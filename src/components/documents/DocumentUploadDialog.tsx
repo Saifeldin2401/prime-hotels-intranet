@@ -1,36 +1,36 @@
-import { useState, useMemo } from 'react'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+import { LoadingButton } from '@/components/loading'
 import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
-import { DOCUMENT_VISIBILITY_OPTIONS } from '@/lib/constants'
-import type { DocumentVisibility, DocumentStatus } from '@/lib/constants'
-import { documentSchema } from '@/lib/validationSchemas'
-import { getUserFriendlyError } from '@/lib/errorMessages'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { LoadingButton } from '@/components/loading'
-import { scanFile } from '@/hooks/useVirusScan'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
-import { useTranslation } from "react-i18next";
+import { scanFile } from '@/hooks/useVirusScan'
+import type { DocumentStatus, DocumentVisibility } from '@/lib/constants'
+import { DOCUMENT_VISIBILITY_OPTIONS } from '@/lib/constants'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { supabase } from '@/lib/supabase'
+import { documentSchema } from '@/lib/validationSchemas'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 interface DocumentUploadDialogProps {
   open: boolean
@@ -101,7 +101,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       const fileUrl = urlData.publicUrl
 
       // Create document record
-      const documentData: any = {
+      const documentData = {
         title,
         description: description || null,
         file_url: fileUrl,

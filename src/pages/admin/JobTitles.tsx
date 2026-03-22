@@ -1,27 +1,7 @@
 
-import { useState, useMemo } from 'react'
-import type { ColumnDef } from "@tanstack/react-table"
-import {
-    Briefcase,
-    Plus,
-    MoreVertical,
-    Pencil,
-    Trash2,
-    AlertTriangle,
-    Loader2
-} from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { DataTable, DataTableColumnHeader } from '@/components/ui/data-table'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
     Dialog,
     DialogContent,
@@ -32,17 +12,37 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog"
 import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
-import { ROLES } from '@/lib/constants'
-import { Badge } from '@/components/ui/badge'
 import { useDepartments } from '@/hooks/useDepartments'
+import { ROLES } from '@/lib/constants'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ColumnDef } from "@tanstack/react-table"
+import {
+    AlertTriangle,
+    Briefcase,
+    Loader2,
+    MoreVertical,
+    Pencil,
+    Plus,
+    Trash2
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface JobTitle {
     id: string
@@ -82,7 +82,7 @@ export default function JobTitles() {
                 .order('title', { ascending: true })
 
             if (error) throw error
-            return data.map((item: any) => ({
+            return data.map((item) => ({
                 ...item,
                 category: item.department?.name || item.category
             })) as JobTitle[]
@@ -172,7 +172,7 @@ export default function JobTitles() {
                 description: t('job_titles.success.deleted'),
             })
         },
-        onError: (error: any) => {
+        onError: (error) => {
             if (error.code === '23503') {
                 toast({
                     title: t('common.error'),

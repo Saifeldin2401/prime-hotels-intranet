@@ -1,10 +1,10 @@
 import { supabase } from '@/lib/supabase'
 import type {
     KnowledgeQuestion,
+    QuestionDifficulty,
     QuestionFormData,
     QuestionStatus,
-    QuestionType,
-    QuestionDifficulty
+    QuestionType
 } from '@/types/questions'
 
 export interface QuestionFilters {
@@ -117,7 +117,7 @@ export async function createQuestion(
 export async function updateQuestion(
     id: string,
     formData: Partial<QuestionFormData>,
-    userId: string
+    _userId: string
 ): Promise<KnowledgeQuestion> {
     const { options, ...questionData } = formData
 

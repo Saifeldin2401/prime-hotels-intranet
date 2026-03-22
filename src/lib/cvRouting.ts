@@ -1,6 +1,6 @@
-import type { SeniorityLevel } from './types'
 import type { AppRole } from './constants'
 import { supabase } from './supabase'
+import type { SeniorityLevel } from './types'
 
 /**
  * CV Routing Logic

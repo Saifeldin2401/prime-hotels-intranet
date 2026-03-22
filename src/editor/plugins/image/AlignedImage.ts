@@ -1,5 +1,5 @@
-import Image from '@tiptap/extension-image'
 import { mergeAttributes } from '@tiptap/core'
+import Image from '@tiptap/extension-image'
 
 const resolveAlignmentStyle = (align?: string): string => {
   if (align === 'left') return 'float: left; margin: 0 1.5rem 1rem 0; clear: left;'

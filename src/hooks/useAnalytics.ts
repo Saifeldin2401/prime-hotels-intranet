@@ -1,12 +1,12 @@
-import { useCallback } from 'react'
 import { analytics } from '@/services/analyticsService'
 import type { AnalyticsEvents } from '@/types/analytics'
+import { useCallback } from 'react'
 
 export function useAnalytics() {
     /**
      * Track a specific event
      */
-    const track = useCallback((eventName: string | AnalyticsEvents, properties?: Record<string, any>, category?: string) => {
+    const track = useCallback((eventName: string | AnalyticsEvents, properties?, category?: string) => {
         analytics.track(eventName, properties, category)
     }, [])
 

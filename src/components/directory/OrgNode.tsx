@@ -1,17 +1,16 @@
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
 import {
+    Crown,
     Mail,
     Phone,
-    Crown,
-    Building2,
-    UserCog,
-    User
+    User,
+    UserCog
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
+import { useState } from 'react'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
 
@@ -53,11 +52,8 @@ const variantStyles = {
 export function OrgNode({
     employee,
     variant = 'staff',
-    directReports = 0,
-    isExpanded = false,
     onToggle,
     onClick,
-    isRTL = false,
     compact = false
 }: OrgNodeProps) {
     const [showDetails, setShowDetails] = useState(false)

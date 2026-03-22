@@ -1,16 +1,16 @@
-import { useSearchParams, useNavigate } from 'react-router-dom'
-import { useTasks } from '@/hooks/useTasks'
-import { useDocuments } from '@/hooks/useDocuments'
-import { useProfiles } from '@/hooks/useUsers'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, FileText, CheckSquare, User, Search } from 'lucide-react'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnalytics } from '@/hooks/useAnalytics'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useTasks } from '@/hooks/useTasks'
+import { useProfiles } from '@/hooks/useUsers'
 import { AnalyticsEvents } from '@/types/analytics'
+import { format } from 'date-fns'
+import { CheckSquare, FileText, Loader2, Search, User } from 'lucide-react'
 import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 export default function GlobalSearch() {
     const [searchParams] = useSearchParams()
@@ -143,7 +143,7 @@ export default function GlobalSearch() {
     )
 }
 
-function TaskCard({ task, navigate, onClick }: { task: any, navigate: any, onClick?: () => void }) {
+function TaskCard({ task, navigate, onClick }: { task, navigate, onClick?: () => void }) {
     return (
         <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => {
             onClick?.()
@@ -165,7 +165,7 @@ function TaskCard({ task, navigate, onClick }: { task: any, navigate: any, onCli
     )
 }
 
-function DocumentCard({ doc, navigate, onClick }: { doc: any, navigate: any, onClick?: () => void }) {
+function DocumentCard({ doc, navigate, onClick }: { doc, navigate, onClick?: () => void }) {
     return (
         <Card className="hover:bg-muted/50 cursor-pointer transition-colors" onClick={() => {
             onClick?.()
@@ -187,7 +187,7 @@ function DocumentCard({ doc, navigate, onClick }: { doc: any, navigate: any, onC
     )
 }
 
-function ProfileCard({ profile }: { profile: any }) {
+function ProfileCard({ profile }: { profile }) {
     return (
         <Card>
             <CardHeader className="flex flex-row items-center gap-4">

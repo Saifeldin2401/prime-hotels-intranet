@@ -1,18 +1,17 @@
-import { useState, useEffect } from 'react'
-import { m, AnimatePresence } from 'framer-motion'
-import {
-    Sun,
-    Cloud,
-    CloudRain,
-    CloudLightning,
-    Snowflake,
-    Moon,
-    CloudSun,
-    CloudFog,
-    CloudDrizzle,
-} from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useWeather } from '@/hooks/useWeather'
+import { AnimatePresence, m } from 'framer-motion'
+import {
+    Cloud,
+    CloudDrizzle,
+    CloudFog,
+    CloudLightning,
+    CloudRain,
+    CloudSun,
+    Moon,
+    Snowflake,
+    Sun,
+} from 'lucide-react'
 
 export function LiveWeather() {
     const { data, loading } = useWeather()
@@ -35,7 +34,7 @@ export function LiveWeather() {
     let Icon = Sun;
     let animateProps = {};
     let iconColor = "text-amber-500";
-    let conditionText = data.conditionText;
+    const conditionText = data.conditionText;
 
     if (code === 0) {
         Icon = isDay ? Sun : Moon;

@@ -4,10 +4,8 @@
  * Component for linking quizzes and training modules to knowledge articles.
  */
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Select,
     SelectContent,
@@ -15,18 +13,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    GraduationCap,
-    ClipboardCheck,
-    Link2,
-    X,
-    ExternalLink,
-    Loader2
-} from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import {
+    ClipboardCheck,
+    ExternalLink,
+    GraduationCap,
+    Link2,
+    Loader2,
+    X
+} from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { useTranslation } from "react-i18next";
 
 interface LinkedResourceSelectorProps {
     linkedQuizId: string | null

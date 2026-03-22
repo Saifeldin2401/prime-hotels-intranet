@@ -4,30 +4,30 @@
  * Searches tasks, people, knowledge articles, pages, documents, and more.
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { useRecentSearches, useSearch } from '@/hooks/useSearch'
+import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
-    Search,
-    Loader2,
-    FileText,
-    User,
-    GraduationCap,
-    Megaphone,
     BookOpen,
-    CornerDownLeft,
-    Command,
-    Clock,
-    Wrench,
     Briefcase,
     CheckSquare,
+    Clock,
+    Command,
+    CornerDownLeft,
+    FileText,
+    GraduationCap,
+    Hash,
     LayoutDashboard,
+    Loader2,
+    Megaphone,
+    Search,
     Sparkles,
-    Hash
+    User,
+    Wrench
 } from 'lucide-react'
-import { useSearch, useRecentSearches } from '@/hooks/useSearch'
-import { cn } from '@/lib/utils'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface CommandPaletteProps {
     open: boolean

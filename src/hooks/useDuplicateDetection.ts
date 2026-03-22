@@ -5,7 +5,7 @@
  * Uses fuzzy string matching to find similar titles.
  */
 
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useKnowledgeArticles } from './useKnowledge'
 
 interface DuplicateCheckResult {

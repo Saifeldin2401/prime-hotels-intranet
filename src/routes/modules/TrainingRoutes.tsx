@@ -1,8 +1,8 @@
-import { lazy } from 'react'
-import { Route, Navigate, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { lazy } from 'react'
+import { Navigate, Route, useParams } from 'react-router-dom'
 
 const TrainingHub = lazy(() => import('@/pages/training/TrainingHub'))
 const MyCertificates = lazy(() => import('@/pages/training/MyCertificates'))

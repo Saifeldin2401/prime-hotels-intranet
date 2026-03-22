@@ -1,7 +1,7 @@
-import { useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { ROLES, type AppRole } from '@/lib/constants'
 import { isConsolidatedPropertyId, roleSupportsConsolidatedView } from '@/lib/propertyScope'
+import { useMemo } from 'react'
 
 export type Permission =
   // Training permissions

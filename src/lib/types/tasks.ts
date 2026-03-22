@@ -1,4 +1,4 @@
-import type { Profile, Property, Department } from './profile'
+import type { Department, Profile, Property } from './profile'
 
 // Task Management Interfaces
 export type TaskStatus = 'todo' | 'in_progress' | 'review' | 'completed' | 'cancelled'

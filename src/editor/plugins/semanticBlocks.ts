@@ -1,5 +1,5 @@
-import { Extension, mergeAttributes, Node } from '@tiptap/core'
 import { isAllowedDirection, sanitizeClassNameList } from '@/lib/aiHtml'
+import { Extension, mergeAttributes, Node } from '@tiptap/core'
 
 const sanitizeId = (value: string | null | undefined): string | null => {
   if (!value) return null

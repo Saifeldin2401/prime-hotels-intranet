@@ -1,54 +1,52 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import { RejectionDialog } from '@/components/approvals/RejectionDialog'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { CardLoading } from '@/components/common/LoadingStates'
-import { crudToasts } from '@/lib/toastHelpers'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
-  Search,
-  FileText,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Eye,
-  Calendar,
-  User,
-  Filter,
-  AlertTriangle
-} from 'lucide-react'
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from '@/components/ui/input'
+import { Label } from "@/components/ui/label"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from '@/hooks/useAuth'
+import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { supabase } from '@/lib/supabase'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { format, formatDistanceToNow, isValid } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import type { Document, DocumentApproval, LeaveRequest, MaintenanceTicket } from '@/lib/types'
-import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+    Calendar,
+    CheckCircle,
+    Clock,
+    Eye,
+    FileText,
+    Filter,
+    Search,
+    User,
+    XCircle
+} from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
-import { RejectionDialog } from '@/components/approvals/RejectionDialog'
 
 export default function MyApprovals() {
   const { t, i18n } = useTranslation(['approvals', 'common'])
@@ -296,7 +294,7 @@ export default function MyApprovals() {
   const approveMutation = useMutation({
     mutationFn: async (approvalId: string) => {
       if (!user || !primaryRole) throw new Error('User must be signed in with a valid role to approve documents')
-      const { data, error } = await supabase.rpc('approve_document_atomic', {
+      const { error } = await supabase.rpc('approve_document_atomic', {
         p_approval_id: approvalId,
         p_approver_id: user.id,
         p_feedback: null,
@@ -451,7 +449,7 @@ export default function MyApprovals() {
         .eq('id', ticketId)
         .single()
 
-      const updatePayload: Record<string, any> = {
+      const updatePayload = {
         status: 'in_progress',
         assigned_to_id: assignedToId,
         updated_at: new Date().toISOString(),
@@ -547,7 +545,7 @@ export default function MyApprovals() {
     })
   }
 
-  const filterApprovals = (approvals: any[], query: string) => {
+  const filterApprovals = (approvals, query: string) => {
     if (!query) return approvals
     const lowerQuery = query.toLowerCase()
     const includesQuery = (value?: string | null) => (value || '').toLowerCase().includes(lowerQuery)
@@ -565,12 +563,11 @@ export default function MyApprovals() {
   const filteredPendingLeave = filterApprovals(pendingLeaveRequests || [], searchQuery)
   const filteredPendingMaintenance = filterApprovals(pendingMaintenanceTickets || [], searchQuery)
   const filteredCompleted = filterApprovals(completedApprovals || [], searchQuery)
-  const safePendingDocuments = filteredPendingDocuments.filter((approval: any) => !!approval?.documents)
-  const safeCompletedDocuments = filteredCompleted.filter((approval: any) => !!approval?.documents)
+  const safePendingDocuments = filteredPendingDocuments.filter((approval) => !!approval?.documents)
+  const safeCompletedDocuments = filteredCompleted.filter((approval) => !!approval?.documents)
   const selectedMaintenanceTicket = pendingMaintenanceTickets?.find(ticket => ticket.id === selectedTicketId) || null
 
   // Calculate total pending count
-  const totalPendingCount = safePendingDocuments.length + filteredPendingLeave.length + filteredPendingMaintenance.length
 
   return (
     <div className="space-y-8 animate-fade-in">
@@ -1001,7 +998,7 @@ export default function MyApprovals() {
                   <SelectValue placeholder={t('select_staff_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {staffMembers?.map((staff: any) => (
+                  {staffMembers?.map((staff) => (
                     <SelectItem key={staff.id} value={staff.id}>
                       {staff.full_name || staff.email}
                     </SelectItem>

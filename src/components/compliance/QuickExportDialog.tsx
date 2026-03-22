@@ -3,36 +3,35 @@
  * Quick Export Dialog Component
  */
 
+import { Calendar, Download, FileText } from 'lucide-react'
 import { useState } from 'react'
-import { Download, Calendar, FileText, AlertCircle } from 'lucide-react'
-import { format } from 'date-fns'
 
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { Calendar as CalendarComponent } from '@/components/ui/calendar'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Calendar as CalendarComponent } from '@/components/ui/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
 import { useCreateAuditExport, useExportTemplates } from '@/hooks/useAuditExports'
 import { EXPORT_FORMATS } from '@/lib/auditConstants'
+import { cn } from '@/lib/utils'
 import type { AuditExportFormat, ExportScope } from '@/types/audit'
 
 interface QuickExportDialogProps {
@@ -52,7 +51,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   const createExport = useCreateAuditExport()
-  const { data: templates } = useExportTemplates(format)
+  const { data: _templates } = useExportTemplates(format)
 
   const handleSubmit = async () => {
     const scope: ExportScope = {

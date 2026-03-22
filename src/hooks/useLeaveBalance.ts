@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { fetchLeaveBalanceSummary } from '@/lib/leaveBalance'
+import { useQuery } from '@tanstack/react-query'
 
 export function useLeaveBalance(userId?: string, year?: number) {
   const { user } = useAuth()

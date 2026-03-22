@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Types
 export interface ApprovalHistory {
@@ -149,7 +149,7 @@ export function useLogApprovalAction() {
 
 // Get user's approval authority info
 export function useApprovalAuthority() {
-    const { user, profile } = useAuth()
+    const { user } = useAuth()
 
     return useQuery({
         queryKey: ['approval-authority', user?.id],

@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
 export interface TaskTemplate {
@@ -8,7 +8,7 @@ export interface TaskTemplate {
     description?: string
     priority: string
     recurrence_type: 'daily' | 'weekly' | 'monthly'
-    recurrence_config: Record<string, any>
+    recurrence_config
     assigned_to_id?: string
     property_id?: string
     department_id?: string

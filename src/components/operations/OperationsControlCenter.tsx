@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { useTasks } from '@/hooks/useTasks'
-import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useProperty } from '@/contexts/PropertyContext'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { Progress } from '@/components/ui/progress'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
 import { useOperationsSlaBreaches } from '@/hooks/useOperationsSla'
+import { useTasks } from '@/hooks/useTasks'
+import { useTranslation } from 'react-i18next'
 
 export function OperationsControlCenter() {
   const { t } = useTranslation('dashboard')

@@ -1,7 +1,7 @@
-import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { AnalyticsEvents } from '@/types/analytics'
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 
 export function PageTracker() {
     const location = useLocation()

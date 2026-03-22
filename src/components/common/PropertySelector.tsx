@@ -1,10 +1,10 @@
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue, SelectGroup, SelectLabel, SelectSeparator } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Building, Lock, LayoutDashboard } from 'lucide-react'
-import { useTranslation } from "react-i18next";
 import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
+import { Building, LayoutDashboard, Lock } from 'lucide-react'
+import { useTranslation } from "react-i18next"
 
 interface PropertySelectorProps {
   value?: string

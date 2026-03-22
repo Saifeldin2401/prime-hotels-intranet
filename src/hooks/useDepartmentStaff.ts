@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
+import { useEffect, useState } from 'react'
 
 export interface DepartmentStaffMember extends Profile {
     status?: 'on_shift' | 'off_duty' | 'leave'
@@ -45,9 +45,9 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
                 if (staffError) throw staffError
 
                 const staffMembers = userDepts
-                    ?.map((ud: any) => ud.profiles)
+                    ?.map((ud) => ud.profiles)
                     .filter(Boolean)
-                    .map((profile: any) => ({
+                    .map((profile) => ({
                         ...profile,
                         status: 'off_duty' // Default
                     })) || []

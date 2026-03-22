@@ -1,22 +1,7 @@
-import { useState, useMemo, useId } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Command,
     CommandEmpty,
@@ -26,20 +11,35 @@ import {
     CommandList,
 } from '@/components/ui/command'
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Loader2, Building2, Users, Briefcase, Save, ShieldAlert, Check, ChevronsUpDown } from 'lucide-react'
-import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { useAuth } from '@/hooks/useAuth'
 import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
+import { supabase } from '@/lib/supabase'
 import { cn, escapeSearchQuery } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Briefcase, Building2, Check, ChevronsUpDown, Loader2, Save, ShieldAlert, Users } from 'lucide-react'
+import { useId, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 interface EmployeeAssignmentDialogProps {
     employee: OrgEmployee | null
@@ -135,7 +135,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         }
         // Property managers/HR can only assign to their properties
         const userPropIds = userProperties?.map(p => p.id) || []
-        return allProperties.filter((p: any) => userPropIds.includes(p.id))
+        return allProperties.filter((p) => userPropIds.includes(p.id))
     }, [allProperties, primaryRole, userProperties])
 
     // Fetch departments for selected property
@@ -258,7 +258,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
             // 1. Update or insert user_properties
             if (selectedPropertyId) {
-                const propertyExists = properties.some((p: any) => p.id === selectedPropertyId)
+                const propertyExists = properties.some((p) => p.id === selectedPropertyId)
                 if (!isValidUUID(selectedPropertyId) || !propertyExists) {
                     throw new Error('Selected property is invalid')
                 }
@@ -299,7 +299,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                 .eq('user_id', employee.id)
             if (existingDepartmentsError) throw existingDepartmentsError
 
-            const departmentExists = departments.some((d: any) => d.id === actualDeptId)
+            const departmentExists = departments.some((d) => d.id === actualDeptId)
             if (actualDeptId) {
                 if (!isValidUUID(actualDeptId) || !departmentExists) {
                     throw new Error('Selected department is invalid')
@@ -381,7 +381,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
             queryClient.invalidateQueries({ queryKey: ['employee-directory-rpc'] })
             onClose()
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast.error(error.message || t('assignment_error', 'Failed to update assignment'))
         }
     })
@@ -445,7 +445,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                 <SelectValue placeholder={t('select_property', 'Select a property')} />
                             </SelectTrigger>
                             <SelectContent>
-                                {properties.map((prop: any) => (
+                                {properties.map((prop) => (
                                     <SelectItem key={prop.id} value={prop.id}>
                                         {prop.name}
                                         {prop.is_headquarters && (
@@ -479,7 +479,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                 <SelectItem value="none">
                                     <span className="text-muted-foreground">{t('no_department', 'No specific department')}</span>
                                 </SelectItem>
-                                {departments.map((dept: any) => (
+                                {departments.map((dept) => (
                                     <SelectItem key={dept.id} value={dept.id}>
                                         {dept.name}
                                     </SelectItem>
@@ -573,7 +573,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                                     <span className="text-muted-foreground">{t('no_manager', 'No manager')}</span>
                                                 </div>
                                             </CommandItem>
-                                            {managerResults.map((manager: any) => (
+                                            {managerResults.map((manager) => (
                                                 <CommandItem
                                                     key={manager.id}
                                                     value={`${manager.full_name} ${manager.staff_id || ''} ${manager.job_title || ''}`}

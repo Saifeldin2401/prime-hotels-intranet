@@ -1,16 +1,15 @@
-import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useAutomationConfigs, useUpdateAutomationConfig } from '@/hooks/useAutomationConfig'
-import type { AutomationConfig } from '@/hooks/useAutomationConfig'
-import { Loader2, Save, Sparkles, GraduationCap, CalendarDays } from 'lucide-react'
 import { useToast } from '@/components/ui/use-toast'
+import type { AutomationConfig } from '@/hooks/useAutomationConfig'
+import { useAutomationConfigs, useUpdateAutomationConfig } from '@/hooks/useAutomationConfig'
 import { supabase } from '@/lib/supabase'
-import { useTranslation } from "react-i18next";
+import { CalendarDays, GraduationCap, Loader2, Save, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 export function AutomationSettings() {
     const { t: t_ext } = useTranslation('extracted');

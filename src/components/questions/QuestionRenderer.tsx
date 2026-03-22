@@ -4,27 +4,26 @@
  * Main component that renders the appropriate question type with feedback.
  */
 
-import { useState, useEffect, useCallback } from 'react'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import {
-    CheckCircle,
-    XCircle,
-    Lightbulb,
-    BookOpen,
-    Clock,
-    HelpCircle,
-    ChevronRight
-} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import type { KnowledgeQuestion, QuestionOption } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
+import {
+    BookOpen,
+    CheckCircle,
+    ChevronRight,
+    Clock,
+    Lightbulb,
+    XCircle
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from "react-i18next"
+import { FillBlankQuestion } from './FillBlankQuestion'
 import { MCQQuestion } from './MCQQuestion'
 import { TrueFalseQuestion } from './TrueFalseQuestion'
-import { FillBlankQuestion } from './FillBlankQuestion'
-import { useTranslation } from "react-i18next";
 
 export interface QuestionRendererProps {
     question: KnowledgeQuestion

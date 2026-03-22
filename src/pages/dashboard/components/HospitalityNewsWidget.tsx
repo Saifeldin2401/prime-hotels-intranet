@@ -1,12 +1,12 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Newspaper, ExternalLink, Globe, ClockIcon } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useNews } from '@/hooks/useNews'
 import { formatDistanceToNow } from 'date-fns'
 import { ar } from 'date-fns/locale'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { ClockIcon, ExternalLink, Globe, Newspaper } from 'lucide-react'
 import { useTranslation } from "react-i18next"
 
 const hospitalityNewsSkeletonKeys = ['hospitality-news-skeleton-1', 'hospitality-news-skeleton-2', 'hospitality-news-skeleton-3']
@@ -65,7 +65,7 @@ export function HospitalityNewsWidget() {
                                     <p className="text-sm text-slate-500 font-medium mt-1">{t('hospitality_news.no_news_desc', 'Check back later for industry updates.')}</p>
                                 </m.div>
                             ) : (
-                                news?.map((item: any, index: number) => (
+                                news?.map((item, index: number) => (
                                     <m.div
                                         key={item.id}
                                         initial={{ opacity: 0, y: 10 }}

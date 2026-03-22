@@ -4,52 +4,44 @@
  * Analytics dashboard for Knowledge Base content performance.
  */
 
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartViewport } from '@/components/ui/ChartViewport'
+import { Progress } from '@/components/ui/progress'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { useArticles, useFeedbackStats, useFeedbackTrends, useRecentFeedback } from '@/hooks/useKnowledge'
+import { cn } from '@/lib/utils'
+import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer
-} from 'recharts'
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import {
+    AlertTriangle,
+    ArrowUpRight,
     BarChart3,
+    Download,
     Eye,
     FileText,
-    TrendingUp,
-    TrendingDown,
-    Clock,
-    AlertTriangle,
-    CheckCircle2,
-    Search,
-    Users,
-    BookOpen,
-    RefreshCw,
-    ChevronRight,
-    ArrowUpRight,
-    Filter,
-    Download,
-    ThumbsUp,
-    ThumbsDown,
     MessageSquare,
+    RefreshCw,
     Smile,
-    Frown
+    ThumbsDown,
+    ThumbsUp,
+    TrendingUp,
+    Users
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ChartViewport } from '@/components/ui/ChartViewport'
-import { cn } from '@/lib/utils'
-import { useArticles, useFeedbackStats, useRecentFeedback, useFeedbackTrends } from '@/hooks/useKnowledge'
-import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import {
+    Area,
+    AreaChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
+} from 'recharts'
 
 export default function KnowledgeAnalytics() {
     const { t: t_ext } = useTranslation('extracted');
@@ -440,7 +432,7 @@ export default function KnowledgeAnalytics() {
 }
 
 function FeedbackSentiment() {
-    const { t: t_ext } = useTranslation('extracted');
+    const { t: _t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: stats, isLoading } = useFeedbackStats()
 
@@ -501,7 +493,7 @@ function FeedbackSentiment() {
 }
 
 function RecentFeedbackList() {
-    const { t: t_ext } = useTranslation('extracted');
+    const { t: _t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: feedback, isLoading } = useRecentFeedback(6)
 
@@ -547,7 +539,7 @@ function RecentFeedbackList() {
 }
 
 function FeedbackTrendsChart() {
-    const { t: t_ext } = useTranslation('extracted');
+    const { t: _t_ext } = useTranslation('extracted');
     const { t } = useTranslation(['knowledge', 'common'])
     const { data: trends, isLoading } = useFeedbackTrends(30) // 30 days default
 

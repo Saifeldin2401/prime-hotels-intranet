@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 export interface ApprovalStats {
     total_pending: number

@@ -1,5 +1,5 @@
-export { ModuleTemplateSelector } from './ModuleTemplateSelector'
+export { ModuleAnalyticsCard } from './ModuleAnalyticsCard'
 export { ModuleCreationWizard } from './ModuleCreationWizard'
 export { ModuleQuickActions } from './ModuleQuickActions'
-export { ModuleAnalyticsCard } from './ModuleAnalyticsCard'
+export { ModuleTemplateSelector } from './ModuleTemplateSelector'
 

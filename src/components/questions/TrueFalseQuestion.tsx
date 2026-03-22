@@ -5,7 +5,7 @@
  */
 
 import { cn } from '@/lib/utils'
-import { Check, X, CheckCircle, XCircle } from 'lucide-react'
+import { Check, CheckCircle, X, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrueFalseQuestionProps {

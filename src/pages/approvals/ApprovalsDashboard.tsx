@@ -1,30 +1,28 @@
-import { useState } from 'react'
 import { ApprovalCard } from '@/components/approvals/ApprovalCard'
 import { ApprovalDetailsSheet } from '@/components/approvals/ApprovalDetailsSheet'
-import { useUnifiedApprovals, type ApprovalItem } from '@/hooks/useUnifiedApprovals'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from 'react-i18next'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/components/ui/use-toast'
+import { useUnifiedApprovals, type ApprovalItem } from '@/hooks/useUnifiedApprovals'
 import { cn } from '@/lib/utils'
 import {
+    Calendar,
+    CheckCircle,
+    FileText,
+    Filter,
+    Inbox,
+    LayoutGrid,
+    LayoutList,
+    ListTodo,
     Loader2,
     Search,
-    CheckCircle,
-    Filter,
-    SortAsc,
-    LayoutList,
-    LayoutGrid,
-    Inbox,
-    FileText,
-    Calendar,
-    Wrench,
-    ListTodo
+    Wrench
 } from 'lucide-react'
-import { useToast } from '@/components/ui/use-toast'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function ApprovalsDashboard() {
     const { t: t_ext } = useTranslation('extracted');
@@ -97,7 +95,7 @@ export default function ApprovalsDashboard() {
             }
             // Close sheet if open and matches
             if (sheetOpen && selectedApproval?.id === id) setSheetOpen(false)
-        } catch (error) {
+        } catch (_error) {
             toast({ title: t('toast.error', 'Action failed'), variant: "destructive" })
         }
     }
@@ -119,7 +117,7 @@ export default function ApprovalsDashboard() {
                 toast({ title: t('toast.request_rejected', 'Request rejected') })
             }
             if (sheetOpen && selectedApproval?.id === id) setSheetOpen(false)
-        } catch (error) {
+        } catch (_error) {
             toast({ title: t('toast.error', 'Action failed'), variant: "destructive" })
         }
     }

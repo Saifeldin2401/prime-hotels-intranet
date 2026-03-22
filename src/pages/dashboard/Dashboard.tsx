@@ -1,31 +1,36 @@
-import { useState, Suspense, useMemo, useCallback } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useDashboardStats, usePropertyManagerStats, useHRStats, useDepartmentHeadStats, useAreaManagerStats, useCorporateStats } from '@/hooks/useDashboardStats'
-import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
-import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion'
-import {
-  CheckCircle, FileText, GraduationCap,
-  Bell, Zap, ChevronRight, X, MessageCircle, Users
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { useDashboardFocus } from '@/hooks/useDashboardFocus'
+import { useAreaManagerStats, useCorporateStats, useDashboardStats, useDepartmentHeadStats, useHRStats, usePropertyManagerStats } from '@/hooks/useDashboardStats'
 import { useNotifications } from '@/hooks/useNotifications'
 import { useUndoableAction } from '@/hooks/useUndoableAction.ts'
-import { useDashboardFocus } from '@/hooks/useDashboardFocus'
+import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    Bell,
+    CheckCircle,
+    ChevronRight,
+    FileText, GraduationCap,
+    MessageCircle, Users,
+    X,
+    Zap
+} from 'lucide-react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 // Dynamic Registry and Permissions
-import { WIDGET_REGISTRY, type WidgetId, getLayoutProfile, type DashboardWidgetId } from './components/WidgetRegistry'
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
+import { WIDGET_REGISTRY, getLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
 
 // Static Widgets
 import { SocialFeed } from '@/components/social/SocialFeed'
-import { WelcomeHeader } from './components/WelcomeHeader'
-import { NotificationsPanel } from './components/NotificationsPanel'
 import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
+import { NotificationsPanel } from './components/NotificationsPanel'
+import { WelcomeHeader } from './components/WelcomeHeader'
 
-import { useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next"
 import { useNavigate } from 'react-router-dom'
 
 interface RegistryWidgetRendererProps {
@@ -89,14 +94,12 @@ export function IntegratedDashboard() {
   const isManager = primaryRole === 'property_manager'
   const isHR = primaryRole === 'property_hr'
   const isDeptHead = primaryRole === 'department_head'
-  const isAreaManager = primaryRole === 'area_manager'
-  const isCorporate = primaryRole === 'corporate_admin'
 
   const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats()
   const { data: hrStats, isLoading: hrLoading } = useHRStats()
   const { data: deptHeadStats, isLoading: deptHeadLoading } = useDepartmentHeadStats()
-  const { data: areaStats, isLoading: areaLoading } = useAreaManagerStats()
-  const { data: corpStats, isLoading: corpLoading } = useCorporateStats()
+  const { isLoading: areaLoading } = useAreaManagerStats()
+  const { isLoading: corpLoading } = useCorporateStats()
 
   const statsLoading = baseLoading || managerLoading || hrLoading || deptHeadLoading || areaLoading || corpLoading
 

@@ -1,39 +1,39 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useTrainingProgress } from '@/hooks/useTraining'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { cn } from '@/lib/utils'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
-import { EmptyState } from '@/components/shared/EmptyState'
-import {
-  BookOpen,
-  Users,
-  Target,
-  Plus,
-  Edit,
-  Trash2,
-  Briefcase,
-  GraduationCap,
-  Loader2
-} from 'lucide-react'
+import { useAuth } from '@/hooks/useAuth'
+import { useTrainingProgress } from '@/hooks/useTraining'
+import { supabase } from '@/lib/supabase'
 import type {
-  TrainingPath,
-  TrainingPathModule,
-  UserPathEnrollment,
-  TrainingModule
+    TrainingModule,
+    TrainingPath,
+    TrainingPathModule,
+    UserPathEnrollment
 } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    BookOpen,
+    Briefcase,
+    Edit,
+    GraduationCap,
+    Loader2,
+    Plus,
+    Target,
+    Trash2,
+    Users
+} from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -322,7 +322,7 @@ export default function TrainingPaths() {
       estimated_duration_hours: path.estimated_duration_hours,
       is_mandatory: path.is_mandatory,
       certificate_enabled: path.certificate_enabled,
-      module_ids: (path as any).training_path_modules?.map((m: any) => m.module_id) || [],
+      module_ids: (path as any).training_path_modules?.map((m) => m.module_id) || [],
       target_role: path.target_role || null,
       target_department_id: path.target_department_id || null,
       target_property_id: path.target_property_id || null,
@@ -362,7 +362,7 @@ export default function TrainingPaths() {
     }
   }
 
-  const calculateProgress = (enrollment: any) => {
+  const calculateProgress = (enrollment) => {
     if (!enrollment.training_paths?.training_path_modules) return 0
     const modules = enrollment.training_paths.training_path_modules
     if (modules.length === 0) return 0
@@ -370,7 +370,7 @@ export default function TrainingPaths() {
     if (!allUserProgress) return 0
 
     // Count completed modules that are part of this path
-    const completedCount = modules.filter((m: any) => {
+    const completedCount = modules.filter((m) => {
       const progress = allUserProgress.find(p => p.training_id === m.module_id)
       return progress?.status === 'completed'
     }).length

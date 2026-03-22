@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 // Common validation patterns
 export const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-export const phonePattern = /^[\+]?[1-9][\d]{0,15}$/
+export const phonePattern = /^[+]?[1-9][\d]{0,15}$/
 export const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/
 export const namePattern = /^[a-zA-Z\s'-]{2,50}$/
 export const employeeIdPattern = /^[A-Z]{2}\d{4,6}$/
@@ -164,13 +164,13 @@ export const validateName = createFieldValidator(z.string().min(2, 'Name must be
 export const validateEmployeeId = createFieldValidator(z.string().regex(employeeIdPattern, 'Invalid employee ID format'))
 
 // Async validation utilities
-export const validateUniqueEmail = async (email: string, excludeUserId?: string): Promise<string | undefined> => {
+export const validateUniqueEmail = async (): Promise<string | undefined> => {
   // This would typically make an API call to check if email exists
   // For now, return undefined (no error)
   return undefined
 }
 
-export const validateUniqueEmployeeId = async (employeeId: string, excludeUserId?: string): Promise<string | undefined> => {
+export const validateUniqueEmployeeId = async (): Promise<string | undefined> => {
   // This would typically make an API call to check if employee ID exists
   // For now, return undefined (no error)
   return undefined
@@ -295,7 +295,7 @@ export const markFieldTouched = <T>(state: ReturnType<typeof createFormState<T>>
   })
 }
 
-export const setFieldValue = <T>(state: ReturnType<typeof createFormState<T>>, fieldName: string, value: any) => {
+export const setFieldValue = <T>(state: ReturnType<typeof createFormState<T>>, fieldName: string, value) => {
   return updateFormState(state, {
     data: { ...state.data, [fieldName]: value },
     isDirty: true

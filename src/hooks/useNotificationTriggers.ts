@@ -5,21 +5,14 @@
  * Provides pre-built notification methods for common system events.
  */
 
-import { useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
 import {
-    createNotification,
     createBulkNotifications,
-    NotificationTemplates,
-    type NotificationType
+    createNotification,
+    NotificationTemplates
 } from '@/lib/notificationService'
+import { useCallback } from 'react'
 
-interface Profile {
-    id: string
-    full_name: string | null
-    email: string
-}
 
 export function useNotificationTriggers() {
     const { user, profile } = useAuth()

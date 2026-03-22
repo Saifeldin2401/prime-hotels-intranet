@@ -1,11 +1,11 @@
-﻿import { Navigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { useAuth } from '@/hooks/useAuth'
+﻿import { useAuth } from '@/hooks/useAuth'
+import type { Permission } from '@/hooks/usePermissions'
 import { usePermissions } from '@/hooks/usePermissions'
 import { ROLES, type AppRole } from '@/lib/constants'
-import type { Permission } from '@/hooks/usePermissions'
-import { getDashboardPathForRole } from './RoleBasedRedirect'
+import { useTranslation } from 'react-i18next'
+import { Navigate } from 'react-router-dom'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
+import { getDashboardPathForRole } from './RoleBasedRedirect'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -30,7 +30,7 @@ export function ProtectedRoute({
   fallbackPath = "/unauthorized",
   smartFallback = true // Default to smart fallback for better UX
 }: ProtectedRouteProps) {
-  const { user, primaryRole, roles, rolesLoading, loading } = useAuth()
+  const { user, primaryRole, rolesLoading, loading } = useAuth()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
 

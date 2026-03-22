@@ -1,15 +1,15 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Mail, Phone, MapPin, Building, Briefcase, Users, MessageSquare, UserCircle } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Briefcase, Building, Mail, MapPin, MessageSquare, Phone, UserCircle, Users } from 'lucide-react'
+import { useState } from 'react'
 import { LazyLoadImage } from 'react-lazy-load-image-component'
 import 'react-lazy-load-image-component/src/effects/blur.css'
+import { useNavigate } from 'react-router-dom'
 
 interface EmployeeCardProps {
-    profile: any
+    profile
     isRTL: boolean
 }
 

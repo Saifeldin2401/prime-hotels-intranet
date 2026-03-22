@@ -1,16 +1,16 @@
-import { motion } from 'framer-motion'
-import { Users, Award, UserX } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { useDepartmentStaff } from '@/hooks/useDepartmentStaff'
 import { useProfiles } from '@/hooks/useUsers'
 import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import { Award, Users, UserX } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
 export function TeamWidget() {
@@ -75,7 +75,7 @@ export function TeamWidget() {
     )
   }
 
-  const onlineCount = teamMembers.filter((_: any, i: number) => getStatus(i) === 'online').length
+  const onlineCount = teamMembers.filter((_, i: number) => getStatus(i) === 'online').length
 
   return (
     <Card className="border-0 shadow-lg bg-gradient-to-b from-white to-slate-50/50">
@@ -104,7 +104,7 @@ export function TeamWidget() {
                 <p>No team members found</p>
               </div>
             ) : (
-              teamMembers.map((member: any, index: number) => {
+              teamMembers.map((member, index: number) => {
                 const status = getStatus(index)
                 return (
                   <motion.div
@@ -175,7 +175,7 @@ export function TeamWidget() {
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-purple-600">
-                {new Set(teamMembers.map((m: any) => m.department_id)).size}
+                {new Set(teamMembers.map((m) => m.department_id)).size}
               </div>
               <div className="text-xs text-muted-foreground">Departments</div>
             </div>

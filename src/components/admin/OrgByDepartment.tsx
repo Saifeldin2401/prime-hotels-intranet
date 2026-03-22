@@ -1,18 +1,18 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useTranslation } from 'react-i18next'
-import {
-    Building2,
-    Users,
-    ChevronDown,
-    ChevronRight,
-    Briefcase,
-    User
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import {
+    Briefcase,
+    Building2,
+    ChevronDown,
+    ChevronRight,
+    User,
+    Users
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Employee {
     id: string

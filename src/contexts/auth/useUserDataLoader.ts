@@ -1,6 +1,6 @@
-import { useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
-import type { Profile, UserRole, Property, Department } from '@/lib/types'
+import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import { useCallback, useRef } from 'react'
 
 interface UserDataState {
   setProfile: (p: Profile | null) => void
@@ -126,9 +126,9 @@ export function useUserDataLoader(
           withTimeout(propertiesPromise as any, 10000, 'Properties load'),
           withTimeout(departmentsPromise as any, 10000, 'Departments load'),
         ]) as [
-          PromiseSettledResult<{ data?: any; error?: any }>,
-          PromiseSettledResult<{ data?: any; error?: any }>,
-          PromiseSettledResult<{ data?: any; error?: any }>,
+          PromiseSettledResult<{ data?; error? }>,
+          PromiseSettledResult<{ data?; error? }>,
+          PromiseSettledResult<{ data?; error? }>,
         ]
 
         if (isStale()) return
@@ -162,7 +162,7 @@ export function useUserDataLoader(
             }
             console.warn('Error loading properties.')
           } else {
-            const props = directProps?.map((up: any) => up.properties).filter(Boolean) || []
+            const props = directProps?.map((up) => up.properties).filter(Boolean) || []
             setProperties(props)
           }
         } else {
@@ -179,7 +179,7 @@ export function useUserDataLoader(
             }
             console.warn('Error loading departments.')
           } else {
-            const depts = directDepts?.map((ud: any) => ud.departments).filter(Boolean) || []
+            const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
             setDepartments(depts)
           }
         } else {

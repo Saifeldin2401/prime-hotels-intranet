@@ -1,23 +1,23 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
+import { AnnouncementEditor } from '@/components/announcements/AnnouncementEditor'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { PullToRefresh } from '@/components/mobile'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { PriorityBadge } from '@/components/shared/PriorityBadge'
-import { Plus, Pin, Loader2, Trash2 } from 'lucide-react'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
+import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { supabase } from '@/lib/supabase'
 import type { Announcement } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Loader2, Pin, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { PullToRefresh } from '@/components/mobile'
-import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { AnnouncementEditor } from '@/components/announcements/AnnouncementEditor'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { useNavigate } from 'react-router-dom'
 
 export default function AnnouncementFeed() {
-  const { user, profile, primaryRole, roles, properties, departments } = useAuth()
+  const { user, profile, roles, properties, departments } = useAuth()
   const { hasPermission } = usePermissions()
   const navigate = useNavigate()
   const queryClient = useQueryClient()

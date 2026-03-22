@@ -1,11 +1,11 @@
-import { useEffect, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { escapeSearchQuery } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { SYSTEM_PAGES } from '@/lib/searchConfig'
+import { supabase } from '@/lib/supabase'
+import { escapeSearchQuery } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 
 export interface SearchSuggestion {
   id: string
@@ -112,7 +112,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     departmentId: explicitDepartmentId
   } = options
 
-  const roleValues = uniqueStrings((roles || []).map((roleRow: any) => roleRow?.role))
+  const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')
   const canViewAllTasks = ALL_TASKS_ROLES.has(primaryRole || '')
@@ -122,15 +122,15 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     if (isRealPropertyId(explicitPropertyId)) return [explicitPropertyId]
     if (isRealPropertyId(currentProperty?.id)) return [currentProperty.id]
     if (propertyIds.length > 0) return propertyIds
-    return uniqueStrings((properties || []).map((property: any) => property?.id))
+    return uniqueStrings((properties || []).map((property) => property?.id))
   })()
 
-  const userDepartmentIds = uniqueStrings((departments || []).map((department: any) => department?.id))
+  const userDepartmentIds = uniqueStrings((departments || []).map((department) => department?.id))
   const scopedDepartmentIds = explicitDepartmentId
     ? [explicitDepartmentId]
     : userDepartmentIds
 
-  const matchesAnnouncementAudience = (announcement: any): boolean => {
+  const matchesAnnouncementAudience = (announcement): boolean => {
     if (!user?.id) return false
     if (announcement.created_by === user.id) return true
 
@@ -183,9 +183,9 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           try {
             const documentLimit = Math.ceil(limit / 2)
             const textFilter = `title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`
-            const queryResults: Array<{ data: any[] | null; error: { message?: string } | null }> = []
+            const queryResults: Array<{ data; error: { message?: string } | null }> = []
 
-            const runDocumentQuery = async (mutate: (q: any) => any) => {
+            const runDocumentQuery = async (mutate) => {
               let q = supabase
                 .from('documents')
                 .select('id, title, description, status, visibility, property_id, department_id, role, created_by')
@@ -231,7 +231,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 .in('department_id', scopedDepartmentIds)
 
               if (!accessError) {
-                const allowedDocumentIds = uniqueStrings((accessRows || []).map((row: any) => row?.document_id))
+                const allowedDocumentIds = uniqueStrings((accessRows || []).map((row) => row?.document_id))
                 if (allowedDocumentIds.length > 0) {
                   await runDocumentQuery((q) =>
                     q
@@ -304,7 +304,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           try {
             const trainingLimit = Math.ceil(limit / 4)
             const textFilter = `title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,category.ilike.%${escapedQuery}%`
-            const trainingQueries: Array<Promise<{ data: any[] | null; error: { message?: string } | null }>> = []
+            const trainingQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
 
             const buildTrainingQuery = () => {
               let q = supabase
@@ -351,7 +351,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         if (includeAnnouncements) {
           try {
             const announcementsLimit = Math.ceil(limit / 2)
-            const announcementQueries: Array<Promise<{ data: any[] | null; error: { message?: string } | null }>> = []
+            const announcementQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
 
             const buildAnnouncementsQuery = () =>
               supabase
@@ -387,7 +387,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         if (includeSOPs) {
           try {
             const sopLimit = Math.ceil(limit / 4)
-            const sopQueries: Array<Promise<{ data: any[] | null; error: { message?: string } | null }>> = []
+            const sopQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
 
             const buildSopQuery = () => {
               let q = supabase
@@ -453,7 +453,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            const taskQueries: Array<Promise<{ data: any[] | null; error: { message?: string } | null }>> = []
+            const taskQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
             if (canViewAllTasks) {
               taskQueries.push(buildTaskBaseQuery())
             } else if (user?.id) {
@@ -618,16 +618,16 @@ export function useSearchSuggestions(query: string) {
   const { user, roles, departments, properties } = useAuth()
   const { currentProperty, propertyIds } = useProperty()
 
-  const roleValues = uniqueStrings((roles || []).map((roleRow: any) => roleRow?.role))
+  const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
 
   const scopedPropertyIds = (() => {
     if (isRealPropertyId(currentProperty?.id)) return [currentProperty.id]
     if (propertyIds.length > 0) return propertyIds
-    return uniqueStrings((properties || []).map((property: any) => property?.id))
+    return uniqueStrings((properties || []).map((property) => property?.id))
   })()
 
-  const scopedDepartmentIds = uniqueStrings((departments || []).map((department: any) => department?.id))
+  const scopedDepartmentIds = uniqueStrings((departments || []).map((department) => department?.id))
 
   const { data: suggestions = [], isLoading } = useQuery({
     queryKey: ['search-suggestions', query, user?.id, scopedPropertyIds, scopedDepartmentIds, roleValues],
@@ -693,9 +693,9 @@ export function useSearchSuggestions(query: string) {
       if (suggestions.length < 5) {
         try {
           const docSuggestionLimit = 3
-          const docQueryResults: Array<{ data: any[] | null }> = []
+          const docQueryResults: Array<{ data }> = []
 
-          const runDocumentSuggestionQuery = async (mutate: (q: any) => any) => {
+          const runDocumentSuggestionQuery = async (mutate) => {
             let q = supabase
               .from('documents')
               .select('id, title, status, visibility')
@@ -729,7 +729,7 @@ export function useSearchSuggestions(query: string) {
           })))
 
           if (suggestions.length < 8) {
-            const sopQueries: Array<Promise<{ data: any[] | null }>> = []
+            const sopQueries: Array<Promise<{ data }>> = []
 
             const buildSopSuggestionQuery = () => {
               let q = supabase

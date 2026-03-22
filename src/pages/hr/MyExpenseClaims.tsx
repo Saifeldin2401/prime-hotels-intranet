@@ -1,34 +1,33 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { format } from 'date-fns'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useMyExpenseClaims, useSubmitExpenseClaim } from '@/hooks/useExpenseClaims'
-import type { ExpenseClaim } from '@/lib/types'
 import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
-import { Plus, Receipt, Loader2, Eye, FileText } from 'lucide-react'
-import { useTranslation } from "react-i18next";
+import type { ExpenseClaim } from '@/lib/types'
+import { format } from 'date-fns'
+import { Eye, FileText, Loader2, Plus, Receipt } from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 const EXPENSE_CATEGORIES: Array<{ value: ExpenseClaim['category']; label: string }> = [
   { value: 'travel', label: 'Travel' },

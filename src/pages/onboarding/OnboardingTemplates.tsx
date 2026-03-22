@@ -1,12 +1,3 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useOnboardingTemplates, useDeleteOnboardingTemplate } from '@/hooks/useOnboarding'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Plus, Trash2, Edit, FileText, Settings, Users, Loader2 } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { format, isValid } from 'date-fns'
-import { useToast } from '@/components/ui/use-toast'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -18,7 +9,15 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { useToast } from '@/components/ui/use-toast'
+import { useDeleteOnboardingTemplate, useOnboardingTemplates } from '@/hooks/useOnboarding'
+import { format, isValid } from 'date-fns'
+import { Edit, FileText, Loader2, Plus, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 export default function OnboardingTemplates() {
     const { t } = useTranslation('onboarding')

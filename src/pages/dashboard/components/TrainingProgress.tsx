@@ -1,17 +1,17 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { GraduationCap, ArrowRight, Play, CheckCircle, Clock } from 'lucide-react'
 import { PinButtonCompact } from '@/components/common/PinButton'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { useTrainingModules, useTrainingProgress } from '@/hooks/useTraining'
 import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from "react-i18next";
-import { cn } from '@/lib/utils';
-import { useMemo } from 'react';
+import { useTrainingModules, useTrainingProgress } from '@/hooks/useTraining'
+import { cn } from '@/lib/utils'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { ArrowRight, CheckCircle, Clock, GraduationCap, Play } from 'lucide-react'
+import { useMemo } from 'react'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 
 const trainingSkeletonKeys = ['training-skeleton-1', 'training-skeleton-2', 'training-skeleton-3']
 
@@ -23,10 +23,10 @@ export function TrainingProgress() {
 
   const modules = useMemo(() => {
     const progressByTraining = new Map<string, number>(
-      (progress || []).map((entry: any) => [entry.training_id, entry.progress_percentage || 0])
+      (progress || []).map((entry) => [entry.training_id, entry.progress_percentage || 0])
     )
 
-    return (modulesData || []).slice(0, 5).map((module: any) => ({
+    return (modulesData || []).slice(0, 5).map((module) => ({
       ...module,
       progress: progressByTraining.get(module.id) ?? 0
     }))
@@ -83,7 +83,7 @@ export function TrainingProgress() {
                   <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">{t('widgets.browse_training', 'Browse available training to get started')}</p>
                 </m.div>
               ) : (
-                modules?.map((module: any, index: number) => {
+                modules?.map((module, index: number) => {
                   const isCompleted = module.progress === 100;
                   const inProgress = module.progress > 0 && module.progress < 100;
 

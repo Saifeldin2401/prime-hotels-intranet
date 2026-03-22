@@ -1,16 +1,15 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useAuditRetention, type AuditRetentionPolicy } from '@/hooks/admin/useAuditRetention'
-import { Plus, Edit2, Trash2, ShieldCheck, DatabaseZap, CheckCircle2, AlertTriangle, FileText, FileSpreadsheet, FileJson, Clock } from 'lucide-react'
-import { format } from 'date-fns'
 import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from '@/components/ui/textarea'
+import { useAuditRetention, type AuditRetentionPolicy } from '@/hooks/admin/useAuditRetention'
+import { AlertTriangle, CheckCircle2, Clock, DatabaseZap, Edit2, FileJson, FileSpreadsheet, FileText, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function AuditRetentionPolicies() {
     const { data: policies, isLoading, createPolicy, updatePolicy, deletePolicy } = useAuditRetention()

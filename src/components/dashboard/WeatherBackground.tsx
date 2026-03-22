@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
-import { m } from 'framer-motion'
-import { Sun, Cloud, Snowflake, Moon } from 'lucide-react'
+import { m } from 'framer-motion';
+import { Cloud, Moon, Snowflake, Sun } from 'lucide-react';
+import { useMemo } from 'react';
 
 interface WeatherBackgroundProps {
     code: number;

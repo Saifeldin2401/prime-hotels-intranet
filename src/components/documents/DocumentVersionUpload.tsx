@@ -1,53 +1,50 @@
-import * as React from "react";
-import {
-  Upload,
-  FileText,
-  History,
-  Clock,
-  User,
-  MessageSquare,
-  RotateCcw,
-  Eye,
-  ChevronDown,
-  ChevronUp,
-  Check,
-  X,
-  Download,
-  ArrowLeftRight,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format, formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/loading/ListSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { format, formatDistanceToNow } from "date-fns";
+import {
+    ArrowLeftRight,
+    Check,
+    ChevronDown,
+    ChevronUp,
+    Clock,
+    Download,
+    FileText,
+    History,
+    MessageSquare,
+    RotateCcw,
+    Upload,
+    User,
+    X
+} from "lucide-react";
+import * as React from "react";
 import { useDropzone } from "react-dropzone";
 
 export interface DocumentVersion {
@@ -283,7 +280,7 @@ export function DocumentVersionUpload({
       ) : (
         <ScrollArea className="h-[350px]">
           <div className="space-y-3">
-            {sortedVersions.map((version, index) => {
+            {sortedVersions.map((version) => {
               const isCurrent = version.id === currentVersionId;
               const isExpanded = expandedVersions.has(version.id);
 

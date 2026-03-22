@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Award, CheckCircle2, ShieldCheck, ShieldAlert, BookOpen, UserCheck, Star, Zap, Settings as SettingsIcon } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { skillsService, type UserSkill } from '@/services/skillsService'
 import { useAuth } from '@/hooks/useAuth'
+import { skillsService, type UserSkill } from '@/services/skillsService'
+import { Award, BookOpen, Settings as SettingsIcon, ShieldCheck, Star, UserCheck, Zap } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export function UserSkillsDisplay({ userId }: { userId?: string }) {
@@ -117,7 +117,7 @@ function getSkillIcon(category?: string) {
     }
 }
 
-function getProficiencyLabel(level: number, t: any): string {
+function getProficiencyLabel(level: number, t): string {
     switch (level) {
         case 1: return t('proficiency_novice')
         case 2: return t('proficiency_beginner')

@@ -4,18 +4,18 @@
  * Shows suggested category, priority, department with confidence level.
  */
 
-import { motion, AnimatePresence } from 'framer-motion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-    Sparkles,
-    CheckCircle2,
-    AlertTriangle,
-    Clock,
-    Loader2
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    AlertTriangle,
+    CheckCircle2,
+    Clock,
+    Loader2,
+    Sparkles
+} from 'lucide-react'
+import { useTranslation } from "react-i18next"
 
 interface TriageSuggestion {
     category: string

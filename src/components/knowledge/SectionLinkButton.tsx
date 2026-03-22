@@ -5,9 +5,9 @@
  * a deep-link URL to that specific section.
  */
 
-import { useState } from 'react'
-import { Link2, Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Check, Link2 } from 'lucide-react'
+import { useState } from 'react'
 import { toast } from 'sonner'
 
 interface SectionLinkButtonProps {

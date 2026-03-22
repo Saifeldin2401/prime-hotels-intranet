@@ -1,21 +1,21 @@
-import React, { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { useReports, type ReportDefinition } from '@/hooks/admin/useReports'
 import { useProperties } from '@/hooks/useProperties'
-import { Plus, Edit2, Trash2, Database, Code, Clock, AlertCircle } from 'lucide-react'
 import { format } from 'date-fns'
-import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
+import { AlertCircle, Clock, Code, Database, Edit2, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
 
 export default function ReportBuilder() {
     const { reports, isLoading, createReport, updateReport, deleteReport } = useReports()
-    const { data: properties } = useProperties()
+    const { data: _properties } = useProperties()
     const [selectedReport, setSelectedReport] = useState<Partial<ReportDefinition> | null>(null)
     const [isEditing, setIsEditing] = useState(false)
     const [filtersJson, setFiltersJson] = useState('{}')
@@ -36,7 +36,7 @@ export default function ReportBuilder() {
         setIsEditing(true)
     }
 
-    const startEditing = (report: any) => {
+    const startEditing = (report) => {
         setSelectedReport(report)
         setFiltersJson(JSON.stringify(report.filters || {}, null, 2))
         setIsEditing(true)
@@ -48,7 +48,7 @@ export default function ReportBuilder() {
         let parsedFilters = {}
         try {
             parsedFilters = JSON.parse(filtersJson)
-        } catch (e) {
+        } catch (_e) {
             alert("Invalid JSON strictly provided in the filters box.")
             return
         }
@@ -126,7 +126,7 @@ export default function ReportBuilder() {
                                 </CardContent>
                             </Card>
                         ) : (
-                            reports?.map((report: any) => (
+                            reports?.map((report) => (
                                 <Card key={report.id} className="overflow-hidden transition-all hover:border-indigo-400">
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between items-start">

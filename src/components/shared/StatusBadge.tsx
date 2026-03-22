@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
-import { DOCUMENT_STATUSES } from '@/lib/constants'
 import type { DocumentStatus } from '@/lib/constants'
+import { DOCUMENT_STATUSES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 
 interface StatusBadgeProps {

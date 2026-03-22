@@ -1,36 +1,45 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  TrendingUp,
-  Award,
-  Target,
-  Clock,
-  CheckCircle,
-  BarChart3,
-  PieChart as PieChartIcon,
-  Star,
-  Users,
-  Flame,
-  Trophy,
-  AlertCircle
-} from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartTooltipContent } from '@/components/ui/chart'
-import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  PieChart, Pie, Cell, ResponsiveContainer,
-  Area, AreaChart, Tooltip,
-  RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar
-} from 'recharts'
-import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAchievementStats, useUserAchievements } from '@/hooks/useAchievements'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { calculateStreak } from '@/lib/training/analytics'
-import { useUserAchievements, useAchievementStats } from '@/hooks/useAchievements'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import {
+    AlertCircle,
+    BarChart3,
+    CheckCircle,
+    Clock,
+    Flame,
+    PieChart as PieChartIcon,
+    Star,
+    Target,
+    TrendingUp,
+    Trophy,
+    Users
+} from 'lucide-react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+    Area, AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Pie,
+    PieChart,
+    PolarAngleAxis,
+    PolarGrid,
+    PolarRadiusAxis, Radar,
+    RadarChart,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis
+} from 'recharts'
 import { AchievementBadge } from './AchievementBadge'
 
 interface TrainingProgressVisualizationProps {
@@ -205,7 +214,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
   })
 
   // Process data for charts
-  const processProgressData = (completions: any[]) => {
+  const processProgressData = (completions) => {
     const dailyProgress = completions?.reduce((acc, completion) => {
       const date = new Date(completion.completed_at).toLocaleDateString()
       acc[date] = (acc[date] || 0) + 1
@@ -218,7 +227,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     }))
   }
 
-  const processCategoryData = (completions: any[]) => {
+  const processCategoryData = (completions) => {
     const categoryData = completions?.reduce((acc, completion) => {
       const category = completion.training_module?.category || 'Other'
       acc[category] = (acc[category] || 0) + 1
@@ -422,7 +431,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                         outerRadius={80}
                         paddingAngle={5}
                         dataKey="count"
-                        label={({ category, percent }: any) => `${category} ${(percent * 100).toFixed(0)}%`}
+                        label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
                       >
                         {userCategoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.fill} />

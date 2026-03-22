@@ -1,4 +1,3 @@
-import { AlertCircle, Clock, LogOut, RefreshCw } from 'lucide-react'
 import {
     AlertDialog,
     AlertDialogContent,
@@ -9,6 +8,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
+import { AlertCircle, Clock, LogOut, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface SessionTimeoutWarningProps {
@@ -56,7 +56,7 @@ export function SessionTimeoutWarning({ enabled = true }: SessionTimeoutWarningP
                             </span>
                         </div>
                         <p className="text-sm">
-                            {t('session_timeout.guidance', { defaultValue: 'Click \"Stay Signed In\" to continue your session, or you will be automatically signed out.' })}
+                            {t('session_timeout.guidance', { defaultValue: 'Click "Stay Signed In" to continue your session, or you will be automatically signed out.' })}
                         </p>
                     </AlertDialogDescription>
                 </AlertDialogHeader>

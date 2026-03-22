@@ -4,40 +4,38 @@
  * UI for generating and displaying AI-powered onboarding plans
  */
 
-import { useState, useMemo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-    Sparkles,
-    User,
-    Building2,
-    Briefcase,
-    Clock,
-    BookOpen,
-    FileText,
-    CheckSquare,
-    Users,
-    Eye,
-    ChevronRight,
-    RefreshCw,
-    Download,
-    Loader2,
-    Building
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
-import { useQuery } from '@tanstack/react-query'
 import { useAIOnboardingPath } from '@/hooks/useAIOnboardingPath'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProperties } from '@/hooks/useProperties'
-import { useTranslation } from "react-i18next";
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    BookOpen,
+    Briefcase,
+    Building,
+    Building2,
+    CheckSquare,
+    ChevronRight,
+    Clock,
+    Eye,
+    FileText,
+    Loader2,
+    RefreshCw,
+    Sparkles,
+    User,
+    Users
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 const stepTypeIcons = {
     training: BookOpen,
@@ -62,7 +60,7 @@ const priorityColors = {
 }
 
 interface AIOnboardingPathGeneratorProps {
-    onPathGenerated?: (path: any) => void
+    onPathGenerated?: (path) => void
     className?: string
 }
 
@@ -245,7 +243,7 @@ export function AIOnboardingPathGenerator({
                             </Label>
                             <Select
                                 value={formData.priorExperience}
-                                onValueChange={(value: any) => setFormData(prev => ({ ...prev, priorExperience: value }))}
+                                onValueChange={(value) => setFormData(prev => ({ ...prev, priorExperience: value }))}
                             >
                                 <SelectTrigger>
                                     <SelectValue />

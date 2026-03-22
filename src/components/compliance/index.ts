@@ -3,9 +3,9 @@
  * Component Exports
  */
 
+export { AnomalyAlertList } from './AnomalyAlertList'
 export { ComplianceMetricCard } from './ComplianceMetricCard'
 export { ExportStatusCard } from './ExportStatusCard'
-export { RecentExportsTable } from './RecentExportsTable'
 export { PIISummaryChart } from './PIISummaryChart'
-export { AnomalyAlertList } from './AnomalyAlertList'
 export { QuickExportDialog } from './QuickExportDialog'
+export { RecentExportsTable } from './RecentExportsTable'

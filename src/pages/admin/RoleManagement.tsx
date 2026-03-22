@@ -1,58 +1,35 @@
-import { useState, useMemo } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
-import {
-  Users,
-  Shield,
-  Edit,
-  Search,
-  Lock,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  RotateCcw,
-  Columns
-} from 'lucide-react'
-import { ROLES, ROLE_HIERARCHY, type AppRole } from '@/lib/constants'
-import type { Permission } from '@/hooks/usePermissions'
-import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, formatPermissionLabel } from '@/lib/permissionCatalog'
-import { useTranslation } from 'react-i18next'
 import { useDebounce } from '@/hooks/useDebounce'
+import { usePermissions } from '@/hooks/usePermissions'
+import { ROLES, ROLE_HIERARCHY, type AppRole } from '@/lib/constants'
+import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, formatPermissionLabel } from '@/lib/permissionCatalog'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    CheckCircle,
+    Columns,
+    Edit,
+    Loader2,
+    Lock,
+    Search,
+    Shield,
+    Users,
+    XCircle
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Fallback hardcoded permissions for role assignment dialog
-const ROLE_PERMISSIONS_FALLBACK: Record<AppRole, Permission[]> = {
-  corporate_admin: ALL_PERMISSIONS,
-  regional_admin: ALL_PERMISSIONS,
-  regional_hr: [
-    'training.view', 'training.create', 'training.edit', 'training.assign', 'training.report',
-    'users.view', 'users.create', 'users.edit', 'users.delete',
-    'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
-    'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete',
-    'system.export_data'
-  ],
-  property_manager: [
-    'training.view', 'training.create', 'training.edit', 'training.assign', 'training.report',
-    'users.view', 'users.edit',
-    'documents.view', 'documents.create', 'documents.edit', 'documents.delete', 'documents.approve',
-    'announcements.view', 'announcements.create', 'announcements.edit', 'announcements.delete'
-  ],
-  property_hr: ['training.view', 'training.assign', 'users.view', 'documents.view', 'documents.create', 'documents.edit', 'announcements.view'],
-  department_head: ['training.view', 'training.assign', 'users.view', 'documents.view', 'announcements.view'],
-  manager: ['training.view', 'training.assign', 'users.view', 'documents.view', 'announcements.view'],
-  staff: ['training.view', 'documents.view', 'announcements.view']
-}
 
 interface RolePermissionRow {
   id: string
@@ -63,7 +40,7 @@ interface RolePermissionRow {
 
 export default function RoleManagement() {
   const { hasPermission } = usePermissions()
-  const { t, i18n } = useTranslation(['admin', 'common'])
+  const { t } = useTranslation(['admin', 'common'])
   const { toast } = useToast()
   const queryClient = useQueryClient()
 
@@ -72,7 +49,7 @@ export default function RoleManagement() {
   const [selectedUser, setSelectedUser] = useState<any>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedRole, setSelectedRole] = useState<AppRole>('staff')
-  const [viewMode, setViewMode] = useState<'list' | 'comparison'>('list')
+  const [_viewMode, _setViewMode] = useState<'list' | 'comparison'>('list')
   const debouncedSearchQuery = useDebounce(searchQuery, 300)
 
   // Fetch role permissions from DB
@@ -251,7 +228,7 @@ export default function RoleManagement() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {users.map((user: any) => (
+                {users.map((user) => (
                   <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">

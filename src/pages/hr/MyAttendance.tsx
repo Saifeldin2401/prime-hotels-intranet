@@ -1,16 +1,16 @@
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useAttendance, useCheckIn, useCheckOut } from '@/hooks/useAttendance'
-import { Clock, LogIn, LogOut, Calendar as CalendarIcon, MapPin } from 'lucide-react'
-import { format } from 'date-fns'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { toast } from 'sonner'
-import { motion } from 'framer-motion'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
-import { useTranslation } from 'react-i18next'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAttendance, useCheckIn, useCheckOut } from '@/hooks/useAttendance'
+import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
+import { motion } from 'framer-motion'
+import { Calendar as CalendarIcon, Clock, LogIn, LogOut, MapPin } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export default function MyAttendance() {
     const { t, i18n } = useTranslation('hr')
@@ -29,7 +29,7 @@ export default function MyAttendance() {
             await checkInMutation.mutateAsync({ notes })
             toast.success(t('attendance.check_in_success'))
             setNotes('')
-        } catch (error) {
+        } catch (_error) {
             toast.error(t('attendance.check_in_fail'))
         }
     }
@@ -40,7 +40,7 @@ export default function MyAttendance() {
             await checkOutMutation.mutateAsync({ id: todayAttendance.id, notes })
             toast.success(t('attendance.check_out_success'))
             setNotes('')
-        } catch (error) {
+        } catch (_error) {
             toast.error(t('attendance.check_out_fail'))
         }
     }

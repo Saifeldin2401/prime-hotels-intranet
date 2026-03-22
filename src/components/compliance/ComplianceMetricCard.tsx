@@ -3,10 +3,10 @@
  * Compliance Metric Card Component
  */
 
-import { LucideIcon } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
+import { LucideIcon } from 'lucide-react'
 
 interface ComplianceMetricCardProps {
   title: string

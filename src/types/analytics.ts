@@ -7,11 +7,11 @@ export interface AnalyticsEvent {
     id?: string;
     event_name: string;
     category: string;
-    properties: Record<string, any>;
+    properties;
     user_id?: string | null;
     session_id?: string | null;
     timestamp?: string;
-    metadata?: Record<string, any>;
+    metadata?;
 }
 
 export interface UserSession {
@@ -20,10 +20,10 @@ export interface UserSession {
     started_at: string;
     last_active_at: string;
     user_agent?: string | null;
-    device_info?: Record<string, any>;
+    device_info?;
     ip_address?: string | null;
     is_active: boolean;
-    metadata?: Record<string, any>;
+    metadata?;
 }
 
 export interface SearchAnalyticsEvent {
@@ -35,7 +35,7 @@ export interface SearchAnalyticsEvent {
     session_id?: string | null;
     clicked_result_id?: string | null;
     timestamp?: string;
-    filters?: Record<string, any>;
+    filters?;
 }
 
 // Event Taxonomy Helper Types

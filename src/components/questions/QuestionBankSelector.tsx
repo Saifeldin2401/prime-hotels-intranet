@@ -5,14 +5,10 @@
  * Used in TrainingBuilder and QuizBuilder to add existing questions.
  */
 
-import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Input } from '@/components/ui/input'
 import {
     Select,
     SelectContent,
@@ -20,17 +16,18 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select'
-import {
-    Search,
-    Filter,
-    CheckCircle,
-    Plus,
-    HelpCircle
-} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { KnowledgeQuestion, QuestionDifficulty, QuestionType } from '@/types/questions'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/questions'
-import { useTranslation } from "react-i18next";
+import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
+import { useQuery } from '@tanstack/react-query'
+import {
+    CheckCircle,
+    HelpCircle,
+    Plus,
+    Search
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 interface QuestionBankSelectorProps {
     /** IDs of already selected questions (to show as selected) */

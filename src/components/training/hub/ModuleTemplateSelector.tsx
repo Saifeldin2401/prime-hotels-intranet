@@ -1,12 +1,12 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Sparkles, Shield, BookOpen, GraduationCap, Layers } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { BookOpen, GraduationCap, Layers, Loader2, Shield, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface Template {
@@ -14,7 +14,7 @@ interface Template {
   name: string
   description: string
   category: 'safety' | 'policy' | 'skill' | 'onboarding' | 'custom'
-  template_structure: any
+  template_structure
 }
 
 interface ModuleTemplateSelectorProps {

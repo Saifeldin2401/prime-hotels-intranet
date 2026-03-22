@@ -1,34 +1,34 @@
-import { useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/badge'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useAuth } from '@/hooks/useAuth'
+import { useContentTypeCounts, useDepartmentContentCounts } from '@/hooks/useKnowledge'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { type KnowledgeContentType } from '@/types/knowledge'
+import { useQueryClient } from '@tanstack/react-query'
 import {
-    LayoutGrid,
-    Search,
     Bookmark,
     BookOpen,
+    Briefcase,
+    Building2,
+    CheckSquare,
     ClipboardList,
     FileText,
-    CheckSquare,
     HelpCircle,
-    Video,
     Image,
-    Link2,
-    Star,
+    LayoutGrid,
     Library,
-    Building2,
-    Briefcase
+    Link2,
+    Search,
+    Star,
+    Video
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useDepartmentContentCounts, useContentTypeCounts } from '@/hooks/useKnowledge'
-import { type KnowledgeContentType } from '@/types/knowledge'
+import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useSearchParams } from 'react-router-dom'
 
 interface NavItemProps {
-    icon: any
+    icon
     label: string
     href: string
     active?: boolean
@@ -107,7 +107,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
         }
     }, [queryClient])
 
-    const CONTENT_TYPES: { type: KnowledgeContentType; icon: any }[] = [
+    const CONTENT_TYPES: { type: KnowledgeContentType; icon }[] = [
         { type: 'sop', icon: ClipboardList },
         { type: 'policy', icon: FileText },
         { type: 'guide', icon: BookOpen },
@@ -174,7 +174,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                             <Briefcase className="h-3 w-3" />
                         </h3>
                         <div className="space-y-1">
-                            {Object.entries(deptCounts || {}).map(([id, dept]: [string, any]) => (
+                            {Object.entries(deptCounts || {}).map(([id, dept]) => (
                                 <NavItem
                                     key={id}
                                     icon={Building2}

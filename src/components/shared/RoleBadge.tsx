@@ -1,8 +1,8 @@
 import { Badge } from '@/components/ui/badge'
-import { useTranslation } from 'react-i18next'
-import { ROLES } from '@/lib/constants'
 import type { AppRole } from '@/lib/constants'
+import { ROLES } from '@/lib/constants'
 import type { Profile } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 interface RoleBadgeProps {
   role?: AppRole

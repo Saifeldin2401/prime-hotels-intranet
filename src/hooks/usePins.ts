@@ -5,11 +5,11 @@
  * Allows users to pin important items to their dashboard for quick access.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 // ============================================================================
 // Types

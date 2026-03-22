@@ -1,79 +1,79 @@
-import { useState, useEffect, useCallback, useMemo, useRef, type KeyboardEvent, type MouseEvent } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
-import { useQueryClient } from '@tanstack/react-query'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
-import { 
-  useDocuments, 
-  useDocumentStats, 
-  useFavorites, 
-  useToggleFavorite, 
-  useSubmitForApproval, 
-  useUpdateDocument, 
-  useDeleteDocument,
-  useRestoreDocument,
-  usePermanentDeleteDocument,
-  useDocumentFolders,
-  useDocumentTags,
-  useDocumentBulkDelete,
-  useDocumentBulkMove,
-  useDocumentBulkAddTags,
-  useDocumentBulkArchive,
-  useDocumentBulkRestore,
-  useDocumentBulkUnarchive,
-  useRecordDocumentView,
-  useDocumentTrash
-} from '@/hooks/useDocuments'
+import { DocumentBulkActionsBar } from '@/components/documents/DocumentBulkActionsBar'
+import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
+import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
+import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
+import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
+import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
+import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
 import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
-import { DocumentViewer } from '@/components/documents/DocumentViewer'
-import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
-import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
-import { DocumentBulkActionsBar } from '@/components/documents/DocumentBulkActionsBar'
-import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
-import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
-// import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
-import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { EnhancedBadge } from '@/components/ui/enhanced-badge'
-import { Progress } from '@/components/ui/progress'
-import { Label } from '@/components/ui/label'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { cn, formatRelativeTime, formatFileSize } from '@/lib/utils'
-import type { Document } from '@/lib/types'
-import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { useTranslation } from 'react-i18next'
-import { crudToasts } from '@/lib/toastHelpers'
-import { toast } from 'sonner'
-import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
+import { useAuth } from '@/hooks/useAuth'
 import {
-  Plus,
-  FileText,
-  Cloud,
-  Filter,
-  Grid,
-  List,
-  Heart,
-  Eye,
-  Pencil,
-  Trash2,
-  FolderOpen,
-  Tag,
-  MoreVertical,
-  AlertTriangle,
-  Sparkles,
-  BarChart3,
-  Clock
-} from 'lucide-react'
+    useDeleteDocument,
+    useDocumentBulkAddTags,
+    useDocumentBulkArchive,
+    useDocumentBulkDelete,
+    useDocumentBulkMove,
+    useDocumentBulkRestore,
+    useDocumentBulkUnarchive,
+    useDocumentFolders,
+    useDocuments,
+    useDocumentStats,
+    useDocumentTags,
+    useDocumentTrash,
+    useFavorites,
+    usePermanentDeleteDocument,
+    useRecordDocumentView,
+    useRestoreDocument,
+    useSubmitForApproval,
+    useToggleFavorite,
+    useUpdateDocument
+} from '@/hooks/useDocuments'
+import { supabase } from '@/lib/supabase'
+import { useQueryClient } from '@tanstack/react-query'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+// import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { EnhancedBadge } from '@/components/ui/enhanced-badge'
+import { Label } from '@/components/ui/label'
+import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { Document } from '@/lib/types'
+import { cn, formatFileSize, formatRelativeTime } from '@/lib/utils'
 import { format } from 'date-fns'
+import {
+    AlertTriangle,
+    BarChart3,
+    Clock,
+    Cloud,
+    Eye,
+    FileText,
+    Filter,
+    FolderOpen,
+    Grid,
+    Heart,
+    List,
+    MoreVertical,
+    Pencil,
+    Plus,
+    Sparkles,
+    Tag,
+    Trash2
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 type ViewMode = 'grid' | 'list'
 type DocumentTab = 'documents' | 'folders' | 'shared' | 'recent' | 'favorites' | 'trash' | 'expiring' | 'analytics'
@@ -1304,7 +1304,7 @@ export default function DocumentLibrary() {
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-muted-foreground">Key changes</div>
                       <ul className="list-disc pl-5 space-y-1 text-sm">
-                        {aiSummary.keyChanges.map((item, idx) => (
+                        {aiSummary.keyChanges.map((item) => (
                           <li key={item}>{item}</li>
                         ))}
                       </ul>

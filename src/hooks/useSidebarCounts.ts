@@ -12,12 +12,12 @@
  * - Staff: Only items directly assigned to them
  */
 
-import { useEffect } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 
 export interface SidebarCounts {
     unreadNotifications: number

@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useEffect, useState, useRef } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import type { Notification } from '@/lib/types'
-import { toast } from 'sonner'
-import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
 import { BrowserNotificationPrompt } from '@/components/notifications/BrowserNotificationPrompt'
+import { useAuth } from '@/hooks/useAuth'
+import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
+import { supabase } from '@/lib/supabase'
+import type { Notification } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import React, { createContext, useContext, useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 
 interface NotificationContextType {
     notifications: Notification[]
@@ -45,7 +45,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
 
 
-            return (data || []).map((n: any) => ({
+            return (data || []).map((n) => ({
                 ...n,
                 is_read: !!n.read_at
             })) as Notification[]

@@ -1,11 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import type { Announcement } from '@/lib/types'
-import { createNotification } from '@/lib/notificationService'
-import { crudToasts } from '@/lib/toastHelpers'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import type { Announcement } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useAnnouncements(options?: {
     includePinned?: boolean

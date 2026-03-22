@@ -1,15 +1,15 @@
-import { useState, useEffect } from 'react';
-import { useTranslation } from 'react-i18next';
-import { AnimatePresence, motion } from 'framer-motion';
-import Confetti from 'react-confetti';
-import { useWindowSize } from 'react-use';
-import { X, Sparkles, Moon, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Moon, Sparkles, Star, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import Confetti from 'react-confetti';
+import { useTranslation } from 'react-i18next';
+import { useWindowSize } from 'react-use';
 
 export type HolidayEvent = 'RAMADAN' | 'EID_FITR' | 'EID_ADHA' | 'SAUDI_NATIONAL' | 'SAUDI_FOUNDING' | null;
 
 export function HolidayCelebration() {
-  const { t, i18n } = useTranslation('common');
+  const { i18n } = useTranslation('common');
   const [activeEvent, setActiveEvent] = useState<HolidayEvent>(null);
   const [showBanner, setShowBanner] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
@@ -47,7 +47,9 @@ export function HolidayCelebration() {
              const parsed = JSON.parse(cached);
              hMonth = parsed.hMonth;
              hDay = parsed.hDay;
-          } catch(e) {}
+          } catch(_e) {
+            // Ignore invalid cached holiday metadata.
+          }
         }
         
         // 2. Fetch from strict authoritative online API if not cached today

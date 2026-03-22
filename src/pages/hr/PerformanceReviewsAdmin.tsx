@@ -1,22 +1,22 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useProfiles } from '@/hooks/useUsers'
-import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
+import { Textarea } from '@/components/ui/textarea'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useProfiles } from '@/hooks/useUsers'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const STATUS_OPTIONS = ['draft', 'in_review', 'completed', 'archived']
 
@@ -70,13 +70,13 @@ export default function PerformanceReviewsAdmin() {
   const filteredReviews = useMemo(() => {
     const reviews = reviewsQuery.data || []
     if (employeeFilter !== 'all') {
-      return reviews.filter((review: any) => review.employee_id === employeeFilter)
+      return reviews.filter((review) => review.employee_id === employeeFilter)
     }
     if (departmentId !== 'all' && staffIds.size > 0) {
-      return reviews.filter((review: any) => staffIds.has(review.employee_id))
+      return reviews.filter((review) => staffIds.has(review.employee_id))
     }
     if (propertyId && staffIds.size > 0) {
-      return reviews.filter((review: any) => staffIds.has(review.employee_id))
+      return reviews.filter((review) => staffIds.has(review.employee_id))
     }
     return reviews
   }, [reviewsQuery.data, employeeFilter, departmentId, staffIds, propertyId])
@@ -162,7 +162,7 @@ export default function PerformanceReviewsAdmin() {
     createMutation.mutate()
   }
 
-  const handleEdit = (review: any) => {
+  const handleEdit = (review) => {
     setEditingId(review.id)
     setForm({
       employee_id: review.employee_id,
@@ -385,7 +385,7 @@ export default function PerformanceReviewsAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredReviews.map((review: any) => (
+                {filteredReviews.map((review) => (
                   <TableRow key={review.id}>
                     <TableCell>
                       <div className="font-medium">{review.employee?.full_name || review.employee?.email || 'Employee'}</div>

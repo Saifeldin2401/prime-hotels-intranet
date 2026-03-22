@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
+import { describe, expect, it } from 'vitest'
 
 const properties = [
     { id: 'p1', name: 'Prime Al Hamra Hotel', code: 'ALH' },

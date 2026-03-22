@@ -1,38 +1,38 @@
-import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Flag, Loader2, Megaphone, Pin, Type, Users } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
-import { Megaphone, Flag, Users, Loader2, Type, Pin } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { useQuickCreateAnnouncement } from '@/hooks/useQuickCreate'
-import { useDepartments } from '@/hooks/useDepartments'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useQuickCreateAnnouncement } from '@/hooks/useQuickCreate'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -63,7 +63,7 @@ interface QuickAnnouncementModalProps {
 export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncementModalProps) {
   const { t, i18n } = useTranslation('dashboard')
   const isRTL = i18n.dir() === 'rtl'
-  const { user, roles, departments: userDepartments, properties } = useAuth()
+  const { roles, properties } = useAuth()
   const createAnnouncement = useQuickCreateAnnouncement()
   const { departments: allDepartments = [] } = useDepartments()
 
@@ -82,7 +82,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
   const targetType = form.watch('target_type')
 
   const onSubmit = async (values: AnnouncementFormValues) => {
-    let targetAudience = { type: values.target_type, values: [] as string[] }
+    const targetAudience = { type: values.target_type, values: [] as string[] }
 
     if (values.target_type === 'department' && values.target_value) {
       targetAudience.values = [values.target_value]
@@ -102,7 +102,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
       })
       form.reset()
       onOpenChange(false)
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('quick_create.post_failed', 'Failed to post announcement'))
     }
   }

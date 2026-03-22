@@ -1,12 +1,11 @@
-import { useState, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { useDepartmentCoverage, useLeaveEvents, useLeaveConflicts } from '@/hooks/useLeaveCoverage'
-import { Calendar, ChevronLeft, ChevronRight, Users, AlertTriangle } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useDepartmentCoverage, useLeaveConflicts, useLeaveEvents } from '@/hooks/useLeaveCoverage'
 import { cn } from '@/lib/utils'
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isToday, addMonths, subMonths } from 'date-fns'
-import { useTranslation } from "react-i18next";
+import { addMonths, eachDayOfInterval, endOfMonth, format, isToday, startOfMonth, subMonths } from 'date-fns'
+import { AlertTriangle, Calendar, ChevronLeft, ChevronRight, Users } from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 interface LeaveCoverageCalendarProps {
     departmentId?: string

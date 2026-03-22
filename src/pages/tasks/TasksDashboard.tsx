@@ -1,28 +1,28 @@
-import { useState } from 'react'
-import { useTasks, useTaskStats } from '@/hooks/useTasks'
-import { useAuth } from '@/hooks/useAuth'
-import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { TaskCard } from '@/components/tasks/TaskCard'
 import { TaskFilters } from '@/components/tasks/TaskFilters'
 import { TaskForm } from '@/components/tasks/TaskForm'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Plus,
-  LayoutGrid,
-  List as ListIcon,
-  Loader2,
-  CheckCircle2,
-  ListTodo,
-  Clock,
-  Eye,
-  BarChart3
-} from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { useAnalytics } from '@/hooks/useAnalytics'
-import { AnalyticsEvents } from '@/types/analytics'
+import { useAuth } from '@/hooks/useAuth'
+import { useTasks, useTaskStats } from '@/hooks/useTasks'
 import { cn } from '@/lib/utils'
+import { AnalyticsEvents } from '@/types/analytics'
+import {
+    BarChart3,
+    CheckCircle2,
+    Clock,
+    Eye,
+    LayoutGrid,
+    List as ListIcon,
+    ListTodo,
+    Loader2,
+    Plus
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const statConfig = [
   {

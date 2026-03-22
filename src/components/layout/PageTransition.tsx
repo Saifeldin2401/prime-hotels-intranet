@@ -1,7 +1,7 @@
-import { motion } from 'framer-motion'
 import { pageVariants } from '@/lib/motion'
-import { useLocation } from 'react-router-dom'
+import { motion } from 'framer-motion'
 import { forwardRef } from 'react'
+import { useLocation } from 'react-router-dom'
 
 interface PageTransitionProps {
     children: React.ReactNode

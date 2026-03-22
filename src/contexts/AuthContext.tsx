@@ -1,15 +1,15 @@
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
-import type { ReactNode } from 'react'
-import type { User } from '@supabase/supabase-js'
-import { supabase } from '@/lib/supabase'
-import { analytics } from '@/services/analyticsService'
-import type { Profile, UserRole, Property, Department } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
+import { supabase } from '@/lib/supabase'
+import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import { analytics } from '@/services/analyticsService'
+import type { User } from '@supabase/supabase-js'
+import type { ReactNode } from 'react'
+import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
 import { useAuthSession } from './auth/useAuthSession'
 import { useUserDataLoader } from './auth/useUserDataLoader'
 
 // ─── Context type ──────────────────────────────────────────────────────────
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null
   profile: Profile | null
   roles: UserRole[]

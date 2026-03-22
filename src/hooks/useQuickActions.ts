@@ -1,8 +1,8 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Task, TaskStatus } from '@/lib/types'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 // ─── Types ───────────────────────────────────────────
 
@@ -121,7 +121,7 @@ export function useAcknowledgeAnnouncement() {
       const previousAnnouncements = queryClient.getQueryData(['announcements'])
 
       // Optimistically mark as read
-      queryClient.setQueryData(['announcements'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['announcements'], (old) => {
         if (!old) return old
         return old.map(announcement => 
           announcement.id === announcementId 
@@ -178,7 +178,7 @@ export function useApproveRequest() {
       const previousRequests = queryClient.getQueryData(['requests-inbox'])
 
       // Optimistically update request status
-      queryClient.setQueryData(['requests-inbox'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['requests-inbox'], (old) => {
         if (!old) return old
         return old.map(request => 
           request.id === requestId 
@@ -245,12 +245,12 @@ export function useNotificationAction() {
       const previousNotifications = queryClient.getQueryData(['notifications'])
 
       if (action === 'delete') {
-        queryClient.setQueryData(['notifications'], (old: any[] | undefined) => {
+        queryClient.setQueryData(['notifications'], (old) => {
           if (!old) return old
           return old.filter(n => n.id !== notificationId)
         })
       } else {
-        queryClient.setQueryData(['notifications'], (old: any[] | undefined) => {
+        queryClient.setQueryData(['notifications'], (old) => {
           if (!old) return old
           return old.map(notification => 
             notification.id === notificationId 
@@ -306,7 +306,7 @@ export function useMarkAllNotificationsRead() {
       
       const previousNotifications = queryClient.getQueryData(['notifications'])
 
-      queryClient.setQueryData(['notifications'], (old: any[] | undefined) => {
+      queryClient.setQueryData(['notifications'], (old) => {
         if (!old) return old
         return old.map(notification => ({
           ...notification,

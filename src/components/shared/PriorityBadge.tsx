@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge'
-import { ANNOUNCEMENT_PRIORITIES } from '@/lib/constants'
 import type { AnnouncementPriority } from '@/lib/constants'
+import { ANNOUNCEMENT_PRIORITIES } from '@/lib/constants'
 
 interface PriorityBadgeProps {
   priority: AnnouncementPriority

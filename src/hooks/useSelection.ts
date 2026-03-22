@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 interface UseSelectionOptions<T> {
     items: T[]
@@ -34,10 +34,6 @@ export function useSelection<T>({
 }: UseSelectionOptions<T>): UseSelectionReturn {
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
-    const itemIds = useMemo(() =>
-        new Set(items.map(getItemId)),
-        [items, getItemId]
-    )
 
     const selectedCount = selectedIds.size
 

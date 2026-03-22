@@ -1,9 +1,9 @@
 import { aiService } from '@/lib/gemini'
 import type {
-    QuestionType,
-    QuestionDifficulty,
     AIQuestionGenerationRequest,
-    GeneratedQuestion
+    GeneratedQuestion,
+    QuestionDifficulty,
+    QuestionType
 } from '@/types/questions'
 
 export async function generateQuestionsWithAI(

@@ -1,36 +1,35 @@
-import { useState, useEffect, useMemo } from 'react'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
-import * as z from 'zod'
-import { maintenanceTicketSchema } from '@/lib/validationSchemas'
-import { getUserFriendlyError } from '@/lib/errorMessages'
 import { LoadingButton } from '@/components/loading'
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
 } from '@/components/ui/form'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { maintenanceTicketSchema } from '@/lib/validationSchemas'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { useEffect, useMemo, useState } from 'react'
+import { useForm } from 'react-hook-form'
+import * as z from 'zod'
 
-import { useAuth } from '@/hooks/useAuth'
-import { useAITicketTriage } from '@/hooks/useAITicketTriage'
-import { useCreateMaintenanceTicket, useUploadMaintenanceAttachment } from '@/hooks/useMaintenanceTickets'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import { Wrench, AlertCircle, CheckCircle, Upload, X, Paperclip } from 'lucide-react'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { useNavigate } from 'react-router-dom'
-import type { MaintenanceTicket } from '@/lib/types'
-import { useTranslation } from 'react-i18next'
+import { useAITicketTriage } from '@/hooks/useAITicketTriage'
+import { useAuth } from '@/hooks/useAuth'
+import { useCreateMaintenanceTicket, useUploadMaintenanceAttachment } from '@/hooks/useMaintenanceTickets'
 import { crudToasts } from '@/lib/toastHelpers'
-import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
+import type { MaintenanceTicket } from '@/lib/types'
+import { AlertCircle, Paperclip, Upload, Wrench, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 const categories = [
   { value: 'plumbing' },
@@ -57,7 +56,7 @@ const allowedFilePrefixes = ['image/']
 const allowedFileTypes = ['application/pdf']
 
 const buildTicketSchema = (
-  t: (key: string, options?: Record<string, any>) => string,
+  t: (key: string, options?) => string,
   propertiesLength: number
 ) => (
   maintenanceTicketSchema.extend({

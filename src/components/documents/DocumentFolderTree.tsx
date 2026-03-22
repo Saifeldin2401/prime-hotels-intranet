@@ -1,34 +1,34 @@
-import * as React from "react";
-import {
-  ChevronRight,
-  ChevronDown,
-  Folder,
-  FolderOpen,
-  MoreHorizontal,
-  Plus,
-  FileText,
-  Trash2,
-  Edit3,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import type { DocumentFolder } from "@/hooks/useDocuments";
+import { cn } from "@/lib/utils";
+import {
+    ChevronDown,
+    ChevronRight,
+    Edit3,
+    FileText,
+    Folder,
+    FolderOpen,
+    MoreHorizontal,
+    Plus,
+    Trash2,
+} from "lucide-react";
+import * as React from "react";
 
 interface DocumentFolderTreeProps {
   folders: DocumentFolder[];

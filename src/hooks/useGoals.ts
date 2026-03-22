@@ -1,19 +1,10 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
-import type { Database } from '@/types/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
-type Goal = Database['public']['Tables']['goals']['Row'] & {
-    training_module?: {
-        title: string;
-        progress?: {
-            status: string;
-            quiz_score: number | null;
-        }
-    }
-}
 
 export function useGoals(employeeId?: string) {
     const { user } = useAuth()

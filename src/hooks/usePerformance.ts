@@ -1,9 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import type { Database } from '@/types/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
-type PerformanceReview = Database['public']['Tables']['performance_reviews']['Row']
 
 export function usePerformanceReviews(employeeId?: string) {
   const { user } = useAuth()

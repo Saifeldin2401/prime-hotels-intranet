@@ -1,62 +1,60 @@
-import { useCallback } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { Button } from '@/components/ui/button'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { useNavigate } from 'react-router-dom'
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialog as AlertDialogRoot,
+    AlertDialogTitle,
+    AlertDialogTrigger as AlertDialogTriggerRoot,
+} from "@/components/ui/alert-dialog"
 import {
-  Menu,
-  User,
-  ChevronDown,
-  LogOut,
-  Settings,
-  Sparkles,
-  Building,
-  Globe,
-  ChevronsUpDown,
-  Bell,
-  Check
-} from 'lucide-react'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
 } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub as DropdownSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+    DropdownMenuSub as DropdownSub,
 } from '@/components/ui/dropdown-menu'
 import {
-  AlertDialog as AlertDialogRoot,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger as AlertDialogTriggerRoot,
-} from "@/components/ui/alert-dialog"
-import { Badge } from '@/components/ui/badge'
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger
+} from '@/components/ui/select'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
+import { cn } from '@/lib/utils'
+import {
+    Bell,
+    Building,
+    Check,
+    ChevronDown,
+    Globe,
+    LogOut,
+    Menu,
+    Settings,
+    Sparkles,
+    User
+} from 'lucide-react'
+import { useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
   sidebarCollapsed: boolean

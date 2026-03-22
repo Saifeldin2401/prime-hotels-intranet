@@ -5,10 +5,10 @@
  * Shows spinner and progress indicator during pull.
  */
 
-import type { ReactNode } from 'react'
-import { cn } from '@/lib/utils'
-import { RefreshCw, ArrowDown } from 'lucide-react'
 import { usePullToRefresh } from '@/hooks/usePullToRefresh'
+import { cn } from '@/lib/utils'
+import { ArrowDown, RefreshCw } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface PullToRefreshProps {
     children: ReactNode

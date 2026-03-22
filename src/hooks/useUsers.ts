@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
 
 
 
@@ -77,9 +77,9 @@ export function useProfiles(filters?: {
             // The types might need adjusting if we want nice nested objects.
             return data.map(profile => ({
                 ...profile,
-                roles: profile.user_roles?.map((ur: any) => ur.role) || [],
-                properties: profile.user_properties?.map((up: any) => up.property) || [],
-                departments: profile.user_departments?.map((ud: any) => ud.department) || []
+                roles: profile.user_roles?.map((ur) => ur.role) || [],
+                properties: profile.user_properties?.map((up) => up.property) || [],
+                departments: profile.user_departments?.map((ud) => ud.department) || []
             }))
         }
     })

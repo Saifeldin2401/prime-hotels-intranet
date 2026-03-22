@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { escapeSearchQuery } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -65,7 +65,6 @@ export interface OrgHierarchy {
 
 // Role classifications
 const EXECUTIVE_ROLES = ['corporate_admin', 'regional_admin', 'regional_hr']
-const MANAGEMENT_ROLES = ['property_manager', 'property_hr', 'department_head']
 const SUPERVISOR_JOB_TITLES = ['supervisor', 'lead', 'senior', 'chief', 'head waiter', 'captain']
 
 // Job Title Hierarchy - Lower numbers = higher rank
@@ -343,13 +342,13 @@ export function useOrgHierarchy(searchTerm?: string) {
         }
 
         // Transform profiles to OrgEmployee
-        const employees: OrgEmployee[] = profiles.map((p: any) => {
+        const employees: OrgEmployee[] = profiles.map((p) => {
             const propertyIds = (p.user_properties || [])
-                .map((up: any) => up.property?.id)
-                .filter((id: any): id is string => !!id)
+                .map((up) => up.property?.id)
+                .filter((id): id is string => !!id)
             const departmentIds = (p.user_departments || [])
-                .map((ud: any) => ud.department?.id)
-                .filter((id: any): id is string => !!id)
+                .map((ud) => ud.department?.id)
+                .filter((id): id is string => !!id)
 
             return ({
                 id: p.id,
@@ -359,7 +358,7 @@ export function useOrgHierarchy(searchTerm?: string) {
                 phone: p.phone,
                 avatar_url: p.avatar_url,
                 staff_id: p.staff_id,
-                roles: p.user_roles?.map((r: any) => r.role) || [],
+                roles: p.user_roles?.map((r) => r.role) || [],
                 propertyId: propertyIds[0] || null,
                 propertyIds,
                 departmentId: departmentIds[0] || null,
@@ -369,7 +368,7 @@ export function useOrgHierarchy(searchTerm?: string) {
         })
 
         // Find HQ property
-        const hqProperty = properties.find((p: any) => p.is_headquarters)
+        const hqProperty = properties.find((p) => p.is_headquarters)
         const hqPropertyId = hqProperty?.id
 
         // Separate corporate executives (regional_admin, regional_hr)
@@ -383,10 +382,10 @@ export function useOrgHierarchy(searchTerm?: string) {
 
         // Corporate shared services: departments at HQ that aren't specific to hotel operations
         const hqDepts = hqPropertyId
-            ? departments.filter((d: any) => d.property_id === hqPropertyId)
+            ? departments.filter((d) => d.property_id === hqPropertyId)
             : []
 
-        const sharedServices: OrgDepartment[] = hqDepts.map((dept: any) => {
+        const sharedServices: OrgDepartment[] = hqDepts.map((dept) => {
             const deptEmployees = employees.filter(e =>
                 (e.departmentIds || (e.departmentId ? [e.departmentId] : [])).includes(dept.id) && !executiveIds.has(e.id)
             )
@@ -399,9 +398,9 @@ export function useOrgHierarchy(searchTerm?: string) {
         }).filter(d => d.totalEmployees > 0)
 
         // Build property hierarchy (excluding HQ if it's marked)
-        const nonHQProperties = properties.filter((p: any) => !p.is_headquarters)
+        const nonHQProperties = properties.filter((p) => !p.is_headquarters)
 
-        const orgProperties: OrgProperty[] = nonHQProperties.map((prop: any) => {
+        const orgProperties: OrgProperty[] = nonHQProperties.map((prop) => {
             // Get all employees assigned to this property (supports multi-property)
             const propertyEmployees = employees.filter(e =>
                 (e.propertyIds || (e.propertyId ? [e.propertyId] : [])).includes(prop.id) && !executiveIds.has(e.id)
@@ -414,7 +413,7 @@ export function useOrgHierarchy(searchTerm?: string) {
 
             // Group remaining employees by their department (per property)
             const deptIdsForProperty = new Set(
-                departments.filter((d: any) => d.property_id === prop.id).map((d: any) => d.id)
+                departments.filter((d) => d.property_id === prop.id).map((d) => d.id)
             )
 
             const employeesWithDept = propertyEmployees.filter(e => {
@@ -437,7 +436,7 @@ export function useOrgHierarchy(searchTerm?: string) {
 
             // Build department structure from actual employee assignments
             const orgDepts: OrgDepartment[] = deptIds.map(deptId => {
-                const dept = departments.find((d: any) => d.id === deptId)
+                const dept = departments.find((d) => d.id === deptId)
                 const deptEmployees = employeesWithDept.filter(e =>
                     (e.departmentIds || (e.departmentId ? [e.departmentId] : [])).includes(deptId)
                 )

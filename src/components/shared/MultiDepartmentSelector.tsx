@@ -1,7 +1,5 @@
 
-import React, { useMemo, useState, useId } from 'react'
-import { Check, ChevronsUpDown, Building2, X } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
     Command,
@@ -16,8 +14,9 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
-import { Badge } from '@/components/ui/badge'
-import type { Department, Property } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { Building2, Check, ChevronsUpDown, X } from 'lucide-react'
+import React, { useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 // Define local compatible types to handle variations between hooks and global types

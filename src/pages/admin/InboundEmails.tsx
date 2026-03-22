@@ -1,27 +1,27 @@
+import { AlertCircle, CheckCircle2, Download, Loader2, Mail, RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mail, Loader2, RefreshCw, Download, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
 
-import { useInboundEmails, useFetchInboundEmailContent, type InboundEmailRow } from '@/hooks/useInboundEmails'
+import { useFetchInboundEmailContent, useInboundEmails, type InboundEmailRow } from '@/hooks/useInboundEmails'
 import { cn } from '@/lib/utils'
 
 function safeArray(value: unknown): string[] {

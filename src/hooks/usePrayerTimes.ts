@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useQuery } from '@tanstack/react-query'
 
 export interface PrayerTimes {
     Fajr: string

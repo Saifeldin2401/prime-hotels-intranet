@@ -1,11 +1,10 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { isValidSentryDsn } from '@/lib/sentry'
 import { analytics } from '@/services/analyticsService'
 import * as Sentry from "@sentry/react"
-import { isValidSentryDsn } from '@/lib/sentry'
-import { useTranslation } from "react-i18next";
+import { AlertTriangle, RefreshCw } from 'lucide-react'
+import { Component, type ErrorInfo, type ReactNode } from 'react'
 
 interface Props {
   children: ReactNode

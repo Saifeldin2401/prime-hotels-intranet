@@ -1,23 +1,6 @@
-import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { useForm, useFieldArray } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import * as z from 'zod'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
-import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Form,
     FormControl,
@@ -27,11 +10,27 @@ import {
     FormLabel,
     FormMessage,
 } from '@/components/ui/form'
-import { Loader2, Save, ArrowLeft, Plus, Trash2, GripVertical, AlertCircle } from 'lucide-react'
-import { useQuestion, useCreateQuestion, useUpdateQuestion } from '@/hooks/useQuestions'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import type { QuestionDifficulty, QuestionType } from '@/types/questions'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/questions'
+import { useCreateQuestion, useQuestion, useUpdateQuestion } from '@/hooks/useQuestions'
+import type { QuestionDifficulty } from '@/types/questions'
+import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { AlertCircle, ArrowLeft, GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { useEffect } from 'react'
+import { useFieldArray, useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import * as z from 'zod'
 
 const questionSchema = z.object({
     question_text: z.string().min(5, 'Question text must be at least 5 characters'),
@@ -173,7 +172,7 @@ export function QuestionEditor() {
                     })
                     navigate('/questions')
                 },
-                onError: (error) => {
+                onError: () => {
                     toast({
                         title: 'Error',
                         description: 'Failed to update question. Please try again.',
@@ -192,7 +191,7 @@ export function QuestionEditor() {
                     })
                     navigate('/questions')
                 },
-                onError: (error) => {
+                onError: () => {
                     toast({
                         title: 'Error',
                         description: 'Failed to create question. Please try again.',

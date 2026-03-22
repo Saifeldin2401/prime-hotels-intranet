@@ -1,4 +1,4 @@
-import type { Profile, Property, Department } from './profile'
+import type { Department, Profile, Property } from './profile'
 
 // Messaging System Interfaces
 export interface Message {

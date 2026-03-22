@@ -1,11 +1,11 @@
-import { Badge } from '@/components/ui/badge'
-import { Calendar, Clock, Paperclip, MessageSquare, AlertTriangle } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { format, isPast, isToday } from 'date-fns'
+import { Badge } from '@/components/ui/badge'
 import type { Task, TaskPriority } from '@/lib/types'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { format, isPast, isToday } from 'date-fns'
+import { AlertTriangle, Calendar, Clock, MessageSquare, Paperclip } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface TaskCardProps {
     task: Task

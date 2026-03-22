@@ -1,17 +1,17 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Book, FileText, ArrowRight, Clock } from 'lucide-react'
 import { PinButtonCompact } from '@/components/common/PinButton'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 import { useRecentArticles } from '@/hooks/useKnowledge'
+import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { ar } from 'date-fns/locale'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { ArrowRight, Book, Clock, FileText } from 'lucide-react'
 import { useTranslation } from "react-i18next"
-import { cn } from '@/lib/utils'
+import { Link } from 'react-router-dom'
 
 const knowledgeBaseSkeletonKeys = ['kb-skeleton-1', 'kb-skeleton-2', 'kb-skeleton-3']
 
@@ -73,7 +73,7 @@ export function KnowledgeBaseWidget() {
                                     <p className="text-sm text-slate-500 font-medium mt-1">{t('widgets.no_articles_desc', 'New content will appear here.')}</p>
                                 </m.div>
                             ) : (
-                                articles?.map((article: any, index: number) => (
+                                articles?.map((article, index: number) => (
                                     <m.div
                                         key={article.id}
                                         initial={{ opacity: 0, y: 10 }}

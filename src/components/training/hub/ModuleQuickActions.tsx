@@ -1,13 +1,13 @@
 import { Button } from '@/components/ui/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Edit, Eye, Users, Copy, Trash2, MoreVertical, Play } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Copy, Edit, Eye, MoreVertical, Play, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrainingModule {

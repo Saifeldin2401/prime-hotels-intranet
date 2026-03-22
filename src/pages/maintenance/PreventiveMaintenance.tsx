@@ -1,23 +1,23 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Calendar, Clock, Trash2, Edit2, PlayCircle } from 'lucide-react'
-import { useMaintenanceSchedules, useCreateMaintenanceSchedule, useDeleteMaintenanceSchedule, useUpdateMaintenanceSchedule } from '@/hooks/useMaintenanceSchedules'
-import { format } from 'date-fns'
-import { cn } from '@/lib/utils'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useCreateMaintenanceSchedule, useDeleteMaintenanceSchedule, useMaintenanceSchedules, useUpdateMaintenanceSchedule } from '@/hooks/useMaintenanceSchedules'
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import { Calendar, Clock, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function PreventiveMaintenance() {
     const { t } = useTranslation('maintenance')
-    const { user, properties } = useAuth()
+    const { properties } = useAuth()
     const { data: schedules, isLoading } = useMaintenanceSchedules()
     const createMutation = useCreateMaintenanceSchedule()
     const deleteMutation = useDeleteMaintenanceSchedule()

@@ -1,8 +1,8 @@
-import { lazy } from 'react'
-import { Route } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { lazy } from 'react'
+import { Route } from 'react-router-dom'
 
 const EmployeeReferrals = lazy(() => import('@/pages/hr/EmployeeReferrals'))
 const MyLeaveRequests = lazy(() => import('@/pages/hr/MyLeaveRequests'))

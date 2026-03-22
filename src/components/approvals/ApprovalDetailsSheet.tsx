@@ -1,13 +1,13 @@
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter } from '@/components/ui/sheet'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Badge } from '@/components/ui/badge'
-import { CheckCircle, XCircle, FileText, User, Building, MapPin, Clock, Inbox, ArrowRight } from 'lucide-react'
-import { format, isValid } from 'date-fns'
-import { useTranslation } from 'react-i18next'
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import type { ApprovalItem } from '@/hooks/useUnifiedApprovals'
-import { useNavigate } from 'react-router-dom'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { format, isValid } from 'date-fns'
+import { ArrowRight, Building, CheckCircle, Clock, FileText, Inbox, MapPin, User, XCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface ApprovalDetailsSheetProps {
     approval: ApprovalItem | null

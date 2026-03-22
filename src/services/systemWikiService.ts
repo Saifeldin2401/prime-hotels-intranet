@@ -42,7 +42,7 @@ export async function getWikiBySlug(slug: string): Promise<SystemWikiArticle | n
 /**
  * Updates or creates a wiki article.
  */
-export async function upsertWikiArticle(article: Partial<SystemWikiArticle> & { slug: string }): Promise<{ data: SystemWikiArticle | null; error: any }> {
+export async function upsertWikiArticle(article: Partial<SystemWikiArticle> & { slug: string }): Promise<{ data: SystemWikiArticle | null; error }> {
     const { data, error } = await supabase
         .from('system_wiki')
         .upsert({
@@ -58,7 +58,7 @@ export async function upsertWikiArticle(article: Partial<SystemWikiArticle> & { 
 /**
  * Deletes a wiki article by id.
  */
-export async function deleteWikiArticle(id: string): Promise<{ error: any }> {
+export async function deleteWikiArticle(id: string): Promise<{ error }> {
     const { error } = await supabase
         .from('system_wiki')
         .delete()

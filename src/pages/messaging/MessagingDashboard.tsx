@@ -1,39 +1,39 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { PullToRefresh } from '@/components/mobile'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import {
-  useConversations,
-  useCreateConversation,
-  useSendMessage,
-  useMarkMessageAsRead,
-  useMessagingStats,
-  useConversationMessages,
-  useChannelMessages
+    useChannelMessages,
+    useConversationMessages,
+    useConversations,
+    useCreateConversation,
+    useMarkMessageAsRead,
+    useMessagingStats,
+    useSendMessage
 } from '@/hooks/useMessaging'
 import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
 import { useProfiles } from '@/hooks/useUsers'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-  Send,
-  Plus,
-  WifiOff,
-  MessageSquare,
-  ArrowLeft,
-  Hash,
-  Bell,
-  Search
-} from 'lucide-react'
-import { formatDistanceToNow, isToday, isYesterday, format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
-import { PullToRefresh } from '@/components/mobile'
 import { useQueryClient } from '@tanstack/react-query'
+import { format, formatDistanceToNow, isToday, isYesterday } from 'date-fns'
+import {
+    ArrowLeft,
+    Bell,
+    Hash,
+    MessageSquare,
+    Plus,
+    Search,
+    Send,
+    WifiOff
+} from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 
 function getInitials(name?: string | null, email?: string | null) {
   return (name || email || 'U')
@@ -97,7 +97,7 @@ export default function MessagingDashboard() {
 
   const activeConversation = useMemo(() => {
     if (!effectiveConversationId) return null
-    return (conversations || []).find((c: any) => c.id === effectiveConversationId) || null
+    return (conversations || []).find((c) => c.id === effectiveConversationId) || null
   }, [conversations, effectiveConversationId])
 
   const otherParticipant = useMemo(() => {
@@ -120,9 +120,9 @@ export default function MessagingDashboard() {
   const filteredConversations = useMemo(() => {
     const q = searchTerm.trim().toLowerCase()
     if (!q) return conversations || []
-    return (conversations || []).filter((c: any) => {
+    return (conversations || []).filter((c) => {
       const participantsText = (c.participants || [])
-        .map((p: any) => `${p.full_name || ''} ${p.email || ''} ${p.job_title || ''} ${p.property_name || ''}`)
+        .map((p) => `${p.full_name || ''} ${p.email || ''} ${p.job_title || ''} ${p.property_name || ''}`)
         .join(' ')
         .toLowerCase()
       const preview = (c.last_message_preview || '').toLowerCase()
@@ -183,7 +183,7 @@ export default function MessagingDashboard() {
     setUserSearch('')
     setActiveChannel(null)
 
-    const existing = (conversations || []).find((c: any) => {
+    const existing = (conversations || []).find((c) => {
       const ids: string[] = Array.isArray(c.participant_ids) ? c.participant_ids : []
       return ids.length === 2 && ids.includes(otherUserId) && ids.includes(user?.id)
     })
@@ -239,9 +239,9 @@ export default function MessagingDashboard() {
 
   // Group messages by date
   const groupedMessages = useMemo(() => {
-    const groups: { label: string; messages: any[] }[] = []
+    const groups: { label: string; messages }[] = []
     let currentLabel = ''
-    currentMessages.forEach((m: any) => {
+    currentMessages.forEach((m) => {
       const label = m.created_at ? formatMessageDate(m.created_at, t) : ''
       if (label !== currentLabel) {
         currentLabel = label
@@ -368,7 +368,7 @@ export default function MessagingDashboard() {
                 </div>
               ) : (
                 <div className="space-y-0.5">
-                  {filteredConversations.map((c: any) => {
+                  {filteredConversations.map((c) => {
                     const participants = (c.participants || []) as any[]
                     const other = user?.id ? (participants.find((p) => p.id !== user.id) || participants[0]) : participants[0]
                     const isActive = c.id === effectiveConversationId && !activeChannel
@@ -525,7 +525,7 @@ export default function MessagingDashboard() {
                           <div className="flex-1 h-px bg-border/50" />
                         </div>
                       )}
-                      {group.messages.map((m: any) => {
+                      {group.messages.map((m) => {
                         const isMine = user?.id && m.sender_id === user.id
 
                         return (
@@ -635,7 +635,7 @@ export default function MessagingDashboard() {
             </div>
             <ScrollArea className="h-[360px]">
               <div className="space-y-0.5">
-                {filteredProfiles.map((p: any) => {
+                {filteredProfiles.map((p) => {
                   const initials = getInitials(p?.full_name, p?.email)
 
                   return (

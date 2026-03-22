@@ -1,19 +1,19 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { CheckCircle, Clock, ArrowRight, CheckSquare, Check } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { cn } from '@/lib/utils'
-import { useTasks, useUpdateTask } from '@/hooks/useTasks'
-import { useUndoableAction } from '@/hooks/useUndoableAction'
-import { isToday, isTomorrow, format, differenceInDays } from 'date-fns'
-import { ar } from 'date-fns/locale'
-import { useTranslation } from "react-i18next";
 import { useAuth } from '@/hooks/useAuth'
 import type { DashboardFocusMode } from '@/hooks/useDashboardFocus'
+import { useTasks, useUpdateTask } from '@/hooks/useTasks'
+import { useUndoableAction } from '@/hooks/useUndoableAction'
+import { cn } from '@/lib/utils'
+import { differenceInDays, format, isToday, isTomorrow } from 'date-fns'
+import { ar } from 'date-fns/locale'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { ArrowRight, Check, CheckCircle, CheckSquare, Clock } from 'lucide-react'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 
 export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFocusMode }) {
   const { user } = useAuth()
@@ -112,7 +112,7 @@ export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFo
                   <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">{t('staff.no_tasks', "You don't have any pending tasks right now. Great job!")}</p>
                 </m.div>
               ) : (
-                tasks?.map((task: any, index: number) => {
+                tasks?.map((task, index: number) => {
                   const isOverdue = new Date(task.due_date) < new Date() && !isToday(new Date(task.due_date))
                   const startsSoon = differenceInDays(new Date(task.due_date), new Date()) < 2
 

@@ -1,18 +1,18 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useDepartments } from '@/hooks/useDepartments'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useToast } from '@/components/ui/use-toast'
-import { Building2, Plus, Pencil, Trash2, ShieldAlert, Users, AlertCircle, Loader2 } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useDepartments } from '@/hooks/useDepartments'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { AlertCircle, Building2, Loader2, Pencil, Plus, ShieldAlert, Trash2, Users } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 const STANDARD_DEPARTMENTS = [
     "Front Office",
     "Housekeeping",

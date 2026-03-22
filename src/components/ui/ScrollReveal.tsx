@@ -1,6 +1,6 @@
+import { DURATION, EASING } from '@/lib/motion'
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
-import { DURATION, EASING } from '@/lib/motion'
 
 interface ScrollRevealProps {
     children: ReactNode

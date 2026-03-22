@@ -1,46 +1,45 @@
-import { useMemo, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { format } from 'date-fns'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  useRequest,
-  useRequestAction,
-  useRequestAttachments,
-  useRequestComments,
-  useRequestEvents,
-  useRequestSteps,
-  type RequestRow,
-  type RequestStatus,
+    useRequest,
+    useRequestAction,
+    useRequestAttachments,
+    useRequestComments,
+    useRequestEvents,
+    useRequestSteps,
+    type RequestStatus
 } from '@/hooks/useRequests'
-import type { LeaveRequest, Profile, ExpenseClaim } from '@/lib/types'
-import { toast } from 'sonner'
-import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveExpenseReceiptUrl } from '@/lib/secureFileAccess'
+import { supabase } from '@/lib/supabase'
+import type { ExpenseClaim, LeaveRequest, Profile } from '@/lib/types'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 function StatusBadge({ status }: { status: RequestStatus }) {
   const { t } = useTranslation('extracted');
@@ -146,7 +145,7 @@ export default function RequestDetail() {
     queryKey: ['request-forward-targets', request?.id, request?.metadata],
     enabled: !!request && canAct,
     queryFn: async () => {
-      const propertyId = (request?.metadata as any)?.property_id as string | undefined
+      const propertyId = request?.metadata?.property_id ?? undefined
 
       const { data, error } = await supabase
         .from('profiles')
@@ -162,12 +161,12 @@ export default function RequestDetail() {
 
       if (error) throw error
 
-      const mapped = (data || []).map((p: any) => ({
+      const mapped = (data || []).map((p) => ({
         id: p.id as string,
         full_name: p.full_name as string | null,
         email: p.email as string,
         role: p.user_roles?.role as string,
-        property_ids: (p.user_properties || []).map((up: any) => up.property_id as string),
+        property_ids: (p.user_properties || []).map((up) => up.property_id as string),
       }))
 
       const filtered = propertyId
@@ -195,8 +194,8 @@ export default function RequestDetail() {
         if (e.event_type === 'attachment_added') return 'Attachment added'
         if (e.event_type === 'comment_added') return 'Comment added'
         if (e.event_type === 'status_changed') {
-          const from = (e.payload as any)?.from
-          const to = (e.payload as any)?.to
+          const from = e.payload?.from
+          const to = e.payload?.to
           return `Status changed: ${from} → ${to}`
         }
         return e.event_type
@@ -524,12 +523,12 @@ export default function RequestDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-xs text-gray-500">New Role</div>
-                          <div className="font-medium capitalize">{(request.metadata as any)?.new_role?.replace('_', ' ')}</div>
+                          <div className="font-medium capitalize">{request.metadata?.new_role?.replace('_', ' ')}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500">Effective Date</div>
                           <div className="font-medium">
-                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                            {request.metadata?.effective_date ? format(new Date(request.metadata.effective_date), 'MMM dd, yyyy') : '—'}
                           </div>
                         </div>
                       </div>
@@ -539,12 +538,12 @@ export default function RequestDetail() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <div className="text-xs text-gray-500">Target Property</div>
-                          <div className="font-medium">{(request.metadata as any)?.target_property}</div>
+                          <div className="font-medium">{request.metadata?.target_property}</div>
                         </div>
                         <div>
                           <div className="text-xs text-gray-500">Effective Date</div>
                           <div className="font-medium">
-                            {(request.metadata as any)?.effective_date ? format(new Date((request.metadata as any).effective_date), 'MMM dd, yyyy') : '—'}
+                            {request.metadata?.effective_date ? format(new Date(request.metadata.effective_date), 'MMM dd, yyyy') : '—'}
                           </div>
                         </div>
                       </div>
@@ -728,16 +727,16 @@ export default function RequestDetail() {
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('common:phone')}</div>
-                  <div className="text-sm">{(requester as any)?.phone || '—'}</div>
+                  <div className="text-sm">{requester?.phone || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Position</div>
-                  <div className="text-sm">{(requester as any)?.job_title || '—'}</div>
+                  <div className="text-sm">{requester?.job_title || '—'}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">Joining Date</div>
                   <div className="text-sm">
-                    {(requester as any)?.hire_date ? format(new Date((requester as any).hire_date), 'MMM dd, yyyy') : '—'}
+                    {requester?.hire_date ? format(new Date(requester.hire_date), 'MMM dd, yyyy') : '—'}
                   </div>
                 </div>
               </div>

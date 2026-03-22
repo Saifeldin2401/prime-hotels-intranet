@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useCallback, useEffect, useState } from 'react'
 
 interface AnimationOptions {
   duration?: number
@@ -26,7 +26,7 @@ export function useAnimation(
   options: AnimationOptions = {}
 ) {
   const [isAnimating, setIsAnimating] = useState(false)
-  const { theme } = useTheme()
+  const { theme: _theme } = useTheme()
 
   const {
     duration = 250,
@@ -129,7 +129,7 @@ export function useStaggeredAnimation(
   animation: string,
   options: StaggerOptions & AnimationOptions = {}
 ) {
-  const { theme } = useTheme()
+  const { theme: _theme } = useTheme()
   const [isAnimating, setIsAnimating] = useState(false)
 
   const {
@@ -260,10 +260,9 @@ export function useTypewriterAnimation(
   const { speed = 50, delay = 0 } = options
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
-    let interval: ReturnType<typeof setInterval>
+    let interval: ReturnType<typeof setInterval> | undefined
 
-    timer = setTimeout(() => {
+    const timer = setTimeout(() => {
       let currentIndex = 0
 
       interval = setInterval(() => {
@@ -301,10 +300,9 @@ export function useCounterAnimation(
   } = options
 
   useEffect(() => {
-    let timer: ReturnType<typeof setTimeout>
     let rafId: number
 
-    timer = setTimeout(() => {
+    const timer = setTimeout(() => {
       setIsAnimating(true)
       const startTime = Date.now()
       const startValue = current

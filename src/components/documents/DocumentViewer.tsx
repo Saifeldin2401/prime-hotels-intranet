@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import { sanitizeHtml } from '@/lib/sanitize'
-import { Button } from '@/components/ui/button'
-import { Download, Loader2 } from 'lucide-react'
-import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
+import { Download, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface DocumentViewerProps {
   open: boolean

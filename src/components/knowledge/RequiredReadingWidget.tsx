@@ -5,24 +5,22 @@
  * Displays count, due dates, and quick links to articles.
  */
 
-import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useRequiredReading } from '@/hooks/useKnowledge'
+import { cn } from '@/lib/utils'
+import type { RequiredReading } from '@/types/knowledge'
 import {
-    BookOpen,
     AlertCircle,
+    ArrowRight,
+    BookOpen,
     CheckCircle2,
     Clock,
-    ArrowRight,
     FileText
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useRequiredReading } from '@/hooks/useKnowledge'
-import type { RequiredReading } from '@/types/knowledge'
-import { useTranslation } from "react-i18next";
+import { Link } from 'react-router-dom'
 
 interface RequiredReadingWidgetProps {
     /** Maximum items to show */

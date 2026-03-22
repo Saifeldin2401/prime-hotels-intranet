@@ -5,8 +5,8 @@
  * Automatically assigns training when specific events occur.
  */
 
-import { supabase } from '@/lib/supabase'
 import { createBulkNotifications } from '@/lib/notificationService'
+import { supabase } from '@/lib/supabase'
 
 // ============================================================================
 // TYPES
@@ -114,37 +114,8 @@ export async function processTrigger(context: TriggerContext): Promise<{
     }
 }
 
-/**
- * Check if context matches rule conditions
- */
-function matchesConditions(conditions: TriggerCondition[], context: TriggerContext): boolean {
-    if (!conditions || conditions.length === 0) {
-        return true
-    }
 
-    for (const condition of conditions) {
-        const value = getContextValue(condition.field, context)
-
-        switch (condition.operator) {
-            case 'equals':
-                if (value !== condition.value) return false
-                break
-            case 'not_equals':
-                if (value === condition.value) return false
-                break
-            case 'contains':
-                if (!String(value).includes(String(condition.value))) return false
-                break
-            case 'in':
-                if (!Array.isArray(condition.value) || !condition.value.includes(String(value))) return false
-                break
-        }
-    }
-
-    return true
-}
-
-function getContextValue(field: string, context: TriggerContext): unknown {
+function _getContextValue(field: string, context: TriggerContext): unknown {
     switch (field) {
         case 'department_id':
             return context.department_id
@@ -157,36 +128,12 @@ function getContextValue(field: string, context: TriggerContext): unknown {
     }
 }
 
-/**
- * Execute a trigger action
- */
-async function executeAction(action: TriggerAction, context: TriggerContext): Promise<void> {
-    const affectedUsers = context.affected_users || []
-
-    switch (action.type) {
-        case 'assign_training':
-            await assignTrainingToUsers(action.target_id, affectedUsers, action.due_days)
-            break
-
-        case 'assign_quiz':
-            await assignQuizToUsers(action.target_id, affectedUsers, action.due_days)
-            break
-
-        case 'assign_required_reading':
-            await assignRequiredReading(action.target_id, affectedUsers, action.due_days)
-            break
-
-        case 'send_notification':
-            await sendNotifications(action.target_id, affectedUsers, context)
-            break
-    }
-}
 
 // ============================================================================
 // ACTION IMPLEMENTATIONS
 // ============================================================================
 
-async function assignTrainingToUsers(
+async function _assignTrainingToUsers(
     trainingId: string,
     userIds: string[],
     dueDays?: number
@@ -213,7 +160,7 @@ async function assignTrainingToUsers(
     if (error) throw error
 }
 
-async function assignQuizToUsers(
+async function _assignQuizToUsers(
     quizId: string,
     userIds: string[],
     dueDays?: number
@@ -238,7 +185,7 @@ async function assignQuizToUsers(
     if (error) throw error
 }
 
-async function assignRequiredReading(
+async function _assignRequiredReading(
     documentId: string,
     userIds: string[],
     dueDays?: number
@@ -261,7 +208,7 @@ async function assignRequiredReading(
     if (error) throw error
 }
 
-async function sendNotifications(
+async function _sendNotifications(
     templateId: string,
     userIds: string[],
     context: TriggerContext

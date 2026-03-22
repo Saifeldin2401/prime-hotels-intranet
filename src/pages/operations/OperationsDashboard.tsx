@@ -1,65 +1,7 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { format, subDays } from 'date-fns'
-import { Link } from 'react-router-dom'
-import {
-    Building2,
-    BedDouble,
-    DollarSign,
-    TrendingUp,
-    RefreshCw,
-    Upload,
-    FileSpreadsheet,
-    BarChart3,
-    FileText,
-    Settings,
-    ChevronRight,
-    ArrowUpRight,
-    Users,
-    Zap,
-    Printer,
-    Trash2,
-    AlertCircle,
-    Loader2
-} from 'lucide-react'
-import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
-import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
-import { toast } from 'sonner'
-import {
-    AreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    BarChart,
-    Bar,
-    Legend
-} from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartViewport } from '@/components/ui/ChartViewport'
-import { useProperty } from '@/contexts/PropertyContext'
-import {
-    useOperationsKPIs,
-    useDailyOccupancy,
-    useDailyRevenue,
-    useDataImportLogs,
-    useDeleteImportLog
-} from '@/hooks/useOperations'
-import { cn } from '@/lib/utils'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
 import {
     Dialog,
     DialogContent,
@@ -68,8 +10,66 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import type { DateRange } from 'react-day-picker'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import {
+    useDailyOccupancy,
+    useDailyRevenue,
+    useDataImportLogs,
+    useDeleteImportLog,
+    useOperationsKPIs
+} from '@/hooks/useOperations'
+import { usePermissions } from '@/hooks/usePermissions'
 import { auditLog } from '@/lib/auditLog'
+import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
+import { cn } from '@/lib/utils'
+import { format, subDays } from 'date-fns'
+import {
+    AlertCircle,
+    ArrowUpRight,
+    BarChart3,
+    BedDouble,
+    Building2,
+    ChevronRight,
+    DollarSign,
+    FileSpreadsheet,
+    FileText,
+    Loader2,
+    Printer,
+    RefreshCw,
+    Settings,
+    Trash2,
+    TrendingUp,
+    Upload,
+    Users,
+    Zap
+} from 'lucide-react'
+import { useState } from 'react'
+import type { DateRange } from 'react-day-picker'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Legend,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis
+} from 'recharts'
+import { toast } from 'sonner'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'

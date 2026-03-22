@@ -1,5 +1,5 @@
-import { lazy, createElement } from 'react'
 import type { AppRole } from '@/lib/constants'
+import { createElement, lazy } from 'react'
 
 type WidgetComponentProps = Record<string, unknown>
 type WidgetComponent = React.ComponentType<WidgetComponentProps>

@@ -1,6 +1,6 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { TrendingUp, BookOpen, CheckCircle2, Clock, Award, BarChart3 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+import { Award, BarChart3, BookOpen, CheckCircle2, Clock, TrendingUp } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface Analytics {

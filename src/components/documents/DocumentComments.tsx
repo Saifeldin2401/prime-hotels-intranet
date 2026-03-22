@@ -1,47 +1,44 @@
-import * as React from "react";
-import {
-  MessageSquare,
-  Send,
-  MoreHorizontal,
-  CornerDownRight,
-  Check,
-  CheckCheck,
-  Pin,
-  AtSign,
-  Trash2,
-  Edit3,
-  X,
-  CheckCircle2,
-  RotateCcw,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { EmptyState } from "@/components/shared/EmptyState";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
+    AtSign,
+    Check,
+    CheckCircle2,
+    CornerDownRight,
+    Edit3,
+    MessageSquare,
+    MoreHorizontal,
+    Pin,
+    RotateCcw,
+    Send,
+    Trash2
+} from "lucide-react";
+import * as React from "react";
 
 export interface User {
   id: string;
@@ -410,7 +407,7 @@ export function DocumentComments({
   const [showMentions, setShowMentions] = React.useState(false);
   const [mentionSearch, setMentionSearch] = React.useState("");
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
-  const [cursorPosition, setCursorPosition] = React.useState(0);
+  const [_cursorPosition, _setCursorPosition] = React.useState(0);
 
   // Build nested comment structure
   const buildCommentTree = (flatComments: Comment[]): Comment[] => {

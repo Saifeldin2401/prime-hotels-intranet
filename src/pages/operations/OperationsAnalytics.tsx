@@ -1,29 +1,6 @@
-import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { format, subDays, eachDayOfInterval, startOfMonth, endOfMonth, subMonths } from 'date-fns'
-import { Link } from 'react-router-dom'
-import {
-    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-    ResponsiveContainer, LineChart, Line, PieChart as RechartsPie,
-    Pie, Cell, Legend, AreaChart, Area
-} from 'recharts'
-import {
-    TrendingUp,
-    TrendingDown,
-    Download,
-    Building2,
-    BedDouble,
-    DollarSign,
-    Calendar,
-    ArrowLeft,
-    BarChart3,
-    PieChart,
-    Activity
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartViewport } from '@/components/ui/ChartViewport'
 import {
     Select,
@@ -32,12 +9,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useProperty } from '@/contexts/PropertyContext'
-import { usePermissions } from '@/hooks/usePermissions'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments } from '@/hooks/useOperations'
-import { cn } from '@/lib/utils'
+import { usePermissions } from '@/hooks/usePermissions'
 import { auditLog } from '@/lib/auditLog'
-import { toast } from 'sonner'
 import {
     CONSOLIDATED_PROPERTY_ID,
     getFirstRealPropertyId,
@@ -45,6 +21,35 @@ import {
     isConsolidatedPropertyId,
     normalizePropertyScopeId,
 } from '@/lib/propertyScope'
+import { cn } from '@/lib/utils'
+import { format, startOfMonth, subDays } from 'date-fns'
+import {
+    Activity,
+    ArrowLeft,
+    BarChart3,
+    BedDouble,
+    Building2,
+    DollarSign,
+    Download,
+    PieChart
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell, Legend,
+    Pie,
+    PieChart as RechartsPie,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis, YAxis
+} from 'recharts'
+import { toast } from 'sonner'
 
 // Types for charts
 interface ChartDataPoint {

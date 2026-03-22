@@ -4,24 +4,24 @@
  * Dashboard widget for daily quiz challenge with streak tracking.
  */
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDailyChallenge, useDailyChallengeStatus, useRecordAttempt, useUserQuestionStats } from '@/hooks/useQuestions'
+import { cn } from '@/lib/utils'
 import {
-    Zap,
-    Trophy,
-    Flame,
     CheckCircle,
     ChevronRight,
-    Star
+    Flame,
+    Star,
+    Trophy,
+    Zap
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useDailyChallenge, useRecordAttempt, useUserQuestionStats, useDailyChallengeStatus } from '@/hooks/useQuestions'
-import { QuestionRenderer } from './QuestionRenderer'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { QuestionRenderer } from './QuestionRenderer'
 
 interface DailyQuizWidgetProps {
     className?: string

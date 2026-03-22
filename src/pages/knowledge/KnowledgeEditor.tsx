@@ -5,42 +5,23 @@
  * Uses 'documents' table.
  */
 
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
-import { sanitizeHtml } from '@/lib/sanitize'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
-import { extractTextFromAiResponse } from '@/lib/aiResponse'
-import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import {
-    Save,
-    Send,
-    Sparkles,
-    Loader2,
-    ArrowLeft,
-    Wand2,
-    RefreshCw,
-    Link as LinkIcon,
-    Languages,
-    Clock,
-    List,
-    ShieldCheck,
-    Building2,
-    Palette,
-    AlertTriangle,
-    Tag,
-    Check,
-    X
-} from 'lucide-react'
-import { marked } from 'marked'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import RichTextEditor from '@/components/ui/RichTextEditor'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+    AIDocumentSummary,
+    ChecklistBuilder,
+    FAQBuilder,
+    RelatedArticlesEditor,
+    VideoContentBuilder,
+    VisualContentBuilder
+} from '@/components/knowledge'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
+import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import RichTextEditor from '@/components/ui/RichTextEditor'
 import {
     Select,
     SelectContent,
@@ -49,39 +30,55 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { toast } from 'sonner'
-import { useAuth } from '@/hooks/useAuth'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useProperty } from '@/contexts/PropertyContext'
-import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { supabase } from '@/lib/supabase'
-import { triggerService } from '@/services/triggerService'
-import * as KnowledgeService from '@/services/knowledgeService'
-import { createBulkNotifications } from '@/lib/notificationService'
-import { aiService } from '@/lib/gemini'
-import {
-    type KnowledgeVisibility,
-    type KnowledgeStatus,
-    type ChecklistItem,
-    type FAQItem,
-    CONTENT_TYPE_CONFIG
-} from '@/types/knowledge'
-import {
-    RelatedArticlesEditor,
-    AIDocumentSummary,
-    VideoContentBuilder,
-    ChecklistBuilder,
-    FAQBuilder,
-    VisualContentBuilder
-} from '@/components/knowledge'
-import { useRelatedArticles, useCategories } from '@/hooks/useKnowledge'
+import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
-import { useProperties } from '@/hooks/useProperties'
-import { scanFile } from '@/hooks/useVirusScan'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
+import { useCategories, useRelatedArticles } from '@/hooks/useKnowledge'
+import { useProperties } from '@/hooks/useProperties'
 import { useTagSuggestions } from '@/hooks/useTagSuggestions'
 import { useTrainingModules } from '@/hooks/useTraining'
+import { scanFile } from '@/hooks/useVirusScan'
+import { extractTextFromAiResponse } from '@/lib/aiResponse'
+import { aiService } from '@/lib/gemini'
+import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
+import { createBulkNotifications } from '@/lib/notificationService'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { supabase } from '@/lib/supabase'
+import * as KnowledgeService from '@/services/knowledgeService'
+import { triggerService } from '@/services/triggerService'
+import {
+    type ChecklistItem,
+    type FAQItem,
+    type KnowledgeVisibility,
+    CONTENT_TYPE_CONFIG
+} from '@/types/knowledge'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+    AlertTriangle,
+    ArrowLeft,
+    Building2,
+    Clock,
+    Link as LinkIcon,
+    List,
+    Loader2,
+    Palette,
+    RefreshCw,
+    Save,
+    Send,
+    ShieldCheck,
+    Sparkles,
+    Tag,
+    Wand2,
+    X
+} from 'lucide-react'
+import { marked } from 'marked'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 interface ArticleFormData {
     title: string
@@ -103,7 +100,7 @@ interface ArticleFormData {
     checklist_items: ChecklistItem[]
     faq_items: FAQItem[]
     video_url: string
-    images: any[]
+    images
 }
 
 const isUuid = (value?: string | null): value is string => {
@@ -116,7 +113,7 @@ export default function KnowledgeEditor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation(['knowledge', 'common'])
-    const { user, profile, roles, primaryRole } = useAuth()
+    const { user, profile, primaryRole } = useAuth()
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id)
@@ -160,7 +157,7 @@ export default function KnowledgeEditor() {
     const { data: trainingModules } = useTrainingModules()
 
     // Duplicate detection and tag suggestions
-    const { checkForDuplicates, clearCheck, isReady, result: duplicateResult } = useDuplicateDetection()
+    const { checkForDuplicates, isReady, result: duplicateResult } = useDuplicateDetection()
     const { suggestions: tagSuggestions, isGenerating: isGeneratingTags, generateSuggestions, clearSuggestions } = useTagSuggestions()
     const [duplicateCheckResult, setDuplicateCheckResult] = useState<{ duplicates: Array<{ id: string; title: string; similarity: number; content_type: string }>; hasDuplicates: boolean } | null>(null)
     const [showDuplicateWarning, setShowDuplicateWarning] = useState(false)
@@ -373,8 +370,6 @@ export default function KnowledgeEditor() {
             '.ai-highlight-box, .ai-warning-box, .ai-info-box, .ai-tip-box, [class^="alert-"], [class*=" alert-"]'
         )
         const hasMermaid = !!body.querySelector('pre.mermaid, .mermaid')
-        const hasHeader = !!body.querySelector('.ai-header')
-        const hasPremiumLayout = !!body.querySelector('.ai-content')
 
         if (!opts.includeTOC || hasTOC) {
             generatedTOCs.forEach((node) => node.remove())
@@ -511,7 +506,7 @@ export default function KnowledgeEditor() {
 
             Array.from(body.querySelectorAll('p')).forEach((p) => {
                 const text = p.textContent?.trim() || ''
-                const match = text.match(/^(IMPORTANT|WARNING|NOTE|TIP|REMEMBER)\s*[:\-]\s*(.+)$/i)
+                const match = text.match(/^(IMPORTANT|WARNING|NOTE|TIP|REMEMBER)\s*[:-]\s*(.+)$/i)
                 if (!match) return
                 const label = match[1].toUpperCase()
                 const content = match[2]
@@ -680,7 +675,6 @@ export default function KnowledgeEditor() {
 
             // Smart validation: If visibility requires department but none selected, show warning
             if (field === 'visibility') {
-                const visValue = value as KnowledgeVisibility
                 // If switching to department-based visibility without a department, auto-select cannot proceed
                 // Just update the value, validation will show warning
             }
@@ -821,7 +815,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                     // Only filter non-ASCII if English-only mode (to remove Chinese mistakes)
                     if (aiLanguage === 'English') {
-                        cleanDesc = cleanDesc.replace(/[^\x00-\x7F]/g, '').trim()
+                        cleanDesc = cleanDesc.replace(/[^\p{ASCII}]/gu, '').trim()
                     }
                     updateField('description', cleanDesc)
                 }
@@ -841,7 +835,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 }
             }
             toast.success(t('editor.alerts.ai_success'))
-        } catch (error) {
+        } catch (_error) {
             toast.error(t('editor.alerts.ai_failed'))
         } finally {
             setIsGenerating(false)
@@ -948,7 +942,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         if (descResult) {
                             const cleanDesc = extractTextFromAiResponse(descResult)
                                 .replace(/^["']|["']$/g, '')
-                                .replace(/[^\x00-\x7F]/g, '')
+                                .replace(/[^\p{ASCII}]/gu, '')
                                 .trim()
                             finalDescription = cleanDesc
                             updateField('description', cleanDesc)
@@ -969,7 +963,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
             const estimatedReadTime = calculateEstimatedReadTime(formData.content)
             let savedArticleId: string | null = null
-            let savedArticleData: any = null
+            let savedArticleData = null
             let redirectToArticleId: string | null = null
 
             const articleData = {
@@ -1068,7 +1062,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 redirectToArticleId = data.id
             }
 
-            let syncedArticleData: any = savedArticleData
+            let syncedArticleData = savedArticleData
             if (savedArticleId) {
                 const hydratedArticle = await KnowledgeService.getArticleById(savedArticleId, user?.id)
                 if (hydratedArticle) {
@@ -1076,11 +1070,11 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 }
             }
 
-            const mergeArticleIntoCollection = (existing: any) => {
+            const mergeArticleIntoCollection = (existing) => {
                 if (!savedArticleId || !syncedArticleData || !existing) return existing
 
                 if (Array.isArray(existing)) {
-                    return existing.map((item: any) =>
+                    return existing.map((item) =>
                         item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
                     )
                 }
@@ -1088,7 +1082,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 if (Array.isArray(existing.articles)) {
                     return {
                         ...existing,
-                        articles: existing.articles.map((item: any) =>
+                        articles: existing.articles.map((item) =>
                             item?.id === savedArticleId ? { ...item, ...syncedArticleData } : item
                         )
                     }
@@ -1104,7 +1098,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 )
                 queryClient.setQueriesData(
                     { queryKey: ['knowledge-article', savedArticleId], exact: false },
-                    (existing: any) => existing ? { ...existing, ...syncedArticleData } : syncedArticleData
+                    (existing) => existing ? { ...existing, ...syncedArticleData } : syncedArticleData
                 )
                 queryClient.setQueriesData(
                     { queryKey: ['knowledge-articles'], exact: false },
@@ -1158,7 +1152,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             if (redirectToArticleId) {
                 navigate(`/knowledge/${redirectToArticleId}`)
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error in saveArticle:', error)
             const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
             toast.error(t('editor.alerts.save_error', { error: errorMessage }))
@@ -1375,7 +1369,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                                                 // RLS requires uploading to a folder matching the user ID
                                                 const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                                                const { data, error } = await supabase.storage
+                                                const { error } = await supabase.storage
                                                     .from('documents')
                                                     .upload(fileName, file)
 
@@ -1578,7 +1572,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         {formData.content_type === 'checklist' && formData.checklist_items.length > 0 && (
                                             <div className="space-y-2">
                                                 <h4 className="font-bold">Checklist Preview:</h4>
-                                                {formData.checklist_items.map((item: any) => (
+                                                {formData.checklist_items.map((item) => (
                                                     <div key={item.id} className="flex items-center gap-2">
                                                         <div className="w-4 h-4 border rounded" />
                                                         <span>{item.text}</span>

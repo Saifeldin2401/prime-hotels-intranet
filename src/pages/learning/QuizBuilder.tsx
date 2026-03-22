@@ -1,15 +1,9 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { Save, Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Sparkles } from 'lucide-react'
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { QuestionSelector } from '@/components/questions/QuestionSelector'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     Select,
     SelectContent,
@@ -17,11 +11,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { learningService } from '@/services/learningService'
 import { useAuth } from '@/hooks/useAuth'
+import { learningService } from '@/services/learningService'
 import type { LearningQuiz } from '@/types/learning'
+import { ArrowDown, ArrowUp, GripVertical, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
 export default function QuizBuilder() {
     const { t: t_ext } = useTranslation('extracted');
@@ -114,7 +114,7 @@ export default function QuizBuilder() {
             const data = await learningService.getQuiz(quizId)
             setQuiz(data)
             setQuestions(data.questions || [])
-        } catch (error) {
+        } catch (_error) {
             toast({
                 title: t('common.error'),
                 description: t('training:quizzes.builder.load_error'),
@@ -140,7 +140,7 @@ export default function QuizBuilder() {
             }
 
             // Clean the quiz object for saving: remove joined fields and ensure correct types
-            const quizData: any = { ...quiz }
+            const quizData = { ...quiz }
             delete quizData.questions
             delete quizData.question_count
             delete quizData.created_at
@@ -171,7 +171,7 @@ export default function QuizBuilder() {
             await learningService.removeQuestionFromQuiz(id, qId)
             setQuestions(prev => prev.filter(q => q.question_id !== qId))
             toast({ title: t('common.success'), description: t('training:quizzes.builder.question_removed') })
-        } catch (error) {
+        } catch (_error) {
             toast({ title: t('common.error'), description: t('training:quizzes.builder.remove_error'), variant: 'destructive' })
         }
     }
@@ -249,7 +249,7 @@ export default function QuizBuilder() {
                                 <Label>{t('training:status')}</Label>
                                 <Select
                                     value={quiz.status}
-                                    onValueChange={(val: any) => setQuiz({ ...quiz, status: val })}
+                                    onValueChange={(val) => setQuiz({ ...quiz, status: val })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -343,7 +343,7 @@ export default function QuizBuilder() {
                                 </div>
                             ) : (
                                 <div className="space-y-2">
-                                    {questions.map((q, index) => (
+                                    {questions.map((q) => (
                                         <div key={q.id} className="flex items-center gap-4 p-4 bg-white border rounded-lg group">
                                             <div className="cursor-move text-muted-foreground">
                                                 <GripVertical className="h-5 w-5" />

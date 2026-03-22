@@ -9,7 +9,7 @@ import { z } from 'zod'
 const emailSchema = z.string().email('Please enter a valid email address').min(1, 'Email is required')
 
 // Phone validation (flexible format)
-const phoneSchema = z.string().optional().or(z.string().regex(/^[\d\s\-\+\(\)]+$/, 'Please enter a valid phone number'))
+const phoneSchema = z.string().optional().or(z.string().regex(/^[\d\s\-+()]+$/, 'Please enter a valid phone number'))
 
 // Date validation
 const dateSchema = z.date({

@@ -1,6 +1,6 @@
-import type { Editor } from '@tiptap/react'
-import { DOMSerializer } from '@tiptap/pm/model'
 import type { SelectedContent } from '@/editor/types'
+import { DOMSerializer } from '@tiptap/pm/model'
+import type { Editor } from '@tiptap/react'
 
 export function getSelectedContent(editor: Editor): SelectedContent | null {
   const { from, to, empty } = editor.state.selection

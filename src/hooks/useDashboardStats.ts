@@ -1,9 +1,9 @@
 
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 type SettledPayload = {
     count?: number | null
@@ -588,7 +588,7 @@ export function useHRStats(propertyId?: string) {
 
                 // 3. New Hires
                 (async () => {
-                    let query = supabase
+                    const query = supabase
                         .from('profiles')
                         .select('id', { count: 'exact', head: true })
                         .gte('created_at', startOfMonth.toISOString())

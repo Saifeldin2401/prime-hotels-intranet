@@ -5,8 +5,8 @@
  * for policy updates, knowledge base articles, and SOPs.
  */
 
-import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useState } from 'react'
 
 interface DocumentSummary {
     summary: string

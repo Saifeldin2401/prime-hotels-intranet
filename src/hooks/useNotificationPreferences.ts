@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import type { NotificationPreference } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuth } from './useAuth'
 
 const isAuthError = (error: unknown) => {
     if (!error || typeof error !== 'object') return false

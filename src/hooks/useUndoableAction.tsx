@@ -5,10 +5,10 @@
  * Shows an undo toast with countdown before executing the action.
  */
 
+import { UndoToast } from '@/components/common/UndoToast';
 import { useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { useUndo } from './useUndo';
-import { UndoToast } from '@/components/common/UndoToast';
 
 export interface UseUndoableActionOptions {
   delay?: number;
@@ -61,7 +61,7 @@ export function useUndoableAction<T = unknown>(
       if (successMessage) {
         toast.success(successMessage);
       }
-    } catch (error) {
+    } catch (_error) {
       toast.error(errorMessage || 'Action failed. Please try again.');
     }
     actionDataRef.current = undefined;

@@ -1,11 +1,10 @@
+import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
+import { ArrowLeft } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
-import { useTranslation } from "react-i18next";
 
 export default function QuestionGeneratorPage() {
     const navigate = useNavigate()
@@ -44,7 +43,7 @@ export default function QuestionGeneratorPage() {
                     sopId="manual_input"
                     sopTitle="Manual Input"
                     sopContent={content}
-                    onQuestionsCreated={(count) => {
+                    onQuestionsCreated={() => {
                         navigate('/questions')
                     }}
                 />

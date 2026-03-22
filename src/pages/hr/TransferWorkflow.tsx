@@ -1,18 +1,18 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import type { Department, Profile, Property } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowRightLeft } from 'lucide-react'
-import type { Profile, Property, Department } from '@/lib/types'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 export default function TransferWorkflow() {
     const { user } = useAuth()
@@ -112,7 +112,7 @@ export default function TransferWorkflow() {
             queryClient.invalidateQueries({ queryKey: ['employees-for-transfer'] })
             navigate('/hr/transfers/history')
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast({
                 title: t('common:error', { defaultValue: 'Error' }),
                 description: error.message || t('common:error_occurred', { defaultValue: 'Failed to create transfer' }),
@@ -158,7 +158,7 @@ export default function TransferWorkflow() {
                                     <SelectValue placeholder={t('promotion.select_employee')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {employees?.map((emp: any) => (
+                                    {employees?.map((emp) => (
                                         <SelectItem key={emp.id} value={emp.id}>
                                             {emp.full_name} ({emp.user_properties?.[0]?.properties?.name || t('history.no_transfers').replace('transfers', 'property')})
                                             {/* Fallback for no property? Just 'No property' -> local string. I should fix it. */}

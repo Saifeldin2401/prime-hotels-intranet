@@ -6,11 +6,11 @@
  * this week vs previous week.
  */
 
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
 interface TrendResult {
   value: number

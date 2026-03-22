@@ -1,38 +1,37 @@
-import * as React from "react";
-import {
-  TrendingUp,
-  TrendingDown,
-  Eye,
-  Download,
-  Users,
-  BarChart3,
-  MoreHorizontal,
-  Calendar,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format, subDays } from "date-fns";
-import {
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-} from "recharts";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import {
+    BarChart3,
+    Calendar,
+    Download,
+    Eye,
+    MoreHorizontal,
+    TrendingDown,
+    TrendingUp,
+    Users,
+} from "lucide-react";
+import {
+    Area,
+    AreaChart,
+    Bar,
+    BarChart,
+    CartesianGrid,
+    ResponsiveContainer,
+    Tooltip,
+    XAxis,
+    YAxis,
+} from "recharts";
 
 export interface DocumentAnalytics {
   documentId: string;
@@ -79,12 +78,12 @@ function calculateTrend(
   };
 }
 
-const CustomTooltip = ({ active, payload, label }: any) => {
+const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border shadow-lg">
         <p className="text-sm font-medium mb-2">{format(new Date(label), "MMM d, yyyy")}</p>
-        {payload.map((entry: any, index: number) => (
+        {payload.map((entry, index: number) => (
           <div key={`${entry?.name ?? 'series'}-${entry?.dataKey ?? index}`} className="flex items-center gap-2 text-sm">
             <div
               className="w-2 h-2 rounded-full"

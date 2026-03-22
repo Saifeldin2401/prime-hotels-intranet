@@ -1,9 +1,9 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
-import { toast } from 'sonner'
 import type { WidgetId } from '@/pages/dashboard/components/WidgetRegistry'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useEffect } from 'react'
+import { toast } from 'sonner'
+import { useAuth } from './useAuth'
 
 const LOCAL_STORAGE_KEY = 'phg_dashboard_preferences'
 

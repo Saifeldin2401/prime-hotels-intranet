@@ -1,7 +1,5 @@
-import { useMemo, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Dialog,
     DialogContent,
@@ -10,13 +8,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
+import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Separator } from '@/components/ui/separator'
 import {
     Select,
     SelectContent,
@@ -24,13 +18,19 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select'
-import { Loader2, UserPlus } from 'lucide-react'
+import { Separator } from '@/components/ui/separator'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { useTranslation } from 'react-i18next'
 import { useProperty } from '@/contexts/PropertyContext'
-import { format, addDays, differenceInMinutes } from 'date-fns'
+import { useAuth } from '@/hooks/useAuth'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { addDays, differenceInMinutes, format } from 'date-fns'
+import { Loader2, UserPlus } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const toLocalInputValue = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000

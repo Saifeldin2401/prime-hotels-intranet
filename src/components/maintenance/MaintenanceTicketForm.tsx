@@ -1,24 +1,24 @@
-import { useState, useEffect } from 'react'
+import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useAITicketTriage } from '@/hooks/useAITicketTriage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { AITriageSuggestions } from '@/components/maintenance/AITriageSuggestions'
-import {
-  Wrench,
-  ArrowLeft,
-  Upload,
-  Camera
-} from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { Textarea } from '@/components/ui/textarea'
+import { useAITicketTriage } from '@/hooks/useAITicketTriage'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import type { MaintenanceTicket } from '@/lib/types'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import {
+    ArrowLeft,
+    Camera,
+    Upload,
+    Wrench
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface MaintenanceTicketFormProps {
   onClose: () => void

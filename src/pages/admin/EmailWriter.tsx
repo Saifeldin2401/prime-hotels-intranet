@@ -1,43 +1,43 @@
-import { useCallback, useMemo, useState, useEffect } from 'react'
+import { Loader2, Mail, Send, Sparkles, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Mail, Loader2, Sparkles, Send, Users } from 'lucide-react'
 import { toast } from 'sonner'
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from '@/components/ui/popover'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
 
-import { cn, escapeSearchQuery } from '@/lib/utils'
+import { useBulkNotifications } from '@/hooks/useBulkNotifications'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
+import { useProfiles } from '@/hooks/useUsers'
 import { auditLog } from '@/lib/auditLog'
 import { supabase } from '@/lib/supabase'
-import { useProfiles } from '@/hooks/useUsers'
-import { useProperties } from '@/hooks/useProperties'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useBulkNotifications } from '@/hooks/useBulkNotifications'
+import { cn, escapeSearchQuery } from '@/lib/utils'
 
 type EmailTemplateKey =
   | 'system_generic_alert'
@@ -296,7 +296,6 @@ function buildEmailInnerContent(params: {
 }) {
   const isAr = params.lang === 'ar'
   const align = isAr ? 'right' : 'left'
-  const accent = '#D4AF37'
   const brand = '#0B1C3E'
 
   const subject = escapeHtml(params.subject)
@@ -1014,24 +1013,6 @@ Return ONLY valid JSON:
       const batchResult = await createBatch(payload as any);
 
       // Ensure email sends clear drafts upon success
-      const clearDraft = () => {
-        setSubject('')
-        setSubjectAr('')
-        setShortMessage('')
-        setShortMessageAr('')
-        setBody('')
-        setBodyAr('')
-        setHtmlBody('')
-        setTextBody('')
-        localStorage.removeItem('email_writer_subject')
-        localStorage.removeItem('email_writer_subjectAr')
-        localStorage.removeItem('email_writer_shortMessage')
-        localStorage.removeItem('email_writer_shortMessageAr')
-        localStorage.removeItem('email_writer_body')
-        localStorage.removeItem('email_writer_bodyAr')
-        localStorage.removeItem('email_writer_htmlBody')
-        localStorage.removeItem('email_writer_textBody')
-      }
 
       auditLog.adminAction(isCustomHtml ? 'email_writer.sent_custom_html' : 'email_writer.sent', {
         batchId: batchResult.batchId,

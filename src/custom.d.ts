@@ -1,6 +1,6 @@
 // Allow TypeScript to import JSON modules
 declare module '*.json' {
-  const value: any;
+  const value;
   export default value;
 }
 

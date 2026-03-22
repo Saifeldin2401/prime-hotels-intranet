@@ -1,8 +1,8 @@
-import { lazy } from 'react'
-import { Route } from 'react-router-dom'
-import { AppLayout } from '@/components/layout/AppLayout'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PublicOnlyRoute } from '@/components/auth/PublicOnlyRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+import { lazy } from 'react'
+import { Route } from 'react-router-dom'
 
 const Login = lazy(() => import('@/pages/Login'))
 const ForgotPassword = lazy(() => import('@/pages/auth/ForgotPassword'))

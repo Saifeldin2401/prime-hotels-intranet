@@ -1,34 +1,34 @@
-import { useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CreateReferralDialog } from '@/components/jobs/CreateReferralDialog'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { getApplicationStatusColor, getRoutingDescription, getSeniorityBadgeColor } from '@/lib/cvRouting'
+import { supabase } from '@/lib/supabase'
+import type { JobApplication, JobPosting } from '@/lib/types'
+import { formatRelativeTime } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
     Building2,
-    MapPin,
     Calendar,
+    CheckCircle,
     DollarSign,
     Edit,
-    Trash2,
-    Users,
-    UserPlus, // Imported UserPlus
-    Mail,
-    Phone,
     FileText,
-    Loader2,
-    CheckCircle,
+    Loader2, // Imported UserPlus
+    Mail,
+    MapPin,
+    Phone,
+    Trash2,
+    UserPlus,
+    Users,
     XCircle
 } from 'lucide-react'
-import { formatRelativeTime } from '@/lib/utils'
-import { getSeniorityBadgeColor, getApplicationStatusColor, getRoutingDescription } from '@/lib/cvRouting'
-import type { JobPosting, JobApplication } from '@/lib/types'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const statusColors = {
@@ -138,7 +138,7 @@ export default function JobPostingDetail() {
                 throw error || new Error('Failed to generate secure link')
             }
             window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
-        } catch (err: any) {
+        } catch (err) {
             console.error('Failed to open CV:', err)
             toast.error(err?.message || 'Unable to open CV')
         } finally {

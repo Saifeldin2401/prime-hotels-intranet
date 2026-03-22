@@ -1,20 +1,20 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type GovFeatureFlag = {
   flag_key: string
@@ -407,10 +407,6 @@ export default function GovernanceControls() {
   const roleNameByCode = useMemo(() => new Map(roles.map((role) => [role.role_code, role.role_name])), [roles])
   const propertyNameById = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties])
   const departmentNameById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments])
-  const ownershipNameById = useMemo(
-    () => new Map(ownershipEntities.map((entity) => [entity.id, entity.display_name])),
-    [ownershipEntities]
-  )
   const portfolioNameById = useMemo(() => new Map(portfolios.map((portfolio) => [portfolio.id, portfolio.portfolio_name])), [portfolios])
   const clusterNameById = useMemo(() => new Map(clusters.map((cluster) => [cluster.id, cluster.cluster_name])), [clusters])
 
@@ -457,18 +453,6 @@ export default function GovernanceControls() {
     }))
   }, [departmentForm.department_id, departmentGovernanceByDepartment])
 
-  const invalidateCore = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['gov-feature-flags'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-role-assignments'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-ownership-entities'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-portfolios'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-property-portfolios'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-property-clusters'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-cluster-properties'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-department-governance'] }),
-    ])
-  }
 
   const setFeatureFlagMutation = useMutation({
     mutationFn: async ({ flagKey, enabled, reason }: { flagKey: string; enabled: boolean; reason: string }) => {

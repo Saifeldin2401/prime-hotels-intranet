@@ -1,5 +1,5 @@
-import { PageHeader } from '@/components/layout/PageHeader'
 import { JobPostingForm } from '@/components/jobs/JobPostingForm'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { useTranslation } from 'react-i18next'
 
 export default function CreateJobPosting() {

@@ -1,6 +1,4 @@
 // Workflow Components
 export {
-    WorkflowTimeline,
-    WorkflowStatusBadge,
-    WorkflowHistoryCard
-} from './WorkflowTimeline'
+    WorkflowHistoryCard, WorkflowStatusBadge, WorkflowTimeline
+} from './WorkflowTimeline';

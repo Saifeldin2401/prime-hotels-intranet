@@ -1,6 +1,6 @@
+import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { usePotentialManagers } from '@/hooks/useOrganization'
-import { Badge } from '@/components/ui/badge'
 import { User, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 

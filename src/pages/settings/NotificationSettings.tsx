@@ -1,10 +1,10 @@
-import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Loader2, Mail, CheckCircle, BookOpen, AlertCircle, Wrench, Bell, Globe, Clock } from 'lucide-react'
-import { toast } from 'sonner'
+import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
+import { AlertCircle, Bell, BookOpen, CheckCircle, Clock, Globe, Loader2, Mail, Wrench } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export function NotificationSettings() {
     const { t: t_ext } = useTranslation('extracted');

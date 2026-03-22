@@ -1,39 +1,39 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useDelegations, type Delegation } from '@/hooks/useDelegations'
-import { useAuth } from '@/hooks/useAuth'
-import { usePermissions, type Permission } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
+import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { useDelegations, type Delegation } from '@/hooks/useDelegations'
+import { usePermissions, type Permission } from '@/hooks/usePermissions'
+import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, PERMISSION_CATEGORY_LABELS, formatPermissionLabel } from '@/lib/permissionCatalog'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { addDays, differenceInMinutes, format } from 'date-fns'
 import {
-    Plus,
-    Loader2,
-    Clock,
-    ShieldCheck,
-    ShieldOff,
-    CalendarRange,
-    UserCheck,
-    XCircle,
     AlertTriangle,
     ArrowRightLeft,
-    PauseCircle,
-    PlayCircle,
-    Pencil,
     CalendarPlus,
+    CalendarRange,
+    Clock,
+    Loader2,
+    PauseCircle,
+    Pencil,
+    PlayCircle,
+    Plus,
+    ShieldCheck,
+    ShieldOff,
+    UserCheck,
+    XCircle,
 } from 'lucide-react'
-import { addDays, differenceInMinutes, format } from 'date-fns'
-import { ALL_PERMISSIONS, PERMISSION_CATEGORIES, PERMISSION_CATEGORY_LABELS, formatPermissionLabel } from '@/lib/permissionCatalog'
-import { useTranslation } from "react-i18next";
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 const toLocalInputValue = (date: Date) => {
     const tzOffset = date.getTimezoneOffset() * 60000

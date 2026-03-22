@@ -5,16 +5,18 @@
  * Allows creating questions directly or importing from Question Bank.
  */
 
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import {
     Select,
@@ -23,28 +25,20 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { cn } from '@/lib/utils'
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogDescription,
-} from '@/components/ui/dialog'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-    Plus,
-    Trash2,
-    GripVertical,
-    CheckCircle,
-    HelpCircle,
-    Sparkles,
     BookOpen,
+    GripVertical,
+    HelpCircle,
+    Plus,
     Save,
+    Sparkles,
+    Trash2,
     X
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export type QuestionType = 'mcq' | 'true_false' | 'fill_blank' | 'matching'
 export type DifficultyLevel = 'easy' | 'medium' | 'hard' | 'expert'
@@ -73,7 +67,6 @@ interface InlineQuizBuilderProps {
 
 export function InlineQuizBuilder({
     trainingModuleId,
-    sectionId,
     initialQuestions = [],
     onQuestionsChange,
     sopContent,
@@ -91,7 +84,7 @@ export function InlineQuizBuilder({
     }
     const [editingQuestion, setEditingQuestion] = useState<InlineQuestion | null>(null)
     const [showAddDialog, setShowAddDialog] = useState(false)
-    const [showImportDialog, setShowImportDialog] = useState(false)
+    const [_showImportDialog, setShowImportDialog] = useState(false)
     const [addMode, setAddMode] = useState<'manual' | 'import' | 'ai'>('manual')
 
     // New question template
@@ -143,13 +136,8 @@ export function InlineQuizBuilder({
         updateQuestions(questions.filter(q => q.id !== id))
     }
 
-    const handleImportQuestions = (importedIds: string[]) => {
-        // Fetch and add imported questions
-        // This would integrate with the Question Bank
-        setShowImportDialog(false)
-    }
 
-    const handleAIGenerated = (count: number, ids?: string[]) => {
+    const handleAIGenerated = () => {
         // Handle AI-generated questions
         setShowAddDialog(false)
     }

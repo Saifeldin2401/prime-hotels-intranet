@@ -1,43 +1,7 @@
-import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { format, subDays } from 'date-fns'
-import { Link } from 'react-router-dom'
-import {
-    ArrowLeft,
-    Download,
-    Printer,
-    Building2,
-    BedDouble,
-    DollarSign,
-    TrendingUp,
-    TrendingDown,
-    Users,
-    Calendar,
-    Clock,
-    PieChart as PieChartIcon,
-    BarChart as BarChartIcon,
-    Layers,
-    Target,
-    ChevronDown,
-    ChevronUp
-} from 'lucide-react'
-import {
-    PieChart,
-    Pie,
-    Cell,
-    ResponsiveContainer,
-    Tooltip as RechartTooltip,
-    Legend,
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-} from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartViewport } from '@/components/ui/ChartViewport'
 import {
     Select,
     SelectContent,
@@ -47,13 +11,10 @@ import {
 } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
 import { useDailyOccupancy, useDailyRevenue, useMarketSegments, usePMSSystems } from '@/hooks/useOperations'
-import { cn } from '@/lib/utils'
-import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
-import { ChartViewport } from '@/components/ui/ChartViewport'
+import { usePermissions } from '@/hooks/usePermissions'
 import { auditLog } from '@/lib/auditLog'
-import { toast } from 'sonner'
+import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import {
     CONSOLIDATED_PROPERTY_ID,
     getFirstRealPropertyId,
@@ -61,6 +22,40 @@ import {
     isConsolidatedPropertyId,
     normalizePropertyScopeId,
 } from '@/lib/propertyScope'
+import { cn } from '@/lib/utils'
+import { format } from 'date-fns'
+import {
+    ArrowLeft,
+    BedDouble,
+    Building2,
+    Calendar,
+    ChevronDown,
+    DollarSign,
+    Download,
+    PieChart as PieChartIcon,
+    Printer,
+    Target,
+    TrendingDown,
+    TrendingUp,
+    Users
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
+import {
+    Bar,
+    BarChart,
+    CartesianGrid,
+    Cell,
+    Legend,
+    Pie,
+    PieChart,
+    Tooltip as RechartTooltip,
+    ResponsiveContainer,
+    XAxis,
+    YAxis,
+} from 'recharts'
+import { toast } from 'sonner'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
 
@@ -127,7 +122,7 @@ function StatBox({ label, value, subValue, trend, icon: Icon, className }: {
 
 const PropertyRow = ({ report, consolidated, formatCurrency }: {
     report: FlashReportData,
-    consolidated: any,
+    consolidated,
     formatCurrency: (v: number) => string
 }) => {
     const [isExpanded, setIsExpanded] = useState(false)

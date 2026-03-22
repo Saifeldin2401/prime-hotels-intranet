@@ -1,9 +1,9 @@
-import { useTranslation } from 'react-i18next'
-import { Link as LinkIcon } from 'lucide-react'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { PdfViewer } from '@/components/common/PdfViewer'
 import { sanitizeHtml } from '@/lib/sanitize'
 import type { TrainingContentBlock } from '@/lib/types'
-import { PdfViewer } from '@/components/common/PdfViewer'
-import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { Link as LinkIcon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface DocumentBlockRendererProps {
     block: TrainingContentBlock

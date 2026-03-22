@@ -6,17 +6,17 @@
  * Supports RTL layouts and includes tooltip.
  */
 
-import { Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { 
-  Tooltip, 
-  TooltipContent, 
-  TooltipProvider, 
-  TooltipTrigger 
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger
 } from '@/components/ui/tooltip'
-import { useIsPinned, useTogglePin, MAX_PINS, usePinsCount } from '@/hooks/usePins'
 import type { PinItemType } from '@/hooks/usePins'
+import { MAX_PINS, useIsPinned, usePinsCount, useTogglePin } from '@/hooks/usePins'
 import { cn } from '@/lib/utils'
+import { Star } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 

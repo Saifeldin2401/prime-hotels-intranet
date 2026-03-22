@@ -1,29 +1,7 @@
-﻿import { useState, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
-import {
-    Upload, FileSpreadsheet, AlertCircle, CheckCircle, X, Download,
-    Sparkles, Clock, ArrowRight, FileUp, Trash2, RefreshCw, Loader2,
-    Calendar, TrendingUp, Building2, AlertTriangle, Wand2, Save,
-    FileCheck, FileX, Layers, Gauge, Settings2, Zap, LayoutDashboard,
-    Search, Filter, Building, ChevronRight, Edit3, MoreVertical, Database, Activity,
-    Check, ChevronDown, Info, Printer
-} from 'lucide-react'
-import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Alert, AlertDescription } from '@/components/ui/alert'
+﻿import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Progress } from '@/components/ui/progress'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
-import { useQueryClient } from '@tanstack/react-query'
-import { useCreateImportLog, useDataImportLogs, useProperties, useDeleteImportLog } from '@/hooks/useOperations'
-import { toast } from '@/components/ui/use-toast'
-import { cn } from '@/lib/utils'
-import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
-import { parseExcelRows } from '@/lib/excel'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -32,6 +10,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
     Sheet,
     SheetContent,
@@ -48,16 +28,46 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { toast } from '@/components/ui/use-toast'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import { useCreateImportLog, useDataImportLogs, useDeleteImportLog, useProperties } from '@/hooks/useOperations'
 import i18n from "@/i18n/i18n"
+import { parseExcelRows } from '@/lib/excel'
+import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
+import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import {
+    Activity,
+    AlertCircle,
+    AlertTriangle,
+    Building2,
+    CheckCircle,
+    ChevronRight,
+    Clock,
+    Database,
+    FileSpreadsheet,
+    FileUp,
+    FileX, Layers,
+    Loader2,
+    Printer,
+    RefreshCw,
+    Search,
+    Sparkles,
+    Trash2,
+    TrendingUp,
+    Upload,
+    Wand2,
+    X,
+    Zap
+} from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
-// ========== TYPES ==========
-interface ValidationError {
-    row: number
-    field: string
-    message: string
-}
 
 interface FileQueueItem {
     id: string
@@ -69,13 +79,7 @@ interface FileQueueItem {
 }
 
 interface ExtractedData {
-    records: Array<{
-        detected_property_id?: string
-        detected_confidence?: number
-        property_id?: string
-        business_date: string
-        [key: string]: any
-    }>
+    records
     detectedFormat: 'pms_daily' | 'occupancy' | 'revenue' | 'unknown'
     dateRange: { start: string; end: string }
     summary: {
@@ -171,7 +175,7 @@ function calculateQualityScore(records: Record<string, string>[]): { score: numb
     return { score: Math.max(0, totalScore), issues, fieldConfidence }
 }
 
-function extractDataFromRows(rows: string[][], properties: any[] = [], fileName: string = ''): ExtractedData {
+function extractDataFromRows(rows: string[][], properties = [], fileName: string = ''): ExtractedData {
     const pmsResult = parsePMSDailyReport(rows, properties, fileName)
     if (pmsResult.detected && pmsResult.data.length > 0) {
         const records = pmsResult.data
@@ -184,14 +188,14 @@ function extractDataFromRows(rows: string[][], properties: any[] = [], fileName:
     return parseStandardTemplate(rows, properties, fileName)
 }
 
-function parsePMSDailyReport(rows: string[][], properties: any[] = [], fileName: string = ''): { data: any[], detected: boolean } {
+function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = ''): { data, detected: boolean } {
     const isValidFormat = rows.some(row => row.some(cell => cell && (cell.toLowerCase().includes('key performance indicators') || cell.toLowerCase().includes('report date') || cell.toLowerCase().includes('prime al-hamra') || cell.toLowerCase().includes('prime al corniche') || cell.toLowerCase().includes('daily sales report'))))
     if (!isValidFormat) return { data: [], detected: false }
 
     // Use Multi-Signal Contextual Detection (Filename + Headers)
     const contextDetection = detectPropertyFromContext(fileName, rows, properties)
     let headerPropertyId: string | null = contextDetection.propertyId
-    let headerPropertyConfidence = contextDetection.confidence
+    let _headerPropertyConfidence = contextDetection.confidence
 
     // Fallback: Legacy row-by-row scan if context failed
     if (!headerPropertyId) {
@@ -200,7 +204,7 @@ function parsePMSDailyReport(rows: string[][], properties: any[] = [], fileName:
             const detection = detectPropertyByName(rowText, properties)
             if (detection.confidence > 90) {
                 headerPropertyId = detection.propertyId
-                headerPropertyConfidence = detection.confidence
+                _headerPropertyConfidence = detection.confidence
                 break
             }
         }
@@ -227,7 +231,7 @@ function parsePMSDailyReport(rows: string[][], properties: any[] = [], fileName:
     if (!businessDate) businessDate = new Date().toISOString().split('T')[0]
     if (kpiHeaderRow === -1) return { data: [], detected: true }
     const headers = rows[kpiHeaderRow]; const values = rows[kpiHeaderRow + 1];
-    const extracted: any = {
+    const extracted = {
         business_date: businessDate,
         rooms_available: '105',
         detected_property_id: headerPropertyId,
@@ -244,7 +248,7 @@ function parsePMSDailyReport(rows: string[][], properties: any[] = [], fileName:
     return { data: [extracted], detected: true }
 }
 
-function parseStandardTemplate(rows: string[][], properties: any[] = [], fileName: string = ''): ExtractedData {
+function parseStandardTemplate(rows: string[][], properties = [], fileName: string = ''): ExtractedData {
     const occupancyKeywords = ['business_date', 'rooms_available', 'rooms_sold']
     const revenueKeywords = ['business_date', 'room_revenue', 'fb_revenue']
     const hotelKeywords = ['hotel', 'property', 'hotel_name', 'hotel name', 'property_name', 'unit']
@@ -268,10 +272,10 @@ function parseStandardTemplate(rows: string[][], properties: any[] = [], fileNam
         contextConfidence = contextDetection.confidence
     }
 
-    const records: any[] = []
+    const records = []
     for (let i = headerRow + 1; i < rows.length; i++) {
         const row = rows[i]; if (!row || row.every(c => !c)) continue
-        const record: any = {}; headers.forEach((h, idx) => { record[h] = row[idx] || '' })
+        const record = {}; headers.forEach((h, idx) => { record[h] = row[idx] || '' })
 
         // Record-level property detection
         if (hotelNameIdx !== -1 && row[hotelNameIdx]) {
@@ -362,7 +366,7 @@ export default function DataImport() {
     const [fileQueue, setFileQueue] = useState<FileQueueItem[]>([])
     const [isProcessing, setIsProcessing] = useState(false)
     const [importProgress, setImportProgress] = useState(0)
-    const [currentFileIndex, setCurrentFileIndex] = useState(0)
+    const [_currentFileIndex, setCurrentFileIndex] = useState(0)
     const stageLabel = t(`data_import.stages.${currentStep}`, { defaultValue: currentStep })
 
     // Recent imports History
@@ -472,7 +476,7 @@ export default function DataImport() {
             const extracted = fileItem.extractedData!
 
             // Group records by property_id
-            const recordsByProperty: Record<string, any[]> = {}
+            const recordsByProperty = {}
             extracted.records.forEach(record => {
                 const pid = record.detected_property_id || currentProperty?.id
                 if (!pid || pid === 'all') return // Skip if no property detected and context is "All"
@@ -726,7 +730,7 @@ export default function DataImport() {
 
         setFileQueue(prev => prev.map(f => {
             let fileModified = false
-            let conflictToResolve = f.duplicateWarning
+            const conflictToResolve = f.duplicateWarning
 
             if (!f.extractedData) {
                 if (conflictToResolve) resolvedConflicts++
@@ -878,7 +882,7 @@ export default function DataImport() {
                                             <p className="text-xs">{t('data_import.pipeline.empty_queue', { defaultValue: 'No files in queue' })}</p>
                                         </div>
                                     ) : (
-                                        fileQueue.map((item, idx) => (
+                                        fileQueue.map((item) => (
                                             <div
                                                 key={item.id}
                                                 onClick={() => setSelectedFileId(item.id)}
@@ -1323,7 +1327,7 @@ export default function DataImport() {
                         </SheetDescription>
                     </SheetHeader>
                     <div className="mt-8 space-y-4">
-                        {recentImports?.map((log: any) => (
+                        {recentImports?.map((log) => (
                             <div key={log.id} className="p-4 rounded-2xl bg-slate-50 border group cursor-default relative">
                                 <Button
                                     variant="ghost"

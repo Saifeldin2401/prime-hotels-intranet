@@ -1,6 +1,3 @@
-import { useState } from 'react'
-import { ChevronRight, ChevronDown, User, Users, Building2, Briefcase, MoreVertical, Edit, Eye } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -10,6 +7,9 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import type { OrgTreeNode } from '@/hooks/useOrganization'
+import { cn } from '@/lib/utils'
+import { Briefcase, Building2, ChevronDown, ChevronRight, Edit, Eye, MoreVertical, User, Users } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface OrgChartTreeProps {

@@ -1,29 +1,29 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
-import { Download, Filter, Search, Activity, User, FileText, Shield, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
-import { formatDateTime } from '@/lib/utils'
+import { supabase } from '@/lib/supabase'
 import type { AuditLog } from '@/lib/types'
+import { formatDateTime } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { Activity, ChevronLeft, ChevronRight, Clock, Download, FileText, Filter, Search, Shield, User } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const actionColors = {
@@ -131,7 +131,7 @@ export default function AuditLogs() {
       // For a real scalable solution, this should use specific RPCs or materialized views.
       // We will just fetch counts for card display based on date range.
 
-      const getCount = async (filter: any) => {
+      const getCount = async (filter) => {
         let q = supabase.from('audit_logs').select('id', { count: 'exact', head: true })
 
         // Apply date range
@@ -411,7 +411,7 @@ export default function AuditLogs() {
                           <div className="max-w-md text-sm text-gray-600">
                             {log.action === 'update' && log.changes ? (
                               <div className="space-y-1">
-                                {Object.entries(log.changes).map(([key, change]: [string, any]) => (
+                                {Object.entries(log.changes).map(([key, change]) => (
                                   <div key={key} className="text-xs">
                                     <span className="font-medium">{key}:</span>{' '}
                                     <span className="text-red-500 line-through">{String(change.old)}</span>

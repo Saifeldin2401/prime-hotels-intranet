@@ -4,8 +4,8 @@
  * Analyzes feedback text to identify sentiment, themes, and actionable insights
  */
 
-import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useState } from 'react'
 
 interface FeedbackAnalysis {
     sentiment: 'positive' | 'neutral' | 'negative' | 'mixed'

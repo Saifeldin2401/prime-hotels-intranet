@@ -1,4 +1,4 @@
-import { type Transition, type Variants, type Easing } from 'framer-motion'
+import { type Easing, type Transition, type Variants } from 'framer-motion'
 
 // ==========================================
 // MOTION PHILOSOPHY & CONSTANTS

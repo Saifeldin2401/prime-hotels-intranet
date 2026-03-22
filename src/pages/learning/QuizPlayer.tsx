@@ -1,8 +1,8 @@
-import { useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { QuizComponentEnhanced } from './components/QuizComponentEnhanced'
+import { useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { QuizComponentEnhanced } from './components/QuizComponentEnhanced'
 
 export default function QuizPlayer() {
     const { t: t_ext } = useTranslation('extracted');

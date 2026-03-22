@@ -40,7 +40,7 @@ export interface AuditLogEntry {
     entity_type?: string // 'user' | 'document' | 'approval' | etc.
     entity_id?: string
     description?: string
-    metadata?: Record<string, any>
+    metadata?
     ip_address?: string
     user_agent?: string
 }
@@ -117,7 +117,7 @@ export const auditLog = {
         description: 'Password changed'
     }),
 
-    profileUpdate: (userId: string, changes: Record<string, any>) => logAuditEvent({
+    profileUpdate: (userId: string, changes) => logAuditEvent({
         event_type: 'user.profile_update',
         entity_type: 'user',
         entity_id: userId,
@@ -147,7 +147,7 @@ export const auditLog = {
         action: 'approved' | 'rejected' | 'delegated',
         approvalId: string,
         approvalType: string,
-        metadata?: Record<string, any>
+        metadata?
     ) => logAuditEvent({
         event_type: `approval.${action}` as AuditEventType,
         entity_type: 'approval',
@@ -183,7 +183,7 @@ export const auditLog = {
     }),
 
     // Admin events
-    adminAction: (action: string, details?: Record<string, any>) => logAuditEvent({
+    adminAction: (action: string, details?) => logAuditEvent({
         event_type: 'admin.action',
         entity_type: 'admin',
         description: action,

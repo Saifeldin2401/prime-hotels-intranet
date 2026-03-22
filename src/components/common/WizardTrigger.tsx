@@ -5,15 +5,15 @@
  * Uses polling to detect when wizard should start (after password change redirect).
  */
 
-import { useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import { useTour } from '@/hooks/useTour'
 import {
     getTourStepsForRole,
-    shouldShowWizard,
-    markWizardCompleted
+    markWizardCompleted,
+    shouldShowWizard
 } from '@/config/newUserTour'
+import { useAuth } from '@/hooks/useAuth'
+import { useTour } from '@/hooks/useTour'
+import { useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 // Pages where wizard should NOT start
 const EXCLUDED_PATHS = ['/change-password', '/login', '/forgot-password', '/reset-password']

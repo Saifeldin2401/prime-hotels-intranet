@@ -1,13 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Plus, Trash2, GripVertical, Loader2, Save } from 'lucide-react'
-import { useWorkflowSteps, useUpdateWorkflow, useUpdateWorkflowSteps, useCreateWorkflow } from '@/hooks/useWorkflows'
-import { useToast } from '@/components/ui/use-toast'
-import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
-import { useTrainingModulesList } from '@/hooks/useTrainingRules'
 import {
     Select,
     SelectContent,
@@ -15,12 +8,37 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
+import { useTrainingModulesList } from '@/hooks/useTrainingRules'
+import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
+import { useCreateWorkflow, useUpdateWorkflow, useUpdateWorkflowSteps, useWorkflowSteps } from '@/hooks/useWorkflows'
 import { supabase } from '@/lib/supabase'
-import { useTranslation } from "react-i18next";
+import { GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 interface WorkflowEditorProps {
     workflow: WorkflowDefinition
     onClose: () => void
+}
+
+type WorkflowEditorStep = Omit<WorkflowStep, 'id' | 'workflow_id'> & Partial<Pick<WorkflowStep, 'id' | 'workflow_id'>>
+
+type WorkflowStepConfig = {
+    title?: string
+    message?: string
+    description?: string
+    priority?: string
+    module_id?: string
+    content_id?: string
+    [key: string]: unknown
+}
+
+function getStepConfig(step: Partial<WorkflowStep>): WorkflowStepConfig {
+    return typeof step.config === 'object' && step.config !== null
+        ? step.config as WorkflowStepConfig
+        : {}
 }
 
 export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
@@ -41,7 +59,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const [actionConfig, setActionConfig] = useState(() =>
         JSON.stringify(workflow.action_config || {}, null, 2)
     )
-    const [localSteps, setLocalSteps] = useState<Partial<WorkflowStep>[]>([])
+    const [localSteps, setLocalSteps] = useState<WorkflowEditorStep[]>([])
     const [advancedMode, setAdvancedMode] = useState(false)
     const [eventType, setEventType] = useState('NEW_HIRE')
     const [customEventType, setCustomEventType] = useState('')
@@ -155,7 +173,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         } catch {
             setAdvancedMode(true)
         }
-    }, [])
+    }, [actionConfig, eventOptions, triggerConfig, type])
 
     useEffect(() => {
         if (advancedMode) return
@@ -192,17 +210,15 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         setLocalSteps(localSteps.filter((_, i) => i !== index))
     }
 
-    const handleStepChange = (index: number, field: keyof WorkflowStep, value: any) => {
+    const handleStepChange = (index: number, field: keyof WorkflowStep, value: WorkflowStep[keyof WorkflowStep]) => {
         const updatedSteps = [...localSteps]
         updatedSteps[index] = { ...updatedSteps[index], [field]: value }
         setLocalSteps(updatedSteps)
     }
 
-    const updateStepConfig = (index: number, updates: Record<string, any>) => {
+    const updateStepConfig = (index: number, updates: Partial<WorkflowStepConfig>) => {
         const updatedSteps = [...localSteps]
-        const currentConfig = typeof updatedSteps[index]?.config === 'object' && updatedSteps[index]?.config !== null
-            ? updatedSteps[index]?.config
-            : {}
+        const currentConfig = getStepConfig(updatedSteps[index] || {})
         updatedSteps[index] = {
             ...updatedSteps[index],
             config: { ...currentConfig, ...updates }
@@ -218,13 +234,13 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
             try {
                 parsedTrigger = triggerConfig ? JSON.parse(triggerConfig) : {}
-            } catch (err) {
+            } catch (_err) {
                 throw new Error('Trigger config JSON is invalid')
             }
 
             try {
                 parsedAction = actionConfig ? JSON.parse(actionConfig) : {}
-            } catch (err) {
+            } catch (_err) {
                 throw new Error('Action config JSON is invalid')
             }
 
@@ -245,13 +261,18 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                     trigger_config: parsedTrigger,
                     action_config: parsedAction,
                     is_active: true
-                } as any)
+                })
                 workflowId = created.id
             }
 
             if (workflowId) {
                 if (workflow.id) {
-                    await updateStepsMutation.mutateAsync(localSteps as any)
+                    await updateStepsMutation.mutateAsync(localSteps.map((step, index) => ({
+                        step_order: step.step_order ?? index + 1,
+                        name: step.name || 'New Step',
+                        action: step.action || 'send_notification',
+                        config: step.config ?? {}
+                    })))
                 } else if (localSteps.length > 0) {
                     const stepsPayload = localSteps.map((s, i) => ({
                         ...s,
@@ -453,7 +474,9 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                 <p className="text-xs text-muted-foreground">Steps are actions performed in order when the workflow runs.</p>
 
                 <div className="space-y-3">
-                    {localSteps.map((step, index) => (
+                    {localSteps.map((step, index) => {
+                        const stepConfig = getStepConfig(step)
+                        return (
                         <div key={index} className="flex items-start gap-3 p-4 border rounded-lg bg-muted/30">
                             <div className="mt-2 text-muted-foreground">
                                 <GripVertical className="h-4 w-4 cursor-grab" />
@@ -494,12 +517,12 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                                 <>
                                                     <Input
                                                         placeholder="Notification title"
-                                                        value={(step.config as any)?.title || ''}
+                                                        value={stepConfig.title || ''}
                                                         onChange={(e) => updateStepConfig(index, { title: e.target.value })}
                                                     />
                                                     <Textarea
                                                         placeholder="Notification message"
-                                                        value={(step.config as any)?.message || ''}
+                                                        value={stepConfig.message || ''}
                                                         onChange={(e) => updateStepConfig(index, { message: e.target.value })}
                                                     />
                                                 </>
@@ -508,16 +531,16 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                                 <>
                                                     <Input
                                                         placeholder="Task title"
-                                                        value={(step.config as any)?.title || ''}
+                                                        value={stepConfig.title || ''}
                                                         onChange={(e) => updateStepConfig(index, { title: e.target.value })}
                                                     />
                                                     <Textarea
                                                         placeholder="Task description"
-                                                        value={(step.config as any)?.description || ''}
+                                                        value={stepConfig.description || ''}
                                                         onChange={(e) => updateStepConfig(index, { description: e.target.value })}
                                                     />
                                                     <Select
-                                                        value={(step.config as any)?.priority || 'medium'}
+                                                        value={stepConfig.priority || 'medium'}
                                                         onValueChange={(val) => updateStepConfig(index, { priority: val })}
                                                     >
                                                         <SelectTrigger>
@@ -533,7 +556,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                             )}
                                             {step.action === 'assign_training' && (
                                                 <Select
-                                                    value={(step.config as any)?.module_id || (step.config as any)?.content_id || ''}
+                                                    value={stepConfig.module_id || stepConfig.content_id || ''}
                                                     onValueChange={(val) => updateStepConfig(index, { module_id: val })}
                                                 >
                                                     <SelectTrigger>
@@ -558,7 +581,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                             onChange={(e) => {
                                                 try {
                                                     handleStepChange(index, 'config', JSON.parse(e.target.value))
-                                                } catch (err) {
+                                                } catch (_err) {
                                                     // Keep raw text so user can see and correct invalid JSON
                                                     // The config will be validated again on save via handleSave
                                                     handleStepChange(index, 'config', e.target.value)
@@ -577,7 +600,8 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                                 <Trash2 className="h-4 w-4" />
                             </Button>
                         </div>
-                    ))}
+                        )
+                    })}
                     {localSteps.length === 0 && (
                         <div className="text-center py-8 border border-dashed rounded-lg text-muted-foreground">
                             {t_ext('no_steps_defined_add_a_step_to_get_start', 'No steps defined. Add a step to get started.')}</div>

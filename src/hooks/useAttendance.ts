@@ -1,9 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import type { Database } from '@/types/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
-type Attendance = Database['public']['Tables']['attendance']['Row']
 type AttendanceInsert = Database['public']['Tables']['attendance']['Insert']
 
 export function useAttendance(employeeId?: string) {

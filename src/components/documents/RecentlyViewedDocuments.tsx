@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
-import { FileText, Clock } from 'lucide-react'
-import { Link } from 'react-router-dom'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { formatRelativeTime } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { useQuery } from '@tanstack/react-query'
+import { Clock, FileText } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const STORAGE_KEY = 'docs_recently_viewed'
 const MAX_ITEMS = 20
@@ -54,7 +53,7 @@ export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
         return []
       }
 
-      const docById = new Map((data || []).map((d: any) => [d.id, d]))
+      const docById = new Map((data || []).map((d) => [d.id, d]))
       return items
         .map((i) => ({ ...i, document: docById.get(i.id) }))
         .filter((v) => v.document)
@@ -73,7 +72,7 @@ export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
-        {recentViews.map((view: any) => (
+        {recentViews.map((view) => (
           <Link
             key={view.id}
             to={`/documents/${view.id}`}

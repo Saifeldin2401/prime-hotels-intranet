@@ -1,25 +1,25 @@
-import {
-    Plus,
-    Trash2,
-    GripVertical,
-    ChevronDown,
-    ChevronUp,
-    FileText,
-    Image,
-    Video,
-    Link,
-    FileQuestion,
-    BookOpen,
-    Headphones,
-    Gamepad2,
-    Sparkles
-} from 'lucide-react'
-import React from 'react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import {
+    BookOpen,
+    ChevronDown,
+    ChevronUp,
+    FileQuestion,
+    FileText,
+    Gamepad2,
+    GripVertical,
+    Headphones,
+    Image,
+    Link,
+    Plus,
+    Sparkles,
+    Trash2,
+    Video
+} from 'lucide-react'
+import React from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Reuse types from TrainingBuilder or distinct types if extracted
 // For now we will define interface here compatible with TrainingBuilder

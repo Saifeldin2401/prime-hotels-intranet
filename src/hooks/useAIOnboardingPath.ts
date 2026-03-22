@@ -5,8 +5,8 @@
  * role, department, and prior experience.
  */
 
-import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useState } from 'react'
 
 interface OnboardingStep {
     order: number

@@ -1,38 +1,42 @@
-import { useState, useMemo, useEffect } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useTranslation } from 'react-i18next'
 import {
-    Search,
-    Grid3X3,
-    List,
+    ArrowUpDown,
+    BookOpen,
+    Briefcase,
+    CheckSquare,
+    ChevronRight,
+    ClipboardList,
     Clock,
     Eye,
-    Star,
-    ArrowUpDown,
-    Plus,
-    FilterX,
-    SlidersHorizontal,
-    Briefcase,
-    RefreshCw,
-    ChevronRight,
-    FileText,
-    ClipboardList,
-    BookOpen,
-    CheckSquare,
-    FileSearch,
-    HelpCircle,
-    Video,
-    Image,
     File,
+    FileSearch,
+    FileText,
+    FilterX,
+    Grid3X3,
+    HelpCircle,
+    Image,
+    List,
     Pencil,
-    Trash2
+    Plus,
+    RefreshCw,
+    Search,
+    SlidersHorizontal,
+    Star,
+    Trash2,
+    Video
 } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent } from '@/components/ui/card'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useSearchParams } from 'react-router-dom'
 
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { KnowledgeSidebar } from '@/components/knowledge'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     Select,
     SelectContent,
@@ -40,19 +44,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
-import { useAuth } from '@/hooks/useAuth'
-import { KnowledgeSidebar } from '@/components/knowledge'
-import { Breadcrumbs } from '@/components/common/Breadcrumbs'
-import { CONTENT_TYPE_CONFIG, type KnowledgeContentType } from '@/types/knowledge'
 import { Sheet, SheetContent } from '@/components/ui/sheet'
-import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useAuth } from '@/hooks/useAuth'
+import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 
-const ICON_MAP: Record<string, any> = {
+const ICON_MAP = {
     ClipboardList,
     FileText,
     BookOpen,

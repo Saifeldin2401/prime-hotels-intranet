@@ -1,22 +1,22 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { supabase } from '@/lib/supabase'
 import {
-  useCreateReportDefinition,
-  useCreateReportRun,
-  useDeleteReportDefinition,
-  useReportDefinitions,
-  useReportRuns,
-  useUpdateReportDefinition
+    useCreateReportDefinition,
+    useCreateReportRun,
+    useDeleteReportDefinition,
+    useReportDefinitions,
+    useReportRuns,
+    useUpdateReportDefinition
 } from '@/hooks/useReports'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
-import { useTranslation } from 'react-i18next'
 import { openUrlInNewTab, resolveReportRunUrl } from '@/lib/secureFileAccess'
+import { supabase } from '@/lib/supabase'
 import { Pencil, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const REPORT_TYPES = [
   { value: 'operations', labelKey: 'report_builder.types.operations' },
@@ -39,7 +39,7 @@ const SCHEDULE_OPTIONS = [
   { value: 'monthly', labelKey: 'report_builder.schedule.monthly' }
 ] as const
 
-function toCsv(rows: any[]) {
+function toCsv(rows) {
   if (!rows || rows.length === 0) return ''
   const headers = Object.keys(rows[0])
   const csvRows = [
@@ -50,7 +50,7 @@ function toCsv(rows: any[]) {
 }
 
 async function fetchReportData(reportType: string, dateFrom?: string, dateTo?: string) {
-  const createdAtRange = (query: any, column: string) => {
+  const createdAtRange = (query, column: string) => {
     let scoped = query
     if (dateFrom) scoped = scoped.gte(column, dateFrom)
     if (dateTo) scoped = scoped.lte(column, dateTo)
@@ -204,7 +204,7 @@ export function ReportsControlCenter() {
         report_id: reportId,
         status: 'success',
         triggered_via: 'manual_download',
-        row_count: Object.values(dataMap).reduce((sum, rows: any) => sum + (rows?.length || 0), 0)
+        row_count: Object.values(dataMap).reduce((sum, rows) => sum + (rows?.length || 0), 0)
       })
     } catch (_error) {
       await createRun.mutateAsync({ report_id: reportId, status: 'failed' })

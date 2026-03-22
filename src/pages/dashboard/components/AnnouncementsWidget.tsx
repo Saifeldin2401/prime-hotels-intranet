@@ -1,20 +1,20 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Bell, Calendar, ArrowRight, AlertCircle, CheckCircle, Check } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
+import { useAuth } from '@/hooks/useAuth'
 import { useAcknowledgeAnnouncement } from '@/hooks/useQuickActions'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { ar } from 'date-fns/locale'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { AlertCircle, ArrowRight, Bell, Calendar, Check, CheckCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from "react-i18next"
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
-import { useState, useEffect } from 'react'
-import { supabase } from '@/lib/supabase'
+import { Link } from 'react-router-dom'
 
 const announcementSkeletonKeys = ['ann-skeleton-1', 'ann-skeleton-2', 'ann-skeleton-3']
 
@@ -123,7 +123,7 @@ export function AnnouncementsWidget() {
                   <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">We'll notify you when an update arrives.</p>
                 </m.div>
               ) : (
-                announcements?.map((announcement: any, index: number) => {
+                announcements?.map((announcement, index: number) => {
                   const isHighPriority = announcement.priority === 'high' || announcement.priority === 'urgent';
                   const isNew = new Date().getTime() - new Date(announcement.created_at).getTime() < 1000 * 60 * 60 * 24 * 2; // 48 hours
                   const requiresAck = announcement.requires_acknowledgment || isHighPriority;

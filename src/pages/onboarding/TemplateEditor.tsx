@@ -1,26 +1,26 @@
-import React, { useState, useEffect, useId } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useCreateOnboardingTemplate, useOnboardingTemplate, useUpdateOnboardingTemplate } from '@/hooks/useOnboarding'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useTrainingModules } from '@/hooks/useTraining'
-import { useDocuments } from '@/hooks/useDocuments'
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useDocuments } from '@/hooks/useDocuments'
+import { useCreateOnboardingTemplate, useOnboardingTemplate, useUpdateOnboardingTemplate } from '@/hooks/useOnboarding'
+import { useTrainingModules } from '@/hooks/useTraining'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import React, { useEffect, useId, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
-import { useToast } from '@/components/ui/use-toast'
-import { Loader2, Plus, Trash2, ArrowLeft, Link as LinkIcon, Check, ChevronsUpDown } from 'lucide-react'
-import { type AppRole, ROLES } from '@/lib/constants'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { cn } from "@/lib/utils"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { useToast } from '@/components/ui/use-toast'
+import { type AppRole, ROLES } from '@/lib/constants'
 import type { OnboardingTaskDefinition } from '@/lib/types'
+import { cn } from "@/lib/utils"
+import { ArrowLeft, Check, ChevronsUpDown, Link as LinkIcon, Loader2, Plus, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export default function TemplateEditor() {
@@ -96,7 +96,7 @@ export default function TemplateEditor() {
         setTasks([...tasks, { title: '', description: '', assignee_role: 'self', due_day_offset: 1 }])
     }
 
-    const handleTaskChange = (index: number, field: keyof OnboardingTaskDefinition, value: any) => {
+    const handleTaskChange = (index: number, field: keyof OnboardingTaskDefinition, value) => {
         const newTasks = [...tasks]
         newTasks[index] = { ...newTasks[index], [field]: value }
 

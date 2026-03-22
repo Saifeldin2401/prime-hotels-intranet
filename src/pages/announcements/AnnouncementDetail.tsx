@@ -1,23 +1,32 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { PriorityBadge } from '@/components/shared/PriorityBadge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
-import {
-    ArrowLeft, Pin, Loader2, CheckCircle, Calendar, User,
-    MessageCircle, Users, AlertTriangle, Send, ThumbsUp, BarChart2
-} from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import type { Announcement } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
+import {
+    AlertTriangle,
+    ArrowLeft,
+    BarChart2,
+    Calendar,
+    CheckCircle,
+    Loader2,
+    MessageCircle,
+    Pin,
+    Send, ThumbsUp,
+    User,
+    Users
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 export default function AnnouncementDetail() {
     const { id } = useParams<{ id: string }>()
@@ -299,7 +308,7 @@ export default function AnnouncementDetail() {
                         <div className="pt-4 border-t">
                             <h4 className="font-medium mb-3">{t('detail.attachments', 'Attachments')}</h4>
                             <div className="flex flex-wrap gap-2">
-                                {announcement.attachments.map((attachment: any, index: number) => (
+                                {announcement.attachments.map((attachment, index: number) => (
                                     <a
                                         key={index}
                                         href={attachment.url}
@@ -383,7 +392,7 @@ export default function AnnouncementDetail() {
                                         {t('detail.acknowledgments_count', { count: acknowledgments.length })} ({acknowledgments.length})
                                     </button>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {acknowledgments.slice(0, 10).map((ack: any) => (
+                                        {acknowledgments.slice(0, 10).map((ack) => (
                                             <div key={ack.id} className="flex items-center gap-1.5 bg-muted rounded-full px-2 py-1 text-xs">
                                                 <Avatar className="h-4 w-4">
                                                     <AvatarImage src={ack.user?.avatar_url} />
@@ -465,7 +474,7 @@ export default function AnnouncementDetail() {
                             </p>
                         ) : (
                             <div className="space-y-4 pt-4 border-t">
-                                {comments.map((comment: any) => (
+                                {comments.map((comment) => (
                                     <div key={comment.id} className="flex gap-3">
                                         <Avatar className="h-8 w-8">
                                             <AvatarImage src={comment.user?.avatar_url} />

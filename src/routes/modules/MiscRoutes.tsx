@@ -1,8 +1,8 @@
-import { lazy } from 'react'
-import { Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { lazy } from 'react'
+import { Navigate, Route } from 'react-router-dom'
 
 const MyProfile = lazy(() => import('@/pages/profile/MyProfile'))
 const UserProfile = lazy(() => import('@/pages/profile/UserProfile'))

@@ -5,31 +5,28 @@
  * and using AI to synthesize relevant information.
  */
 
-import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import {
-    X,
-    Send,
-    Sparkles,
-    Bot,
-    User,
-    Loader2,
-    BookOpen,
-    ExternalLink,
-    AlertCircle,
-    RefreshCcw,
-    Zap,
-    BrainCircuit,
-    Info
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    BookOpen,
+    BrainCircuit,
+    ExternalLink,
+    Info,
+    Loader2,
+    RefreshCcw,
+    Sparkles,
+    User,
+    X,
+    Zap
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 interface Message {

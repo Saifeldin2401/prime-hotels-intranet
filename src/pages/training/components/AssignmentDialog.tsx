@@ -1,16 +1,11 @@
-import { useState, useMemo, useCallback } from 'react'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
-    DialogDescription,
 } from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
-import { useTranslation } from 'react-i18next'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { Input } from '@/components/ui/input'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -19,7 +14,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Search } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
 

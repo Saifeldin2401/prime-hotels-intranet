@@ -1,20 +1,20 @@
-import { useState, useEffect, useRef } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import {
-  Search,
-  Clock,
-  TrendingUp,
-  Filter,
-  X,
-  FileText,
-  Users,
-  Tag
-} from 'lucide-react'
+import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import {
+    Clock,
+    FileText,
+    Filter,
+    Search,
+    Tag,
+    TrendingUp,
+    Users,
+    X
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 interface SearchSuggestion {
   id: string
@@ -35,7 +35,7 @@ interface SearchFilter {
 
 interface AdvancedSearchProps {
   placeholder?: string
-  onSearch: (query: string, filters?: Record<string, any>) => void
+  onSearch: (query: string, filters?) => void
   suggestions?: SearchSuggestion[]
   filters?: SearchFilter[]
   className?: string
@@ -130,7 +130,7 @@ export function AdvancedSearch({
     onSearch(suggestion.text, selectedFilters)
   }
 
-  const handleFilterChange = (filterId: string, value: any) => {
+  const handleFilterChange = (filterId: string, value) => {
     setSelectedFilters(prev => ({
       ...prev,
       [filterId]: value

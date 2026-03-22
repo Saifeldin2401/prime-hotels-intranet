@@ -3,11 +3,11 @@
  * PII Summary Chart Component
  */
 
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertTriangle } from 'lucide-react'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { PIIAccessSummary } from '@/types/audit'
+import { AlertTriangle } from 'lucide-react'
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface PIISummaryChartProps {
   data: PIIAccessSummary[]

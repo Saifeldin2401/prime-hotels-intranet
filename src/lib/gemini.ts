@@ -161,7 +161,7 @@ const cleanText = (text: string): string => {
 
   return text
 
-    .replace(/[\u0000-\u0008\u000B-\u000C\u000E-\u001F\u007F-\u009F]/g, '')
+    .replace(/\p{Cc}/gu, '')
 
     .replace(/[þÿ]/g, '')
 
@@ -370,7 +370,7 @@ export const aiService = {
           return parsed
         }
 
-      } catch (e: unknown) {
+      } catch (_e: unknown) {
 
         console.warn(`⚠️ Model ${model} failed, switch to next...`)
 

@@ -4,30 +4,9 @@
  * Comprehensive analytics for the learning management system.
  */
 
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import {
-    BarChart3,
-    TrendingUp,
-    Users,
-    Clock,
-    GraduationCap,
-    Target,
-    Award,
-    Calendar,
-    Filter,
-    Download,
-    ArrowLeft,
-    Loader2,
-    CheckCircle2,
-    BookOpen,
-    ClipboardCheck
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import {
     Select,
@@ -37,8 +16,27 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase'
 import { useDepartments } from '@/hooks/useDepartments'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import {
+    ArrowLeft,
+    Award,
+    BarChart3,
+    BookOpen,
+    Calendar,
+    CheckCircle2,
+    ClipboardCheck,
+    Clock,
+    Download,
+    GraduationCap,
+    Loader2,
+    Target,
+    Users
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface AnalyticsData {
     overview: {
@@ -104,13 +102,71 @@ interface AnalyticsData {
     }[]
 }
 
+type TimeRange = '7d' | '30d' | '90d' | 'all'
+
+type QuizAttemptSummary = {
+    score: number | null
+    passed: boolean | null
+}
+
+type DepartmentUsersRow = {
+    id: string
+    name: string
+    users: { id: string }[] | null
+}
+
+type QuizProfile = {
+    id: string
+    first_name: string | null
+    last_name: string | null
+}
+
+type QuizStatsRow = {
+    id: string
+    title: string
+    attempts: QuizAttemptSummary[] | null
+}
+
+type RecentAttemptRow = {
+    id: string
+    score: number | null
+    completed_at: string | null
+    user: QuizProfile | null
+    quiz: { title: string | null } | null
+}
+
+type TopUserRow = {
+    id: string
+    first_name: string | null
+    last_name: string | null
+    attempts: { score: number | null }[] | null
+}
+
+type TeamProgressRow = {
+    id: string
+    status: string
+    content_id: string | null
+    last_accessed_at: string | null
+    completed_at: string | null
+    score_percentage: number | null
+    user: (QuizProfile & {
+        department?: { name: string | null } | null
+    }) | null
+}
+
+const TIME_RANGES: readonly TimeRange[] = ['7d', '30d', '90d', 'all']
+
+function isTimeRange(value: string): value is TimeRange {
+    return TIME_RANGES.includes(value as TimeRange)
+}
+
 export default function LearningAnalytics() {
     const { t } = useTranslation(['learning', 'common'])
     const navigate = useNavigate()
-    const { departments } = useDepartments()
+    const { departments: _departments } = useDepartments()
 
-    const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
-    const [departmentFilter, setDepartmentFilter] = useState<string>('all')
+    const [timeRange, setTimeRange] = useState<TimeRange>('30d')
+    const [departmentFilter, _setDepartmentFilter] = useState<string>('all')
 
     const { data: analytics, isLoading } = useQuery({
         queryKey: ['learning-analytics', timeRange, departmentFilter],
@@ -150,17 +206,20 @@ export default function LearningAnalytics() {
                 .eq('status', 'published')
                 .limit(10)
 
-            const quizPerformance = quizStats?.map(q => ({
-                quiz_id: q.id,
-                title: q.title,
-                attempts: (q.attempts as any[])?.length || 0,
-                avg_score: (q.attempts as any[])?.length
-                    ? Math.round((q.attempts as any[]).reduce((sum: number, a: any) => sum + (a.score || 0), 0) / (q.attempts as any[]).length)
-                    : 0,
-                pass_rate: (q.attempts as any[])?.length
-                    ? Math.round((q.attempts as any[]).filter((a: any) => a.passed).length / (q.attempts as any[]).length * 100)
-                    : 0
-            })) || []
+            const quizPerformance = ((quizStats as QuizStatsRow[] | null) || []).map(q => {
+                const attempts = q.attempts || []
+                return {
+                    quiz_id: q.id,
+                    title: q.title,
+                    attempts: attempts.length,
+                    avg_score: attempts.length
+                        ? Math.round(attempts.reduce((sum, a) => sum + (a.score || 0), 0) / attempts.length)
+                        : 0,
+                    pass_rate: attempts.length
+                        ? Math.round(attempts.filter((a) => a.passed).length / attempts.length * 100)
+                        : 0
+                }
+            })
 
             // Department progress
             const { data: deptStats } = await supabase
@@ -171,13 +230,13 @@ export default function LearningAnalytics() {
                     users:profiles(id)
                 `)
 
-            const departmentProgress = deptStats?.map(dept => ({
+            const departmentProgress = ((deptStats as DepartmentUsersRow[] | null) || []).map(dept => ({
                 department_id: dept.id,
                 department_name: dept.name,
-                assigned: (dept.users as any[])?.length || 0,
+                assigned: dept.users?.length || 0,
                 completed: 0,
                 avg_score: 0
-            })) || []
+            }))
 
             // Recent activity
             const buildRecentAttemptsQuery = () => supabase
@@ -191,23 +250,24 @@ export default function LearningAnalytics() {
                 `)
                 .limit(10)
 
-            let { data: recentAttempts, error: recentAttemptsError } = await buildRecentAttemptsQuery()
+            const initialRecentAttemptsResponse = await buildRecentAttemptsQuery()
                 .order('completed_at', { ascending: false })
+            let recentAttempts = initialRecentAttemptsResponse.data
 
-            if (recentAttemptsError) {
+            if (initialRecentAttemptsResponse.error) {
                 const fallback = await buildRecentAttemptsQuery().order('created_at', { ascending: false })
                 if (!fallback.error) {
                     recentAttempts = fallback.data
                 }
             }
 
-            const recentActivity = recentAttempts?.map(a => ({
-                user_id: (a.user as any)?.id || '',
-                user_name: `${(a.user as any)?.first_name || ''} ${(a.user as any)?.last_name || ''}`.trim(),
-                quiz_title: (a.quiz as any)?.title || '',
+            const recentActivity = ((recentAttempts as RecentAttemptRow[] | null) || []).map(a => ({
+                user_id: a.user?.id || '',
+                user_name: `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim(),
+                quiz_title: a.quiz?.title || '',
                 score: a.score || 0,
                 completed_at: a.completed_at || ''
-            })) || []
+            }))
 
             // Top performers
             const { data: topUsers } = await supabase
@@ -220,18 +280,21 @@ export default function LearningAnalytics() {
                 `)
                 .limit(10)
 
-            const topPerformers = topUsers
-                ?.map(u => ({
-                    user_id: u.id,
-                    user_name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
-                    quizzes_completed: (u.attempts as any[])?.length || 0,
-                    avg_score: (u.attempts as any[])?.length
-                        ? Math.round((u.attempts as any[]).reduce((sum: number, a: any) => sum + (a.score || 0), 0) / (u.attempts as any[]).length)
-                        : 0
-                }))
+            const topPerformers = ((topUsers as TopUserRow[] | null) || [])
+                .map(u => {
+                    const attempts = u.attempts || []
+                    return {
+                        user_id: u.id,
+                        user_name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+                        quizzes_completed: attempts.length,
+                        avg_score: attempts.length
+                            ? Math.round(attempts.reduce((sum, a) => sum + (a.score || 0), 0) / attempts.length)
+                            : 0
+                    }
+                })
                 .filter(u => u.quizzes_completed > 0)
                 .sort((a, b) => b.avg_score - a.avg_score)
-                .slice(0, 5) || []
+                .slice(0, 5)
 
             // Team Training Progress (from TrainingDashboard logic)
             const { data: teamProgressData } = await supabase
@@ -259,15 +322,15 @@ export default function LearningAnalytics() {
                 : { data: [], error: null }
             const teamModuleMap = new Map((teamModules || []).map((module) => [module.id, module.title]))
 
-            const teamProgress = teamProgressData?.map(item => ({
+            const teamProgress = ((teamProgressData as TeamProgressRow[] | null) || []).map(item => ({
                 id: item.id,
-                user_name: `${(item.user as any)?.first_name || ''} ${(item.user as any)?.last_name || ''}`.trim(),
-                department: (item.user as any)?.department?.name || 'Unassigned',
+                user_name: `${item.user?.first_name || ''} ${item.user?.last_name || ''}`.trim(),
+                department: item.user?.department?.name || 'Unassigned',
                 module_title: teamModuleMap.get(item.content_id) || 'Unknown Module',
                 status: item.status,
                 score: item.score_percentage,
                 date: item.completed_at || item.last_accessed_at
-            })) || []
+            }))
 
             // Module insights
             const { data: modules } = await supabase
@@ -427,7 +490,11 @@ export default function LearningAnalytics() {
                     </div>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Select value={timeRange} onValueChange={(v) => setTimeRange(v as any)}>
+                    <Select value={timeRange} onValueChange={(value) => {
+                        if (isTimeRange(value)) {
+                            setTimeRange(value)
+                        }
+                    }}>
                         <SelectTrigger className="w-[140px]">
                             <Calendar className="h-4 w-4 mr-2" />
                             <SelectValue />

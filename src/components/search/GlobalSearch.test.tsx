@@ -1,6 +1,6 @@
+import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { act, fireEvent, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { GlobalSearch } from '@/components/search/GlobalSearch'
 
 const mockNavigate = vi.fn()
 const mockUseSearch = vi.fn()

@@ -1,9 +1,9 @@
-import { formatDistanceToNow } from 'date-fns'
-import { Clock, ArrowRight, User } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { useStatusHistory, type StatusHistoryEntry } from '@/hooks/useStatusHistory'
 import { cn } from '@/lib/utils'
+import { formatDistanceToNow } from 'date-fns'
+import { ArrowRight, Clock, User } from 'lucide-react'
 
 interface StatusHistoryTimelineProps {
     entityType: string

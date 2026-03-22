@@ -1,7 +1,7 @@
 
-import { useEffect } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '@/hooks/useAuth'
+import { useEffect } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 interface PasswordEnforcementGuardProps {
     children: React.ReactNode

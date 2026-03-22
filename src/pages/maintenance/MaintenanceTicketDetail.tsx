@@ -1,24 +1,7 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { useAuth } from '@/hooks/useAuth'
-import {
-    useMaintenanceTicket,
-    useAssignMaintenanceTicket,
-    useCompleteMaintenanceTicket,
-    useAddMaintenanceComment,
-    useUpdateMaintenanceTicket
-} from '@/hooks/useMaintenanceTickets'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2, ArrowLeft, Send, User, Calendar, MapPin, Download, Settings } from 'lucide-react'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { supabase } from '@/lib/supabase'
-import { openUrlInNewTab, resolveMaintenanceAttachmentUrl } from '@/lib/secureFileAccess'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Dialog,
     DialogContent,
@@ -27,10 +10,27 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
+import {
+    useAddMaintenanceComment,
+    useAssignMaintenanceTicket,
+    useCompleteMaintenanceTicket,
+    useMaintenanceTicket,
+    useUpdateMaintenanceTicket
+} from '@/hooks/useMaintenanceTickets'
+import { openUrlInNewTab, resolveMaintenanceAttachmentUrl } from '@/lib/secureFileAccess'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { ArrowLeft, Calendar, Download, Loader2, MapPin, Send, Settings, User } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const priorityColors: Record<string, string> = {
     low: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -99,16 +99,16 @@ export default function MaintenanceTicketDetail() {
 
             if (error) throw error
 
-            const mapped = (data || []).map((p: any) => ({
+            const mapped = (data || []).map((p) => ({
                 id: p.id as string,
                 full_name: p.full_name as string | null,
                 email: p.email as string,
                 role: p.user_roles?.role as string,
-                property_ids: (p.user_properties || []).map((up: any) => up.property_id as string),
+                property_ids: (p.user_properties || []).map((up) => up.property_id as string),
             }))
 
             return ticket?.property_id
-                ? mapped.filter((p: any) => p.role === 'corporate_admin' || p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(ticket.property_id))
+                ? mapped.filter((p) => p.role === 'corporate_admin' || p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(ticket.property_id))
                 : mapped
         }
     })
@@ -173,7 +173,7 @@ export default function MaintenanceTicketDetail() {
         if (!ticket) return
         setManageSaving(true)
         try {
-            const updates: any = {
+            const updates = {
                 status: manageStatus,
                 priority: managePriority,
                 estimated_completion_date: manageEta || null,
@@ -413,7 +413,7 @@ export default function MaintenanceTicketDetail() {
                                     <SelectValue placeholder={t_ext('select_a_user_1', 'Select a user')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {(assignableUsersQuery.data || []).map((p: any) => (
+                                    {(assignableUsersQuery.data || []).map((p) => (
                                         <SelectItem key={p.id} value={p.id}>
                                             {(p.full_name || p.email) + ` (${p.role})`}
                                         </SelectItem>

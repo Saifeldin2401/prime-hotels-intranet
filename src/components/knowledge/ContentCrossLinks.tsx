@@ -6,10 +6,10 @@
  * appearing in both Knowledge Base and Documents sections.
  */
 
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { BookOpen, FileText, ArrowRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ArrowRight, BookOpen, FileText } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface ContentCrossLinksProps {
     /** The document ID (same in both KB and Documents) */

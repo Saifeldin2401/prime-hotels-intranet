@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { FileText, ChevronLeft, ChevronRight, ZoomIn, ZoomOut, RotateCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import * as pdfjsLib from 'pdfjs-dist'
-import { useTranslation } from "react-i18next";
+import { Button } from '@/components/ui/button';
+import { ChevronLeft, ChevronRight, FileText, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
+import * as pdfjsLib from 'pdfjs-dist';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Set worker source locally using Vite's URL handling
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -43,7 +42,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
         if (renderTaskRef.current) {
             try {
                 renderTaskRef.current.cancel()
-            } catch (error) {
+            } catch (_error) {
                 // Ignore
             }
             renderTaskRef.current = null

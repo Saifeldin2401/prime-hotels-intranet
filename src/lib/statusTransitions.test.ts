@@ -1,4 +1,3 @@
-import { describe, expect, it } from 'vitest'
 import {
     StatusHelpers,
     getTransitionErrorMessage,
@@ -7,6 +6,7 @@ import {
     isValidTransition,
     validateTransition
 } from '@/lib/statusTransitions'
+import { describe, expect, it } from 'vitest'
 
 describe('statusTransitions business rules', () => {
     it('allows valid transitions and blocks invalid ones', () => {

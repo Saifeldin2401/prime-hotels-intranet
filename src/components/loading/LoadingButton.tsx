@@ -3,8 +3,8 @@
  */
 
 import { Button, type ButtonProps } from '@/components/ui/button'
-import { Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Loader2 } from 'lucide-react'
 
 interface LoadingButtonProps extends ButtonProps {
   loading?: boolean

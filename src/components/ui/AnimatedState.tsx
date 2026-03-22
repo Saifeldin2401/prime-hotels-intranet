@@ -1,8 +1,8 @@
-import { useLottie } from "lottie-react";
 import { cn } from "@/lib/utils";
+import { useLottie } from "lottie-react";
 
 interface AnimatedStateProps {
-    animationData: any;
+    animationData;
     className?: string;
     loop?: boolean;
     autoplay?: boolean;

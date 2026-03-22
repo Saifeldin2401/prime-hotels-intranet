@@ -1,19 +1,18 @@
-import { useMemo } from 'react'
-import { BubbleMenu } from '@tiptap/react/menus'
-import type { Editor } from '@tiptap/react'
-import {
-  AlignCenter,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Italic,
-  Sparkles,
-  Strikethrough,
-  Trash2,
-  Underline,
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
 import ToolbarButton from '@/editor/toolbar/ToolbarButton'
+import { cn } from '@/lib/utils'
+import type { Editor } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
+import {
+    AlignCenter,
+    AlignLeft,
+    AlignRight,
+    Bold,
+    Italic,
+    Sparkles,
+    Strikethrough,
+    Trash2,
+    Underline,
+} from 'lucide-react'
 
 interface FloatingToolbarProps {
   editor: Editor | null
@@ -29,10 +28,6 @@ function parseWidth(width?: string): number {
 }
 
 export function FloatingToolbar({ editor, disabled = false, onOpenAiPanel }: FloatingToolbarProps) {
-  const imageWidth = useMemo(() => {
-    if (!editor?.isActive('image')) return 100
-    return parseWidth(editor.getAttributes('image').width)
-  }, [editor, editor?.state.selection.from, editor?.state.selection.to])
 
   if (!editor || disabled) return null
 

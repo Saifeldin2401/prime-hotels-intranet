@@ -1,19 +1,17 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { X, Bell, Check, Trash2, Settings, Filter, CheckCheck, ThumbsUp, ThumbsDown } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { cn } from '@/lib/utils'
 import { useNotifications } from '@/hooks/useNotifications'
-import { useNotificationAction, useMarkAllNotificationsRead, useApproveRequest } from '@/hooks/useQuickActions'
+import { useApproveRequest, useMarkAllNotificationsRead, useNotificationAction } from '@/hooks/useQuickActions'
+import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
-import { useTranslation } from "react-i18next";
+import { AnimatePresence, motion } from 'framer-motion'
+import { Bell, Check, CheckCheck, Filter, Settings, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from "react-i18next"
 import { toast } from 'sonner'
 
-const notificationIcons: Record<string, any> = {
+const notificationIcons = {
   task: Check,
   announcement: Bell,
   mention: Bell,
@@ -44,7 +42,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     
     try {
       await notificationAction.mutateAsync({ notificationId, action: 'mark_read' })
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('notifications.failed_to_mark_read', 'Failed to mark as read'))
     } finally {
       setProcessingIds(prev => {
@@ -61,7 +59,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     
     try {
       await notificationAction.mutateAsync({ notificationId, action: 'delete' })
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('notifications.failed_to_delete', 'Failed to delete notification'))
     } finally {
       setProcessingIds(prev => {
@@ -75,7 +73,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
   const handleMarkAllRead = async () => {
     try {
       await markAllRead.mutateAsync()
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('notifications.failed_to_mark_all_read', 'Failed to mark all as read'))
     }
   }
@@ -88,7 +86,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
       await approveRequest.mutateAsync({ requestId, action })
       // Also mark the notification as read
       await notificationAction.mutateAsync({ notificationId, action: 'mark_read' })
-    } catch (error) {
+    } catch (_error) {
       toast.error(t(`notifications.failed_to_${action}`, `Failed to ${action} request`))
     } finally {
       setProcessingIds(prev => {
@@ -101,7 +99,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
 
   const isProcessing = (id: string) => processingIds.has(id)
 
-  const getNotificationActions = (notification: any) => {
+  const getNotificationActions = (notification) => {
     const actions = []
     
     // Mark as read action for unread notifications

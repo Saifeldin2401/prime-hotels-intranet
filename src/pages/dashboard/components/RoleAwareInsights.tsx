@@ -1,31 +1,31 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import {
-    Building2,
-    Users,
-    ClipboardCheck,
-    Wrench,
-    GraduationCap,
-    TrendingUp,
-    Briefcase,
-    Calendar,
-    UserCheck,
-    FileCheck,
-    BarChart3
-} from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useTranslation } from 'react-i18next'
+import { useAuth } from '@/hooks/useAuth'
 import {
-    usePropertyManagerStats,
+    useCorporateStats,
     useDepartmentHeadStats,
     useHRStats,
-    useCorporateStats
+    usePropertyManagerStats
 } from '@/hooks/useDashboardStats'
 import type { AppRole } from '@/lib/constants'
 import { getBusinessRoleForAppRole, type BusinessRole } from '@/lib/organizationalRoles'
+import { cn } from '@/lib/utils'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    BarChart3,
+    Briefcase,
+    Building2,
+    Calendar,
+    ClipboardCheck,
+    FileCheck,
+    GraduationCap,
+    TrendingUp,
+    UserCheck,
+    Users,
+    Wrench
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const colorMap = {
     navy: { bg: 'bg-blue-950/5', text: 'text-blue-950', border: 'border-blue-950/10', icon: 'text-blue-950' },

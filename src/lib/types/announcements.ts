@@ -1,5 +1,4 @@
-import type { AnnouncementPriority } from '../constants'
-import type { AppRole } from '../constants'
+import type { AnnouncementPriority, AppRole } from '../constants'
 import type { Profile } from './profile'
 
 export interface Announcement {

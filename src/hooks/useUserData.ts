@@ -1,6 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 export interface UserTask {
     id: string
@@ -110,7 +110,7 @@ export function useUserSchedule() {
                     if (moduleData) modules = moduleData
                 }
 
-                assignments.forEach((a: any) => {
+                assignments.forEach((a) => {
                     const moduleTitle = modules.find(m => m.id === a.content_id)?.title
                     scheduleItems.push({
                         id: a.id,

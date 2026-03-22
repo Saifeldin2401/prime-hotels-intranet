@@ -1,25 +1,24 @@
-import { useState, useEffect, useRef } from 'react'
-import { Bell } from 'lucide-react'
-import { motion, useAnimation } from 'framer-motion'
-import { useNavigate } from 'react-router-dom'
-import { useNotifications } from '@/hooks/useNotifications'
-import { bellVariants } from '@/lib/motion'
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { formatDistanceToNow } from 'date-fns'
-import type { Notification } from '@/lib/types'
+import { Button } from '@/components/ui/button'
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from '@/components/ui/popover'
 import { useAuth } from '@/hooks/useAuth'
+import { useNotifications } from '@/hooks/useNotifications'
 import { usePermissions } from '@/hooks/usePermissions'
-import { useTranslation } from "react-i18next";
+import { bellVariants } from '@/lib/motion'
+import type { Notification } from '@/lib/types'
+import { formatDistanceToNow } from 'date-fns'
+import { motion, useAnimation } from 'framer-motion'
+import { Bell } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
-  const { roles } = useAuth()
+  const { roles: _roles } = useAuth()
   const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()

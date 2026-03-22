@@ -1,12 +1,12 @@
-import { useNavigate, Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Cake, Loader2, Gift, ChevronRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTodaysBirthdays } from '@/hooks/useEmployeeDirectory'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { Cake, ChevronRight, Gift, Loader2 } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { Link, useNavigate } from 'react-router-dom'
 
 function getInitials(name?: string | null) {
   return name

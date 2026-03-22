@@ -1,6 +1,6 @@
-import React, { useState, useRef, useEffect, forwardRef } from 'react'
-import { cn } from '@/lib/utils'
 import { useAnimationPreferences } from '@/hooks/useAnimations'
+import { cn } from '@/lib/utils'
+import React, { forwardRef, useEffect, useRef, useState } from 'react'
 
 // Interactive Button with ripple effect
 interface InteractiveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -11,7 +11,7 @@ interface InteractiveButtonProps extends React.ButtonHTMLAttributes<HTMLButtonEl
 }
 
 export const InteractiveButton = forwardRef<HTMLButtonElement, InteractiveButtonProps>(
-  ({ className, variant = 'default', size = 'default', ripple = true, magnetic = false, children, ...props }, ref) => {
+  ({ className, variant = 'default', size = 'default', ripple = true, magnetic = false, children, ...props }) => {
     const [ripples, setRipples] = useState<Array<{ id: number; x: number; y: number }>>([])
     const buttonRef = useRef<HTMLButtonElement>(null)
     const preferences = useAnimationPreferences()
@@ -179,7 +179,7 @@ interface InteractiveCardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 export const InteractiveCard = forwardRef<HTMLDivElement, InteractiveCardProps>(
-  ({ className, hover = true, tilt = false, glow = false, children, ...props }, ref) => {
+  ({ className, hover = true, tilt = false, glow = false, children, ...props }) => {
     const cardRef = useRef<HTMLDivElement>(null)
     const [isHovered, setIsHovered] = useState(false)
     const { shouldUseReducedMotion } = useAnimationPreferences()

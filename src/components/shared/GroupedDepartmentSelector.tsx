@@ -1,4 +1,3 @@
-import React, { useMemo } from 'react'
 import {
     Select,
     SelectContent,
@@ -8,13 +7,14 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import type { Department, Property } from '@/lib/types'
-import { useTranslation } from 'react-i18next'
+import type { Department } from '@/lib/types'
 import { Building2 } from 'lucide-react'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface GroupedDepartmentSelectorProps {
-    departments: any[] | undefined
-    properties: any[] | undefined
+    departments
+    properties
     value: string
     onValueChange: (value: string) => void
     placeholder?: string

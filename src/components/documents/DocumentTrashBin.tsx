@@ -1,52 +1,50 @@
-import * as React from "react";
-import {
-  Trash2,
-  RotateCcw,
-  AlertTriangle,
-  Grid3X3,
-  List,
-  FileText,
-  Image,
-  FileSpreadsheet,
-  File,
-  Calendar,
-  User,
-  Search,
-  X,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { formatDistanceToNow } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { EmptyState } from "@/components/shared/EmptyState";
 import { ListSkeleton } from "@/components/loading/ListSkeleton";
+import { EmptyState } from "@/components/shared/EmptyState";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { formatDistanceToNow } from "date-fns";
+import {
+    AlertTriangle,
+    Calendar,
+    File,
+    Grid3X3,
+    Image,
+    List,
+    RotateCcw,
+    Search,
+    Trash2,
+    User,
+    X
+} from "lucide-react";
+import * as React from "react";
 
 export interface TrashedDocument {
   id: string;
@@ -104,7 +102,6 @@ export function DocumentTrashBin({
   onRestore,
   onDeletePermanently,
   onEmptyTrash,
-  currentUserId,
   className,
 }: DocumentTrashBinProps) {
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");

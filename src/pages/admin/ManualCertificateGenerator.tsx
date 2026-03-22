@@ -1,17 +1,17 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
+import { useProfiles } from '@/hooks/useUsers'
 import { createCertificate } from '@/lib/certificateService'
 import { supabase } from '@/lib/supabase'
-import { toast } from 'sonner'
-import { Award, Loader2, User as UserIcon } from 'lucide-react'
-import { useProfiles } from '@/hooks/useUsers'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Award, Loader2, User as UserIcon } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 type CertificateType = 'training' | 'sop_quiz' | 'compliance' | 'achievement'
 
@@ -87,7 +87,7 @@ export default function ManualCertificateGenerator() {
             setSelectedUserId('')
             setSelectedTrainingModuleId('')
             setTitle('')
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error generating manual certificate:', error)
             toast.error(t('manual_certificates.errors.generation_failed'))
         } finally {

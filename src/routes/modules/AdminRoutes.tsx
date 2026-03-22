@@ -1,8 +1,8 @@
-import React, { lazy } from 'react'
-import { Route } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { lazy } from 'react'
+import { Route } from 'react-router-dom'
 
 const UserManagement = lazy(() => import('@/pages/admin/UserManagement'))
 const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioning'))

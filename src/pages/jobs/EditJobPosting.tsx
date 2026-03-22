@@ -1,10 +1,10 @@
-import { useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { PageHeader } from '@/components/layout/PageHeader'
 import { JobPostingForm } from '@/components/jobs/JobPostingForm'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { supabase } from '@/lib/supabase'
 import type { JobPosting } from '@/lib/types'
+import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
 
 export default function EditJobPosting() {
     const { t } = useTranslation('jobs')

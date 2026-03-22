@@ -4,40 +4,38 @@
  * Admin page for browsing, managing, and reviewing questions.
  */
 
-import { useState, useEffect } from 'react'
-import { useSearchParams, Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useApproveQuestion, useDeleteQuestion, usePendingReviewQuestions, useQuestions, useRejectQuestion } from '@/hooks/useQuestions'
+import type { KnowledgeQuestion, QuestionStatus, QuestionType } from '@/types/questions'
+import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG, STATUS_CONFIG } from '@/types/questions'
 import {
-    Search,
-    Plus,
-    Filter,
-    MoreVertical,
+    Archive,
+    Brain,
     CheckCircle,
     Clock,
-    FileEdit,
-    Archive,
     Eye,
-    Sparkles,
-    Brain,
+    FileEdit,
+    Filter,
     Loader2,
-    ChevronRight
+    MoreVertical,
+    Plus,
+    Search,
+    Sparkles
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useQuestions, usePendingReviewQuestions, useApproveQuestion, useRejectQuestion, useDeleteQuestion } from '@/hooks/useQuestions'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { KnowledgeQuestion, QuestionStatus, QuestionType } from '@/types/questions'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG, STATUS_CONFIG } from '@/types/questions'
+import { Link, useSearchParams } from 'react-router-dom'
 
 export function QuestionLibrary() {
     const { t } = useTranslation(['knowledge', 'common'])
@@ -261,7 +259,7 @@ interface QuestionCardProps {
     isApproving?: boolean
 }
 
-function QuestionCard({ question, onApprove, onReject, onDelete, isApproving }: QuestionCardProps) {
+function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCardProps) {
     const statusConfig = STATUS_CONFIG[question.status]
     const typeConfig = QUESTION_TYPE_CONFIG[question.question_type]
     const difficultyConfig = DIFFICULTY_CONFIG[question.difficulty_level]

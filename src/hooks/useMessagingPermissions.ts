@@ -1,6 +1,6 @@
-import { useMemo } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import type { AppRole } from '@/lib/constants'
+import { useMemo } from 'react'
 
 export interface MessagingPermissions {
   canSendMessage: boolean

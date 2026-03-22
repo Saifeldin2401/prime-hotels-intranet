@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTheme } from '@/contexts/ThemeContext'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface AccessibilityOptions {
   enableKeyboardNavigation?: boolean
@@ -395,7 +395,7 @@ export function useAccessibleForm<T extends Record<string, any>>(initialValues: 
 
   const { announceAssertive } = useAriaLive()
 
-  const setValue = useCallback((field: keyof T, value: any) => {
+  const setValue = useCallback((field: keyof T, value) => {
     setValues(prev => ({ ...prev, [field]: value }))
   }, [])
 
@@ -411,7 +411,7 @@ export function useAccessibleForm<T extends Record<string, any>>(initialValues: 
     setTouched(prev => ({ ...prev, [fieldName]: true }))
   }, [])
 
-  const validateField = useCallback((field: keyof T, validator: (value: any) => string | undefined) => {
+  const validateField = useCallback((field: keyof T, validator: (value) => string | undefined) => {
     const error = validator(values[field])
     setError(field, error)
     return !error
@@ -419,7 +419,7 @@ export function useAccessibleForm<T extends Record<string, any>>(initialValues: 
 
   const getFieldProps = useCallback((field: keyof T) => ({
     value: values[field],
-    onChange: (value: any) => setValue(field, value),
+    onChange: (value) => setValue(field, value),
     onBlur: () => setFieldTouched(field),
     'aria-invalid': !!errors[field],
     'aria-describedby': errors[field] ? `${String(field)}-error` : undefined,

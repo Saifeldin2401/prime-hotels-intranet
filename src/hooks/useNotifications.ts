@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import type { Notification } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
 export function useNotifications() {
   const { user } = useAuth()
@@ -23,7 +23,7 @@ export function useNotifications() {
       if (error) throw error
 
       // Derive is_read from read_at for frontend compatibility
-      return data.map((n: any) => ({
+      return data.map((n) => ({
         ...n,
         is_read: !!n.read_at,
         entity_type: n.metadata?.entity_type || null,

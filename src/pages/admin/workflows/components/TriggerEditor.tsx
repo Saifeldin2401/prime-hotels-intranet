@@ -1,16 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Loader2, Save } from 'lucide-react'
-import { useCreateTrigger, useUpdateTrigger } from '@/hooks/useTriggers'
-import { useToast } from '@/components/ui/use-toast'
-import type { TriggerRule } from '@/hooks/useTriggers'
-import { useWorkflows } from '@/hooks/useWorkflows'
-import { useTrainingModulesList } from '@/hooks/useTrainingRules'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import {
     Select,
     SelectContent,
@@ -18,7 +8,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { useTranslation } from "react-i18next";
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
+import { useTrainingModulesList } from '@/hooks/useTrainingRules'
+import type { TriggerRule } from '@/hooks/useTriggers'
+import { useCreateTrigger, useUpdateTrigger } from '@/hooks/useTriggers'
+import { useWorkflows } from '@/hooks/useWorkflows'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { Loader2, Save } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 interface TriggerEditorProps {
     trigger?: Partial<TriggerRule>
@@ -72,7 +72,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
     const [advancedMode, setAdvancedMode] = useState(false)
     const [conditionRows, setConditionRows] = useState<ConditionRow[]>(() => {
         if (!Array.isArray(trigger?.conditions)) return []
-        return trigger?.conditions.map((condition: any) => ({
+        return trigger?.conditions.map((condition) => ({
             field: String(condition?.field ?? ''),
             operator: (condition?.operator ?? 'equals') as ConditionRow['operator'],
             value: Array.isArray(condition?.value) ? condition.value.join(', ') : String(condition?.value ?? '')
@@ -110,8 +110,8 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
         description: string
         event_type: string
         action_type: string
-        action_config: Record<string, any>
-        conditions?: any[]
+        action_config
+        conditions?
     }) => {
         setName(template.name)
         setDescription(template.description)
@@ -126,7 +126,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
         setActionConfig(JSON.stringify(template.action_config || {}, null, 2))
         const nextConditions = template.conditions || []
         setConditions(JSON.stringify(nextConditions, null, 2))
-        setConditionRows(nextConditions.map((condition: any) => ({
+        setConditionRows(nextConditions.map((condition) => ({
             field: String(condition?.field ?? 'department_id'),
             operator: (condition?.operator ?? 'equals') as ConditionRow['operator'],
             value: Array.isArray(condition?.value) ? condition.value.join(', ') : String(condition?.value ?? '')
@@ -229,8 +229,8 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
         { value: 'in', label: 'In (comma separated)' }
     ]
 
-    const updateActionConfig = (updates: Record<string, any>) => {
-        let current: Record<string, any> = {}
+    const updateActionConfig = (updates) => {
+        let current = {}
         try {
             current = actionConfig ? JSON.parse(actionConfig) : {}
         } catch {
@@ -240,7 +240,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
         setActionConfig(JSON.stringify(next, null, 2))
     }
 
-    const getActionConfigValue = (key: string, fallback: any = '') => {
+    const getActionConfigValue = (key: string, fallback = '') => {
         try {
             const parsed = actionConfig ? JSON.parse(actionConfig) : {}
             return parsed?.[key] ?? fallback
@@ -435,7 +435,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
                                 <SelectValue placeholder="Select quiz" />
                             </SelectTrigger>
                             <SelectContent>
-                                {quizzes?.map((quiz: any) => (
+                                {quizzes?.map((quiz) => (
                                     <SelectItem key={quiz.id} value={quiz.id}>{quiz.title}</SelectItem>
                                 ))}
                             </SelectContent>
@@ -454,7 +454,7 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
                                 <SelectValue placeholder="Select document" />
                             </SelectTrigger>
                             <SelectContent>
-                                {documents?.map((doc: any) => (
+                                {documents?.map((doc) => (
                                     <SelectItem key={doc.id} value={doc.id}>{doc.title}</SelectItem>
                                 ))}
                             </SelectContent>

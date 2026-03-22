@@ -1,13 +1,12 @@
-import { useState } from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Button } from '@/components/ui/button'
+import { Icons } from '@/components/icons'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Icons } from '@/components/icons'
 import type { User } from '@/lib/rbac'
 import { canAccessPage } from '@/lib/rbac'
-import { useTranslation } from "react-i18next";
+import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 interface HotelNavigationProps {
   user: User

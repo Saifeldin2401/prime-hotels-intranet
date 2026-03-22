@@ -1,20 +1,11 @@
-import { useState } from 'react'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import { Switch } from '@/components/ui/switch'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Play, Loader2, Settings2, Plus } from 'lucide-react'
-import { useWorkflows, useToggleWorkflow, useExecuteWorkflow, useDeleteWorkflow } from '@/hooks/useWorkflows'
-import { useAuth } from '@/hooks/useAuth'
-import { format } from 'date-fns'
-import { useToast } from '@/components/ui/use-toast'
+import { Button } from '@/components/ui/button'
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle
+} from "@/components/ui/dialog"
 import { Input } from '@/components/ui/input'
 import {
     Select,
@@ -23,16 +14,24 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-} from "@/components/ui/dialog"
-import { WorkflowEditor } from './WorkflowEditor'
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { useDeleteWorkflow, useExecuteWorkflow, useToggleWorkflow, useWorkflows } from '@/hooks/useWorkflows'
 import type { WorkflowDefinition } from '@/services/workflowEngine'
-import { useTranslation } from "react-i18next";
+import { format } from 'date-fns'
+import { Loader2, Play, Plus, Settings2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
+import { WorkflowEditor } from './WorkflowEditor'
 
 export function WorkflowList() {
     const { t: t_ext } = useTranslation('extracted');
@@ -59,7 +58,7 @@ export function WorkflowList() {
                         description: `Workflow is now ${!currentStatus ? 'active' : 'inactive'}`,
                     })
                 },
-                onError: (error) => {
+                onError: () => {
                     toast({
                         title: 'Error',
                         description: 'Failed to update workflow status',

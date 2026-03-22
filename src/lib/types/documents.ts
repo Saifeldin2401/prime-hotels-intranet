@@ -1,5 +1,4 @@
 import type { AppRole, DocumentStatus, DocumentVisibility } from '../constants'
-import type { Profile } from './profile'
 
 export interface Document {
   id: string

@@ -135,7 +135,7 @@ function mapSupabaseError(code: string, message: string): ErrorDetails {
 /**
  * Maps generic error messages to user-friendly versions
  */
-function mapErrorToUserMessage(message: string, name?: string): ErrorDetails {
+function mapErrorToUserMessage(message: string, _name?: string): ErrorDetails {
   const lowerMessage = message.toLowerCase()
 
   // Network errors

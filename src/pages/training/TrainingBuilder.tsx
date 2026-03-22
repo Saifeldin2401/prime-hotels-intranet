@@ -1,50 +1,50 @@
-import { useState, useEffect, useMemo, useRef, lazy, useCallback } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useToast } from '@/components/ui/use-toast'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Switch } from '@/components/ui/switch'
-// Lazy load heavy RichTextEditor
-const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
-import {
-  Plus,
-  Upload,
-  FileQuestion,
-  Sparkles,
-  Layers,
-  CheckCircle2,
-  AlertTriangle,
-  ChevronLeft,
-  ChevronRight,
-  RotateCcw,
-  RotateCw,
-  ListChecks,
-  Trash2
-} from 'lucide-react'
-import type { TrainingModule } from '@/lib/types'
-import type { LearningQuiz } from '@/types/learning'
-import { useTranslation } from 'react-i18next'
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { KnowledgeBaseSidebar, SmartModuleWizard } from '@/components/training'
-import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
-import { getUserFriendlyError } from '@/lib/errorMessages'
-import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
-import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
+import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
+import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
+import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { supabase } from '@/lib/supabase'
+import type { TrainingModule } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { analytics } from '@/services/analyticsService'
 import { quizIntegrityService } from '@/services/quizIntegrityService'
-import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import type { LearningQuiz } from '@/types/learning'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    AlertTriangle,
+    CheckCircle2,
+    ChevronLeft,
+    ChevronRight,
+    FileQuestion,
+    Layers,
+    ListChecks,
+    Plus,
+    RotateCcw,
+    RotateCw,
+    Sparkles,
+    Trash2,
+    Upload
+} from 'lucide-react'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+// Lazy load heavy RichTextEditor
+const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank'

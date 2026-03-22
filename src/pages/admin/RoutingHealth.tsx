@@ -1,35 +1,34 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addDays, format } from 'date-fns'
-import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { useProperties } from '@/hooks/useProperties'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
+import type { RequestRow, RequestStepRow } from '@/hooks/useRequests'
 import type { AppRole } from '@/lib/constants'
-import type { RequestRow, RequestStepRow, RequestStatus } from '@/hooks/useRequests'
-import { AlertTriangle, Loader2, UserPlus, UserX, Shield, Clock } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { addDays, format } from 'date-fns'
+import { AlertTriangle, Clock, Loader2, Shield, UserPlus, UserX } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 type Candidate = {
@@ -55,8 +54,6 @@ type DelegationRow = {
   delegate?: { id: string; full_name: string | null; email: string }
 }
 
-const HR_ROLES: AppRole[] = ['property_hr', 'regional_hr', 'regional_admin', 'corporate_admin']
-const SUPERVISOR_ROLES: AppRole[] = ['manager', 'department_head', 'property_manager']
 
 function toLabel(role?: string | null) {
   if (!role) return 'Unknown'
@@ -84,7 +81,7 @@ export default function RoutingHealth() {
   } | null>(null)
   const [selectedAssignee, setSelectedAssignee] = useState('')
 
-  const [propertySelections, setPropertySelections] = useState<Record<string, string>>({})
+  const [_propertySelections, _setPropertySelections] = useState<Record<string, string>>({})
 
   const [delegatorId, setDelegatorId] = useState('')
   const [delegateId, setDelegateId] = useState('')
@@ -92,8 +89,8 @@ export default function RoutingHealth() {
   const [scopeId, setScopeId] = useState('')
   const [expiryDays, setExpiryDays] = useState('7')
   const [reason, setReason] = useState('')
-  const [entityType, setEntityType] = useState('')
-  const [entityId, setEntityId] = useState('')
+  const [entityType, _setEntityType] = useState('')
+  const [entityId, _setEntityId] = useState('')
 
   const { data: requests = [], isLoading: loadingRequests } = useQuery({
     queryKey: ['routing-health', 'requests'],
@@ -155,7 +152,7 @@ export default function RoutingHealth() {
     }
   })
 
-  const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
+  const { data: profiles = [] } = useQuery({
     queryKey: ['routing-health', 'profiles'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -169,7 +166,7 @@ export default function RoutingHealth() {
     }
   })
 
-  const { data: delegations = [], isLoading: loadingDelegations } = useQuery({
+  const { data: delegations = [] } = useQuery({
     queryKey: ['routing-health', 'delegations'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -198,12 +195,12 @@ export default function RoutingHealth() {
   })
 
   const candidates = useMemo<Candidate[]>(() => {
-    return (profiles || []).map((profile: any) => ({
+    return (profiles || []).map((profile) => ({
       id: profile.id,
       full_name: profile.full_name ?? null,
       email: profile.email,
-      roles: (profile.user_roles || []).map((role: any) => role.role) as AppRole[],
-      property_ids: (profile.user_properties || []).map((p: any) => p.property_id) as string[],
+      roles: (profile.user_roles || []).map((role) => role.role) as AppRole[],
+      property_ids: (profile.user_properties || []).map((p) => p.property_id) as string[],
     }))
   }, [profiles])
 
@@ -250,18 +247,6 @@ export default function RoutingHealth() {
       .filter((row) => row.hasIssue)
   }, [requests, stepsByRequest])
 
-  const hrAssignments = useMemo(() => {
-    const hrUsers = candidates.filter((c) => c.roles.includes('property_hr'))
-    const map = new Map<string, Candidate[]>()
-    hrUsers.forEach((user) => {
-      user.property_ids.forEach((propertyId) => {
-        const list = map.get(propertyId) || []
-        list.push(user)
-        map.set(propertyId, list)
-      })
-    })
-    return map
-  }, [candidates])
 
   const refreshAll = () => {
     queryClient.invalidateQueries({ queryKey: ['routing-health'] })
@@ -314,7 +299,7 @@ export default function RoutingHealth() {
       setAssignDialogOpen(false)
       refreshAll()
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Assignment failed', description: err.message, variant: 'destructive' })
     }
   })
@@ -341,7 +326,7 @@ export default function RoutingHealth() {
       setReason('')
       refreshAll()
     },
-    onError: (err: any) => {
+    onError: (err) => {
       toast({ title: 'Failed to create delegation', description: err.message, variant: 'destructive' })
     }
   })
@@ -491,7 +476,7 @@ export default function RoutingHealth() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Scope</label>
-                  <Select value={scopeType} onValueChange={(v: any) => setScopeType(v)}>
+                  <Select value={scopeType} onValueChange={(v) => setScopeType(v)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -511,10 +496,10 @@ export default function RoutingHealth() {
                       </SelectTrigger>
                       <SelectContent>
                         {scopeType === 'property'
-                          ? properties.map((p: any) => (
+                          ? properties.map((p) => (
                             <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                           ))
-                          : departments.map((d: any) => (
+                          : departments.map((d) => (
                             <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                           ))}
                       </SelectContent>
@@ -678,7 +663,7 @@ export default function RoutingHealth() {
   )
 }
 
-function ChevronRight(props: any) {
+function ChevronRight(props) {
   return (
     <svg
       {...props}

@@ -1,21 +1,20 @@
-import { useState } from 'react'
-import { useTheme } from '@/contexts/ThemeContext'
-import { EnhancedButton } from '@/components/ui/enhanced-button'
 import {
-  Sun,
-  Moon,
-  Monitor,
-  Check,
-  Palette
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { useTranslation } from "react-i18next";
+import { EnhancedButton } from '@/components/ui/enhanced-button'
+import { useTheme } from '@/contexts/ThemeContext'
+import {
+    Check,
+    Monitor,
+    Moon,
+    Palette,
+    Sun
+} from 'lucide-react'
+import { useState } from 'react'
 
 export function ThemeToggle() {
   const { mode, setMode } = useTheme()

@@ -1,67 +1,63 @@
-import { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import {
-  useDocument,
-  useDocumentVersions,
-  useRecordDocumentView,
-  useRecordDocumentDownload,
-  useDocumentComments,
-  useAddDocumentComment,
-  useDocumentAnalytics,
-  useUpdateDocument,
-  useDocumentFolders
-} from '@/hooks/useDocuments'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/shared/StatusBadge'
-import { DocumentViewer } from '@/components/documents/DocumentViewer'
-import { DocumentComments } from '@/components/documents/DocumentComments'
 import { DocumentAnalyticsCard } from '@/components/documents/DocumentAnalyticsCard'
-import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
+import { DocumentComments } from '@/components/documents/DocumentComments'
 import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
-import { DocumentMetadataForm } from '@/components/documents/DocumentMetadataForm'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
+import { DocumentMetadataForm } from '@/components/documents/DocumentMetadataForm'
+import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
+import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Separator } from '@/components/ui/separator'
+import { StatusBadge } from '@/components/shared/StatusBadge'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { EnhancedBadge } from '@/components/ui/enhanced-badge'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import {
-  Loader2,
-  ArrowLeft,
-  Download,
-  Eye,
-  Calendar,
-  User,
-  Building2,
-  FolderOpen,
-  Tag,
-  Clock,
-  Shield,
-  FileText,
-  History,
-  MessageSquare,
-  BarChart3,
-  Settings,
-  Share2,
-  Printer,
-  MoreVertical,
-  Edit3,
-  AlertTriangle,
-  CheckCircle,
-  Sparkles
-} from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
-import { useTranslation } from 'react-i18next'
-import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
+import { Separator } from '@/components/ui/separator'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import {
+    useAddDocumentComment,
+    useDocument,
+    useDocumentAnalytics,
+    useDocumentComments,
+    useDocumentFolders,
+    useDocumentVersions,
+    useRecordDocumentDownload,
+    useRecordDocumentView,
+    useUpdateDocument
+} from '@/hooks/useDocuments'
 import { usePermissions } from '@/hooks/usePermissions'
+import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
 import { cn, formatFileSize } from '@/lib/utils'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { format } from 'date-fns'
+import {
+    AlertTriangle,
+    ArrowLeft,
+    BarChart3,
+    Building2,
+    Calendar,
+    Clock,
+    Download,
+    Edit3,
+    Eye,
+    FileText,
+    FolderOpen,
+    History,
+    Loader2,
+    MessageSquare,
+    MoreVertical,
+    Printer,
+    Settings,
+    Share2,
+    Sparkles,
+    Tag,
+    User
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 // import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
 import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
 
@@ -92,7 +88,7 @@ export default function DocumentDetail() {
   // Data fetching
   const { data: document, isLoading: docLoading, error: docError } = useDocument(id!)
   const { data: versions = [], isLoading: versionsLoading } = useDocumentVersions(id!)
-  const { data: comments = [], isLoading: commentsLoading } = useDocumentComments(id!)
+  const { data: comments = [] } = useDocumentComments(id!)
   const { data: analytics } = useDocumentAnalytics(id!)
   const { data: folders = [] } = useDocumentFolders()
 
@@ -181,7 +177,7 @@ export default function DocumentDetail() {
     })
   }, [document?.id, user, addComment])
 
-  const handleUpdateMetadata = useCallback(async (updates: any) => {
+  const handleUpdateMetadata = useCallback(async (updates) => {
     if (!document?.id) return
 
     await updateDocument.mutateAsync({
@@ -403,7 +399,7 @@ export default function DocumentDetail() {
                 <div className="mt-4 flex items-center gap-2">
                   <Tag className="w-4 h-4 text-gray-400" />
                   <div className="flex flex-wrap gap-2">
-                    {document.tags.map((tag: any) => (
+                    {document.tags.map((tag) => (
                       <span
                         key={tag.id}
                         className="px-2 py-1 text-xs rounded-full"
@@ -487,7 +483,7 @@ export default function DocumentDetail() {
 
             <TabsContent value="comments" className="mt-4">
               <DocumentComments
-                comments={(comments || []).map((c: any) => ({
+                comments={(comments || []).map((c) => ({
                   id: c.id,
                   content: c.content,
                   author: {

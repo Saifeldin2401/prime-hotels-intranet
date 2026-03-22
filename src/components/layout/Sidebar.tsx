@@ -1,29 +1,27 @@
-import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { AnimatePresence, motion } from 'framer-motion'
-import { useTranslation } from 'react-i18next'
-import { DURATION, EASING } from '@/lib/motion'
-import {
-  LogOut,
-  ChevronRight,
-  ChevronDown
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
-import { useNavigation } from '@/hooks/useNavigation'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems } from '@/hooks/useNavigation'
+import { useNavigation } from '@/hooks/useNavigation'
+import { DURATION, EASING } from '@/lib/motion'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    ChevronRight,
+    LogOut
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 export function Sidebar() {
-  const location = useLocation()
   const { t } = useTranslation('nav')
   const { t: t_ext } = useTranslation('extracted')
   const { signOut } = useAuth()

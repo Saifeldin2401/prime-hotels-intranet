@@ -1,14 +1,13 @@
-import React from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useMyOnboarding, useUpdateOnboardingTask } from '@/hooks/useOnboarding'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Progress } from '@/components/ui/progress'
-import { Loader2, Calendar, CheckCircle2, Circle, PlayCircle, FileText, ExternalLink, ArrowRight } from 'lucide-react'
-import { format, isValid } from 'date-fns'
+import { useMyOnboarding, useUpdateOnboardingTask } from '@/hooks/useOnboarding'
 import { cn } from '@/lib/utils'
+import { format, isValid } from 'date-fns'
+import { ArrowRight, Calendar, CheckCircle2, ExternalLink, FileText, Loader2, PlayCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 export default function OnboardingDashboard() {
@@ -53,7 +52,7 @@ export default function OnboardingDashboard() {
                     : t('dashboard.task_reopened', 'Task reopened')
                 )
             },
-            onError: (error: any) => {
+            onError: (error) => {
                 const message = error.message?.includes('RLS')
                     ? t('dashboard.error_permissions', 'Permission denied: This task must be completed by the assigned owner.')
                     : t('common:messages.error_action_failed', 'Failed to update task');
@@ -62,7 +61,7 @@ export default function OnboardingDashboard() {
         })
     }
 
-    const handleLinkClick = (task: any) => {
+    const handleLinkClick = (task) => {
         if (task.link_type === 'training' && task.link_id) {
             navigate(`/learning/training/${task.link_id}`)
         } else if (task.link_type === 'document' && task.link_id) {

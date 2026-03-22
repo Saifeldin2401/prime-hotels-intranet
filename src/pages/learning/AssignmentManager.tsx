@@ -1,29 +1,6 @@
-import { useMemo, useState, useEffect, useId } from 'react'
-import { Plus, Users, BookOpen, Check, ChevronsUpDown, Pencil, Trash2 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { learningService } from '@/services/learningService'
-import type { LearningAssignment } from '@/types/learning'
-import { addDays, format } from 'date-fns'
-import { useSearchParams } from 'react-router-dom'
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from '@/components/ui/dialog'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Separator } from '@/components/ui/separator'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import {
     Command,
     CommandEmpty,
@@ -32,20 +9,43 @@ import {
     CommandItem,
 } from "@/components/ui/command"
 import {
+    Dialog,
+    DialogContent,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { learningService } from '@/services/learningService'
+import type { LearningAssignment } from '@/types/learning'
+import { addDays, format } from 'date-fns'
+import { BookOpen, Check, ChevronsUpDown, Pencil, Plus, Trash2, Users } from 'lucide-react'
+import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 
 // Hooks
-import { useProfiles } from '@/hooks/useUsers'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useLearningQuizzes, useTrainingModules, useAssignmentProgress } from '@/hooks/useTraining'
-import { Eye } from 'lucide-react'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useAssignmentProgress, useLearningQuizzes, useTrainingModules } from '@/hooks/useTraining'
+import { useProfiles } from '@/hooks/useUsers'
+import { Eye } from 'lucide-react'
 
 function AssignmentProgressDialog({
     assignmentId,
@@ -85,7 +85,7 @@ function AssignmentProgressDialog({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y">
-                                    {progress.map((p: any) => (
+                                    {progress.map((p) => (
                                         <tr key={p.id}>
                                             <td className="px-4 py-3">
                                                 <div className="font-medium">{p.user?.full_name || 'Unknown User'}</div>

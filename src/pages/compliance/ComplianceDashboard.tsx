@@ -3,46 +3,38 @@
  * Compliance Dashboard Page
  */
 
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Helmet } from 'react-helmet-async'
 import {
-  Shield,
-  FileText,
-  AlertTriangle,
-  Download,
-  Clock,
-  CheckCircle,
-  XCircle,
-  RefreshCw,
-  Users,
-  Lock,
+    AlertTriangle,
+    Clock,
+    Download,
+    FileText,
+    Lock,
+    Shield,
+    Users
 } from 'lucide-react'
+import { useState } from 'react'
+import { Helmet } from 'react-helmet-async'
+import { useTranslation } from 'react-i18next'
 
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Separator } from '@/components/ui/separator'
 
 import {
-  useComplianceDashboardMetrics,
-  useAuditExports,
-  usePIIAccessSummary,
-  useAnomalyDetection,
-  useSuspiciousActivity,
+    useAnomalyDetection,
+    useAuditExports,
+    useComplianceDashboardMetrics,
+    usePIIAccessSummary,
+    useSuspiciousActivity,
 } from '@/hooks/useAuditExports'
 
+import { AnomalyAlertList } from '@/components/compliance/AnomalyAlertList'
+import { ComplianceMetricCard } from '@/components/compliance/ComplianceMetricCard'
 import { ExportStatusCard } from '@/components/compliance/ExportStatusCard'
 import { PIISummaryChart } from '@/components/compliance/PIISummaryChart'
-import { AnomalyAlertList } from '@/components/compliance/AnomalyAlertList'
-import { RecentExportsTable } from '@/components/compliance/RecentExportsTable'
-import { ComplianceMetricCard } from '@/components/compliance/ComplianceMetricCard'
 import { QuickExportDialog } from '@/components/compliance/QuickExportDialog'
+import { RecentExportsTable } from '@/components/compliance/RecentExportsTable'
 
-import { EXPORT_STATUSES } from '@/lib/auditConstants'
-import type { AuditExport } from '@/types/audit'
 
 export default function ComplianceDashboard() {
   const { t } = useTranslation('compliance')

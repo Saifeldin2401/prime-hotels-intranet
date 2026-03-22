@@ -1,29 +1,25 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import { BookOpen, Clock, AlertCircle, CheckCircle, Play, Award, Loader2, FileQuestion, Sparkles, Flame } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TrainingProgressVisualization } from '@/components/training/TrainingProgressVisualization'
-import { format, formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/hooks/useAuth'
 import {
     useMyAssignments,
 } from '@/hooks/useTraining'
-import { useTranslation } from 'react-i18next'
-import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
 import { calculateStreak } from '@/lib/training/analytics'
-import { learningService } from '@/services/learningService'
+import { cn } from '@/lib/utils'
 import type { LearningAssignment } from '@/types/learning'
+import { format, formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
+import { AlertCircle, Award, BookOpen, CheckCircle, Clock, FileQuestion, Flame, Loader2, Play, Sparkles } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 export default function MyLearning() {
     const { t, i18n } = useTranslation(['training', 'common'])
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user: _user } = useAuth()
     const isRTL = i18n.dir() === 'rtl'
     const dateLocale = isRTL ? ar : enUS
 

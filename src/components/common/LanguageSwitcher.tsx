@@ -1,16 +1,16 @@
-import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
-  Globe,
-  ChevronDown
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
+import {
+    ChevronDown,
+    Globe
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const languages = [
   { code: 'en', name: 'English', flag: '🇺🇸' },

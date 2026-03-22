@@ -1,19 +1,4 @@
-import { useState, useId } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useToast } from '@/components/ui/use-toast'
-import type { JobPosting, SeniorityLevel, EmploymentType } from '@/lib/types'
-import { getRoutingDescription } from '@/lib/cvRouting'
-import { useTranslation } from 'react-i18next'
-import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
 import {
     Command,
     CommandEmpty,
@@ -22,11 +7,26 @@ import {
     CommandItem,
     CommandList,
 } from "@/components/ui/command"
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { getRoutingDescription } from '@/lib/cvRouting'
+import { supabase } from '@/lib/supabase'
+import type { EmploymentType, JobPosting, SeniorityLevel } from '@/lib/types'
+import { cn } from "@/lib/utils"
+import { useQuery } from '@tanstack/react-query'
+import { Check, ChevronsUpDown } from "lucide-react"
+import { useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface JobPostingFormProps {
     job?: JobPosting
@@ -35,7 +35,7 @@ interface JobPostingFormProps {
 
 export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
     const { t } = useTranslation('jobs')
-    const { user, roles } = useAuth()
+    const { user, roles: _roles } = useAuth()
     const navigate = useNavigate()
     const { toast } = useToast()
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -70,7 +70,6 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
         closes_at: job?.closes_at ? new Date(job.closes_at).toISOString().split('T')[0] : ''
     })
 
-    const isRegionalRole = (roles || []).some((userRole) => ['corporate_admin', 'regional_admin', 'regional_hr'].includes(userRole.role))
 
     // Fetch properties
     const { data: properties } = useQuery({
@@ -111,7 +110,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
         setIsSubmitting(true)
 
         try {
-            const jobData: any = {
+            const jobData = {
                 title: formData.title,
                 property_id: formData.property_id || null,
                 department_id: formData.department_id || null,

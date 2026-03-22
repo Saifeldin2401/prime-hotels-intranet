@@ -1,20 +1,29 @@
-import { useState } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { supabase } from '@/lib/supabase'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import {
-    User, Mail, Phone, Building2, FileText, Link2,
-    Clock, MessageSquare, CalendarPlus, ExternalLink, Loader2, History
-} from 'lucide-react'
+import { supabase } from '@/lib/supabase'
 import { formatRelativeTime } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    Building2,
+    CalendarPlus,
+    Clock,
+    ExternalLink,
+    FileText,
+    History,
+    Link2,
+    Loader2,
+    Mail,
+    MessageSquare,
+    Phone,
+    User
+} from 'lucide-react'
+import { useState } from 'react'
 
 interface Referral {
     id: string
@@ -74,7 +83,7 @@ export function CandidateProfileDialog({
     propertyName,
     departmentName
 }: CandidateProfileDialogProps) {
-    const { roles } = useAuth()
+    const { roles: _roles } = useAuth()
     const { hasPermission } = usePermissions()
     const queryClient = useQueryClient()
     const [hrNotes, setHrNotes] = useState('')
@@ -347,7 +356,7 @@ export function CandidateProfileDialog({
                                 Status Timeline
                             </h4>
                             <div className="space-y-3">
-                                {history.map((item: any) => (
+                                {history.map((item) => (
                                     <div key={item.id} className="flex items-start gap-3">
                                         <div className="mt-1 h-2 w-2 rounded-full bg-blue-500" />
                                         <div className="flex-1">

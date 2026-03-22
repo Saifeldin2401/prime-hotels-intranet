@@ -1,20 +1,3 @@
-import { useState } from 'react'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import { Switch } from '@/components/ui/switch'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Loader2, GraduationCap } from 'lucide-react'
-import { useTrainingRules, useDeleteTrainingRule, useUpdateTrainingRule, useCreateTrainingRule, useTrainingModulesList } from '@/hooks/useTrainingRules'
-import { format } from 'date-fns'
-import { useToast } from '@/components/ui/use-toast'
-import { Label } from '@/components/ui/label'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -25,12 +8,15 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { Label } from '@/components/ui/label'
 import {
     Select,
     SelectContent,
@@ -38,10 +24,24 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
+import { Switch } from '@/components/ui/switch'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { useToast } from '@/components/ui/use-toast'
 import { useDepartments } from '@/hooks/useDepartments'
-import { useQuery } from '@tanstack/react-query'
+import { useCreateTrainingRule, useDeleteTrainingRule, useTrainingModulesList, useTrainingRules, useUpdateTrainingRule } from '@/hooks/useTrainingRules'
 import { supabase } from '@/lib/supabase'
-import { useTranslation } from "react-i18next";
+import { useQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { GraduationCap, Loader2, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 export function TrainingRulesList() {
     const { t: t_ext } = useTranslation('extracted');
@@ -117,7 +117,7 @@ export function TrainingRulesList() {
         })
     }
 
-    const handleEdit = (rule: any) => {
+    const handleEdit = (rule) => {
         setEditingRule(rule)
         setFormState({
             training_module_id: rule.training_module_id || '',
@@ -214,7 +214,7 @@ export function TrainingRulesList() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {rules?.map((rule: any) => (
+                        {rules?.map((rule) => (
                             <TableRow key={rule.id}>
                                 <TableCell className="font-medium">
                                     {rule.training_modules?.title || 'Unknown Module'}
@@ -308,7 +308,7 @@ export function TrainingRulesList() {
                                     <SelectValue placeholder={t_ext('select_module', 'Select module')} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {modules?.map((module: any) => (
+                                    {modules?.map((module) => (
                                         <SelectItem key={module.id} value={module.id}>{module.title}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -344,7 +344,7 @@ export function TrainingRulesList() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">{t_ext('any_department', 'Any department')}</SelectItem>
-                                    {departments?.map((dept: any) => (
+                                    {departments?.map((dept) => (
                                         <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                                     ))}
                                 </SelectContent>
@@ -362,7 +362,7 @@ export function TrainingRulesList() {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="none">{t_ext('any_job_title', 'Any job title')}</SelectItem>
-                                    {jobTitles?.map((jt: any) => (
+                                    {jobTitles?.map((jt) => (
                                         <SelectItem key={jt.id} value={jt.id}>{jt.title}</SelectItem>
                                     ))}
                                 </SelectContent>

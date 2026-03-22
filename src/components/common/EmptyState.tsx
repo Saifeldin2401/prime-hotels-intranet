@@ -1,15 +1,15 @@
-import * as React from 'react'
-import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
+    AlertCircle,
     FileText,
     Inbox,
-    Search,
-    AlertCircle,
     Plus,
     RefreshCw,
+    Search,
     type LucideIcon,
 } from 'lucide-react'
+import * as React from 'react'
 
 export type EmptyStateVariant = 'no-data' | 'no-results' | 'error' | 'custom'
 
@@ -38,7 +38,7 @@ interface EmptyStateProps {
     /** Additional className for container */
     className?: string
     /** Compact mode for inline usage */
-    animationData?: any
+    animationData?
     /** Compact mode for inline usage */
     compact?: boolean
 }

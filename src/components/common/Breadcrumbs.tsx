@@ -1,7 +1,6 @@
-import { Link } from 'react-router-dom'
-import { ChevronRight, Home } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { cn } from '@/lib/utils';
+import { ChevronRight, Home } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface BreadcrumbItem {
     label: string

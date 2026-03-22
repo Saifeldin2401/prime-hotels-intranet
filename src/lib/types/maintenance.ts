@@ -1,5 +1,5 @@
 import type { EntityStatus } from './index'
-import type { Profile, Property, Department } from './profile'
+import type { Department, Profile, Property } from './profile'
 
 export interface MaintenanceTicket {
   id: string

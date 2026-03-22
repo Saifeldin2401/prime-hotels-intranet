@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
@@ -7,14 +8,13 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { ManagerSelect } from './ManagerSelect'
-import { useUpdateReportingLine, useReportingChain } from '@/hooks/useOrganization'
-import { AlertTriangle, ArrowRight, Users } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import type { OrgTreeNode } from '@/hooks/useOrganization'
+import { useReportingChain, useUpdateReportingLine } from '@/hooks/useOrganization'
+import { AlertTriangle, ArrowRight, Users } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { ManagerSelect } from './ManagerSelect'
 
 interface ReportingLineEditorProps {
     open: boolean

@@ -1,10 +1,5 @@
-import { useState } from 'react'
-import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Settings, Sparkles, BookOpen, Layers } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { cn } from '@/lib/utils'
 
 interface BuilderSidebarProps {
     className?: string

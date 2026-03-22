@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
 export interface AutomationConfig {
     id: 'smart_leave' | 'auto_training' | 'recurring_tasks'
     is_enabled: boolean
-    config: Record<string, any>
+    config
     updated_at: string
 }
 

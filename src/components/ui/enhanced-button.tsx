@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { Loader2 } from 'lucide-react'
+import type { ReactNode } from 'react'
 
 interface EnhancedButtonProps {
   children: ReactNode
@@ -16,8 +16,8 @@ interface EnhancedButtonProps {
   type?: 'button' | 'submit' | 'reset'
 }
 
-import { motion } from 'framer-motion'
 import { microInteractionVariants } from '@/lib/motion'
+import { motion } from 'framer-motion'
 
 export function EnhancedButton({
   children,

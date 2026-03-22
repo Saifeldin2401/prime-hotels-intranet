@@ -5,14 +5,13 @@
  * Redesigned with glassmorphism and floating action button.
  */
 
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import { Menu, Home, MessageSquare, GraduationCap, LayoutDashboard } from 'lucide-react'
-import { Badge } from '@/components/ui/badge'
-import { useNavigation } from '@/hooks/useNavigation'
-import { useTranslation } from 'react-i18next'
-import { useCallback, useState } from 'react'
 import { ActionSheet } from '@/components/mobile/ActionSheet'
+import { useNavigation } from '@/hooks/useNavigation'
+import { cn } from '@/lib/utils'
+import { GraduationCap, Home, LayoutDashboard, Menu, MessageSquare } from 'lucide-react'
+import { useCallback, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 
 interface MobileNavigationProps {
   onMenuClick?: () => void
@@ -23,7 +22,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
   const { t } = useTranslation('nav')
   const location = useLocation()
   const navigate = useNavigate()
-  const { quickActions, isPathActive } = useNavigation()
+  const { quickActions: _quickActions } = useNavigation()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
   const handleHaptic = useCallback((e?: React.MouseEvent) => {
@@ -35,7 +34,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(10)
-      } catch (e) {
+      } catch (_e) {
         // Ignore
       }
     }

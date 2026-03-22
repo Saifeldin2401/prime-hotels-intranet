@@ -1,23 +1,22 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { EditorContent, useEditor } from '@tiptap/react'
-import { BubbleMenu } from '@tiptap/react/menus'
-import type { Editor } from '@tiptap/react'
-import { toast } from 'sonner'
-import { Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { sanitizeHtml } from '@/lib/sanitize'
+import AIAssistPanel from '@/editor/ai/AIAssistPanel'
+import EditorStatusBar from '@/editor/components/EditorStatusBar'
+import FloatingToolbar from '@/editor/components/FloatingToolbar'
+import { QuickInsertMenu } from '@/editor/components/QuickInsertMenu'
 import { createEditorExtensions } from '@/editor/plugins/extensions'
+import '@/editor/styles.css'
+import EditorToolbar from '@/editor/toolbar/EditorToolbar'
 import { mergeToolbarConfig } from '@/editor/toolbar/toolbarConfig'
+import type { EditorOutput, RichTextEditorProps, SaveState } from '@/editor/types'
+import { copyToClipboard } from '@/editor/utils/clipboard'
 import { serializeEditorContent } from '@/editor/utils/serialization'
 import { uploadImageToSupabase } from '@/editor/utils/supabaseUpload'
-import { copyToClipboard } from '@/editor/utils/clipboard'
-import type { EditorOutput, RichTextEditorProps, SaveState } from '@/editor/types'
-import EditorToolbar from '@/editor/toolbar/EditorToolbar'
-import FloatingToolbar from '@/editor/components/FloatingToolbar'
-import EditorStatusBar from '@/editor/components/EditorStatusBar'
-import AIAssistPanel from '@/editor/ai/AIAssistPanel'
-import { QuickInsertMenu } from '@/editor/components/QuickInsertMenu'
-import '@/editor/styles.css'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { cn } from '@/lib/utils'
+import type { Editor } from '@tiptap/react'
+import { EditorContent, useEditor } from '@tiptap/react'
+import { Loader2 } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
 function buildEmptyOutput(): EditorOutput {
   return {
@@ -255,7 +254,7 @@ export function CustomRichTextEditor({
     if (typeof pos === 'number') {
       try {
         editor.chain().focus(pos).run()
-      } catch (err) {
+      } catch (_err) {
         editor.commands.focus()
       }
 

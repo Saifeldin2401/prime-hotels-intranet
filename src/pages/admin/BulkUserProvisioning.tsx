@@ -1,43 +1,43 @@
-import { useMemo, useState } from 'react'
-import type { ChangeEvent } from 'react'
-import { Link } from 'react-router-dom'
-import {
-  AlertTriangle,
-  CheckCircle2,
-  FileUp,
-  Loader2,
-  Play,
-  RefreshCw,
-  ShieldCheck,
-  Upload,
-  Users
-} from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
 } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
 } from '@/components/ui/table'
-import { supabase } from '@/lib/supabase'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/lib/supabase'
+import {
+    AlertTriangle,
+    CheckCircle2,
+    FileUp,
+    Loader2,
+    Play,
+    RefreshCw,
+    ShieldCheck,
+    Upload,
+    Users
+} from 'lucide-react'
+import type { ChangeEvent } from 'react'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 type ProvisioningMethod = 'invite' | 'temporary_password'
 
@@ -598,7 +598,7 @@ export default function BulkUserProvisioning() {
       appendLog(`Loaded ${maps.propertyByName.size} active properties.`)
 
       const seenInputEmails = new Set<string>()
-      let localReport: RunReport = {
+      const localReport: RunReport = {
         created: 0,
         skippedInputDuplicates: 0,
         skippedExisting: 0,

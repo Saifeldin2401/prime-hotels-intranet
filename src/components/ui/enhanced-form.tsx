@@ -1,9 +1,7 @@
-import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { EnhancedInput } from './enhanced-input'
-import { EnhancedButton } from './enhanced-button'
-import { EnhancedBadge } from './enhanced-badge'
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { EnhancedButton } from './enhanced-button'
 
 interface FormFieldProps {
   label: string
@@ -64,7 +62,7 @@ interface FormProgressProps {
   currentStep: number
 }
 
-export function FormProgress({ steps, currentStep }: FormProgressProps) {
+export function FormProgress({ steps }: FormProgressProps) {
   return (
     <div className="flex items-center justify-between w-full">
       {steps.map((step, index) => (

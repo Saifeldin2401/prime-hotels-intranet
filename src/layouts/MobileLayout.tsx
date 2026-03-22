@@ -1,13 +1,12 @@
-import { useState, useCallback } from 'react'
-import { Outlet } from 'react-router-dom'
+import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation'
-import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { Link } from 'react-router-dom'
-import { Globe, Building } from 'lucide-react'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
+import { Building, Globe } from 'lucide-react'
+import { useState } from 'react'
+import { Link, Outlet } from 'react-router-dom'
 
 interface MobileLayoutProps {
     children?: React.ReactNode

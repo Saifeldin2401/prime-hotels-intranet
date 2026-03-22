@@ -1,13 +1,11 @@
+import type { Editor } from '@tiptap/react';
 import {
     ImagePlus,
-    Video,
-    Table,
     Minus,
-    X,
-    Sparkles
-} from 'lucide-react'
-import type { Editor } from '@tiptap/react'
-import { cn } from '@/lib/utils'
+    Sparkles,
+    Table,
+    X
+} from 'lucide-react';
 
 interface QuickInsertMenuProps {
     editor: Editor

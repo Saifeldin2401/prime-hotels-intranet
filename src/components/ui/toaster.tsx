@@ -1,5 +1,5 @@
-import { Toaster as SonnerToaster } from 'sonner'
 import { useTranslation } from 'react-i18next'
+import { Toaster as SonnerToaster } from 'sonner'
 
 /**
  * Enhanced Sonner-powered Toaster with premium PHG branding.

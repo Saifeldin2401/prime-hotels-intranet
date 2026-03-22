@@ -4,32 +4,32 @@
  * Browse Knowledge Base by content type with visual grid.
  */
 
-import { Link, useSearchParams } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useArticles } from '@/hooks/useKnowledge'
+import { cn } from '@/lib/utils'
+import type { KnowledgeContentType } from '@/types/knowledge'
 import {
-    FileText,
     BookOpen,
     CheckSquare,
-    HelpCircle,
-    Video,
-    Image,
-    ClipboardList,
-    Link2,
     ChevronRight,
-    TrendingUp,
+    ClipboardList,
     Clock,
-    Star
+    FileText,
+    HelpCircle,
+    Image,
+    Link2,
+    Star,
+    TrendingUp,
+    Video
 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useArticles } from '@/hooks/useKnowledge'
-import type { KnowledgeContentType } from '@/types/knowledge'
+import { useTranslation } from 'react-i18next'
+import { Link, useSearchParams } from 'react-router-dom'
 
 const CONTENT_TYPES: {
     type: KnowledgeContentType
-    icon: any
+    icon
     color: string
     gradient: string
 }[] = [
@@ -161,10 +161,9 @@ export default function KnowledgeBrowse() {
 
             {/* Content Type Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {CONTENT_TYPES.map(({ type, icon: Icon, color, gradient }) => {
+                {CONTENT_TYPES.map(({ type, icon: Icon, gradient }) => {
                     const count = typeCounts[type] || 0
                     const typeLabel = t(`content_types.${type}`, type)
-                    const typeDesc = t(`content_type_desc.${type}`, '') // Assumes description keys exist or fallback
 
                     return (
                         <Link key={type} to={`/knowledge/search?type=${type}`}>

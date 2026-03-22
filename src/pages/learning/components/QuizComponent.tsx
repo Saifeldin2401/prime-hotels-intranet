@@ -1,13 +1,6 @@
-import { useState, useEffect, useMemo } from 'react'
-import { CheckCircle2, XCircle, Award, Clock, ArrowRight, HelpCircle, ArrowLeft, PenBox, Languages, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Progress } from '@/components/ui/progress'
-import { useToast } from '@/components/ui/use-toast'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -16,22 +9,26 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { learningService } from '@/services/learningService'
+import { Input } from '@/components/ui/input'
+import { RadioGroup } from '@/components/ui/radio-group'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/lib/certificateService'
 import { supabase } from '@/lib/supabase'
-import type { LearningQuiz } from '@/types/learning'
-import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
-import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { learningService } from '@/services/learningService'
+import type { LearningQuiz } from '@/types/learning'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ArrowLeft, ArrowRight, Award, CheckCircle2, Clock, HelpCircle, Languages, Loader2, PenBox, XCircle } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface QuizComponentProps {
     quizId: string
     assignmentId?: string | null
-    onComplete?: (result: any) => void
+    onComplete?: (result) => void
     onExit?: () => void
     certificateEnabled?: boolean
     translationTarget?: TranslationTargetLanguage | null
@@ -135,7 +132,7 @@ export function QuizComponent({
                 setAttemptCount(0)
                 setAttemptLimitReached(false)
             }
-        } catch (error) {
+        } catch (_error) {
             toast({
                 title: t('common.error'),
                 description: t('training:quizzes.player.load_error'),
@@ -480,7 +477,7 @@ export function QuizComponent({
                             )}>
                                 {t('training:quizzes.player.review_answers')}
                             </h3>
-                            {result.gradedAnswers?.map((answer: any, index: number) => {
+                            {result.gradedAnswers?.map((answer, index: number) => {
                                 const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
                                 if (!question) return null
 
@@ -629,9 +626,6 @@ export function QuizComponent({
     const displayQuestionText = translationTarget && translatedCurrent?.text
         ? translatedCurrent.text
         : currentQuestion?.question?.question_text
-    const displayExplanation = translationTarget && translatedCurrent?.explanation
-        ? translatedCurrent.explanation
-        : currentQuestion?.question?.explanation
     const displayOptionText = (optionId?: string, fallback?: string) => {
         if (!translationTarget || !translatedCurrent?.options) return fallback
         return translatedCurrent.options[optionId || ''] || fallback

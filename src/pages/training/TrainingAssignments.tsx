@@ -1,59 +1,59 @@
 
-import { useState, useMemo, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import {
+    DropdownMenu,
+    DropdownMenuCheckboxItem,
+    DropdownMenuContent,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog'
+import { Progress } from '@/components/ui/progress'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuCheckboxItem
-} from '@/components/ui/dropdown-menu'
-import { Progress } from '@/components/ui/progress'
-import {
-  Plus,
-  Users,
-  Building,
-  MapPin,
-  Trash2,
-  Edit,
-  Search,
-  Bell,
-  Loader2,
-  CheckCircle2,
-  Clock,
-  AlertCircle,
-  BarChart3,
-  Download,
-  Eye,
-  Settings,
-  X
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import type { TrainingModule } from '@/lib/types'
-import { useTranslation } from 'react-i18next'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
 import { useLearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
-import { addDays, format } from 'date-fns'
+import { supabase } from '@/lib/supabase'
+import type { TrainingModule } from '@/lib/types'
+import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
 import type { ModuleAssigneeRosterEntry } from '@/types/learning'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { addDays, format } from 'date-fns'
+import {
+    AlertCircle,
+    BarChart3,
+    Bell,
+    Building,
+    CheckCircle2,
+    Clock,
+    Download,
+    Edit,
+    Eye,
+    Loader2,
+    MapPin,
+    Plus,
+    Search,
+    Settings,
+    Trash2,
+    Users,
+    X
+} from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
 
@@ -273,7 +273,7 @@ export function TrainingAssignmentsPanel({
       const { data, error } = await supabase.from('departments').select('id, name, property_id, property:properties(name)').order('name')
       if (error) throw error
       // Format with property name for disambiguation
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d) => ({
         id: d.id,
         name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
         propertyName: d.property?.name,
@@ -299,7 +299,7 @@ export function TrainingAssignmentsPanel({
     mutationFn: async () => {
       if (!formModuleId) throw new Error(t('moduleRequired'))
 
-      const assignments: any[] = []
+      const assignments = []
       const typeMap: Record<string, string> = {
         users: 'user',
         departments: 'department',
@@ -719,13 +719,13 @@ export function TrainingAssignmentsPanel({
 
   const exemptedModuleUserKeys = useMemo(() => {
     return new Set(
-      moduleExemptions.map((row: any) => `${row.content_id}:${row.user_id}`)
+      moduleExemptions.map((row) => `${row.content_id}:${row.user_id}`)
     )
   }, [moduleExemptions])
 
   const exemptionCountByModule = useMemo(() => {
     const counts = new Map<string, number>()
-    moduleExemptions.forEach((row: any) => {
+    moduleExemptions.forEach((row) => {
       counts.set(row.content_id, (counts.get(row.content_id) || 0) + 1)
     })
     return counts
@@ -905,7 +905,7 @@ export function TrainingAssignmentsPanel({
 
   const selectedBlock = useMemo(() => {
     if (!selectedBlockId) return null
-    return selectedModuleBlocks?.find((block: any) => block.id === selectedBlockId) || null
+    return selectedModuleBlocks?.find((block) => block.id === selectedBlockId) || null
   }, [selectedBlockId, selectedModuleBlocks])
 
   const selectedQuizResults = useMemo(() => {
@@ -914,7 +914,7 @@ export function TrainingAssignmentsPanel({
 
     return Object.values(rawResults as Record<string, any>)
       .filter((item) => item && typeof item === 'object')
-      .sort((a: any, b: any) => {
+      .sort((a, b) => {
         const aTime = new Date(a.completedAt || a.completed_at || 0).getTime()
         const bTime = new Date(b.completedAt || b.completed_at || 0).getTime()
         return bTime - aTime
@@ -1294,10 +1294,10 @@ export function TrainingAssignmentsPanel({
                             const joinedProps = item.profiles?.user_properties
                             const deptName = (joinedDepts && joinedDepts.length > 0)
                               ? joinedDepts[0]?.departments?.name
-                              : userDepartments?.find((d: any) => d.user_id === item.user_id)?.department?.name
+                              : userDepartments?.find((d) => d.user_id === item.user_id)?.department?.name
                             const propName = (joinedProps && joinedProps.length > 0)
                               ? joinedProps[0]?.properties?.name
-                              : userProperties?.find((p: any) => p.user_id === item.user_id)?.property?.name
+                              : userProperties?.find((p) => p.user_id === item.user_id)?.property?.name
 
                             const user = users?.find(u => u.id === item.user_id)
                             const userName = item.profiles?.full_name || user?.full_name || t('unknownUser')
@@ -1396,10 +1396,10 @@ export function TrainingAssignmentsPanel({
                         const joinedProps2 = item.profiles?.user_properties
                         const deptName = (joinedDepts2 && joinedDepts2.length > 0)
                           ? joinedDepts2[0]?.departments?.name
-                          : userDepartments?.find((d: any) => d.user_id === item.user_id)?.department?.name
+                          : userDepartments?.find((d) => d.user_id === item.user_id)?.department?.name
                         const propName = (joinedProps2 && joinedProps2.length > 0)
                           ? joinedProps2[0]?.properties?.name
-                          : userProperties?.find((p: any) => p.user_id === item.user_id)?.property?.name
+                          : userProperties?.find((p) => p.user_id === item.user_id)?.property?.name
                         const user = users?.find(u => u.id === item.user_id)
                         const module = item.training_modules || modules?.find(m => m.id === item.content_id)
                         const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
@@ -1558,7 +1558,7 @@ export function TrainingAssignmentsPanel({
                           {t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')}
                         </div>
                       ) : (
-                        selectedQuizResults.map((quizResult: any) => (
+                        selectedQuizResults.map((quizResult) => (
                           <div key={quizResult.quizId || quizResult.quiz_id} className="space-y-4 rounded-xl border p-4">
                             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                               <div>
@@ -1593,7 +1593,7 @@ export function TrainingAssignmentsPanel({
                             </div>
 
                             <div className="space-y-3">
-                              {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem: any, index: number) => (
+                              {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem, index: number) => (
                                 <div key={`${quizResult.quizId || quizResult.quiz_id}-${reviewItem.questionId || reviewItem.question_id || index}`} className="rounded-lg border bg-slate-50 p-4">
                                   <div className="flex items-start justify-between gap-3">
                                     <div>

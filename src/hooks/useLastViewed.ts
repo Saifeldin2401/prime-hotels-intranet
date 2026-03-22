@@ -5,7 +5,7 @@
  * Used to show "Updated since last view" badges.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'prime_kb_last_viewed'
 

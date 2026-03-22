@@ -1,22 +1,21 @@
-import { useState, useEffect, useRef } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { learningService } from '@/services/learningService'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { learningService } from '@/services/learningService'
+import type { MicrolearningContent } from '@/types/learning'
+import { useQuery } from '@tanstack/react-query'
 import {
-    Play,
     ArrowLeft,
     CheckCircle2,
     Clock,
     FileText
 } from 'lucide-react'
-import type { MicrolearningContent } from '@/types/learning'
-import { useAuth } from '@/hooks/useAuth'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
 export default function MicrolearningViewer() {
     const { t: t_ext } = useTranslation('extracted');
@@ -110,7 +109,7 @@ export default function MicrolearningViewer() {
                 description: "You've successfully completed this microlearning module.",
             })
             setCompleted(true)
-        } catch (error) {
+        } catch (_error) {
             toast({
                 title: "Error",
                 description: "Failed to save progress. Please try again.",

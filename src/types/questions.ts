@@ -141,7 +141,7 @@ export interface QuestionVersion {
     id: string
     question_id: string
     version_number: number
-    data_snapshot: Record<string, any>
+    data_snapshot
     changed_by?: string
     changed_at: string
     change_reason?: string

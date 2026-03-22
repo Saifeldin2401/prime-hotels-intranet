@@ -1,6 +1,6 @@
-import type { Profile } from './types'
 import type { AppRole } from './constants'
 import { ROLES } from './constants'
+import type { Profile } from './types'
 
 /**
  * Display helper utilities for job titles and system roles

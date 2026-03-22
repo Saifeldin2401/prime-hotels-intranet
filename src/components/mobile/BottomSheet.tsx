@@ -5,12 +5,12 @@
  * More natural touch pattern than centered modals on mobile.
  */
 
+import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
+import { X } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { cn } from '@/lib/utils'
-import { X } from 'lucide-react'
-import { Button } from '@/components/ui/button'
 
 import { useTranslation } from 'react-i18next'
 
@@ -32,7 +32,6 @@ export function BottomSheet({
     title,
     className,
     showHandle = true,
-    snapPoints = ['content'],
     defaultSnap = 'content'
 }: BottomSheetProps) {
     const { t } = useTranslation('common')

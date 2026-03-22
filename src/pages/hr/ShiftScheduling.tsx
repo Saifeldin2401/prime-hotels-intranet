@@ -1,37 +1,37 @@
-import { useMemo, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useDepartments } from '@/hooks/useDepartments'
-import { useProfiles } from '@/hooks/useUsers'
-import { useCreateShift, useUpdateShift, useDeleteShift } from '@/hooks/useShifts'
-import type { Shift } from '@/hooks/useShifts'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow
-} from '@/components/ui/table'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue
+} from '@/components/ui/select'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow
+} from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useDepartments } from '@/hooks/useDepartments'
+import type { Shift } from '@/hooks/useShifts'
+import { useCreateShift, useDeleteShift, useUpdateShift } from '@/hooks/useShifts'
+import { useProfiles } from '@/hooks/useUsers'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const defaultShiftForm: {
   user_id: string
@@ -165,7 +165,7 @@ export default function ShiftScheduling() {
       if (error) throw error
 
       if (departmentId === 'all') return data || []
-      return (data || []).filter((row: any) => staffIds.has(row.employee_id))
+      return (data || []).filter((row) => staffIds.has(row.employee_id))
     },
     enabled: !!attendanceDate && !!propertyId
   })
@@ -287,7 +287,7 @@ export default function ShiftScheduling() {
     }
   }
 
-  const handleEditShift = (shift: any) => {
+  const handleEditShift = (shift) => {
     setEditingShiftId(shift.id)
     setShiftForm({
       user_id: shift.user_id,
@@ -310,7 +310,7 @@ export default function ShiftScheduling() {
     }
   }
 
-  const handleEditAttendance = (record: any) => {
+  const handleEditAttendance = (record) => {
     setEditingAttendanceId(record.id)
     setAttendanceForm({
       employee_id: record.employee_id,
@@ -498,7 +498,7 @@ export default function ShiftScheduling() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {shiftsQuery.data.map((shift: any) => (
+                      {shiftsQuery.data.map((shift) => (
                         <TableRow key={shift.id}>
                           <TableCell>{shift.user?.full_name || shift.user?.email || 'Staff'}</TableCell>
                           <TableCell>{shift.shift_type}</TableCell>
@@ -605,7 +605,7 @@ export default function ShiftScheduling() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {attendanceQuery.data.map((record: any) => (
+                      {attendanceQuery.data.map((record) => (
                         <TableRow key={record.id}>
                           <TableCell>{record.employee?.full_name || record.employee?.email || 'Staff'}</TableCell>
                           <TableCell>{record.check_in ? format(new Date(record.check_in), 'HH:mm') : '—'}</TableCell>

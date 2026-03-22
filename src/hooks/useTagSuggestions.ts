@@ -5,8 +5,8 @@
  * No DB changes needed - just suggestions displayed to user.
  */
 
-import { useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 
 interface TagSuggestion {
@@ -31,7 +31,6 @@ export function useTagSuggestions() {
 
         setIsGenerating(true)
         try {
-            const textToAnalyze = `${title}. ${description || ''}. ${content || ''}`.slice(0, 3000)
             let aiResponseText = ''
 
             // Prefer deployed AI gateway function.

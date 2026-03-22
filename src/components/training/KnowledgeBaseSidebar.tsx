@@ -8,32 +8,32 @@
  * - One-click import of content
  */
 
-import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import {
-    Search,
-    FileText,
-    ClipboardCheck,
-    HelpCircle,
-    Plus,
-    ChevronRight,
-    Sparkles,
-    BookOpen,
-    Loader2,
-    Link2
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAITrainingContent } from '@/hooks/training/useAITrainingContent'
-import { useTranslation } from 'react-i18next'
 import { useDebounce } from '@/hooks/useDebounce'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import {
+    BookOpen,
+    ChevronRight,
+    ClipboardCheck,
+    FileText,
+    HelpCircle,
+    Link2,
+    Loader2,
+    Plus,
+    Search,
+    Sparkles
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface KnowledgeBaseSidebarProps {
     moduleId?: string
@@ -46,7 +46,6 @@ interface KnowledgeBaseSidebarProps {
 }
 
 export function KnowledgeBaseSidebar({
-    moduleId,
     moduleTopic = '',
     onInsertContent,
     onLinkDocument,

@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface ReportDefinition {
     id: string
@@ -10,7 +10,7 @@ export interface ReportDefinition {
     property_id: string | null
     department_id: string | null
     report_type: string
-    filters: Record<string, any>
+    filters
     schedule_cron: string | null
     is_active: boolean
     created_by: string | null

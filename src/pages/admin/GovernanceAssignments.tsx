@@ -1,19 +1,19 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
 
 type ProfileLite = { id: string; full_name: string | null; email: string | null }
 type PropertyLite = { id: string; name: string }
@@ -308,16 +308,6 @@ export default function GovernanceAssignments() {
   const ownershipNameById = useMemo(() => new Map(ownership.map((o) => [o.id, o.display_name])), [ownership])
   const kpiNameById = useMemo(() => new Map(kpiCatalog.map((k) => [k.id, k.kpi_name])), [kpiCatalog])
 
-  const invalidateAssignQueries = async () => {
-    await Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['gov-kpi-catalog'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-kpi-targets'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-kpi-raci-assignments'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-portfolio-role-assignments'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-property-executive-assignments'] }),
-      queryClient.invalidateQueries({ queryKey: ['gov-owner-visibility-grants'] }),
-    ])
-  }
 
   const createKpiMutation = useMutation({
     mutationFn: async () => {

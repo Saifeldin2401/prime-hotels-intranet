@@ -1,25 +1,32 @@
-import { useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
+import { CandidateProfileDialog } from '@/components/hr/CandidateProfileDialog'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { exportRowsToXlsx } from '@/lib/excel'
+import { supabase } from '@/lib/supabase'
 import { formatRelativeTime } from '@/lib/utils'
-import { useTranslation } from 'react-i18next'
-import { CandidateProfileDialog } from '@/components/hr/CandidateProfileDialog'
-import {
-  Plus, Users, CheckCircle, Clock, UserPlus,
-  Download, Building2, Eye, ExternalLink, FileDown, LineChart
-} from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import jsPDF from 'jspdf'
 import autoTable from 'jspdf-autotable'
+import {
+    Building2,
+    CheckCircle, Clock,
+    Download,
+    ExternalLink,
+    Eye,
+    FileDown, LineChart,
+    Plus,
+    UserPlus,
+    Users
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
-import { exportRowsToXlsx } from '@/lib/excel'
 
 const statusColors: Record<string, string> = {
   received: 'bg-blue-100 text-blue-800',
@@ -43,7 +50,7 @@ const statusLabels: Record<string, string> = {
 
 export default function EmployeeReferrals() {
   const { t } = useTranslation('hr')
-  const { user, roles } = useAuth()
+  const { user } = useAuth()
   const { hasPermission } = usePermissions()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -225,7 +232,7 @@ export default function EmployeeReferrals() {
         `referrals_${new Date().toISOString().split('T')[0]}.xlsx`,
         'Referrals'
       )
-    } catch (err: any) {
+    } catch (err) {
       toast.error(err?.message || 'Failed to export Excel')
     }
   }
@@ -247,12 +254,12 @@ export default function EmployeeReferrals() {
   }
 
   // View candidate profile
-  const handleViewProfile = (referral: any) => {
+  const handleViewProfile = (referral) => {
     setSelectedReferral(referral)
     setProfileOpen(true)
   }
 
-  const handleOpenCv = async (referral: any) => {
+  const handleOpenCv = async (referral) => {
     try {
       if (referral.cv_url) {
         window.open(referral.cv_url, '_blank', 'noopener,noreferrer')
@@ -268,7 +275,7 @@ export default function EmployeeReferrals() {
         throw error || new Error('Failed to generate secure link')
       }
       window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to open CV:', err)
       toast.error(err?.message || 'Unable to open CV')
     }

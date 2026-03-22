@@ -1,26 +1,25 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Dialog,
     DialogContent,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent } from '@/components/ui/card'
-import { toast } from 'sonner'
-import { Shield, Languages, Save, Loader2 } from 'lucide-react'
-import { Plus, Trash2 } from 'lucide-react'
-import type { SystemWikiArticle, AppRole, SystemWikiSubtopic } from '@/lib/types'
-import { upsertWikiArticle } from '@/services/systemWikiService'
+import { Textarea } from '@/components/ui/textarea'
 import { ROLES } from '@/lib/constants'
+import type { AppRole, SystemWikiArticle, SystemWikiSubtopic } from '@/lib/types'
+import { upsertWikiArticle } from '@/services/systemWikiService'
+import { Languages, Loader2, Plus, Save, Shield, Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 interface WikiEditorDialogProps {
     article: Partial<SystemWikiArticle> | null
@@ -30,7 +29,7 @@ interface WikiEditorDialogProps {
 }
 
 export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEditorDialogProps) {
-    const { t } = useTranslation(['knowledge', 'common'])
+    const { t: _t } = useTranslation(['knowledge', 'common'])
     const [isSaving, setIsSaving] = useState(false)
     const [formData, setFormData] = useState<Partial<SystemWikiArticle>>({
         slug: '',
@@ -121,7 +120,7 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
             toast.success('Wiki article updated successfully')
             onSave()
             onOpenChange(false)
-        } catch (error: any) {
+        } catch (error) {
             console.error('Error saving wiki article:', error)
             toast.error(error.message || 'Failed to save article')
         } finally {

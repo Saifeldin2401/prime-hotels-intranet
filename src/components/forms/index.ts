@@ -1,10 +1,5 @@
 // Form Components
 export {
-    FormFeedback,
-    FieldError,
-    FieldHint,
-    RequiredIndicator,
-    FormSection,
-    FormActions,
-    CharacterCount
-} from './FormFeedback'
+    CharacterCount, FieldError,
+    FieldHint, FormActions, FormFeedback, FormSection, RequiredIndicator
+} from './FormFeedback';

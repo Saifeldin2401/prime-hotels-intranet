@@ -2,13 +2,13 @@
  * Knowledge Base Component Exports
  */
 
+export { AIDocumentSummary } from './AIDocumentSummary'
+export { ChecklistRenderer, FAQAccordion, ImageGalleryRenderer, RelatedArticles, VideoPlayer } from './ContentRenderers'
+export { ChecklistBuilder, FAQBuilder, VideoContentBuilder, VisualContentBuilder } from './ContentTypeBuilders'
 export { ContextualHelpWidget, usePageContextualHelp } from './ContextualHelpWidget'
-export { RequiredReadingWidget } from './RequiredReadingWidget'
-export { VideoPlayer, ChecklistRenderer, FAQAccordion, RelatedArticles, ImageGalleryRenderer } from './ContentRenderers'
-export { VideoContentBuilder, ChecklistBuilder, FAQBuilder, VisualContentBuilder } from './ContentTypeBuilders'
+export { KnowledgeAIAssistant } from './KnowledgeAIAssistant'
+export { KnowledgeSidebar } from './KnowledgeSidebar'
 export { LinkedResourceSelector } from './LinkedResourceSelector'
 export { RelatedArticlesEditor } from './RelatedArticlesEditor'
-export { KnowledgeSidebar } from './KnowledgeSidebar'
-export { KnowledgeAIAssistant } from './KnowledgeAIAssistant'
-export { AIDocumentSummary } from './AIDocumentSummary'
+export { RequiredReadingWidget } from './RequiredReadingWidget'
 

@@ -1,49 +1,24 @@
-import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { TrendingUp, BarChart3, Download, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
-import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnalyticsStats } from '@/hooks/useAnalyticsStats'
-import { useTrainingStats } from '@/hooks/useTraining'
-import { useTaskStats } from '@/hooks/useTasks'
 import { useAuth } from '@/hooks/useAuth'
+import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { useTaskStats } from '@/hooks/useTasks'
+import { useTrainingStats } from '@/hooks/useTraining'
+import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import { BarChart3, Download, TrendingUp } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
 import { toast } from 'sonner'
-import { useTranslation } from "react-i18next";
 
 interface PerformanceChartProps {
   fullWidth?: boolean
 }
 
 // Simple SVG Bar Chart Component
-function SimpleBarChart({ data, color }: { data: number[]; color: string }) {
-  const max = Math.max(...data, 1)
-
-  return (
-    <div className="flex items-end justify-between h-32 gap-2">
-      {data.map((value, idx) => {
-        const height = (value / max) * 100
-        return (
-          <motion.div
-            key={idx}
-            initial={{ height: 0 }}
-            animate={{ height: `${Math.max(height, 5)}%` }}
-            transition={{ delay: idx * 0.05, duration: 0.5, ease: "easeOut" }}
-            className={cn("flex-1 rounded-t-lg relative group cursor-pointer", color)}
-          >
-            <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
-              {value}%
-            </div>
-          </motion.div>
-        )
-      })}
-    </div>
-  )
-}
 
 export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('week')
@@ -52,8 +27,8 @@ export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
   const canLoadAnalytics = ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'].includes(primaryRole || '')
 
   // Get real stats
-  const { data: dashboardStats, isLoading: isLoadingDashboard } = useDashboardStats()
-  const { data: analyticsStats, isLoading: isLoadingAnalytics } = useAnalyticsStats({ enabled: canLoadAnalytics })
+  const { isLoading: isLoadingDashboard } = useDashboardStats()
+  const { isLoading: isLoadingAnalytics } = useAnalyticsStats({ enabled: canLoadAnalytics })
   const { data: trainingStats, isLoading: isLoadingTraining } = useTrainingStats()
   const { data: taskStats, isLoading: isLoadingTasks } = useTaskStats(user?.id)
 

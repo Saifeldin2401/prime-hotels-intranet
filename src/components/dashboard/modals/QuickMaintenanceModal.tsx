@@ -1,34 +1,34 @@
-import { useTranslation } from 'react-i18next'
-import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { FileText, Flag, Loader2, MapPin, Wrench } from 'lucide-react'
+import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import * as z from 'zod'
-import { Wrench, MapPin, Flag, Loader2, FileText } from 'lucide-react'
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from '@/components/ui/form'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { useQuickCreateMaintenanceTicket } from '@/hooks/useQuickCreate'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -78,7 +78,7 @@ export function QuickMaintenanceModal({ open, onOpenChange }: QuickMaintenanceMo
       })
       form.reset()
       onOpenChange(false)
-    } catch (error) {
+    } catch (_error) {
       toast.error(t('quick_create.maintenance_failed', 'Failed to create maintenance ticket'))
     }
   }

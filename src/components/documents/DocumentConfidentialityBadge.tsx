@@ -1,14 +1,13 @@
-import * as React from "react";
-import {
-  Globe,
-  Building2,
-  Lock,
-  ShieldAlert,
-  Info,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import type { BadgeProps } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import {
+    Building2,
+    Globe,
+    Info,
+    Lock,
+    ShieldAlert,
+} from "lucide-react";
+import * as React from "react";
 
 export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
 
@@ -17,7 +16,7 @@ export interface ConfidentialityConfig {
   label: string;
   description: string;
   detailedDescription: string;
-  icon: React.ReactElement<any>;
+  icon;
   color: {
     bg: string;
     text: string;

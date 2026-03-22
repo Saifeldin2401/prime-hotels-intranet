@@ -5,11 +5,11 @@
  * Uses localStorage for client-side tracking (no DB table needed).
  */
 
-import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import type { KnowledgeArticle } from '@/types/knowledge'
 import * as KnowledgeService from '@/services/knowledgeService'
+import type { KnowledgeArticle } from '@/types/knowledge'
+import { useCallback, useEffect, useState } from 'react'
 
 const STORAGE_KEY = 'kb_recently_viewed'
 const MAX_ITEMS = 10

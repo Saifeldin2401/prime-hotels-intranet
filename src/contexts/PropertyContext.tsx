@@ -1,12 +1,12 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
-import { supabase } from '@/lib/supabase'
-import type { Property } from '@/lib/types'
 import {
     CONSOLIDATED_PROPERTY_ID,
     isRealPropertyId,
     roleSupportsConsolidatedView,
 } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import type { Property } from '@/lib/types'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 interface PropertyContextType {
     currentProperty: Property | null
@@ -75,7 +75,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (error) throw error
 
                 const mappedProperties = (data ?? [])
-                    .map((item: any) => item.property as Property | null | undefined)
+                    .map((item) => item.property as Property | null | undefined)
                     .filter((p): p is Property => !!p)
 
                 const uniqueProperties = Array.from(

@@ -1,37 +1,37 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { useTranslation } from 'react-i18next'
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Search,
-  Loader2,
-  User,
-  LayoutGrid,
-  Network,
-  Download,
-  Calendar,
-  Filter,
-  Settings
-} from 'lucide-react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { EmployeeCard } from '@/components/directory/EmployeeCard'
 import { OrgPyramid } from '@/components/directory/OrgPyramid'
-import { useOrgHierarchy } from '@/hooks/useOrgHierarchy'
-import {
-  useEmployeeDirectory,
-  exportMonthlyBirthdays,
-  type ManagementLevelFilter,
-  type DirectorySort
-} from '@/hooks/useEmployeeDirectory'
-import { useProperties } from '@/hooks/useProperties'
-import { useDepartments } from '@/hooks/useDepartments'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
+import { useDepartments } from '@/hooks/useDepartments'
+import {
+    exportMonthlyBirthdays,
+    useEmployeeDirectory,
+    type DirectorySort,
+    type ManagementLevelFilter
+} from '@/hooks/useEmployeeDirectory'
+import { useOrgHierarchy } from '@/hooks/useOrgHierarchy'
+import { useProperties } from '@/hooks/useProperties'
 import { ROLE_HIERARCHY, type AppRole } from '@/lib/constants'
+import { useVirtualizer } from '@tanstack/react-virtual'
+import {
+    Calendar,
+    Download,
+    Filter,
+    LayoutGrid,
+    Loader2,
+    Network,
+    Search,
+    Settings,
+    User
+} from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
 type ViewMode = 'grid' | 'org'

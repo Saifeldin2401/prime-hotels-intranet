@@ -1,23 +1,31 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { WikiEditorDialog } from '@/components/knowledge/WikiEditorDialog'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { useAuth } from '@/hooks/useAuth'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-    BookOpen, Home, CheckSquare, Users, Building, Shield, Edit3, Plus, Loader2
-} from 'lucide-react'
-import { getWikiArticles } from '@/services/systemWikiService'
-import type { SystemWikiArticle, AppRole } from '@/lib/types'
-import { WikiEditorDialog } from '@/components/knowledge/WikiEditorDialog'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import type { AppRole, SystemWikiArticle } from '@/lib/types'
+import { getWikiArticles } from '@/services/systemWikiService'
+import {
+    BookOpen,
+    Building,
+    CheckSquare,
+    Edit3,
+    Home,
+    Loader2,
+    Plus,
+    Shield,
+    Users
+} from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function SystemWiki() {
     const { t, i18n } = useTranslation(['common', 'nav', 'knowledge'])
-    const { profile, primaryRole, rolesLoading } = useAuth()
+    const { primaryRole, rolesLoading } = useAuth()
     const [activeTab, setActiveTab] = useState('')
     const [articles, setArticles] = useState<SystemWikiArticle[]>([])
     const [isLoading, setIsLoading] = useState(true)
@@ -245,7 +253,7 @@ function getContentIcon(slug: string) {
     return BookOpen
 }
 
-function WikiTabButton({ id, label, icon: Icon, activeTab, onClick, badge }: any) {
+function WikiTabButton({ id, label, icon: Icon, activeTab, onClick, badge }) {
     const isActive = activeTab === id
     return (
         <button

@@ -1,6 +1,6 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface ReportDefinition {
   id: string
@@ -10,7 +10,7 @@ export interface ReportDefinition {
   property_id?: string | null
   department_id?: string | null
   report_type: string
-  filters?: Record<string, any> | null
+  filters?
   schedule_cron?: string | null
   schedule_frequency?: 'hourly' | 'daily' | 'weekly' | 'monthly' | null
   next_run_at?: string | null

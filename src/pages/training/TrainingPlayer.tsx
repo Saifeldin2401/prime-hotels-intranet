@@ -1,11 +1,6 @@
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -14,48 +9,53 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
+import { Progress } from '@/components/ui/progress'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
-import { useToast } from '@/components/ui/use-toast'
-import { useAuth } from '@/hooks/useAuth'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
-import {
-    ChevronLeft,
-    ChevronRight,
-    CheckCircle,
-    FileText,
-    Image as ImageIcon,
-    Video as VideoIcon,
-    Link as LinkIcon,
-    HelpCircle,
-    Menu,
-    X,
-    ArrowLeft,
-    Trophy,
-    BookOpen,
-    Languages,
-    Loader2,
-    Headphones,
-    Gamepad2,
-    Eye,
-    MousePointer2
-} from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
-import { learningService } from '@/services/learningService'
-import { skillsService } from '@/services/skillsService'
-import { createCertificate, type CertificateData } from '@/lib/certificateService'
-import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
-import { sanitizeHtml } from '@/lib/sanitize'
-import type { TrainingContentBlock } from '@/lib/types'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
 import { SmartObserver } from '@/components/training/SmartObserver'
-import { cn } from '@/lib/utils'
-import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import { createCertificate, type CertificateData } from '@/lib/certificateService'
+import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
 import { getUserFriendlyError } from '@/lib/errorMessages'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import type { TrainingContentBlock } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
+import { learningService } from '@/services/learningService'
+import { skillsService } from '@/services/skillsService'
+import {
+    ArrowLeft,
+    BookOpen,
+    CheckCircle,
+    ChevronLeft,
+    ChevronRight,
+    Eye,
+    FileText,
+    Gamepad2,
+    Headphones,
+    HelpCircle,
+    Image as ImageIcon,
+    Languages,
+    Link as LinkIcon,
+    Loader2,
+    Menu,
+    MousePointer2,
+    Trophy,
+    Video as VideoIcon,
+    X
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 type PersistedModuleProgress = {
     status?: string

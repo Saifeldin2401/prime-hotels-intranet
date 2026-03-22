@@ -5,8 +5,8 @@
  * when a user describes a maintenance issue.
  */
 
-import { useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useRef, useState } from 'react'
 
 interface TriageSuggestion {
     category: string
@@ -77,7 +77,7 @@ Do not include any text outside the JSON.`
             if (aiError) throw aiError
 
             // Parse AI response
-            let parsed: any = null
+            let parsed = null
             try {
                 const rawText = (aiResult?.response ?? aiResult?.result ?? '')
                 const jsonMatch = rawText.match(/\{[\s\S]*\}/)

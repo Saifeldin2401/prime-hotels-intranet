@@ -1,14 +1,14 @@
-import { useTranslation } from 'react-i18next'
-import { useMemo, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProfiles } from '@/hooks/useUsers'
-import { useProperty } from '@/contexts/PropertyContext'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function DepartmentControlCenter({ propertyId }: { propertyId?: string }) {
   const { t } = useTranslation('dashboard')
@@ -79,7 +79,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
                 {managers.length === 0 && (
                   <SelectItem value="none" disabled>{t('department_control.no_managers')}</SelectItem>
                 )}
-                {managers.map((profile: any) => (
+                {managers.map((profile) => (
                   <SelectItem key={profile.id} value={profile.id}>
                     {profile.full_name || profile.email}
                   </SelectItem>
@@ -122,7 +122,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
                         {managers.length === 0 && (
                           <SelectItem value="none" disabled>{t('department_control.no_managers')}</SelectItem>
                         )}
-                        {managers.map((profile: any) => (
+                        {managers.map((profile) => (
                           <SelectItem key={profile.id} value={profile.id}>
                             {profile.full_name || profile.email}
                           </SelectItem>

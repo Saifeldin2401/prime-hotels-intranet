@@ -4,18 +4,17 @@
  * React Query hooks for Knowledge Base data fetching.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
 import type {
-    KnowledgeSearchFilters,
-    KnowledgeComment,
-    KnowledgeContentType
+    KnowledgeContentType,
+    KnowledgeSearchFilters
 } from '@/types/knowledge'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { supabase } from '@/lib/supabase'
-import { isRealPropertyId } from '@/lib/propertyScope'
 
 // ============================================================================
 // ARTICLES
@@ -246,7 +245,7 @@ export function useSubmitFeedback() {
             queryClient.invalidateQueries({ queryKey: ['knowledge-feedback'] })
             toast.success('Thank you for your feedback!')
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast.error(`Failed to submit feedback: ${error.message}`)
         }
     })
@@ -329,7 +328,7 @@ export function useDepartmentContentCounts() {
 
             const departmentIds = Array.from(new Set(
                 documents
-                    .map((doc: any) => doc.department_id)
+                    .map((doc) => doc.department_id)
                     .filter((id: string | null): id is string => !!id)
             ))
 
@@ -348,7 +347,7 @@ export function useDepartmentContentCounts() {
             }
 
             // Group by normalized department name to merge same-named departments across properties.
-            const byName = documents.reduce((acc: any, doc: any) => {
+            const byName = documents.reduce((acc, doc) => {
                 const deptId = doc.department_id
                 const joinedDept = Array.isArray(doc.departments) ? doc.departments[0] : doc.departments
                 if (!deptId) return acc
@@ -379,8 +378,8 @@ export function useDepartmentContentCounts() {
             // Convert to object keyed by stable id for sidebar URL params.
             // Prefer IDs that resolve through departments table to keep matching search filters stable.
             return Object.values(byName)
-                .sort((a: any, b: any) => a.name.localeCompare(b.name))
-                .reduce((acc: any, dept: any) => {
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .reduce((acc, dept) => {
                     const allIds = Array.from(dept.departmentIds || []) as string[]
                     const knownIds = allIds.filter(id => !!departmentNameById[id])
                     const stableId = (knownIds.length > 0 ? knownIds : allIds).sort()[0] || dept.id

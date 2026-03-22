@@ -1,21 +1,27 @@
-import { useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
 import { Input } from '@/components/ui/input'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { formatDistanceToNow } from 'date-fns'
 import {
-    ArrowLeft, Loader2, CheckCircle, Eye, EyeOff, ThumbsUp,
-    Search, Users, Clock, Download, PieChart, User
+    ArrowLeft,
+    CheckCircle, Eye, EyeOff,
+    Loader2,
+    PieChart,
+    Search,
+    ThumbsUp,
+    User,
+    Users
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { formatDistanceToNow } from 'date-fns'
 
 interface UserReadStatus {
     id: string
@@ -83,7 +89,7 @@ const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], sho
 export default function AnnouncementAnalytics() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { t, i18n } = useTranslation('announcements')
+    const { i18n } = useTranslation('announcements')
     const [searchQuery, setSearchQuery] = useState('')
     const [activeTab, setActiveTab] = useState('overview')
 
@@ -142,7 +148,7 @@ export default function AnnouncementAnalytics() {
             if (error) throw error
 
             const map = new Map<string, { departmentName: string; propertyName?: string }>()
-            ;(data || []).forEach((row: any) => {
+            ;(data || []).forEach((row) => {
                 map.set(row.id, {
                     departmentName: row.name,
                     propertyName: row.property?.name
@@ -270,7 +276,7 @@ export default function AnnouncementAnalytics() {
     const readMap = new Map(reads.map(r => [r.user_id, r.read_at]))
     const ackMap = new Map(acknowledgments.map(a => [a.user_id, a.acknowledged_at]))
 
-    const usersWithStatus: UserReadStatus[] = targetUsers.map((user: any) => ({
+    const usersWithStatus: UserReadStatus[] = targetUsers.map((user) => ({
         id: user.id,
         full_name: user.full_name,
         avatar_url: user.avatar_url,

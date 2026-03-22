@@ -1,6 +1,6 @@
-import { supabase } from '@/lib/supabase'
-import { getQuestionById } from './core'
-import type { AnswerSubmission, QuestionAttempt, QuizSession } from '@/types/questions'
+import { supabase } from '@/lib/supabase';
+import type { AnswerSubmission, QuestionAttempt, QuizSession } from '@/types/questions';
+import { getQuestionById } from './core';
 
 export async function recordAttempt(
     userId: string,

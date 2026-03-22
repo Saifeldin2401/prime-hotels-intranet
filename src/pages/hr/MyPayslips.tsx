@@ -1,16 +1,16 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { usePayslips } from '@/hooks/usePayslips'
-import { FileText, Download, Calendar as CalendarIcon, Wallet, ArrowRight } from 'lucide-react'
-import { format } from 'date-fns'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
-import { toast } from 'sonner'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { usePayslips } from '@/hooks/usePayslips'
 import { supabase } from '@/lib/supabase'
+import { format } from 'date-fns'
+import { ArrowRight, Calendar as CalendarIcon, Download, FileText, Wallet } from 'lucide-react'
+import { toast } from 'sonner'
 
-import { useTranslation } from 'react-i18next'
 import { ar, enUS } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 
 export default function MyPayslips() {
     const { t, i18n } = useTranslation('hr')

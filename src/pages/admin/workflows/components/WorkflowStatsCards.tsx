@@ -1,8 +1,7 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Activity, CheckCircle, XCircle, Clock } from 'lucide-react'
-import { useWorkflowStats } from '@/hooks/useWorkflows'
-import { Skeleton } from '@/components/ui/skeleton'
-import { useTranslation } from "react-i18next";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useWorkflowStats } from '@/hooks/useWorkflows';
+import { Activity, CheckCircle, Clock, XCircle } from 'lucide-react';
 
 export function WorkflowStatsCards() {
     const { data: stats, isLoading, error } = useWorkflowStats()

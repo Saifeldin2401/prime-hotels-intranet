@@ -4,10 +4,9 @@
  * Text input question with validation.
  */
 
-import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
-import { CheckCircle, XCircle } from 'lucide-react'
-import { useTranslation } from "react-i18next";
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { CheckCircle, XCircle } from 'lucide-react';
 
 interface FillBlankQuestionProps {
     value: string

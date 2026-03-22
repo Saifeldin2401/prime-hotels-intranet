@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 
 interface SmartObserverProps {
     onFocusChange?: (isFocused: boolean) => void

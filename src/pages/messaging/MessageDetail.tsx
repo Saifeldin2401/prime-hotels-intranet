@@ -1,40 +1,37 @@
-import { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import {
-  useMessage,
-  useSendMessage,
-  useMarkMessageAsRead,
-  useUpdateMessage
-} from '@/hooks/useMessaging'
-import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useProfiles } from '@/hooks/useUsers'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
 import {
-  ArrowLeft,
-  Reply,
-  Forward,
-  Archive,
-  Send,
-  Paperclip,
-  Clock,
-  CheckSquare,
-  User,
-  Building,
-  Wifi,
-  WifiOff
-} from 'lucide-react'
-import { format, formatDistanceToNow } from 'date-fns'
-import type { Message } from '@/lib/types'
-import { useTranslation } from 'react-i18next'
+    useMarkMessageAsRead,
+    useMessage,
+    useSendMessage,
+    useUpdateMessage
+} from '@/hooks/useMessaging'
+import { useRealtimeMessaging } from '@/hooks/useRealtimeMessaging'
+import { useProfiles } from '@/hooks/useUsers'
 import { cn } from '@/lib/utils'
+import { format, formatDistanceToNow } from 'date-fns'
+import {
+    Archive,
+    ArrowLeft,
+    Building,
+    CheckSquare,
+    Clock,
+    Forward,
+    Paperclip,
+    Reply,
+    Send,
+    User
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
 
 const priorityColors: Record<string, string> = {
   low: 'bg-gray-100 text-gray-800',
@@ -75,7 +72,7 @@ export default function MessageDetail() {
   const updateMessageMutation = useUpdateMessage()
   
   // Real-time messaging
-  const { isConnected } = useRealtimeMessaging()
+  const { isConnected: _isConnected } = useRealtimeMessaging()
 
   const handleReply = () => {
     if (!replyContent.trim() || !message) return
@@ -112,11 +109,6 @@ export default function MessageDetail() {
     })
   }
 
-  const handleMarkAsRead = () => {
-    if (messageId) {
-      markAsReadMutation.mutate(messageId)
-    }
-  }
 
   const handleArchive = () => {
     if (messageId) {
@@ -362,7 +354,7 @@ export default function MessageDetail() {
                   <SelectValue placeholder={t('select_recipient')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {profiles?.map((profile: any) => (
+                  {profiles?.map((profile) => (
                     <SelectItem key={profile.id} value={profile.id}>
                       {profile.full_name || profile.email}
                     </SelectItem>

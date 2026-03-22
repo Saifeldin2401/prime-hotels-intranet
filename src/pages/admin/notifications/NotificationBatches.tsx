@@ -1,13 +1,9 @@
 
-import { useNotificationBatches, useBulkNotifications } from '@/hooks/useBulkNotifications'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Loader2, RefreshCw, Play, AlertCircle, CheckCircle2, Clock } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import {
     Table,
     TableBody,
@@ -16,11 +12,15 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import { useBulkNotifications, useNotificationBatches } from '@/hooks/useBulkNotifications'
 import { useQueryClient } from '@tanstack/react-query'
+import { formatDistanceToNow } from 'date-fns'
+import { AlertCircle, CheckCircle2, Clock, Loader2, Play, RefreshCw } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function NotificationBatches() {
     const { t: t_ext } = useTranslation('extracted');
-    const { t, i18n } = useTranslation(['admin', 'common'])
+    const { t } = useTranslation(['admin', 'common'])
     const { data: batches, isLoading } = useNotificationBatches()
     const { processBatch, isProcessing } = useBulkNotifications()
     const queryClient = useQueryClient()

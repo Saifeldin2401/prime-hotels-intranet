@@ -1,14 +1,14 @@
-import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog'
-import { Upload, X, File, AlertCircle, Loader2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { useUploadEmployeeDocument } from '@/hooks/useEmployeeDocuments'
 import { useToast } from '@/components/ui/use-toast'
+import { useUploadEmployeeDocument } from '@/hooks/useEmployeeDocuments'
 import { cn } from '@/lib/utils'
+import { File, Loader2, Upload, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface DocumentUploaderProps {
     open: boolean
@@ -18,7 +18,7 @@ interface DocumentUploaderProps {
 export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) {
     // Component initialization
     const [file, setFile] = useState<File | null>(null)
-    const [uploadProgress, setUploadProgress] = useState<number | null>(null)
+    const [_uploadProgress, _setUploadProgress] = useState<number | null>(null)
     const { t } = useTranslation()
     const [category, setCategory] = useState<string>('other')
     const [title, setTitle] = useState('')

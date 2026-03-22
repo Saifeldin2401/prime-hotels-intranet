@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { AnalyticsEvents, type AnalyticsEvent, type UserSession } from '@/types/analytics'
+import { type AnalyticsEvent } from '@/types/analytics'
 
 class AnalyticsService {
     private static instance: AnalyticsService
@@ -206,7 +206,7 @@ class AnalyticsService {
     /**
      * Track an event
      */
-    public track(eventName: string, properties: Record<string, any> = {}, category = 'engagement') {
+    public track(eventName: string, properties = {}, category = 'engagement') {
         // Don't buffer events when there's no authenticated user - they can never be flushed
         if (!this.userId && !this.sessionId) return
 

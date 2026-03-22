@@ -1,26 +1,26 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { useTranslation } from 'react-i18next'
-import {
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Loader2,
-  ArrowRight,
-  AlertCircle,
-  Shield,
-  CheckCircle2,
-  WifiOff,
-  AlertTriangle,
-  LockKeyhole
-} from 'lucide-react'
-import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import { showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    AlertCircle,
+    AlertTriangle,
+    ArrowRight,
+    CheckCircle2,
+    Eye,
+    EyeOff,
+    Loader2,
+    Lock,
+    LockKeyhole,
+    Mail,
+    Shield,
+    WifiOff
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Password strength calculator
 function getPasswordStrength(password: string): { score: number; label: string; color: string } {
@@ -278,7 +278,7 @@ export function LoginForm() {
         showSuccessToast(t('welcome_back'), t('redirecting'))
         // Redirect handled by AuthContext/AppRouter
       }
-    } catch (err) {
+    } catch (_err) {
       setErrorType('network')
       setError(t('errors.network_error'))
       showErrorToast(t('errors.title'), t('errors.network_error'))

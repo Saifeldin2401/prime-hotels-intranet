@@ -1,16 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useProperty } from '@/contexts/PropertyContext'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
-import { Search, X, Building2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { useProperty } from '@/contexts/PropertyContext'
 import { isConsolidatedPropertyId, isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { Building2, Search, X } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface TaskFiltersProps {
-    filters: any
-    onChange: (filters: any) => void
+    filters
+    onChange: (filters) => void
 }
 
 export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
@@ -80,7 +80,7 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="all">{t('all_departments')}</SelectItem>
-                    {departments.map((dept: any) => (
+                    {departments.map((dept) => (
                         <SelectItem key={dept.id} value={dept.id}>
                             {dept.name}
                         </SelectItem>

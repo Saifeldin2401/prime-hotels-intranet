@@ -10,13 +10,10 @@
  * - Social proof nudges
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
+import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Textarea } from '@/components/ui/textarea'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -25,46 +22,49 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import { Progress } from '@/components/ui/progress'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import { createCertificate } from '@/lib/certificateService'
+import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
+import { getUserFriendlyError } from '@/lib/errorMessages'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { getEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { supabase } from '@/lib/supabase'
+import type { TrainingContentBlock } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
+import { learningService } from '@/services/learningService'
+import { skillsService } from '@/services/skillsService'
+import { useQuery } from '@tanstack/react-query'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import {
+    ArrowLeft,
+    BookOpen,
+    Bookmark,
+    CheckCircle,
     ChevronLeft,
     ChevronRight,
-    CheckCircle,
-    Video as VideoIcon,
-    ArrowLeft,
-    Trophy,
     Clock,
-    BookOpen,
+    Flame,
     Languages,
     Loader2,
     Maximize2,
     Minimize2,
-    StickyNote,
-    Users,
-    Sparkles,
     PartyPopper,
+    Sparkles,
+    StickyNote,
     Target,
-    Flame,
-    Bookmark,
+    Trophy,
+    Users,
+    Video as VideoIcon,
 } from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
-import { learningService } from '@/services/learningService'
-import { skillsService } from '@/services/skillsService'
-import { createCertificate } from '@/lib/certificateService'
-import { awardCertificationPathCertificates } from '@/lib/certificationPathService'
-import { sanitizeHtml } from '@/lib/sanitize'
-import { getEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
-import type { TrainingContentBlock } from '@/lib/types'
-import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
-import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
-import { cn } from '@/lib/utils'
-import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
-import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
-import { getUserFriendlyError } from '@/lib/errorMessages'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 // --- Types ---
 

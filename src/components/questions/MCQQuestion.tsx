@@ -5,8 +5,8 @@
  */
 
 import { cn } from '@/lib/utils'
-import { CheckCircle, Circle, Square, CheckSquare } from 'lucide-react'
 import type { QuestionOption } from '@/types/questions'
+import { CheckCircle, CheckSquare, Circle, Square } from 'lucide-react'
 
 interface MCQQuestionProps {
     options: QuestionOption[]

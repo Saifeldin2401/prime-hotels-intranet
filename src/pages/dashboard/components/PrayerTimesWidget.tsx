@@ -1,8 +1,8 @@
 import { usePrayerTimes } from '@/hooks/usePrayerTimes'
-import { m } from 'framer-motion'
-import { Moon, Clock, Bell } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { m } from 'framer-motion'
+import { Bell, Moon } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export function PrayerTimesWidget() {
     const { data: prayerData, isLoading } = usePrayerTimes()

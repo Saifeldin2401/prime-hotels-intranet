@@ -5,24 +5,21 @@
  * Can either accept pre-computed summary OR content to analyze
  */
 
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
+import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
 import {
-    Sparkles,
+    ChevronRight,
     Clock,
-    Users,
     ListChecks,
     RefreshCw,
-    ChevronRight,
-    FileText
+    Sparkles,
+    Users
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useAIDocumentSummarizer } from '@/hooks/useAIDocumentSummarizer'
-import { useTranslation } from "react-i18next";
 
 interface DocumentSummary {
     summary: string
@@ -65,9 +62,7 @@ export function AIDocumentSummary({
         summary: hookSummary,
         loading: hookLoading,
         error: hookError,
-        summarizeDocument,
-        clearSummary
-    } = useAIDocumentSummarizer()
+        summarizeDocument    } = useAIDocumentSummarizer()
 
     // Determine which mode we're in
     const isContentMode = !!content && !propSummary

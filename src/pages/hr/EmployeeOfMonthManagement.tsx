@@ -1,23 +1,23 @@
-import { useState, useEffect, useId, useCallback } from 'react'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { useTranslation } from 'react-i18next'
-import { supabase } from '@/lib/supabase'
-import { useToast } from '@/components/ui/use-toast'
-import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
-import { Trophy, Calendar, Save, Trash2, UserPlus, Check, ChevronsUpDown, Pencil } from 'lucide-react'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-import { createNotification, NotificationTemplates } from '@/lib/notificationService'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command'
+import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { cn } from '@/lib/utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import { createNotification, NotificationTemplates } from '@/lib/notificationService'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { domAnimation, LazyMotion, m } from 'framer-motion'
+import { Calendar, Check, ChevronsUpDown, Pencil, Save, Trash2, Trophy, UserPlus } from 'lucide-react'
+import { useCallback, useEffect, useId, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Profile {
     id: string
@@ -198,7 +198,7 @@ export default function EmployeeOfMonthManagement() {
             })
 
             fetchWinners()
-        } catch (err: any) {
+        } catch (err) {
             toast({
                 title: t('common:errors.delete_failed'),
                 description: err.message,
@@ -285,7 +285,7 @@ export default function EmployeeOfMonthManagement() {
 
             resetComposer()
             fetchWinners()
-        } catch (err: any) {
+        } catch (err) {
             toast({
                 title: t('common:errors.save_failed'),
                 description: err.message,

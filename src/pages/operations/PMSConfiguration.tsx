@@ -1,22 +1,14 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
-import {
-    ArrowLeft,
-    Building2,
-    Settings,
-    RefreshCw,
-    CheckCircle,
-    AlertCircle,
-    Clock,
-    Plug,
-    Save,
-    Edit,
-    XCircle
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -26,22 +18,28 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog'
 import { Switch } from '@/components/ui/switch'
+import { toast } from '@/components/ui/use-toast'
 import { usePMSSystems } from '@/hooks/useOperations'
 import { supabase } from '@/lib/supabase'
-import { toast } from '@/components/ui/use-toast'
-import { useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import type { PMSSystem, PMSType } from '@/types/operations'
+import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
+import {
+    AlertCircle,
+    ArrowLeft,
+    Building2,
+    CheckCircle,
+    Clock,
+    Edit,
+    Plug,
+    RefreshCw,
+    Save
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 const PMS_TYPE_INFO: Record<PMSType, { name: string; color: string; description: string }> = {
     opera: {

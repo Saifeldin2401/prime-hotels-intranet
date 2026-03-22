@@ -5,41 +5,9 @@
  * Adapted for 'documents' table.
  */
 
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import {
-    CheckCircle2,
-    XCircle,
-    Clock,
-    Eye,
-    MessageSquare,
-    User,
-    Calendar,
-    FileText,
-    ArrowLeft,
-    Filter,
-    Loader2,
-    ThumbsUp,
-    ThumbsDown,
-    Edit3,
-    Languages,
-    Sparkles,
-    Check
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-    Tabs,
-    TabsContent,
-    TabsList,
-    TabsTrigger,
-} from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -48,6 +16,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Select,
     SelectContent,
@@ -55,14 +25,42 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { supabase } from '@/lib/supabase'
+import {
+    Tabs,
+    TabsContent,
+    TabsList,
+    TabsTrigger,
+} from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
-import { toast } from 'sonner'
+import { useTranslationAI } from '@/hooks/useTranslationAI'
+import { createNotification } from '@/lib/notificationService'
+import { supabase } from '@/lib/supabase'
+import { type KnowledgeArticle, KNOWLEDGE_STATUS } from '@/types/knowledge'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
-import { type KnowledgeArticle, KNOWLEDGE_STATUS } from '@/types/knowledge'
-import { createNotification } from '@/lib/notificationService'
-import { useTranslationAI } from '@/hooks/useTranslationAI'
+import {
+    ArrowLeft,
+    Calendar,
+    CheckCircle2,
+    Clock,
+    Edit3,
+    Eye,
+    FileText,
+    Filter,
+    Loader2,
+    MessageSquare,
+    Sparkles,
+    ThumbsDown,
+    ThumbsUp,
+    User,
+    XCircle
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 
 export default function KnowledgeReview() {
     const { t: t_ext } = useTranslation('extracted');
@@ -130,9 +128,9 @@ export default function KnowledgeReview() {
 
             const seen = new Set<string>()
             const documents = (data || [])
-                .map((row: any) => row.document)
+                .map((row) => row.document)
                 .filter(Boolean)
-                .filter((doc: any) => {
+                .filter((doc) => {
                     if (seen.has(doc.id)) return false
                     seen.add(doc.id)
                     return true
@@ -155,7 +153,7 @@ export default function KnowledgeReview() {
             // 'changes' keeps as DRAFT
 
             // Update document content and status
-            const updatePayload: any = { status: newStatus }
+            const updatePayload = { status: newStatus }
 
             // If in translation mode or translation fields were edited, include them
             if (activeTab === 'translation' || translationData.title_ar) {
@@ -173,7 +171,7 @@ export default function KnowledgeReview() {
 
             if (updateError) throw updateError
 
-            const approvalUpdate: any = {
+            const approvalUpdate = {
                 status: action === 'approve' ? 'approved' : action === 'reject' ? 'rejected' : 'pending',
                 feedback: reviewComment.trim() || null,
                 approved_at: action === 'approve' ? new Date().toISOString() : null,
@@ -249,7 +247,7 @@ export default function KnowledgeReview() {
             setReviewComment('')
             setReviewAction(null)
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast.error(`${t('review_queue.messages.failed')} ${error.message}`)
         }
     })
@@ -304,7 +302,7 @@ export default function KnowledgeReview() {
             })
 
             toast.success(t('translation.success', 'AI translation generated successfully'), { id: 'ai-translate' })
-        } catch (error: any) {
+        } catch (error) {
             toast.error(t('translation.error', 'Translation failed: ') + error.message, { id: 'ai-translate' })
         }
     }

@@ -29,7 +29,7 @@ export async function checkTrainingPrerequisites(
 
     if (resourcesError) throw resourcesError
 
-    const documentIds = (requiredResources || []).map((r: any) => r.resource_id).filter(Boolean)
+    const documentIds = (requiredResources || []).map((r) => r.resource_id).filter(Boolean)
 
     const { data: docs, error: docsError } = await supabase
       .from('documents')
@@ -54,7 +54,7 @@ export async function checkTrainingPrerequisites(
 
     if (ackError) throw ackError
 
-    const completedDocIds = new Set((acks || []).filter((a: any) => a.acknowledged_at).map((a: any) => a.document_id))
+    const completedDocIds = new Set((acks || []).filter((a) => a.acknowledged_at).map((a) => a.document_id))
 
     // Build prerequisites result
     const documentPrerequisites: TrainingPrerequisite[] = (documentIds || []).map((docId: string) => ({
@@ -84,9 +84,7 @@ export async function checkTrainingPrerequisites(
 
 export async function markDocumentAsCompleted(
   userId: string,
-  documentId: string,
-  timeSpentSeconds?: number
-) {
+  documentId: string) {
   try {
     const nowIso = new Date().toISOString()
 

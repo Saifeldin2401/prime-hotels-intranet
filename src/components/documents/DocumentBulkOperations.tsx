@@ -1,37 +1,32 @@
-import { useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Badge } from '@/components/ui/badge'
-import { Separator } from '@/components/ui/separator'
 import {
-  Download,
-  Trash2,
-  Share2,
-  Move,
-  Copy,
-  Archive,
-  Tag,
-  Eye,
-  FileText,
-  FolderOpen,
-  MoreHorizontal,
-  CheckCircle
-} from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { cn } from '@/lib/utils'
-import { toast } from 'sonner'
+import { useAuth } from '@/hooks/useAuth'
 import { openUrlInNewTab, resolveDocumentUrl } from '@/lib/secureFileAccess'
-import { useTranslation } from "react-i18next";
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQueryClient } from '@tanstack/react-query'
+import {
+    Archive,
+    Download,
+    Eye,
+    FileText,
+    MoreHorizontal,
+    Move,
+    Share2,
+    Tag,
+    Trash2
+} from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
 interface Document {
   id: string
@@ -95,7 +90,7 @@ export function DocumentBulkOperations({
       }
 
       toast.success(`Downloaded ${selectedDocuments.size} documents`)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to download documents')
     } finally {
       setIsProcessing(false)
@@ -158,7 +153,7 @@ export function DocumentBulkOperations({
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       setSelectedDocuments(new Set())
       toast.success(`Archived ${selectedDocuments.size} documents`)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to archive documents')
     } finally {
       setIsProcessing(false)
@@ -188,7 +183,7 @@ export function DocumentBulkOperations({
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       setSelectedDocuments(new Set())
       toast.success(`Moved ${selectedDocuments.size} documents`)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to move documents')
     } finally {
       setIsProcessing(false)
@@ -210,7 +205,7 @@ export function DocumentBulkOperations({
 
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       toast.success(`Updated tags for ${selectedDocuments.size} documents`)
-    } catch (error) {
+    } catch (_error) {
       toast.error('Failed to update tags')
     } finally {
       setIsProcessing(false)

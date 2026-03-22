@@ -1,9 +1,9 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Users, CheckCircle, GraduationCap, Clock, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { cn } from '@/lib/utils'
 import { useDashboardMetrics } from '@/hooks/useDashboardMetrics'
+import { cn } from '@/lib/utils'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { CheckCircle, Clock, GraduationCap, Minus, TrendingDown, TrendingUp, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 const colorMap = {

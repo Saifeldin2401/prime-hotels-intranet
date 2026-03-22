@@ -1,4 +1,3 @@
-import { FileText, Settings, Users, Home, BookOpen, GraduationCap, ClipboardList, Building, MessageSquare } from 'lucide-react'
 
 export interface SearchablePage {
     id: string

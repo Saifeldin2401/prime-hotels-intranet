@@ -1,11 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
-import type { MaintenanceTicket, MaintenanceComment, MaintenanceAttachment } from '@/lib/types'
-import { crudToasts } from '@/lib/toastHelpers'
+import { useAuth } from '@/hooks/useAuth'
 import { scanFile } from '@/hooks/useVirusScan'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { MaintenanceAttachment, MaintenanceComment, MaintenanceTicket } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useMyMaintenanceTickets() {
   const { user } = useAuth()
@@ -367,7 +367,7 @@ export function useCompleteMaintenanceTicket() {
       if (error) throw error
       return data as MaintenanceTicket
     },
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
       crudToasts.update.success('Ticket completed')
     },

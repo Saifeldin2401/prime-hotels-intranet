@@ -4,18 +4,17 @@
  * API service for Knowledge Base operations.
  */
 
-import { supabase } from '@/lib/supabase'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
 import type {
+    ContextualHelp,
     KnowledgeArticle,
+    KnowledgeBookmark,
     KnowledgeComment,
     KnowledgeSearchFilters,
     KnowledgeSearchResult,
-    RequiredReading,
-    ContextualHelp,
-    KnowledgeBookmark,
-    KnowledgeFeedback,
-    RelatedArticle
+    RelatedArticle,
+    RequiredReading
 } from '@/types/knowledge'
 
 // ============================================================================
@@ -55,6 +54,12 @@ const toErrorMessage = (error: unknown): string => {
         return typeof message === 'string' ? message : 'Unknown error'
     }
     return 'Unknown error'
+}
+
+function normalizeContentType(value: unknown): KnowledgeArticle['content_type'] {
+    return typeof value === 'string'
+        ? value.toLowerCase() as KnowledgeArticle['content_type']
+        : 'document'
 }
 
 /**
@@ -338,7 +343,7 @@ export async function getRequiredReading(userId: string, propertyId?: string): P
                 id: d.id, // Using document ID as the listing ID
                 document_id: d.id,
                 title: d.title,
-                content_type: (d.content_type?.toLowerCase() as any) || 'document',
+                content_type: normalizeContentType(d.content_type),
                 is_acknowledged: !!acknowledgment,
                 acknowledged_at: acknowledgment?.acknowledged_at,
                 // In a real system, due_date might come from a specific assignment table
@@ -401,7 +406,7 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
         : [baseQuery()]
 
     const scopedResults = await Promise.all(scopedQueries)
-    const scopedDocs: any[] = []
+    const scopedDocs = []
     for (const result of scopedResults) {
         if (result.error || !result.data) {
             continue
@@ -453,8 +458,14 @@ export async function getComments(documentId: string): Promise<KnowledgeComment[
 
     return (data || []).map(comment => ({
         ...comment,
-        author: comment.user as any
-    })) as unknown as KnowledgeComment[]
+        author: comment.user
+            ? {
+                id: comment.user.id,
+                full_name: comment.user.full_name,
+                avatar_url: comment.user.avatar_url || undefined
+            }
+            : undefined
+    })) as KnowledgeComment[]
 }
 
 export async function createComment(documentId: string, userId: string, content: string, parentId?: string, isQuestion = false): Promise<KnowledgeComment | null> {
@@ -483,7 +494,7 @@ export async function createComment(documentId: string, userId: string, content:
         content,
         created_at: new Date().toISOString(),
         user_id: userId
-    } as any
+    } as KnowledgeComment
 }
 export async function voteComment(commentId: string, userId: string, voteType: 'up' | 'down'): Promise<void> {
     const { error } = await supabase
@@ -595,7 +606,15 @@ export async function getFeedbackStats(): Promise<{ helpful: number, unhelpful: 
 /**
  * Gets most recent feedback entries with document titles
  */
-export async function getRecentFeedback(limit = 10): Promise<any[]> {
+export async function getRecentFeedback(limit = 10): Promise<Array<{
+    id: string
+    document_id: string
+    user_id: string
+    helpful: boolean
+    feedback_text?: string | null
+    created_at: string
+    document?: { id: string; title: string } | null
+}>> {
     const { data, error } = await supabase
         .from('document_feedback')
         .select(`
@@ -732,16 +751,16 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             return []
         }
 
-        const relatedDocs = (data || []).map(d => d.related_document).filter(Boolean) as any[]
+        const relatedDocs = (data || []).map(d => d.related_document).filter(Boolean) as RawKnowledgeArticle[]
         const hydratedDocs = await hydratePublishedSnapshotsForList(relatedDocs)
         const docMap = new Map(hydratedDocs.map(doc => [doc.id, doc]))
 
         return (data || []).map(d => {
-            const doc = docMap.get(d.related_document_id) || (d.related_document as any) || {}
+            const doc = docMap.get(d.related_document_id) || (d.related_document as RawKnowledgeArticle | null) || {}
             return {
                 id: doc.id || d.related_document_id,
                 title: doc.title || 'Untitled',
-                content_type: (doc.content_type?.toLowerCase() as any) || 'document',
+                content_type: normalizeContentType(doc.content_type),
                 relation_type: 'automated',
                 score: d.relevance_score
             }
@@ -788,7 +807,7 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
 // HELPERS
 // ============================================================================
 
-async function hydratePublishedSnapshotIfNeeded(data: any): Promise<any> {
+async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Promise<RawKnowledgeArticle> {
     if (!data?.id) return data
     if (data.status === 'PUBLISHED') return data
     if (!data.published_version_number) return data
@@ -816,7 +835,7 @@ async function hydratePublishedSnapshotIfNeeded(data: any): Promise<any> {
     }
 }
 
-async function hydratePublishedSnapshotsForList(rows: any[]): Promise<any[]> {
+async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Promise<RawKnowledgeArticle[]> {
     if (!rows.length) return rows
     const needsSnapshot = rows.filter(row =>
         row?.id &&

@@ -3,42 +3,12 @@
  * Premium search + filter experience to match the redesigned KnowledgeHome.
  */
 
-import { useState, useMemo, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { useDebounce } from '@/hooks/useDebounce'
-import { useTranslation } from 'react-i18next'
-import { motion, AnimatePresence } from 'framer-motion'
-import {
-    Search,
-    X,
-    FileText,
-    BookOpen,
-    CheckSquare,
-    HelpCircle,
-    Video,
-    Image,
-    ClipboardList,
-    Link2,
-    List,
-    LayoutGrid,
-    Clock,
-    Eye,
-    Star,
-    ArrowUpDown,
-    Loader2,
-    ChevronRight,
-    ShieldCheck,
-    SlidersHorizontal,
-    ArrowLeft,
-    Building2,
-    Sparkles,
-    Pencil,
-    Lightbulb
-} from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { RequestContentDialog } from '@/components/knowledge/RequestContentDialog'
+import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import {
     Select,
     SelectContent,
@@ -47,13 +17,41 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { cn } from '@/lib/utils'
-import { useArticles, useCategories } from '@/hooks/useKnowledge'
+import { useDebounce } from '@/hooks/useDebounce'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useArticles, useCategories } from '@/hooks/useKnowledge'
 import { useProperties } from '@/hooks/useProperties'
+import { cn } from '@/lib/utils'
 import type { KnowledgeContentType } from '@/types/knowledge'
-import { RequestContentDialog } from '@/components/knowledge/RequestContentDialog'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    ArrowLeft,
+    ArrowUpDown,
+    BookOpen,
+    CheckSquare,
+    ChevronRight,
+    ClipboardList,
+    Clock,
+    Eye,
+    FileText,
+    HelpCircle,
+    Image,
+    LayoutGrid,
+    Link2,
+    List,
+    Loader2,
+    Pencil,
+    Search,
+    ShieldCheck,
+    SlidersHorizontal,
+    Sparkles,
+    Star,
+    Video,
+    X
+} from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useSearchParams } from 'react-router-dom'
 
 /* Type Configuration */
 const TYPE_CONFIG: Record<KnowledgeContentType, {
@@ -105,8 +103,7 @@ const fadeUp = {
 
 
 export default function KnowledgeSearch() {
-    const { t, i18n } = useTranslation(['knowledge', 'common'])
-    const isRTL = i18n.dir() === 'rtl'
+    const { t, i18n: _i18n } = useTranslation(['knowledge', 'common'])
     const [searchParams] = useSearchParams()
 
     /* State */

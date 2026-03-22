@@ -1,25 +1,6 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import {
-    ArrowUp, ArrowRightLeft, Calendar, User, Search, Target,
-    MoreHorizontal, Trash2, Edit, XCircle
-} from 'lucide-react'
-import { ROLES, type AppRole } from '@/lib/constants'
-import { useTranslation } from 'react-i18next'
 import { PromoteEmployeeDialog } from '@/components/hr/PromoteEmployeeDialog'
 import { TransferEmployeeDialog } from '@/components/hr/TransferEmployeeDialog'
-import { useAuth } from '@/hooks/useAuth'
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { PageHeader } from '@/components/layout/PageHeader'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -30,7 +11,31 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from '@/components/ui/input'
 import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import {
+    ArrowRightLeft,
+    ArrowUp,
+    Calendar,
+    Edit,
+    MoreHorizontal,
+    Search, Target,
+    User,
+    XCircle
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface PromotionRecord {
     type: 'promotion'
@@ -83,7 +88,7 @@ type HistoryRecord = PromotionRecord | TransferRecord
 export default function PromotionTransferHistory() {
     const { t, i18n } = useTranslation(['hr', 'common'])
     const [searchTerm, setSearchTerm] = useState('')
-    const { user, profile, primaryRole } = useAuth()
+    const { primaryRole } = useAuth()
     const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
 
@@ -99,7 +104,7 @@ export default function PromotionTransferHistory() {
     // It has `metadata` with everything we need for display.
     // And it has `id` which is the request_id needed for actions.
 
-    const { data: requestRecords, refetch } = useQuery({
+    const { data: _requestRecords, refetch: _refetch } = useQuery({
         queryKey: ['history-requests'],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -117,7 +122,6 @@ export default function PromotionTransferHistory() {
             // Map to HistoryRecord shape
             return data.map(r => {
                 const meta = r.metadata || {};
-                const isPromo = r.entity_type === 'promotion';
 
                 // Construct record based on metadata (available since implementation)
                 // NOTE: Older records might miss metadata, but since this is a new system, it's fine.
@@ -177,7 +181,6 @@ export default function PromotionTransferHistory() {
         }
     });
 
-    const isGlobalAdmin = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '');
 
     // Refetch Promotions
     const { data: promotionsData, refetch: refetchPromos } = useQuery({

@@ -1,13 +1,13 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
-import type { Task, TaskComment, TaskStats } from '@/lib/types'
-import { validateTransition, getTransitionErrorMessage } from '@/lib/statusTransitions'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
-import { crudToasts } from '@/lib/toastHelpers'
-import { escapeSearchQuery } from '@/lib/utils'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { getTransitionErrorMessage, validateTransition } from '@/lib/statusTransitions'
+import { supabase } from '@/lib/supabase'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { Task, TaskComment, TaskStats } from '@/lib/types'
+import { escapeSearchQuery } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Fetch tasks
 export function useTasks(filters?: {

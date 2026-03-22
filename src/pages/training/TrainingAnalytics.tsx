@@ -5,14 +5,10 @@
  * and knowledge gap analysis across the organization.
  */
 
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
     Select,
     SelectContent,
@@ -20,20 +16,21 @@ import {
     SelectTrigger,
     SelectValue
 } from '@/components/ui/select'
-import {
-
-    TrendingUp,
-    Users,
-    BookOpen,
-    Award,
-    AlertTriangle,
-    CheckCircle,
-    Clock,
-    Target,
-    Brain
-} from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
+import {
+    AlertTriangle,
+    Award,
+    BookOpen,
+    Brain,
+    CheckCircle,
+    Target,
+    TrendingUp
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface AnalyticsSummary {
     totalAssignments: number
@@ -71,7 +68,7 @@ const StatCard = ({
 }: {
     title: string
     value: string | number
-    icon: any
+    icon
     trend?: string
     color?: string
 }) => (
@@ -100,10 +97,10 @@ export default function TrainingAnalytics() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
-    const [departmentFilter, setDepartmentFilter] = useState<string>('all')
+    const [departmentFilter, _setDepartmentFilter] = useState<string>('all')
 
     // Fetch summary stats
-    const { data: summary, isLoading: summaryLoading } = useQuery({
+    const { data: summary } = useQuery({
         queryKey: ['training-analytics-summary', timeRange, departmentFilter],
         queryFn: async (): Promise<AnalyticsSummary> => {
             // Get date filter
@@ -297,7 +294,7 @@ export default function TrainingAnalytics() {
                 description={t('analytics.description')}
                 actions={
                     <div className="flex items-center gap-3">
-                        <Select value={timeRange} onValueChange={(v: any) => setTimeRange(v)}>
+                        <Select value={timeRange} onValueChange={(v) => setTimeRange(v)}>
                             <SelectTrigger className="w-[140px]">
                                 <SelectValue />
                             </SelectTrigger>

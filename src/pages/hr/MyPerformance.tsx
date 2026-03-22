@@ -1,15 +1,15 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { usePerformanceReviews } from '@/hooks/usePerformance'
-import { useMyCertificates } from '@/hooks/useCertificates'
-import { Award, Star, Calendar as CalendarIcon, User, TrendingUp } from 'lucide-react'
-import { format } from 'date-fns'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { useMyCertificates } from '@/hooks/useCertificates'
+import { usePerformanceReviews } from '@/hooks/usePerformance'
+import { format } from 'date-fns'
+import { Award, Calendar as CalendarIcon, Star, TrendingUp, User } from 'lucide-react'
 
-import { useTranslation } from 'react-i18next'
 import { ar, enUS } from 'date-fns/locale'
+import { useTranslation } from 'react-i18next'
 
 export default function MyPerformance() {
     const { t, i18n } = useTranslation('hr')

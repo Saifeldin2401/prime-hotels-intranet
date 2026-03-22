@@ -1,19 +1,18 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Building2, Pencil, Trash2, Layers } from 'lucide-react'
-import type { Property } from '@/lib/types'
-import { useTranslation, Trans } from 'react-i18next'
 import { useToast } from '@/components/ui/use-toast'
 import { useDepartments } from '@/hooks/useDepartments'
-import { ConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { supabase } from '@/lib/supabase'
+import type { Property } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Building2, Layers, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 import {
     Dialog,
@@ -21,8 +20,7 @@ import {
     DialogDescription,
     DialogFooter,
     DialogHeader,
-    DialogTitle,
-    DialogTrigger,
+    DialogTitle
 } from '@/components/ui/dialog'
 import { Separator } from '@/components/ui/separator'
 
@@ -239,7 +237,7 @@ export default function PropertyManagement() {
                 description: t('admin:properties.success.deleted', { defaultValue: 'Property deleted successfully.' })
             })
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
                 description: error.message,
@@ -275,7 +273,7 @@ export default function PropertyManagement() {
                 description: selectedProperty ? t('admin:properties.success.updated_desc') : t('admin:properties.success.created_desc'),
             })
         },
-        onError: (error: any) => {
+        onError: (error) => {
             toast({
                 title: t('common:common.error'),
                 description: error.message,

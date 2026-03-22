@@ -1,8 +1,8 @@
-import { useMemo } from 'react'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { ROLES, type AppRole } from '@/lib/constants'
 import { WIDGET_REGISTRY, type WidgetId } from '@/pages/dashboard/components/WidgetRegistry'
+import { useMemo } from 'react'
 
 export function useWidgetPermissions() {
     const { primaryRole, properties, departments } = useAuth()

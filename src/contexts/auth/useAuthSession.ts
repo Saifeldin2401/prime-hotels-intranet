@@ -1,5 +1,5 @@
-import { useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useRef } from 'react'
 
 /**
  * Internal hook: session recovery, timeout utilities, and auth-error detection.

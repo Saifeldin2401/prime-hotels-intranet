@@ -1,17 +1,14 @@
-import * as React from 'react'
-import { cn } from '@/lib/utils'
-import { format, formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils';
+import { format, formatDistanceToNow } from 'date-fns';
 import {
+    AlertCircle,
+    ArrowRight,
     CheckCircle,
     Clock,
-    XCircle,
-    AlertCircle,
     User,
-    ArrowRight,
-    Calendar,
+    XCircle,
     type LucideIcon
-} from 'lucide-react'
-import { useTranslation } from "react-i18next";
+} from 'lucide-react';
 
 interface TimelineEvent {
     id: string
@@ -23,7 +20,7 @@ interface TimelineEvent {
         avatar?: string
     }
     timestamp: Date | string
-    metadata?: Record<string, any>
+    metadata?
     icon?: LucideIcon
 }
 
@@ -67,7 +64,7 @@ export function WorkflowTimeline({
             <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" aria-hidden="true" />
 
             <ul className="space-y-4">
-                {events.map((event, index) => {
+                {events.map((event) => {
                     const config = eventConfig[event.type] || eventConfig.custom
                     const Icon = event.icon || config.icon
                     const timestamp = typeof event.timestamp === 'string'

@@ -1,10 +1,9 @@
+import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
 import { useDepartmentKnowledgeCompliance, useUserKnowledgeCompliance } from '@/hooks/useKnowledgeCompliance'
-import { FileCheck, AlertTriangle, CheckCircle, BookOpen } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { AlertTriangle, BookOpen, CheckCircle } from 'lucide-react'
 
 interface KnowledgeComplianceWidgetProps {
     propertyId?: string

@@ -1,9 +1,9 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { FileText, GraduationCap, CheckCircle, Users, Wrench, Calendar, MessageSquare, BarChart3 } from 'lucide-react'
 import { usePermissions, type Permission } from '@/hooks/usePermissions'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { BarChart3, Calendar, CheckCircle, FileText, GraduationCap, MessageSquare, Users, Wrench } from 'lucide-react'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 
 interface QuickAction {
   key: string

@@ -1,10 +1,6 @@
 // Responsive Components
 export {
-    ResponsiveTable,
     DataCard,
-    DataField,
-    ResponsiveStack,
-    HideOnMobile,
-    ShowOnMobile,
+    DataField, HideOnMobile, ResponsiveStack, ResponsiveTable, ShowOnMobile,
     TouchTarget
-} from './ResponsiveComponents'
+} from './ResponsiveComponents';

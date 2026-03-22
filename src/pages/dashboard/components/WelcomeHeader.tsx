@@ -1,41 +1,42 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import {
-  RefreshCw,
-  Building2,
-  Briefcase,
-  Bell,
-  Settings,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  CheckCircle2,
-  AlertCircle,
-  CalendarClock,
-  Activity,
-  Zap,
-  Users
-} from 'lucide-react'
+import { LiveWeather } from '@/components/dashboard/LiveWeather'
+import { QuickCreateMenu } from '@/components/dashboard/QuickCreateMenu'
+import { WeatherBackground } from '@/components/dashboard/WeatherBackground'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
-import { useAuth } from '@/hooks/useAuth'
+import { Sparkline } from '@/components/ui/Sparkline'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useTasks } from '@/hooks/useTasks'
-import { useEvents } from '@/hooks/useEvents'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
+import { useAuth } from '@/hooks/useAuth'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
+import { useEvents } from '@/hooks/useEvents'
+import { useTasks } from '@/hooks/useTasks'
+import { useWeather } from '@/hooks/useWeather'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
+import { ar } from 'date-fns/locale'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    Activity,
+    AlertCircle,
+    ArrowRight,
+    Bell,
+    Briefcase,
+    Building2,
+    Calendar,
+    CalendarClock,
+    CheckCircle2,
+    RefreshCw,
+    Settings,
+    Sparkles,
+    TrendingDown,
+    TrendingUp,
+    Users,
+    Zap
+} from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from "react-i18next"
 import { useNavigate } from 'react-router-dom'
-import { ar } from 'date-fns/locale'
-import { QuickCreateMenu } from '@/components/dashboard/QuickCreateMenu'
-import { LiveWeather } from '@/components/dashboard/LiveWeather'
-import { useWeather } from '@/hooks/useWeather'
-import { WeatherBackground } from '@/components/dashboard/WeatherBackground'
 import { PrayerTimesWidget } from './PrayerTimesWidget'
-import { Sparkline } from '@/components/ui/Sparkline'
-import { Sparkles, ArrowRight } from 'lucide-react'
 
 interface WelcomeHeaderProps {
   taskCount?: number
@@ -133,7 +134,7 @@ function StatBentoCard({
   delay,
   showPulse
 }: {
-  icon: any;
+  icon;
   title: string;
   value: React.ReactNode;
   subtext?: React.ReactNode;

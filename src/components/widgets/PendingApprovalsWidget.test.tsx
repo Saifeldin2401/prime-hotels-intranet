@@ -1,8 +1,8 @@
-import { render, screen, fireEvent } from '@testing-library/react'
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { PendingApprovalsWidget } from '@/components/widgets/PendingApprovalsWidget'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { PendingApprovalsWidget } from '@/components/widgets/PendingApprovalsWidget'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Mock the hooks
 vi.mock('@/hooks/useApprovalStats', () => ({

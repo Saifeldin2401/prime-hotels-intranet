@@ -1,40 +1,40 @@
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Badge } from '@/components/ui/badge'
-import { UserForm } from '@/components/admin/UserForm'
-import { EmptyState } from '@/components/shared/EmptyState'
-import { Plus, Users, Loader2, Trash2, Edit, MoreVertical, ShieldOff, ShieldCheck, KeyRound, Unlock, AlertTriangle, Clock, CheckSquare, Square, MailPlus, UserX, Upload, XCircle } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { useAccountActions } from '@/hooks/useAccountActions'
 import { UserBulkActionsBar } from '@/components/admin/UserBulkActionsBar'
-import type { Profile } from '@/lib/types'
+import { UserForm } from '@/components/admin/UserForm'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { EmptyState } from '@/components/shared/EmptyState'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import { useAccountActions } from '@/hooks/useAccountActions'
 import type { AppRole } from '@/lib/constants'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
+import { supabase } from '@/lib/supabase'
+import type { Profile } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useToast } from '@/components/ui/use-toast'
+import { Link } from 'react-router-dom'
 
 type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
 

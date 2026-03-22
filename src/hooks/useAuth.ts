@@ -1,13 +1,14 @@
-import { useContext } from 'react'
+import type { AuthContextType } from '@/contexts/AuthContext'
 import { AuthContext } from '@/contexts/AuthContext'
+import { useContext } from 'react'
 
 // Safe fallback for HMR scenarios where components re-mount outside the provider tree
-const hmrFallback = {
+const hmrFallback: AuthContextType = {
     user: null,
     profile: null,
-    roles: [] as any[],
-    properties: [] as any[],
-    departments: [] as any[],
+    roles: [],
+    properties: [],
+    departments: [],
     primaryRole: null,
     loading: true,
     rolesLoading: true,
@@ -22,7 +23,7 @@ export function useAuth() {
         if (import.meta.hot) {
             // During HMR, components may temporarily mount outside the provider tree
             console.debug('useAuth: AuthProvider not found (HMR), using fallback')
-            return hmrFallback as any
+            return hmrFallback
         }
         throw new Error('useAuth must be used within an AuthProvider')
     }

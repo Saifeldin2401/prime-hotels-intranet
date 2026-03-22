@@ -1,31 +1,31 @@
-import { useNotifications } from '@/hooks/useNotifications'
-import { formatDistanceToNow, isToday, isThisWeek, isYesterday } from 'date-fns'
-import {
-    Bell,
-    CheckCircle2,
-    Clock,
-    Search,
-    Trash2,
-    AlertCircle,
-    Info,
-    Building,
-    GraduationCap,
-    MessageSquare,
-    FileText,
-    Users,
-    Inbox,
-    BellOff
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useState, useMemo } from 'react'
-import { cn } from '@/lib/utils'
-import { useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
+import { useNotifications } from '@/hooks/useNotifications'
 import type { Notification } from '@/lib/types'
-import { motion, AnimatePresence } from 'framer-motion'
+import { cn } from '@/lib/utils'
+import { formatDistanceToNow, isThisWeek, isToday, isYesterday } from 'date-fns'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    AlertCircle,
+    Bell,
+    BellOff,
+    Building,
+    CheckCircle2,
+    Clock,
+    FileText,
+    GraduationCap,
+    Inbox,
+    Info,
+    MessageSquare,
+    Search,
+    Trash2,
+    Users
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 type FilterType = 'all' | 'unread' | 'approval' | 'training' | 'maintenance' | 'announcement'
 

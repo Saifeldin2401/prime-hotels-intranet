@@ -1,23 +1,22 @@
-import { useState } from 'react'
-import { useSystemSettings, type SystemSetting } from '@/hooks/useSystemSettings'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Switch } from '@/components/ui/switch'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useSystemSettings, type SystemSetting } from '@/hooks/useSystemSettings'
 import {
+    Bell,
+    Building,
     Loader2,
+    Palette,
+    Save,
     Settings,
     Shield,
-    Bell,
-    Palette,
     Users,
-    Building,
-    Save,
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { useTranslation } from "react-i18next";
+import { useState } from 'react'
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     general: { label: 'General', icon: <Settings className="w-4 h-4" />, description: 'Core application settings' },
@@ -35,7 +34,6 @@ function formatKey(key: string): string {
 function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (key: string, value: unknown) => void }) {
     const isBool = typeof setting.value === 'boolean'
     const isNumber = typeof setting.value === 'number'
-    const isString = typeof setting.value === 'string'
     const isArray = Array.isArray(setting.value)
 
     const [localValue, setLocalValue] = useState<string>(

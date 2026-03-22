@@ -1,23 +1,22 @@
-import { useEffect } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { crudToasts, showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
 import type {
-  TrainingModule,
-  TrainingAssignment,
-  TrainingProgress,
-  TrainingContentBlock,
-  TrainingQuiz,
-  TrainingQuizAttempt
+    TrainingAssignment,
+    TrainingContentBlock,
+    TrainingModule,
+    TrainingProgress,
+    TrainingQuiz,
+    TrainingQuizAttempt
 } from '@/lib/types'
-import type {
-  LearningAssignment,
-  LearningProgress
-} from '@/types/learning'
-import { learningService } from '@/services/learningService'
-import type { QuestionStatus } from '@/types/questions'
-import { crudToasts, showSuccessToast, showErrorToast } from '@/lib/toastHelpers'
 import { escapeSearchQuery } from '@/lib/utils'
+import { learningService } from '@/services/learningService'
+import type {
+    LearningAssignment
+} from '@/types/learning'
+import type { QuestionStatus } from '@/types/questions'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
 
 
 // Training Modules
@@ -547,7 +546,7 @@ export function useCompleteTraining() {
             }
             certificateGenerated = true
           }
-        } catch (certError: any) {
+        } catch (certError) {
           console.error('Certificate generation failed:', certError)
           certificateError = certError.message || 'Certificate generation failed'
           // Don't throw - training completion should succeed even if cert fails
@@ -615,7 +614,7 @@ export function useCreateQuizAttempt() {
       const passed = (score / maxScore) >= 0.8 // 80% passing threshold
 
       // Get attempt number
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('training_quiz_attempts')
         .select('attempt_number')
         .eq('user_id', user.id)

@@ -1,24 +1,23 @@
-import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  GitCompare,
-  FileText,
-  Calendar,
-  User,
-  ArrowLeftRight,
-  MessageSquare,
-  Plus,
-  Minus
-} from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { useQuery } from '@tanstack/react-query'
+import { formatDistanceToNow } from 'date-fns'
+import {
+    ArrowLeftRight,
+    Calendar,
+    FileText,
+    GitCompare,
+    MessageSquare,
+    Minus,
+    Plus,
+    User
+} from 'lucide-react'
+import { useState } from 'react'
 
 interface DocumentVersion {
   id: string
@@ -125,7 +124,7 @@ export function DocumentVersionComparison({ documentId, className }: DocumentVer
         .order('version_number', { ascending: false })
 
       if (error) throw error
-      return data.map((version: any) => ({
+      return data.map((version) => ({
         ...version,
         user_name: version.user?.full_name || 'Unknown User',
         user_avatar: version.user?.avatar_url

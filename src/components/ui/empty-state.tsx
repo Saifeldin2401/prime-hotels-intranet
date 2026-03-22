@@ -1,16 +1,15 @@
-import type { ReactNode } from 'react'
-import { motion } from 'framer-motion'
 import { cn } from '@/lib/utils'
-import { EnhancedButton } from './enhanced-button'
 import {
-  FileText,
-  Inbox,
-  Search,
-  Calendar,
-  Users,
-  AlertCircle,
-  RefreshCw
+    AlertCircle,
+    Calendar,
+    FileText,
+    Inbox,
+    RefreshCw,
+    Search,
+    Users
 } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { EnhancedButton } from './enhanced-button'
 
 interface EmptyStateProps {
   icon?: ReactNode

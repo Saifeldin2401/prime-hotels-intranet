@@ -1,23 +1,23 @@
-import StarterKit from '@tiptap/starter-kit'
-import TextAlign from '@tiptap/extension-text-align'
-import Link from '@tiptap/extension-link'
-import Placeholder from '@tiptap/extension-placeholder'
-import CharacterCount from '@tiptap/extension-character-count'
-import { Table } from '@tiptap/extension-table'
-import TableRow from '@tiptap/extension-table-row'
-import TableHeader from '@tiptap/extension-table-header'
-import TableCell from '@tiptap/extension-table-cell'
-import Youtube from '@tiptap/extension-youtube'
-import BubbleMenu from '@tiptap/extension-bubble-menu'
 import { AlignedImage } from '@/editor/plugins/image/AlignedImage'
 import {
-  AICalloutBlock,
-  ArticleBlock,
-  SectionBlock,
-  HeaderBlock,
-  FooterBlock,
-  SemanticClassAttributes,
+    AICalloutBlock,
+    ArticleBlock,
+    FooterBlock,
+    HeaderBlock,
+    SectionBlock,
+    SemanticClassAttributes,
 } from '@/editor/plugins/semanticBlocks'
+import BubbleMenu from '@tiptap/extension-bubble-menu'
+import CharacterCount from '@tiptap/extension-character-count'
+import Link from '@tiptap/extension-link'
+import Placeholder from '@tiptap/extension-placeholder'
+import { Table } from '@tiptap/extension-table'
+import TableCell from '@tiptap/extension-table-cell'
+import TableHeader from '@tiptap/extension-table-header'
+import TableRow from '@tiptap/extension-table-row'
+import TextAlign from '@tiptap/extension-text-align'
+import Youtube from '@tiptap/extension-youtube'
+import StarterKit from '@tiptap/starter-kit'
 
 interface ExtensionOptions {
   placeholder: string

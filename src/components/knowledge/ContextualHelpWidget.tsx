@@ -5,28 +5,27 @@
  * Can be triggered by page, task type, or other workflow triggers.
  */
 
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
-import {
-    HelpCircle,
-    X,
-    ChevronRight,
-    BookOpen,
-    FileText,
-    Video,
-    CheckSquare,
-    ExternalLink,
-    Lightbulb
-} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { useContextualHelp } from '@/hooks/useKnowledge'
-import type { KnowledgeContentType, ContextualHelp } from '@/types/knowledge'
-import { useTranslation } from "react-i18next";
+import { cn } from '@/lib/utils'
+import type { ContextualHelp } from '@/types/knowledge'
+import {
+    BookOpen,
+    CheckSquare,
+    ChevronRight,
+    ExternalLink,
+    FileText,
+    HelpCircle,
+    Lightbulb,
+    Video,
+    X
+} from 'lucide-react'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
-const CONTENT_TYPE_ICONS: Record<KnowledgeContentType, any> = {
+const CONTENT_TYPE_ICONS = {
     sop: FileText,
     policy: FileText,
     guide: BookOpen,

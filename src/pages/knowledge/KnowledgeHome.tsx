@@ -3,52 +3,51 @@
  * Premium, content-forward design inspired by modern documentation platforms.
  */
 
-import { useState, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
-import {
-    Search,
-    BookOpen,
-    Clock,
-    Star,
-    AlertCircle,
-    ArrowRight,
-    Library,
-    Plus,
-    ChevronRight,
-    ShieldCheck,
-    FileText,
-    ListChecks,
-    HelpCircle,
-    Eye,
-    TrendingUp,
-    ClipboardList,
-    Video,
-    Sparkles,
-    Users,
-    Building2,
-    Layers,
-    BookMarked,
-    Flame,
-    GraduationCap,
-    Zap,
-    Pencil
-} from 'lucide-react'
+import { KnowledgeAIAssistant } from '@/components/knowledge/KnowledgeAIAssistant'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
 import {
-    useFeaturedArticles,
-    useRequiredReading,
     useArticles,
-    useRecentArticles
+    useFeaturedArticles,
+    useRecentArticles,
+    useRequiredReading
 } from '@/hooks/useKnowledge'
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed'
-import { KnowledgeAIAssistant } from '@/components/knowledge/KnowledgeAIAssistant'
+import { cn } from '@/lib/utils'
+import { motion } from 'framer-motion'
+import {
+    AlertCircle,
+    ArrowRight,
+    BookMarked,
+    BookOpen,
+    Building2,
+    ChevronRight,
+    ClipboardList,
+    Clock,
+    Eye,
+    FileText,
+    Flame,
+    GraduationCap,
+    HelpCircle,
+    Layers,
+    Library,
+    ListChecks,
+    Pencil,
+    Plus,
+    Search,
+    ShieldCheck,
+    Sparkles,
+    Star,
+    TrendingUp,
+    Users,
+    Video
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useNavigate } from 'react-router-dom'
 
 /* â”€â”€â”€ Content Type Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TYPE_CONFIG: Record<string, {
@@ -98,7 +97,7 @@ function timeAgo(dateStr: string): string {
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
-    const { user, primaryRole, departments } = useAuth()
+    const { primaryRole, departments } = useAuth()
     const [searchQuery, setSearchQuery] = useState('')
     const [isAIAssistantOpen, setIsAIAssistantOpen] = useState(false)
 
@@ -496,7 +495,7 @@ export default function KnowledgeHome() {
                                 </div>
 
                                 <div className="bg-white rounded-2xl border border-gray-100 divide-y divide-gray-50 overflow-hidden shadow-sm">
-                                    {recentArticles.slice(0, 6).map((article, idx) => {
+                                    {recentArticles.slice(0, 6).map((article) => {
                                         const cfg = TYPE_CONFIG[article.content_type] || TYPE_CONFIG.reference
                                         const Icon = cfg?.icon || FileText
                                         return (

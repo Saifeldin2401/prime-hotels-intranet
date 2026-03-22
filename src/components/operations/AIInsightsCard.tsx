@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react'
-import { Sparkles, TrendingUp, TrendingDown, Lightbulb, ArrowRight, BrainCircuit, RefreshCw } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { ArrowRight, BrainCircuit, Lightbulb, RefreshCw, Sparkles, TrendingDown, TrendingUp } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 
 interface AIInsight {
     type: 'success' | 'warning' | 'tip'
@@ -20,7 +19,7 @@ interface AIInsightsCardProps {
         adr: number
         revpar: number
         totalRevenue: number
-        previousPeriod?: any
+        previousPeriod?
     }
     className?: string
 }

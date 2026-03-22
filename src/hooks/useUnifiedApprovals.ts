@@ -1,22 +1,22 @@
-import { useMemo } from 'react'
+import type { ApprovalType } from '@/components/approvals/ApprovalCard'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import {
-    usePendingApprovals,
     useApproveDocument,
+    usePendingApprovals,
     useRejectDocument
 } from '@/hooks/useDocuments'
 import {
-    usePendingLeaveRequests,
     useApproveLeaveRequest,
+    usePendingLeaveRequests,
     useRejectLeaveRequest
 } from '@/hooks/useLeaveRequests'
-import { useRequestsInbox, useRequestAction } from '@/hooks/useRequests'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import type { ApprovalType } from '@/components/approvals/ApprovalCard'
-import type { MaintenanceTicket } from '@/lib/types'
+import { useRequestAction, useRequestsInbox } from '@/hooks/useRequests'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import type { MaintenanceTicket } from '@/lib/types'
+import { useQuery } from '@tanstack/react-query'
+import { useMemo } from 'react'
 
 export interface ApprovalItem {
     id: string
@@ -32,7 +32,7 @@ export interface ApprovalItem {
         department?: string
         room?: string
     }
-    raw: any
+    raw
     actions: {
         canApprove: boolean
         canReject: boolean

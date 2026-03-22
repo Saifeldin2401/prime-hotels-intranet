@@ -1,6 +1,5 @@
 "use client"
 
-import * as React from "react"
 import type {
     ColumnDef,
     ColumnFiltersState,
@@ -15,7 +14,9 @@ import {
     getSortedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
+import * as React from "react"
 
+import { ResponsiveTable } from "@/components/ui/responsive-table"
 import {
     Table,
     TableBody,
@@ -24,11 +25,10 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table"
-import { ResponsiveTable } from "@/components/ui/responsive-table"
 
-import { DataTablePagination } from "./data-table-pagination"
 import { Input } from "@/components/ui/input"
 import { useTranslation } from "react-i18next"
+import { DataTablePagination } from "./data-table-pagination"
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[]

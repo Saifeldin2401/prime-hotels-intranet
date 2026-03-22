@@ -1,30 +1,27 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { supabase } from '@/lib/supabase'
 import { PublicNavbar } from '@/components/layout/PublicNavbar'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import {
-    CheckCircle2,
-    XCircle,
-    Search,
-    Award,
-    Calendar,
-    User,
-    FileText,
-    ShieldCheck,
-    AlertTriangle,
-    ArrowLeft
-} from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { verifyCertificate } from '@/lib/certificateService'
 import { format } from 'date-fns'
+import {
+    ArrowLeft,
+    Award,
+    Calendar,
+    CheckCircle2,
+    FileText,
+    Search,
+    ShieldCheck,
+    User,
+    XCircle
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useParams } from 'react-router-dom'
 
 export default function VerifyCertificate() {
     const { code: urlCode } = useParams<{ code?: string }>()
-    const navigate = useNavigate()
     const { t, i18n } = useTranslation('public')
     const isRTL = i18n.dir() === 'rtl'
 
@@ -231,7 +228,7 @@ export default function VerifyCertificate() {
     )
 }
 
-function DetailItem({ icon: Icon, label, value, className }: any) {
+function DetailItem({ icon: Icon, label, value, className }) {
     return (
         <div className={`flex items-start gap-4 ${className}`}>
             <div className="w-10 h-10 bg-white shadow-sm rounded-lg flex items-center justify-center text-hotel-navy flex-shrink-0">

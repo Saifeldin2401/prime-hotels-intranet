@@ -1,22 +1,17 @@
-import { useAuth } from '@/hooks/useAuth'
-import { useState, useEffect } from 'react'
-import { SwipeableItem } from '@/components/mobile/SwipeableItem'
-import { MobileHomeSkeleton } from '@/components/mobile/MobileSkeletons'
-import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
-import { Bell, Calendar, CheckSquare, PlusCircle, Search } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { useAuth } from '@/hooks/useAuth'
 import { format } from 'date-fns'
+import { Calendar, CheckSquare, PlusCircle, Search } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export function MobileHome() {
     const { user } = useAuth()
-    const { t } = useTranslation('common')
+    const { t: _t } = useTranslation('common')
 
     const firstName = user?.user_metadata?.first_name || 'Staff'
-    const role = user?.user_metadata?.role || 'Member'
     const timeGreeting = new Date().getHours() < 12 ? 'Good Morning' : new Date().getHours() < 18 ? 'Good Afternoon' : 'Good Evening'
 
     return (

@@ -1,5 +1,4 @@
-import type { AppRole } from '../constants'
-import type { Profile, Property, Department } from './profile'
+import type { Department, Profile, Property } from './profile'
 
 // SOP System Interfaces
 export type SOPStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'archived'

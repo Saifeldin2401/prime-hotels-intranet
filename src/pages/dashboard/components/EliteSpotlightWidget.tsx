@@ -1,15 +1,15 @@
-import { m, AnimatePresence } from 'framer-motion'
-import { useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Star, Gift, User, ChevronLeft, ChevronRight, Award, Trophy, Cake, CalendarDays } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { cn } from '@/lib/utils'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { supabase } from '@/lib/supabase'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { AnimatePresence, m } from 'framer-motion'
+import { Award, Cake, CalendarDays, ChevronLeft, ChevronRight, Gift, Star, Trophy, User } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface SpotlightItem {
   id: string

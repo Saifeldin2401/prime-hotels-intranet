@@ -1,5 +1,5 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
 export interface TriggerRule {
@@ -7,9 +7,9 @@ export interface TriggerRule {
     event_type: string
     name: string
     description?: string
-    conditions: any[]
+    conditions
     action_type: string
-    action_config: Record<string, any>
+    action_config
     is_active: boolean
     created_at: string
 }

@@ -1,7 +1,3 @@
-import { useState, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import {
     Dialog,
@@ -14,10 +10,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Loader2, AlertCircle, CheckCircle, Upload, FileText, X, Link2, User } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
 import { logAuditEvent } from '@/lib/auditLog'
-import { useTranslation } from "react-i18next";
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { useQueryClient } from '@tanstack/react-query'
+import { AlertCircle, CheckCircle, FileText, Link2, Loader2, Upload, User, X } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_EXTENSIONS = new Set(['pdf', 'doc', 'docx'])

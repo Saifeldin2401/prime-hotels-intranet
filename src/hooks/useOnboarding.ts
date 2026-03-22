@@ -1,7 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import type { OnboardingProcess, OnboardingTask, OnboardingTemplate } from '@/lib/types'
-import { useAuth } from '@/hooks/useAuth'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useMyOnboarding() {
     const { user } = useAuth()
@@ -58,7 +58,7 @@ export function useUpdateOnboardingTask() {
 
             return data[0]
         },
-        onSuccess: (_, variables) => {
+        onSuccess: (_) => {
             queryClient.invalidateQueries({ queryKey: ['onboarding'] })
         },
     })

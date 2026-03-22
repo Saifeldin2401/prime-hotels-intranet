@@ -7,8 +7,7 @@ import {
     AlertDialogFooter,
     AlertDialogHeader,
     AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
-import { useTranslation } from "react-i18next";
+} from "@/components/ui/alert-dialog";
 
 interface UnsavedChangesDialogProps {
     open: boolean

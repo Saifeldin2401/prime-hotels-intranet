@@ -1,25 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Pencil, Trash2, X } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  useAuditItems,
-  useAuditRuns,
-  useAuditTemplates,
-  useCreateAuditItem,
-  useCreateAuditRun,
-  useCreateAuditTemplate,
-  useDeleteAuditItem,
-  useDeleteAuditRun,
-  useDeleteAuditTemplate,
-  useUpdateAuditItem,
-  useUpdateAuditTemplate
+    useAuditItems,
+    useAuditRuns,
+    useAuditTemplates,
+    useCreateAuditItem,
+    useCreateAuditRun,
+    useCreateAuditTemplate,
+    useDeleteAuditItem,
+    useDeleteAuditRun,
+    useDeleteAuditTemplate,
+    useUpdateAuditItem,
+    useUpdateAuditTemplate
 } from '@/hooks/useAudits'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
-import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { Pencil, Trash2, X } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 const SCOPE_TYPES = [
   { value: 'global', label: 'Global' },

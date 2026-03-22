@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProfiles } from '@/hooks/useUsers'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const STATUS_OPTIONS = ['draft', 'processing', 'published', 'archived']
 
@@ -88,7 +88,7 @@ export default function PayslipsAdmin() {
   const filteredPayslips = useMemo(() => {
     const payslips = payslipsQuery.data || []
 
-    return payslips.filter((payslip: any) => {
+    return payslips.filter((payslip) => {
       if (employeeFilter !== 'all' && payslip.employee_id !== employeeFilter) return false
       if (departmentId !== 'all' && staffIds.size > 0 && !staffIds.has(payslip.employee_id)) return false
       if (propertyId && staffIds.size > 0 && !staffIds.has(payslip.employee_id)) return false
@@ -161,7 +161,7 @@ export default function PayslipsAdmin() {
       setForm(defaultForm)
       setFile(null)
       setExistingStoragePath(null)
-    } catch (error: any) {
+    } catch (error) {
       console.error('Payslip save error', error)
       toast.error(t('hr_admin.messages.payslip_save_failed', 'Failed to save payslip.'))
     } finally {
@@ -169,7 +169,7 @@ export default function PayslipsAdmin() {
     }
   }
 
-  const handleEdit = (payslip: any) => {
+  const handleEdit = (payslip) => {
     setEditingId(payslip.id)
     setForm({
       employee_id: payslip.employee_id,
@@ -190,7 +190,7 @@ export default function PayslipsAdmin() {
     setFile(null)
   }
 
-  const handleDelete = async (payslip: any) => {
+  const handleDelete = async (payslip) => {
     try {
       const { error } = await supabase
         .from('payslips')
@@ -508,7 +508,7 @@ export default function PayslipsAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPayslips.map((payslip: any) => {
+                {filteredPayslips.map((payslip) => {
                   const periodDate = payslip.year && payslip.month
                     ? format(new Date(payslip.year, payslip.month - 1, 1), 'MMM yyyy')
                     : '-'

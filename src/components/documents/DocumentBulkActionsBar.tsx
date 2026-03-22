@@ -1,30 +1,30 @@
-import * as React from "react";
-import {
-  FolderInput,
-  Tags,
-  Archive,
-  Trash2,
-  Download,
-  Share2,
-  X,
-  Check,
-  FileText,
-  Loader2,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Separator } from "@/components/ui/separator";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import type { DocumentFolder } from "@/hooks/useDocuments";
+import { cn } from "@/lib/utils";
+import {
+    Archive,
+    Check,
+    Download,
+    FileText,
+    FolderInput,
+    Loader2,
+    Share2,
+    Tags,
+    Trash2,
+    X,
+} from "lucide-react";
+import * as React from "react";
 import type { DocumentTag } from "./DocumentTagManager";
 
 interface DocumentBulkActionsBarProps {

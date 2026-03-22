@@ -1,10 +1,10 @@
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { ChevronLeft, Save, Eye, Wand2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { cn } from '@/lib/utils'
+import { ChevronLeft, Eye, Save, Wand2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import { Input } from '@/components/ui/input'
 
 interface BuilderHeaderProps {
     title: string

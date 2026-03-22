@@ -1,31 +1,31 @@
-import { useMemo } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
-import { format } from 'date-fns'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import EmployeeDocuments from './EmployeeDocuments'
-import { UserSkillsDisplay } from '@/components/profile/UserSkillsDisplay'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { format } from 'date-fns'
 import {
-  ArrowLeft,
-  RefreshCw,
-  Mail,
-  Phone,
-  Building,
-  Users,
-  Calendar,
-  Shield,
-  MessageSquare,
-  AlertCircle,
-  Briefcase
+    AlertCircle,
+    ArrowLeft,
+    Briefcase,
+    Building,
+    Calendar,
+    Mail,
+    MessageSquare,
+    Phone,
+    RefreshCw,
+    Shield,
+    Users
 } from 'lucide-react'
+import { useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import EmployeeDocuments from './EmployeeDocuments'
 
 type AppRole =
   | 'corporate_admin'

@@ -1,14 +1,14 @@
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { Wrench, ArrowRight, AlertTriangle, Clock as ClockIcon, CheckCircle2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { useAssignedMaintenanceTickets } from '@/hooks/useMaintenanceTickets'
 import { cn } from '@/lib/utils'
-import { format, differenceInHours } from 'date-fns'
+import { differenceInHours, format } from 'date-fns'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { AlertTriangle, ArrowRight, CheckCircle2, Clock as ClockIcon, Wrench } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const maintenanceSkeletonKeys = ['maintenance-skeleton-1', 'maintenance-skeleton-2', 'maintenance-skeleton-3']
 
@@ -19,7 +19,7 @@ const priorityConfig: Record<string, { color: string; bg: string; label: string;
   low: { color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', label: 'Low' },
 }
 
-const statusConfig: Record<string, { icon: any; color: string; bg: string; border: string; label: string }> = {
+const statusConfig: Record<string, { icon; color: string; bg: string; border: string; label: string }> = {
   open: { icon: AlertTriangle, color: 'text-rose-500', bg: 'bg-rose-50', border: 'border-rose-100', label: 'Open' },
   in_progress: { icon: ClockIcon, color: 'text-amber-500', bg: 'bg-amber-50', border: 'border-amber-100', label: 'In Progress' },
   resolved: { icon: CheckCircle2, color: 'text-emerald-500', bg: 'bg-emerald-50', border: 'border-emerald-100', label: 'Resolved' },
@@ -27,7 +27,7 @@ const statusConfig: Record<string, { icon: any; color: string; bg: string; borde
 
 export function MaintenanceWidget() {
   const { data: assignedTickets, isLoading } = useAssignedMaintenanceTickets()
-  const tickets = (assignedTickets || []).filter((ticket: any) => ticket.status === 'open').slice(0, 5)
+  const tickets = (assignedTickets || []).filter((ticket) => ticket.status === 'open').slice(0, 5)
 
   if (isLoading) {
     return (
@@ -80,7 +80,7 @@ export function MaintenanceWidget() {
                   <p className="text-sm text-slate-500 font-medium mt-1">No open maintenance tickets</p>
                 </m.div>
               ) : (
-                tickets?.map((ticket: any, index: number) => {
+                tickets?.map((ticket, index: number) => {
                   const priority = priorityConfig[ticket.priority] || priorityConfig.medium
                   const StatusIcon = statusConfig[ticket.status]?.icon || AlertTriangle
                   const hoursOpen = differenceInHours(new Date(), new Date(ticket.created_at))

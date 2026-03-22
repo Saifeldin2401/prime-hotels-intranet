@@ -117,13 +117,13 @@ async function sendEmails() {
     const htmlTemplate = getBeautifulEidTemplate(APP_URL);
     const BATCH_SIZE = 100;
 
-    console.log(\`Sending \${emails.length} emails...\`);
+    console.log(`Sending ${emails.length} emails...`);
     
     for (let i = 0; i < emails.length; i += BATCH_SIZE) {
         const batchRecipients = emails.slice(i, i + BATCH_SIZE);
         
         const payload = batchRecipients.map(email => ({
-          from: \`\${FROM_NAME} <\${FROM_EMAIL}>\`,
+          from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: [email],
           subject: "Eid Mubarak from PRIME Hotels | عيد مبارك",
           html: htmlTemplate,
@@ -137,13 +137,13 @@ async function sendEmails() {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "Authorization": \`Bearer \${RESEND_API_KEY}\`,
+            "Authorization": `Bearer ${RESEND_API_KEY}`,
           },
           body: JSON.stringify(payload),
         });
   
         const result = await response.json().catch(() => ({}));
-        console.log(\`Batch \${i/BATCH_SIZE} completed with status:\`, response.status, result);
+        console.log(`Batch ${i / BATCH_SIZE} completed with status:`, response.status, result);
     }
 
     console.log("All emails sent.");

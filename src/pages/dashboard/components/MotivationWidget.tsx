@@ -1,12 +1,12 @@
-import { memo } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Quote, RefreshCw } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { useQuotes } from '@/hooks/useQuotes'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useQuotes } from '@/hooks/useQuotes'
 import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Quote, RefreshCw } from 'lucide-react'
+import { memo } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export const MotivationWidget = memo(function MotivationWidget() {
     const { t, i18n } = useTranslation()

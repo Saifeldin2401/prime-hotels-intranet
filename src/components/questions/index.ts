@@ -9,13 +9,13 @@ export { QuestionRenderer } from './QuestionRenderer'
 export type { QuestionRendererProps } from './QuestionRenderer'
 
 // Question types
+export { FillBlankQuestion } from './FillBlankQuestion'
 export { MCQQuestion } from './MCQQuestion'
 export { TrueFalseQuestion } from './TrueFalseQuestion'
-export { FillBlankQuestion } from './FillBlankQuestion'
 
 // Widgets
-export { InlineQuizWidget } from './InlineQuizWidget'
 export { DailyQuizWidget } from './DailyQuizWidget'
+export { InlineQuizWidget } from './InlineQuizWidget'
 
 // AI Generation
 export { AIQuestionGenerator } from './AIQuestionGenerator'

@@ -1,7 +1,7 @@
-import type { ReactNode } from 'react'
-import { motion, type HTMLMotionProps } from 'framer-motion'
 import { DURATION, EASING } from '@/lib/motion'
 import { cn } from '@/lib/utils'
+import { motion, type HTMLMotionProps } from 'framer-motion'
+import type { ReactNode } from 'react'
 
 interface EnhancedCardProps extends HTMLMotionProps<'div'> {
   children: ReactNode

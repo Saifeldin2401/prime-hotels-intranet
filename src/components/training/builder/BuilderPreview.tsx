@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Link, FileText, Image, Video, FileQuestion, BookOpen, Headphones, Gamepad2 } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
-import { sanitizeHtml } from '@/lib/sanitize'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
+import { BookOpen, FileQuestion, FileText, Gamepad2, Headphones, Image, Link, Video } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface ContentBlock {
     id: string

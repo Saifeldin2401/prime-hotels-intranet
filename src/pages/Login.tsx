@@ -1,9 +1,9 @@
 import { LoginForm } from '@/components/auth/LoginForm'
-import { useTranslation } from 'react-i18next'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
-import { motion, useScroll, useTransform } from 'framer-motion'
-import { Sparkles, Shield, Clock, Users, Fingerprint, ChevronRight } from 'lucide-react'
+import { motion } from 'framer-motion'
+import { ChevronRight, Clock, Fingerprint, Shield, Sparkles, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // Animated background particles
 function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; size: number }) {

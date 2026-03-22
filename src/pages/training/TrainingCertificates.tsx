@@ -1,40 +1,40 @@
-import { useState } from 'react'
-import {
-  useMyCertificates,
-  useAllCertificates,
-  useDownloadCertificate,
-  useVerifyCertificate
-} from '@/hooks/useCertificates'
-import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from "@/components/ui/use-toast"
+import { useAuth } from '@/hooks/useAuth'
 import {
-  Award,
-  Download,
-  Search,
-  ExternalLink,
-  CheckCircle,
-  FileText,
-  Shield,
-  Printer,
-  AlertTriangle,
-  Copy
-} from 'lucide-react'
+    useAllCertificates,
+    useDownloadCertificate,
+    useMyCertificates,
+    useVerifyCertificate
+} from '@/hooks/useCertificates'
+import { usePermissions } from '@/hooks/usePermissions'
+import type { Certificate } from '@/lib/certificateService'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
+import {
+    AlertTriangle,
+    Award,
+    CheckCircle,
+    Copy,
+    Download,
+    ExternalLink,
+    FileText,
+    Printer,
+    Search,
+    Shield
+} from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useToast } from "@/components/ui/use-toast"
-import type { Certificate } from '@/lib/certificateService'
 
 export default function TrainingCertificates() {
-  const { profile } = useAuth()
+  const { profile: _profile } = useAuth()
   const { hasPermission } = usePermissions()
   const { t, i18n } = useTranslation(['training', 'public', 'common'])
   const { toast } = useToast()

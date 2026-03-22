@@ -1,8 +1,8 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { Message, Comment, Notification } from '@/lib/types'
+import type { Comment, Message } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Message Hooks
 export function useMessages(filters?: {
@@ -13,7 +13,7 @@ export function useMessages(filters?: {
   recipient_id?: string
   propertyId?: string
 }) {
-  const { profile, properties } = useAuth()
+  const { profile } = useAuth()
 
   return useQuery({
     queryKey: ['messages', profile?.id, filters],
@@ -62,7 +62,7 @@ export function useMessages(filters?: {
 }
 
 export function useMessage(messageId: string) {
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
 
   return useQuery({
     queryKey: ['message', messageId],
@@ -88,7 +88,7 @@ export function useMessage(messageId: string) {
 
 export function useSendMessage() {
   const queryClient = useQueryClient()
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
 
   return useMutation({
     mutationFn: async (data: {
@@ -404,7 +404,7 @@ export function useDeleteComment() {
 
 // Conversation Hooks
 export function useConversations() {
-  const { user, profile } = useAuth()
+  const { profile } = useAuth()
 
   return useQuery({
     queryKey: ['conversations', profile?.id],
@@ -431,7 +431,7 @@ export function useConversations() {
 
       // Get participant details for each conversation
       const conversationsWithParticipants = await Promise.all(
-        (data || []).map(async (conv: any) => {
+        (data || []).map(async (conv) => {
           const { data: participants } = await supabase
             .from('profiles')
             .select('id, full_name, email, avatar_url, job_title')
@@ -446,20 +446,20 @@ export function useConversations() {
             : { data: [] as any[] }
 
           const primaryPropertyByUserId = new Map<string, string>()
-          ;(userProps || []).forEach((row: any) => {
+          ;(userProps || []).forEach((row) => {
             if (!row?.user_id) return
             if (primaryPropertyByUserId.has(row.user_id)) return
             const propName = row?.properties?.name
             if (propName) primaryPropertyByUserId.set(row.user_id, propName)
           })
 
-          const enrichedParticipants = (participants || []).map((p: any) => ({
+          const enrichedParticipants = (participants || []).map((p) => ({
             ...p,
             property_name: primaryPropertyByUserId.get(p.id) || null,
           }))
 
           const messages = Array.isArray(conv.messages) ? [...conv.messages] : []
-          messages.sort((a: any, b: any) => {
+          messages.sort((a, b) => {
             const aTime = new Date(a.created_at).getTime()
             const bTime = new Date(b.created_at).getTime()
             return bTime - aTime

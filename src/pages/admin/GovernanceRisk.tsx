@@ -1,20 +1,20 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Textarea } from '@/components/ui/textarea'
-import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 type Severity = 'low' | 'medium' | 'high' | 'critical'
 type IncidentCategory = 'safety' | 'security' | 'financial' | 'operational' | 'guest' | 'regulatory' | 'technology' | 'other'
@@ -340,7 +340,6 @@ export default function GovernanceRisk() {
   const departments = departmentsQuery.data ?? []
   const roles = rolesQuery.data ?? []
   const incidents = incidentsQuery.data ?? []
-  const escalations = escalationsQuery.data ?? []
   const delegations = delegationsQuery.data ?? []
   const activeDelegations = activeDelegationsQuery.data ?? []
   const auditLog = auditLogQuery.data ?? []
@@ -351,11 +350,8 @@ export default function GovernanceRisk() {
     () => new Map(profiles.map((profile) => [profile.id, profile.full_name || profile.email || profile.id])),
     [profiles]
   )
-  const propertyNameById = useMemo(() => new Map(properties.map((property) => [property.id, property.name])), [properties])
-  const departmentNameById = useMemo(() => new Map(departments.map((department) => [department.id, department.name])), [departments])
   const roleNameByCode = useMemo(() => new Map(roles.map((role) => [role.role_code, role.role_name])), [roles])
 
-  const incidentById = useMemo(() => new Map(incidents.map((incident) => [incident.id, incident])), [incidents])
 
   const filteredAudit = useMemo(() => {
     return auditLog.filter((entry) => {

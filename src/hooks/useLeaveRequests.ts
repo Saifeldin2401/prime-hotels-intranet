@@ -1,12 +1,11 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
+import { calculateLeaveRequestDays, fetchLeaveBalanceSummary } from '@/lib/leaveBalance'
+import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { LeaveRequest } from '@/lib/types'
-import { notifyApprovalOutcome } from '@/services/approvalNotificationService'
-import { isRealPropertyId } from '@/lib/propertyScope'
-import { calculateLeaveRequestDays, fetchLeaveBalanceSummary } from '@/lib/leaveBalance'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 const BALANCE_ENFORCED_LEAVE_TYPES = new Set<LeaveRequest['type']>(['annual'])
 
@@ -61,7 +60,7 @@ export function useMyLeaveRequests() {
 }
 
 export function useTeamLeaveRequests() {
-  const { user, roles, properties, departments, primaryRole } = useAuth()
+  const { user, properties, departments, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
 
   // Determine access level
@@ -172,7 +171,7 @@ export function usePendingLeaveRequests() {
       if (workflowError) throw workflowError
 
       const workflowItems = (workflowRows || [])
-        .map((row: any) => row.leave_request)
+        .map((row) => row.leave_request)
         .filter(Boolean)
 
       // 2) Legacy pending leave requests without workflow linkage (fallback)
@@ -220,7 +219,7 @@ export function usePendingLeaveRequests() {
 
       const combined = [...workflowItems, ...(legacyRows || [])]
       const seen = new Set<string>()
-      return combined.filter((item: any) => {
+      return combined.filter((item) => {
         if (!item?.id) return false
         if (seen.has(item.id)) return false
         seen.add(item.id)
@@ -391,7 +390,7 @@ export function useApproveLeaveRequest() {
 
 export function useRejectLeaveRequest() {
   const queryClient = useQueryClient()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
 
   return useMutation({
     mutationFn: async ({

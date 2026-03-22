@@ -1,10 +1,10 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Search, Loader2, FileText, User, GraduationCap, Megaphone, BookOpen, AlertCircle, X, CheckSquare, Wrench, Briefcase } from 'lucide-react'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useSearch, useSearchSuggestions, useRecentSearches } from '@/hooks/useSearch'
-import { useTranslation } from 'react-i18next'
+import { useRecentSearches, useSearch, useSearchSuggestions } from '@/hooks/useSearch'
 import { cn } from '@/lib/utils'
+import { AlertCircle, BookOpen, Briefcase, CheckSquare, FileText, GraduationCap, Loader2, Megaphone, Search, User, Wrench, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 
 interface GlobalSearchProps {

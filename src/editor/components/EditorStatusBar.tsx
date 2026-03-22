@@ -1,5 +1,5 @@
-import { CheckCircle2, Loader2, Save, XCircle } from 'lucide-react'
 import type { SaveState } from '@/editor/types'
+import { CheckCircle2, Loader2, Save, XCircle } from 'lucide-react'
 
 interface EditorStatusBarProps {
   wordCount: number

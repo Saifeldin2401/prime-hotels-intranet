@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import type { RealtimeChannel } from '@supabase/supabase-js'
+import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useRef, useState } from 'react'
 
 export function useRealtimeMessaging() {
   const queryClient = useQueryClient()
@@ -236,7 +236,7 @@ export function useMessageTypingIndicator(conversationId?: string) {
       .on(
         'broadcast',
         { event: 'typing' },
-        (payload: any) => {
+        (payload) => {
           if (payload.payload.userId !== user.id) {
             setTypingUsers(prev => {
               if (payload.payload.isTyping) {

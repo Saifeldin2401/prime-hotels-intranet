@@ -1,5 +1,5 @@
+import { isAllowedDirection, sanitizeClassNameList } from '@/lib/aiHtml';
 import DOMPurify from 'dompurify';
-import { isAllowedDirection, sanitizeClassNameList } from '@/lib/aiHtml'
 
 let hooksInitialized = false
 

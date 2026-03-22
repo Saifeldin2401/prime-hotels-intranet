@@ -1,7 +1,7 @@
-import { lazy } from 'react'
-import { Route, Navigate, useParams } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { lazy } from 'react'
+import { Navigate, Route, useParams } from 'react-router-dom'
 
 const KnowledgeHome = lazy(() => import('@/pages/knowledge/KnowledgeHome'))
 const KnowledgeViewer = lazy(() => import('@/pages/knowledge/KnowledgeViewer'))

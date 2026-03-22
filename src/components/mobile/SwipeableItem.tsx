@@ -1,5 +1,5 @@
 import { motion, type PanInfo, useAnimation } from 'framer-motion'
-import { Trash2, CheckCircle } from 'lucide-react'
+import { CheckCircle, Trash2 } from 'lucide-react'
 import { type ReactNode } from 'react'
 
 interface SwipeableItemProps {
@@ -25,9 +25,8 @@ export function SwipeableItem({
 }: SwipeableItemProps) {
     const controls = useAnimation()
 
-    const handleDragEnd = async (event: any, info: PanInfo) => {
+    const handleDragEnd = async (event, info: PanInfo) => {
         const offset = info.offset.x
-        const velocity = info.velocity.x
 
         if (offset < -threshold && onSwipeRight) {
             // Swiped Left (trigger right action)

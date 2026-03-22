@@ -5,17 +5,9 @@
  * Updated to use 'documents' table.
  */
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Command,
     CommandEmpty,
@@ -30,18 +22,25 @@ import {
     PopoverTrigger,
 } from '@/components/ui/popover'
 import {
-    Link2,
-    Plus,
-    X,
-    FileText,
-    ArrowRight,
-    Loader2
-} from 'lucide-react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { useDebounce } from '@/hooks/useDebounce'
 import { supabase } from '@/lib/supabase'
 import type { RelatedArticle } from '@/types/knowledge'
-import { useTranslation } from "react-i18next";
-import { useDebounce } from '@/hooks/useDebounce'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    ArrowRight,
+    FileText,
+    Link2,
+    Loader2,
+    Plus,
+    X
+} from 'lucide-react'
+import { useState } from 'react'
 
 const RELATION_TYPES = [
     { value: 'see_also', label: 'Related / See Also', color: 'blue' },
@@ -103,7 +102,7 @@ export function RelatedArticlesEditor({
             setSearchQuery('')
             onUpdate()
         },
-        onError: (error: any) => {
+        onError: (error) => {
             console.error('Failed to add relation:', error)
             // alert('Failed to link article. Is the "knowledge_related_articles" table migrated?')
         }

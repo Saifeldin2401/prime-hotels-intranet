@@ -1,48 +1,48 @@
-import { useMemo, useState } from 'react'
-import type { Editor } from '@tiptap/react'
-import {
-  AlignCenter,
-  AlignJustify,
-  AlignLeft,
-  AlignRight,
-  Bold,
-  Code2,
-  Eraser,
-  ImagePlus,
-  Italic,
-  Link2,
-  List,
-  ListOrdered,
-  Maximize,
-  Minimize,
-  Minus,
-  Quote,
-  Redo2,
-  Sparkles,
-  Strikethrough,
-  Table2,
-  Underline,
-  Undo2,
-  Video,
-  Copy,
-  FileCode2,
-} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
+import { Switch } from '@/components/ui/switch'
 import ToolbarButton from '@/editor/toolbar/ToolbarButton'
 import type { RichEditorToolbarConfig } from '@/editor/types'
+import type { Editor } from '@tiptap/react'
+import {
+    AlignCenter,
+    AlignJustify,
+    AlignLeft,
+    AlignRight,
+    Bold,
+    Code2,
+    Copy,
+    Eraser,
+    FileCode2,
+    ImagePlus,
+    Italic,
+    Link2,
+    List,
+    ListOrdered,
+    Maximize,
+    Minimize,
+    Minus,
+    Quote,
+    Redo2,
+    Sparkles,
+    Strikethrough,
+    Table2,
+    Underline,
+    Undo2,
+    Video,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 
 interface EditorToolbarProps {
   editor: Editor | null

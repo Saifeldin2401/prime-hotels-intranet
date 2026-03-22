@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react'
-import { Bell, X, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotificationPreferences } from '@/hooks/useNotificationPreferences'
+import { Bell, Settings, X } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { toast } from 'sonner'
 import { useNavigate } from 'react-router-dom'
+import { toast } from 'sonner'
 
 const PROMPT_DISMISSED_KEY = 'prime_notification_prompt_dismissed'
 const PROMPT_DELAY_MS = 5000 // Show after 5 seconds on the page

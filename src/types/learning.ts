@@ -3,7 +3,7 @@
  * Exported interfaces for Quizzes, Assignments, and Microlearning.
  */
 
-import type { QuestionStatus, KnowledgeQuestion } from './questions'
+import type { KnowledgeQuestion, QuestionStatus } from './questions'
 
 export type LearningTargetType = 'user' | 'department' | 'role' | 'property' | 'everyone'
 export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module'

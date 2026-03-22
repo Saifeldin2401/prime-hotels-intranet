@@ -5,9 +5,9 @@
  * Generates training content from documents, creates outlines, and suggests resources.
  */
 
-import { useState } from 'react'
-import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
+import { supabase } from '@/lib/supabase'
+import { useState } from 'react'
 
 interface GeneratedContent {
     title: string
@@ -203,7 +203,7 @@ Return a JSON object with:
     const getSuggestedResources = async (
         moduleId: string,
         topic: string
-    ): Promise<{ documents: any[], quizzes: any[], questions: any[] }> => {
+    ): Promise<{ documents, quizzes, questions }> => {
         try {
             // Search for related documents
             const { data: documents } = await supabase
@@ -377,7 +377,7 @@ IMPORTANT:
                 if (parsed.sections && parsed.sections.length > 0) {
                     return parsed
                 }
-            } catch (parseError) {
+            } catch (_parseError) {
                 console.warn('Failed to parse AI response, using fallback')
             }
 

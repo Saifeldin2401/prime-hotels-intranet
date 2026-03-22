@@ -1,14 +1,14 @@
-import React, { type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
-import { EnhancedButton } from './enhanced-button'
-import { 
-  CheckCircle2, 
-  AlertCircle, 
-  AlertTriangle, 
-  Info,
-  X,
-  Loader2
+import {
+    AlertCircle,
+    AlertTriangle,
+    CheckCircle2,
+    Info,
+    Loader2,
+    X
 } from 'lucide-react'
+import React, { type ReactNode } from 'react'
+import { EnhancedButton } from './enhanced-button'
 
 export interface ToastProps {
   id: string
@@ -25,7 +25,6 @@ export interface ToastProps {
 }
 
 export function Toast({
-  id,
   title,
   description,
   variant = 'info',
@@ -105,11 +104,6 @@ interface ToastProviderProps {
   children: ReactNode
 }
 
-interface ToastContextType {
-  toast: (props: Omit<ToastProps, 'id' | 'onDismiss'>) => string
-  dismiss: (id: string) => void
-  dismissAll: () => void
-}
 
 export function createToastContext() {
   const toasts = new Map<string, ToastProps>()

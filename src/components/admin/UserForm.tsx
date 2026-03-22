@@ -1,41 +1,40 @@
-import { useState, useEffect, useCallback, useId, useMemo, type KeyboardEvent } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { LoadingButton } from '@/components/loading'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
+import { useToast } from '@/components/ui/use-toast'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
-import { triggerService } from '@/services/triggerService'
-import { userSchema, type UserFormData } from '@/lib/validationSchemas'
 import { getUserFriendlyError } from '@/lib/errorMessages'
-import { LoadingButton } from '@/components/loading'
+import { supabase } from '@/lib/supabase'
+import { userSchema, type UserFormData } from '@/lib/validationSchemas'
+import { triggerService } from '@/services/triggerService'
+import { useMutation, useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ZodError } from 'zod'
 
 
-import type { Profile, Property } from '@/lib/types'
-import type { AppRole } from '@/lib/constants'
-import { ArrowLeft } from 'lucide-react'
-import { useDepartments } from '@/hooks/useDepartments'
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
 } from "@/components/ui/command"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui/popover"
-import { Check, ChevronsUpDown } from "lucide-react"
+import { useDepartments } from '@/hooks/useDepartments'
+import type { AppRole } from '@/lib/constants'
+import type { Profile, Property } from '@/lib/types'
 import { cn, escapeSearchQuery } from "@/lib/utils"
+import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react'
 
 interface UserFormProps {
   user?: Profile

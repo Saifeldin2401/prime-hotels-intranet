@@ -1,9 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
-import type { Database } from '@/types/supabase'
 
-type Payslip = Database['public']['Tables']['payslips']['Row']
 
 export function usePayslips() {
     const { user } = useAuth()

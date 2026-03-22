@@ -6,36 +6,36 @@
  * Supports removing pins directly from the widget.
  */
 
-import { Link } from 'react-router-dom'
-import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion'
-import { 
-  Star, 
-  FileText, 
-  GraduationCap, 
-  CheckSquare, 
-  Bell, 
-  Book,
-  ArrowRight,
-  X,
-  Pin
-} from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle
+} from '@/components/ui/dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Button } from '@/components/ui/button'
-import { usePins, useRemovePin, MAX_PINS } from '@/hooks/usePins'
 import type { PinItemType, PinWithDetails } from '@/hooks/usePins'
-import { useTranslation } from "react-i18next"
+import { MAX_PINS, usePins, useRemovePin } from '@/hooks/usePins'
 import { cn } from '@/lib/utils'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    ArrowRight,
+    Bell,
+    Book,
+    CheckSquare,
+    FileText,
+    GraduationCap,
+    Pin,
+    Star,
+    X
+} from 'lucide-react'
 import { useState } from 'react'
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle,
-  DialogDescription 
-} from '@/components/ui/dialog'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 
 // Icon mapping for each item type
 const itemTypeConfig: Record<PinItemType, { icon: typeof FileText; color: string; label: string }> = {

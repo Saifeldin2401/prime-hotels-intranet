@@ -1,9 +1,9 @@
-import { LazyMotion, domAnimation, m } from 'framer-motion'
-import { TrendingUp, TrendingDown } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
+import { LazyMotion, domAnimation, m } from 'framer-motion'
+import { TrendingDown, TrendingUp } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 const containerVariants = {
   hidden: { opacity: 0 },

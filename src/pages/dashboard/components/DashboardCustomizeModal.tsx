@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
@@ -5,25 +6,23 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
+import { Switch } from '@/components/ui/switch'
 import {
     BarChart3,
     Bell,
+    Book,
     Cake,
     Calendar,
     CheckCircle,
     GraduationCap,
     LayoutDashboard,
-    Newspaper,
-    Users,
-    Wrench,
-    Book,
-    Quote,
     MessageCircle,
-    Star as LucideStar
+    Newspaper,
+    Quote,
+    Users,
+    Wrench
 } from 'lucide-react'
 
 interface DashboardCustomizeModalProps {

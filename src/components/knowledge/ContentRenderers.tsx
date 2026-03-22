@@ -4,34 +4,34 @@
  * Specialized components for rendering different knowledge article content types.
  */
 
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Badge, type BadgeProps } from '@/components/ui/badge'
-import { sanitizeHtml } from '@/lib/sanitize'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
-import { useTranslation } from 'react-i18next'
-import type { TFunction } from 'i18next'
 import {
     Accordion,
     AccordionContent,
     AccordionItem,
     AccordionTrigger,
 } from '@/components/ui/accordion'
-import {
-    Maximize,
-    CheckCircle2,
-    Circle,
-    HelpCircle,
-    ExternalLink,
-    ArrowRight
-} from 'lucide-react'
+import { Badge, type BadgeProps } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
+import { useAuth } from '@/hooks/useAuth'
+import { useTrackRelatedClick, useTrackRelatedImpressions } from '@/hooks/useKnowledge'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem, RelatedArticle } from '@/types/knowledge'
+import type { TFunction } from 'i18next'
+import {
+    ArrowRight,
+    CheckCircle2,
+    Circle,
+    ExternalLink,
+    HelpCircle,
+    Maximize
+} from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import { useTrackRelatedClick, useTrackRelatedImpressions } from '@/hooks/useKnowledge'
-import { useAuth } from '@/hooks/useAuth'
 
 // ============================================================================
 // VIDEO PLAYER

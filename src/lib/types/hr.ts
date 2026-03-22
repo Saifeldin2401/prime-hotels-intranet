@@ -1,6 +1,6 @@
 import type { AppRole } from '../constants'
 import type { EntityStatus } from './index'
-import type { Profile, Property, Department } from './profile'
+import type { Department, Profile, Property } from './profile'
 
 export interface EmployeeReferral {
   id: string

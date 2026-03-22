@@ -9,36 +9,10 @@
  * - Power-ups system (earned through participation)
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import {
-    CheckCircle2,
-    XCircle,
-    AlertCircle,
-    Award,
-    Clock,
-    ArrowRight,
-    HelpCircle,
-    ArrowLeft,
-    PenBox,
-    Languages,
-    Loader2,
-    Zap,
-    Target,
-    Lightbulb,
-    SkipForward,
-    Flame,
-    TrendingUp,
-    Brain,
-    Sparkles
-} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
-import { Progress } from '@/components/ui/progress'
-import { useToast } from '@/components/ui/use-toast'
 import {
     DropdownMenu,
     DropdownMenuCheckboxItem,
@@ -47,17 +21,40 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
-import { Badge } from '@/components/ui/badge'
-import { learningService } from '@/services/learningService'
-import { supabase } from '@/lib/supabase'
-import { createCertificate, type CertificateData } from '@/lib/certificateService'
-import type { LearningProgress, LearningQuiz } from '@/types/learning'
+import { Input } from '@/components/ui/input'
+import { RadioGroup } from '@/components/ui/radio-group'
+import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from 'react-i18next'
-import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
-import { cn } from '@/lib/utils'
-import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
+import { createCertificate, type CertificateData } from '@/lib/certificateService'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { learningService } from '@/services/learningService'
+import type { LearningProgress, LearningQuiz } from '@/types/learning'
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
+import {
+    AlertCircle,
+    ArrowLeft,
+    ArrowRight,
+    Award,
+    Brain,
+    CheckCircle2,
+    Clock,
+    Flame,
+    HelpCircle,
+    Languages,
+    Lightbulb,
+    Loader2,
+    SkipForward,
+    Sparkles,
+    Target,
+    TrendingUp,
+    XCircle,
+    Zap
+} from 'lucide-react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 // --- Types ---
 
@@ -502,7 +499,7 @@ export function QuizComponentEnhanced({
             }
 
             setQuestionStates(buildInitialQuestionStates(data))
-        } catch (error) {
+        } catch (_error) {
             setQuiz(null)
             setLoadError(i18n.t('training:quizzes.player.load_error'))
             toastRef.current({
@@ -728,7 +725,7 @@ export function QuizComponentEnhanced({
         }
     }
 
-    const handleSubmit = async (isTimeout = false) => {
+    const handleSubmit = async (_isTimeout = false) => {
         if (!quiz || !user || submitted) return
 
         try {
@@ -963,11 +960,6 @@ export function QuizComponentEnhanced({
     }
 
     // Translation helpers
-    const translationTargetMeta = useMemo(() => (
-        translationTarget
-            ? SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === translationTarget)
-            : null
-    ), [translationTarget])
 
     const translateQuestion = useCallback(async (questionItem: NonNullable<LearningQuiz['questions']>[number]) => {
         if (!translationTarget || !questionItem?.question) return
@@ -1586,8 +1578,8 @@ interface QuizResultsScreenProps {
     onRetry: () => void
     canRetry: boolean
     isRTL: boolean
-    t: any
-    translatedQuestions: Record<string, any>
+    t
+    translatedQuestions
     translationTarget: TranslationTargetLanguage | null
     showBilingual: boolean
 }
@@ -1598,12 +1590,7 @@ function QuizResultsScreen({
     onExit,
     onRetry,
     canRetry,
-    isRTL,
-    t,
-    translatedQuestions,
-    translationTarget,
-    showBilingual
-}: QuizResultsScreenProps) {
+    t}: QuizResultsScreenProps) {
     const formatTime = (seconds: number) => {
         const mins = Math.floor(seconds / 60)
         const secs = seconds % 60

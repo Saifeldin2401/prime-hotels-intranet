@@ -6,10 +6,10 @@
  * No mocks. No placeholders.
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
+import { useAuth } from './useAuth'
 
 export interface Achievement {
   id: string

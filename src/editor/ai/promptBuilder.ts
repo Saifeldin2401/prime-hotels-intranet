@@ -1,5 +1,5 @@
-import type { AIRequestPayload } from '@/editor/types'
-import { AI_HTML_OUTPUT_REQUIREMENTS, AI_HTML_SYSTEM_PROMPT } from '@/lib/aiHtml'
+import type { AIRequestPayload } from '@/editor/types';
+import { AI_HTML_OUTPUT_REQUIREMENTS, AI_HTML_SYSTEM_PROMPT } from '@/lib/aiHtml';
 
 export function buildAIPrompt(payload: AIRequestPayload): { system: string; user: string } {
   const translationSuffix =

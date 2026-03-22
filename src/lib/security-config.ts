@@ -236,7 +236,7 @@ export const securityUtils = {
   },
 
   // Centralized exception logging
-  logException: (error: Error, context?: Record<string, any>) => {
+  logException: (error: Error, context?) => {
     // Integrate with Sentry
     if (isValidSentryDsn(import.meta.env.VITE_SENTRY_DSN)) {
       Sentry.captureException(error, { extra: context });

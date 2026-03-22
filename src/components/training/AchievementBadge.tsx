@@ -4,9 +4,9 @@
  * Displays a single achievement with icon and details.
  */
 
-import { Award, GraduationCap, Target, ShieldCheck, Trophy, CheckCircle, Zap, BookOpen, Users, Sunrise, Flame } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import type { Achievement } from '@/hooks/useAchievements'
+import { cn } from '@/lib/utils'
+import { Award, BookOpen, CheckCircle, Flame, GraduationCap, ShieldCheck, Sunrise, Target, Trophy, Users, Zap } from 'lucide-react'
 
 const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   'award': Award,

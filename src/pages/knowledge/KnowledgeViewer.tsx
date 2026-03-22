@@ -5,102 +5,96 @@
  * Supports Title, Description, Content (HTML), and File Attachments.
  */
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
-import { marked } from 'marked'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Skeleton } from '@/components/ui/skeleton'
+import { Breadcrumbs } from '@/components/common/Breadcrumbs'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { PdfViewer } from '@/components/common/PdfViewer'
+import { RelatedArticles } from '@/components/knowledge'
+import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
+import {
+    ChecklistRenderer,
+    FAQAccordion,
+    ImageGalleryRenderer,
+    VideoPlayer
+} from '@/components/knowledge/ContentRenderers'
+import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
-import {
-    ArrowLeft,
-    BookmarkCheck,
-    Share2,
-    Printer,
-    ThumbsUp,
-    ThumbsDown,
-    MessageSquare,
-    Clock,
-    User,
-    Calendar,
-    CheckCircle,
-    CheckCircle2,
-    Bookmark,
-    AlertTriangle,
-    FileText,
-    Download,
-    ChevronUp,
-    ChevronDown,
-    ChevronRight,
-    List,
-    Pencil,
-    Trash2,
-    Lightbulb,
-    GraduationCap,
-    PlayCircle,
-    Sparkles,
-    Eye,
-    Timer,
-    Loader2,
-    Send,
-    Languages,
-    Maximize2,
-    Minimize2,
-    Type,
-    Settings2,
-    Zap,
-    BookOpen,
-    ShieldCheck
-} from 'lucide-react'
-import '@/styles/knowledge-ui.css'
-import { cn } from '@/lib/utils'
-import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
-import { useAuth } from '@/hooks/useAuth'
-import {
-    useKnowledgeArticle,
-    useComments,
-    useCreateComment,
-    useToggleBookmark,
-    useBookmarks,
-    useAcknowledgeArticle,
-    useSubmitFeedback,
-    useRelatedArticles
-} from '@/hooks/useKnowledge'
-import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
-import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     DropdownMenu,
     DropdownMenuContent,
-    DropdownMenuTrigger,
     DropdownMenuItem,
+    DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/hooks/useAuth'
 import {
-    VideoPlayer,
-    ChecklistRenderer,
-    FAQAccordion,
-    ImageGalleryRenderer
-} from '@/components/knowledge/ContentRenderers'
-import { STATUS_CONFIG } from '@/types/knowledge'
-import { RelatedArticles } from '@/components/knowledge'
-import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
-import { useTrackView } from '@/hooks/useRecentlyViewed'
-import { SectionLinkButton } from '@/components/knowledge/SectionLinkButton'
-import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
+    useAcknowledgeArticle,
+    useBookmarks,
+    useComments,
+    useCreateComment,
+    useKnowledgeArticle,
+    useRelatedArticles,
+    useSubmitFeedback,
+    useToggleBookmark
+} from '@/hooks/useKnowledge'
 import { useLastViewed } from '@/hooks/useLastViewed'
 import { usePermissions } from '@/hooks/usePermissions'
-import { PdfViewer } from '@/components/common/PdfViewer'
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
-import { toast } from 'sonner'
-import { sanitizeHtml } from '@/lib/sanitize'
-import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
-import { supabase, env } from '@/lib/supabase'
+import { useTrackView } from '@/hooks/useRecentlyViewed'
+import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
-import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
+import { sanitizeHtml } from '@/lib/sanitize'
+import { env, supabase } from '@/lib/supabase'
+import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
+import { cn } from '@/lib/utils'
+import '@/styles/knowledge-ui.css'
+import { STATUS_CONFIG } from '@/types/knowledge'
+import {
+    AlertTriangle,
+    ArrowLeft,
+    Bookmark,
+    BookmarkCheck,
+    Calendar,
+    CheckCircle2,
+    ChevronDown,
+    ChevronRight,
+    ChevronUp,
+    Download,
+    Eye,
+    FileText,
+    GraduationCap,
+    Languages,
+    Lightbulb,
+    List,
+    Loader2,
+    Maximize2,
+    MessageSquare,
+    Minimize2,
+    Pencil,
+    PlayCircle,
+    Printer,
+    Send,
+    Share2,
+    ShieldCheck,
+    Sparkles,
+    ThumbsDown,
+    ThumbsUp,
+    Timer,
+    Trash2,
+    Type,
+    Zap
+} from 'lucide-react'
+import { marked } from 'marked'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 interface TOCItem {
     id: string
@@ -118,7 +112,7 @@ export default function KnowledgeViewer() {
     const mermaidRef = useRef<HTMLDivElement>(null)
 
     const [tocItems, setTocItems] = useState<TOCItem[]>([])
-    const [activeSection, setActiveSection] = useState<string>('')
+    const [activeSection, _setActiveSection] = useState<string>('')
     const [showComments, setShowComments] = useState(false)
     const [newComment, setNewComment] = useState('')
     const [isQuestion, setIsQuestion] = useState(false)
@@ -132,7 +126,7 @@ export default function KnowledgeViewer() {
     const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base')
     const [fontFamily, setFontFamily] = useState<'sans' | 'serif'>('sans')
     const [readerTheme, setReaderTheme] = useState<'light' | 'sepia' | 'dark'>('light')
-    const [showReadabilityMenu, setShowReadabilityMenu] = useState(false)
+    const [_showReadabilityMenu, _setShowReadabilityMenu] = useState(false)
 
     // Translation States
     const [isTranslating, setIsTranslating] = useState(false)
@@ -169,7 +163,7 @@ export default function KnowledgeViewer() {
     useTrackView(id)
 
     // Track last viewed for "Updated since last view" feature
-    const { hasBeenUpdatedSinceLastView, markAsViewed, getTimeSinceLastView } = useLastViewed(user?.id)
+    const { hasBeenUpdatedSinceLastView, markAsViewed } = useLastViewed(user?.id)
 
     // Mark as viewed after 10 seconds (considered "read")
     useEffect(() => {
@@ -235,9 +229,6 @@ export default function KnowledgeViewer() {
         return { __html: sanitizeHtml(htmlContent) }
     }, [htmlContent])
 
-    const htmlContentArSanitized = useMemo(() => {
-        return { __html: sanitizeHtml(htmlContentAr) }
-    }, [htmlContentAr])
 
     const translatedHtmlSanitized = useMemo(() => {
         const translatedHtml = translatedData?.content
@@ -308,7 +299,7 @@ export default function KnowledgeViewer() {
         try {
             await navigator.clipboard.writeText(articleUrl)
             toast.success(t('viewer.link_copied', 'Article link copied to clipboard'))
-        } catch (err) {
+        } catch (_err) {
             // Fallback for browsers that don't support clipboard API
             const textarea = document.createElement('textarea')
             textarea.value = articleUrl
@@ -328,7 +319,7 @@ export default function KnowledgeViewer() {
 
         const logo = await loadLogoAsDataUrl()
 
-        const blocks: any[] = []
+        const blocks = []
 
         const blobToPngDataUrl = async (blob: Blob): Promise<string> => {
             // Prefer canvas conversion to ensure jsPDF-compatible format (PNG/JPEG)
@@ -442,7 +433,7 @@ export default function KnowledgeViewer() {
             }
         }
 
-        const parseContentToBlocks = (raw: string): { type: 'text'; text: string } | { type: 'mixed'; blocks: any[] } => {
+        const parseContentToBlocks = (raw: string): { type: 'text'; text: string } | { type: 'mixed'; blocks } => {
             if (!raw || !raw.trim()) return { type: 'text', text: '' }
 
             const imgMatches: { index: number; length: number; url: string; caption?: string }[] = []
@@ -476,7 +467,7 @@ export default function KnowledgeViewer() {
 
             imgMatches.sort((a, b) => a.index - b.index)
 
-            const out: any[] = []
+            const out = []
             let cursor = 0
             for (const im of imgMatches) {
                 if (im.index > cursor) {
@@ -530,16 +521,16 @@ export default function KnowledgeViewer() {
             }
         }
 
-        if (Array.isArray((article as any).images) && (article as any).images.length > 0) {
-            const images = [...((article as any).images as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        if (Array.isArray(article.images) && article.images.length > 0) {
+            const images = [...article.images].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             for (const img of images) {
                 if (!img?.url) continue
                 await tryEmbedImage(String(img.url), img.caption || undefined)
             }
         }
 
-        if (Array.isArray((article as any).checklist_items) && (article as any).checklist_items.length > 0) {
-            const items = [...((article as any).checklist_items as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        if (Array.isArray(article.checklist_items) && article.checklist_items.length > 0) {
+            const items = [...article.checklist_items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             blocks.push({
                 type: 'checklist',
                 items: items.map((i) => ({
@@ -549,8 +540,8 @@ export default function KnowledgeViewer() {
             })
         }
 
-        if (Array.isArray((article as any).faq_items) && (article as any).faq_items.length > 0) {
-            const items = [...((article as any).faq_items as any[])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        if (Array.isArray(article.faq_items) && article.faq_items.length > 0) {
+            const items = [...article.faq_items].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
             blocks.push({
                 type: 'faq',
                 items: items.map((i) => ({
@@ -687,7 +678,7 @@ export default function KnowledgeViewer() {
             const title = article.title || ''
             const description = article.description || ''
             const content = article.content || ''
-            const summary = (article as any).summary || ''
+            const summary = article.summary || ''
 
             if (![title, description, content, summary].some(text => !!text)) {
                 setTranslatedDataByLanguage(prev => ({

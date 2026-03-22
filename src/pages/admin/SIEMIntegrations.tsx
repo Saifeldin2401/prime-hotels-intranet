@@ -1,18 +1,18 @@
-import React, { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
+import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useSIEMIntegrations, type SIEMIntegration, type SIEMProvider, type SIEMAuthType } from '@/hooks/admin/useSIEMIntegrations'
-import { Plus, Edit2, Trash2, Activity, AlertCircle, CheckCircle2, Server, Key, Filter } from 'lucide-react'
+import { Textarea } from '@/components/ui/textarea'
+import { useSIEMIntegrations, type SIEMAuthType, type SIEMIntegration, type SIEMProvider } from '@/hooks/admin/useSIEMIntegrations'
 import { format } from 'date-fns'
-import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
+import { Activity, AlertCircle, CheckCircle2, Edit2, Filter, Key, Plus, Server, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function SIEMIntegrations() {
     const { t } = useTranslation(['admin', 'common'])
@@ -239,7 +239,9 @@ export default function SIEMIntegrations() {
                                                     try {
                                                         const parsed = JSON.parse(e.target.value);
                                                         setSelectedIntegration({...selectedIntegration, auth_config: parsed});
-                                                    } catch (err) {}
+                                                    } catch (_err) {
+                                                        // Ignore invalid JSON while the admin is editing.
+                                                    }
                                                 }}
                                                 className="font-mono text-sm min-h-[150px]" 
                                                 placeholder={'{\n  "token": "your-splunk-hec-token"\n}'}
@@ -258,7 +260,9 @@ export default function SIEMIntegrations() {
                                                     try {
                                                         const parsed = JSON.parse(e.target.value);
                                                         setSelectedIntegration({...selectedIntegration, event_filter: parsed});
-                                                    } catch (err) {}
+                                                    } catch (_err) {
+                                                        // Ignore invalid JSON while the admin is editing.
+                                                    }
                                                 }}
                                                 className="font-mono text-sm min-h-[150px]" 
                                                 placeholder={'{\n  "entity_types": ["profiles", "documents"],\n  "actions": ["create", "delete", "export"]\n}'}

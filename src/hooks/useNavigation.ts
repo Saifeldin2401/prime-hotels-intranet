@@ -5,23 +5,22 @@
  * Consumes the centralized navigation configuration.
  */
 
-import { useMemo, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import {
+    ROUTES,
+    canAccessRoute,
+    getFlatRoutesForRole,
+    getGroupConfig,
+    getMobileQuickActions,
+    getRoutesForRole,
+    resolvePathForRole,
+    type NavigationGroup,
+    type NavigationGroupConfig,
+    type RouteConfig
+} from '@/config/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
-import {
-    NAVIGATION_GROUPS,
-    ROUTES,
-    getRoutesForRole,
-    getFlatRoutesForRole,
-    getMobileQuickActions,
-    getGroupConfig,
-    canAccessRoute,
-    resolvePathForRole,
-    type RouteConfig,
-    type NavigationGroup,
-    type NavigationGroupConfig
-} from '@/config/navigation'
+import { useCallback, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
 
 export interface NavigationItem extends RouteConfig {
     isActive: boolean

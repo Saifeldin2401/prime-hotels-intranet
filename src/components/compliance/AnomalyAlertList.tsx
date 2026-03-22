@@ -3,12 +3,12 @@
  * Anomaly Alert List Component
  */
 
-import { AlertTriangle, Shield, UserX, Download } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { Skeleton } from '@/components/ui/skeleton'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
 import type { AnomalyDetection, SuspiciousActivity } from '@/types/audit'
+import { AlertTriangle, Download, Shield, UserX } from 'lucide-react'
 
 interface AnomalyAlertListProps {
   anomalies: AnomalyDetection[]

@@ -1,19 +1,3 @@
-import { useState } from 'react'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import { Switch } from '@/components/ui/switch'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Trash2, Plus, Loader2, CalendarDays, Clock } from 'lucide-react'
-import { useTaskTemplates, useToggleTaskTemplate, useDeleteTaskTemplate, useCreateTaskTemplate, useUpdateTaskTemplate, type TaskTemplate } from '@/hooks/useTaskTemplates'
-import { format } from 'date-fns'
-import { useToast } from '@/components/ui/use-toast'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -24,12 +8,16 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
     Select,
     SelectContent,
@@ -37,15 +25,27 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select"
-import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
 import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { useProperties } from '@/hooks/useProperties'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
+import { useProperties } from '@/hooks/useProperties'
+import { useCreateTaskTemplate, useDeleteTaskTemplate, useTaskTemplates, useToggleTaskTemplate, useUpdateTaskTemplate, type TaskTemplate } from '@/hooks/useTaskTemplates'
 import { useProfiles } from '@/hooks/useUsers'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from "react-i18next";
+import { format } from 'date-fns'
+import { CalendarDays, Clock, Loader2, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 type RecurrenceType = TaskTemplate['recurrence_type']
 type AssignmentScope = 'user' | 'department' | 'property' | 'unassigned'
@@ -136,7 +136,7 @@ export function TaskTemplateList() {
         })
     }
 
-    const handleEdit = (template: any) => {
+    const handleEdit = (template) => {
         setEditingTemplate(template)
         setFormState({
             title: template.title || '',
@@ -196,7 +196,7 @@ export function TaskTemplateList() {
                 return
             }
 
-            let recurrenceConfig: Record<string, any> = {}
+            let recurrenceConfig = {}
             try {
                 recurrenceConfig = formState.recurrence_config ? JSON.parse(formState.recurrence_config) : {}
             } catch {
@@ -289,7 +289,7 @@ export function TaskTemplateList() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {templates?.map((template: any) => (
+                        {templates?.map((template) => (
                             <TableRow key={template.id}>
                                 <TableCell>
                                     <div className="font-medium">{template.title}</div>
@@ -481,7 +481,7 @@ export function TaskTemplateList() {
                                         <SelectValue placeholder={t_ext('select_user', 'Select user')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {profiles?.map((profile: any) => (
+                                        {profiles?.map((profile) => (
                                             <SelectItem key={profile.id} value={profile.id}>{profile.full_name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -500,7 +500,7 @@ export function TaskTemplateList() {
                                         <SelectValue placeholder={t_ext('select_department', 'Select department')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {departments?.map((dept: any) => (
+                                        {departments?.map((dept) => (
                                             <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
                                         ))}
                                     </SelectContent>
@@ -519,7 +519,7 @@ export function TaskTemplateList() {
                                         <SelectValue placeholder={t_ext('select_property_1', 'Select property')} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {properties?.map((prop: any) => (
+                                        {properties?.map((prop) => (
                                             <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
                                         ))}
                                     </SelectContent>

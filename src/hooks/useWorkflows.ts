@@ -1,15 +1,15 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from './useAuth'
 import { executeWorkflow, getWorkflowExecutions } from '@/services/workflowEngine'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useAuth } from './useAuth'
 
 export interface WorkflowDefinition {
     id: string
     name: string
     description?: string
     type: 'scheduled' | 'event-based' | 'manual'
-    trigger_config: Record<string, any>
-    action_config: Record<string, any>
+    trigger_config: Record<string, unknown> | null
+    action_config: Record<string, unknown> | null
     is_active: boolean
     is_deleted?: boolean
     updated_at?: string
@@ -21,9 +21,9 @@ export interface WorkflowExecution {
     status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled' | 'paused'
     started_at: string
     completed_at?: string
-    result?: Record<string, any>
+    result?: Record<string, unknown> | null
     error?: string
-    metadata?: Record<string, any>
+    metadata?: Record<string, unknown> | null
     execution_time_ms?: number
     current_step_id?: string
     workflow_definitions?: { name: string } | null
@@ -38,7 +38,7 @@ export interface WorkflowStep {
     step_order: number
     name: string
     action: string
-    config: Record<string, any>
+    config: Record<string, unknown> | null
 }
 
 /**
@@ -106,7 +106,7 @@ export function useExecuteWorkflow() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async ({ workflowId, metadata }: { workflowId: string; metadata?: Record<string, any> }) => {
+        mutationFn: async ({ workflowId, metadata }: { workflowId: string; metadata? }) => {
             return await executeWorkflow(workflowId, metadata)
         },
         onSuccess: () => {

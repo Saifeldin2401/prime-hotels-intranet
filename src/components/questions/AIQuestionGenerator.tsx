@@ -4,46 +4,43 @@
  * Component for generating questions from SOP content using AI.
  */
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Switch } from '@/components/ui/switch'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Skeleton } from '@/components/ui/skeleton'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import {
-    Sparkles,
-    Wand2,
-    Loader2,
-    CheckCircle,
-    Edit3,
-    Save,
-    Trash2,
-    AlertTriangle,
-    FileText,
-    Brain,
-    Upload,
-    Search,
-    BookOpen,
-    MessageSquare,
-    CheckSquare
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useGenerateQuestions, useCreateQuestion } from '@/hooks/useQuestions'
-import { useArticles, useKnowledgeArticle } from '@/hooks/useKnowledge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
+import { useArticles, useKnowledgeArticle } from '@/hooks/useKnowledge'
+import { useCreateQuestion, useGenerateQuestions } from '@/hooks/useQuestions'
+import { cn } from '@/lib/utils'
 import type {
     GeneratedQuestion,
-    QuestionType,
     QuestionDifficulty,
-    QuestionFormData
+    QuestionFormData,
+    QuestionType
 } from '@/types/questions'
-import { QUESTION_TYPE_CONFIG, DIFFICULTY_CONFIG } from '@/types/questions'
+import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
+import {
+    AlertTriangle,
+    BookOpen,
+    CheckCircle,
+    Edit3,
+    FileText,
+    Loader2,
+    Save,
+    Search,
+    Sparkles,
+    Trash2,
+    Upload,
+    Wand2
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface AIQuestionGeneratorProps {
@@ -69,8 +66,7 @@ export function AIQuestionGenerator({
     defaultGroundedOnly,
     defaultIncludeCitations
 }: AIQuestionGeneratorProps) {
-    const { t, i18n } = useTranslation('training')
-    const isRTL = i18n.language === 'ar'
+    const { t, i18n: _i18n } = useTranslation('training')
     const generateQuestions = useGenerateQuestions()
     const createQuestion = useCreateQuestion()
 
@@ -236,8 +232,8 @@ export function AIQuestionGenerator({
                     const page = await pdf.getPage(i)
                     const textContent = await page.getTextContent()
                     const pageText = textContent.items
-                        .filter((item: any) => item.str)
-                        .map((item: any) => item.str)
+                        .filter((item) => item.str)
+                        .map((item) => item.str)
                         .join(' ')
                     fullText += pageText + '\n'
                 }
@@ -344,12 +340,6 @@ export function AIQuestionGenerator({
         })
     }
 
-    const handleUpdateQuestion = (index: number, updates: Partial<GeneratedQuestion>) => {
-        setGeneratedQuestions(prev =>
-            prev.map((q, i) => i === index ? { ...q, ...updates } : q)
-        )
-        setEditingIndex(null)
-    }
 
     const handleDeleteQuestion = (index: number) => {
         setGeneratedQuestions(prev => prev.filter((_, i) => i !== index))

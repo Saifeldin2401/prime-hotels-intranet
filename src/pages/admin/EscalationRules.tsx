@@ -1,25 +1,25 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
-import {
-  Clock,
-  Settings,
-  Plus,
-  Edit,
-  Trash2,
-  AlertTriangle,
-  Calendar
-} from 'lucide-react'
-import type { EscalationRule } from '@/lib/types'
 import type { AppRole } from '@/lib/constants'
+import { supabase } from '@/lib/supabase'
+import type { EscalationRule } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    AlertTriangle,
+    Calendar,
+    Clock,
+    Edit,
+    Plus,
+    Settings,
+    Trash2
+} from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 const entityTypes = [
@@ -333,7 +333,7 @@ function EscalationRuleForm({ rule, onClose, onSubmit }: EscalationRuleFormProps
     onSubmit(formData)
   }
 
-  const updateFormData = (field: keyof typeof formData, value: any) => {
+  const updateFormData = (field: keyof typeof formData, value) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 

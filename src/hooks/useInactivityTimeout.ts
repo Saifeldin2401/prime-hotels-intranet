@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseInactivityTimeoutOptions {
     timeoutMs?: number

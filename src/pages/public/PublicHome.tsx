@@ -1,32 +1,31 @@
-import { useEffect, type ElementType } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { PublicNavbar } from '@/components/layout/PublicNavbar';
-import { useAuth } from '@/hooks/useAuth';
-import { Button } from '@/components/ui/button';
-import { useTranslation } from 'react-i18next';
-import {
-  GraduationCap,
-  TrendingUp,
-  Users,
-  Shield,
-  Zap,
-  Globe,
-  Award,
-  BookOpen,
-  MessageSquare,
-  Calendar,
-  ChevronRight,
-  CheckCircle2,
-  ArrowRight,
-  Mail,
-  Phone,
-  MapPin,
-  HelpCircle,
-  FileText,
-  Headphones,
-  ShieldCheck
-} from 'lucide-react';
 import aboutTeamImg from '@/assets/about-team.png';
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+import {
+    ArrowRight,
+    Award,
+    BookOpen,
+    Calendar,
+    CheckCircle2,
+    FileText,
+    Globe,
+    GraduationCap,
+    Headphones,
+    HelpCircle,
+    Mail,
+    MapPin,
+    MessageSquare,
+    Phone,
+    Shield,
+    ShieldCheck,
+    TrendingUp,
+    Users,
+    Zap
+} from 'lucide-react';
+import { useEffect, type ElementType } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 
 export default function PublicHome() {
   const { user: authUser } = useAuth();

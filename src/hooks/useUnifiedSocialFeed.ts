@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState, useCallback } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useTranslation } from 'react-i18next'
 import type { FeedItem } from '@/components/social/SocialFeed'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import type { User } from '@/lib/rbac'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 function buildCurrentUser(params: {
   userId: string
@@ -67,16 +67,9 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           return value.toLocaleDateString()
         }
       }
-      const formatTime = (value: Date) => {
-        try {
-          return new Intl.DateTimeFormat(language, { hour: 'numeric', minute: '2-digit' }).format(value)
-        } catch {
-          return value.toLocaleTimeString()
-        }
-      }
 
       const roleList = roles?.map(role => role.role) ?? []
-      const managerRoles = new Set([
+      const _managerRoles = new Set([
         'corporate_admin',
         'regional_admin',
         'regional_hr',
@@ -85,7 +78,6 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         'department_head',
         'manager'
       ])
-      const isManagerRole = roleList.some(role => managerRoles.has(role))
       const isGlobalOverride = roleList.includes('corporate_admin')
       const departmentIds = (departments ?? []).map(dept => dept.id).filter(Boolean)
       const propertyIds = (properties ?? []).map(prop => prop.id).filter(Boolean)
@@ -102,7 +94,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
             .in('department_id', departmentIds)
             .limit(500)
 
-          data?.forEach((row: any) => {
+          data?.forEach((row) => {
             if (row?.user_id) {
               idSet.add(row.user_id)
             }
@@ -116,7 +108,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
             .in('property_id', propertyIds)
             .limit(500)
 
-          data?.forEach((row: any) => {
+          data?.forEach((row) => {
             if (row?.user_id) {
               idSet.add(row.user_id)
             }
@@ -142,7 +134,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         .limit(40)
 
       if (announcements) {
-        const filteredAnnouncements = announcements.filter((announcement: any) => {
+        const filteredAnnouncements = announcements.filter((announcement) => {
           if (announcement.created_by === user.id) return true
 
           const audience = announcement.target_audience
@@ -164,7 +156,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           }
         })
 
-        filteredAnnouncements.slice(0, 10).forEach((a: any) => {
+        filteredAnnouncements.slice(0, 10).forEach((a) => {
           feedItems.push({
             id: `ann-${a.id}`,
             type: 'announcement',
@@ -198,7 +190,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         .order('updated_at', { ascending: false })
         .limit(10)
 
-      recentDocs?.forEach((d: any) => {
+      recentDocs?.forEach((d) => {
         const isNew = new Date(d.created_at) > thirtyDaysAgo
         feedItems.push({
           id: `doc-${d.id}`,
@@ -241,7 +233,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         .order('due_date', { ascending: true })
         .limit(5)
 
-      tasks?.forEach((task: any) => {
+      tasks?.forEach((task) => {
         const dueDate = task.due_date ? new Date(task.due_date) : null
         const isOverdue = dueDate ? dueDate < now : false
         const title = dueDate
@@ -286,7 +278,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         .order('created_at', { ascending: false })
         .limit(10)
 
-      trainings?.forEach((assignment: any) => {
+      trainings?.forEach((assignment) => {
         const trainingTitle = assignment.training?.title || t('social_feed.defaults.new_training', 'New Training')
         const trainingContent = assignment.deadline
           ? t('social_feed.messages.training_due', { date: formatDate(new Date(assignment.deadline), { dateStyle: 'medium' }) })
@@ -320,7 +312,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
 
       // 5. Team achievements (completed training in last 7 days)
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      let achievements: any[] = []
+      let achievements = []
       if (shouldScopeToTeam || allowGlobalFallback) {
         const buildAchievementsQuery = () => {
           let base = supabase
@@ -342,10 +334,11 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           return base
         }
 
-        let { data, error } = await buildAchievementsQuery()
+        const initialResponse = await buildAchievementsQuery()
           .order('completed_at', { ascending: false })
+        let data = initialResponse.data
 
-        if (error) {
+        if (initialResponse.error) {
           const fallback = await buildAchievementsQuery().order('updated_at', { ascending: false })
           if (!fallback.error) {
             data = fallback.data
@@ -355,7 +348,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         achievements = data || []
       }
 
-      achievements.forEach((a: any) => {
+      achievements.forEach((a) => {
         if (a.user && a.training) {
           feedItems.push({
             id: `ach-${a.id}`,
@@ -380,7 +373,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
       })
 
       // 6. Birthdays (today and next 3 days)
-      let birthdayProfiles: any[] = []
+      let birthdayProfiles = []
       if (shouldScopeToTeam || allowGlobalFallback) {
         let profilesQuery = supabase
           .from('profiles')
@@ -395,7 +388,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         birthdayProfiles = data || []
       }
 
-      birthdayProfiles.forEach((p: any) => {
+      birthdayProfiles.forEach((p) => {
         if (!p.date_of_birth) return
 
         const bday = new Date(p.date_of_birth)
@@ -429,7 +422,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
 
       // 7. New team members (hired in last 14 days)
       const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000)
-      let newJoiners: any[] = []
+      let newJoiners = []
       if (shouldScopeToTeam || allowGlobalFallback) {
         let newJoinersQuery = supabase
           .from('profiles')
@@ -447,7 +440,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         newJoiners = data || []
       }
 
-      newJoiners.forEach((j: any) => {
+      newJoiners.forEach((j) => {
         if (!j.hire_date) return
         feedItems.push({
           id: `newjoiner-${j.id}`,
@@ -540,7 +533,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
       }
     }
 
-    const commentsByItem: Record<string, any[]> = {}
+    const commentsByItem = {}
     for (const c of interactionsData.comments as any[]) {
       commentsByItem[c.feed_item_id] ||= []
       commentsByItem[c.feed_item_id].push(c)
@@ -553,7 +546,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
       return {
         ...item,
         reactions,
-        comments: rawComments.map((c: any) => ({
+        comments: rawComments.map((c) => ({
           id: c.id,
           author: {
             id: c.author?.id || 'system',

@@ -1,6 +1,6 @@
+import type { EditorOutput } from '@/editor/types'
 import type { Editor } from '@tiptap/react'
 import TurndownService from 'turndown'
-import type { EditorOutput } from '@/editor/types'
 
 const turndownService = new TurndownService({
   headingStyle: 'atx',

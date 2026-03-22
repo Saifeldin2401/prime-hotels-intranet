@@ -1,43 +1,43 @@
-import { useMemo, useState, lazy, Suspense } from 'react'
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
-import { useDebounce } from '@/hooks/useDebounce'
-import { useToast } from '@/components/ui/use-toast'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
+import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
+import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
+import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import {
-  Plus,
-  Search,
-  Users,
-  Clock,
-  Eye,
-  Loader2,
-  FileText,
-  Settings,
-  Sparkles,
-  Wand2,
-  Layers,
-  BookOpen,
-  TrendingUp,
-  BarChart3,
-  AlertCircle
-} from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    AlertCircle,
+    BarChart3,
+    BookOpen,
+    Clock,
+    Eye,
+    FileText,
+    Layers,
+    Loader2,
+    Plus,
+    Search,
+    Settings,
+    Sparkles,
+    TrendingUp,
+    Users,
+    Wand2
+} from 'lucide-react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { TrainingBuilder } from './TrainingBuilder'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TrainingAssignmentsPanel } from './TrainingAssignments'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
-import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
-import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
-import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
-import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
+import { TrainingBuilder } from './TrainingBuilder'
 
 // Lazy load heavy chart component
 const TrainingProgressVisualization = lazy(() => import('@/components/training/TrainingProgressVisualization').then(m => ({ default: m.TrainingProgressVisualization })))
@@ -176,7 +176,7 @@ export default function TrainingHub() {
   })
 
   const assignedModuleIds = useMemo(() => {
-    return new Set((assignmentLinks || []).map((a: any) => a.content_id))
+    return new Set((assignmentLinks || []).map((a) => a.content_id))
   }, [assignmentLinks])
 
   // Analytics data

@@ -1,35 +1,30 @@
-import * as React from "react";
-import {
-  Sparkles,
-  Wand2,
-  AlertTriangle,
-  FileText,
-  Copy,
-  Check,
-  Lightbulb,
-  X,
-  RefreshCw,
-  Tag,
-  Files,
-  ChevronRight,
-  Loader2,
-  ThumbsUp,
-  ThumbsDown,
-  MoreHorizontal,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Separator } from "@/components/ui/separator";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
+    AlertTriangle,
+    Check,
+    ChevronRight,
+    Copy,
+    Files,
+    FileText,
+    Lightbulb,
+    Loader2,
+    RefreshCw,
+    Sparkles,
+    Tag,
+    X
+} from "lucide-react";
+import * as React from "react";
 
 export interface AISuggestedTag {
   name: string;
@@ -73,7 +68,6 @@ interface AIDocumentAssistantProps {
 }
 
 function ConfidenceBadge({ confidence }: { confidence: number }) {
-  let variant: "default" | "secondary" | "outline" | "destructive" = "outline";
   let colorClass = "";
 
   if (confidence >= 80) {

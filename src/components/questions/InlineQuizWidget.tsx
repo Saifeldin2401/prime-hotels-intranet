@@ -4,24 +4,20 @@
  * Compact quiz widget for embedding in KnowledgeViewer.
  */
 
-import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useQuestionsForContext, useRecordAttempt } from '@/hooks/useQuestions'
+import { cn } from '@/lib/utils'
 import {
     Brain,
-    CheckCircle,
-    ChevronRight,
     Sparkles,
     Trophy
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useQuestionsForContext, useRecordAttempt } from '@/hooks/useQuestions'
+import { useState } from 'react'
 import { QuestionRenderer } from './QuestionRenderer'
-import type { KnowledgeQuestion } from '@/types/questions'
-import { useTranslation } from "react-i18next";
 
 interface InlineQuizWidgetProps {
     sopId: string
@@ -34,7 +30,6 @@ interface InlineQuizWidgetProps {
 
 export function InlineQuizWidget({
     sopId,
-    sectionId,
     maxQuestions = 3,
     className,
     title = 'Quick Knowledge Check',

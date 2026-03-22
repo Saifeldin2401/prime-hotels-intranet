@@ -1,4 +1,3 @@
-import React from 'react'
 import {
     AlertDialog,
     AlertDialogCancel,
@@ -9,8 +8,9 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { AlertTriangle, Trash2, CheckCircle, Info } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AlertTriangle, CheckCircle, Info, Trash2 } from 'lucide-react'
+import React from 'react'
 
 export type ConfirmationVariant = 'danger' | 'warning' | 'info' | 'success'
 

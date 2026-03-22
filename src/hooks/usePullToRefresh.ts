@@ -5,7 +5,7 @@
  * Detects overscroll at top of page and triggers refresh callback.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UsePullToRefreshOptions {
     onRefresh: () => Promise<void>

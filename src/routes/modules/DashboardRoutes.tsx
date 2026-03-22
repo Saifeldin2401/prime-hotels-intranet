@@ -1,8 +1,8 @@
-import { Route, Navigate } from 'react-router-dom'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import Dashboard from '@/pages/dashboard/Dashboard'
+import { Navigate, Route } from 'react-router-dom'
 
 export function DashboardRoutes() {
   return (

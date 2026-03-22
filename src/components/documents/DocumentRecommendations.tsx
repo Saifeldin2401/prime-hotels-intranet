@@ -1,11 +1,10 @@
-import { useQuery } from '@tanstack/react-query';
-import { FileText, Star, Building2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useTranslation } from "react-i18next";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/lib/supabase';
+import { useQuery } from '@tanstack/react-query';
+import { Building2, FileText, Star } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 export function DocumentRecommendations() {
   const { user } = useAuth();
@@ -21,9 +20,9 @@ export function DocumentRecommendations() {
         supabase.from('user_properties').select('property_id').eq('user_id', user.id),
       ])
 
-      const departmentIds = [...new Set((deptRows || []).map((d: any) => d.department_id).filter(Boolean))]
-      const roles = [...new Set((roleRows || []).map((r: any) => r.role).filter(Boolean))]
-      const propertyIds = [...new Set((propRows || []).map((p: any) => p.property_id).filter(Boolean))]
+      const departmentIds = [...new Set((deptRows || []).map((d) => d.department_id).filter(Boolean))]
+      const roles = [...new Set((roleRows || []).map((r) => r.role).filter(Boolean))]
+      const propertyIds = [...new Set((propRows || []).map((p) => p.property_id).filter(Boolean))]
 
       // Build query for recommended documents
       let query = supabase
@@ -58,7 +57,7 @@ export function DocumentRecommendations() {
 
   if (!recommendations?.length) return null;
 
-  const getRecommendationReason = (doc: any) => {
+  const getRecommendationReason = (doc) => {
     switch (doc.visibility) {
       case 'all_properties':
         return 'All Properties'

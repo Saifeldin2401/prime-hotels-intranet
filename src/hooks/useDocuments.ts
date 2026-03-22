@@ -1,13 +1,13 @@
-import { useCallback, useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
-import { escapeSearchQuery } from '@/lib/utils'
-import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
-import { crudToasts } from '@/lib/toastHelpers'
-import { isRealPropertyId } from '@/lib/propertyScope'
+import { useAuth } from '@/hooks/useAuth'
 import { logAuditEvent } from '@/lib/auditLog'
+import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
+import { escapeSearchQuery } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback, useState } from 'react'
 
 const DOCS_RECENTLY_VIEWED_KEY = 'docs_recently_viewed'
 const MAX_RECENT_DOCS = 20
@@ -302,10 +302,10 @@ export function useDocuments(filters?: DocumentFilters) {
 
       // Hydrate tags for each document
       return (data || []).map(doc => {
-        const hydrated: any = doc
+        const hydrated = doc
         if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
           hydrated.tags = hydrated.tag_assignments
-            .map((a: any) => a.tag)
+            .map((a) => a.tag)
             .filter(Boolean)
         }
         return hydrated as Document
@@ -473,10 +473,10 @@ export function useDocumentsPaginated(
       if (error) throw error
 
       const hydratedDocs = (data || []).map(doc => {
-        const hydrated: any = doc
+        const hydrated = doc
         if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
           hydrated.tags = hydrated.tag_assignments
-            .map((a: any) => a.tag)
+            .map((a) => a.tag)
             .filter(Boolean)
         }
         return hydrated as Document
@@ -519,11 +519,11 @@ export function useDocument(documentId: string) {
       if (user?.id) {
         saveRecentlyViewedDocument(user.id, documentId)
       }
-      const hydrated: any = data
+      const hydrated = data
       // Normalize tags into a flat array for UI
       if (hydrated?.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
         hydrated.tags = hydrated.tag_assignments
-          .map((a: any) => a.tag)
+          .map((a) => a.tag)
           .filter(Boolean)
       }
       return hydrated as Document
@@ -1075,7 +1075,7 @@ export function useDocumentComments(documentId: string) {
       // Build threaded structure
       const comments = (data || []) as any[]
       const commentMap = new Map(comments.map((c) => [c.id, { ...c, replies: [] as any[] }]))
-      const rootComments: any[] = []
+      const rootComments = []
 
       comments.forEach((comment) => {
         const commentWithReplies = commentMap.get(comment.id)!
@@ -1165,7 +1165,7 @@ export function useDeleteDocumentComment() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async ({ id, documentId }: { id: string; documentId: string }) => {
+    mutationFn: async ({ id }: { id: string; documentId: string }) => {
       const { error } = await supabase
         .from('document_comments')
         .delete()
@@ -1210,10 +1210,10 @@ export function useDocumentTrash() {
 
       // Hydrate tags for each document
       return (data || []).map(doc => {
-        const hydrated: any = doc
+        const hydrated = doc
         if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
           hydrated.tags = hydrated.tag_assignments
-            .map((a: any) => a.tag)
+            .map((a) => a.tag)
             .filter(Boolean)
         }
         return hydrated as Document
@@ -1337,7 +1337,7 @@ export function useDocumentExpiry(status?: 'expiring_soon' | 'expired' | 'all') 
       if (error) throw error
 
       // Calculate days until expiry
-      return (data || []).map((doc: any) => {
+      return (data || []).map((doc) => {
         const expiryDate = new Date(doc.expires_at)
         const daysUntilExpiry = Math.ceil((expiryDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
 

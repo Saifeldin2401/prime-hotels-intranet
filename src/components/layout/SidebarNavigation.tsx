@@ -10,60 +10,60 @@
  * - Mobile responsive (Bottom Sheet Launcher)
  */
 
-import { useMemo, useCallback, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
-import { sidebarItemVariants } from '@/lib/motion'
-import { useAuth } from '@/hooks/useAuth'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useProperty } from '@/contexts/PropertyContext'
-import {
-  X,
-  ChevronDown,
-  LogOut,
-  Globe,
-  Building,
-  User,
-  Settings,
-  Bell,
-  ChevronsUpDown,
-  Sparkles
-} from 'lucide-react'
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@/components/ui/avatar'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub as DropdownSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
-} from '@/components/ui/dropdown-menu'
-import {
-  AlertDialog as AlertDialogRoot,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger as AlertDialogTriggerRoot,
-} from "@/components/ui/alert-dialog"
-import { cn } from '@/lib/utils'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
-import { useTranslation } from 'react-i18next'
-import { useNavigation } from '@/hooks/useNavigation'
+import {
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialog as AlertDialogRoot,
+    AlertDialogTitle,
+    AlertDialogTrigger as AlertDialogTriggerRoot,
+} from "@/components/ui/alert-dialog"
+import {
+    Avatar,
+    AvatarFallback,
+    AvatarImage,
+} from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+    DropdownMenuSub as DropdownSub,
+} from '@/components/ui/dropdown-menu'
+import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
+import { useNavigation } from '@/hooks/useNavigation'
+import { sidebarItemVariants } from '@/lib/motion'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
+import {
+    Bell,
+    Building,
+    ChevronDown,
+    ChevronsUpDown,
+    Globe,
+    LogOut,
+    Settings,
+    Sparkles,
+    User,
+    X
+} from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link, useNavigate } from 'react-router-dom'
 
 interface SidebarNavigationProps {
   isOpen: boolean

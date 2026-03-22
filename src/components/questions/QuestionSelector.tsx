@@ -1,13 +1,14 @@
-import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
-    DialogFooter
+    DialogFooter,
+    DialogHeader,
+    DialogTitle
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
     Table,
@@ -17,12 +18,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Search, Filter, Loader2 } from 'lucide-react'
 import { useQuestions } from '@/hooks/useQuestions'
-import type { QuestionType, QuestionDifficulty } from '@/types/questions'
-import { Badge } from '@/components/ui/badge'
-import { useTranslation } from "react-i18next";
+import { Loader2, Search } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
 
 const EMPTY_EXCLUDE_IDS: string[] = []
 

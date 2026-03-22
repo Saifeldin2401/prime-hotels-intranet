@@ -1,32 +1,12 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
+import { OrgChartStats, OrgChartTree } from '@/components/admin/OrgChartTree'
+import { ReportingLineEditor } from '@/components/admin/ReportingLineEditor'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-    GitBranch,
-    Users,
-    Clock,
-    History,
-    Search,
-    RefreshCw,
-    Download,
-    Building2,
-    Filter
-} from 'lucide-react'
-import { useOrgHierarchy, buildOrgTree, type OrgTreeNode } from '@/hooks/useOrganization'
-import { OrgChartTree, OrgChartStats } from '@/components/admin/OrgChartTree'
-import { OrgByDepartment } from '@/components/admin/OrgByDepartment'
-import { ReportingLineEditor } from '@/components/admin/ReportingLineEditor'
-import { useProperties } from '@/hooks/useProperties'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { formatDateTime } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
 import {
     Table,
     TableBody,
@@ -35,6 +15,23 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { buildOrgTree, useOrgHierarchy, type OrgTreeNode } from '@/hooks/useOrganization'
+import { useProperties } from '@/hooks/useProperties'
+import { supabase } from '@/lib/supabase'
+import { cn, formatDateTime } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import {
+    Building2,
+    Clock,
+    GitBranch,
+    History,
+    RefreshCw,
+    Search,
+    Users
+} from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function OrganizationalControlCenter() {
     const { t } = useTranslation(['admin', 'common'])
@@ -396,7 +393,7 @@ function AssignmentsTable({
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {employees?.map((emp: any) => (
+                            {employees?.map((emp) => (
                                 <TableRow key={emp.id}>
                                     <TableCell className="font-mono text-xs text-gray-400">{emp.staff_id || '—'}</TableCell>
                                     <TableCell className="font-medium">{emp.full_name}</TableCell>
@@ -537,7 +534,7 @@ function PendingChangesTable() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {pendingChanges.promotions.map((p: any) => (
+                                            {pendingChanges.promotions.map((p) => (
                                                 <TableRow key={p.id}>
                                                     <TableCell className="font-medium">{p.employee?.full_name}</TableCell>
                                                     <TableCell>
@@ -568,7 +565,7 @@ function PendingChangesTable() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {pendingChanges.transfers.map((tr: any) => (
+                                            {pendingChanges.transfers.map((tr) => (
                                                 <TableRow key={tr.id}>
                                                     <TableCell className="font-medium">{tr.employee?.full_name}</TableCell>
                                                     <TableCell>
@@ -650,7 +647,7 @@ function OrgChangeHistory() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {history.map((entry: any) => (
+                                {history.map((entry) => (
                                     <TableRow key={entry.id}>
                                         <TableCell className="whitespace-nowrap">
                                             {formatDateTime(entry.created_at)}

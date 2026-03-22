@@ -1,17 +1,17 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useUserSettings } from '@/contexts/UserSettingsContext'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Loader2, Globe, Accessibility, Keyboard, Shield, Clock } from 'lucide-react'
-import { Input } from '@/components/ui/input'
-import { Switch } from '@/components/ui/switch'
-import { toast } from 'sonner'
+import { Accessibility, Globe, Keyboard, Loader2, Shield } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 import { NotificationSettings } from './NotificationSettings'
-import { useUserSettings } from '@/contexts/UserSettingsContext'
 
 export default function Settings() {
     const { t: t_ext } = useTranslation('extracted');
@@ -82,7 +82,7 @@ export default function Settings() {
             toast.success('Password updated successfully')
             setNewPassword('')
             setConfirmPassword('')
-        } catch (error: any) {
+        } catch (error) {
             toast.error(error.message || 'Failed to update password')
         } finally {
             setUpdatingPassword(false)
@@ -94,7 +94,7 @@ export default function Settings() {
             const { error } = await supabase.auth.signOut({ scope: 'others' })
             if (error) throw error
             toast.success('Signed out of all other devices')
-        } catch (error: any) {
+        } catch (error) {
             toast.error(error.message || 'Failed to sign out of other devices')
         }
     }

@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react'
-import { Sparkles, ArrowRight, CheckCircle2, AlertCircle, Info } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { ArrowRight, CheckCircle2, Info, Sparkles } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 interface SmartHeaderMapperProps {
     csvHeaders: string[]

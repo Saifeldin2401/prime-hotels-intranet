@@ -5,8 +5,7 @@
  * Integrates with leave requests, promotions, transfers, and other workflows.
  */
 
-import { supabase } from '@/lib/supabase'
-import { createNotification, createBulkNotifications } from '@/lib/notificationService'
+import { createNotification } from '@/lib/notificationService'
 
 export type ApprovalType =
     | 'leave_request'

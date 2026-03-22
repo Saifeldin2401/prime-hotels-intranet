@@ -1,25 +1,25 @@
-import * as React from "react";
-import { X, Plus, Palette, Tag, Hash, Cloud } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
 } from "@/components/ui/command";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { cn } from "@/lib/utils";
+import { Cloud, Hash, Palette, Plus, Tag, X } from "lucide-react";
+import * as React from "react";
 
 export interface DocumentTag {
   id: string;
@@ -76,7 +76,6 @@ export function DocumentTagManager({
   onCreateTag,
   onDeleteTag,
   onAssignTags,
-  documents = [],
   selectedDocumentIds = [],
   mode = "manage",
   className,

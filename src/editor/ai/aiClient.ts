@@ -1,7 +1,7 @@
-import { supabase } from '@/lib/supabase'
-import type { AIConfig, AIRequestPayload } from '@/editor/types'
 import { buildAIPrompt } from '@/editor/ai/promptBuilder'
+import type { AIConfig, AIRequestPayload } from '@/editor/types'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
+import { supabase } from '@/lib/supabase'
 
 export interface OpenAIResult {
   html: string

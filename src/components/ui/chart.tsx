@@ -1,5 +1,5 @@
-import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -67,23 +67,23 @@ const ChartTooltipContent = React.forwardRef<
     sideOffset?: number
     formatter?: (value: unknown, name: string, item: RechartsTooltipPayload) => React.ReactNode
   }
->(({ className, sideOffset = 4, hideLabel = false, hideIndicator = false, indicator = "dot", nameKey, labelKey, ...props }, ref) => {
+>(({ className, sideOffset: _sideOffset = 4, hideLabel = false, hideIndicator = false, indicator = "dot", nameKey, labelKey, ...props }, ref) => {
   const {
     active,
     payload,
     label,
-    contentStyle,
-    itemStyle,
-    labelStyle,
-    cursor,
-    filterNull,
-    isAnimationActive,
-    itemSorter,
-    reverseDirection,
-    useTranslate3d,
-    wrapperStyle,
-    activeIndex,
-    accessibilityLayer,
+    contentStyle: _contentStyle,
+    itemStyle: _itemStyle,
+    labelStyle: _labelStyle,
+    cursor: _cursor,
+    filterNull: _filterNull,
+    isAnimationActive: _isAnimationActive,
+    itemSorter: _itemSorter,
+    reverseDirection: _reverseDirection,
+    useTranslate3d: _useTranslate3d,
+    wrapperStyle: _wrapperStyle,
+    activeIndex: _activeIndex,
+    accessibilityLayer: _accessibilityLayer,
     ...otherProps
   } = props as any
 

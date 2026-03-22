@@ -1,10 +1,10 @@
-import { useAnalyticsStats } from '@/hooks/useAnalyticsStats'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ChartViewport } from '@/components/ui/ChartViewport'
-import { Loader2, Users, Activity, MousePointer2, Search } from 'lucide-react'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAnalyticsStats } from '@/hooks/useAnalyticsStats'
+import { Activity, Loader2, MousePointer2, Search, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 export default function AdminAnalyticsDashboard() {
     const { data, isLoading, error } = useAnalyticsStats()

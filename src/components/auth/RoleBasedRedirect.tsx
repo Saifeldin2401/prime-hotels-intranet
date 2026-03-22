@@ -1,7 +1,7 @@
-import { Navigate } from 'react-router-dom'
-import { useAuth } from '@/hooks/useAuth'
-import type { AppRole } from '@/lib/constants'
+import { useAuth } from '@/hooks/useAuth';
+import type { AppRole } from '@/lib/constants';
 import { useTranslation } from "react-i18next";
+import { Navigate } from 'react-router-dom';
 
 /**
  * Unified Dashboard Routing

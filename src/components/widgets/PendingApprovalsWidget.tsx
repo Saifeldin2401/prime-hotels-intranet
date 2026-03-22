@@ -1,22 +1,22 @@
-import { useState } from 'react'
-import { Clock, CheckCircle, XCircle, ArrowRight } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { Link } from 'react-router-dom'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { RejectionDialog } from '@/components/approvals/RejectionDialog'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
 } from '@/components/ui/tooltip'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useApprovalStats, usePendingApprovals } from '@/hooks/useApprovalStats'
 import { useApproveLeaveRequest, useRejectLeaveRequest } from '@/hooks/useLeaveRequests'
-import { RejectionDialog } from '@/components/approvals/RejectionDialog'
 import { cn } from '@/lib/utils'
-import { useTranslation } from "react-i18next";
+import { formatDistanceToNow } from 'date-fns'
+import { ArrowRight, CheckCircle, Clock, XCircle } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 
 interface PendingApprovalsWidgetProps {
     className?: string
@@ -105,7 +105,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                 </div>
             </CardHeader>
             <CardContent className="space-y-3">
-                {displayItems.map((item: any) => (
+                {displayItems.map((item) => (
                     <div
                         key={item.id}
                         className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"

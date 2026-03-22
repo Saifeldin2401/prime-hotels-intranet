@@ -1,7 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 import type { Theme, ThemeMode } from '../lib/theme'
-import { getTheme, applyTheme, lightTheme } from '../lib/theme'
+import { applyTheme, lightTheme } from '../lib/theme'
 
 interface ThemeContextType {
   theme: Theme

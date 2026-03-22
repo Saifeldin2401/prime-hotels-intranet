@@ -1,9 +1,9 @@
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Users, Lock } from 'lucide-react'
-import { useTranslation } from "react-i18next";
+import { Lock, Users } from 'lucide-react'
+import { useTranslation } from "react-i18next"
 
 interface DepartmentSelectorProps {
   value?: string
@@ -19,7 +19,6 @@ export function DepartmentSelector({
   onValueChange, 
   propertyId,
   placeholder = "Select department",
-  showAllDepartments = false,
   disabled = false
 }: DepartmentSelectorProps) {
   const { t: t_ext } = useTranslation('extracted')

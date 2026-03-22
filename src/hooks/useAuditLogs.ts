@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 export interface AuditLog {
     id: string
@@ -10,7 +10,7 @@ export interface AuditLog {
     created_at: string
     ip_address: string | null
     user_agent: string | null
-    details: any
+    details
     profile?: {
         full_name: string | null
         avatar_url: string | null

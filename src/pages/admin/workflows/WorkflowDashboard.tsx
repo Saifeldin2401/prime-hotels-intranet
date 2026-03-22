@@ -1,14 +1,14 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { WorkflowList } from './components/WorkflowList'
+import { useState } from 'react'
+import { AutomationSettings } from './components/AutomationSettings'
+import { TaskTemplateList } from './components/TaskTemplateList'
+import { TrainingRulesList } from './components/TrainingRulesList'
 import { TriggerList } from './components/TriggerList'
 import { WorkflowExecutions } from './components/WorkflowExecutions'
+import { WorkflowList } from './components/WorkflowList'
 import { WorkflowStatsCards } from './components/WorkflowStatsCards'
-import { AutomationSettings } from './components/AutomationSettings'
-import { TrainingRulesList } from './components/TrainingRulesList'
-import { TaskTemplateList } from './components/TaskTemplateList'
-import { Separator } from '@/components/ui/separator'
 
 export default function WorkflowDashboard() {
     const [activeTab, setActiveTab] = useState('definitions')

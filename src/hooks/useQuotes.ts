@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { useCallback, useEffect, useState } from 'react'
 
 export interface MotivationalQuote {
     id: string
@@ -38,7 +38,7 @@ export function useQuotes() {
                 if (fetchError) throw fetchError
                 setQuote(data)
             }
-        } catch (err: any) {
+        } catch (err) {
             console.error('Error fetching motivational quote:', err)
             setError(err)
         } finally {

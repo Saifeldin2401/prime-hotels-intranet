@@ -1,6 +1,6 @@
-import { useState, useCallback, useRef } from 'react'
+import { getFieldError, hasFieldError, prepareFormData, sanitizeFormData, validateForm as validateFormUtil } from '@/lib/validation'
+import { useCallback, useRef, useState } from 'react'
 import { z } from 'zod'
-import { validateForm as validateFormUtil, sanitizeFormData, prepareFormData, getFieldError, hasFieldError } from '@/lib/validation'
 
 export interface UseFormOptions<T> {
   initialValues: T
@@ -45,7 +45,7 @@ const markFieldTouched = <T>(state: FormState<T>, fieldName: string): FormState<
   })
 }
 
-const setFieldValue = <T>(state: FormState<T>, fieldName: string, value: any): FormState<T> => {
+const setFieldValue = <T>(state: FormState<T>, fieldName: string, value): FormState<T> => {
   return updateFormState(state, {
     data: { ...state.data, [fieldName]: value },
     isDirty: true
@@ -82,7 +82,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
   const isSubmittingRef = useRef(false)
 
   // Validate a single field
-  const validateField = useCallback((fieldName: string, value: any): string | undefined => {
+  const validateField = useCallback((fieldName: string, value): string | undefined => {
     if (!schema) return undefined
 
     try {
@@ -127,7 +127,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
   }, [schema])
 
   // Update field value
-  const setField = useCallback((fieldName: string, value: any) => {
+  const setField = useCallback((fieldName: string, value) => {
     setState(prevState => {
       let newState = setFieldValue(prevState, fieldName, value)
 
@@ -176,7 +176,7 @@ export function useForm<T extends Record<string, any>>(options: UseFormOptions<T
   }, [validateOnBlur, schema, validateField])
 
   // Handle field change
-  const handleChange = useCallback((fieldName: string, value: any) => {
+  const handleChange = useCallback((fieldName: string, value) => {
     setField(fieldName, value)
   }, [setField])
 
@@ -363,7 +363,7 @@ export function useAsyncForm<T extends Record<string, any>>(options: UseFormOpti
   const [asyncErrors, setAsyncErrors] = useState<Record<string, string>>({})
 
   // Validate field asynchronously
-  const validateFieldAsync = useCallback(async (fieldName: string, value: any): Promise<string | undefined> => {
+  const validateFieldAsync = useCallback(async (fieldName: string, value): Promise<string | undefined> => {
     // This would typically make an API call for async validation
     // For now, return undefined (no async error)
     // Parameters are unused but kept for API consistency

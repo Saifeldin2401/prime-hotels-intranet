@@ -1,15 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
-import { SidebarNavigation } from './SidebarNavigation'
-import { MobileLayout } from '@/layouts/MobileLayout'
 import { Header } from '@/components/layout/Header'
-import { useTranslation } from 'react-i18next'
-import { AnimatePresence } from 'framer-motion'
+import { MobileLayout } from '@/layouts/MobileLayout'
 import { cn } from '@/lib/utils'
+import { AnimatePresence } from 'framer-motion'
+import { useCallback, useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { SidebarNavigation } from './SidebarNavigation'
 
-import { PageTransition } from '@/components/layout/PageTransition'
-import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { CommandPalette } from '@/components/common/CommandPalette'
 import { KeyboardShortcutsModal } from '@/components/common/KeyboardShortcutsModal'
+import { WizardTrigger } from '@/components/common/WizardTrigger'
+import { PageTransition } from '@/components/layout/PageTransition'
 import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
 
 interface AppLayoutProps {

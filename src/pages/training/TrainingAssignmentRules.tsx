@@ -1,16 +1,16 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { Pencil, Plus, Trash2, Shield } from 'lucide-react'
-import { useTrainingRules, useCreateTrainingRule, useDeleteTrainingRule, useUpdateTrainingRule, useTrainingModulesList } from '@/hooks/useTrainingRules'
+import { useCreateTrainingRule, useDeleteTrainingRule, useTrainingModulesList, useTrainingRules, useUpdateTrainingRule } from '@/hooks/useTrainingRules'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { Pencil, Plus, Shield, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function TrainingAssignmentRules() {
     const { t, i18n } = useTranslation(['training', 'common'])
@@ -93,7 +93,7 @@ export default function TrainingAssignmentRules() {
         }
     }
 
-    const startEdit = (rule: any) => {
+    const startEdit = (rule) => {
         setEditingRule(rule)
         setTargetType(rule.job_title_id ? 'job_title' : 'role')
         setNewRule({

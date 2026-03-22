@@ -1,8 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export type RequestStatus =
   | 'draft'
@@ -28,6 +28,20 @@ export type RequestEventType =
   | 'attachment_added'
   | 'status_changed'
 
+export interface RequestMetadata {
+  property_id?: string | null
+  new_role?: string | null
+  effective_date?: string | null
+  target_property?: string | null
+  [key: string]: unknown
+}
+
+export interface RequestEventPayload {
+  from?: string | null
+  to?: string | null
+  [key: string]: unknown
+}
+
 export interface RequestRow {
   id: string
   request_no: number
@@ -42,7 +56,7 @@ export interface RequestRow {
   last_action_at?: string | null
   submitted_at: string | null
   closed_at: string | null
-  metadata: any
+  metadata: RequestMetadata | null
   created_at: string
   updated_at: string
   property_id: string | null
@@ -53,6 +67,8 @@ export interface RequestRow {
     email: string
     phone: string | null
     job_title: string | null
+    hire_date?: string | null
+    reporting_to?: string | null
   }
   supervisor?: {
     id: string
@@ -86,7 +102,7 @@ export interface RequestStepRow {
   due_at?: string | null
   sla_hours?: number | null
   escalated_at?: string | null
-  metadata: any
+  metadata: Record<string, unknown> | null
   comment: string | null
   created_by: string | null
   created_at: string
@@ -120,7 +136,7 @@ export interface RequestEventRow {
   request_id: string
   event_type: RequestEventType
   actor_id: string | null
-  payload: any
+  payload: RequestEventPayload | null
   created_at: string
   actor?: {
     id: string

@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 interface UserSettings {
     reduced_motion: boolean

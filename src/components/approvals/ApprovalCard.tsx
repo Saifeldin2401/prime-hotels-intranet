@@ -1,21 +1,21 @@
-import { format, isValid } from 'date-fns'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
+import { format, isValid } from 'date-fns'
 import {
     Calendar,
-    FileText,
-    Clock,
     CheckCircle,
-    XCircle,
-    Wrench,
+    Clock,
     Eye,
+    FileText,
     Inbox,
-    Loader2
+    Loader2,
+    Wrench,
+    XCircle
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { useTranslation } from 'react-i18next'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 export type ApprovalType = 'document' | 'leave' | 'maintenance' | 'request' | 'expense'
 

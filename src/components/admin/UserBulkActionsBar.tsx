@@ -1,14 +1,6 @@
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useUserBulkOperations } from '@/hooks/useUserBulkOperations'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import {
     Dialog,
     DialogContent,
@@ -17,6 +9,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
 import {
     Select,
     SelectContent,
@@ -24,10 +17,17 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Label } from '@/components/ui/label'
-import { ShieldOff, ShieldCheck, KeyRound, UserCog, Loader2, X } from 'lucide-react'
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { useUserBulkOperations } from '@/hooks/useUserBulkOperations'
 import { ROLES, type AppRole } from '@/lib/constants'
+import { KeyRound, Loader2, ShieldCheck, ShieldOff, UserCog, X } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface UserBulkActionsBarProps {
     selectedIds: Set<string>

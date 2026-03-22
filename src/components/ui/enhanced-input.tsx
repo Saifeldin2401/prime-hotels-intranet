@@ -1,7 +1,7 @@
-import { forwardRef, useState } from 'react'
-import type { InputHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
 import { AlertCircle, Eye, EyeOff } from 'lucide-react'
+import type { InputHTMLAttributes } from 'react'
+import { forwardRef, useState } from 'react'
 
 interface EnhancedInputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
   label?: string

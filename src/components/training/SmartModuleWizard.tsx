@@ -5,20 +5,14 @@
  * Steps: Select Topic/Documents → AI Generates Outline → Review & Create
  */
 
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { useNavigate } from 'react-router-dom'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
-import { ScrollArea } from '@/components/ui/scroll-area'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     Select,
     SelectContent,
@@ -26,22 +20,28 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
+import { useAITrainingContent } from '@/hooks/training/useAITrainingContent'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import * as QuestionService from '@/services/questionService'
+import { useQuery } from '@tanstack/react-query'
 import {
     ArrowLeft,
     ArrowRight,
-    Sparkles,
-    FileText,
-    CheckCircle,
-    Loader2,
-    Lightbulb,
     BookOpen,
+    CheckCircle,
     Clock,
+    FileText,
+    Lightbulb,
+    Loader2,
+    Sparkles,
     Target
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { useAITrainingContent } from '@/hooks/training/useAITrainingContent'
-import { useAuth } from '@/hooks/useAuth'
-import * as QuestionService from '@/services/questionService'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 interface SmartModuleWizardProps {
     open: boolean

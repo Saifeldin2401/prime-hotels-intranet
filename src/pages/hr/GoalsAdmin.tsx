@@ -1,21 +1,21 @@
-import { useMemo, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Textarea } from '@/components/ui/textarea'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useProfiles } from '@/hooks/useUsers'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { toast } from 'sonner'
-import { format } from 'date-fns'
-import { useTranslation } from 'react-i18next'
 import { isRealPropertyId } from '@/lib/propertyScope'
+import { supabase } from '@/lib/supabase'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { format } from 'date-fns'
+import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'completed', 'cancelled']
 
@@ -65,13 +65,13 @@ export default function GoalsAdmin() {
   const filteredGoals = useMemo(() => {
     const goals = goalsQuery.data || []
     if (employeeFilter !== 'all') {
-      return goals.filter((goal: any) => goal.employee_id === employeeFilter)
+      return goals.filter((goal) => goal.employee_id === employeeFilter)
     }
     if (departmentId !== 'all' && staffIds.size > 0) {
-      return goals.filter((goal: any) => staffIds.has(goal.employee_id))
+      return goals.filter((goal) => staffIds.has(goal.employee_id))
     }
     if (propertyId && staffIds.size > 0) {
-      return goals.filter((goal: any) => staffIds.has(goal.employee_id))
+      return goals.filter((goal) => staffIds.has(goal.employee_id))
     }
     return goals
   }, [goalsQuery.data, employeeFilter, departmentId, staffIds, propertyId])
@@ -149,7 +149,7 @@ export default function GoalsAdmin() {
     createMutation.mutate()
   }
 
-  const handleEdit = (goal: any) => {
+  const handleEdit = (goal) => {
     setEditingId(goal.id)
     setForm({
       employee_id: goal.employee_id,
@@ -321,7 +321,7 @@ export default function GoalsAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredGoals.map((goal: any) => (
+                {filteredGoals.map((goal) => (
                   <TableRow key={goal.id}>
                     <TableCell>
                       <div className="font-medium">{goal.employee?.full_name || goal.employee?.email || 'Employee'}</div>

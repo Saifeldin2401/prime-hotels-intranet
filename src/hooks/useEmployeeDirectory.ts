@@ -1,7 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { exportRowsToXlsx } from '@/lib/excel'
 import type { AppRole } from '@/lib/constants'
+import { exportRowsToXlsx } from '@/lib/excel'
+import { supabase } from '@/lib/supabase'
+import { useQuery } from '@tanstack/react-query'
 
 export type ManagementLevelFilter = 'all' | 'executive' | 'management' | 'staff'
 export type DirectorySort =

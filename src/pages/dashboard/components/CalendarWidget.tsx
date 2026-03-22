@@ -1,35 +1,35 @@
-import { useState, useMemo } from 'react'
-import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion'
-import { Calendar, ChevronLeft, ChevronRight, Clock, MapPin, CalendarDays, Plus, Sun, CheckCircle2, AlertCircle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useQuery } from '@tanstack/react-query'
-import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
 import { useEvents, useUpcomingEvents, type Event } from '@/hooks/useEvents'
 import { useUserShifts, type UserShift } from '@/hooks/useUserShifts'
-import { useAuth } from '@/hooks/useAuth'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
 import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  isSameMonth,
-  isSameDay,
-  addMonths,
-  subMonths,
-  parseISO
+    addDays,
+    addMonths,
+    endOfMonth,
+    endOfWeek,
+    format,
+    isSameDay,
+    isSameMonth,
+    parseISO,
+    startOfMonth,
+    startOfWeek,
+    subMonths
 } from 'date-fns'
 import { ar } from 'date-fns/locale'
-import { Link } from 'react-router-dom'
-import { useTranslation } from "react-i18next";
+import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from 'framer-motion'
 import type { TFunction } from 'i18next'
-import { EventDialogs } from './EventDialogs'
+import { AlertCircle, Calendar, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, MapPin, Plus, Sun } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useTranslation } from "react-i18next"
+import { Link } from 'react-router-dom'
 import type { CalendarEvent, CalendarEventType } from './EventDialogs'
+import { EventDialogs } from './EventDialogs'
 
 const eventTypeColors: Record<CalendarEventType | 'default', string> = {
   meeting: 'bg-blue-500 shadow-blue-500/30',

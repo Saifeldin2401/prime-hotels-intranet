@@ -1,27 +1,27 @@
-import React, { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import type { OnboardingProcess } from '@/lib/types'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { AIOnboardingPathGenerator } from '@/components/onboarding/AIOnboardingPathGenerator'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, Search, Users, Sparkles, ChevronDown, ChevronRight, CheckCircle2, Circle, Clock, ExternalLink, GraduationCap } from 'lucide-react'
-import { useOnboardingTasks } from '@/hooks/useOnboarding'
-import { cn } from '@/lib/utils'
-import { Link } from 'react-router-dom'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { format, isValid } from 'date-fns'
-import { useTranslation } from 'react-i18next'
+import { Progress } from '@/components/ui/progress'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { AIOnboardingPathGenerator } from '@/components/onboarding/AIOnboardingPathGenerator'
+import { useOnboardingTasks } from '@/hooks/useOnboarding'
+import { supabase } from '@/lib/supabase'
+import type { OnboardingProcess } from '@/lib/types'
+import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import { format, isValid } from 'date-fns'
+import { CheckCircle2, ChevronDown, ChevronRight, Circle, Clock, ExternalLink, GraduationCap, Loader2, Search, Sparkles, Users } from 'lucide-react'
+import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Link } from 'react-router-dom'
 
 
 function TaskDetailList({ processId }: { processId: string }) {
     const { t: t_ext } = useTranslation('extracted');
     const { data: tasks, isLoading } = useOnboardingTasks(processId)
-    const { t } = useTranslation('onboarding')
+    const { t: _t } = useTranslation('onboarding')
 
     if (isLoading) return <div className="flex justify-center p-4"><Loader2 className="h-4 w-4 animate-spin" /></div>
 

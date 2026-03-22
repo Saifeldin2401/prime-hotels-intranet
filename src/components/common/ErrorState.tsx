@@ -1,8 +1,8 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { AlertCircle, RefreshCw, WifiOff, ShieldX, FileX2, Server } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/utils'
+import { AlertCircle, FileX2, RefreshCw, Server, ShieldX, WifiOff } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface ErrorStateProps {
     error: Error | string | null
@@ -16,7 +16,6 @@ interface ErrorStateProps {
 // Determine error type and return appropriate icon/message
 function getErrorDetails(error: Error | string | null) {
     const errorMessage = typeof error === 'string' ? error : error?.message || ''
-    const errorName = typeof error === 'string' ? 'Error' : error?.name || 'Error'
 
     // Network errors
     if (errorMessage.includes('fetch') || errorMessage.includes('network') || errorMessage.includes('Failed to fetch')) {

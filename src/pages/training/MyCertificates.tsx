@@ -9,28 +9,28 @@
  * - Verification code display
  */
 
-import { useState } from 'react'
-import { useMyCertificates, useDownloadCertificate } from '@/hooks/useCertificates'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificates'
+import type { Certificate } from '@/lib/certificateService'
+import { format } from 'date-fns'
 import {
+    AlertCircle,
     Award,
+    BookOpen,
+    CheckCircle,
+    Clock,
     Download,
     Eye,
-    BookOpen,
+    Loader2,
     Shield,
-    Clock,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
-    Loader2
+    XCircle
 } from 'lucide-react'
-import { format } from 'date-fns'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { Certificate } from '@/lib/certificateService'
 
 export default function MyCertificates() {
     const { t, i18n } = useTranslation('training')
@@ -192,7 +192,7 @@ const getTypeIcon = (type: string) => {
     }
 }
 
-const getTypeLabel = (type: string, t: any) => {
+const getTypeLabel = (type: string, t) => {
     switch (type) {
         case 'training': return t('training')
         case 'sop_quiz': return t('sopQuiz')
@@ -202,7 +202,7 @@ const getTypeLabel = (type: string, t: any) => {
     }
 }
 
-const getStatusBadge = (status: string, t: any) => {
+const getStatusBadge = (status: string, t) => {
     switch (status) {
         case 'active':
             return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t('active')}</Badge>
@@ -219,7 +219,7 @@ interface CertificateCardProps {
     certificate: Certificate
     onDownload: (id: string) => void
     isDownloading: boolean
-    t: any
+    t
 }
 
 const CertificateCard = ({ certificate, onDownload, isDownloading, t }: CertificateCardProps) => (

@@ -1,27 +1,3 @@
-import { useState } from 'react'
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table'
-import { Switch } from '@/components/ui/switch'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Settings2, Trash2, Plus, Loader2 } from 'lucide-react'
-import { useTriggers, useUpdateTrigger, useDeleteTrigger } from '@/hooks/useTriggers'
-import { format } from 'date-fns'
-import { useToast } from '@/components/ui/use-toast'
-import { Input } from '@/components/ui/input'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select'
 import {
     AlertDialog,
     AlertDialogAction,
@@ -32,15 +8,39 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
-import { TriggerEditor } from './TriggerEditor'
+import { Input } from '@/components/ui/input'
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select'
+import { Switch } from '@/components/ui/switch'
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table'
+import { useToast } from '@/components/ui/use-toast'
 import type { TriggerRule } from '@/hooks/useTriggers'
-import { useTranslation } from "react-i18next";
+import { useDeleteTrigger, useTriggers, useUpdateTrigger } from '@/hooks/useTriggers'
+import { format } from 'date-fns'
+import { Loader2, Plus, Settings2, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from "react-i18next"
+import { TriggerEditor } from './TriggerEditor'
 
 export function TriggerList() {
     const { t: t_ext } = useTranslation('extracted');
@@ -64,7 +64,7 @@ export function TriggerList() {
                         description: `Trigger is now ${!currentStatus ? 'active' : 'inactive'}`,
                     })
                 },
-                onError: (error) => {
+                onError: () => {
                     toast({
                         title: 'Error',
                         description: 'Failed to update trigger status',

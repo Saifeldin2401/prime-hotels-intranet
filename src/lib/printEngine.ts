@@ -312,8 +312,8 @@ function drawTableSection(
     doc: jsPDF,
     table: TableSection,
     yPos: number,
-    contentWidth: number,
-    pageHeight: number
+    _contentWidth: number,
+    _pageHeight: number
 ): number {
     // Section title
     if (table.title) {

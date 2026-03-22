@@ -1,38 +1,38 @@
-import * as React from "react";
-import { useTranslation } from "react-i18next";
-import {
-  FileText,
-  Calendar,
-  Shield,
-  User,
-  Hash,
-  FolderInput,
-  Plus,
-  Trash2,
-  RefreshCw,
-} from "lucide-react";
-import { cn } from "@/lib/utils";
-import { format } from "date-fns";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import type { DocumentFolder } from "@/hooks/useDocuments";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import {
+    Calendar,
+    FileText,
+    FolderInput,
+    Hash,
+    Plus,
+    RefreshCw,
+    Shield,
+    Trash2,
+    User,
+} from "lucide-react";
+import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
 

@@ -1,40 +1,37 @@
-import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
-import { createBulkNotifications } from '@/lib/notificationService'
-import { useAuth } from '@/hooks/useAuth'
-import { useDebounce } from '@/hooks/useDebounce'
 import { PageHeader } from '@/components/layout/PageHeader'
+import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
-import { ConfirmationDialog } from '@/components/ui/confirmation-dialog'
-import { ModuleFormDialog, type ModuleFormValues } from './components/ModuleFormDialog'
-import { AssignmentDialog } from './components/AssignmentDialog'
-import { useNavigate } from 'react-router-dom'
-import {
-  Plus,
-  Search,
-  Edit,
-  Users,
-  Clock,
-  Settings,
-  Eye,
-  Loader2,
-  FileText,
-  Trash2,
-  UserX
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { useAuth } from '@/hooks/useAuth'
+import { useDebounce } from '@/hooks/useDebounce'
+import { createBulkNotifications } from '@/lib/notificationService'
+import { supabase } from '@/lib/supabase'
 import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
+import { cn } from '@/lib/utils'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+    Clock,
+    Edit,
+    Eye,
+    FileText,
+    Loader2,
+    Plus,
+    Search,
+    Trash2,
+    Users,
+    UserX
+} from 'lucide-react'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { AssignmentDialog } from './components/AssignmentDialog'
+import { ModuleFormDialog, type ModuleFormValues } from './components/ModuleFormDialog'
 
 import { useTranslation } from 'react-i18next'
 
-// Type definitions
-type Language = 'en' | 'ar'
 type ModuleStatus = 'draft' | 'published' | 'archived'
 
 interface TrainingModule {
@@ -156,7 +153,7 @@ export default function TrainingModules() {
   })
 
   // Get durations for form
-  const { data: durations } = useQuery({
+  const { data: _durations } = useQuery({
     queryKey: ['module-durations'],
     queryFn: async () => {
       const { data } = await supabase
@@ -204,7 +201,7 @@ export default function TrainingModules() {
 
       if (error) throw error
       // Format department name with property for disambiguation
-      return (data || []).map((d: any) => ({
+      return (data || []).map((d) => ({
         id: d.id,
         name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
         propertyName: d.property?.name,

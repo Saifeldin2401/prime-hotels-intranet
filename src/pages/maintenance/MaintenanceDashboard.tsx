@@ -1,34 +1,32 @@
-import { useState } from 'react'
-import { useAuth } from '@/hooks/useAuth'
-import { useMyMaintenanceTickets, useAssignedMaintenanceTickets, useUpdateMaintenanceTicket, useCompleteMaintenanceTicket } from '@/hooks/useMaintenanceTickets'
-import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
-import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import emptyStateImage from '@/assets/maintenance-empty.png'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { LoadingTransition, StatSkeleton } from '@/components/ui/loading-system'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import {
-  Wrench,
-  AlertTriangle,
-  Clock,
-  Plus,
-  Search,
-  Zap,
-  Droplets,
-  Thermometer,
-  Tv,
-  Calendar,
-  User
-} from 'lucide-react'
-import { format } from 'date-fns'
-import { useNavigate } from 'react-router-dom'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuth } from '@/hooks/useAuth'
+import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
+import { useAssignedMaintenanceTickets, useCompleteMaintenanceTicket, useMyMaintenanceTickets, useUpdateMaintenanceTicket } from '@/hooks/useMaintenanceTickets'
 import type { MaintenanceTicket } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import emptyStateImage from '@/assets/maintenance-empty.png'
-import { LoadingTransition, TableSkeleton, CardSkeleton, StatSkeleton } from '@/components/ui/loading-system'
+import { format } from 'date-fns'
+import {
+    AlertTriangle,
+    Calendar,
+    Clock,
+    Droplets,
+    Plus,
+    Search,
+    Thermometer,
+    Tv,
+    User,
+    Wrench,
+    Zap
+} from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 const priorityColors: Record<string, string> = {
   low: 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-200 border-blue-200 dark:border-blue-800',
@@ -48,7 +46,7 @@ const statusColors: Record<string, string> = {
   cancelled: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 line-through'
 }
 
-const categoryIcons: Record<string, any> = {
+const categoryIcons = {
   plumbing: Droplets,
   electrical: Zap,
   hvac: Thermometer,
@@ -81,7 +79,7 @@ const TicketCard = ({
 }: {
   ticket: MaintenanceTicket
   showActions?: boolean
-  t: any
+  t
   isRTL: boolean
   canManageTickets: boolean
   onStatusUpdate: (id: string, status: string) => void

@@ -1,8 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
-import { useAuth } from '@/hooks/useAuth'
+import type { Profile } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import type { Profile, Property, Department } from '@/lib/types'
 
 // Types for organization data
 export interface OrgNode {
@@ -134,7 +133,7 @@ export function usePotentialManagers(propertyId?: string, excludeUserId?: string
             if (error) throw error
 
             // Filter to managers/supervisors only (not staff)
-            const filtered = (data || []).filter((p: any) => {
+            const filtered = (data || []).filter((p) => {
                 const role = p.user_roles?.[0]?.role
                 return role && role !== 'staff'
             })

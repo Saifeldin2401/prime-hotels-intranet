@@ -4,32 +4,28 @@
  * Displays sentiment, themes, insights, and suggested actions
  */
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Skeleton } from '@/components/ui/skeleton'
-import { Progress } from '@/components/ui/progress'
-import {
-    Sparkles,
-    TrendingUp,
-    TrendingDown,
-    Minus,
-    AlertTriangle,
-    Lightbulb,
-    Target,
-    RefreshCw,
-    Loader2,
-    ThumbsUp,
-    ThumbsDown,
-    ArrowRight
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Textarea } from '@/components/ui/textarea'
 import { useAIFeedbackAnalyzer } from '@/hooks/useAIFeedbackAnalyzer'
-import { useTranslation } from "react-i18next";
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    ArrowRight,
+    Lightbulb,
+    Loader2,
+    Minus,
+    RefreshCw,
+    Sparkles,
+    Target,
+    ThumbsDown,
+    ThumbsUp,
+    TrendingUp
+} from 'lucide-react'
+import { useState } from 'react'
 
 const sentimentConfig = {
     positive: {
@@ -67,7 +63,7 @@ const urgencyConfig = {
 
 interface AIFeedbackAnalyzerProps {
     defaultFeedback?: string
-    onAnalysisComplete?: (analysis: any) => void
+    onAnalysisComplete?: (analysis) => void
     className?: string
 }
 

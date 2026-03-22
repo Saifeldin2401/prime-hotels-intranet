@@ -1,11 +1,11 @@
-import { useCallback } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { useMessagingPermissions } from './useMessagingPermissions'
-import { crudToasts } from '@/lib/toastHelpers'
 import { createBulkNotifications, createNotification } from '@/lib/notificationService'
-import type { Message, Notification } from '@/lib/types'
+import { supabase } from '@/lib/supabase'
+import { crudToasts } from '@/lib/toastHelpers'
+import type { Message } from '@/lib/types'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useMessagingPermissions } from './useMessagingPermissions'
 
 interface CreateNotificationData {
   user_id: string
@@ -13,7 +13,7 @@ interface CreateNotificationData {
   message: string
   type: 'message_received' | 'system'
   link?: string
-  metadata?: Record<string, any>
+  metadata?
 }
 
 export function useCreateNotification() {
@@ -181,7 +181,7 @@ export function useUpdateNotificationSettings() {
   const { profile } = useAuth()
 
   return useMutation({
-    mutationFn: async (settings: any) => {
+    mutationFn: async (settings) => {
       if (!profile?.id) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase

@@ -2,21 +2,19 @@
  * AIToolsPage - Central hub for AI-powered HR tools
  */
 
-import React from 'react'
-import { useTranslation } from 'react-i18next'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-    Sparkles,
-    MessageSquareText,
-    FileText,
-    GraduationCap,
-    Brain
-} from 'lucide-react'
+import { AIDocumentSummarizer } from '@/components/documents/AIDocumentSummarizer'
 import { AIFeedbackAnalyzer } from '@/components/feedback/AIFeedbackAnalyzer'
 import { AIOnboardingPathGenerator } from '@/components/onboarding/AIOnboardingPathGenerator'
-import { AIDocumentSummarizer } from '@/components/documents/AIDocumentSummarizer'
+import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import {
+    Brain,
+    FileText,
+    GraduationCap,
+    MessageSquareText,
+    Sparkles
+} from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export default function AIToolsPage() {
     const { t } = useTranslation(['ai_tools', 'common'])

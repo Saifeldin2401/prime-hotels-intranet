@@ -1,13 +1,13 @@
-import { useState, useRef, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { X, Sparkles, User, Loader2, RefreshCcw, Zap, BrainCircuit, Settings } from 'lucide-react'
-import { cn } from '@/lib/utils'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import { BrainCircuit, Loader2, RefreshCcw, Settings, Sparkles, User, X, Zap } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 
 interface Message {
     id: string
@@ -94,7 +94,7 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                     timestamp: new Date()
                 }])
             }
-        } catch (error) {
+        } catch (_error) {
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'error',

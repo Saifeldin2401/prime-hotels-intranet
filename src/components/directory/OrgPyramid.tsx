@@ -1,39 +1,36 @@
-import { useState, useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
-import { OrgNode } from './OrgNode'
-import { EmployeeAssignmentDialog } from './EmployeeAssignmentDialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
-import {
-    Building2,
-    Hotel,
-    Users,
-    ChevronDown,
-    ChevronRight,
-    Expand,
-    Shrink,
-    MapPin,
-    Phone,
-    Crown,
-    Briefcase,
-    UserCog,
-    User,
-    Settings
-} from 'lucide-react'
-import { cn } from '@/lib/utils'
+import { Switch } from '@/components/ui/switch'
 import { useAuth } from '@/hooks/useAuth'
 import type {
-    OrgHierarchy,
-    OrgProperty,
     OrgDepartment,
     OrgEmployee,
-    OrgRoleGroup,
-    OrgCorporate
+    OrgHierarchy,
+    OrgProperty
 } from '@/hooks/useOrgHierarchy'
+import { cn } from '@/lib/utils'
+import { AnimatePresence, motion } from 'framer-motion'
+import {
+    Briefcase,
+    Building2,
+    ChevronDown,
+    ChevronRight,
+    Crown,
+    Expand,
+    Hotel,
+    MapPin,
+    Phone,
+    Settings,
+    Shrink,
+    User,
+    UserCog,
+    Users
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { EmployeeAssignmentDialog } from './EmployeeAssignmentDialog'
+import { OrgNode } from './OrgNode'
 
 interface OrgPyramidProps {
     hierarchy: OrgHierarchy
@@ -72,7 +69,6 @@ export function OrgPyramid({
 }: OrgPyramidProps) {
     const { t } = useTranslation('directory')
     const { primaryRole } = useAuth()
-    const navigate = useNavigate()
     const [expandedProperties, setExpandedProperties] = useState<Set<string>>(new Set())
     const [expandedDepartments, setExpandedDepartments] = useState<Set<string>>(new Set())
     const [expandedRoleGroups, setExpandedRoleGroups] = useState<Set<string>>(new Set())
@@ -617,7 +613,7 @@ function DepartmentCard({
     variant,
     isRTL
 }: DepartmentCardProps) {
-    const { t } = useTranslation('directory')
+    const { t: _t } = useTranslation('directory')
     const colors = variant === 'corporate'
         ? { bg: 'from-violet-500 to-purple-500', hover: 'from-violet-600 to-purple-600', light: 'from-violet-50' }
         : { bg: 'from-emerald-500 to-teal-500', hover: 'from-emerald-600 to-teal-600', light: 'from-emerald-50' }

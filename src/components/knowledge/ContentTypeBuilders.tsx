@@ -4,31 +4,29 @@
  * Specialized editor components for different knowledge article content types.
  */
 
-import { useState, useCallback, useMemo } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Checkbox } from '@/components/ui/checkbox'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import {
-    Video,
+    CheckSquare,
+    ChevronDown,
+    ChevronUp,
+    Eye,
+    EyeOff,
+    HelpCircle,
+    Play,
     Plus,
     Trash2,
-    GripVertical,
-    ChevronUp,
-    ChevronDown,
-    HelpCircle,
-    CheckSquare,
-    Play,
-    Eye,
-    EyeOff
+    Video
 } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
-import { useTranslation } from "react-i18next";
 
 // ============================================================================
 // VIDEO CONTENT BUILDER
@@ -54,7 +52,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
     // Extract YouTube video ID
     const getYouTubeId = (url: string): string | null => {
         if (!url) return null
-        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+        const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
         const match = url.match(regExp)
         return (match && match[2].length === 11) ? match[2] : null
     }

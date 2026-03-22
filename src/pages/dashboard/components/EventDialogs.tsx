@@ -1,18 +1,15 @@
-import { useState, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
-import { format, parseISO } from 'date-fns'
-import { Calendar, Clock, MapPin, Type, AlignLeft, Globe, Trash2, Edit, Save, X } from 'lucide-react'
+import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
     Dialog,
     DialogContent,
-    DialogHeader,
-    DialogTitle,
     DialogDescription,
     DialogFooter,
+    DialogHeader,
+    DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
 import {
     Select,
     SelectContent,
@@ -20,12 +17,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select'
-import { Badge } from '@/components/ui/badge'
-import { useCreateEvent, useDeleteEvent } from '@/hooks/useEvents'
-import type { Event } from '@/hooks/useEvents'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import type { Event } from '@/hooks/useEvents'
+import { useCreateEvent, useDeleteEvent } from '@/hooks/useEvents'
 import { cn } from '@/lib/utils'
-import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
+import { format, parseISO } from 'date-fns'
+import { AlignLeft, Calendar, Clock, Edit, MapPin, Trash2, Type } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export type CalendarEventType =
     | 'meeting'
@@ -64,11 +64,10 @@ export function EventDialogs({
     setIsAddModalOpen,
     selectedDate
 }: EventDialogsProps) {
-    const { t, i18n } = useTranslation(['dashboard', 'common'])
+    const { t, i18n: _i18n } = useTranslation(['dashboard', 'common'])
     const { toast } = useToast()
     const createEvent = useCreateEvent()
     const deleteEvent = useDeleteEvent()
-    const isRTL = i18n.dir() === 'rtl'
 
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
     const [formData, setFormData] = useState({

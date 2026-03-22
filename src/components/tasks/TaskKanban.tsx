@@ -1,11 +1,11 @@
-import { useMemo, useState, useCallback } from 'react'
-import type { Task, TaskStatus } from '@/lib/types'
-import { TaskCard } from './TaskCard'
-import { useTranslation } from 'react-i18next'
 import { useUpdateTask } from '@/hooks/useTasks'
+import type { Task, TaskStatus } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { ListTodo, Clock, Eye, CheckCircle2 } from 'lucide-react'
+import { CheckCircle2, Clock, Eye, ListTodo } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { TaskCard } from './TaskCard'
 
 const columnConfig: { id: TaskStatus; icon: typeof ListTodo; color: string; headerBg: string; dropBg: string }[] = [
     {

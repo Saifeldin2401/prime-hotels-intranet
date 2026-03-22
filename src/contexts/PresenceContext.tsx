@@ -1,7 +1,7 @@
 
-import React, { createContext, useContext, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import React, { createContext, useContext, useEffect, useState } from 'react'
 
 interface PresenceState {
     onlineUsers: {
@@ -45,10 +45,10 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
                 }
                 setOnlineUsers(users)
             })
-            .on('presence', { event: 'join' }, ({ key, newPresences }) => {
+            .on('presence', { event: 'join' }, () => {
                 // console.log('join', key, newPresences)
             })
-            .on('presence', { event: 'leave' }, ({ key, leftPresences }) => {
+            .on('presence', { event: 'leave' }, () => {
                 // console.log('leave', key, leftPresences)
             })
             .subscribe(async (status) => {

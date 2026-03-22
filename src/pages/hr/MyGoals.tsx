@@ -1,14 +1,6 @@
-import { useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { useGoals, useCreateGoal, useUpdateGoal } from '@/hooks/useGoals'
-import { Target, Plus, Calendar as CalendarIcon, CheckCircle2, Circle, Clock, BookOpen } from 'lucide-react'
-import { format } from 'date-fns'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { MotionWrapper } from '@/components/ui/MotionWrapper'
-import { Progress } from '@/components/ui/progress'
-import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
     Dialog,
     DialogContent,
@@ -20,10 +12,18 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { Progress } from '@/components/ui/progress'
+import { ScrollArea } from '@/components/ui/scroll-area'
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from '@/hooks/useAuth'
-import { useTranslation } from 'react-i18next'
+import { useCreateGoal, useGoals, useUpdateGoal } from '@/hooks/useGoals'
+import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
+import { BookOpen, Calendar as CalendarIcon, CheckCircle2, Circle, Clock, Plus, Target } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { toast } from 'sonner'
 
 export default function MyGoals() {
     const { t, i18n } = useTranslation('hr')
@@ -52,7 +52,7 @@ export default function MyGoals() {
             toast.success(t('career_goals.success_create'))
             setIsAddOpen(false)
             setNewGoal({ title: '', description: '', target_date: '', category: 'performance' })
-        } catch (error) {
+        } catch (_error) {
             toast.error(t('career_goals.error_create'))
         }
     }
@@ -65,7 +65,7 @@ export default function MyGoals() {
                 updates: { status: nextStatus as any }
             })
             toast.success(t('career_goals.success_update', { status: nextStatus.replace('_', ' ') }))
-        } catch (error) {
+        } catch (_error) {
             toast.error(t('career_goals.error_update'))
         }
     }

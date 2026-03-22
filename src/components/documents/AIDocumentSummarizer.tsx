@@ -1,16 +1,16 @@
 
-import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { Loader2, FileText, Sparkles, Copy, AlertCircle } from 'lucide-react'
-import { useTranslation } from 'react-i18next'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Textarea } from '@/components/ui/textarea'
 import { supabase } from '@/lib/supabase'
+import { AnimatePresence, motion } from 'framer-motion'
+import { AlertCircle, Copy, FileText, Loader2, Sparkles } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function AIDocumentSummarizer() {
-    const { t } = useTranslation(['ai_tools', 'common'])
+    const { t: _t } = useTranslation(['ai_tools', 'common'])
     const [inputText, setInputText] = useState('')
     const [summary, setSummary] = useState<string | null>(null)
     const [loading, setLoading] = useState(false)
