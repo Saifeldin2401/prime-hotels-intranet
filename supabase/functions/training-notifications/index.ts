@@ -56,7 +56,7 @@ Deno.serve(async (req) => {
         const tomorrow = new Date(now);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // 1. Fetch approaching deadlines (due within 24h)
+        // 1. Fetch all active module assignments to process reminders
         const { data: upcomingAssignments, error: upcomingError } = await supabase
             .from('learning_assignments')
             .select(`
@@ -67,10 +67,7 @@ Deno.serve(async (req) => {
               target_id
             `)
             .eq('content_type', 'module')
-            .or('is_deleted.is.null,is_deleted.eq.false')
-            .not('due_date', 'is', null)
-            .gte('due_date', now.toISOString())
-            .lte('due_date', tomorrow.toISOString());
+            .or('is_deleted.is.null,is_deleted.eq.false');
 
         if (upcomingError) throw upcomingError;
 
@@ -133,28 +130,41 @@ Deno.serve(async (req) => {
             for (const target of targets) {
                 if (completedUsers.has(target.id)) continue;
 
+                const isDueTomorrow = assignment.due_date && 
+                    new Date(assignment.due_date).getTime() >= now.getTime() && 
+                    new Date(assignment.due_date).getTime() <= tomorrow.getTime();
+
+                const sevenDaysAgo = new Date(now);
+                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+                const throttleDateStr = isDueTomorrow ? `${todayIso}T00:00:00Z` : sevenDaysAgo.toISOString();
+                const reminderType = isDueTomorrow ? 'due_24h' : 'weekly_reminder';
+
                 const { data: existingReminder } = await supabase
                     .from('scheduled_reminders')
                     .select('id')
                     .eq('entity_type', 'training_assignment')
                     .eq('entity_id', assignment.id)
                     .eq('user_id', target.id)
-                    .eq('reminder_type', 'due_24h')
-                    .gte('sent_at', `${todayIso}T00:00:00Z`)
+                    .eq('reminder_type', reminderType)
+                    .gte('sent_at', throttleDateStr)
                     .maybeSingle();
 
                 if (existingReminder) continue;
+                
+                const dueDateDisplay = assignment.due_date ? ` due on ${new Date(assignment.due_date).toLocaleDateString()}` : '';
 
                 notifications.push({
                     user_id: target.id,
                     type: 'training_deadline',
-                    title: 'Training Due Soon',
-                    message: `Your training "${moduleTitle}" is due on ${new Date(assignment.due_date).toLocaleDateString()}.`,
+                    title: isDueTomorrow ? 'Training Due Soon' : 'Training Reminder',
+                    message: isDueTomorrow 
+                        ? `Your training "${moduleTitle}" is due tomorrow.`
+                        : `Please remember to complete your pending training "${moduleTitle}"${dueDateDisplay}.`,
                     link: `/learning/my-learning`,
                     metadata: {
                         assignment_id: assignment.id,
                         content_id: assignment.content_id,
-                        reminder_type: 'due_24h'
+                        reminder_type: reminderType
                     }
                 });
 
@@ -162,7 +172,7 @@ Deno.serve(async (req) => {
                     entity_type: 'training_assignment',
                     entity_id: assignment.id,
                     user_id: target.id,
-                    reminder_type: 'due_24h',
+                    reminder_type: reminderType,
                     scheduled_for: now.toISOString(),
                     sent_at: now.toISOString(),
                     status: 'sent'
@@ -175,14 +185,14 @@ Deno.serve(async (req) => {
                         body: {
                             to: target.email,
                             templateKey: 'learning_deadline_reminder',
-                            title: 'Training Deadline Tomorrow',
+                            title: isDueTomorrow ? 'Training Deadline Tomorrow' : 'Pending Training Reminder',
                             userId: target.id,
                             variables: {
                                 recipient_name: target.full_name || 'Team Member',
                                 module_title: moduleTitle
                             },
                             actionUrl: '/learning/my-learning',
-                            businessDomain: 'operations',
+                            businessDomain: 'learning',
                             notificationType: 'training_deadline'
                         }
                     });
@@ -255,7 +265,7 @@ Deno.serve(async (req) => {
 
     } catch (error) {
         console.error("Critical error in training-notifications:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+        return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500
         });
