@@ -869,7 +869,7 @@ export function TrainingAssignmentsPanel({
 
       const { data, error } = await supabase
         .from('training_content_blocks')
-        .select('id, title, type, "order"')
+        .select('id, title, type, "order", content_data')
         .eq('training_module_id', selectedProgress.content_id)
         .eq('is_deleted', false)
         .order('order', { ascending: true })
@@ -908,18 +908,160 @@ export function TrainingAssignmentsPanel({
     return selectedModuleBlocks?.find((block) => block.id === selectedBlockId) || null
   }, [selectedBlockId, selectedModuleBlocks])
 
+  const selectedModuleQuizIds = useMemo(() => (
+    Array.from(new Set(
+      (selectedModuleBlocks || [])
+        .filter((block) => block.type === 'quiz')
+        .map((block) => {
+          const contentData = block.content_data as Record<string, unknown> | null | undefined
+          return typeof contentData?.quiz_id === 'string' && contentData.quiz_id.length > 0
+            ? contentData.quiz_id
+            : null
+        })
+        .filter((quizId): quizId is string => typeof quizId === 'string' && quizId.length > 0)
+    ))
+  ), [selectedModuleBlocks])
+
+  const { data: selectedQuizProgressRows = [] } = useQuery({
+    queryKey: ['training-progress-details-quiz-progress', selectedProgress?.user_id, selectedModuleQuizIds],
+    queryFn: async () => {
+      if (!selectedProgress?.user_id || selectedModuleQuizIds.length === 0) return []
+
+      const { data, error } = await supabase
+        .from('learning_progress')
+        .select('content_id, score_percentage, passed, completed_at, updated_at, metadata')
+        .eq('user_id', selectedProgress.user_id)
+        .eq('content_type', 'quiz')
+        .in('content_id', selectedModuleQuizIds)
+        .order('updated_at', { ascending: false })
+
+      if (error) throw error
+      return data || []
+    },
+    enabled: !!selectedProgress?.user_id && selectedModuleQuizIds.length > 0
+  })
+
+  const parseOptionalNumber = useCallback((value: unknown) => {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string' && value.trim().length > 0) {
+      const parsed = Number(value)
+      return Number.isFinite(parsed) ? parsed : null
+    }
+    return null
+  }, [])
+
+  const getQuizResultReviewItems = useCallback((value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return []
+
+    const candidate = value as Record<string, unknown>
+    if (Array.isArray(candidate.reviewItems)) return candidate.reviewItems
+    if (Array.isArray(candidate.review_items)) return candidate.review_items
+    return []
+  }, [])
+
   const selectedQuizResults = useMemo(() => {
     const rawResults = selectedProgressMetadata.quiz_results_by_id
-    if (!rawResults || typeof rawResults !== 'object' || Array.isArray(rawResults)) return []
+    const mergedResults = new Map<string, any>()
 
-    return Object.values(rawResults as Record<string, any>)
-      .filter((item) => item && typeof item === 'object')
-      .sort((a, b) => {
-        const aTime = new Date(a.completedAt || a.completed_at || 0).getTime()
-        const bTime = new Date(b.completedAt || b.completed_at || 0).getTime()
-        return bTime - aTime
+    if (rawResults && typeof rawResults === 'object' && !Array.isArray(rawResults)) {
+      Object.values(rawResults as Record<string, any>)
+        .filter((item) => item && typeof item === 'object')
+        .forEach((item) => {
+          const quizId = item.quizId || item.quiz_id
+          if (typeof quizId === 'string' && quizId.length > 0) {
+            mergedResults.set(quizId, {
+              ...item,
+              quizId,
+              score: parseOptionalNumber(item.score),
+              correctCount: parseOptionalNumber(item.correctCount ?? item.correct_count),
+              totalQuestions: parseOptionalNumber(item.totalQuestions ?? item.total_questions),
+              reviewItems: getQuizResultReviewItems(item)
+            })
+          }
+        })
+    }
+
+    selectedQuizProgressRows.forEach((row) => {
+      const metadata = (
+        row.metadata &&
+        typeof row.metadata === 'object' &&
+        !Array.isArray(row.metadata)
+      ) ? row.metadata as Record<string, any> : null
+      const latestQuizResult = (
+        metadata?.latest_quiz_result &&
+        typeof metadata.latest_quiz_result === 'object' &&
+        !Array.isArray(metadata.latest_quiz_result)
+      ) ? metadata.latest_quiz_result : null
+
+      if (!latestQuizResult) return
+
+      const quizId = latestQuizResult.quizId || latestQuizResult.quiz_id || row.content_id
+      if (typeof quizId !== 'string' || quizId.length === 0) return
+
+      const existingResult = mergedResults.get(quizId)
+      const latestReviewItems = getQuizResultReviewItems(latestQuizResult)
+      const existingReviewItems = getQuizResultReviewItems(existingResult)
+      const resolvedScore = (
+        parseOptionalNumber(existingResult?.score)
+        ?? parseOptionalNumber(latestQuizResult.score)
+        ?? parseOptionalNumber(row.score_percentage)
+      )
+      const resolvedCorrectCount = (
+        parseOptionalNumber(existingResult?.correctCount ?? existingResult?.correct_count)
+        ?? parseOptionalNumber(latestQuizResult.correctCount ?? latestQuizResult.correct_count)
+        ?? (latestReviewItems.length > 0
+          ? latestReviewItems.filter((item: any) => item?.correct === true).length
+          : null)
+      )
+      const resolvedTotalQuestions = (
+        parseOptionalNumber(existingResult?.totalQuestions ?? existingResult?.total_questions)
+        ?? parseOptionalNumber(latestQuizResult.totalQuestions ?? latestQuizResult.total_questions)
+        ?? (latestReviewItems.length > 0 ? latestReviewItems.length : null)
+      )
+
+      mergedResults.set(quizId, {
+        ...latestQuizResult,
+        ...existingResult,
+        quizId,
+        score: resolvedScore,
+        passed: typeof existingResult?.passed === 'boolean'
+          ? existingResult.passed
+          : typeof latestQuizResult.passed === 'boolean'
+            ? latestQuizResult.passed
+            : row.passed,
+        completedAt: existingResult?.completedAt
+          || existingResult?.completed_at
+          || latestQuizResult.completedAt
+          || latestQuizResult.completed_at
+          || row.completed_at
+          || row.updated_at,
+        correctCount: resolvedCorrectCount,
+        totalQuestions: resolvedTotalQuestions,
+        reviewItems: existingReviewItems.length > 0 ? existingReviewItems : latestReviewItems
       })
-  }, [selectedProgressMetadata])
+    })
+
+    return Array.from(mergedResults.values()).sort((a, b) => {
+      const aTime = new Date(a.completedAt || a.completed_at || 0).getTime()
+      const bTime = new Date(b.completedAt || b.completed_at || 0).getTime()
+      return bTime - aTime
+    })
+  }, [getQuizResultReviewItems, parseOptionalNumber, selectedProgressMetadata, selectedQuizProgressRows])
+
+  const selectedQuizResultsMessage = useMemo(() => {
+    if (selectedQuizResults.length > 0) {
+      return t('quizResultsDesc', 'Latest question-level review saved from the learner session.')
+    }
+
+    if (selectedModuleQuizIds.length > 0 && selectedProgress?.status === 'completed') {
+      return t(
+        'legacyQuizResultsUnavailable',
+        'This completion was recovered from legacy progress data. Detailed quiz answers were not recoverable for this attempt.'
+      )
+    }
+
+    return t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')
+  }, [selectedModuleQuizIds.length, selectedProgress?.status, selectedQuizResults.length, t])
 
   // Get unique properties from departments
   const normalizedTargetSearch = targetSearch.trim().toLowerCase()
@@ -1547,15 +1689,13 @@ export function TrainingAssignmentsPanel({
                     <CardHeader>
                       <CardTitle className="text-base">{t('quizResults', 'Quiz results')}</CardTitle>
                       <DialogDescription>
-                        {selectedQuizResults.length > 0
-                          ? t('quizResultsDesc', 'Latest question-level review saved from the learner session.')
-                          : t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')}
+                        {selectedQuizResultsMessage}
                       </DialogDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       {selectedQuizResults.length === 0 ? (
                         <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                          {t('noQuizResultsSaved', 'No detailed quiz review has been saved for this progress record yet.')}
+                          {selectedQuizResultsMessage}
                         </div>
                       ) : (
                         selectedQuizResults.map((quizResult) => (
