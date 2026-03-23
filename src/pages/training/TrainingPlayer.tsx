@@ -60,6 +60,8 @@ import { useTranslation } from 'react-i18next'
 type PersistedModuleProgress = {
     status?: string
     progress_percentage?: number
+    completed_at?: string | null
+    passed?: boolean | null
     last_block_index?: number
     last_block_id?: string | null
     metadata?: {
@@ -109,6 +111,15 @@ type MediaWatchState = {
     lastTime: number
     watchedSeconds: number
     markedComplete: boolean
+}
+
+type ModuleCompletionOverrides = {
+    completedBlocks?: Set<string>
+    quizScoresById?: Record<string, number>
+    quizResultsById?: Record<string, PersistedQuizResult>
+    quizScore?: number | null
+    lastBlockId?: string | null
+    lastBlockIndex?: number
 }
 
 const isValidUuid = (value?: string | null) =>
@@ -273,6 +284,7 @@ export default function TrainingPlayer() {
     const quizScoresByIdRef = useRef<Record<string, number>>({})
     const quizResultsByIdRef = useRef<Record<string, PersistedQuizResult>>({})
     const mediaWatchProgressRef = useRef<Record<string, MediaWatchState>>({})
+    const completionInFlightRef = useRef(false)
 
     const translateAI = useTranslationAI()
 
@@ -350,10 +362,12 @@ export default function TrainingPlayer() {
         }
 
         const restoredQuizScores = getValidQuizScoresMap(progress.metadata?.quiz_scores_by_id)
+        let restoredAggregatedScore: number | null = null
         if (Object.keys(restoredQuizScores).length > 0) {
             setQuizScoresById(restoredQuizScores)
             quizScoresByIdRef.current = restoredQuizScores
             const aggregatedScore = getAggregatedQuizScore(getModuleQuizIds(blocks), restoredQuizScores)
+            restoredAggregatedScore = aggregatedScore
             if (typeof aggregatedScore === 'number') {
                 setQuizScore(aggregatedScore)
             }
@@ -375,6 +389,15 @@ export default function TrainingPlayer() {
             setQuizResultsById({})
             quizResultsByIdRef.current = {}
         }
+
+        const wasCompleted = progress.status === 'completed' || Boolean(progress.completed_at)
+        setIsFinished(wasCompleted)
+        setCompletionPassed(wasCompleted && typeof progress.passed === 'boolean' ? progress.passed : null)
+        setCompletionScore(
+            wasCompleted
+                ? (typeof progress.score_percentage === 'number' ? progress.score_percentage : restoredAggregatedScore)
+                : null
+        )
     }, [resetModuleInteractionState, t])
 
     // Close sidebar on mobile by default and when entering small breakpoints.
@@ -572,12 +595,19 @@ export default function TrainingPlayer() {
         }
     }
 
-    const handleCompleteModule = async () => {
-        if (!user || !moduleData) return
+    const handleCompleteModule = async (overrides: ModuleCompletionOverrides = {}) => {
+        if (!user || !moduleData || isFinished || completionInFlightRef.current) return
+
+        completionInFlightRef.current = true
 
         try {
             const nowIso = new Date().toISOString()
             const timeSpent = totalTimeRef.current + Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
+            const resolvedCompletedBlocks = Array.from(overrides.completedBlocks ?? completedBlocks)
+            const resolvedQuizScores = overrides.quizScoresById ?? quizScoresByIdRef.current
+            const resolvedQuizResults = overrides.quizResultsById ?? quizResultsByIdRef.current
+            const resolvedLastBlockId = overrides.lastBlockId ?? activeBlock?.id ?? null
+            const resolvedLastBlockIndex = overrides.lastBlockIndex ?? activeBlockIndex
 
             let linkedTrainingProgressId: string | undefined
             let linkedTrainingQuizScore: number | undefined
@@ -601,9 +631,9 @@ export default function TrainingPlayer() {
             }
 
             const passingScore = moduleData.module.passing_score_percentage || 80
-            const latestQuizScores = quizScoresByIdRef.current
+            const latestQuizScores = resolvedQuizScores
             const aggregatedPartScore = getAggregatedQuizScore(moduleQuizIds, latestQuizScores)
-            const effectiveScore = aggregatedPartScore ?? quizScore ?? linkedTrainingQuizScore
+            const effectiveScore = aggregatedPartScore ?? overrides.quizScore ?? quizScore ?? linkedTrainingQuizScore
             const completedQuizParts = moduleQuizIds.filter((quizId) => typeof latestQuizScores[quizId] === 'number').length
 
             if (moduleQuizIds.length > 1 && completedQuizParts < moduleQuizIds.length) {
@@ -638,15 +668,15 @@ export default function TrainingPlayer() {
                 completed_at: nowIso,
                 last_accessed_at: nowIso,
                 last_activity_at: nowIso,
-                last_block_index: activeBlockIndex,
-                last_block_id: activeBlock?.id || null,
+                last_block_index: resolvedLastBlockIndex,
+                last_block_id: resolvedLastBlockId,
                 time_spent_seconds: timeSpent,
                 metadata: {
-                    completed_blocks: Array.from(completedBlocks),
+                    completed_blocks: resolvedCompletedBlocks,
                     completed_media_blocks: Array.from(completedMediaBlocks),
                     quiz_scores_by_id: latestQuizScores,
-                    quiz_results_by_id: quizResultsByIdRef.current,
-                    active_block_id: activeBlock?.id || null
+                    quiz_results_by_id: resolvedQuizResults,
+                    active_block_id: resolvedLastBlockId
                 }
             })
 
@@ -766,6 +796,8 @@ export default function TrainingPlayer() {
                 description: errorDetails.message,
                 variant: 'destructive'
             })
+        } finally {
+            completionInFlightRef.current = false
         }
     }
 
@@ -1004,7 +1036,7 @@ export default function TrainingPlayer() {
 
             const { data } = await supabase
                 .from('learning_progress')
-                .select('id, status, progress_percentage, score_percentage, last_block_index, last_block_id, time_spent_seconds, metadata, updated_at')
+                .select('id, status, progress_percentage, score_percentage, passed, completed_at, last_block_index, last_block_id, time_spent_seconds, metadata, updated_at')
                 .eq('user_id', user.id)
                 .eq('content_type', 'module')
                 .eq('content_id', moduleData.module.id)
@@ -1413,46 +1445,60 @@ export default function TrainingPlayer() {
                         <QuizComponentEnhanced
                             quizId={block.content_data?.quiz_id as string}
                             assignmentId={assignmentId}
-                            certificateEnabled={moduleData.module.certificate_enabled}
+                            certificateEnabled={false}
                             translationTarget={translationTarget}
                             showBilingual={showBilingual}
                             onComplete={(result) => {
                                 const currentQuizId = (block.content_data?.quiz_id as string) || ''
+                                const nextCompletedBlocks = new Set(completedBlocks)
+                                nextCompletedBlocks.add(block.id)
+                                let nextAggregatedScore = result.score
+                                let nextQuizScores = quizScoresByIdRef.current
+                                let nextQuizResults = quizResultsByIdRef.current
+
                                 if (currentQuizId) {
-                                    setQuizScoresById((prev) => {
-                                        const next = { ...prev, [currentQuizId]: result.score }
-                                        quizScoresByIdRef.current = next
-                                        const nextAggregated = getAggregatedQuizScore(moduleQuizIds, next)
-                                        setQuizScore(nextAggregated ?? result.score)
-                                        return next
-                                    })
-                                    setQuizResultsById((prev) => {
-                                        const next = {
-                                            ...prev,
-                                            [currentQuizId]: {
-                                                quizId: currentQuizId,
-                                                quizTitle: block.title || t('knowledgeCheck', 'Knowledge Check'),
-                                                score: result.score,
-                                                passed: result.passed,
-                                                correctCount: result.correctCount,
-                                                totalQuestions: result.totalQuestions,
-                                                completedAt: new Date().toISOString(),
-                                                reviewItems: result.reviewItems
-                                            }
+                                    nextQuizScores = { ...quizScoresByIdRef.current, [currentQuizId]: result.score }
+                                    quizScoresByIdRef.current = nextQuizScores
+                                    const calculatedAggregated = getAggregatedQuizScore(moduleQuizIds, nextQuizScores)
+                                    nextAggregatedScore = calculatedAggregated ?? result.score
+                                    setQuizScoresById(nextQuizScores)
+                                    setQuizScore(nextAggregatedScore)
+
+                                    nextQuizResults = {
+                                        ...quizResultsByIdRef.current,
+                                        [currentQuizId]: {
+                                            quizId: currentQuizId,
+                                            quizTitle: block.title || t('knowledgeCheck', 'Knowledge Check'),
+                                            score: result.score,
+                                            passed: result.passed,
+                                            correctCount: result.correctCount,
+                                            totalQuestions: result.totalQuestions,
+                                            completedAt: new Date().toISOString(),
+                                            reviewItems: result.reviewItems
                                         }
-                                        quizResultsByIdRef.current = next
-                                        return next
-                                    })
+                                    }
+                                    quizResultsByIdRef.current = nextQuizResults
+                                    setQuizResultsById(nextQuizResults)
                                 } else {
                                     setQuizScore(result.score)
                                 }
                                 if (result.passed) {
-                                    setCompletedBlocks((prev) => new Set(prev).add(block.id))
+                                    setCompletedBlocks(nextCompletedBlocks)
                                     void recordBlockCompletion(block.id)
                                     toast({
                                         title: t('moduleQuizPassed'),
                                         description: t('quizScoreProceed', { score: result.score })
                                     })
+                                    if (isLastBlock) {
+                                        void handleCompleteModule({
+                                            completedBlocks: nextCompletedBlocks,
+                                            quizScoresById: nextQuizScores,
+                                            quizResultsById: nextQuizResults,
+                                            quizScore: nextAggregatedScore,
+                                            lastBlockId: block.id,
+                                            lastBlockIndex: activeBlockIndex
+                                        })
+                                    }
                                 } else {
                                     toast({
                                         title: t('quizNotPassed'),

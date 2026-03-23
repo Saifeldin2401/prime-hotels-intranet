@@ -1256,6 +1256,7 @@ export const learningService = {
         const nextScore = typeof progress.score_percentage === 'number' ? progress.score_percentage : null
         const existingProgress = typeof existingRow?.progress_percentage === 'number' ? existingRow.progress_percentage : null
         const nextProgress = typeof progress.progress_percentage === 'number' ? progress.progress_percentage : null
+        const shouldPreserveCompletion = existingRow?.status === 'completed' && progress.status !== 'completed'
 
         const keepExistingScore =
             existingScore !== null &&
@@ -1280,16 +1281,24 @@ export const learningService = {
             existingProgress !== null && nextProgress !== null
                 ? Math.max(existingProgress, nextProgress)
                 : (nextProgress ?? existingProgress)
-        const resolvedProgressPercentage = progress.status === 'completed'
+        const resolvedStatus = shouldPreserveCompletion ? 'completed' : progress.status
+        const resolvedProgressPercentage = resolvedStatus === 'completed'
             ? 100
-            : bestProgressPercentage
+            : Math.min(bestProgressPercentage ?? 0, 99)
 
-        const bestScorePercentage = keepExistingScore ? existingRow?.score_percentage : progress.score_percentage
-        const bestPassed = keepExistingScore ? existingRow?.passed : progress.passed
-        const bestCompletedAt = keepExistingScore ? (existingRow?.completed_at ?? progress.completed_at) : (progress.completed_at ?? existingRow?.completed_at)
+        const bestScorePercentage = shouldPreserveCompletion
+            ? (existingRow?.score_percentage ?? progress.score_percentage)
+            : (keepExistingScore ? existingRow?.score_percentage : progress.score_percentage)
+        const bestPassed = shouldPreserveCompletion
+            ? (existingRow?.passed ?? progress.passed)
+            : (keepExistingScore ? existingRow?.passed : progress.passed)
+        const bestCompletedAt = shouldPreserveCompletion
+            ? (existingRow?.completed_at ?? progress.completed_at)
+            : (keepExistingScore ? (existingRow?.completed_at ?? progress.completed_at) : (progress.completed_at ?? existingRow?.completed_at))
 
         const progressData = {
             ...progress,
+            status: resolvedStatus,
             progress_percentage: resolvedProgressPercentage,
             score_percentage: bestScorePercentage,
             passed: bestPassed,
