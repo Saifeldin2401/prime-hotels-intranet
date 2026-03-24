@@ -1,11 +1,11 @@
 /**
- * Service Worker for Prime Hotels PWA (v8)
+ * Service Worker for Prime Hotels PWA
  * 
  * Provides offline caching for static assets and API responses.
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = 'v8';
+const VERSION = new URL(self.location.href).searchParams.get('v') || 'v8';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;

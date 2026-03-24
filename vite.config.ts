@@ -29,6 +29,7 @@ const securityHeaders = {
 
 const sentryRelease = process.env.VERCEL_GIT_COMMIT_SHA || process.env.VITE_RELEASE
 const sentryEnv = process.env.VERCEL_ENV || process.env.VITE_SENTRY_ENV || process.env.NODE_ENV
+const appBuildVersion = process.env.VERCEL_GIT_COMMIT_SHA || process.env.VITE_RELEASE || new Date().toISOString()
 const enableSentryUpload = Boolean(
   process.env.SENTRY_AUTH_TOKEN &&
   process.env.SENTRY_ORG &&
@@ -134,6 +135,7 @@ export default defineConfig({
     global: 'globalThis',
     'import.meta.env.VITE_RELEASE': JSON.stringify(sentryRelease || ''),
     'import.meta.env.VITE_SENTRY_ENV': JSON.stringify(sentryEnv || ''),
+    'import.meta.env.VITE_APP_BUILD_VERSION': JSON.stringify(appBuildVersion),
   },
   // Security: Environment variable validation
   envPrefix: 'VITE_',

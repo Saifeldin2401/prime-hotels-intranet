@@ -90,6 +90,10 @@ const SENTRY_RELEASE =
   import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_GIT_COMMIT ||
   undefined
+const SERVICE_WORKER_BUILD_VERSION =
+  import.meta.env.VITE_APP_BUILD_VERSION ||
+  SENTRY_RELEASE ||
+  'app'
 
 const sentryEnabled = isValidSentryDsn(SENTRY_DSN)
 const tracesSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.1 : 1.0))
@@ -164,7 +168,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     })
 
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`/sw.js?v=${encodeURIComponent(SERVICE_WORKER_BUILD_VERSION)}`)
       .then((registration) => {
         const activateWaitingWorker = () => {
           if (registration.waiting) {
