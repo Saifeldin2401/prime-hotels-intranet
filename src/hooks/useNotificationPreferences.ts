@@ -12,6 +12,14 @@ const isAuthError = (error: unknown) => {
     return status === 401 || code === '401' || code === 'PGRST301' || code === 'PGRST302'
 }
 
+const isPermissionError = (error: unknown) => {
+    if (!error || typeof error !== 'object') return false
+    const candidate = error as { code?: string | number; status?: number }
+    const code = String(candidate.code ?? '')
+    const status = Number(candidate.status ?? 0)
+    return status === 403 || code === '403' || code === '42501'
+}
+
 export function useNotificationPreferences() {
     const { user } = useAuth()
     const queryClient = useQueryClient()
@@ -60,7 +68,13 @@ export function useNotificationPreferences() {
                 .from('notification_preferences')
                 .upsert(defaultPreferences, { onConflict: 'user_id' })
 
-            if (createError) throw createError
+            if (createError) {
+                if (isPermissionError(createError) || isAuthError(createError)) {
+                    console.warn('Notification preferences bootstrap skipped:', createError)
+                    return defaultPreferences as NotificationPreference
+                }
+                throw createError
+            }
 
             const { data: createdRows, error: loadCreatedError } = await supabase
                 .from('notification_preferences')
@@ -68,7 +82,13 @@ export function useNotificationPreferences() {
                 .eq('user_id', user!.id)
                 .limit(1)
 
-            if (loadCreatedError) throw loadCreatedError
+            if (loadCreatedError) {
+                if (isPermissionError(loadCreatedError) || isAuthError(loadCreatedError)) {
+                    console.warn('Notification preferences reload skipped:', loadCreatedError)
+                    return defaultPreferences as NotificationPreference
+                }
+                throw loadCreatedError
+            }
             const createdPreferences = Array.isArray(createdRows) ? createdRows[0] : null
 
             if (!createdPreferences) {

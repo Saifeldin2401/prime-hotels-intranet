@@ -1,4 +1,5 @@
 import { DailyQuizWidget } from '@/components/questions/DailyQuizWidget'
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -24,7 +25,7 @@ export default function MyLearning() {
     const dateLocale = isRTL ? ar : enUS
 
     // Fetch data using new MyAssignments hook which queries learning_assignments
-    const { data: assignments, isLoading: assignmentsLoading } = useMyAssignments()
+    const { data: assignments, isLoading: assignmentsLoading, error: assignmentsError } = useMyAssignments()
     // We still fetch progress separately or rely on what's joined in assignments? 
     // learningService.getMyAssignments fetches joined progress.
 
@@ -81,6 +82,21 @@ export default function MyLearning() {
             <div className="flex items-center justify-center min-h-[400px]">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+        )
+    }
+
+    if (assignmentsError) {
+        return (
+            <Card className="border-destructive/30 bg-destructive/5">
+                <CardHeader>
+                    <CardTitle>{t('error', { defaultValue: 'Error' })}</CardTitle>
+                    <CardDescription>
+                        {t('loadAssignmentsFailed', {
+                            defaultValue: 'We could not load your training assignments right now. Please refresh and try again.'
+                        })}
+                    </CardDescription>
+                </CardHeader>
+            </Card>
         )
     }
 
@@ -302,7 +318,22 @@ export default function MyLearning() {
                 </div>
 
                 <div>
-                    <DailyQuizWidget className="mb-6" />
+                    <InlineErrorBoundary
+                        fallback={(
+                            <Card className="mb-6 border-amber-200 bg-amber-50/80">
+                                <CardHeader>
+                                    <CardTitle>{t('dailyChallenge', { defaultValue: 'Daily Challenge' })}</CardTitle>
+                                    <CardDescription>
+                                        {t('dailyChallengeTemporarilyUnavailable', {
+                                            defaultValue: 'The daily challenge is temporarily unavailable, but your training assignments are still available below.'
+                                        })}
+                                    </CardDescription>
+                                </CardHeader>
+                            </Card>
+                        )}
+                    >
+                        <DailyQuizWidget className="mb-6" />
+                    </InlineErrorBoundary>
 
                     <Card>
                         <CardHeader>
