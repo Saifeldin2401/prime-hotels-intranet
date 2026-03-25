@@ -10,6 +10,7 @@ import {
 import { auditLog } from '@/lib/auditLog'
 import { securityConfig } from '@/lib/security-config'
 import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/hooks/useAuth'
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -24,6 +25,7 @@ function isSupportedOtpType(value: string | null): value is SupportedOtpType {
 export default function ResetPassword() {
     const { t } = useTranslation('auth')
     const navigate = useNavigate()
+    const { signOut } = useAuth()
 
     const [password, setPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
@@ -291,7 +293,7 @@ export default function ResetPassword() {
             await auditLog.passwordChange().catch(() => undefined)
 
             window.setTimeout(() => {
-                supabase.auth.signOut().finally(() => {
+                signOut().finally(() => {
                     navigate('/login')
                 })
             }, 3000)
