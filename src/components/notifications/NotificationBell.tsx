@@ -5,10 +5,10 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover'
-import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePermissions } from '@/hooks/usePermissions'
 import { bellVariants } from '@/lib/motion'
+import { getNotificationLink } from '@/lib/notificationLinks'
 import type { Notification } from '@/lib/types'
 import { formatDistanceToNow } from 'date-fns'
 import { motion, useAnimation } from 'framer-motion'
@@ -18,7 +18,6 @@ import { useNavigate } from 'react-router-dom'
 
 export function NotificationBell() {
   const { notifications, unreadCount, markAsRead, markAllAsRead, isMarkingRead } = useNotifications()
-  const { roles: _roles } = useAuth()
   const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
@@ -33,44 +32,11 @@ export function NotificationBell() {
     prevUnreadCount.current = unreadCount
   }, [unreadCount, controls])
 
-  const getNotificationLink = (notification: Notification): string | null => {
-    if (notification.link) return notification.link
-    const type = notification.type
-    switch (type) {
-      case 'approval_required':
-      case 'request_approved':
-      case 'request_rejected':
-        return '/approvals'
-      case 'training_assigned':
-        return notification.entity_id ? `/learning/training/${notification.entity_id}` : '/learning/assignments'
-      case 'training_deadline':
-        return notification.entity_id ? `/learning/training/${notification.entity_id}` : '/learning/assignments'
-      case 'document_published':
-      case 'document_acknowledgment_required':
-        return '/knowledge'
-      case 'announcement_new':
-        return '/announcements'
-      case 'maintenance_assigned':
-      case 'maintenance_resolved':
-        return '/maintenance'
-      case 'referral_status_update': {
-        const isHR = hasPermission('hr.manage_referrals')
-        return isHR ? '/hr/referrals' : '/jobs/referrals'
-      }
-      case 'message_received':
-        return '/messaging'
-      case 'system':
-        return null
-      default:
-        return null
-    }
-  }
-
   const handleNotificationClick = (notification: Notification) => {
     if (!notification.is_read) {
       markAsRead.mutate(notification.id)
     }
-    const link = getNotificationLink(notification)
+    const link = getNotificationLink(notification, { hasPermission })
     if (link) {
       navigate(link)
       setOpen(false)

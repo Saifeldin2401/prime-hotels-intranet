@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useNotifications } from '@/hooks/useNotifications'
+import { usePermissions } from '@/hooks/usePermissions'
+import { getNotificationLink } from '@/lib/notificationLinks'
 import type { Notification } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow, isThisWeek, isToday, isYesterday } from 'date-fns'
@@ -31,6 +33,7 @@ type FilterType = 'all' | 'unread' | 'approval' | 'training' | 'maintenance' | '
 
 export default function Notifications() {
     const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications()
+    const { hasPermission } = usePermissions()
     const [filter, setFilter] = useState<FilterType>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const navigate = useNavigate()
@@ -97,7 +100,8 @@ export default function Notifications() {
         if (!notification.is_read) {
             markAsRead.mutate(notification.id)
         }
-        if (notification.link) navigate(notification.link)
+        const link = getNotificationLink(notification, { hasPermission })
+        if (link) navigate(link)
     }
 
     const filterButtons: { key: FilterType; label: string; icon: React.ReactNode }[] = [

@@ -50,6 +50,22 @@ function isISODate(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
 }
 
+function normalizeDateOfBirth(raw: string): string {
+  const value = raw.trim();
+  if (!value) return "";
+  if (isISODate(value)) return value;
+
+  const mmddyyyy = value.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (mmddyyyy) {
+    const month = mmddyyyy[1].padStart(2, "0");
+    const day = mmddyyyy[2].padStart(2, "0");
+    const year = mmddyyyy[3];
+    return `${year}-${month}-${day}`;
+  }
+
+  return value;
+}
+
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
 
@@ -87,7 +103,7 @@ Deno.serve(async (req: Request) => {
 
     const action = typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
     const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
-    const dateOfBirth = typeof body?.dateOfBirth === "string" ? body.dateOfBirth.trim() : "";
+    const dateOfBirth = typeof body?.dateOfBirth === "string" ? normalizeDateOfBirth(body.dateOfBirth) : "";
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
     const jobTitleInput = typeof body?.jobTitle === "string" ? body.jobTitle.trim() : "";
     const propertyId = typeof body?.propertyId === "string" ? body.propertyId.trim() : "";

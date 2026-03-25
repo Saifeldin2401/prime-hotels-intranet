@@ -36,7 +36,8 @@ export function useNotificationTriggers() {
             ...template,
             entityType,
             entityId,
-            metadata: { requester_id: user?.id, requester_name: currentUserName }
+            metadata: { requester_id: user?.id, requester_name: currentUserName },
+            link: '/approvals'
         })
     }, [user?.id, currentUserName])
 
@@ -53,7 +54,8 @@ export function useNotificationTriggers() {
             ...template,
             entityType,
             entityId,
-            metadata: { approver_id: user?.id, approver_name: currentUserName }
+            metadata: { approver_id: user?.id, approver_name: currentUserName },
+            link: '/approvals'
         })
     }, [user?.id, currentUserName])
 
@@ -71,7 +73,8 @@ export function useNotificationTriggers() {
             ...template,
             entityType,
             entityId,
-            metadata: { approver_id: user?.id, approver_name: currentUserName, reason }
+            metadata: { approver_id: user?.id, approver_name: currentUserName, reason },
+            link: '/approvals'
         })
     }, [user?.id, currentUserName])
 
@@ -129,6 +132,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
+            link: `/learning/training/${moduleId}`,
             metadata: { days_remaining: daysRemaining }
         })
     }, [])
@@ -147,6 +151,7 @@ export function useNotificationTriggers() {
             message: `${completedByName} completed "${moduleTitle}"${score !== undefined ? ` with ${score}%` : ''}.`,
             entityType: 'training_module',
             entityId: moduleId,
+            link: `/learning/training/${moduleId}`,
             metadata: { completed_by: user?.id, score }
         })
     }, [user?.id])
@@ -167,6 +172,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'task',
             entityId: taskId,
+            link: '/tasks',
             metadata: { assigner_id: user?.id, assigner_name: currentUserName }
         })
     }, [user?.id, currentUserName])
@@ -183,6 +189,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'task',
             entityId: taskId,
+            link: '/tasks',
             metadata: { completed_by: user?.id, completed_by_name: currentUserName }
         })
     }, [user?.id, currentUserName])
@@ -204,6 +211,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'maintenance_ticket',
             entityId: ticketId,
+            link: '/maintenance',
             metadata: { assigner_id: user?.id, location }
         })
     }, [user?.id])
@@ -220,6 +228,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'maintenance_ticket',
             entityId: ticketId,
+            link: '/maintenance',
             metadata: { resolved_by: user?.id, resolved_by_name: currentUserName }
         })
     }, [user?.id, currentUserName])
@@ -240,6 +249,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'message',
             entityId: messageId,
+            link: '/messaging',
             metadata: { sender_id: user?.id, sender_name: currentUserName }
         })
     }, [user?.id, currentUserName])
@@ -257,6 +267,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType,
             entityId,
+            link: '/messaging',
             metadata: { mentioner_id: user?.id, mentioner_name: currentUserName }
         })
     }, [user?.id, currentUserName])
@@ -278,6 +289,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'sop_document',
             entityId: sopId,
+            link: '/knowledge',
             metadata: { assigner_id: user?.id, deadline }
         })
     }, [user?.id])
@@ -294,6 +306,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'sop_document',
             entityId: sopId,
+            link: '/knowledge',
         })
     }, [])
 
@@ -314,6 +327,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'leave_request',
             entityId: requestId,
+            link: '/approvals',
             metadata: { approver_id: user?.id, start_date: startDate, end_date: endDate }
         })
     }, [user?.id, currentUserName])
@@ -332,6 +346,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'leave_request',
             entityId: requestId,
+            link: '/approvals',
             metadata: { approver_id: user?.id, start_date: startDate, end_date: endDate, reason }
         })
     }, [user?.id, currentUserName])
@@ -353,6 +368,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'announcement',
             entityId: announcementId,
+            link: '/announcements',
             metadata: { priority }
         })
     }, [])
@@ -373,6 +389,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'document',
             entityId: documentId,
+            link: '/knowledge',
         })
     }, [])
 
@@ -388,6 +405,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'document',
             entityId: documentId,
+            link: '/knowledge',
         })
     }, [])
 

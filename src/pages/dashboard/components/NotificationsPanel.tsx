@@ -2,13 +2,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useNotifications } from '@/hooks/useNotifications'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useApproveRequest, useMarkAllNotificationsRead, useNotificationAction } from '@/hooks/useQuickActions'
+import { getNotificationLink } from '@/lib/notificationLinks'
 import { cn } from '@/lib/utils'
 import { formatDistanceToNow } from 'date-fns'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Bell, Check, CheckCheck, Filter, Settings, ThumbsDown, ThumbsUp, Trash2, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from "react-i18next"
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 const notificationIcons = {
@@ -29,9 +32,11 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
   const { t, i18n } = useTranslation('dashboard')
   const isRTL = i18n.dir() === 'rtl'
   const { notifications, isLoading } = useNotifications()
+  const { hasPermission } = usePermissions()
   const notificationAction = useNotificationAction()
   const markAllRead = useMarkAllNotificationsRead()
   const approveRequest = useApproveRequest()
+  const navigate = useNavigate()
   const [processingIds, setProcessingIds] = useState<Set<string>>(new Set())
 
   const unreadCount = notifications?.filter(n => !n.is_read).length || 0
@@ -226,9 +231,19 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                           exit={{ opacity: 0, height: 0 }}
                           transition={{ delay: index * 0.05 }}
                           className={cn(
-                            "p-4 hover:bg-slate-50 transition-colors",
+                            "p-4 hover:bg-slate-50 transition-colors cursor-pointer",
                             !notification.is_read && "bg-blue-50/50"
                           )}
+                          onClick={() => {
+                            if (!notification.is_read) {
+                              handleMarkAsRead(notification.id)
+                            }
+                            const link = getNotificationLink(notification, { hasPermission })
+                            if (link) {
+                              navigate(link)
+                              onClose()
+                            }
+                          }}
                         >
                           <div className="flex items-start gap-3">
                             <div className={cn(
@@ -310,8 +325,20 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                               )}
 
                               {/* View Details Link */}
-                              {notification.link && actions.length === 0 && (
-                                <Button variant="link" size="sm" className="h-auto p-0 mt-1 text-xs">
+                              {getNotificationLink(notification, { hasPermission }) && actions.length === 0 && (
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="h-auto p-0 mt-1 text-xs"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    const link = getNotificationLink(notification, { hasPermission })
+                                    if (link) {
+                                      navigate(link)
+                                      onClose()
+                                    }
+                                  }}
+                                >
                                   {t('notifications.view_details') || 'View details'}
                                 </Button>
                               )}
