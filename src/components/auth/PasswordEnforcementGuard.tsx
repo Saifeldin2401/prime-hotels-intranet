@@ -15,6 +15,20 @@ export function PasswordEnforcementGuard({ children }: PasswordEnforcementGuardP
     useEffect(() => {
         if (loading || !user || !profile) return
 
+        const isOnCompleteInvitePage =
+            location.pathname === '/complete-invite' ||
+            location.pathname.startsWith('/complete-invite/')
+
+        const needsInviteProfileCompletion =
+            profile.force_password_reset === true &&
+            profile.password_initialized === false &&
+            (!profile.full_name || !profile.date_of_birth)
+
+        if (needsInviteProfileCompletion && !isOnCompleteInvitePage) {
+            navigate('/complete-invite', { replace: true })
+            return
+        }
+
         // If active temp password
         const isTempPassword = profile.is_temp_password
         const isOnChangePasswordPage = location.pathname === '/change-password'

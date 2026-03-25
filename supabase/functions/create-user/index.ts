@@ -196,11 +196,15 @@ type GenerateInviteResult = {
 async function generateInviteLink(
     email: string,
     authMetadata: Record<string, string>,
+    redirectTo: string,
 ): Promise<GenerateInviteResult> {
     const { data, error } = await adminClient.auth.admin.generateLink({
         type: "invite",
         email,
         data: authMetadata,
+        options: {
+            redirectTo,
+        },
     });
 
     return {
@@ -393,7 +397,7 @@ Deno.serve(async (req: Request) => {
         if (normalizedDob) authMetadata.date_of_birth = normalizedDob;
         try {
             if (provisioningMethod === "invite") {
-                const generatedInvite = await generateInviteLink(normalizedEmail, authMetadata);
+                const generatedInvite = await generateInviteLink(normalizedEmail, authMetadata, inviteRedirectTo);
                 authData = generatedInvite.userId ? { user: { id: generatedInvite.userId } } : null;
                 authError = generatedInvite.error;
                 inviteTokenHash = generatedInvite.tokenHash;

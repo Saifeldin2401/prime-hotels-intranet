@@ -77,13 +77,31 @@ export default function CompleteInvite() {
 
             try {
                 const queryParams = new URLSearchParams(window.location.search)
+                const code = queryParams.get('code')
                 const tokenHash = queryParams.get('token_hash')
                 const otpType = queryParams.get('type')
                 const hashParams = new URLSearchParams(window.location.hash.substring(1))
-                const accessToken = hashParams.get('access_token')
-                const refreshToken = hashParams.get('refresh_token')
+                const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
+                const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
 
-                if (tokenHash && isSupportedOtpType(otpType)) {
+                if (code) {
+                    const { data: exchangeData, error: exchangeError } = await withAuthLinkTimeout(
+                        supabase.auth.exchangeCodeForSession(code),
+                        'Invite code exchange'
+                    )
+
+                    if (!exchangeError && exchangeData.session) {
+                        validSession = true
+                        const currentUrl = new URL(window.location.href)
+                        currentUrl.searchParams.delete('code')
+                        const normalizedSearch = currentUrl.search ? currentUrl.search : ''
+                        window.history.replaceState({}, document.title, currentUrl.pathname + normalizedSearch)
+                    } else if (exchangeError) {
+                        rememberValidationError(exchangeError)
+                    }
+                }
+
+                if (!validSession && tokenHash && isSupportedOtpType(otpType)) {
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
 
                     const { data: verifiedData, error: verifyError } = await withAuthLinkTimeout(
