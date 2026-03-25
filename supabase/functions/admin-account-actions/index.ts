@@ -22,6 +22,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:5173",
 ] as const;
+const CANONICAL_APP_URL = "https://phg-connect.com";
 
 function getAllowedOrigins(): string[] {
     const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
@@ -170,6 +171,9 @@ function resolveAppUrl(req: Request): string {
         if (!candidate) continue;
         try {
             const parsed = new URL(candidate);
+            if (parsed.hostname === "www.phg-connect.com") {
+                parsed.hostname = "phg-connect.com";
+            }
             parsed.pathname = "";
             parsed.search = "";
             parsed.hash = "";
@@ -179,7 +183,7 @@ function resolveAppUrl(req: Request): string {
         }
     }
 
-    return "https://phg-connect.com";
+    return CANONICAL_APP_URL;
 }
 
 function jsonResponse(

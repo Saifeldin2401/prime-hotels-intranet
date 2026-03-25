@@ -1,8 +1,16 @@
 import aboutTeamImg from '@/assets/about-team.png';
+import {
+  AUTH_ROUTE_RECOVERY_MESSAGE,
+  buildCanonicalUrl,
+  clearPrimeHotelServiceWorkersAndCaches,
+  normalizePathname,
+  shouldProtectAuthEntry,
+} from '@/lib/runtimeRecovery';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import {
+    AlertCircle,
     ArrowRight,
     Award,
     BookOpen,
@@ -17,13 +25,14 @@ import {
     MapPin,
     MessageSquare,
     Phone,
+    RefreshCw,
     Shield,
     ShieldCheck,
     TrendingUp,
     Users,
     Zap
 } from 'lucide-react';
-import { useEffect, type ElementType } from 'react';
+import { useEffect, useState, type ElementType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 
@@ -32,12 +41,110 @@ export default function PublicHome() {
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('public');
   const isRTL = i18n.dir() === 'rtl';
+  const secureEntryRecoveryNeeded = shouldProtectAuthEntry(
+    window.location.pathname,
+    window.location.search,
+    window.location.hash,
+  )
+  const [secureEntryRecoveryFailed, setSecureEntryRecoveryFailed] = useState(false)
 
   useEffect(() => {
+    if (secureEntryRecoveryNeeded) {
+      let cancelled = false
+      const recoveryKey = '__public_home_auth_entry_recovery__'
+
+      const runRecovery = async () => {
+        try {
+          const alreadyAttempted = (() => {
+            try {
+              return sessionStorage.getItem(recoveryKey) === '1'
+            } catch {
+              return false
+            }
+          })()
+          if (alreadyAttempted) {
+            if (!cancelled) {
+              setSecureEntryRecoveryFailed(true)
+            }
+            return
+          }
+
+          try {
+            sessionStorage.setItem(recoveryKey, '1')
+          } catch {
+            // Ignore storage errors and continue recovery.
+          }
+
+          const clearedArtifacts = await clearPrimeHotelServiceWorkersAndCaches()
+          if (!cancelled && clearedArtifacts) {
+            window.location.replace(
+              buildCanonicalUrl(window.location.pathname, window.location.search, window.location.hash)
+            )
+            return
+          }
+        } catch {
+          // Fall through to the recovery UI below.
+        }
+
+        if (!cancelled) {
+          setSecureEntryRecoveryFailed(true)
+        }
+      }
+
+      void runRecovery()
+
+      return () => {
+        cancelled = true
+      }
+    }
+
     if (authUser) {
       navigate('/home', { replace: true });
     }
-  }, [authUser, navigate]);
+  }, [authUser, navigate, secureEntryRecoveryNeeded]);
+
+  if (secureEntryRecoveryNeeded) {
+    const currentPathname = normalizePathname(window.location.pathname)
+
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
+        <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-8 shadow-xl">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-700">
+            {secureEntryRecoveryFailed ? <AlertCircle className="h-7 w-7" /> : <RefreshCw className="h-7 w-7 animate-spin" />}
+          </div>
+
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-slate-900">
+              {secureEntryRecoveryFailed ? 'Secure link recovery needed' : 'Recovering secure link'}
+            </h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              {secureEntryRecoveryFailed
+                ? `PHG Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to load the password reset screen.`
+                : AUTH_ROUTE_RECOVERY_MESSAGE}
+            </p>
+          </div>
+
+          <div className="mt-6 grid gap-3">
+            <Button
+              className="w-full"
+              onClick={async () => {
+                await clearPrimeHotelServiceWorkersAndCaches()
+                window.location.replace(
+                  buildCanonicalUrl(window.location.pathname, window.location.search, window.location.hash)
+                )
+              }}
+            >
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Retry Secure Link
+            </Button>
+            <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>
+              Access Portal
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   if (authUser) {
     return null;
@@ -287,8 +394,8 @@ export default function PublicHome() {
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {howItWorks.map((step, index) => (
-              <div key={index} className="text-center">
+            {howItWorks.map((step) => (
+              <div key={step.step} className="text-center">
                 <div className="relative inline-flex items-center justify-center mb-4">
                   <div className="w-16 h-16 bg-hotel-gold/10 rounded-full flex items-center justify-center">
                     <step.icon className="w-7 h-7 text-hotel-gold" />
@@ -364,8 +471,8 @@ export default function PublicHome() {
             <div>
               <h4 className="font-bold mb-4">{t('footer.resources.title')}</h4>
               <ul className="space-y-2">
-                {footerResources.map((resource, idx) => (
-                  <li key={idx} className="flex items-center gap-2 text-white/60 text-sm">
+                {footerResources.map((resource) => (
+                  <li key={resource.label} className="flex items-center gap-2 text-white/60 text-sm">
                     <resource.icon className="w-4 h-4 text-hotel-gold" />
                     <span>{resource.label}</span>
                   </li>

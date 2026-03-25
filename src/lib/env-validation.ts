@@ -11,6 +11,7 @@ interface EnvConfig {
   VITE_ALLOWED_ORIGINS?: string
   VITE_APP_URL?: string
   VITE_CERTIFICATE_VERIFY_URL?: string
+  VITE_ENABLE_PWA?: string
 }
 
 const PLACEHOLDER_MARKERS = [
@@ -51,7 +52,8 @@ export function validateEnvironment(): EnvConfig {
     'VITE_MOCK_AUTH',
     'VITE_ALLOWED_ORIGINS',
     'VITE_APP_URL',
-    'VITE_CERTIFICATE_VERIFY_URL'
+    'VITE_CERTIFICATE_VERIFY_URL',
+    'VITE_ENABLE_PWA'
   ]
 
   for (const varName of OPTIONAL_VARS) {

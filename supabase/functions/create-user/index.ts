@@ -17,6 +17,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://localhost:3000",
 ] as const;
+const CANONICAL_APP_URL = "https://phg-connect.com";
 
 function getAllowedOrigins(): string[] {
     const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
@@ -163,6 +164,9 @@ function resolveAppUrl(req: Request, appUrlFromBody: unknown): string | null {
         if (!candidate) continue;
         try {
             const parsed = new URL(candidate);
+            if (parsed.hostname === "www.phg-connect.com") {
+                parsed.hostname = "phg-connect.com";
+            }
             parsed.pathname = "";
             parsed.search = "";
             parsed.hash = "";
@@ -382,7 +386,7 @@ Deno.serve(async (req: Request) => {
         let authError: any = null;
         let inviteTokenHash: string | null = null;
         let inviteActionLink: string | null = null;
-        const resolvedAppUrl = resolveAppUrl(req, appUrl) || "https://phg-connect.com";
+        const resolvedAppUrl = resolveAppUrl(req, appUrl) || CANONICAL_APP_URL;
         const inviteRedirectTo = `${resolvedAppUrl}/complete-invite`;
         const authMetadata: Record<string, string> = {};
         if (normalizedFullName) authMetadata.full_name = normalizedFullName;

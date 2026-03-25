@@ -26,7 +26,7 @@
   <meta property="og:image" content="/icons/icon-512x512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="robots" content="noindex, nofollow" /> <!-- Internal tool, prevent indexing -->
-  <link rel="canonical" href="https://connect.primehotels.com" />
+  <link rel="canonical" href="https://phg-connect.com" />
 
   <!-- Cache busting: force browsers to fetch latest after updates -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -49,7 +49,73 @@
 
 <body>
   <div id="root"></div>
-  <script type="module" src="/src/main.tsx"></script>
+  <script>
+    (() => {
+      const canonicalOrigin = 'https://phg-connect.com'
+      const authSensitivePrefixes = ['/login', '/forgot-password', '/reset-password', '/complete-invite']
+      const normalizePathname = (pathname) => {
+        if (!pathname) return '/'
+        const normalized = pathname.endsWith('/') && pathname.length > 1
+          ? pathname.replace(/\/+$/, '')
+          : pathname
+        return normalized || '/'
+      }
+
+      const currentPathname = normalizePathname(window.location.pathname)
+      const hasAuthParams =
+        /(?:^|[?&])(token_hash|code|access_token|refresh_token)=/i.test(window.location.search)
+        || /(?:^|[?&])type=(?:recovery|invite|signup|magiclink|email|email_change)\b/i.test(window.location.search)
+        || /(?:^|[#&])(access_token|refresh_token)=/i.test(window.location.hash)
+
+      const isSensitiveEntry = authSensitivePrefixes.some((prefix) =>
+        currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
+      ) || hasAuthParams
+
+      const shouldCanonicalizeHost = /^(www\.)?phg-connect\.com$/i.test(window.location.hostname)
+        && window.location.origin !== canonicalOrigin
+
+      window.__PHG_BOOTSTRAP_PROMISE__ = (async () => {
+        if (shouldCanonicalizeHost) {
+          window.location.replace(`${canonicalOrigin}${window.location.pathname}${window.location.search}${window.location.hash}`)
+          return
+        }
+
+        if (!isSensitiveEntry || !('navigator' in window)) {
+          return
+        }
+
+        let shouldReload = false
+
+        if ('serviceWorker' in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations()
+          if (registrations.length > 0) {
+            shouldReload = true
+          }
+          await Promise.allSettled(registrations.map((registration) => registration.unregister()))
+        }
+
+        if ('caches' in window) {
+          const cacheKeys = await caches.keys()
+          const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
+          if (staleCacheKeys.length > 0) {
+            shouldReload = true
+          }
+          await Promise.allSettled(staleCacheKeys.map((key) => caches.delete(key)))
+        }
+
+        if (shouldReload) {
+          window.location.replace(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+        }
+      })().catch(() => undefined)
+    })()
+  </script>
+  <script type="module">
+    const bootstrapPromise = window.__PHG_BOOTSTRAP_PROMISE__
+    if (bootstrapPromise && typeof bootstrapPromise.then === 'function') {
+      await bootstrapPromise
+    }
+    await import('/src/main.tsx')
+  </script>
 </body>
 
 </html>

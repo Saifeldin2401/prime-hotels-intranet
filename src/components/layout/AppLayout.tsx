@@ -1,16 +1,22 @@
 import { Header } from '@/components/layout/Header'
+import { PageTransition } from '@/components/layout/PageTransition'
+import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
 import { MobileLayout } from '@/layouts/MobileLayout'
 import { cn } from '@/lib/utils'
 import { AnimatePresence } from 'framer-motion'
-import { useCallback, useEffect, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SidebarNavigation } from './SidebarNavigation'
 
-import { CommandPalette } from '@/components/common/CommandPalette'
-import { KeyboardShortcutsModal } from '@/components/common/KeyboardShortcutsModal'
-import { WizardTrigger } from '@/components/common/WizardTrigger'
-import { PageTransition } from '@/components/layout/PageTransition'
-import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
+const CommandPalette = lazy(() =>
+  import('@/components/common/CommandPalette').then((module) => ({ default: module.CommandPalette }))
+)
+const KeyboardShortcutsModal = lazy(() =>
+  import('@/components/common/KeyboardShortcutsModal').then((module) => ({ default: module.KeyboardShortcutsModal }))
+)
+const WizardTrigger = lazy(() =>
+  import('@/components/common/WizardTrigger').then((module) => ({ default: module.WizardTrigger }))
+)
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -21,20 +27,22 @@ export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [deferredChromeReady, setDeferredChromeReady] = useState(false)
+  const [isMobileView, setIsMobileView] = useState(
+    () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false)
+  )
 
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), [])
-  const handleSidebarToggle = useCallback(() => setSidebarCollapsed(prev => !prev), [])
+  const handleSidebarToggle = useCallback(() => setSidebarCollapsed((prev) => !prev), [])
 
-  // Global Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
-      // Don't trigger if typing in an input or textarea
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
-        setCommandPaletteOpen(prev => !prev)
+        setCommandPaletteOpen((prev) => !prev)
       }
 
       if (e.key === '/') {
@@ -42,32 +50,28 @@ export function AppLayout({ children }: AppLayoutProps) {
         setCommandPaletteOpen(true)
       }
     }
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
-  // Check for mobile view (could be hook or prop)
-  // For now, we'll rely on the existing sidebarOpen/isMobile prop logic or add a new check
-  // But since this is a layout component, we might want to return MobileLayout directly if isMobile is true
-  // However, AppLayout is often used as a wrapper. Let's add the check.
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDeferredChromeReady(true)
+    }, 500)
 
-  // Check for mobile view using matchMedia for better performance
-  const [isMobileView, setIsMobileView] = useState(
-    () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false)
-  )
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 1023px)')
-
-    // Handler for changes
     const handleMediaChange = (e: MediaQueryListEvent) => {
       setIsMobileView(e.matches)
     }
 
-    // Add listener
     mediaQuery.addEventListener('change', handleMediaChange)
-
-    // Cleanup
     return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [])
 
@@ -80,13 +84,14 @@ export function AppLayout({ children }: AppLayoutProps) {
     )
   }
 
+  const shouldRenderDeferredChrome = deferredChromeReady || commandPaletteOpen
+
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col no-horizontal-scroll">
-      {/* Skip to content link for keyboard accessibility */}
       <a href="#main-content" className="skip-to-content">
-        {t_ext('skip_to_main_content', 'Skip to main content')}</a>
+        {t_ext('skip_to_main_content', 'Skip to main content')}
+      </a>
 
-      {/* Desktop Sidebar */}
       <SidebarNavigation
         isOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
@@ -94,12 +99,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         onToggleCollapse={handleSidebarToggle}
       />
 
-      <div className={cn(
-        "flex-1 flex flex-col transition-all duration-300 ease-in-out",
-        sidebarCollapsed ? "lg:ms-20" : "lg:ms-[280px]"
-      )}>
+      <div
+        className={cn(
+          'flex-1 flex flex-col transition-all duration-300 ease-in-out',
+          sidebarCollapsed ? 'lg:ms-20' : 'lg:ms-[280px]'
+        )}
+      >
         <HolidayCelebration />
-        {/* Desktop Header */}
         <div className="hidden lg:block">
           <Header
             sidebarCollapsed={sidebarCollapsed}
@@ -118,14 +124,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         </main>
       </div>
 
-      {/* New User Onboarding Wizard Trigger */}
-      <WizardTrigger />
-
-      {/* Global Command Palette (⌘K) */}
-      <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
-
-      {/* Global Keyboard Shortcuts (?) */}
-      <KeyboardShortcutsModal />
+      <Suspense fallback={null}>
+        {shouldRenderDeferredChrome && <WizardTrigger />}
+        {shouldRenderDeferredChrome && (
+          <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
+        )}
+        {shouldRenderDeferredChrome && <KeyboardShortcutsModal />}
+      </Suspense>
     </div>
   )
 }

@@ -56,6 +56,7 @@ import {
     X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { marked } from 'marked'
 
 type PersistedModuleProgress = {
     status?: string
@@ -180,8 +181,8 @@ function RichTextBlockContent({
     originalLabel,
     translatedLabel
 }: RichTextBlockContentProps) {
-    const originalMarkup = sanitizeHtml(originalHtml)
-    const translatedMarkup = translatedHtml ? sanitizeHtml(translatedHtml) : ''
+    const originalMarkup = sanitizeHtml(marked.parse(originalHtml || '', { async: false }) as string)
+    const translatedMarkup = translatedHtml ? sanitizeHtml(marked.parse(translatedHtml, { async: false }) as string) : ''
 
     if (!translationTarget || !translatedHtml) {
         return (

@@ -15,7 +15,7 @@ export const AuthRoutes = () => {
     return (
         <>
             <Route
-                path="/login"
+                path="/login/*"
                 element={
                     <PublicOnlyRoute>
                         <Login />
@@ -23,7 +23,7 @@ export const AuthRoutes = () => {
                 }
             />
             <Route
-                path="/forgot-password"
+                path="/forgot-password/*"
                 element={
                     <PublicOnlyRoute>
                         <ForgotPassword />
@@ -31,15 +31,15 @@ export const AuthRoutes = () => {
                 }
             />
             <Route
-                path="/reset-password"
+                path="/reset-password/*"
                 element={<ResetPassword />}
             />
             <Route
-                path="/complete-invite"
+                path="/complete-invite/*"
                 element={<CompleteInvite />}
             />
             <Route
-                path="/change-password"
+                path="/change-password/*"
                 element={
                     <ProtectedRoute>
                         <AppLayout>

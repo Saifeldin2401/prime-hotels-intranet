@@ -19,7 +19,7 @@ import {
     X,
     Zap
 } from 'lucide-react'
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 // Dynamic Registry and Permissions
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
 import { WIDGET_REGISTRY, getLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
@@ -100,6 +100,7 @@ export function IntegratedDashboard() {
   const { data: deptHeadStats, isLoading: deptHeadLoading } = useDepartmentHeadStats()
   const { isLoading: areaLoading } = useAreaManagerStats()
   const { isLoading: corpLoading } = useCorporateStats()
+  const [deferredWidgetsReady, setDeferredWidgetsReady] = useState(false)
 
   const statsLoading = baseLoading || managerLoading || hrLoading || deptHeadLoading || areaLoading || corpLoading
 
@@ -109,7 +110,17 @@ export function IntegratedDashboard() {
   const [showNotifications, setShowNotifications] = useState(false)
   const [showCustomize, setShowCustomize] = useState(false)
 
-  const shouldLoadFeed = true
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setDeferredWidgetsReady(true)
+    }, 250)
+
+    return () => {
+      window.clearTimeout(timer)
+    }
+  }, [])
+
+  const shouldLoadFeed = deferredWidgetsReady
   const {
     currentUser,
     feedItems,
@@ -343,6 +354,20 @@ export function IntegratedDashboard() {
 
   const renderWidget = (widgetId: DashboardWidgetId) => {
     if (widgetId === 'socialFeed') {
+      if (!deferredWidgetsReady) {
+        return (
+          <m.div key="socialFeed-loading" variants={itemVariants} className="relative">
+            <Card className="h-full border border-slate-200/60 shadow-xl overflow-hidden rounded-2xl flex flex-col bg-white">
+              <CardContent className="space-y-4 p-6">
+                <Skeleton className="h-10 w-64 rounded-xl" />
+                <Skeleton className="h-32 w-full rounded-2xl" />
+                <Skeleton className="h-32 w-full rounded-2xl" />
+              </CardContent>
+            </Card>
+          </m.div>
+        )
+      }
+
       return visibleWidgets.socialFeed !== false ? (
         <m.div key="socialFeed" variants={itemVariants} className="relative group">
           <Button

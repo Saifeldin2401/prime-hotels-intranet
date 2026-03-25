@@ -20,6 +20,13 @@ const STATIC_ASSETS = [
     '/vite.svg'
 ];
 
+const AUTH_SENSITIVE_PATHS = new Set([
+    '/login',
+    '/forgot-password',
+    '/reset-password',
+    '/complete-invite',
+]);
+
 // Install event - cache static assets
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -83,15 +90,14 @@ self.addEventListener('fetch', (event) => {
     // 1. Navigation Redirect Fix (App Shell Pattern)
     // Navigation requests (mode: navigate) can fail if the SW returns redirected/opaqueredirect responses.
     if (request.mode === 'navigate') {
+        const skipCachedShell = isAuthSensitivePath(url.pathname);
         event.respondWith(
             (async () => {
-                const cachedShell = await getCachedAppShell(request);
-
                 try {
                     const preloadResponse = await event.preloadResponse;
                     const safePreloadResponse = toSafeResponse(request, preloadResponse);
-                    if (safePreloadResponse?.ok) {
-                        await cacheAppShell(safePreloadResponse.clone());
+                    if (isSuccessfulHtmlResponse(safePreloadResponse)) {
+                        await cacheAppShell(safePreloadResponse.clone(), url.pathname);
                         return safePreloadResponse;
                     }
                 } catch (error) {
@@ -99,8 +105,6 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 try {
-                    // Prefer the original navigation request so the hosting rewrite layer can
-                    // resolve SPA deep links normally.
                     const response = await fetch(request, {
                         redirect: 'follow',
                         credentials: 'same-origin',
@@ -108,10 +112,8 @@ self.addEventListener('fetch', (event) => {
                     });
 
                     const safeNetworkResponse = toSafeResponse(request, response);
-                    if (safeNetworkResponse) {
-                        if (safeNetworkResponse.ok) {
-                            await cacheAppShell(safeNetworkResponse.clone());
-                        }
+                    if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                        await cacheAppShell(safeNetworkResponse.clone(), url.pathname);
                         return safeNetworkResponse;
                     }
                 } catch (error) {
@@ -119,8 +121,6 @@ self.addEventListener('fetch', (event) => {
                 }
 
                 try {
-                    // Fall back to the SPA shell directly if the deep-link request itself
-                    // fails, for example during a transient hosting edge issue.
                     const shellUrl = new URL('/index.html', self.location.origin).toString();
                     const response = await fetch(shellUrl, {
                         redirect: 'follow',
@@ -129,9 +129,9 @@ self.addEventListener('fetch', (event) => {
                     });
 
                     const safeNetworkResponse = toSafeResponse(request, response);
-                    if (safeNetworkResponse) {
-                        if (safeNetworkResponse.ok) {
-                            await cacheAppShell(safeNetworkResponse.clone());
+                    if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                        if (!skipCachedShell) {
+                            await cacheAppShell(safeNetworkResponse.clone(), '/index.html');
                         }
                         return safeNetworkResponse;
                     }
@@ -139,8 +139,11 @@ self.addEventListener('fetch', (event) => {
                     console.warn(`[SW ${VERSION}] Shell fetch failed:`, error);
                 }
 
-                if (cachedShell) {
-                    return cachedShell;
+                if (!skipCachedShell) {
+                    const cachedShell = await getCachedAppShell(request);
+                    if (cachedShell) {
+                        return cachedShell;
+                    }
                 }
 
                 return createOfflineShellResponse();
@@ -158,14 +161,20 @@ self.addEventListener('fetch', (event) => {
     // 3. Static assets - cache first, fallback to network
     if (
         request.destination === 'image' ||
-        request.destination === 'style' ||
-        request.destination === 'script' ||
         request.destination === 'font' ||
         url.pathname.endsWith('.png') ||
         url.pathname.endsWith('.svg') ||
         url.pathname.endsWith('.ico')
     ) {
         event.respondWith(cacheFirst(request));
+        return;
+    }
+
+    if (
+        request.destination === 'script' ||
+        request.destination === 'style' ||
+        request.destination === 'worker'
+    ) {
         return;
     }
 
@@ -204,11 +213,27 @@ function toSafeResponse(request, response) {
     }
 }
 
-async function cacheAppShell(response) {
-    if (!response || !response.ok) return;
+function normalizePathname(pathname) {
+    if (!pathname) return '/';
+    const normalized = pathname.endsWith('/') && pathname.length > 1
+        ? pathname.replace(/\/+$/, '')
+        : pathname;
+    return normalized || '/';
+}
 
+function isAuthSensitivePath(pathname) {
+    return AUTH_SENSITIVE_PATHS.has(normalizePathname(pathname));
+}
+
+function isSuccessfulHtmlResponse(response) {
+    if (!response || !response.ok) return false;
     const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('text/html')) return;
+    return contentType.includes('text/html');
+}
+
+async function cacheAppShell(response, sourcePath) {
+    if (!isSuccessfulHtmlResponse(response)) return;
+    if (isAuthSensitivePath(sourcePath)) return;
 
     const cache = await caches.open(STATIC_CACHE);
     await Promise.allSettled([
@@ -218,10 +243,11 @@ async function cacheAppShell(response) {
 }
 
 async function getCachedAppShell(request) {
+    const cache = await caches.open(STATIC_CACHE);
     for (const path of ['/index.html', '/']) {
-        const cached = await caches.match(path);
+        const cached = await cache.match(path);
         const safeCached = toSafeResponse(request, cached);
-        if (safeCached) {
+        if (isSuccessfulHtmlResponse(safeCached)) {
             return safeCached;
         }
     }
@@ -292,7 +318,7 @@ async function cacheFirst(request) {
             return new Response('Asset not available offline', { status: 503 });
         }
 
-        if (safeResponse.status === 200) {
+        if (shouldCacheResponse(request, safeResponse)) {
             const cache = await caches.open(STATIC_CACHE);
             cache.put(request, safeResponse.clone());
         }
@@ -311,7 +337,7 @@ async function networkFirst(request) {
             throw new Error('Unsafe redirect response');
         }
 
-        if (safeResponse.status === 200) {
+        if (shouldCacheResponse(request, safeResponse)) {
             const cache = await caches.open(DYNAMIC_CACHE);
             cache.put(request, safeResponse.clone());
         }
@@ -322,6 +348,16 @@ async function networkFirst(request) {
         if (safeCached) return safeCached;
         return new Response('Network error', { status: 503 });
     }
+}
+
+function shouldCacheResponse(request, response) {
+    if (!response || response.status !== 200) return false;
+    if (request.mode === 'navigate') return false;
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('text/html')) return false;
+
+    return true;
 }
 
 // Handle push notifications

@@ -5,12 +5,47 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const CANONICAL_APP_URL = "https://phg-connect.com";
 
-function jsonResponse(payload: Record<string, unknown>, status: number, corsHeaders: Record<string, string>): Response {
+type ResolvedAppUrl = {
+  appUrl: string;
+  source: string;
+  usedFallback: boolean;
+};
+
+function buildResponseHeaders(
+  corsHeaders: Record<string, string>,
+  requestId: string,
+  extraHeaders: Record<string, string> = {},
+): Record<string, string> {
+  return {
+    ...corsHeaders,
+    ...extraHeaders,
+    "Content-Type": "application/json",
+    "X-Request-Id": requestId,
+  };
+}
+
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status: number,
+  corsHeaders: Record<string, string>,
+  requestId: string,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: buildResponseHeaders(corsHeaders, requestId, extraHeaders),
   });
+}
+
+function logEvent(
+  level: "info" | "warn" | "error",
+  message: string,
+  context: Record<string, unknown>,
+): void {
+  const logger = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+  logger(`[public-forgot-password] ${message}`, context);
 }
 
 function normalizeEmail(email: unknown): string {
@@ -34,28 +69,39 @@ function resolveClientIp(req: Request): string {
   return "unknown";
 }
 
-function resolveAppUrl(req: Request): string {
+function resolveAppUrl(req: Request): ResolvedAppUrl {
   const candidates = [
-    (Deno.env.get("APP_URL") || "").trim(),
-    (Deno.env.get("APP_BASE_URL") || "").trim(),
-    (Deno.env.get("SITE_URL") || "").trim(),
-    (req.headers.get("origin") || "").trim(),
+    { value: (Deno.env.get("APP_URL") || "").trim(), source: "APP_URL" },
+    { value: (Deno.env.get("APP_BASE_URL") || "").trim(), source: "APP_BASE_URL" },
+    { value: (Deno.env.get("SITE_URL") || "").trim(), source: "SITE_URL" },
+    { value: (req.headers.get("origin") || "").trim(), source: "origin" },
   ];
 
   for (const candidate of candidates) {
-    if (!candidate) continue;
+    if (!candidate.value) continue;
     try {
-      const parsed = new URL(candidate);
+      const parsed = new URL(candidate.value);
+      if (parsed.hostname === "www.phg-connect.com") {
+        parsed.hostname = "phg-connect.com";
+      }
       parsed.pathname = "";
       parsed.search = "";
       parsed.hash = "";
-      return parsed.toString().replace(/\/$/, "");
+      return {
+        appUrl: parsed.toString().replace(/\/$/, ""),
+        source: candidate.source,
+        usedFallback: false,
+      };
     } catch {
-      // ignore
+      // Ignore invalid candidates.
     }
   }
 
-  return "https://phg-connect.com";
+  return {
+    appUrl: CANONICAL_APP_URL,
+    source: "default_fallback",
+    usedFallback: true,
+  };
 }
 
 async function enforceRateLimit(
@@ -93,29 +139,40 @@ async function enforceRateLimit(
 }
 
 Deno.serve(async (req: Request) => {
+  const requestId = crypto.randomUUID();
   const corsHeaders = buildCorsHeaders(req);
 
   if (req.method === "OPTIONS") {
-    return new Response(null, { status: 204, headers: corsHeaders });
+    return new Response(null, {
+      status: 204,
+      headers: buildResponseHeaders(corsHeaders, requestId),
+    });
   }
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders);
+    return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders, requestId);
   }
 
   try {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Missing environment configuration" }, 500, corsHeaders);
+      logEvent("error", "missing_env_configuration", {
+        requestId,
+        hasSupabaseUrl: Boolean(SUPABASE_URL),
+        hasAnonKey: Boolean(SUPABASE_ANON_KEY),
+        hasServiceRoleKey: Boolean(SUPABASE_SERVICE_ROLE_KEY),
+      });
+      return jsonResponse({ error: "Missing environment configuration" }, 500, corsHeaders, requestId);
     }
 
     const body = (await req.json().catch(() => ({}))) as { email?: unknown };
     const email = normalizeEmail(body?.email);
 
     if (!email || !email.includes("@")) {
-      return jsonResponse({ success: true }, 200, corsHeaders);
+      return jsonResponse({ success: true }, 200, corsHeaders, requestId);
     }
 
     const ip = resolveClientIp(req);
+    const emailDomain = email.split("@")[1] || "unknown";
 
     const adminClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -123,9 +180,17 @@ Deno.serve(async (req: Request) => {
 
     const rate = await enforceRateLimit(adminClient, email, ip);
     if (!rate.allowed) {
-      const headers = { ...corsHeaders };
-      if (rate.retryAfterSeconds) headers["Retry-After"] = rate.retryAfterSeconds.toString();
-      return jsonResponse({ error: "Too many requests" }, 429, headers);
+      const extraHeaders: Record<string, string> = {};
+      if (rate.retryAfterSeconds) {
+        extraHeaders["Retry-After"] = rate.retryAfterSeconds.toString();
+      }
+      logEvent("warn", "rate_limit_blocked", {
+        requestId,
+        ip,
+        emailDomain,
+        retryAfterSeconds: rate.retryAfterSeconds ?? null,
+      });
+      return jsonResponse({ error: "Too many requests" }, 429, corsHeaders, requestId, extraHeaders);
     }
 
     await adminClient
@@ -134,8 +199,17 @@ Deno.serve(async (req: Request) => {
       .then(() => undefined)
       .catch(() => undefined);
 
-    const appUrl = resolveAppUrl(req);
-    const resetRedirectTo = `${appUrl}/reset-password`;
+    const resolvedAppUrl = resolveAppUrl(req);
+    const resetRedirectTo = `${resolvedAppUrl.appUrl}/reset-password`;
+
+    if (resolvedAppUrl.usedFallback) {
+      logEvent("warn", "app_url_fallback_used", {
+        requestId,
+        appUrl: resolvedAppUrl.appUrl,
+        source: resolvedAppUrl.source,
+        resetRedirectTo,
+      });
+    }
 
     const { data: profile } = await adminClient
       .from("profiles")
@@ -154,41 +228,72 @@ Deno.serve(async (req: Request) => {
       },
     });
 
-    if (!linkError) {
+    if (linkError) {
+      logEvent("error", "generate_link_failed", {
+        requestId,
+        emailDomain,
+        redirectTo: resetRedirectTo,
+        appUrl: resolvedAppUrl.appUrl,
+        source: resolvedAppUrl.source,
+        error: linkError.message,
+      });
+    } else {
       const hashedToken = linkData?.properties?.hashed_token || null;
+      if (!hashedToken) {
+        logEvent("warn", "hashed_token_missing", {
+          requestId,
+          emailDomain,
+          redirectTo: resetRedirectTo,
+        });
+      }
 
-      // ALWAYS use direct token_hash link. Do NOT use action_link because
-      // it routes through Supabase's /auth/v1/verify which does a 303 redirect,
-      // and that redirect fails with "access_denied" if the redirect URL is not
-      // perfectly whitelisted in the Supabase dashboard. Direct links go straight
-      // to our app where ResetPassword.tsx verifies the token client-side.
       const resetLink = hashedToken
         ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
         : resetRedirectTo;
 
-      await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-          "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        },
-        body: JSON.stringify({
-          to: email,
-          templateKey: "system_generic_alert",
-          title: "Password reset",
-          message: "Use the link below to reset your PHG Connect password.",
-          actionUrl: resetLink,
-          actionLabel: "Reset Password",
-          businessDomain: "user_management",
-          notificationType: "system",
-          userId: profileUserId || undefined,
-          variables: {
-            recipient_name: recipientName,
-            reset_url: resetLink,
+      try {
+        const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
           },
-        }),
-      }).then(() => undefined).catch(() => undefined);
+          body: JSON.stringify({
+            to: email,
+            templateKey: "system_generic_alert",
+            title: "Password reset",
+            message: "Use the link below to reset your PHG Connect password.",
+            actionUrl: resetLink,
+            actionLabel: "Reset Password",
+            businessDomain: "user_management",
+            notificationType: "system",
+            userId: profileUserId || undefined,
+            variables: {
+              recipient_name: recipientName,
+              reset_url: resetLink,
+            },
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          const responseText = await emailResponse.text().catch(() => "");
+          logEvent("warn", "email_send_failed", {
+            requestId,
+            emailDomain,
+            status: emailResponse.status,
+            responseText,
+            resetRedirectTo,
+          });
+        }
+      } catch (emailError) {
+        logEvent("warn", "email_send_failed", {
+          requestId,
+          emailDomain,
+          resetRedirectTo,
+          error: emailError instanceof Error ? emailError.message : String(emailError),
+        });
+      }
     }
 
     if (profileUserId) {
@@ -201,6 +306,7 @@ Deno.serve(async (req: Request) => {
           entity_id: profileUserId,
           details: {
             source: "public-forgot-password",
+            request_id: requestId,
           },
           ip_address: ip,
         })
@@ -208,9 +314,12 @@ Deno.serve(async (req: Request) => {
         .catch(() => undefined);
     }
 
-    return jsonResponse({ success: true }, 200, corsHeaders);
+    return jsonResponse({ success: true }, 200, corsHeaders, requestId);
   } catch (err) {
-    console.error("public-forgot-password unexpected error:", err);
-    return jsonResponse({ success: true }, 200, corsHeaders);
+    logEvent("error", "unexpected_error", {
+      requestId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return jsonResponse({ success: true }, 200, corsHeaders, requestId);
   }
 });

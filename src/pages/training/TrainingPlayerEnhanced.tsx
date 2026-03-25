@@ -65,6 +65,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { marked } from 'marked'
 
 // --- Types ---
 
@@ -815,7 +816,7 @@ export default function TrainingPlayerEnhanced() {
                                                     <div
                                                         dangerouslySetInnerHTML={{
                                                             __html: sanitizeHtml(
-                                                                getTranslatedBlockContent(activeBlock) || activeBlock.content
+                                                                marked.parse(getTranslatedBlockContent(activeBlock) || activeBlock.content || '', { async: false }) as string
                                                             )
                                                         }}
                                                     />

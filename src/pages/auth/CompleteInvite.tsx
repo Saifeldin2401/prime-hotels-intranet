@@ -4,6 +4,11 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { markWizardPending } from '@/config/newUserTour'
 import { useAuth } from '@/hooks/useAuth'
+import {
+    AUTH_SERVICE_UNAVAILABLE_MESSAGE,
+    classifyAuthLinkError,
+    withAuthLinkTimeout,
+} from '@/lib/authLinkRecovery'
 import { securityConfig } from '@/lib/security-config'
 import { supabase } from '@/lib/supabase'
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck, UserRound } from 'lucide-react'
@@ -52,14 +57,25 @@ export default function CompleteInvite() {
     const [success, setSuccess] = useState(false)
     const [validatingToken, setValidatingToken] = useState(true)
     const [tokenValid, setTokenValid] = useState(false)
+    const [serviceUnavailableMessage, setServiceUnavailableMessage] = useState<string | null>(null)
+    const [validationNonce, setValidationNonce] = useState(0)
     const [jobTitleOptions, setJobTitleOptions] = useState<string[]>([])
     const [propertyOptions, setPropertyOptions] = useState<PropertyOption[]>([])
     const [loadingFormOptions, setLoadingFormOptions] = useState(false)
 
     useEffect(() => {
         const initializeInviteSession = async () => {
+            let validSession = false
+            let temporaryFailureMessage: string | null = null
+
+            const rememberValidationError = (candidateError: unknown) => {
+                const classified = classifyAuthLinkError(candidateError)
+                if (classified.kind !== 'invalid_link') {
+                    temporaryFailureMessage = AUTH_SERVICE_UNAVAILABLE_MESSAGE
+                }
+            }
+
             try {
-                let validSession = false
                 const queryParams = new URLSearchParams(window.location.search)
                 const tokenHash = queryParams.get('token_hash')
                 const otpType = queryParams.get('type')
@@ -68,49 +84,67 @@ export default function CompleteInvite() {
                 const refreshToken = hashParams.get('refresh_token')
 
                 if (tokenHash && isSupportedOtpType(otpType)) {
-                    // Explicit invite/recovery tokens must override any existing browser session.
                     await supabase.auth.signOut({ scope: 'local' }).catch(() => undefined)
-                    const { data: verifiedData, error: verifyError } = await supabase.auth.verifyOtp({
-                        token_hash: tokenHash,
-                        type: otpType,
-                    })
+
+                    const { data: verifiedData, error: verifyError } = await withAuthLinkTimeout(
+                        supabase.auth.verifyOtp({
+                            token_hash: tokenHash,
+                            type: otpType,
+                        }),
+                        'Invite token verification'
+                    )
 
                     if (!verifyError && verifiedData.session) {
                         validSession = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                    } else if (verifyError) {
+                        rememberValidationError(verifyError)
                     }
                 }
 
                 if (!validSession && accessToken && refreshToken) {
-                    const { data: setSessionData, error: setSessionError } = await supabase.auth.setSession({
-                        access_token: accessToken,
-                        refresh_token: refreshToken,
-                    })
+                    const { data: setSessionData, error: setSessionError } = await withAuthLinkTimeout(
+                        supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken,
+                        }),
+                        'Invite session restore'
+                    )
 
                     if (!setSessionError && setSessionData.session) {
                         validSession = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                    } else if (setSessionError) {
+                        rememberValidationError(setSessionError)
                     }
                 }
 
                 if (!validSession) {
-                    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+                    const { data: sessionData, error: sessionError } = await withAuthLinkTimeout(
+                        supabase.auth.getSession(),
+                        'Invite session lookup'
+                    )
+
                     if (!sessionError && sessionData.session) {
                         validSession = true
+                    } else if (sessionError) {
+                        rememberValidationError(sessionError)
                     }
                 }
-
-                setTokenValid(validSession)
-            } catch (err) {
-                console.error('Invite session validation failed:', err)
-                setTokenValid(false)
+            } catch (candidateError) {
+                console.error('Invite session validation failed:', candidateError)
+                rememberValidationError(candidateError)
             } finally {
+                setTokenValid(validSession)
+                setServiceUnavailableMessage(validSession ? null : temporaryFailureMessage)
                 setValidatingToken(false)
             }
         }
 
-        initializeInviteSession()
-    }, [])
+        setValidatingToken(true)
+        setServiceUnavailableMessage(null)
+        void initializeInviteSession()
+    }, [validationNonce])
 
     useEffect(() => {
         if (!tokenValid) return
@@ -120,11 +154,11 @@ export default function CompleteInvite() {
         const loadFormOptions = async () => {
             setLoadingFormOptions(true)
             try {
-                const { data: optionsData, error: optionsError } = await supabase.functions.invoke(
-                    'complete-invite-profile',
-                    {
+                const { data: optionsData, error: optionsError } = await withAuthLinkTimeout(
+                    supabase.functions.invoke('complete-invite-profile', {
                         body: { action: 'options' },
-                    }
+                    }),
+                    'Invite options lookup'
                 )
 
                 if (optionsError) {
@@ -132,6 +166,7 @@ export default function CompleteInvite() {
                     const response = maybeContext?.context instanceof Response
                         ? maybeContext.context
                         : maybeContext?.context?.response
+
                     if (response) {
                         const text = await response.text().catch(() => '')
                         let parsedError: string | undefined
@@ -145,6 +180,7 @@ export default function CompleteInvite() {
                         }
                         throw new Error(parsedError || optionsError.message || 'Failed to load invite setup options')
                     }
+
                     throw new Error(optionsError.message || 'Failed to load invite setup options')
                 }
 
@@ -181,10 +217,15 @@ export default function CompleteInvite() {
                 if (availableProperties.length === 0) {
                     setError('No properties are available for this invite. Please contact your administrator.')
                 }
-            } catch (err) {
-                console.error('Failed to load invite setup options:', err)
+            } catch (candidateError) {
+                console.error('Failed to load invite setup options:', candidateError)
                 if (!cancelled) {
-                    setError('Failed to load job titles and properties. Please refresh the page.')
+                    const classified = classifyAuthLinkError(candidateError)
+                    setError(
+                        classified.kind === 'invalid_link'
+                            ? 'Failed to load job titles and properties. Please refresh the page.'
+                            : AUTH_SERVICE_UNAVAILABLE_MESSAGE
+                    )
                 }
             } finally {
                 if (!cancelled) {
@@ -193,7 +234,7 @@ export default function CompleteInvite() {
             }
         }
 
-        loadFormOptions()
+        void loadFormOptions()
 
         return () => {
             cancelled = true
@@ -265,14 +306,17 @@ export default function CompleteInvite() {
         setLoading(true)
 
         try {
-            const { data: userData, error: userError } = await supabase.auth.getUser()
+            const { data: userData, error: userError } = await withAuthLinkTimeout(
+                supabase.auth.getUser(),
+                'Invite session user lookup'
+            )
+
             if (userError || !userData.user) {
-                throw new Error('Your invite link session is invalid or expired. Please request a new invite.')
+                throw userError || new Error('Your invite link session is invalid or expired. Please request a new invite.')
             }
 
-            const { data: completeInviteData, error: completeInviteError } = await supabase.functions.invoke(
-                'complete-invite-profile',
-                {
+            const { data: completeInviteData, error: completeInviteError } = await withAuthLinkTimeout(
+                supabase.functions.invoke('complete-invite-profile', {
                     body: {
                         fullName: trimmedName,
                         dateOfBirth: trimmedDob,
@@ -280,7 +324,8 @@ export default function CompleteInvite() {
                         jobTitle: jobTitle || null,
                         propertyId,
                     },
-                }
+                }),
+                'Invite profile completion'
             )
 
             if (completeInviteError) {
@@ -288,6 +333,7 @@ export default function CompleteInvite() {
                 const response = maybeContext?.context instanceof Response
                     ? maybeContext.context
                     : maybeContext?.context?.response
+
                 if (response) {
                     const text = await response.text().catch(() => '')
                     let parsedError: string | undefined
@@ -331,15 +377,17 @@ export default function CompleteInvite() {
             markWizardPending()
             setSuccess(true)
 
-            setTimeout(() => {
+            window.setTimeout(() => {
                 navigate('/home', { replace: true })
             }, 1200)
-        } catch (err: unknown) {
-            console.error('Complete invite error:', err)
-            const errorMessage = err instanceof Error
-                ? err.message
-                : 'Failed to complete account setup. Please try again.'
-            setError(errorMessage)
+        } catch (candidateError: unknown) {
+            console.error('Complete invite error:', candidateError)
+            const classified = classifyAuthLinkError(candidateError)
+            setError(
+                classified.kind === 'service_unavailable'
+                    ? AUTH_SERVICE_UNAVAILABLE_MESSAGE
+                    : (candidateError instanceof Error ? candidateError.message : 'Failed to complete account setup. Please try again.')
+            )
         } finally {
             setLoading(false)
         }
@@ -353,6 +401,34 @@ export default function CompleteInvite() {
                         <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
                         <p className="text-gray-600">Validating invite link...</p>
                     </CardContent>
+                </Card>
+            </div>
+        )
+    }
+
+    if (!tokenValid && serviceUnavailableMessage) {
+        return (
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+                <Card className="w-full max-w-md">
+                    <CardHeader className="text-center">
+                        <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
+                            <AlertCircle className="h-6 w-6 text-amber-600" />
+                        </div>
+                        <CardTitle>{t('reset_password.service_unavailable_title', { defaultValue: 'Authentication service unavailable' })}</CardTitle>
+                        <CardDescription>
+                            {t('reset_password.service_unavailable_message', { defaultValue: serviceUnavailableMessage })}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardFooter>
+                        <div className="w-full space-y-3">
+                            <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
+                                {t('reset_password.revalidate_link')}
+                            </Button>
+                            <Button className="w-full" variant="outline" onClick={() => navigate('/login')}>
+                                {t('forgot_password.back_to_login')}
+                            </Button>
+                        </div>
+                    </CardFooter>
                 </Card>
             </div>
         )
@@ -372,9 +448,14 @@ export default function CompleteInvite() {
                         </CardDescription>
                     </CardHeader>
                     <CardFooter>
-                        <Button className="w-full" onClick={() => navigate('/login')}>
-                            {t('forgot_password.back_to_login')}
-                        </Button>
+                        <div className="w-full space-y-3">
+                            <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
+                                {t('reset_password.revalidate_link')}
+                            </Button>
+                            <Button className="w-full" variant="outline" onClick={() => navigate('/login')}>
+                                {t('forgot_password.back_to_login')}
+                            </Button>
+                        </div>
                     </CardFooter>
                 </Card>
             </div>
@@ -532,10 +613,10 @@ export default function CompleteInvite() {
                                     { check: /[a-z]/.test(password), text: 'One lowercase letter' },
                                     { check: /\d/.test(password), text: 'One number' },
                                     { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' },
-                                ].map((req) => (
-                                    <li key={req.text} className={`flex items-center gap-1 ${req.check ? 'text-green-600' : 'text-gray-500'}`}>
-                                        {req.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
-                                        {req.text}
+                                ].map((requirement) => (
+                                    <li key={requirement.text} className={`flex items-center gap-1 ${requirement.check ? 'text-green-600' : 'text-gray-500'}`}>
+                                        {requirement.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
+                                        {requirement.text}
                                     </li>
                                 ))}
                             </ul>

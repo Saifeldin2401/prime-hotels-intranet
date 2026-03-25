@@ -1,12 +1,15 @@
-import { WizardTrigger } from '@/components/common/WizardTrigger'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { Building, Globe } from 'lucide-react'
-import { useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, Outlet } from 'react-router-dom'
+
+const WizardTrigger = lazy(() =>
+  import('@/components/common/WizardTrigger').then((module) => ({ default: module.WizardTrigger }))
+)
 
 interface MobileLayoutProps {
     children?: React.ReactNode
@@ -14,7 +17,18 @@ interface MobileLayoutProps {
 
 export function MobileLayout({ children }: MobileLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
+    const [deferredChromeReady, setDeferredChromeReady] = useState(false)
     const { currentProperty } = useProperty()
+
+    useEffect(() => {
+        const timeoutId = window.setTimeout(() => {
+            setDeferredChromeReady(true)
+        }, 500)
+
+        return () => {
+            window.clearTimeout(timeoutId)
+        }
+    }, [])
 
     return (
         <div className="min-h-dvh bg-gray-50 flex flex-col no-horizontal-scroll">
@@ -24,7 +38,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                     <img
                         src="/prime-logo-light.png"
                         alt="Prime Hotels"
-                        className="h-8 w-auto brightness-0" /* Darken for light mobile theme */
+                        className="h-8 w-auto brightness-0"
                     />
                     <div className="flex flex-col">
                         <span className="text-xs font-bold text-hotel-navy leading-none tracking-tight">PRIME</span>
@@ -33,7 +47,6 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                 </Link>
 
                 <div className="flex items-center gap-3">
-                    {/* Compact Property Indicator */}
                     {currentProperty && (
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-full text-[10px] font-medium text-gray-600">
                             {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-3 h-3 text-indigo-500" /> : <Building className="w-3 h-3 text-hotel-gold" />}
@@ -44,12 +57,10 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                 </div>
             </header>
 
-            {/* Main Content Area - with padding for bottom nav and top header */}
             <main className="flex-1 w-full max-w-none mx-auto px-safe pb-32 pb-safe animate-in fade-in duration-300">
                 {children || <Outlet />}
             </main>
 
-            {/* Render one mobile navigation surface at a time to avoid duplicate data subscriptions */}
             {sidebarOpen ? (
                 <SidebarNavigation
                     isOpen={sidebarOpen}
@@ -61,7 +72,10 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                     onMenuClick={() => setSidebarOpen(true)}
                 />
             )}
-            <WizardTrigger />
+
+            <Suspense fallback={null}>
+                {deferredChromeReady && <WizardTrigger />}
+            </Suspense>
         </div>
     )
 }

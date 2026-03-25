@@ -184,17 +184,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    window.addEventListener('focus', () => void verifySessionOnResume())
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void verifySessionOnResume()
-    })
+    const handleWindowFocus = () => {
+      void verifySessionOnResume()
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void verifySessionOnResume()
+      }
+    }
+
+    window.addEventListener('focus', handleWindowFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
 
     return () => {
       mounted = false
       clearTimeout(timeoutId)
       subscription.unsubscribe()
-      window.removeEventListener('focus', () => void verifySessionOnResume())
-      document.removeEventListener('visibilitychange', () => void verifySessionOnResume())
+      window.removeEventListener('focus', handleWindowFocus)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
     }
   }, [
     clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData,
