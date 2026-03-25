@@ -15,6 +15,13 @@ export function PasswordEnforcementGuard({ children }: PasswordEnforcementGuardP
     useEffect(() => {
         if (loading || !user || !profile) return
 
+        const isOnResetPasswordPage =
+            location.pathname === '/reset-password' ||
+            location.pathname.startsWith('/reset-password/')
+
+        // Never interfere with the standalone reset-password flow
+        if (isOnResetPasswordPage) return
+
         const isOnCompleteInvitePage =
             location.pathname === '/complete-invite' ||
             location.pathname.startsWith('/complete-invite/')

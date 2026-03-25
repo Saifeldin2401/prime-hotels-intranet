@@ -291,8 +291,9 @@ export default function ResetPassword() {
             await auditLog.passwordChange().catch(() => undefined)
 
             window.setTimeout(() => {
-                void supabase.auth.signOut()
-                navigate('/login')
+                supabase.auth.signOut().finally(() => {
+                    navigate('/login')
+                })
             }, 3000)
         } catch (candidateError: unknown) {
             console.error('Password update error:', candidateError)

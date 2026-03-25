@@ -20,10 +20,9 @@ export function getNotificationLink(
     hasPermission?: (permission: string) => boolean
   },
 ): string | null {
-  // 1. Prefer an explicit link stored on the notification
-  if (notification.link) return notification.link
-
-  // 2. Fall back to type-based routing
+  // Type-based routing takes priority over stored links because the DB
+  // may contain stale/incorrect values from older notification triggers.
+  // The stored link is only used as a last-resort fallback for unknown types.
   const type = notification.type
 
   switch (type) {
@@ -39,11 +38,11 @@ export function getNotificationLink(
     // ── Training / Learning ────────────────────────────────
     case 'training_assigned':
     case 'training_deadline':
-    case 'training_completed':
     case 'training_overdue':
-      return notification.entity_id
-        ? `/learning/training/${notification.entity_id}`
-        : '/learning/assignments'
+      return '/learning/my'
+
+    case 'training_completed':
+      return '/training/certificates'
 
     // ── Knowledge / Documents ──────────────────────────────
     case 'document_published':
@@ -63,6 +62,11 @@ export function getNotificationLink(
     // ── Announcements ──────────────────────────────────────
     case 'announcement_new':
       return '/announcements'
+
+    // ── Certificates ──────────────────────────────────────
+    case 'certificate_issued':
+    case 'certificate_expiring':
+      return '/training/certificates'
 
     // ── Maintenance ────────────────────────────────────────
     case 'maintenance_assigned':
@@ -106,6 +110,7 @@ export function getNotificationLink(
     // ── System / unknown ───────────────────────────────────
     case 'system':
     default:
-      return null
+      // Last resort: use the stored link for unmapped types
+      return notification.link || null
   }
 }

@@ -95,7 +95,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
-            link: `/learning/training/${moduleId}`,
+            link: '/learning/my',
             metadata: { assigner_id: user?.id, assigner_name: currentUserName, deadline }
         })
     }, [user?.id, currentUserName])
@@ -113,7 +113,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
-            link: `/learning/training/${moduleId}`,
+            link: '/learning/my',
             metadata: { assigner_id: user?.id, assigner_name: currentUserName, deadline },
             skipDbInsert: false
         })
@@ -132,7 +132,7 @@ export function useNotificationTriggers() {
             ...template,
             entityType: 'training_module',
             entityId: moduleId,
-            link: `/learning/training/${moduleId}`,
+            link: '/learning/my',
             metadata: { days_remaining: daysRemaining }
         })
     }, [])
@@ -151,7 +151,7 @@ export function useNotificationTriggers() {
             message: `${completedByName} completed "${moduleTitle}"${score !== undefined ? ` with ${score}%` : ''}.`,
             entityType: 'training_module',
             entityId: moduleId,
-            link: `/learning/training/${moduleId}`,
+            link: '/training/certificates',
             metadata: { completed_by: user?.id, score }
         })
     }, [user?.id])
