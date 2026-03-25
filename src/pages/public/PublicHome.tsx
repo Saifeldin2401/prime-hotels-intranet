@@ -32,15 +32,21 @@ import {
     Users,
     Zap
 } from 'lucide-react';
-import { useEffect, useState, type ElementType } from 'react';
+import { lazy, Suspense, useEffect, useState, type ElementType } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
+
+const InviteRouteRescue = lazy(() => import('@/pages/auth/CompleteInvite'))
+const ResetRouteRescue = lazy(() => import('@/pages/auth/ResetPassword'))
 
 export default function PublicHome() {
   const { user: authUser } = useAuth();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation('public');
   const isRTL = i18n.dir() === 'rtl';
+  const currentPathname = normalizePathname(window.location.pathname)
+  const isInvitePath = currentPathname === '/complete-invite' || currentPathname.startsWith('/complete-invite/')
+  const isResetPath = currentPathname === '/reset-password' || currentPathname.startsWith('/reset-password/')
   const secureEntryRecoveryNeeded = shouldProtectAuthEntry(
     window.location.pathname,
     window.location.search,
@@ -104,7 +110,24 @@ export default function PublicHome() {
   }, [authUser, navigate, secureEntryRecoveryNeeded]);
 
   if (secureEntryRecoveryNeeded) {
-    const currentPathname = normalizePathname(window.location.pathname)
+    if (secureEntryRecoveryFailed && (isInvitePath || isResetPath)) {
+      const RescueComponent = isInvitePath ? InviteRouteRescue : ResetRouteRescue
+
+      return (
+        <Suspense
+          fallback={(
+            <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
+              <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-xl">
+                <RefreshCw className="mx-auto h-8 w-8 animate-spin text-slate-500" />
+                <p className="mt-3 text-sm text-slate-600">{AUTH_ROUTE_RECOVERY_MESSAGE}</p>
+              </div>
+            </div>
+          )}
+        >
+          <RescueComponent />
+        </Suspense>
+      )
+    }
 
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center px-4">
@@ -119,7 +142,7 @@ export default function PublicHome() {
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {secureEntryRecoveryFailed
-                ? `PHG Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to load the password reset screen.`
+                ? `PHG Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to continue account setup.`
                 : AUTH_ROUTE_RECOVERY_MESSAGE}
             </p>
           </div>

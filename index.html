@@ -5,6 +5,14 @@
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/favicon.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <script>
+    (() => {
+      if (window.location.hostname !== 'www.phg-connect.com') return
+      const target = new URL(window.location.href)
+      target.hostname = 'phg-connect.com'
+      window.location.replace(target.toString())
+    })()
+  </script>
 
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="/manifest.json" />
@@ -95,7 +103,14 @@
         }
 
         if (shouldReload) {
-          window.location.replace(`${window.location.pathname}${window.location.search}${window.location.hash}`)
+          const target = new URL(window.location.href)
+          if (target.hostname === 'www.phg-connect.com') {
+            target.hostname = 'phg-connect.com'
+          }
+          target.pathname = window.location.pathname
+          target.search = window.location.search
+          target.hash = window.location.hash
+          window.location.replace(target.toString())
         }
       })().catch(() => undefined)
     })()
