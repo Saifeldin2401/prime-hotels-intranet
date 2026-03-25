@@ -3,10 +3,11 @@ import { Button } from '@/components/ui/button'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export function PublicNavbar() {
   const { t } = useTranslation('public')
+  const navigate = useNavigate()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
 
@@ -33,7 +34,7 @@ export function PublicNavbar() {
         element.scrollIntoView({ behavior: 'smooth' })
       }
     } else {
-      window.location.assign(href)
+      navigate(href)
     }
   }
 
@@ -82,7 +83,7 @@ export function PublicNavbar() {
               showLabel={false}
             />
             <Button
-              onClick={() => window.location.assign('/login')}
+              onClick={() => navigate('/login')}
               size="sm"
               className="hidden sm:flex bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold px-5 rounded-full transition-all"
             >
@@ -114,7 +115,7 @@ export function PublicNavbar() {
               ))}
               <div className="pt-3 px-1">
                 <Button
-                  onClick={() => window.location.assign('/login')}
+                  onClick={() => navigate('/login')}
                   className="w-full bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold rounded-full"
                 >
                   {t('login_button')}
