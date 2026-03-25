@@ -4,7 +4,7 @@ import './i18n/i18n'
 import './index.css'
 import './rtl.css'
 
-import { CANONICAL_APP_HOST, CANONICAL_APP_URL, clearPrimeHotelServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
+import { clearPrimeHotelServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
 import { isValidSentryDsn } from '@/lib/sentry'
 import * as Sentry from "@sentry/react"
 import App from './App'
@@ -187,41 +187,26 @@ if (redirectPath) {
   window.history.replaceState(null, '', redirectPath)
 }
 
-const currentUrl = new URL(window.location.href)
-const shouldRedirectToCanonicalHost =
-  /^(www\.)?phg-connect\.com$/i.test(currentUrl.hostname)
-  && currentUrl.hostname !== CANONICAL_APP_HOST
-
-if (shouldRedirectToCanonicalHost) {
-  currentUrl.protocol = new URL(CANONICAL_APP_URL).protocol
-  currentUrl.host = CANONICAL_APP_HOST
-  window.location.replace(currentUrl.toString())
-}
-
 const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
 
-if (!shouldRedirectToCanonicalHost) {
-  createRoot(document.getElementById('root')!).render(
-    <Wrapper>
-      <App />
-    </Wrapper>
-  )
-}
+createRoot(document.getElementById('root')!).render(
+  <Wrapper>
+    <App />
+  </Wrapper>
+)
 
 // If the app stays up, allow future one-time recoveries in this tab.
-if (!shouldRedirectToCanonicalHost) {
-  window.setTimeout(() => {
-    try {
-      sessionStorage.removeItem(STALE_MODULE_RELOAD_KEY)
-      sessionStorage.removeItem(STALE_MODULE_SW_RESET_KEY)
-    } catch {
-      // Ignore storage errors.
-    }
-  }, 30_000)
-}
+window.setTimeout(() => {
+  try {
+    sessionStorage.removeItem(STALE_MODULE_RELOAD_KEY)
+    sessionStorage.removeItem(STALE_MODULE_SW_RESET_KEY)
+  } catch {
+    // Ignore storage errors.
+  }
+}, 30_000)
 
 // Register Service Worker for PWA
-if (!shouldRedirectToCanonicalHost && 'serviceWorker' in navigator && import.meta.env.PROD) {
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     if (!PWA_ENABLED) {
       try {

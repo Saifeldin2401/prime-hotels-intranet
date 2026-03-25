@@ -51,7 +51,6 @@
   <div id="root"></div>
   <script>
     (() => {
-      const canonicalOrigin = 'https://phg-connect.com'
       const authSensitivePrefixes = ['/login', '/forgot-password', '/reset-password', '/complete-invite']
       const normalizePathname = (pathname) => {
         if (!pathname) return '/'
@@ -71,15 +70,7 @@
         currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
       ) || hasAuthParams
 
-      const shouldCanonicalizeHost = /^(www\.)?phg-connect\.com$/i.test(window.location.hostname)
-        && window.location.origin !== canonicalOrigin
-
       window.__PHG_BOOTSTRAP_PROMISE__ = (async () => {
-        if (shouldCanonicalizeHost) {
-          window.location.replace(`${canonicalOrigin}${window.location.pathname}${window.location.search}${window.location.hash}`)
-          return
-        }
-
         if (!isSensitiveEntry || !('navigator' in window)) {
           return
         }

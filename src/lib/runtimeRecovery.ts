@@ -67,6 +67,13 @@ export function buildCanonicalUrl(
   search: string,
   hash: string,
 ): string {
+  if (typeof window !== 'undefined') {
+    const runtimeHost = window.location.hostname.toLowerCase()
+    if (runtimeHost === CANONICAL_APP_HOST || runtimeHost === `www.${CANONICAL_APP_HOST}`) {
+      return `${window.location.origin}${pathname}${search}${hash}`
+    }
+  }
+
   return `${CANONICAL_APP_URL}${pathname}${search}${hash}`
 }
 
