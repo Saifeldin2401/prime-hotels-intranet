@@ -33,6 +33,7 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
 
 export const CANONICAL_APP_URL = canonicalizeAppUrl(import.meta.env.VITE_APP_URL)
 export const CANONICAL_APP_HOST = new URL(CANONICAL_APP_URL).hostname
+const WWW_HOST_REDIRECT_ATTEMPTED_KEY = '__phg_www_host_redirect_attempted__'
 
 export function normalizePathname(pathname: string): string {
   if (!pathname) return '/'
@@ -74,7 +75,22 @@ export function buildCanonicalUrl(
     }
 
     if (runtimeHost === `www.${CANONICAL_APP_HOST}`) {
-      return `${CANONICAL_APP_URL}${pathname}${search}${hash}`
+      let shouldForceCanonicalHost = true
+      try {
+        if (sessionStorage.getItem(WWW_HOST_REDIRECT_ATTEMPTED_KEY) === '1') {
+          shouldForceCanonicalHost = false
+        } else {
+          sessionStorage.setItem(WWW_HOST_REDIRECT_ATTEMPTED_KEY, '1')
+        }
+      } catch {
+        // If storage is unavailable, default to forcing canonical host.
+      }
+
+      if (shouldForceCanonicalHost) {
+        return `${CANONICAL_APP_URL}${pathname}${search}${hash}`
+      }
+
+      return `${window.location.origin}${pathname}${search}${hash}`
     }
   }
 

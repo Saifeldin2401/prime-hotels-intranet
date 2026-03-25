@@ -7,7 +7,35 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script>
     (() => {
-      if (window.location.hostname !== 'www.phg-connect.com') return
+      const authSensitivePrefixes = ['/login', '/forgot-password', '/reset-password', '/complete-invite']
+      const normalizePathname = (pathname) => {
+        if (!pathname) return '/'
+        const normalized = pathname.endsWith('/') && pathname.length > 1
+          ? pathname.replace(/\/+$/, '')
+          : pathname
+        return normalized || '/'
+      }
+
+      const currentPathname = normalizePathname(window.location.pathname)
+      const hasAuthParams =
+        /(?:^|[?&])(token_hash|code|access_token|refresh_token)=/i.test(window.location.search)
+        || /(?:^|[?&])type=(?:recovery|invite|signup|magiclink|email|email_change)\b/i.test(window.location.search)
+        || /(?:^|[#&])(access_token|refresh_token)=/i.test(window.location.hash)
+
+      const isSensitiveEntry = authSensitivePrefixes.some((prefix) =>
+        currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
+      ) || hasAuthParams
+
+      if (window.location.hostname !== 'www.phg-connect.com' || !isSensitiveEntry) return
+
+      const hostRedirectKey = '__phg_www_host_redirect_attempted__'
+      try {
+        if (sessionStorage.getItem(hostRedirectKey) === '1') return
+        sessionStorage.setItem(hostRedirectKey, '1')
+      } catch {
+        // Continue even if sessionStorage is unavailable.
+      }
+
       const target = new URL(window.location.href)
       target.hostname = 'phg-connect.com'
       window.location.replace(target.toString())
@@ -105,7 +133,20 @@
         if (shouldReload) {
           const target = new URL(window.location.href)
           if (target.hostname === 'www.phg-connect.com') {
-            target.hostname = 'phg-connect.com'
+            const hostRedirectKey = '__phg_www_host_redirect_attempted__'
+            let shouldCanonicalize = true
+            try {
+              if (sessionStorage.getItem(hostRedirectKey) === '1') {
+                shouldCanonicalize = false
+              } else {
+                sessionStorage.setItem(hostRedirectKey, '1')
+              }
+            } catch {
+              // Continue with canonicalization by default.
+            }
+            if (shouldCanonicalize) {
+              target.hostname = 'phg-connect.com'
+            }
           }
           target.pathname = window.location.pathname
           target.search = window.location.search
