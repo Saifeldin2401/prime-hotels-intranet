@@ -9,6 +9,7 @@ import {
     classifyAuthLinkError,
     withAuthLinkTimeout,
 } from '@/lib/authLinkRecovery'
+import { clearAuthFlowState, setAuthFlowState } from '@/lib/authFlowState'
 import { securityConfig } from '@/lib/security-config'
 import { supabase } from '@/lib/supabase'
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck, UserRound } from 'lucide-react'
@@ -64,6 +65,10 @@ export default function CompleteInvite() {
     const [loadingFormOptions, setLoadingFormOptions] = useState(false)
 
     useEffect(() => {
+        setAuthFlowState('complete-invite')
+    }, [])
+
+    useEffect(() => {
         const initializeInviteSession = async () => {
             let validSession = false
             let temporaryFailureMessage: string | null = null
@@ -96,6 +101,7 @@ export default function CompleteInvite() {
                         currentUrl.searchParams.delete('code')
                         const normalizedSearch = currentUrl.search ? currentUrl.search : ''
                         window.history.replaceState({}, document.title, currentUrl.pathname + normalizedSearch)
+                        setAuthFlowState('complete-invite')
                     } else if (exchangeError) {
                         rememberValidationError(exchangeError)
                     }
@@ -115,6 +121,7 @@ export default function CompleteInvite() {
                     if (!verifyError && verifiedData.session) {
                         validSession = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                        setAuthFlowState('complete-invite')
                     } else if (verifyError) {
                         rememberValidationError(verifyError)
                     }
@@ -132,6 +139,7 @@ export default function CompleteInvite() {
                     if (!setSessionError && setSessionData.session) {
                         validSession = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                        setAuthFlowState('complete-invite')
                     } else if (setSessionError) {
                         rememberValidationError(setSessionError)
                     }
@@ -145,6 +153,7 @@ export default function CompleteInvite() {
 
                     if (!sessionError && sessionData.session) {
                         validSession = true
+                        setAuthFlowState('complete-invite')
                     } else if (sessionError) {
                         rememberValidationError(sessionError)
                     }
@@ -386,6 +395,8 @@ export default function CompleteInvite() {
                 console.warn('Password updated, but failed to finalize reset flags:', finalizeError)
             }
 
+            clearAuthFlowState('complete-invite')
+
             try {
                 await refreshSession()
             } catch (refreshErr) {
@@ -442,7 +453,14 @@ export default function CompleteInvite() {
                             <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
                                 {t('reset_password.revalidate_link')}
                             </Button>
-                            <Button className="w-full" variant="outline" onClick={() => navigate('/login')}>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => {
+                                    clearAuthFlowState('complete-invite')
+                                    navigate('/login')
+                                }}
+                            >
                                 {t('forgot_password.back_to_login')}
                             </Button>
                         </div>
@@ -470,7 +488,14 @@ export default function CompleteInvite() {
                             <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
                                 {t('reset_password.revalidate_link')}
                             </Button>
-                            <Button className="w-full" variant="outline" onClick={() => navigate('/login')}>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => {
+                                    clearAuthFlowState('complete-invite')
+                                    navigate('/login')
+                                }}
+                            >
                                 {t('forgot_password.back_to_login')}
                             </Button>
                         </div>

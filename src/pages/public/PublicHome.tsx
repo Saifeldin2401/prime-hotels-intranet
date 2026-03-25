@@ -1,4 +1,5 @@
 import aboutTeamImg from '@/assets/about-team.png';
+import { getAuthFlowRedirectPath } from '@/lib/authFlowState';
 import {
   AUTH_ROUTE_RECOVERY_MESSAGE,
   buildCanonicalUrl,
@@ -45,6 +46,7 @@ export default function PublicHome() {
   const { t, i18n } = useTranslation('public');
   const isRTL = i18n.dir() === 'rtl';
   const currentPathname = normalizePathname(window.location.pathname)
+  const pendingAuthFlowPath = getAuthFlowRedirectPath()
   const isInvitePath = currentPathname === '/complete-invite' || currentPathname.startsWith('/complete-invite/')
   const isResetPath = currentPathname === '/reset-password' || currentPathname.startsWith('/reset-password/')
   const secureEntryRecoveryNeeded = shouldProtectAuthEntry(
@@ -105,9 +107,13 @@ export default function PublicHome() {
     }
 
     if (authUser) {
+      if (pendingAuthFlowPath) {
+        navigate(pendingAuthFlowPath, { replace: true });
+        return
+      }
       navigate('/home', { replace: true });
     }
-  }, [authUser, navigate, secureEntryRecoveryNeeded]);
+  }, [authUser, navigate, pendingAuthFlowPath, secureEntryRecoveryNeeded]);
 
   if (secureEntryRecoveryNeeded) {
     if (secureEntryRecoveryFailed && (isInvitePath || isResetPath)) {

@@ -1,6 +1,7 @@
 import { RouteErrorBoundary } from '@/components/common'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
+import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route } from 'react-router-dom'
 
@@ -53,6 +54,10 @@ const RootLayout = () => {
 
 const RootIndex = () => {
     const { user } = useAuth()
+    const pendingAuthFlowPath = getAuthFlowRedirectPath()
+    if (user && pendingAuthFlowPath) {
+        return <Navigate to={pendingAuthFlowPath} replace />
+    }
     return user ? <Navigate to="/home" replace /> : <PublicHome />
 }
 

@@ -5,6 +5,7 @@ import { analytics } from '@/services/analyticsService'
 import type { User } from '@supabase/supabase-js'
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react'
+import { shouldSuppressAuthenticatedAppState } from '@/lib/authFlowState'
 import { useAuthSession } from './auth/useAuthSession'
 import { useUserDataLoader } from './auth/useUserDataLoader'
 
@@ -82,6 +83,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true
     let loadingState = true
 
+    const shouldDeferAuthenticatedAppState = () => {
+      if (typeof window === 'undefined') return false
+      return shouldSuppressAuthenticatedAppState(
+        window.location.pathname,
+        window.location.search,
+        window.location.hash,
+      )
+    }
+
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
         console.warn('Loading timeout - forcing loading to false after 5 seconds')
@@ -105,6 +115,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
       if (session?.user) {
+        if (shouldDeferAuthenticatedAppState()) {
+          resetLocalAuthState()
+          finishLoading()
+          return
+        }
+
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         setRolesLoading(true)
@@ -124,9 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!mounted) return
 
-      // PASSWORD_RECOVERY events: let the user stay on /reset-password
-      if (_event === 'PASSWORD_RECOVERY') {
-        if (session?.user) setUser(session.user)
+      if (session?.user && shouldDeferAuthenticatedAppState()) {
+        resetLocalAuthState()
         finishLoading()
         return
       }

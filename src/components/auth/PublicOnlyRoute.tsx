@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
+import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { Navigate } from 'react-router-dom'
 
 interface PublicOnlyRouteProps {
@@ -7,6 +8,7 @@ interface PublicOnlyRouteProps {
 
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const { user, loading } = useAuth()
+    const pendingAuthFlowPath = getAuthFlowRedirectPath()
 
     if (loading) {
         return (
@@ -17,7 +19,7 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     }
 
     if (user) {
-        return <Navigate to="/home" replace />
+        return <Navigate to={pendingAuthFlowPath ?? "/home"} replace />
     }
 
     return <>{children}</>

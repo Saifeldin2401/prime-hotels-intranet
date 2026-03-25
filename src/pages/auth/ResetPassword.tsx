@@ -7,6 +7,7 @@ import {
     classifyAuthLinkError,
     withAuthLinkTimeout,
 } from '@/lib/authLinkRecovery'
+import { clearAuthFlowState, setAuthFlowState } from '@/lib/authFlowState'
 import { auditLog } from '@/lib/auditLog'
 import { securityConfig } from '@/lib/security-config'
 import { supabase } from '@/lib/supabase'
@@ -48,6 +49,10 @@ export default function ResetPassword() {
     const [resendLoading, setResendLoading] = useState(false)
     const [resendSuccess, setResendSuccess] = useState(false)
     const [resendError, setResendError] = useState<string | null>(null)
+
+    useEffect(() => {
+        setAuthFlowState('reset-password')
+    }, [])
 
     const hasResetParams = useCallback(() => {
         const url = new URL(window.location.href)
@@ -94,6 +99,7 @@ export default function ResetPassword() {
                         isTokenCurrentlyValid = true
                         url.searchParams.delete('code')
                         window.history.replaceState({}, document.title, url.pathname + (url.search ? url.search : ''))
+                        setAuthFlowState('reset-password')
                     } else if (exchangeError) {
                         rememberValidationError(exchangeError)
                     }
@@ -111,6 +117,7 @@ export default function ResetPassword() {
                     if (!verifyError && data.session) {
                         isTokenCurrentlyValid = true
                         window.history.replaceState({}, document.title, window.location.pathname)
+                        setAuthFlowState('reset-password')
                     } else if (verifyError) {
                         rememberValidationError(verifyError)
                     }
@@ -133,6 +140,7 @@ export default function ResetPassword() {
                         if (!setSessionError && data.session) {
                             isTokenCurrentlyValid = true
                             window.history.replaceState({}, document.title, window.location.pathname)
+                            setAuthFlowState('reset-password')
                         } else if (setSessionError) {
                             rememberValidationError(setSessionError)
                         }
@@ -147,6 +155,7 @@ export default function ResetPassword() {
 
                     if (session?.user) {
                         isTokenCurrentlyValid = true
+                        setAuthFlowState('reset-password')
                     } else if (sessionError) {
                         rememberValidationError(sessionError)
                     }
@@ -187,6 +196,7 @@ export default function ResetPassword() {
     }, [success])
 
     const handleConfirmClick = () => {
+        setAuthFlowState('reset-password')
         setAwaitingConfirmation(false)
     }
 
@@ -294,6 +304,7 @@ export default function ResetPassword() {
 
             window.setTimeout(() => {
                 signOut().finally(() => {
+                    clearAuthFlowState('reset-password')
                     navigate('/login')
                 })
             }, 3000)
@@ -379,7 +390,14 @@ export default function ResetPassword() {
                         </CardHeader>
                         <CardFooter>
                             <div className="w-full">
-                                <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
+                                <Button
+                                    className="w-full"
+                                    variant="outline"
+                                    onClick={() => {
+                                        clearAuthFlowState('reset-password')
+                                        navigate('/forgot-password')
+                                    }}
+                                >
                                     {t('reset_password.request_new')}
                                 </Button>
                             </div>
@@ -447,7 +465,14 @@ export default function ResetPassword() {
                             <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
                                 {t('reset_password.revalidate_link')}
                             </Button>
-                            <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => {
+                                    clearAuthFlowState('reset-password')
+                                    navigate('/forgot-password')
+                                }}
+                            >
                                 {t('reset_password.request_new')}
                             </Button>
                         </div>
@@ -478,7 +503,14 @@ export default function ResetPassword() {
                             <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
                                 {t('reset_password.revalidate_link')}
                             </Button>
-                            <Button className="w-full" variant="outline" onClick={() => navigate('/forgot-password')}>
+                            <Button
+                                className="w-full"
+                                variant="outline"
+                                onClick={() => {
+                                    clearAuthFlowState('reset-password')
+                                    navigate('/forgot-password')
+                                }}
+                            >
                                 {t('reset_password.request_new')}
                             </Button>
                         </div>
