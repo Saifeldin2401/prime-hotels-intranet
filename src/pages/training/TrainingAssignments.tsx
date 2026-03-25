@@ -1,10 +1,11 @@
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
+import { EmployeeProgressTracker } from '@/components/training/EmployeeProgressTracker'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
     DropdownMenu,
@@ -16,14 +17,13 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
-import { useLearningProgress } from '@/hooks/useLearningProgress'
+import { useLearningProgress, type LearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
@@ -41,7 +41,6 @@ import {
     Clock,
     Download,
     Edit,
-    Eye,
     Loader2,
     MapPin,
     Plus,
@@ -86,6 +85,50 @@ interface LearningAssignment {
 }
 
 type AssignmentStatus = 'active' | 'completed' | 'overdue' | 'due_soon'
+
+type EnrichedProgressRecord = LearningProgress & {
+  resolvedDepartmentName: string
+  resolvedModuleTitle: string
+  resolvedProgress: number
+  resolvedPropertyName: string
+  resolvedScore: number | null
+  resolvedUserName: string
+  statusLabel: string
+  userInitials: string
+  lastTouchedAt: string
+  locationLabel: string
+}
+
+interface EmployeeProgressGroup {
+  activeModules: number
+  assignedModules: number
+  attentionCount: number
+  averageProgress: number
+  averageScore: number | null
+  completedModules: number
+  departmentName: string
+  excusedModules: number
+  highlightModule: EnrichedProgressRecord | null
+  inProgressModules: number
+  lastTouchedAt: string | null
+  locationLabel: string
+  overdueModules: number
+  propertyName: string
+  records: EnrichedProgressRecord[]
+  totalModules: number
+  userId: string
+  userInitials: string
+  userName: string
+  avatarUrl?: string
+}
+
+const progressStatusOrder: Record<LearningProgress['status'], number> = {
+  overdue: 0,
+  in_progress: 1,
+  assigned: 2,
+  completed: 3,
+  excused: 4
+}
 
 interface TrainingAssignmentsPanelProps {
   embedded?: boolean
@@ -673,16 +716,6 @@ export function TrainingAssignmentsPanel({
     return 'active'
   }
 
-  const getStatusColor = (status: AssignmentStatus) => {
-    switch (status) {
-      case 'active': return 'bg-blue-100 text-blue-800'
-      case 'completed': return 'bg-green-100 text-green-800'
-      case 'overdue': return 'bg-red-100 text-red-800'
-      case 'due_soon': return 'bg-yellow-100 text-yellow-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
   const getTargetIcon = (type: string) => {
     switch (type) {
       case 'all':
@@ -758,6 +791,60 @@ export function TrainingAssignmentsPanel({
     if (!dateStr) return '-'
     return new Date(dateStr).toLocaleDateString(i18n.language === 'ar' ? 'ar-SA' : 'en-US')
   }
+
+  const formatDuration = useCallback((seconds?: number | null) => {
+    if (!seconds || seconds <= 0) return '-'
+
+    const totalMinutes = Math.floor(seconds / 60)
+    const hours = Math.floor(totalMinutes / 60)
+    const minutes = totalMinutes % 60
+
+    if (hours > 0 && minutes > 0) return `${hours}h ${minutes}m`
+    if (hours > 0) return `${hours}h`
+    if (totalMinutes > 0) return `${totalMinutes}m`
+    return '< 1m'
+  }, [])
+
+  const escapeCsvValue = useCallback((value: string | number | boolean | null | undefined) => {
+    if (value === null || value === undefined || value === '') return '""'
+    return `"${String(value).replace(/"/g, '""')}"`
+  }, [])
+
+  const getProgressStatusMeta = useCallback((status: LearningProgress['status']) => {
+    switch (status) {
+      case 'completed':
+        return {
+          badgeClass: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+          label: t('completed'),
+          progressClass: '[&>div]:bg-emerald-600'
+        }
+      case 'in_progress':
+        return {
+          badgeClass: 'border-sky-200 bg-sky-50 text-sky-700',
+          label: t('inProgress'),
+          progressClass: '[&>div]:bg-sky-600'
+        }
+      case 'overdue':
+        return {
+          badgeClass: 'border-rose-200 bg-rose-50 text-rose-700',
+          label: t('overdue'),
+          progressClass: '[&>div]:bg-rose-600'
+        }
+      case 'excused':
+        return {
+          badgeClass: 'border-slate-200 bg-slate-100 text-slate-600',
+          label: t('excused', 'Excused'),
+          progressClass: '[&>div]:bg-slate-500'
+        }
+      case 'assigned':
+      default:
+        return {
+          badgeClass: 'border-amber-200 bg-amber-50 text-amber-700',
+          label: t('assigned'),
+          progressClass: '[&>div]:bg-amber-500'
+        }
+    }
+  }, [t])
 
   // Filtered Assignments (For the Assignments Tab)
   const filteredAssignments = useMemo(() => {
@@ -890,6 +977,216 @@ export function TrainingAssignmentsPanel({
       overdue: sourceData.filter(p => p.status === 'overdue').length
     }
   }, [filteredProgress])
+
+  const enrichedProgress = useMemo<EnrichedProgressRecord[]>(() => {
+    return filteredProgress.map((item) => {
+      const joinedDepartmentName = item.profiles?.user_departments?.[0]?.departments?.name || ''
+      const joinedPropertyName = item.profiles?.user_properties?.[0]?.properties?.name || ''
+      const departmentData = userDepartments?.find((department) => department.user_id === item.user_id)?.department as
+        | { name?: string }
+        | Array<{ name?: string }>
+        | null
+        | undefined
+      const propertyData = userProperties?.find((property) => property.user_id === item.user_id)?.property as
+        | { name?: string }
+        | Array<{ name?: string }>
+        | null
+        | undefined
+      const fallbackDepartmentName = Array.isArray(departmentData) ? departmentData[0]?.name || '' : departmentData?.name || ''
+      const fallbackPropertyName = Array.isArray(propertyData) ? propertyData[0]?.name || '' : propertyData?.name || ''
+      const user = users?.find((entry) => entry.id === item.user_id)
+      const resolvedUserName = item.profiles?.full_name || user?.full_name || t('unknownUser')
+      const resolvedModuleTitle = item.training_modules?.title || modules?.find((module) => module.id === item.content_id)?.title || t('unknownModule')
+      const resolvedProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
+      const parsedScore = item.score_percentage === undefined || item.score_percentage === null
+        ? null
+        : Number(item.score_percentage)
+      const statusMeta = getProgressStatusMeta(item.status)
+      const lastTouchedAt = item.last_accessed_at || item.completed_at || item.updated_at || item.created_at
+      const normalizedName = resolvedUserName.trim()
+      const userInitials = normalizedName
+        .split(/\s+/)
+        .filter(Boolean)
+        .map((name) => name[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase() || 'NA'
+
+      const resolvedDepartmentName = joinedDepartmentName || fallbackDepartmentName
+      const resolvedPropertyName = joinedPropertyName || fallbackPropertyName
+
+      return {
+        ...item,
+        resolvedDepartmentName,
+        resolvedModuleTitle,
+        resolvedProgress,
+        resolvedPropertyName,
+        resolvedScore: parsedScore !== null && Number.isFinite(parsedScore) ? parsedScore : null,
+        resolvedUserName,
+        statusLabel: statusMeta.label,
+        userInitials,
+        lastTouchedAt,
+        locationLabel: resolvedDepartmentName || resolvedPropertyName || t('noDept')
+      }
+    })
+  }, [filteredProgress, getProgressStatusMeta, modules, t, userDepartments, userProperties, users])
+
+  const employeeProgressGroups = useMemo<EmployeeProgressGroup[]>(() => {
+    const groupedRecords = new Map<string, EmployeeProgressGroup>()
+
+    enrichedProgress.forEach((record) => {
+      if (!groupedRecords.has(record.user_id)) {
+        groupedRecords.set(record.user_id, {
+          activeModules: 0,
+          assignedModules: 0,
+          attentionCount: 0,
+          averageProgress: 0,
+          averageScore: null,
+          avatarUrl: record.profiles?.avatar_url || undefined,
+          completedModules: 0,
+          departmentName: record.resolvedDepartmentName,
+          excusedModules: 0,
+          highlightModule: null,
+          inProgressModules: 0,
+          lastTouchedAt: record.lastTouchedAt,
+          locationLabel: record.locationLabel,
+          overdueModules: 0,
+          propertyName: record.resolvedPropertyName,
+          records: [],
+          totalModules: 0,
+          userId: record.user_id,
+          userInitials: record.userInitials,
+          userName: record.resolvedUserName
+        })
+      }
+
+      const group = groupedRecords.get(record.user_id)!
+      group.records.push(record)
+      if (!group.lastTouchedAt || new Date(record.lastTouchedAt) > new Date(group.lastTouchedAt)) {
+        group.lastTouchedAt = record.lastTouchedAt
+      }
+    })
+
+    return Array.from(groupedRecords.values())
+      .map((group) => {
+        const records = [...group.records].sort((a, b) => {
+          const statusDifference = progressStatusOrder[a.status] - progressStatusOrder[b.status]
+          if (statusDifference !== 0) return statusDifference
+          return new Date(b.lastTouchedAt).getTime() - new Date(a.lastTouchedAt).getTime()
+        })
+
+        const completedModules = records.filter((record) => record.status === 'completed').length
+        const inProgressModules = records.filter((record) => record.status === 'in_progress').length
+        const assignedModules = records.filter((record) => record.status === 'assigned').length
+        const overdueModules = records.filter((record) => record.status === 'overdue').length
+        const excusedModules = records.filter((record) => record.status === 'excused').length
+        const activeModules = records.filter((record) => !['completed', 'excused'].includes(record.status)).length
+        const averageProgress = records.length > 0
+          ? Math.round(records.reduce((sum, record) => sum + record.resolvedProgress, 0) / records.length)
+          : 0
+        const scoreValues = records
+          .map((record) => record.resolvedScore)
+          .filter((score): score is number => score !== null)
+        const averageScore = scoreValues.length > 0
+          ? Math.round(scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length)
+          : null
+        const highlightModule = records.find((record) => record.status === 'overdue')
+          || records.find((record) => record.status === 'in_progress')
+          || records.find((record) => record.status === 'assigned')
+          || records[0]
+          || null
+        const attentionCount = overdueModules > 0
+          ? overdueModules + Math.max(0, activeModules - 1)
+          : (assignedModules > 1 ? assignedModules - 1 : 0) + (activeModules >= 4 ? 1 : 0)
+
+        return {
+          ...group,
+          activeModules,
+          assignedModules,
+          attentionCount,
+          averageProgress,
+          averageScore,
+          completedModules,
+          excusedModules,
+          highlightModule,
+          inProgressModules,
+          overdueModules,
+          records,
+          totalModules: records.length
+        }
+      })
+      .sort((a, b) => {
+        if (b.attentionCount !== a.attentionCount) return b.attentionCount - a.attentionCount
+        if (b.activeModules !== a.activeModules) return b.activeModules - a.activeModules
+        if ((b.lastTouchedAt || '') !== (a.lastTouchedAt || '')) {
+          return new Date(b.lastTouchedAt || 0).getTime() - new Date(a.lastTouchedAt || 0).getTime()
+        }
+        return a.userName.localeCompare(b.userName)
+      })
+  }, [enrichedProgress])
+
+  const employeeTrackingSummary = useMemo(() => {
+    const employeeCount = employeeProgressGroups.length
+    const averageModulesPerEmployee = employeeCount > 0
+      ? Number((progressMetrics.total / employeeCount).toFixed(1))
+      : 0
+    const employeesNeedingFollowUp = employeeProgressGroups.filter((group) => group.attentionCount > 0 || group.overdueModules > 0).length
+    const heavyLoadEmployees = employeeProgressGroups.filter((group) => group.totalModules >= 4).length
+    const averageProgress = employeeCount > 0
+      ? Math.round(employeeProgressGroups.reduce((sum, group) => sum + group.averageProgress, 0) / employeeCount)
+      : 0
+    const scoreValues = employeeProgressGroups
+      .map((group) => group.averageScore)
+      .filter((score): score is number => score !== null)
+    const averageScore = scoreValues.length > 0
+      ? Math.round(scoreValues.reduce((sum, score) => sum + score, 0) / scoreValues.length)
+      : null
+    const completionRate = progressMetrics.total > 0
+      ? Math.round((progressMetrics.completed / progressMetrics.total) * 100)
+      : 0
+
+    return {
+      averageModulesPerEmployee,
+      averageProgress,
+      averageScore,
+      completionRate,
+      employeeCount,
+      employeesNeedingFollowUp,
+      heavyLoadEmployees
+    }
+  }, [employeeProgressGroups, progressMetrics.completed, progressMetrics.total])
+
+  const followUpQueue = useMemo(() => {
+    return employeeProgressGroups
+      .filter((group) => group.attentionCount > 0 || group.overdueModules > 0)
+      .slice(0, 5)
+  }, [employeeProgressGroups])
+
+  const moduleLoadLeaders = useMemo(() => {
+    return [...employeeProgressGroups]
+      .sort((a, b) => {
+        if (b.totalModules !== a.totalModules) return b.totalModules - a.totalModules
+        if (b.activeModules !== a.activeModules) return b.activeModules - a.activeModules
+        return a.averageProgress - b.averageProgress
+      })
+      .slice(0, 5)
+  }, [employeeProgressGroups])
+
+  const describeFollowUp = useCallback((group: EmployeeProgressGroup) => {
+    const reasons: string[] = []
+
+    if (group.overdueModules > 0) {
+      reasons.push(`${group.overdueModules} ${t('overdue')}`)
+    }
+    if (group.assignedModules > 0) {
+      reasons.push(`${group.assignedModules} ${t('assigned')}`)
+    }
+    if (group.activeModules >= 4) {
+      reasons.push(t('heavyLoad', 'Heavy load'))
+    }
+
+    return reasons.length > 0 ? reasons.join(' • ') : t('onTime')
+  }, [t])
 
   const selectedProgressMetadata = useMemo(() => {
     const metadata = selectedProgress?.metadata
@@ -1180,45 +1477,88 @@ export function TrainingAssignmentsPanel({
     : `${formTargetIds.length} ${t('selected')}`
 
   const handleExport = () => {
-    if (!filteredProgress.length) return
+    if (!enrichedProgress.length) return
+
+    const employeeLookup = new Map(employeeProgressGroups.map((group) => [group.userId, group]))
 
     const headers = [
       t('employee'),
-      t('department') + '/' + t('property'),
+      t('email', 'Email'),
+      t('department'),
+      t('property'),
       t('module'),
       t('status'),
       t('progress'),
       t('score'),
-      t('lastAccess')
+      t('passed', 'Passed'),
+      t('timeSpent', 'Time spent'),
+      t('lastAccess'),
+      t('completedAt', 'Completed at'),
+      t('currentStep', 'Current step'),
+      t('totalEnrollments'),
+      t('completed', 'Completed') + ` ${t('modules', 'Modules')}`,
+      t('inProgress') + ` ${t('modules', 'Modules')}`,
+      t('overdue') + ` ${t('modules', 'Modules')}`,
+      t('assigned') + ` ${t('modules', 'Modules')}`,
+      t('employeeCompletionRate', 'Employee completion rate'),
+      t('analytics.avgScore', 'Avg Score'),
+      t('followUpFlag', 'Follow-up flag'),
+      t('followUpReason', 'Follow-up reason')
     ]
-    const csvContent = [
-      headers.join(','),
-      ...filteredProgress.map(item => {
-        const deptData = userDepartments?.find(d => d.user_id === item.user_id)?.department
-        const propData = userProperties?.find(p => p.user_id === item.user_id)?.property
-        const deptName = Array.isArray(deptData) ? deptData[0]?.name : (deptData as any)?.name
-        const propName = Array.isArray(propData) ? propData[0]?.name : (propData as any)?.name
-        const user = users?.find(u => u.id === item.user_id)
-        const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')
-        const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
+
+    const csvRows = employeeProgressGroups.flatMap((group) => {
+      return group.records.map((record) => {
+        const user = users?.find((entry) => entry.id === record.user_id)
+        const currentStep = record.last_block_index !== null && record.last_block_index !== undefined
+          ? t('blockTitle', { number: record.last_block_index + 1 })
+          : '-'
+        const completionRate = group.totalModules > 0
+          ? `${Math.round((group.completedModules / group.totalModules) * 100)}%`
+          : '0%'
+        const followUpFlag = group.attentionCount > 0 || group.overdueModules > 0
+          ? t('requiredAction', 'Required Action')
+          : t('onTime')
 
         return [
-          `"${item.profiles?.full_name || user?.full_name || t('unknownUser')}"`,
-          `"${deptName || propName || '-'}"`,
-          `"${moduleTitle}"`,
-          t(item.status),
-          `${displayProgress}%`,
-          item.score_percentage !== undefined && item.score_percentage !== null ? `${item.score_percentage}%` : '-',
-          formatDate(item.last_accessed_at || item.created_at)
+          escapeCsvValue(group.userName),
+          escapeCsvValue(record.profiles?.email || user?.email || '-'),
+          escapeCsvValue(group.departmentName || '-'),
+          escapeCsvValue(group.propertyName || '-'),
+          escapeCsvValue(record.resolvedModuleTitle),
+          escapeCsvValue(record.statusLabel),
+          escapeCsvValue(`${record.resolvedProgress}%`),
+          escapeCsvValue(record.resolvedScore !== null ? `${Math.round(record.resolvedScore)}%` : '-'),
+          escapeCsvValue(
+            record.passed === undefined || record.passed === null
+              ? '-'
+              : record.passed
+                ? t('yes', 'Yes')
+                : t('no', 'No')
+          ),
+          escapeCsvValue(formatDuration(record.time_spent_seconds)),
+          escapeCsvValue(formatDate(record.lastTouchedAt)),
+          escapeCsvValue(record.completed_at ? formatDate(record.completed_at) : '-'),
+          escapeCsvValue(currentStep),
+          escapeCsvValue(group.totalModules),
+          escapeCsvValue(group.completedModules),
+          escapeCsvValue(group.inProgressModules),
+          escapeCsvValue(group.overdueModules),
+          escapeCsvValue(group.assignedModules),
+          escapeCsvValue(completionRate),
+          escapeCsvValue(group.averageScore !== null ? `${group.averageScore}%` : '-'),
+          escapeCsvValue(followUpFlag),
+          escapeCsvValue(describeFollowUp(employeeLookup.get(record.user_id) || group))
         ].join(',')
       })
-    ].join('\n')
+    })
+
+    const csvContent = [headers.map(escapeCsvValue).join(','), ...csvRows].join('\n')
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const link = document.createElement('a')
     const url = URL.createObjectURL(blob)
     link.setAttribute('href', url)
-    link.setAttribute('download', `training_progress_${new Date().toISOString().split('T')[0]}.csv`)
+    link.setAttribute('download', `training_progress_tracker_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -1337,260 +1677,95 @@ export function TrainingAssignmentsPanel({
               </Button>
             </div>
           </div>
-          {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card className="border-l-4 border-l-blue-500 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{t('totalEnrollments')}</p>
-                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.total}</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600">
-                    <Users className="w-6 h-6" />
-                  </div>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('totalEnrollments')}</CardDescription>
+                <CardTitle className="text-3xl">{progressMetrics.total}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="size-4 text-blue-600" />
+                  {t('modules', 'Modules')}
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-green-500 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{t('completed')}</p>
-                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.completed}</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-green-50 rounded-xl flex items-center justify-center text-green-600">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('staff', 'Staff')}</CardDescription>
+                <CardTitle className="text-3xl">{employeeTrackingSummary.employeeCount}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Users className="size-4 text-indigo-600" />
+                  {t('employeeProgress', 'Employee Progress')}
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-yellow-500 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{t('inProgress')}</p>
-                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.in_progress}</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-yellow-50 rounded-xl flex items-center justify-center text-yellow-600">
-                    <Clock className="w-6 h-6" />
-                  </div>
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('completed')}</CardDescription>
+                <CardTitle className="text-3xl">{progressMetrics.completed}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="size-4 text-emerald-600" />
+                  {employeeTrackingSummary.completionRate}% {t('progress')}
                 </div>
               </CardContent>
             </Card>
-            <Card className="border-l-4 border-l-red-500 shadow-sm hover:shadow-md transition-all">
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">{t('overdue')}</p>
-                    <h3 className="text-3xl font-bold mt-2 text-slate-900">{progressMetrics.overdue}</h3>
-                  </div>
-                  <div className="h-12 w-12 bg-red-50 rounded-xl flex items-center justify-center text-red-600">
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('inProgress')}</CardDescription>
+                <CardTitle className="text-3xl">{progressMetrics.in_progress}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Clock className="size-4 text-sky-600" />
+                  {employeeTrackingSummary.averageProgress}% {t('progress')}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('overdue')}</CardDescription>
+                <CardTitle className="text-3xl">{progressMetrics.overdue}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <AlertCircle className="size-4 text-rose-600" />
+                  {employeeTrackingSummary.employeesNeedingFollowUp} {t('requiredAction', 'Require follow-up')}
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader className="gap-1 pb-3">
+                <CardDescription>{t('moduleLoad', 'Avg module load')}</CardDescription>
+                <CardTitle className="text-3xl">{employeeTrackingSummary.averageModulesPerEmployee}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <BarChart3 className="size-4 text-amber-600" />
+                  {employeeTrackingSummary.heavyLoadEmployees} {t('heavyLoad', 'heavy load')}
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Progress Table */}
-          <Card className="shadow-md border-t-4 border-t-hotel-navy">
-            <CardHeader className="flex flex-row items-center justify-between pb-2 border-b">
-              <CardTitle className="text-xl font-heading text-hotel-navy">{t('employeeProgress')}</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              {isLoadingProgress ? (
-                <div className="flex justify-center p-12">
-                  <Loader2 className="w-10 h-10 animate-spin text-hotel-gold" />
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="hidden md:block">
-                    <Table>
-                      <TableHeader className="bg-slate-50">
-                        <TableRow>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('employee')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('module')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('status')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('progress')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('score')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-right" : "")}>{t('lastAccess')}</TableHead>
-                          <TableHead className={cn("py-4 uppercase text-xs font-bold tracking-wider text-slate-500", isRTL ? "text-left" : "text-right")}>{t('actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {filteredProgress.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
-                              <div className="flex flex-col items-center gap-3">
-                                <Search className="h-10 w-10 text-slate-300" />
-                                <p>{t('noProgressFound')}</p>
-                                <p className="text-xs text-slate-400">{t('adjustFilters')}</p>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          filteredProgress.map((item) => {
-                            // Prefer dept/prop data joined directly in the hook (avoids RLS issues on user_departments)
-                            const joinedDepts = item.profiles?.user_departments
-                            const joinedProps = item.profiles?.user_properties
-                            const deptName = (joinedDepts && joinedDepts.length > 0)
-                              ? joinedDepts[0]?.departments?.name
-                              : userDepartments?.find((d) => d.user_id === item.user_id)?.department?.name
-                            const propName = (joinedProps && joinedProps.length > 0)
-                              ? joinedProps[0]?.properties?.name
-                              : userProperties?.find((p) => p.user_id === item.user_id)?.property?.name
-
-                            const user = users?.find(u => u.id === item.user_id)
-                            const userName = item.profiles?.full_name || user?.full_name || t('unknownUser')
-                            const userInitials = userName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
-                            const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
-
-                            return (
-                              <TableRow key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                                <TableCell className="py-4">
-                                  <div className="flex items-center gap-3">
-                                    <Avatar className="h-10 w-10 border-2 border-white shadow-sm group-hover:border-blue-100 transition-all">
-                                      <AvatarImage src={item.profiles?.avatar_url || ''} />
-                                      <AvatarFallback className="bg-hotel-navy/5 text-hotel-navy font-bold text-xs">
-                                        {userInitials}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <div className="flex flex-col">
-                                      <span className="font-semibold text-slate-900 group-hover:text-hotel-navy transition-colors">{userName}</span>
-                                      <span className="text-xs text-muted-foreground max-w-[180px] truncate" title={deptName || propName || t('noDept')}>
-                                        {deptName || propName || t('noDept')}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell className="font-medium text-slate-700 py-4">
-                                  {item.training_modules?.title || modules?.find(m => m.id === item.content_id)?.title || t('unknownModule')}
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  <Badge variant="outline" className={cn(
-                                    "capitalize px-3 py-1 rounded-full text-xs font-semibold shadow-sm border-0",
-                                    item.status === 'completed' ? 'bg-green-100 text-green-700 hover:bg-green-200' :
-                                      item.status === 'in_progress' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' :
-                                        item.status === 'overdue' ? 'bg-red-100 text-red-700 hover:bg-red-200' :
-                                          'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                                  )}>
-                                    {t(item.status)}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="w-[150px] py-4">
-                                  <div className="flex flex-col gap-1.5">
-                                    <div className="flex justify-between text-xs mb-1">
-                                      <span className="font-medium text-slate-700">{displayProgress}%</span>
-                                    </div>
-                                    <Progress value={displayProgress} className={cn("h-2",
-                                      displayProgress === 100 ? "[&>div]:bg-green-500" : "[&>div]:bg-hotel-gold"
-                                    )} />
-                                  </div>
-                                </TableCell>
-                                <TableCell className="py-4">
-                                  {item.score_percentage !== undefined && item.score_percentage !== null ? (
-                                    <span className={cn(
-                                      "font-bold text-sm",
-                                      item.passed ? "text-green-600" : "text-red-500"
-                                    )}>
-                                      {Number(item.score_percentage).toFixed(0)}%
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-400">-</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-sm text-muted-foreground py-4">
-                                  <div className="flex items-center gap-1.5">
-                                    <Clock className="w-3.5 h-3.5 text-slate-400" />
-                                    {formatDate(item.last_accessed_at || item.created_at)}
-                                  </div>
-                                </TableCell>
-                                <TableCell className={cn("py-4", isRTL ? "text-left" : "text-right")}>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setSelectedProgressId(item.id)}
-                                  >
-                                    <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
-                                    {t('details', 'Details')}
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            )
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  {/* Mobile Card View */}
-                  <div className="grid grid-cols-1 gap-4 md:hidden">
-                    {filteredProgress.length === 0 ? (
-                      <div className="text-center py-8 text-gray-500 border rounded-lg bg-gray-50">
-                        {t('noProgressFound')}
-                      </div>
-                    ) : (
-                      filteredProgress.map((item) => {
-                        // Prefer joined data from hook
-                        const joinedDepts2 = item.profiles?.user_departments
-                        const joinedProps2 = item.profiles?.user_properties
-                        const deptName = (joinedDepts2 && joinedDepts2.length > 0)
-                          ? joinedDepts2[0]?.departments?.name
-                          : userDepartments?.find((d) => d.user_id === item.user_id)?.department?.name
-                        const propName = (joinedProps2 && joinedProps2.length > 0)
-                          ? joinedProps2[0]?.properties?.name
-                          : userProperties?.find((p) => p.user_id === item.user_id)?.property?.name
-                        const user = users?.find(u => u.id === item.user_id)
-                        const module = item.training_modules || modules?.find(m => m.id === item.content_id)
-                        const displayProgress = item.status === 'completed' ? item.progress_percentage : Math.min(item.progress_percentage, 99)
-
-                        return (
-                          <div key={item.id} className="bg-white border rounded-lg p-4 shadow-sm space-y-3">
-                            <div className="flex justify-between items-start">
-                              <div>
-                                <h4 className="font-medium">{item.profiles?.full_name || user?.full_name || t('unknownUser')}</h4>
-                                <p className="text-xs text-muted-foreground">{deptName || propName || t('noDept')}</p>
-                              </div>
-                              <Badge className={cn(getStatusColor(item.status as AssignmentStatus))}>
-                                {t(item.status)}
-                              </Badge>
-                            </div>
-
-                            <div>
-                              <p className="text-sm font-medium text-slate-700">{module?.title || t('unknownModule')}</p>
-                              <div className="flex justify-between text-xs text-muted-foreground mt-1">
-                                <span>{t('progress')}: {displayProgress}%</span>
-                                <span>{item.score_percentage !== undefined && item.score_percentage !== null ? `${t('score')}: ${item.score_percentage}%` : ''}</span>
-                              </div>
-                              <Progress value={displayProgress} className="h-1.5 mt-1" />
-                            </div>
-
-                            <div className="pt-2 border-t flex justify-between items-center text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatDate(item.last_accessed_at || item.created_at)}
-                              </span>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 px-2"
-                                onClick={() => setSelectedProgressId(item.id)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card >
+          <EmployeeProgressTracker
+            describeFollowUp={describeFollowUp}
+            followUpQueue={followUpQueue}
+            formatDate={formatDate}
+            formatDuration={formatDuration}
+            getProgressStatusMeta={getProgressStatusMeta}
+            groups={employeeProgressGroups}
+            isLoading={isLoadingProgress}
+            isRTL={isRTL}
+            metrics={progressMetrics}
+            moduleLoadLeaders={moduleLoadLeaders}
+            onViewDetails={setSelectedProgressId}
+            summary={employeeTrackingSummary}
+          />
 
           <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && setSelectedProgressId(null)}>
             <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">

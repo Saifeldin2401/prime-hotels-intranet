@@ -30,8 +30,6 @@ import {
     BarChart,
     CartesianGrid,
     Cell,
-    Pie,
-    PieChart,
     PolarAngleAxis,
     PolarGrid,
     PolarRadiusAxis, Radar,
@@ -216,15 +214,19 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
   // Process data for charts
   const processProgressData = (completions) => {
     const dailyProgress = completions?.reduce((acc, completion) => {
-      const date = new Date(completion.completed_at).toLocaleDateString()
-      acc[date] = (acc[date] || 0) + 1
+      const rawDate = completion.completed_at || completion.updated_at
+      if (!rawDate) return acc
+      const dateKey = String(rawDate).slice(0, 10)
+      acc[dateKey] = (acc[dateKey] || 0) + 1
       return acc
     }, {} as Record<string, number>) || {}
 
-    return Object.entries(dailyProgress).map(([date, count]) => ({
-      date,
-      completions: count
-    }))
+    return Object.entries(dailyProgress)
+      .sort(([firstDate], [secondDate]) => new Date(firstDate).getTime() - new Date(secondDate).getTime())
+      .map(([date, count]) => ({
+        date,
+        completions: count
+      }))
   }
 
   const processCategoryData = (completions) => {
@@ -234,12 +236,31 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
       return acc
     }, {} as Record<string, number>) || {}
 
-    return Object.entries(categoryData).map(([category, count]) => ({
-      category,
-      count,
-      fullMark: 100,
-      fill: getCategoryColor(category)
-    }))
+    const sortedCategories = Object.entries(categoryData)
+      .map(([category, count]) => ({
+        category,
+        count,
+        fullMark: 100,
+        fill: getCategoryColor(category)
+      }))
+      .sort((first, second) => second.count - first.count)
+
+    if (sortedCategories.length <= 6) {
+      return sortedCategories
+    }
+
+    const visibleCategories = sortedCategories.slice(0, 5)
+    const overflowCount = sortedCategories.slice(5).reduce((sum, item) => sum + item.count, 0)
+
+    return [
+      ...visibleCategories,
+      {
+        category: t('other', 'Other'),
+        count: overflowCount,
+        fullMark: 100,
+        fill: getCategoryColor('Other')
+      }
+    ]
   }
 
   const getCategoryColor = (category: string) => {
@@ -266,6 +287,17 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     acc + (completion.score || 0), 0) / (totalCompletions || 1) || 0
 
   const currentStreak = calculateStreak(fullHistory || [])
+  const hasPersonalTrend = userDailyProgress.length > 0
+  const hasPersonalCategories = userCategoryData.length > 0
+  const hasDepartmentData = !!departmentProgress && departmentProgress.length > 0
+
+  const renderChartEmptyState = (title: string, description: string) => (
+    <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed bg-slate-50 p-6 text-center text-muted-foreground">
+      <BarChart3 className="size-10 opacity-50" />
+      <p className="mt-3 text-sm font-medium text-slate-900">{title}</p>
+      <p className="mt-1 max-w-sm text-xs">{description}</p>
+    </div>
+  )
 
   // Real achievements from database
   const { data: achievements } = useUserAchievements()
@@ -351,7 +383,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
       </div>
 
       {/* Charts */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'personal' | 'department')} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'personal' | 'department' | 'achievements')} className="space-y-4">
         <TabsList className={isRTL ? 'flex-row-reverse' : ''}>
           <TabsTrigger value="personal">{t('visualization.personalProgress')}</TabsTrigger>
           <TabsTrigger value="department">{t('visualization.department')}</TabsTrigger>
@@ -377,69 +409,80 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                   {t('visualization.dailyProgress')}
                 </CardTitle>
                 <CardDescription>
-                  {t('visualization.dailyProgressDesc')}
+                  {t('visualization.dailyProgressDesc', 'Completions recorded across the selected period.')}
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartViewport height={250}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
-                    <AreaChart data={userDailyProgress}>
-                      <defs>
-                        <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0088FE" stopOpacity={0.8} />
-                          <stop offset="95%" stopColor="#0088FE" stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                      <XAxis
-                        dataKey="date"
-                        tick={{ fontSize: 12 }}
-                        tickFormatter={(value) => new Date(value).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
-                      />
-                      <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
-                      <Tooltip content={<ChartTooltipContent />} />
-                      <Area
-                        type="monotone"
-                        dataKey="completions"
-                        stroke="#0088FE"
-                        fillOpacity={1}
-                        fill="url(#colorCompletions)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                  {hasPersonalTrend ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                      <AreaChart data={userDailyProgress}>
+                        <defs>
+                          <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#0088FE" stopOpacity={0.8} />
+                            <stop offset="95%" stopColor="#0088FE" stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis
+                          dataKey="date"
+                          tick={{ fontSize: 12 }}
+                          tickFormatter={(value) => new Date(value).toLocaleDateString(i18n.language, { month: 'short', day: 'numeric' })}
+                        />
+                        <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Area
+                          type="monotone"
+                          dataKey="completions"
+                          stroke="#0088FE"
+                          fillOpacity={1}
+                          fill="url(#colorCompletions)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    renderChartEmptyState(
+                      t('visualization.noDailyProgress', 'No daily progress yet'),
+                      t('visualization.noDailyProgressDesc', 'Complete a module in the selected range to populate this trend.')
+                    )
+                  )}
                 </ChartViewport>
               </CardContent>
             </Card>
 
-            {/* Category Distribution - Pie Chart */}
+            {/* Category Distribution */}
             <Card>
               <CardHeader className={isRTL ? 'text-right' : 'text-left'}>
                 <CardTitle className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
                   <PieChartIcon className="h-5 w-5" />
                   {t('visualization.trainingCategories')}
                 </CardTitle>
+                <CardDescription>
+                  {t('visualization.trainingCategoriesDesc', 'Top categories by completed modules in the current range.')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartViewport height={300}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
-                    <PieChart>
-                      <Pie
-                        data={userCategoryData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={80}
-                        paddingAngle={5}
-                        dataKey="count"
-                        label={({ category, percent }) => `${category} ${(percent * 100).toFixed(0)}%`}
-                      >
-                        {userCategoryData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltipContent />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {hasPersonalCategories ? (
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                      <BarChart data={userCategoryData} layout="vertical" margin={{ left: 8, right: 8 }}>
+                        <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                        <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
+                        <YAxis dataKey="category" type="category" tick={{ fontSize: 12 }} width={110} />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Bar dataKey="count" radius={[0, 4, 4, 0]}>
+                          {userCategoryData.map((entry, index) => (
+                            <Cell key={`category-cell-${index}`} fill={entry.fill} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    renderChartEmptyState(
+                      t('visualization.noCategoryData', 'No category data yet'),
+                      t('visualization.noCategoryDataDesc', 'Category insights will appear after staff complete modules.')
+                    )
+                  )}
                 </ChartViewport>
               </CardContent>
             </Card>
@@ -451,6 +494,9 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                   <Trophy className="h-5 w-5" />
                   {t('visualization.skillsRadar')}
                 </CardTitle>
+                <CardDescription>
+                  {t('visualization.skillsRadarDesc', 'Balance of completed learning across different training categories.')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartViewport height={300}>
@@ -485,6 +531,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
 
         <TabsContent value="department" className="space-y-4">
           {activeTab === 'department' && (
+          hasDepartmentData ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Department Daily Progress */}
             <Card>
@@ -493,6 +540,9 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                   <Users className="h-5 w-5" />
                   {t('visualization.deptProgress')}
                 </CardTitle>
+                <CardDescription>
+                  {t('visualization.deptProgressDesc', 'Completions recorded across your department during the selected range.')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartViewport height={250}>
@@ -520,6 +570,9 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                   <BarChart3 className="h-5 w-5" />
                   {t('visualization.deptCategories')}
                 </CardTitle>
+                <CardDescription>
+                  {t('visualization.deptCategoriesDesc', 'Which categories your department completes most often.')}
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartViewport height={250}>
@@ -527,7 +580,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                     <BarChart data={departmentCategoryData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize: 12 }} />
-                      <YAxis dataKey="category" type="category" tick={{ fontSize: 12 }} width={80} />
+                      <YAxis dataKey="category" type="category" tick={{ fontSize: 12 }} width={110} />
                       <Tooltip content={<ChartTooltipContent />} />
                       <Bar dataKey="count" fill="#FFBB28" radius={[0, 4, 4, 0]} />
                     </BarChart>
@@ -535,20 +588,18 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
                 </ChartViewport>
               </CardContent>
             </Card>
-
-            {/* No Department Data Message */}
-            {(!departmentProgress || departmentProgress.length === 0) && (
-              <Card className="col-span-1 lg:col-span-2">
-                <CardContent className="p-8 text-center">
-                  <AlertCircle className="h-12 w-12 mx-auto text-amber-500 mb-4" />
-                  <h3 className="text-lg font-semibold mb-2">{t('visualization.noDeptData')}</h3>
-                  <p className="text-muted-foreground">
-                    {t('visualization.noDeptDataDesc')}
-                  </p>
-                </CardContent>
-              </Card>
-            )}
           </div>
+          ) : (
+            <Card>
+              <CardContent className="p-8 text-center">
+                <AlertCircle className="mx-auto mb-4 size-12 text-amber-500" />
+                <h3 className="text-lg font-semibold mb-2">{t('visualization.noDeptData', 'No department data yet')}</h3>
+                <p className="text-muted-foreground">
+                  {t('visualization.noDeptDataDesc', 'Department insights will appear after teammates complete modules in the selected range.')}
+                </p>
+              </CardContent>
+            </Card>
+          )
           )}
         </TabsContent>
 

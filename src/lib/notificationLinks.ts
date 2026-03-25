@@ -14,7 +14,7 @@
  * @returns             A route string or null when no target exists
  */
 export function getNotificationLink(
-  notification: { type: string; link?: string | null; entity_id?: string | null },
+  notification: { type: string; title?: string | null; link?: string | null; entity_id?: string | null },
   options?: {
     /** Check whether the current user has a given permission. */
     hasPermission?: (permission: string) => boolean
@@ -109,8 +109,33 @@ export function getNotificationLink(
 
     // ── System / unknown ───────────────────────────────────
     case 'system':
-    default:
+    default: {
+      // For system/unknown types, try title-based keyword routing
+      // to handle legacy notifications created without specific types
+      const titleRoute = resolveLinkByTitle(notification.title)
+      if (titleRoute) return titleRoute
       // Last resort: use the stored link for unmapped types
       return notification.link || null
+    }
   }
+}
+
+/**
+ * Fallback: resolve a navigation link based on the notification title.
+ * Used for legacy notifications (type = 'system') where the title
+ * is the only indicator of the content area.
+ */
+function resolveLinkByTitle(title?: string | null): string | null {
+  if (!title) return null
+  const t = title.toLowerCase()
+
+  if (t.includes('certificate')) return '/training/certificates'
+  if (t.includes('training') || t.includes('learning')) return '/learning/my'
+  if (t.includes('maintenance')) return '/maintenance'
+  if (t.includes('task')) return '/tasks'
+  if (t.includes('announcement')) return '/announcements'
+  if (t.includes('document') || t.includes('knowledge') || t.includes('sop')) return '/knowledge'
+  if (t.includes('approval') || t.includes('request')) return '/approvals'
+
+  return null
 }
