@@ -7,6 +7,7 @@ import {
     SectionBlock,
     SemanticClassAttributes,
 } from '@/editor/plugins/semanticBlocks'
+import { VideoExtension } from '@/editor/plugins/video/VideoExtension'
 import BubbleMenu from '@tiptap/extension-bubble-menu'
 import CharacterCount from '@tiptap/extension-character-count'
 import Link from '@tiptap/extension-link'
@@ -30,6 +31,7 @@ export function createEditorExtensions(options: ExtensionOptions) {
     HeaderBlock,
     FooterBlock,
     AICalloutBlock,
+    VideoExtension,
     StarterKit.configure({
       heading: {
         levels: [1, 2, 3, 4],

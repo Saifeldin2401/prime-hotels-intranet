@@ -222,8 +222,8 @@ export default function KnowledgeViewer() {
 
     // Memoize Arabic content HTML if it exists in DB
     const htmlContentAr = useMemo(() => {
-        return renderKnowledgeContent(article?.content_ar)
-    }, [article?.content_ar, renderKnowledgeContent])
+        return renderKnowledgeContent(article?.content_ar || article?.content)
+    }, [article?.content_ar, article?.content, renderKnowledgeContent])
 
     const htmlContentSanitized = useMemo(() => {
         return { __html: sanitizeHtml(htmlContent) }

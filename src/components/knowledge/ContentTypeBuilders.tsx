@@ -21,9 +21,13 @@ import {
     Play,
     Plus,
     Trash2,
-    Video
+    Video,
+    Upload,
+    Loader2
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
+import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
 
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
@@ -39,6 +43,8 @@ interface VideoContentBuilderProps {
 
 export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProps) {
     const [showPreview, setShowPreview] = useState(true)
+    const [isUploading, setIsUploading] = useState(false)
+    const fileInputRef = useRef<HTMLInputElement>(null)
 
     const isValidUrl = useMemo(() => {
         try {
@@ -107,6 +113,54 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                     <p className="text-xs text-muted-foreground">
                         Supports YouTube, Vimeo, or direct video file URLs (.mp4, .webm)
                     </p>
+                </div>
+
+                <div className="flex flex-col gap-3 p-4 border-2 border-dashed rounded-lg bg-muted/30">
+                    <div className="flex items-center justify-between gap-4">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium">Upload Internal Video</p>
+                            <p className="text-xs text-muted-foreground">
+                                Upload secure MP4/MOV files up to 500MB directly to PRIME Cloud
+                            </p>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                            className="gap-2 shrink-0"
+                        >
+                            {isUploading ? (
+                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                            ) : (
+                                <Upload className="h-4 w-4" />
+                            )}
+                            {isUploading ? 'Uploading to PRIME Cloud...' : 'Upload Video File'}
+                        </Button>
+                    </div>
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        className="hidden"
+                        accept="video/mp4,video/quicktime,video/webm"
+                        onChange={async (e) => {
+                            const file = e.target.files?.[0]
+                            if (!file) return
+
+                            setIsUploading(true)
+                            try {
+                                const url = await uploadFileToSupabase(file, 'media')
+                                onChange(url)
+                                toast.success('Video uploaded successfully to PRIME Cloud')
+                            } catch (error) {
+                                console.error('Upload error:', error)
+                                toast.error((error as Error).message || 'Failed to upload video')
+                            } finally {
+                                setIsUploading(false)
+                                if (fileInputRef.current) fileInputRef.current.value = ''
+                            }
+                        }}
+                    />
                 </div>
 
                 {showPreview && isValidUrl && (

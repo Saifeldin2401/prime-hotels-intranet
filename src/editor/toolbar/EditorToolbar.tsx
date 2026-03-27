@@ -41,6 +41,7 @@ import {
     Underline,
     Undo2,
     Video,
+    UploadCloud,
 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 
@@ -49,6 +50,7 @@ interface EditorToolbarProps {
   disabled?: boolean
   config: RichEditorToolbarConfig
   onUploadImage: () => void
+  onUploadVideo: () => void
   onOpenAiPanel: () => void
   onCopyHtml: () => void
   onCopyMarkdown: () => void
@@ -69,6 +71,7 @@ export function EditorToolbar({
   disabled = false,
   config,
   onUploadImage,
+  onUploadVideo,
   onOpenAiPanel,
   onCopyHtml,
   onCopyMarkdown,
@@ -363,18 +366,38 @@ export function EditorToolbar({
                   <Video className="mr-1 h-4 w-4" /> Video
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs font-semibold">YouTube URL</Label>
-                  <Input
-                    value={videoUrl}
-                    onChange={(event) => setVideoUrl(event.target.value)}
-                    placeholder="https://www.youtube.com/watch?v=..."
-                  />
+              <PopoverContent className="w-80 space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Upload Internal Video</Label>
+                  <Button 
+                    variant="outline" 
+                    className="w-full h-16 border-dashed flex flex-col gap-1"
+                    onClick={() => {
+                      onUploadVideo();
+                    }}
+                  >
+                    <UploadCloud className="h-5 w-5 text-primary" />
+                    <span className="text-xs">Upload to PRIME Cloud</span>
+                  </Button>
+                  <p className="text-[10px] text-center text-muted-foreground">Max 500MB (.mp4, .webm, .ogg)</p>
                 </div>
-                <Button size="sm" onClick={insertYoutube}>
-                  Embed Video
-                </Button>
+                
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Embed YouTube URL</Label>
+                  <div className="flex flex-col gap-2">
+                    <Input
+                      value={videoUrl}
+                      onChange={(event) => setVideoUrl(event.target.value)}
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      className="h-8 text-xs"
+                    />
+                    <Button size="sm" onClick={insertYoutube} className="w-full">
+                      Embed Video
+                    </Button>
+                  </div>
+                </div>
               </PopoverContent>
             </Popover>
           </>

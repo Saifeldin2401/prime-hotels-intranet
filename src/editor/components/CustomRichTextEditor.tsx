@@ -9,7 +9,7 @@ import { mergeToolbarConfig } from '@/editor/toolbar/toolbarConfig'
 import type { EditorOutput, RichTextEditorProps, SaveState } from '@/editor/types'
 import { copyToClipboard } from '@/editor/utils/clipboard'
 import { serializeEditorContent } from '@/editor/utils/serialization'
-import { uploadImageToSupabase } from '@/editor/utils/supabaseUpload'
+import { uploadImageToSupabase, uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import type { Editor } from '@tiptap/react'
@@ -53,6 +53,7 @@ export function CustomRichTextEditor({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [isUploadingVideo, setIsUploadingVideo] = useState(false)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
   const [changeVersion, setChangeVersion] = useState(0)
@@ -63,6 +64,7 @@ export function CustomRichTextEditor({
   const latestOutputRef = useRef<EditorOutput>(buildEmptyOutput())
   const autosaveTimerRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
+  const videoFileInputRef = useRef<HTMLInputElement | null>(null)
   const isMountedRef = useRef(false)
 
   // 3. Editor Hook
@@ -169,6 +171,39 @@ export function CustomRichTextEditor({
     [editor, supabaseBucket],
   )
 
+  const handleVideoUpload = useCallback(
+    async (files: File[], position?: number) => {
+      const currentEditor = editorRef.current || editor
+      if (!currentEditor || !isMountedRef.current) return
+
+      const videoFiles = files.filter((file) => file.type.startsWith('video/'))
+      if (!videoFiles.length) return
+
+      setIsUploadingVideo(true)
+      try {
+        for (const file of videoFiles) {
+          const publicUrl = await uploadFileToSupabase(file, 'media')
+          if (!publicUrl) continue
+
+          const chain = currentEditor.chain().focus()
+          if (typeof position === 'number') {
+            chain.setTextSelection(position)
+          }
+
+          chain.setVideo({ src: publicUrl }).run()
+        }
+        toast.success('Video uploaded successfully to PRIME Cloud')
+      } catch (error) {
+        toast.error((error as Error).message || 'Video upload failed')
+      } finally {
+        if (isMountedRef.current) {
+          setIsUploadingVideo(false)
+        }
+      }
+    },
+    [editor],
+  )
+
   // 5. Effects
   useEffect(() => {
     isMountedRef.current = true
@@ -186,11 +221,11 @@ export function CustomRichTextEditor({
     const incoming = sanitizedValue
     const current = editor.getHTML()
 
-    if (incoming !== current && !editor.isFocused && !isUploadingImage) {
+    if (incoming !== current && !editor.isFocused && !isUploadingImage && !isUploadingVideo) {
       editor.commands.setContent(incoming, { emitUpdate: false })
       latestOutputRef.current = serializeEditorContent(editor)
     }
-  }, [sanitizedValue, editor, isUploadingImage])
+  }, [sanitizedValue, editor, isUploadingImage, isUploadingVideo])
 
   useEffect(() => {
     if (!autosave?.enabled || !autosave.onAutosave) return
@@ -225,6 +260,14 @@ export function CustomRichTextEditor({
     if (!files.length) return
 
     await handleImageUpload(files)
+    event.target.value = ''
+  }
+
+  const handleVideoFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    if (!files.length) return
+
+    await handleVideoUpload(files)
     event.target.value = ''
   }
 
@@ -278,12 +321,20 @@ export function CustomRichTextEditor({
         className="hidden"
         onChange={handleFileInputChange}
       />
+      <input
+        ref={videoFileInputRef}
+        type="file"
+        accept="video/*"
+        className="hidden"
+        onChange={handleVideoFileInputChange}
+      />
 
       <EditorToolbar
         editor={editor}
         disabled={disabled}
         config={mergedToolbarConfig}
         onUploadImage={() => fileInputRef.current?.click()}
+        onUploadVideo={() => videoFileInputRef.current?.click()}
         onOpenAiPanel={() => setIsAiPanelOpen(!isAiPanelOpen)}
         onCopyHtml={copyHtml}
         onCopyMarkdown={copyMarkdown}
@@ -309,6 +360,13 @@ export function CustomRichTextEditor({
             <div className="editor-uploading-banner">
               <Loader2 className="h-4 w-4 animate-spin" />
               Uploading image...
+            </div>
+          )}
+
+          {isUploadingVideo && (
+            <div className="editor-uploading-banner">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Uploading video to Cloud...
             </div>
           )}
         </div>

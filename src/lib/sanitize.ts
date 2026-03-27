@@ -10,6 +10,7 @@ const TRUSTED_IFRAME_ORIGINS = [
     'https://www.youtube-nocookie.com',
     'https://player.vimeo.com',
     'https://vimeo.com',
+    'https://htsvjfrofcpkfzvjpwvx.supabase.co', // Added Supabase project URL
 ]
 
 function ensureHooksInitialized() {
@@ -85,17 +86,21 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
             'table', 'thead', 'tbody', 'tfoot', 'caption', 'tr', 'th', 'td', 'colgroup', 'col',
             // Media
             'img', 'figure', 'figcaption',
+            // Video (direct files)
+            'video', 'source',
             // Video embeds (YouTube/Vimeo) — validated in hook above
             'iframe',
         ],
         ALLOWED_ATTR: [
             // Universal
-            'id', 'class', 'dir', 'lang', 'title',
-            // Links & images
-            'href', 'src', 'alt', 'name', 'target', 'rel',
-            // Images
+            'id', 'class', 'dir', 'lang', 'title', 'style',
+            // Links, images & videos
+            'href', 'src', 'alt', 'name', 'target', 'rel', 'type',
+            // Images & videos
             'width', 'height', 'loading',
             'data-width', 'data-align',
+            // Video specific
+            'controls', 'poster', 'preload', 'autoplay', 'muted', 'loop', 'playsinline',
             // Iframes
             'allow', 'allowfullscreen', 'frameborder', 'scrolling',
             // Tables
@@ -103,8 +108,8 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
         ],
         // Allow data URIs for images only (legacy base64 images still render)
         ALLOW_DATA_ATTR: false,
-        ADD_TAGS: ['iframe'],
-        ADD_ATTR: ['allowfullscreen', 'allow', 'loading'],
+        ADD_TAGS: ['iframe', 'video', 'source'],
+        ADD_ATTR: ['allowfullscreen', 'allow', 'loading', 'controls', 'poster', 'preload', 'autoplay', 'muted', 'loop', 'playsinline'],
     });
 };
 
