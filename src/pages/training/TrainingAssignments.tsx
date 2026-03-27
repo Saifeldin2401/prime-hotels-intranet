@@ -34,8 +34,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { addDays, format } from 'date-fns'
 import {
     AlertCircle,
+    AlertTriangle,
     BarChart3,
     Bell,
+    BookOpen,
     Building,
     CheckCircle2,
     Clock,
@@ -47,6 +49,7 @@ import {
     Search,
     Settings,
     Trash2,
+    TrendingUp,
     Users,
     X
 } from 'lucide-react'
@@ -974,7 +977,8 @@ export function TrainingAssignmentsPanel({
       total: sourceData.length,
       completed: sourceData.filter(p => p.status === 'completed').length,
       in_progress: sourceData.filter(p => p.status === 'in_progress').length,
-      overdue: sourceData.filter(p => p.status === 'overdue').length
+      overdue: sourceData.filter(p => p.status === 'overdue').length,
+      uniqueModules: new Set(sourceData.map(p => p.content_id)).size
     }
   }, [filteredProgress])
 
@@ -1610,15 +1614,15 @@ export function TrainingAssignmentsPanel({
         {/* PROGRESS TAB */}
         <TabsContent value="overview" className="space-y-6">
           {/* Overview Filters Toolbar */}
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between bg-gray-50 p-4 rounded-lg border">
-            <div className="flex flex-1 items-center gap-4 w-full md:w-auto flex-wrap">
-              <div className="relative flex-1 w-full md:w-64 min-w-0">
-                <Search className={cn("absolute top-2.5 h-4 w-4 text-gray-500", isRTL ? "right-3" : "left-3")} />
+          <div className="flex flex-col md:flex-row gap-3 items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
+            <div className="flex flex-1 items-center gap-3 w-full md:w-auto flex-wrap">
+              <div className="relative w-full md:w-64 min-w-0">
+                <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "right-3" : "left-3")} />
                 <Input
                   placeholder={t('searchEmployeeOrModule')}
                   value={overviewSearch}
                   onChange={(e) => setOverviewSearch(e.target.value)}
-                  className={cn(isRTL ? "pr-9" : "pl-9", "bg-white")}
+                  className={cn(isRTL ? "pr-9" : "pl-9", "bg-slate-50/50 border-slate-200")}
                 />
               </div>
               <GroupedDepartmentSelector
@@ -1629,10 +1633,10 @@ export function TrainingAssignmentsPanel({
                 placeholder={t('filterByDept')}
                 generalLabel={t('allDepartments')}
                 generalValue="all"
-                className="w-full sm:w-[180px] bg-white"
+                className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200"
               />
               <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-white">
+                <SelectTrigger className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200">
                   <SelectValue placeholder={t('filterByProp')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1643,7 +1647,7 @@ export function TrainingAssignmentsPanel({
                 </SelectContent>
               </Select>
               <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
-                <SelectTrigger className="w-full sm:w-[150px] bg-white">
+                <SelectTrigger className="w-full sm:w-[150px] bg-slate-50/50 border-slate-200">
                   <SelectValue placeholder={t('filterByStatus')} />
                 </SelectTrigger>
                 <SelectContent>
@@ -1665,88 +1669,94 @@ export function TrainingAssignmentsPanel({
                     setOverviewFilterProp('all')
                     setOverviewFilterStatus('all')
                   }}
-                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                 >
-                  <X className="w-4 h-4 mr-2" />
+                  <X className="w-3.5 h-3.5 mr-1.5" />
                   {t('clearFilters')}
                 </Button>
               )}
-              <Button variant="outline" onClick={handleExport} className="bg-white">
+              <Button variant="outline" size="sm" onClick={handleExport}>
                 <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
                 {t('export')}
               </Button>
             </div>
           </div>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('totalEnrollments')}</CardDescription>
-                <CardTitle className="text-3xl">{progressMetrics.total}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="size-4 text-blue-600" />
-                  {t('modules', 'Modules')}
+          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
+            <Card className="border-s-4 border-s-hotel-gold">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-50">
+                    <BookOpen className="size-4 text-hotel-gold" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.uniqueModules}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('modules', 'Modules')}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('staff', 'Staff')}</CardDescription>
-                <CardTitle className="text-3xl">{employeeTrackingSummary.employeeCount}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="size-4 text-indigo-600" />
-                  {t('employeeProgress', 'Employee Progress')}
+            <Card className="border-s-4 border-s-indigo-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
+                    <Users className="size-4 text-indigo-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{employeeTrackingSummary.employeeCount}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('staff', 'Staff')}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('completed')}</CardDescription>
-                <CardTitle className="text-3xl">{progressMetrics.completed}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <CheckCircle2 className="size-4 text-emerald-600" />
-                  {employeeTrackingSummary.completionRate}% {t('progress')}
+            <Card className="border-s-4 border-s-blue-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
+                    <TrendingUp className="size-4 text-blue-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.total}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('totalEnrollments', 'Total Enrollments')}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('inProgress')}</CardDescription>
-                <CardTitle className="text-3xl">{progressMetrics.in_progress}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Clock className="size-4 text-sky-600" />
-                  {employeeTrackingSummary.averageProgress}% {t('progress')}
+            <Card className="border-s-4 border-s-sky-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-50">
+                    <Clock className="size-4 text-sky-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.in_progress}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('inProgress')} · {employeeTrackingSummary.averageProgress}%</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('overdue')}</CardDescription>
-                <CardTitle className="text-3xl">{progressMetrics.overdue}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <AlertCircle className="size-4 text-rose-600" />
-                  {employeeTrackingSummary.employeesNeedingFollowUp} {t('requiredAction', 'Require follow-up')}
+            <Card className="border-s-4 border-s-rose-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-50">
+                    <AlertTriangle className="size-4 text-rose-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.overdue}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('overdue')} · {employeeTrackingSummary.employeesNeedingFollowUp} {t('followUpFlag', 'follow-up')}</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="gap-1 pb-3">
-                <CardDescription>{t('moduleLoad', 'Avg module load')}</CardDescription>
-                <CardTitle className="text-3xl">{employeeTrackingSummary.averageModulesPerEmployee}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <BarChart3 className="size-4 text-amber-600" />
-                  {employeeTrackingSummary.heavyLoadEmployees} {t('heavyLoad', 'heavy load')}
+            <Card className="border-s-4 border-s-emerald-500">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
+                    <CheckCircle2 className="size-4 text-emerald-600" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.completed}</p>
+                    <p className="truncate text-xs text-muted-foreground">{t('completed')} · {employeeTrackingSummary.completionRate}%</p>
+                  </div>
                 </div>
               </CardContent>
             </Card>
