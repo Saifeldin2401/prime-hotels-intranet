@@ -50,25 +50,80 @@ async function getVaultSecret(supabase: ReturnType<typeof createClient>, name: s
 }
 
 function buildSlackBlocks(payload: Record<string, unknown>) {
-  return [
+  const propertyName = payload.propertyName || "PHG Property";
+  const platform = payload.platform || "Unknown";
+  const ratingDisplay = payload.ratingDisplay || "Unrated";
+  const severity = String(payload.severity || "medium");
+  const assigneeName = payload.assigneeName || "Unassigned";
+  const summaryEn = payload.summaryEn || "No summary available.";
+  const managerBriefEn = payload.managerBriefEn ? `\n*Manager Brief:* ${payload.managerBriefEn}` : "";
+  const reviewText = payload.reviewText || "No review text provided.";
+  const authorName = payload.authorName || "Anonymous";
+  const reviewedAt = payload.reviewedAt ? new Date(String(payload.reviewedAt)).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Unknown date";
+  const reviewUrl = payload.reviewUrl ? String(payload.reviewUrl) : null;
+  const actionUrl = payload.actionUrl ? String(payload.actionUrl) : null;
+
+  const severityEmoji = severity === "critical" ? "🚨" : severity === "high" ? "🔴" : severity === "medium" ? "🟠" : "🟢";
+
+  const blocks: Array<Record<string, unknown>> = [
     {
       type: "header",
-      text: { type: "plain_text", text: `${payload.propertyName || "PHG Property"} | Guest Review Alert` },
+      text: { type: "plain_text", text: `${severityEmoji} ${propertyName} | Guest Review Alert`, emoji: true },
     },
     {
       type: "section",
       fields: [
-        { type: "mrkdwn", text: `*Platform*\n${payload.platform || "Unknown"}` },
-        { type: "mrkdwn", text: `*Rating*\n${payload.ratingDisplay || "Unrated"}` },
-        { type: "mrkdwn", text: `*Severity*\n${payload.severity || "medium"}` },
-        { type: "mrkdwn", text: `*Assigned*\n${payload.assigneeName || "Unassigned"}` },
+        { type: "mrkdwn", text: `*Platform:*\n${platform}` },
+        { type: "mrkdwn", text: `*Rating:*\n${ratingDisplay}` },
+        { type: "mrkdwn", text: `*Author:*\n${authorName}` },
+        { type: "mrkdwn", text: `*Date:*\n${reviewedAt}` },
       ],
     },
     {
       type: "section",
-      text: { type: "mrkdwn", text: `*Summary*\n${payload.summaryEn || "No summary available."}` },
+      fields: [
+        { type: "mrkdwn", text: `*Severity:*\n${severity.toUpperCase()}` },
+        { type: "mrkdwn", text: `*Assigned Owner:*\n${assigneeName}` },
+      ]
+    },
+    { type: "divider" },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `*AI Analysis*\n*Summary:* ${summaryEn}${managerBriefEn}` },
+    },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: `*Original Review*\n> ${String(reviewText).replace(/\n/g, '\n> ')}` },
     },
   ];
+
+  const buttons: Array<Record<string, unknown>> = [];
+  
+  if (actionUrl) {
+    buttons.push({
+      type: "button",
+      text: { type: "plain_text", text: "View Details in Platform", emoji: true },
+      style: "primary",
+      url: actionUrl,
+    });
+  }
+
+  if (reviewUrl) {
+    buttons.push({
+      type: "button",
+      text: { type: "plain_text", text: "Open Original Review", emoji: true },
+      url: reviewUrl,
+    });
+  }
+
+  if (buttons.length > 0) {
+    blocks.push({
+      type: "actions",
+      elements: buttons,
+    });
+  }
+
+  return blocks;
 }
 
 async function sendSlackWebhook(webhookUrl: string, body: Record<string, unknown>) {
@@ -119,8 +174,8 @@ Deno.serve(async (req: Request) => {
         return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
       }
       const { data: roleRows } = await serviceClient.from("user_roles").select("role").eq("user_id", authData.user.id);
-      const roles = (roleRows ?? []).map((r) => r.role);
-      if (!roles.some((r) => TEST_ALLOWED_ROLES.has(r))) {
+      const roles = (roleRows ?? []).map((r: any) => r.role);
+      if (!roles.some((r: any) => TEST_ALLOWED_ROLES.has(r))) {
         return new Response(JSON.stringify({ error: "Forbidden" }), { status: 403, headers: corsHeaders });
       }
     }
