@@ -8,6 +8,7 @@ import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes } from './modules/AuthRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
+import { GuestReviewRoutes } from './modules/GuestReviewRoutes'
 import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
@@ -71,6 +72,7 @@ export const router = createBrowserRouter(
             {AdminRoutes()}
             {HRRoutes()}
             {OperationsRoutes()}
+            {GuestReviewRoutes()}
             {TrainingRoutes()}
             {KnowledgeRoutes()}
             {DashboardRoutes()}

@@ -76,9 +76,8 @@ export function isStandaloneAuthFlowPathname(pathname: string): pathname is (typ
 export function setAuthFlowState(flow: AuthFlowName, path?: string) {
   if (typeof window === 'undefined') return
 
-  const sanitizedPath = sanitizeFlowPath(path)
-    ?? `${window.location.pathname}${window.location.search}${window.location.hash}`
-    ?? getDefaultFlowPath(flow)
+  const fallbackPath = `${window.location.pathname}${window.location.search}${window.location.hash}` || getDefaultFlowPath(flow)
+  const sanitizedPath = sanitizeFlowPath(path) ?? fallbackPath
 
   try {
     window.sessionStorage.setItem(

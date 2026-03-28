@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from "../_shared/auth.ts";
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -32,26 +33,25 @@ serve(async (req) => {
 
 
 
-        const supabaseClient = createClient(
+        const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+        const serviceRoleJwt = getServiceRoleToken(authHeader)
+        const isServiceRoleCall = isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey)
 
-            Deno.env.get('SUPABASE_URL') ?? '',
+        if (!isServiceRoleCall) {
+            const supabaseClient = createClient(
+                Deno.env.get('SUPABASE_URL') ?? '',
+                Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+                { global: { headers: { Authorization: authHeader } } }
+            )
 
-            Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+            const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
 
-            { global: { headers: { Authorization: authHeader } } }
-
-        )
-
-
-
-        const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-
-        if (authError || !user) {
-
-            console.error('Auth error:', authError?.message || 'No user found')
-
-            throw new Error('Session expired. Please refresh the page or log in again.')
-
+            if (authError || !user) {
+                console.error('Auth error:', authError?.message || 'No user found')
+                throw new Error('Session expired. Please refresh the page or log in again.')
+            }
+        } else {
+            console.log('process-ai-request: accepted internal service-role call')
         }
 
 
@@ -232,6 +232,7 @@ serve(async (req) => {
                 modelUsed: targetModelId,
                 usedBackupToken,
                 forcedMinimax: forceMinimax,
+                internalServiceCall: Boolean(serviceRoleJwt),
             },
         }), {
 

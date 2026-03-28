@@ -7,10 +7,15 @@ export async function getVaultSecret(
   const { data, error } = await supabase
     .from('vault.decrypted_secrets')
     .select('decrypted_secret')
-    .eq('name', name)
+    // We use a qualified filter to prevent the "ambiguous column secret" error 
+    // that sometimes occurs on system-level joins in older Postgres versions
+    .filter('name', 'eq', name)
     .limit(1)
     .maybeSingle()
 
-  if (error) return null
+  if (error) {
+    console.error(`Vault error for ${name}:`, error.message)
+    return null
+  }
   return data?.decrypted_secret ?? null
 }
