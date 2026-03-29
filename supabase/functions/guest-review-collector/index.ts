@@ -98,8 +98,8 @@ async function resolveExtractPayload(
   if (extractPostBody?.data && typeof extractPostBody.data === "object") return extractPostBody;
 
   const started = Date.now();
-  const timeoutMs = 60000;
-  const intervalMs = 2500;
+  const timeoutMs = 120000; // Extended timeout to 2 minutes
+  const intervalMs = 10000; // Increased polling interval to 10 seconds to avoid Firecrawl's 20 req/min limit
 
   while (Date.now() - started < timeoutMs) {
     const statusRes = await fetch(`https://api.firecrawl.dev/v2/extract/${extractId}`, {
@@ -126,6 +126,31 @@ async function resolveExtractPayload(
   }
 
   throw new Error("Firecrawl extract timed out waiting for completion");
+}
+
+async function getFirecrawlApiKeys(client: ReturnType<typeof createClient>): Promise<string[]> {
+  const keys: string[] = [];
+
+  // 1. Env var first
+  const envKey = Deno.env.get("FIRECRAWL_API_KEY") ?? Deno.env.get("firecrawl_api_key");
+  if (envKey && envKey.trim()) keys.push(envKey.trim());
+
+  // 2. Vault keys - search for all variations including backups
+  const { data: vaultKeys } = await client
+    .from("vault.decrypted_secrets")
+    .select("decrypted_secret")
+    .or("name.ilike.FIRECRAWL_API_KEY%,name.ilike.firecrawl_api_key%")
+    .order("created_at", { ascending: false });
+
+  if (vaultKeys) {
+    for (const vk of vaultKeys) {
+      if (typeof vk.decrypted_secret === "string" && vk.decrypted_secret.trim()) {
+        const key = vk.decrypted_secret.trim();
+        if (!keys.includes(key)) keys.push(key);
+      }
+    }
+  }
+  return keys;
 }
 
 async function getManualContext(
@@ -195,9 +220,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const firecrawlApiKey = await getVaultSecret(serviceClient, "FIRECRAWL_API_KEY") ??
-      await getVaultSecret(serviceClient, "firecrawl_api_key");
-    if (!firecrawlApiKey) {
+    const firecrawlApiKeys = await getFirecrawlApiKeys(serviceClient);
+    if (firecrawlApiKeys.length === 0) {
       return new Response(JSON.stringify({ success: false, error: "Vault secret FIRECRAWL_API_KEY missing" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -220,7 +244,14 @@ Deno.serve(async (req: Request) => {
     });
 
     const results: Array<Record<string, unknown>> = [];
+    let isFirstSource = true;
     for (const source of dueSources) {
+      if (!isFirstSource) {
+        // Stagger requests by 15 seconds to avoid sudden spikes in rate limit
+        await sleep(15000);
+      }
+      isFirstSource = false;
+
       const { data: runRow } = await serviceClient
         .from("guest_review_collection_runs")
         .insert({
@@ -249,21 +280,51 @@ Deno.serve(async (req: Request) => {
               ...((source.firecrawl_options as Record<string, unknown>) ?? {}),
             };
 
-        const firecrawlRes = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${firecrawlApiKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(requestPayload),
-        });
-        let firecrawlBody = await firecrawlRes.json().catch(() => null) as Record<string, unknown> | null;
-        if (!firecrawlRes.ok) {
-          const detail = getFirecrawlErrorMessage(firecrawlBody);
-          throw new Error(detail ? `Firecrawl failed HTTP ${firecrawlRes.status}: ${detail}` : `Firecrawl failed HTTP ${firecrawlRes.status}`);
-        }
-        if (hasSchema) {
-          firecrawlBody = await resolveExtractPayload(firecrawlBody, firecrawlApiKey);
+        let firecrawlBody: Record<string, unknown> | null = null;
+        let lastKeyUsed = "";
+        let usedAllKeys = false;
+        
+        // Loop through available keys if we hit credits or rate limits
+        for (let i = 0; i < firecrawlApiKeys.length; i++) {
+          const currentKey = firecrawlApiKeys[i];
+          lastKeyUsed = currentKey;
+          
+          try {
+            const firecrawlRes = await fetch(endpoint, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${currentKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(requestPayload),
+            });
+            let body = await firecrawlRes.json().catch(() => null) as Record<string, unknown> | null;
+            if (!firecrawlRes.ok) {
+              const detail = getFirecrawlErrorMessage(body);
+              const status = firecrawlRes.status;
+              const errorLabel = detail ? `HTTP ${status}: ${detail}` : `HTTP ${status}`;
+              
+              // If credit or rate limit error, and we have more keys, try next key
+              if ((status === 402 || status === 429) && i < firecrawlApiKeys.length - 1) {
+                console.warn(`Firecrawl Key ${i+1} failed with ${status}. Attempting fallback key...`);
+                continue;
+              }
+              throw new Error(`Firecrawl failed ${errorLabel}`);
+            }
+            if (hasSchema) {
+              body = await resolveExtractPayload(body, currentKey);
+            }
+            firecrawlBody = body;
+            break; // SUCCESS!
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            // If credit or rate limit error even during resolveExtractPayload, try next key if available
+            if ((msg.includes("HTTP 402") || msg.includes("HTTP 429")) && i < firecrawlApiKeys.length - 1) {
+              console.warn(`Firecrawl extraction failed on Key ${i+1} with credit/rate limit error. Retrying with backup key...`);
+              continue;
+            }
+            throw err;
+          }
         }
 
         const candidates = getReviewCandidates(firecrawlBody);
