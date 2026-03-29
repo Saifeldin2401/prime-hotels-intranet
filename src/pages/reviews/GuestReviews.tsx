@@ -205,11 +205,12 @@ export default function GuestReviews() {
         .from('guest_reviews')
         .select('*')
         .eq('id', selectedReviewId)
-        .single()
+        .maybeSingle()
 
       if (error) throw error
-      return data as GuestReview
+      return (data ?? null) as GuestReview | null
     },
+    retry: false,
   })
 
   const issuesQuery = useQuery({
@@ -709,9 +710,16 @@ export default function GuestReviews() {
       <Dialog open={sheetOpen} onOpenChange={onSheetOpenChange}>
         <DialogContent 
           className="sm:max-w-4xl p-0 border border-slate-200 dark:border-slate-800 shadow-2xl rounded-2xl overflow-hidden bg-white dark:bg-slate-950 max-h-[90vh] flex flex-col [&>button]:text-white [&>button]:right-6 [&>button]:top-6 [&>button]:opacity-70 hover:[&>button]:opacity-100 [&>button]:z-50 [&>button]:bg-black/20 [&>button]:p-1.5 [&>button]:rounded-full [&>button]:transition-all"
-          aria-describedby="guest-review-dialog-description"
           bodyClassName="p-0"
         >
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {selectedReview?.review_title || 'Guest review details'}
+            </DialogTitle>
+            <DialogDescription>
+              Detailed guest review analysis, assignments, and response management.
+            </DialogDescription>
+          </DialogHeader>
           {selectedReview && (
             <>
               {/* Premium Header */}
@@ -731,12 +739,9 @@ export default function GuestReviews() {
                   </div>
                   
                   <div>
-                    <DialogTitle className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight">
+                    <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight">
                       {selectedReview.review_title || 'Review Intelligence'}
-                    </DialogTitle>
-                    <DialogDescription id="guest-review-dialog-description" className="sr-only">
-                      Detailed view for review and response management.
-                    </DialogDescription>
+                    </h2>
                     <p className="text-sm font-medium text-white/80 mt-2 flex items-center gap-2">
                       <User className="h-4 w-4" />
                       {selectedReview.reviewer_name || 'Anonymous Guest'}
@@ -913,6 +918,13 @@ export default function GuestReviews() {
                 </Tabs>
               </div>
             </>
+          )}
+          {!selectedReview && (
+            <div className="flex min-h-[240px] items-center justify-center p-8 text-center text-sm font-medium text-muted-foreground">
+              {selectedReviewId
+                ? 'This review is no longer available or you no longer have access to it.'
+                : 'Select a review to inspect its details.'}
+            </div>
           )}
         </DialogContent>
       </Dialog>
