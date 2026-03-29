@@ -7,9 +7,14 @@ const MANUAL_ALLOWED_ROLES = new Set([
 
 // ScraperAPI JS-rendering cost tiers
 // render=true  → 5 credits, needed for SPA/JS-heavy pages
-// premium=true → 10 credits, needed for heavily protected sites (Booking, TripAdvisor)
+// premium=true → 10 credits, needed for heavily protected sites
+// Booking.com uses its reviewlist.html endpoint which returns HTML without JS — no render needed
 const SCRAPER_RENDER_PLATFORMS = new Set(["tripadvisor", "expedia", "hotels_com", "agoda"]);
-const SCRAPER_PREMIUM_PLATFORMS = new Set(["booking"]);
+const SCRAPER_PREMIUM_PLATFORMS = new Set<string>([]); // Booking uses reviewlist endpoint instead
+
+// Max sources to process per invocation to stay within Supabase 150s wall-clock limit.
+// Each OTA source takes ~40s (ScraperAPI render + AI). Google sources ~5s each.
+const MAX_SOURCES_PER_RUN = 8;
 
 // ─── Utility ──────────────────────────────────────────────────────────────────
 
@@ -226,19 +231,43 @@ function mapSerperReviews(reviews: Array<Record<string, unknown>>): Array<Record
 // ─── ScraperAPI (OTA scraping) ────────────────────────────────────────────────
 
 /**
+ * Convert an OTA hotel page URL into the best URL for extracting reviews.
+ *
+ * Booking.com's main hotel page returns 404 via any proxy (heavy bot protection).
+ * The reviewlist.html endpoint returns paginated review HTML and is much lighter.
+ *   /hotel/COUNTRY/SLUG.html  →  /reviewlist.html?pagename=SLUG&cc1=COUNTRY&type=total&order=review_date_and_time&rows=25
+ */
+function reviewsUrl(url: string, platform: string): string {
+  if (platform === "booking") {
+    // Strip optional language suffix: "slug.en-gb.html" → "slug"
+    const m = url.match(/booking\.com\/hotel\/([^/]+)\/([^./]+)(?:\.[a-z-]+)?\.html/);
+    if (m) {
+      const country = m[1]; // e.g. "sa"
+      const slug = m[2];    // e.g. "prime-al-hamra-jeddah"
+      return `https://www.booking.com/reviewlist.html?pagename=${slug}&cc1=${country}&type=total&order=review_date_and_time&rows=25`;
+    }
+  }
+  return url;
+}
+
+/**
  * Scrape a URL via ScraperAPI.
  * - premium=true for Booking.com (heavily bot-protected, residential proxy)
  * - render=true for JS-heavy platforms (TripAdvisor, Expedia, Hotels.com, Agoda)
  */
 async function fetchWithScraperApi(url: string, apiKey: string, platform: string): Promise<string> {
-  const params = new URLSearchParams({ api_key: apiKey, url });
-  if (SCRAPER_PREMIUM_PLATFORMS.has(platform)) {
-    params.set("premium", "true");
+  const targetUrl = reviewsUrl(url, platform);
+  const params = new URLSearchParams({ api_key: apiKey, url: targetUrl });
+
+  if (SCRAPER_RENDER_PLATFORMS.has(platform)) {
     params.set("render", "true");
-  } else if (SCRAPER_RENDER_PLATFORMS.has(platform)) {
-    params.set("render", "true");
+    // TripAdvisor loads reviews dynamically — wait for the review containers to appear
+    if (platform === "tripadvisor") {
+      params.set("wait_for_selector", ".reviewSelector,.review-container,[data-automation=reviewCard]");
+      params.set("wait", "5000");
+    }
   }
-  // For all hotel review pages request English
+  // Request English content
   params.set("country_code", "us");
 
   const res = await fetch(`https://api.scraperapi.com/?${params.toString()}`);
@@ -338,6 +367,9 @@ Deno.serve(async (req: Request) => {
     // target_date defaults to yesterday (YYYY-MM-DD)
     const defaultYesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
     const targetDate = typeof body.target_date === "string" ? body.target_date : defaultYesterday;
+    // batch_offset lets callers page through sources; max_sources caps work per invocation
+    const batchOffset = typeof body.batch_offset === "number" ? Number(body.batch_offset) : 0;
+    const maxSources = typeof body.max_sources === "number" ? Number(body.max_sources) : MAX_SOURCES_PER_RUN;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -382,13 +414,17 @@ Deno.serve(async (req: Request) => {
       .order("updated_at", { ascending: true });
     if (sourceErr) throw sourceErr;
 
-    const dueSources = (allSources ?? []).filter((s) => {
+    const allDue = (allSources ?? []).filter((s) => {
       if (sourceId && String(s.id) !== sourceId) return false;
       if (!s.next_poll_at) return true;
       return new Date(String(s.next_poll_at)).getTime() <= now.getTime();
     });
 
-    console.log(`Processing ${dueSources.length} due sources (target_date: ${targetDate})`);
+    // Apply batch window to avoid edge function timeout
+    const dueSources = allDue.slice(batchOffset, batchOffset + maxSources);
+    const hasMore = batchOffset + maxSources < allDue.length;
+
+    console.log(`Processing ${dueSources.length}/${allDue.length} due sources (offset=${batchOffset}, target_date: ${targetDate})`);
 
     const results: Array<Record<string, unknown>> = [];
 
@@ -582,7 +618,19 @@ Deno.serve(async (req: Request) => {
     const totalNew = results.reduce((s, r) => s + Number(r.reviews_new ?? 0), 0);
 
     return new Response(
-      JSON.stringify({ success: true, processed_sources: dueSources.length, succeeded, failed, total_new_reviews: totalNew, target_date: targetDate, results }),
+      JSON.stringify({
+        success: true,
+        processed_sources: dueSources.length,
+        total_due: allDue.length,
+        batch_offset: batchOffset,
+        has_more: hasMore,
+        next_batch_offset: hasMore ? batchOffset + maxSources : null,
+        succeeded,
+        failed,
+        total_new_reviews: totalNew,
+        target_date: targetDate,
+        results,
+      }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (error) {
