@@ -2540,9 +2540,9 @@ export function TrainingBuilder() {
     return null
   }
 
+  const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending || saveQuestionsMutation.isPending
   const stepContent = renderStepContent()
   const rightPanelContent = renderRightPanel()
-  const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending || saveQuestionsMutation.isPending
 
   return (
     <div className={`min-h-screen bg-background flex flex-col ${isRTL ? 'text-right' : 'text-left'}`}>

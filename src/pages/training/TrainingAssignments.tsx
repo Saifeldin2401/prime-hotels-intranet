@@ -22,6 +22,7 @@ import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useLearningProgress, type LearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
@@ -63,6 +64,25 @@ const sortPropertyNames = (a: string, b: string) => {
   if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
   if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
   return a.localeCompare(b)
+}
+
+type PostgrestLikeError = {
+  code?: string
+  message?: string
+  details?: string | null
+  hint?: string | null
+}
+
+const isSchemaColumnMismatchError = (error: PostgrestLikeError | null) => {
+  if (!error) return false
+  const details = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase()
+  return (
+    error.code === 'PGRST204'
+    || error.code === '42703'
+    || (details.includes('column') && details.includes('does not exist'))
+    || (details.includes('schema cache') && details.includes('column'))
+    || (details.includes('could not find') && details.includes('column'))
+  )
 }
 
 // Interface for learning_assignments table
@@ -154,6 +174,7 @@ export function TrainingAssignmentsPanel({
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { t, i18n } = useTranslation('training')
+  const { toast } = useToast()
   const isRTL = i18n.dir() === 'rtl'
   const { notifyTrainingAssigned } = useNotificationTriggers()
 
@@ -258,11 +279,13 @@ export function TrainingAssignmentsPanel({
 
   // Fetch Modules
   const { data: modules } = useQuery({
-    queryKey: ['training-modules'],
+    queryKey: ['training-modules', 'assignable'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('training_modules')
-        .select('id, title, description')
+        .select('id, title, description, status, is_active')
+        .eq('status', 'published')
+        .eq('is_active', true)
         .order('title')
       if (error) throw error
       return data as TrainingModule[]
@@ -344,6 +367,9 @@ export function TrainingAssignmentsPanel({
   const createAssignmentMutation = useMutation({
     mutationFn: async () => {
       if (!formModuleId) throw new Error(t('moduleRequired'))
+      if (!selectedAssignableModule) {
+        throw new Error(t('moduleMustBePublishedAndActive', 'Only active, published modules can be assigned.'))
+      }
 
       const assignments = []
       const typeMap: Record<string, string> = {
@@ -351,6 +377,12 @@ export function TrainingAssignmentsPanel({
         departments: 'department',
         properties: 'property'
       }
+      const normalizedReminderDaysBefore = Array.from(
+        new Set(reminderDaysBefore.filter((value) => Number.isInteger(value) && value > 0))
+      ).sort((a, b) => a - b)
+      const normalizedTargetIds = Array.from(
+        new Set(formTargetIds.map((id) => id.trim()).filter(Boolean))
+      )
 
       if (formTargetType === 'all') {
         assignments.push({
@@ -366,10 +398,14 @@ export function TrainingAssignmentsPanel({
           instructions: formInstructions || null,
           requires_acknowledgement: requiresAcknowledgement,
           notify_on_due: notifyOnDue,
-          reminder_days_before: reminderDaysBefore
+          reminder_days_before: normalizedReminderDaysBefore
         })
       } else {
-        formTargetIds.forEach(id => {
+        if (normalizedTargetIds.length === 0) {
+          throw new Error(t('selectTargetsRequired', 'Select at least one target.'))
+        }
+
+        normalizedTargetIds.forEach(id => {
           assignments.push({
             target_type: typeMap[formTargetType],
             target_id: id,
@@ -383,7 +419,7 @@ export function TrainingAssignmentsPanel({
             instructions: formInstructions || null,
             requires_acknowledgement: requiresAcknowledgement,
             notify_on_due: notifyOnDue,
-            reminder_days_before: reminderDaysBefore
+            reminder_days_before: normalizedReminderDaysBefore
           })
         })
       }
@@ -413,7 +449,29 @@ export function TrainingAssignmentsPanel({
         const { error } = await supabase
           .from('learning_assignments')
           .insert(assignmentsToInsert)
-        if (error) throw error
+        if (error) {
+          if (!isSchemaColumnMismatchError(error)) {
+            throw error
+          }
+
+          // Backward-compatible fallback when control columns are missing in the DB schema.
+          const legacyAssignments = assignmentsToInsert.map((assignment) => {
+            const {
+              instructions: _instructions,
+              requires_acknowledgement: _requiresAcknowledgement,
+              notify_on_due: _notifyOnDue,
+              reminder_days_before: _reminderDaysBefore,
+              ...baseColumns
+            } = assignment
+            return baseColumns
+          })
+
+          const { error: legacyError } = await supabase
+            .from('learning_assignments')
+            .insert(legacyAssignments)
+
+          if (legacyError) throw legacyError
+        }
       }
 
       if (!sendNotifications || assignmentsToInsert.length === 0) {
@@ -512,6 +570,15 @@ export function TrainingAssignmentsPanel({
         inserted: assignmentsToInsert.length,
         skipped: assignments.length - assignmentsToInsert.length
       }
+    },
+    onError: (error: unknown) => {
+      const fallbackMessage = t('createAssignmentFailedDesc', 'Please check your permission and assignment settings, then try again.')
+      const errorMessage = error instanceof Error ? error.message : fallbackMessage
+      toast({
+        title: t('createAssignmentFailed', 'Failed to create assignment'),
+        description: errorMessage,
+        variant: 'destructive'
+      })
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
@@ -1416,6 +1483,10 @@ export function TrainingAssignmentsPanel({
       .sort((a, b) => sortPropertyNames(a.name, b.name))
   }, [departments, propertyFilters, matchesTargetSearch, t])
 
+  const assignableModules = modules || []
+  const selectedAssignableModule = assignableModules.find((module) => module.id === formModuleId)
+  const moduleSelectValue = selectedAssignableModule ? formModuleId : ''
+
   // Form List Items
   const currentListItems = useMemo(() => {
     switch (formTargetType) {
@@ -1458,10 +1529,10 @@ export function TrainingAssignmentsPanel({
 
   const validationErrors = useMemo(() => {
     const errors: string[] = []
-    if (!formModuleId) errors.push(t('moduleRequired'))
+    if (!moduleSelectValue) errors.push(t('moduleRequired'))
     if (formTargetType !== 'all' && formTargetIds.length === 0) errors.push(t('selectTargetsRequired', 'Select at least one target.'))
     return errors
-  }, [formModuleId, formTargetIds.length, formTargetType, t])
+  }, [formTargetIds.length, formTargetType, moduleSelectValue, t])
 
   const dueDatePresets = [
     { label: t('in_1_week', 'In 1 week'), days: 7 },
@@ -1475,7 +1546,7 @@ export function TrainingAssignmentsPanel({
     { label: t('reminder_7_days', '7 days before'), value: 7 }
   ]
 
-  const selectedModuleName = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
+  const selectedModuleName = selectedAssignableModule?.title || t('unknownModule')
   const selectedTargetsLabel = formTargetType === 'all'
     ? t('allUsers')
     : `${formTargetIds.length} ${t('selected')}`
@@ -2510,12 +2581,12 @@ export function TrainingAssignmentsPanel({
                 <div className="space-y-2">
                   <Label>{t('selectModule')}</Label>
                   <select
-                    value={formModuleId}
+                    value={moduleSelectValue}
                     onChange={(e) => setFormModuleId(e.target.value)}
                     className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
                   >
                     <option value="">{t('selectModule')}</option>
-                    {modules?.map((module) => (
+                    {assignableModules.map((module) => (
                       <option key={module.id} value={module.id}>
                         {module.title}
                       </option>

@@ -48,6 +48,7 @@ interface TrainingModule {
   created_at?: string
   updated_at?: string
   certificate_enabled?: boolean
+  is_active?: boolean
 }
 
 export default function TrainingModules() {
@@ -375,6 +376,12 @@ export default function TrainingModules() {
       deadline?: string
     }) => {
       if (!assigningModuleId) throw new Error("No module selected")
+      const assignableModule = modules?.find((module) => (
+        module.id === assigningModuleId && module.status === 'published' && module.is_active !== false
+      ))
+      if (!assignableModule) {
+        throw new Error(t('moduleMustBePublishedAndActive', 'Only active, published modules can be assigned.'))
+      }
 
       const assignments = []
 
@@ -529,6 +536,12 @@ export default function TrainingModules() {
         inserted: assignmentsToInsert.length,
         skipped: assignments.length - assignmentsToInsert.length
       }
+    },
+    onError: (error: unknown) => {
+      const message = error instanceof Error
+        ? error.message
+        : t('assignFailedDesc', 'Please try again.')
+      showErrorToast(t('assignFailed', 'Assign failed'), message)
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
@@ -767,17 +780,17 @@ export default function TrainingModules() {
                   <Button
                     className={cn(
                       "w-full transition-colors group",
-                      module.status === 'published'
+                      module.status === 'published' && module.is_active !== false
                         ? "bg-hotel-navy text-white hover:bg-hotel-navy-light"
                         : "bg-gray-100 text-gray-500 hover:bg-gray-200",
                       isRTL ? "flex-row-reverse" : ""
                     )}
                     size="sm"
                     onClick={() => {
-                      if (module.status !== 'published') {
+                      if (module.status !== 'published' || module.is_active === false) {
                         showErrorToast(
-                          t('onlyPublishedModulesCanBeAssigned'),
-                          t('publishBeforeAssign', 'Publish the module before assigning it.')
+                          t('moduleMustBePublishedAndActive', 'Only active, published modules can be assigned.'),
+                          t('publishBeforeAssign', 'Publish and activate the module before assigning it.')
                         )
                         return;
                       }

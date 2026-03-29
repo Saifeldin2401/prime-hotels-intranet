@@ -614,14 +614,12 @@ export const learningService = {
     // ==========================================
 
     async createAssignment(assignment: CreateAssignmentDTO) {
-        const { data, error } = await supabase
+        const { error } = await supabase
             .from('learning_assignments')
             .insert(assignment)
-            .select()
-            .single()
 
         if (error) throw error
-        return data as LearningAssignment
+        return { success: true } as unknown as LearningAssignment
     },
 
     async updateAssignment(id: string, updates: Partial<CreateAssignmentDTO>) {

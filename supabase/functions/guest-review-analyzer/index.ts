@@ -223,13 +223,28 @@ async function getManualCallerContext(
 }
 
 async function getVaultServiceRoleSecret(serviceClient: ReturnType<typeof createClient>): Promise<string | null> {
-  const { data } = await serviceClient
+  // Check env first
+  const envKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY");
+  if (envKey && envKey.trim()) return envKey.trim();
+  
+  // Check vault for both naming conventions
+  const { data: data1 } = await serviceClient
     .from("vault.decrypted_secrets")
     .select("decrypted_secret")
     .filter("name", "eq", "service_role_key")
     .limit(1)
     .maybeSingle();
-  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
+  
+  if (data1?.decrypted_secret) return String(data1.decrypted_secret);
+  
+  const { data: data2 } = await serviceClient
+    .from("vault.decrypted_secrets")
+    .select("decrypted_secret")
+    .filter("name", "eq", "SERVICE_ROLE_KEY")
+    .limit(1)
+    .maybeSingle();
+  
+  return typeof data2?.decrypted_secret === "string" ? data2.decrypted_secret : null;
 }
 
 async function resolveOwner(
