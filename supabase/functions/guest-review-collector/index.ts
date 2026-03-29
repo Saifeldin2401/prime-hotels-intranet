@@ -113,23 +113,52 @@ function extractGoogleSearchQuery(url: string): string | null {
   } catch { return null; }
 }
 
+/** Score how well a Serper place title matches a query (0–1). */
+function placeNameScore(title: string, query: string): number {
+  const t = title.toLowerCase();
+  const words = query.toLowerCase().split(/\s+/).filter((w) => w.length > 2 && !["the", "and", "for", "by", "hotel", "hotels"].includes(w));
+  if (words.length === 0) return 0;
+  return words.filter((w) => t.includes(w)).length / words.length;
+}
+
 async function findGoogleCidBySearch(query: string, serperKey: string): Promise<string | null> {
+  // Add "hotel" to bias search toward lodging (avoids malls, parks, beaches with same name)
+  const hotelQuery = /hotel|resort|inn|suites/i.test(query) ? query : `${query} hotel`;
+
   const placesRes = await fetch("https://google.serper.dev/places", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: query, gl: "sa", hl: "en" }),
+    body: JSON.stringify({ q: hotelQuery, gl: "sa", hl: "en" }),
   });
   if (placesRes.ok) {
     const data = await placesRes.json() as Record<string, unknown>;
-    for (const place of (data.places as Array<Record<string, unknown>> ?? [])) {
-      if (place.cid) return `cid:${place.cid}`;
+    const places = (data.places as Array<Record<string, unknown>> ?? []);
+
+    // 1st pass: prefer results whose category is explicitly lodging
+    for (const place of places) {
+      const category = String(place.category ?? place.type ?? "").toLowerCase();
+      const isLodging = /hotel|resort|lodging|inn|accommodation|suites|hostel|motel|serviced/i.test(category);
+      if (isLodging && place.cid) return `cid:${place.cid}`;
     }
+
+    // 2nd pass: best name-match score (≥ 0.5 required), skip malls / non-lodging
+    let bestCid: string | null = null;
+    let bestScore = 0;
+    for (const place of places) {
+      const category = String(place.category ?? place.type ?? "").toLowerCase();
+      const isExcluded = /mall|shopping|restaurant|cafe|museum|park|beach|gym|hospital|clinic/i.test(category);
+      if (isExcluded) continue;
+      const score = placeNameScore(String(place.title ?? place.name ?? ""), query);
+      if (score > bestScore && place.cid) { bestScore = score; bestCid = String(place.cid); }
+    }
+    if (bestCid && bestScore >= 0.5) return `cid:${bestCid}`;
   }
+
   // Fallback: web search for a maps link with an embedded FID
   const searchRes = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: `${query} google maps reviews`, gl: "sa", hl: "en", num: 5 }),
+    body: JSON.stringify({ q: `${hotelQuery} google maps reviews`, gl: "sa", hl: "en", num: 5 }),
   });
   if (!searchRes.ok) return null;
   const data = await searchRes.json() as Record<string, unknown>;
@@ -184,7 +213,11 @@ async function fetchSerperReviews(
   }
 
   // 3. Search → CID discovery
-  const searchQuery = extractGoogleSearchQuery(sourceUrl) ?? sourceName.replace(/^Google.*?-\s*/i, "").trim();
+  // Prefer a custom search_query stored in the schema (more precise than the source name)
+  const searchQuery =
+    (typeof schema.search_query === "string" && schema.search_query.trim()) ||
+    extractGoogleSearchQuery(sourceUrl) ||
+    sourceName.replace(/^Google[^-]*-\s*/i, "").trim();
   if (!searchQuery) throw new Error("Cannot resolve Google Place identifier");
 
   console.log(`Resolving CID for "${searchQuery}" via Serper…`);
