@@ -9,6 +9,18 @@ const MANUAL_ALLOWED_ROLES = new Set([
   "property_hr",
 ]);
 
+const GOOGLE_PLACE_EXCLUDE_RE = /mall|shopping|restaurant|cafe|museum|park|beach|gym|hospital|clinic/i;
+const GOOGLE_PLACE_LODGING_RE = /hotel|resort|lodging|inn|accommodation|suites|hostel|motel|serviced/i;
+const INVALID_REVIEW_TEXT_RE = [
+  /^scraperapi fetch - html length:/i,
+  /^direct fetch - html length:/i,
+  /^no review text provided\.?$/i,
+  /^no comments\.?$/i,
+];
+const SUPPORTED_PLATFORMS = new Set(["google", "booking", "agoda"]);
+const SCRAPER_RENDER_PLATFORMS = new Set(["agoda"]);
+const MAX_SOURCES_PER_RUN = 8;
+
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "*";
   return {
@@ -30,15 +42,78 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
+function decodeHtmlEntities(value: string): string {
+  try {
+    const doc = new DOMParser().parseFromString(`<body>${value}</body>`, "text/html");
+    const text = doc?.body?.textContent;
+    if (typeof text === "string" && text.length > 0) return text;
+  } catch {
+    // Fall back to a small manual decoder if the runtime DOM parser is unavailable.
+  }
+
+  const named: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: "\"",
+    apos: "'",
+    nbsp: " ",
+    middot: "-",
+    ndash: "-",
+    mdash: "-",
+    hellip: "...",
+    rsquo: "'",
+    lsquo: "'",
+    rdquo: "\"",
+    ldquo: "\"",
+  };
+
+  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity) => {
+    if (entity[0] === "#") {
+      const isHex = entity[1]?.toLowerCase() === "x";
+      const num = Number.parseInt(entity.slice(isHex ? 2 : 1), isHex ? 16 : 10);
+      return Number.isFinite(num) ? String.fromCodePoint(num) : _;
+    }
+    return named[entity] ?? _;
+  });
+}
+
+function fixMojibake(value: string): string {
+  return value
+    .replace(/\u00c2/g, "")
+    .replace(/\u00e2\u20ac\u2122/g, "'")
+    .replace(/\u00e2\u20ac\u02dc/g, "'")
+    .replace(/\u00e2\u20ac\u0153/g, "\"")
+    .replace(/\u00e2\u20ac\u009d/g, "\"")
+    .replace(/\u00e2\u20ac"/g, "\"")
+    .replace(/\u00e2\u20ac\u201c/g, "-")
+    .replace(/\u00e2\u20ac\u201d/g, "-")
+    .replace(/\u00e2\u20ac\u00a6/g, "...")
+    .replace(/\u00e2\u20ac\u00a2/g, "*")
+    .replace(/\u00c5\u0178/g, "s");
+}
+
 function cleanText(value: unknown): string {
-  return String(value ?? "")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+  return fixMojibake(
+    decodeHtmlEntities(
+      String(value ?? "")
+        .replace(/<br\s*\/?>/gi, "\n")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/\s+/g, " ")
+        .trim(),
+    ),
+  ).trim();
+}
+
+function sanitizeReviewText(value: unknown): string {
+  const text = cleanText(value);
+  if (!text) return "";
+  if (INVALID_REVIEW_TEXT_RE.some((pattern) => pattern.test(text))) return "";
+  return text;
 }
 
 function toNullableString(value: unknown): string | null {
-  const v = typeof value === "string" ? value.trim() : "";
+  const v = cleanText(value);
   return v ? v : null;
 }
 
@@ -50,107 +125,54 @@ function normalizeRating(value: unknown): { r5: number | null; r10: number | nul
   return { r5: null, r10: null };
 }
 
+function parseDate(value: unknown): string | null {
+  if (!value) return null;
+  const s = cleanText(value);
+  if (!s) return null;
+  const normalized = s.replace(/^reviewed:\s*/i, "").replace(/^reviewed\s+/i, "").trim();
+  const d = new Date(normalized);
+  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+}
+
+function matchOne(input: string, pattern: RegExp): string | null {
+  const match = input.match(pattern);
+  return match?.[1] ?? null;
+}
+
+function collectMatches(input: string, pattern: RegExp): string[] {
+  return Array.from(input.matchAll(pattern), (match) => match[1]).filter(Boolean);
+}
+
+function blockSplit(input: string, pattern: RegExp): string[] {
+  return Array.from(input.matchAll(pattern), (match) => match[0]);
+}
+
+function isValidReviewCandidate(text: string): boolean {
+  if (!text) return false;
+  if (INVALID_REVIEW_TEXT_RE.some((pattern) => pattern.test(text))) return false;
+  return text.length >= 5;
+}
+
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
   return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-function getReviewCandidates(payload: Record<string, unknown> | null): Array<Record<string, unknown>> {
-  const candidates: Array<unknown> = [
-    payload,
-    payload?.data,
-    payload?.reviews,
-    payload?.result,
-    payload?.data && typeof payload.data === "object" ? (payload.data as Record<string, unknown>).reviews : null,
-    payload?.data && typeof payload.data === "object" ? (payload.data as Record<string, unknown>).data : null,
-    payload?.data && typeof payload.data === "object" &&
-        (payload.data as Record<string, unknown>).json &&
-        typeof (payload.data as Record<string, unknown>).json === "object"
-      ? ((payload.data as Record<string, unknown>).json as Record<string, unknown>).reviews
-      : null,
-  ];
-  for (const c of candidates) {
-    if (Array.isArray(c) && c.length > 0) {
-      return c.filter((x) => x && typeof x === "object") as Array<Record<string, unknown>>;
-    }
-  }
-  return [];
-}
-
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function getFirecrawlErrorMessage(body: Record<string, unknown> | null): string | null {
-  if (!body) return null;
-  const message = body.error ?? body.message ?? body.detail;
-  if (typeof message === "string" && message.trim()) return message.trim();
-  return null;
-}
-
-async function resolveExtractPayload(
-  extractPostBody: Record<string, unknown> | null,
-  firecrawlApiKey: string,
-): Promise<Record<string, unknown> | null> {
-  const extractId = typeof extractPostBody?.id === "string" ? extractPostBody.id : null;
-  if (!extractId) return extractPostBody;
-  if (extractPostBody?.data && typeof extractPostBody.data === "object") return extractPostBody;
-
-  const started = Date.now();
-  const timeoutMs = 120000; // Extended timeout to 2 minutes
-  const intervalMs = 10000; // Increased polling interval to 10 seconds to avoid Firecrawl's 20 req/min limit
-
-  while (Date.now() - started < timeoutMs) {
-    const statusRes = await fetch(`https://api.firecrawl.dev/v2/extract/${extractId}`, {
-      method: "GET",
-      headers: { Authorization: `Bearer ${firecrawlApiKey}` },
-    });
-    const statusBody = await statusRes.json().catch(() => null) as Record<string, unknown> | null;
-    if (!statusRes.ok) {
-      const detail = getFirecrawlErrorMessage(statusBody);
-      throw new Error(
-        detail
-          ? `Firecrawl extract status failed HTTP ${statusRes.status}: ${detail}`
-          : `Firecrawl extract status failed HTTP ${statusRes.status}`,
-      );
-    }
-
-    const status = typeof statusBody?.status === "string" ? statusBody.status.toLowerCase() : "";
-    if (status === "completed") return statusBody;
-    if (status === "failed" || status === "cancelled") {
-      const detail = getFirecrawlErrorMessage(statusBody);
-      throw new Error(detail ? `Firecrawl extract ${status}: ${detail}` : `Firecrawl extract ${status}`);
-    }
-    await sleep(intervalMs);
-  }
-
-  throw new Error("Firecrawl extract timed out waiting for completion");
-}
-
-async function getFirecrawlApiKeys(client: ReturnType<typeof createClient>): Promise<string[]> {
-  const keys: string[] = [];
-
-  // 1. Env var first
-  const envKey = Deno.env.get("FIRECRAWL_API_KEY") ?? Deno.env.get("firecrawl_api_key");
-  if (envKey && envKey.trim()) keys.push(envKey.trim());
-
-  // 2. Vault keys - search for all variations including backups
-  const { data: vaultKeys } = await client
+async function getVaultSecret(client: ReturnType<typeof createClient>, name: string): Promise<string | null> {
+  const envValue = Deno.env.get(name);
+  if (envValue?.trim()) return envValue.trim();
+  const { data } = await client
     .from("vault.decrypted_secrets")
     .select("decrypted_secret")
-    .or("name.ilike.FIRECRAWL_API_KEY%,name.ilike.firecrawl_api_key%")
-    .order("created_at", { ascending: false });
-
-  if (vaultKeys) {
-    for (const vk of vaultKeys) {
-      if (typeof vk.decrypted_secret === "string" && vk.decrypted_secret.trim()) {
-        const key = vk.decrypted_secret.trim();
-        if (!keys.includes(key)) keys.push(key);
-      }
-    }
-  }
-  return keys;
+    .filter("name", "eq", name)
+    .limit(1)
+    .maybeSingle();
+  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
 }
 
 async function getManualContext(
@@ -164,235 +186,310 @@ async function getManualContext(
   });
   const { data: authData, error } = await userClient.auth.getUser();
   if (error || !authData.user) return null;
-  const userId = authData.user.id;
-  const { data: roleRows } = await serviceClient.from("user_roles").select("role").eq("user_id", userId);
-  const roles = (roleRows ?? []).map((r) => r.role);
-  if (!roles.some((r) => MANUAL_ALLOWED_ROLES.has(r))) return null;
-  return { userId, roles };
+  const { data: roleRows } = await serviceClient
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", authData.user.id);
+  const roles = (roleRows ?? []).map((row) => row.role);
+  if (!roles.some((role) => MANUAL_ALLOWED_ROLES.has(role))) return null;
+  return { userId: authData.user.id, roles };
 }
 
-async function getVaultSecret(client: ReturnType<typeof createClient>, name: string): Promise<string | null> {
-  const envValue = Deno.env.get(name);
-  if (envValue && envValue.trim()) return envValue.trim();
+function extractFidFromGoogleUrl(url: string): string | null {
+  try {
+    const match = decodeURIComponent(url).match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
 
-  const { data } = await client.from("vault.decrypted_secrets").select("decrypted_secret").filter("name", "eq", name).limit(1)
-    .maybeSingle();
-  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
+function extractGoogleSearchQuery(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    return parsed.searchParams.get("query") ?? parsed.searchParams.get("q");
+  } catch {
+    return null;
+  }
+}
+
+function placeNameScore(title: string, query: string): number {
+  const titleLower = title.toLowerCase();
+  const words = query.toLowerCase().split(/\s+/).filter((word) =>
+    word.length > 2 && !["the", "and", "for", "by", "hotel", "hotels"].includes(word)
+  );
+  if (words.length === 0) return 0;
+  return words.filter((word) => titleLower.includes(word)).length / words.length;
+}
+
+function extractReviewerName(value: unknown): string | null {
+  if (typeof value === "string") return toNullableString(value);
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    return toNullableString(record.name ?? record.displayName ?? record.title);
+  }
+  return null;
+}
+
+async function findGoogleCidBySearch(query: string, serperKey: string): Promise<string | null> {
+  const hotelQuery = /hotel|resort|inn|suites/i.test(query) ? query : `${query} hotel`;
+  const placesRes = await fetch("https://google.serper.dev/places", {
+    method: "POST",
+    headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ q: hotelQuery, gl: "sa", hl: "en" }),
+  });
+
+  if (placesRes.ok) {
+    const data = await placesRes.json() as Record<string, unknown>;
+    const places = (data.places as Array<Record<string, unknown>> ?? []);
+
+    for (const place of places) {
+      const category = String(place.category ?? place.type ?? "").toLowerCase();
+      if (GOOGLE_PLACE_LODGING_RE.test(category) && place.cid) return `cid:${place.cid}`;
+    }
+
+    let bestCid: string | null = null;
+    let bestScore = 0;
+    for (const place of places) {
+      const category = String(place.category ?? place.type ?? "").toLowerCase();
+      if (GOOGLE_PLACE_EXCLUDE_RE.test(category)) continue;
+      const score = placeNameScore(String(place.title ?? place.name ?? ""), query);
+      if (score > bestScore && place.cid) {
+        bestScore = score;
+        bestCid = String(place.cid);
+      }
+    }
+    if (bestCid && bestScore >= 0.5) return `cid:${bestCid}`;
+  }
+
+  const searchRes = await fetch("https://google.serper.dev/search", {
+    method: "POST",
+    headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+    body: JSON.stringify({ q: `${hotelQuery} google maps reviews`, gl: "sa", hl: "en", num: 5 }),
+  });
+  if (!searchRes.ok) return null;
+  const data = await searchRes.json() as Record<string, unknown>;
+  for (const result of (data.organic as Array<Record<string, unknown>> ?? [])) {
+    const link = String(result.link ?? "");
+    if (link.includes("google.com/maps") || link.includes("maps.google.com")) {
+      const fid = extractFidFromGoogleUrl(link);
+      if (fid) return fid;
+    }
+  }
+  return null;
+}
+
+async function callSerperReviews(body: Record<string, unknown>, serperKey: string): Promise<Array<Record<string, unknown>>> {
+  const res = await fetch("https://google.serper.dev/reviews", {
+    method: "POST",
+    headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.text().catch(() => "");
+    throw new Error(`Serper Reviews HTTP ${res.status}: ${err.slice(0, 300)}`);
+  }
+  const data = await res.json() as Record<string, unknown>;
+  return Array.isArray(data.reviews) ? data.reviews as Array<Record<string, unknown>> : [];
+}
+
+function mapSerperReviews(reviews: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return reviews
+    .map((review) => ({
+      review_text: sanitizeReviewText(review.snippet ?? review.text ?? review.body ?? ""),
+      reviewer_name: extractReviewerName(review.name) ?? extractReviewerName(review.user),
+      rating: review.rating ?? null,
+      published_at: parseDate(review.isoDate) ?? parseDate(review.iso_date) ?? parseDate(review.date),
+      review_title: review.title ?? null,
+      source_review_id: review.reviewId ?? review.review_id ?? review.id ?? null,
+      review_url: review.link ?? null,
+      review_language: review.language ?? "en",
+      metadata: review,
+    }))
+    .filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
 }
 
 async function fetchSerperReviews(
-  apiKey: string,
   source: Record<string, unknown>,
+  serperKey: string,
+  serviceClient: ReturnType<typeof createClient>,
 ): Promise<Array<Record<string, unknown>>> {
-  const schema = source.firecrawl_extract_schema as Record<string, unknown> | null;
-  
-  // Try CID from schema first
-  let cid = schema?.cid as string | undefined;
-  
-  // If no CID, try to extract from URL
-  if (!cid && source.source_url) {
-    const urlMatch = String(source.source_url).match(/cid=([^&]+)/);
-    if (urlMatch) cid = urlMatch[1];
-  }
-  
-  // If still no CID, use search
-  let placeId: string | null = null;
-  if (!cid && schema?.search_query) {
-    const searchRes = await fetch("https://google.serper.dev/places", {
-      method: "POST",
-      headers: {
-        "X-API-KEY": apiKey,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        q: schema.search_query,
-        gl: "sa",
-        hl: "en",
-      }),
-    });
-    
-    if (!searchRes.ok) {
-      throw new Error(`Serper places search failed: ${searchRes.status}`);
-    }
-    
-    const searchData = await searchRes.json();
-    const places = searchData.places as Array<Record<string, unknown>> | undefined;
-    
-    if (places && places.length > 0) {
-      // Find the best match (hotel, not mall)
-      const hotelMatch = places.find((p) => {
-        const name = String(p.title || "").toLowerCase();
-        return name.includes("hotel") && name.includes("hamra");
-      });
-      
-      const bestMatch = hotelMatch || places[0];
-      placeId = bestMatch.placeId as string | undefined || null;
-      cid = bestMatch.cid as string | undefined || cid;
-    }
-  }
-  
-  // Fetch reviews using Serper
-  const reviewsRes = await fetch("https://google.serper.dev/reviews", {
-    method: "POST",
-    headers: {
-      "X-API-KEY": apiKey,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      placeId: placeId,
-      cid: cid,
-      gl: "sa",
-      hl: "en",
-    }),
-  });
-  
-  if (!reviewsRes.ok) {
-    throw new Error(`Serper reviews fetch failed: ${reviewsRes.status}`);
-  }
-  
-  const reviewsData = await reviewsRes.json();
-  const reviews = reviewsData.reviews as Array<Record<string, unknown>> | undefined;
-  
-  if (!reviews || !Array.isArray(reviews)) {
-    return [];
-  }
-  
-  return reviews.map((r) => ({
-    review_text: r.snippet || r.text,
-    reviewer_name: r.user?.name || r.reviewerName,
-    rating: r.rating,
-    published_at: r.date,
-    source_review_id: r.reviewId || r.id,
-  }));
-}
+  const sourceUrl = String(source.source_url ?? "");
+  const schema = (source.firecrawl_extract_schema ?? {}) as Record<string, unknown>;
+  const sourceName = String(source.source_name ?? "");
 
-async function fetchWithScraperAPI(
-  apiKey: string,
-  url: string,
-): Promise<string> {
-  try {
-    // Validate inputs
-    if (!apiKey || !url) {
-      throw new Error("Missing apiKey or url");
-    }
-    
-    // Try with ultra_premium first for protected domains like Booking.com
-    const ultraPremiumUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(url)}&ultra_premium=true`;
-    
-    let ultraResponse: Response | null = null;
-    try {
-      ultraResponse = await fetch(ultraPremiumUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-    } catch (e) {
-      console.log("Ultra premium fetch failed:", e);
-    }
-    
-    if (ultraResponse && ultraResponse.ok) {
-      return await ultraResponse.text();
-    }
-    
-    // Fallback to premium
-    const premiumUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(url)}&premium=true`;
-    let premiumResponse: Response | null = null;
-    try {
-      premiumResponse = await fetch(premiumUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-    } catch (e) {
-      console.log("Premium fetch failed:", e);
-    }
-    
-    if (premiumResponse && premiumResponse.ok) {
-      return await premiumResponse.text();
-    }
-    
-    // Last resort - try basic
-    const scraperUrl = `http://api.scraperapi.com?api_key=${apiKey}&url=${encodeURIComponent(url)}`;
-    let response: Response | null = null;
-    try {
-      response = await fetch(scraperUrl, {
-        method: "GET",
-        headers: {
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        },
-      });
-    } catch (e) {
-      console.log("Basic fetch failed:", e);
-    }
-    
-    if (response && response.ok) {
-      return await response.text();
-    }
-    
-    const statuses = `ultra_premium=${ultraResponse?.status || 'failed'}, premium=${premiumResponse?.status || 'failed'}, basic=${response?.status || 'failed'}`;
-    throw new Error(`ScraperAPI failed all attempts: ${statuses}`);
-  } catch (err: unknown) {
-    const errMsg = err instanceof Error ? err.message : String(err);
-    throw new Error(`ScraperAPI error: ${errMsg}`);
+  if (schema.cid || schema.fid || schema.place_id) {
+    const body: Record<string, unknown> = { gl: "sa", hl: "en" };
+    if (schema.cid) body.cid = String(schema.cid);
+    else if (schema.fid) body.fid = String(schema.fid);
+    else body.placeId = String(schema.place_id);
+    const reviews = await callSerperReviews(body, serperKey);
+    if (reviews.length > 0) return mapSerperReviews(reviews);
   }
-}
 
-// ... (rest of the code remains the same)
-async function getScraperApiKey(client: ReturnType<typeof createClient>): Promise<string | null> {
-  // Check env first
-  const envKey = Deno.env.get("SCRAPER_API_KEY") ?? Deno.env.get("scraper_api_key");
-  if (envKey && envKey.trim()) return envKey.trim();
-  
-  // Check vault
-  const { data } = await client
-    .from("vault.decrypted_secrets")
-    .select("decrypted_secret")
-    .filter("name", "eq", "SCRAPER_API_KEY")
-    .maybeSingle();
-  
-  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
-}
+  const urlFid = extractFidFromGoogleUrl(sourceUrl);
+  if (urlFid) {
+    const reviews = await callSerperReviews({ fid: urlFid, gl: "sa", hl: "en" }, serperKey);
+    if (reviews.length > 0) return mapSerperReviews(reviews);
+  }
 
-async function fetchWithDirectHttp(url: string, scraperApiKey: string | null): Promise<Array<Record<string, unknown>>> {
-  if (scraperApiKey) {
-    const html = await fetchWithScraperAPI(scraperApiKey, url);
-    // Return raw HTML for now - parsing would require cheerio which isn't available in edge functions
-    return [{ review_text: "ScraperAPI fetch - HTML length: " + html.length }];
+  const searchQuery =
+    (typeof schema.search_query === "string" && schema.search_query.trim()) ||
+    extractGoogleSearchQuery(sourceUrl) ||
+    sourceName.replace(/^Google[^-]*-\s*/i, "").trim();
+
+  if (!searchQuery) throw new Error("Cannot resolve Google Place identifier");
+
+  const resolvedId = await findGoogleCidBySearch(searchQuery, serperKey);
+  if (!resolvedId) throw new Error(`Could not find Google Place via search: ${searchQuery}`);
+
+  const body: Record<string, unknown> = { gl: "sa", hl: "en" };
+  if (resolvedId.startsWith("cid:")) {
+    const cid = resolvedId.slice(4);
+    body.cid = cid;
+    await serviceClient
+      .from("guest_review_sources")
+      .update({ firecrawl_extract_schema: { ...schema, cid } })
+      .eq("id", source.id);
   } else {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-      },
-    });
-    
-    if (!response.ok) {
-      throw new Error(`Fetch failed: ${response.status}`);
-    }
-    
-    const html = await response.text();
-    
-    // Return raw HTML for now - parsing would require cheerio which isn't available in edge functions
-    return [{ review_text: "Direct fetch - HTML length: " + html.length }];
+    body.fid = resolvedId;
+    await serviceClient
+      .from("guest_review_sources")
+      .update({ firecrawl_extract_schema: { ...schema, fid: resolvedId } })
+      .eq("id", source.id);
   }
+
+  const reviews = await callSerperReviews(body, serperKey);
+  if (reviews.length === 0) throw new Error(`Serper returned 0 reviews for: ${searchQuery}`);
+  return mapSerperReviews(reviews);
 }
 
-async function getSerperApiKey(client: ReturnType<typeof createClient>): Promise<string | null> {
-  // Check env first
-  const envKey = Deno.env.get("SERPER_API_KEY") ?? Deno.env.get("serper_api_key");
-  if (envKey && envKey.trim()) return envKey.trim();
-  
-  // Check vault
-  const { data } = await client
-    .from("vault.decrypted_secrets")
-    .select("decrypted_secret")
-    .filter("name", "eq", "SERPER_API_KEY")
-    .maybeSingle();
-  
-  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
+function reviewsUrl(url: string, platform: string): string {
+  if (platform === "booking") {
+    const match = url.match(/booking\.com\/hotel\/([^/]+)\/([^./]+)(?:\.[a-z-]+)?\.html/i);
+    if (match) {
+      const country = match[1];
+      const slug = match[2];
+      return `https://www.booking.com/reviewlist.html?pagename=${slug}&cc1=${country}&type=total&order=review_date_and_time&rows=25`;
+    }
+  }
+  return url;
+}
+
+async function fetchWithScraperApi(url: string, apiKey: string, platform: string): Promise<string> {
+  const targetUrl = reviewsUrl(url, platform);
+  const params = new URLSearchParams({ api_key: apiKey, url: targetUrl, country_code: "us" });
+  if (SCRAPER_RENDER_PLATFORMS.has(platform)) {
+    params.set("render", "true");
+    params.set("wait_for_selector", platform === "agoda" ? ".Review-comment" : "body");
+    params.set("wait", "5000");
+  }
+
+  const res = await fetch(`https://api.scraperapi.com/?${params.toString()}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`ScraperAPI HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+  return await res.text();
+}
+
+function parseBookingReviews(html: string): Array<Record<string, unknown>> {
+  const blocks = blockSplit(
+    html,
+    /<li class="review_list_new_item_block"[\s\S]*?(?=<li class="review_list_new_item_block"|$)/g,
+  );
+
+  return blocks.map((block) => {
+    const reviewBodies = collectMatches(block, /<span class="c-review__body"[^>]*>([\s\S]*?)<\/span>/g)
+      .map((text) => sanitizeReviewText(text))
+      .filter(Boolean);
+
+    const ratingText = matchOne(block, /<div class="bui-review-score__badge"[^>]*>\s*([0-9.]+)\s*<\/div>/i)
+      ?? matchOne(block, /aria-label="Scored ([0-9.]+)/i);
+
+    const language = matchOne(block, /<span class="c-review__body"[^>]*lang="([^"]+)"/i);
+
+    return {
+      source_review_id: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
+      reviewer_name: toNullableString(matchOne(block, /<span class="bui-avatar-block__title">([\s\S]*?)<\/span>/i)),
+      rating: ratingText ? Number(ratingText) : null,
+      published_at: parseDate(matchOne(block, /Reviewed:\s*([^<\n]+)/i)),
+      review_title: toNullableString(matchOne(block, /<h3[^>]*class="[^"]*c-review-block__title[^"]*"[^>]*>([\s\S]*?)<\/h3>/i)),
+      review_text: reviewBodies.join("\n").trim(),
+      review_url: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
+      review_language: language ? language.slice(0, 2).toLowerCase() : null,
+      metadata: {
+        room_type: toNullableString(matchOne(block, /<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>\s*<\/a>/i)),
+        traveler_type: toNullableString(
+          matchOne(block, /review-panel-wide__traveller_type[\s\S]*?<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>/i),
+        ),
+        stay_date: toNullableString(matchOne(block, /<span class="c-review-block__date">\s*([^<]+)\s*<\/span>/i)),
+      },
+    };
+  }).filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
+}
+
+function parseAgodaReviews(html: string): Array<Record<string, unknown>> {
+  const blocks = blockSplit(
+    html,
+    /<div data-element-name="review-comment"[\s\S]*?(?=<div data-element-name="review-comment"|<\/ol>)/g,
+  );
+
+  return blocks.map((block) => ({
+    source_review_id: toNullableString(matchOne(block, /data-review-id="([^"]+)"/i)),
+    reviewer_name: toNullableString(
+      matchOne(block, /data-info-type="reviewer-name"[\s\S]*?<strong>([\s\S]*?)<\/strong>/i),
+    ),
+    rating: Number(matchOne(block, /<div class="Review-comment-leftScore">([0-9.]+)<\/div>/i) ?? ""),
+    published_at: parseDate(matchOne(block, /Reviewed\s+([^<]+)<\/span>/i)),
+    review_title: toNullableString(matchOne(block, /data-testid="review-title">([\s\S]*?)<\/h4>/i)),
+    review_text: sanitizeReviewText(matchOne(block, /data-testid="review-comment">([\s\S]*?)<\/p>/i)),
+    review_url: toNullableString(matchOne(block, /data-review-id="([^"]+)"/i)),
+    review_language: null,
+    metadata: {
+      reviewer_country: toNullableString(
+        matchOne(block, /data-info-type="reviewer-name"[\s\S]*?<span>\s*from\s*<\/span><span>([\s\S]*?)<\/span>/i),
+      ),
+      traveler_type: toNullableString(matchOne(block, /data-info-type="group-name"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
+      room_type: toNullableString(matchOne(block, /data-info-type="room-type"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
+      stay_detail: toNullableString(matchOne(block, /data-info-type="stay-detail"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
+    },
+  })).filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
+}
+
+async function collectPlatformReviews(
+  source: Record<string, unknown>,
+  serperKey: string | null,
+  scraperKey: string | null,
+  serviceClient: ReturnType<typeof createClient>,
+): Promise<{ method: string; reviews: Array<Record<string, unknown>> }> {
+  const platform = String(source.platform ?? "");
+
+  if (platform === "google") {
+    if (!serperKey) throw new Error("SERPER_API_KEY not configured for Google source");
+    return {
+      method: "serper",
+      reviews: await fetchSerperReviews(source, serperKey, serviceClient),
+    };
+  }
+
+  if (platform === "booking") {
+    if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Booking source");
+    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform);
+    return { method: "scraperapi+booking-html", reviews: parseBookingReviews(html) };
+  }
+
+  if (platform === "agoda") {
+    if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Agoda source");
+    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform);
+    return { method: "scraperapi+agoda-html", reviews: parseAgodaReviews(html) };
+  }
+
+  if (!SUPPORTED_PLATFORMS.has(platform)) {
+    throw new Error(`Unsupported platform on current reliable collector: ${platform}`);
+  }
+
+  throw new Error(`Unhandled platform: ${platform}`);
 }
 
 Deno.serve(async (req: Request) => {
@@ -412,6 +509,10 @@ Deno.serve(async (req: Request) => {
     const sourceId = typeof body.source_id === "string" ? body.source_id : null;
     const runMode = typeof body.run_mode === "string" ? body.run_mode : "scheduled";
     const dryRun = body.dry_run === true;
+    const defaultYesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
+    const targetDate = typeof body.target_date === "string" ? body.target_date : defaultYesterday;
+    const batchOffset = typeof body.batch_offset === "number" ? Number(body.batch_offset) : 0;
+    const maxSources = typeof body.max_sources === "number" ? Number(body.max_sources) : MAX_SOURCES_PER_RUN;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -421,11 +522,9 @@ Deno.serve(async (req: Request) => {
     });
 
     const vaultServiceRoleKey = await getVaultSecret(serviceClient, "service_role_key");
-    const envServiceRoleKey = await getVaultSecret(serviceClient, "SERVICE_ROLE_KEY");
-    const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
-    const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
-    const isEnvServiceRole = envServiceRoleKey ? timingSafeBearerMatch(authHeader, envServiceRoleKey) : false;
-    const isInternalService = isServiceRole || isVaultServiceRole || isEnvServiceRole;
+    const isInternalService =
+      timingSafeBearerMatch(authHeader, serviceRoleKey) ||
+      (vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false);
 
     if (!isInternalService) {
       const ctx = await getManualContext(supabaseUrl, anonKey, authHeader, serviceClient);
@@ -437,14 +536,8 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const serperApiKey = await getSerperApiKey(serviceClient);
-    const scraperApiKey = await getScraperApiKey(serviceClient);
-    if (!serperApiKey) {
-      return new Response(JSON.stringify({ success: false, error: "Vault secret SERPER_API_KEY missing" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const serperKey = await getVaultSecret(serviceClient, "SERPER_API_KEY");
+    const scraperKey = await getVaultSecret(serviceClient, "SCRAPER_API_KEY");
 
     const now = new Date();
     const { data: allSources, error: sourceErr } = await serviceClient
@@ -455,186 +548,168 @@ Deno.serve(async (req: Request) => {
       .order("updated_at", { ascending: true });
     if (sourceErr) throw sourceErr;
 
-    const dueSources = (allSources ?? []).filter((s) => {
-      if (sourceId && String(s.id) !== sourceId) return false;
-      if (!s.next_poll_at) return true;
-      return new Date(String(s.next_poll_at)).getTime() <= now.getTime();
+    const allDue = (allSources ?? []).filter((source) => {
+      if (sourceId && String(source.id) !== sourceId) return false;
+      if (!source.next_poll_at) return true;
+      return new Date(String(source.next_poll_at)).getTime() <= now.getTime();
     });
 
+    const dueSources = allDue.slice(batchOffset, batchOffset + maxSources);
+    const hasMore = batchOffset + maxSources < allDue.length;
     const results: Array<Record<string, unknown>> = [];
-    let isFirstSource = true;
-    for (const source of dueSources) {
-      if (!isFirstSource) {
-        // Stagger requests by 15 seconds to avoid sudden spikes in rate limit
-        await sleep(15000);
-      }
-      isFirstSource = false;
 
-      const { data: runRow } = await serviceClient
+    for (const source of dueSources) {
+      const { data: runRow, error: runErr } = await serviceClient
         .from("guest_review_collection_runs")
-        .insert({
-          source_id: source.id,
-          run_mode: runMode,
-          status: "running",
-        })
+        .insert({ source_id: source.id, run_mode: runMode, status: "running" })
         .select("id")
         .single();
+      if (runErr) throw runErr;
 
       let reviewsCollected = 0;
       let reviewsNew = 0;
       let reviewsUpdated = 0;
+      let collectionMethod = "unknown";
+
       try {
-        let candidates: Array<Record<string, unknown>> = [];
-        
-        // Use Serper for Google sources
-        if (source.platform === "google" && serperApiKey) {
-          candidates = await fetchSerperReviews(serperApiKey, source);
-        } else {
-          // Use ScraperAPI for other platforms
-          candidates = await fetchWithDirectHttp(String(source.source_url), scraperApiKey);
+        const { method, reviews } = await collectPlatformReviews(source, serperKey, scraperKey, serviceClient);
+        collectionMethod = method;
+        reviewsCollected = reviews.length;
+
+        if (reviewsCollected === 0) {
+          throw new Error("No reviews returned from collection step");
         }
-        
-        reviewsCollected = candidates.length;
-        if (candidates.length === 0) throw new Error("No review rows returned");
 
-        for (const row of candidates) {
-          try {
-            const reviewText = cleanText(row.review_text ?? row.text ?? row.content ?? row.comment);
-            if (!reviewText || reviewText.length < 5) {
-              console.log("Skipping empty/short review");
+        for (const row of reviews) {
+          const reviewText = sanitizeReviewText(row.review_text ?? row.text ?? row.content ?? row.comment);
+          if (!isValidReviewCandidate(reviewText)) continue;
+
+          const sourceReviewId = toNullableString(row.source_review_id ?? row.review_id ?? row.id);
+          const reviewerName = toNullableString(row.reviewer_name ?? row.reviewer ?? row.author);
+          const publishedAt = parseDate(row.published_at ?? row.date ?? row.created_at);
+          const rating = normalizeRating(row.rating ?? row.score ?? row.stars);
+          const dedupeHash = await sha256([
+            String(source.property_id),
+            String(source.platform),
+            sourceReviewId ?? "",
+            reviewerName ?? "",
+            publishedAt ?? "",
+            String(rating.r10 ?? ""),
+            reviewText.toLowerCase(),
+          ].join("|"));
+
+          let existingId: string | null = null;
+          if (sourceReviewId) {
+            const { data } = await serviceClient
+              .from("guest_reviews")
+              .select("id")
+              .eq("property_id", source.property_id)
+              .eq("platform", source.platform)
+              .eq("source_review_id", sourceReviewId)
+              .maybeSingle();
+            existingId = data?.id ? String(data.id) : null;
+          }
+          if (!existingId) {
+            const { data } = await serviceClient
+              .from("guest_reviews")
+              .select("id")
+              .eq("dedupe_hash", dedupeHash)
+              .maybeSingle();
+            existingId = data?.id ? String(data.id) : null;
+          }
+
+          const timestamp = new Date().toISOString();
+          const reviewPayload = {
+            source_id: source.id,
+            property_id: source.property_id,
+            platform: source.platform,
+            source_review_id: sourceReviewId,
+            review_url: toNullableString(row.review_url ?? row.url),
+            source_listing_url: source.source_url,
+            reviewer_name: reviewerName,
+            review_title: toNullableString(row.review_title ?? row.title ?? row.headline),
+            review_text: reviewText,
+            review_text_normalized: reviewText.toLowerCase(),
+            review_language: toNullableString(row.review_language ?? row.language) ?? "en",
+            original_rating: rating.r5,
+            rating_normalized_5: rating.r5,
+            rating_normalized_10: rating.r10,
+            published_at: publishedAt,
+            dedupe_hash: dedupeHash,
+            status: "collected",
+            ai_analysis_status: "pending",
+            metadata: row.metadata ?? row,
+            collected_at: timestamp,
+            created_at: timestamp,
+            updated_at: timestamp,
+          };
+
+          let reviewId: string;
+          let changed = true;
+
+          if (existingId) {
+            const { data: old } = await serviceClient
+              .from("guest_reviews")
+              .select("review_text")
+              .eq("id", existingId)
+              .maybeSingle();
+            changed = cleanText(old?.review_text) !== reviewText;
+            const { created_at: _createdAt, ...updatePayload } = reviewPayload;
+            const { error: updateErr } = await serviceClient
+              .from("guest_reviews")
+              .update(updatePayload)
+              .eq("id", existingId);
+            if (updateErr) {
+              console.error("UPDATE error:", updateErr.message, updateErr.code);
               continue;
             }
-
-            const sourceReviewId = toNullableString(row.source_review_id ?? row.review_id ?? row.id);
-            const reviewerName = toNullableString(row.reviewer_name ?? row.reviewer ?? row.author);
-            const publishedAt = toNullableString(row.published_at ?? row.date ?? row.created_at);
-            const rating = normalizeRating(row.rating ?? row.score ?? row.stars);
-            
-            // Validate required fields
-            if (!source.property_id) {
-              console.error("Missing property_id for source:", source.id);
+            reviewId = existingId;
+            if (changed) reviewsUpdated += 1;
+          } else {
+            const { data, error: insertErr } = await serviceClient
+              .from("guest_reviews")
+              .insert(reviewPayload)
+              .select("id")
+              .single();
+            if (insertErr || !data?.id) {
+              console.error("INSERT error:", insertErr?.message, insertErr?.code);
               continue;
             }
-            
-            const dedupeHash = await sha256([
-              String(source.property_id),
-              String(source.platform),
-              sourceReviewId ?? "",
-              reviewerName ?? "",
-              publishedAt ?? "",
-              rating.r10 ?? "",
-              reviewText.toLowerCase(),
-            ].join("|"));
+            reviewId = String(data.id);
+            reviewsNew += 1;
+          }
 
-            let existingId: string | null = null;
-            if (sourceReviewId) {
-              const { data } = await serviceClient
-                .from("guest_reviews")
-                .select("id")
-                .eq("platform", source.platform)
-                .eq("source_review_id", sourceReviewId)
-                .maybeSingle();
-              existingId = data?.id ? String(data.id) : null;
-            }
-            if (!existingId) {
-              const { data } = await serviceClient
-                .from("guest_reviews")
-                .select("id")
-                .eq("dedupe_hash", dedupeHash)
-                .maybeSingle();
-              existingId = data?.id ? String(data.id) : null;
-            }
-
-            const reviewPayload = {
-              source_id: source.id,
-              property_id: source.property_id,
+          await serviceClient.from("guest_review_raw_snapshots").insert({
+            review_id: reviewId,
+            source_id: source.id,
+            source_url: source.source_url,
+            firecrawl_method: collectionMethod,
+            request_payload: {
+              url: source.source_url,
               platform: source.platform,
-              source_review_id: sourceReviewId,
-              review_url: toNullableString(row.review_url ?? row.url),
-              source_listing_url: source.source_url,
-              reviewer_name: reviewerName,
-              review_title: toNullableString(row.review_title ?? row.title ?? row.headline),
-              review_text: reviewText,
-              review_text_normalized: reviewText.toLowerCase(),
-              review_language: toNullableString(row.review_language ?? row.language) ?? 'en',
-              original_rating: rating.r5,
-              rating_normalized_5: rating.r5,
-              rating_normalized_10: rating.r10,
-              published_at: publishedAt,
-              dedupe_hash: dedupeHash,
-              status: "collected",
-              ai_analysis_status: "pending",
-              metadata: row,
-              collected_at: new Date().toISOString(),
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
+              method: collectionMethod,
+              target_date: targetDate,
+            },
+            response_payload: row,
+            extraction_metadata: { source_name: source.source_name, platform: source.platform },
+            checksum: await sha256(JSON.stringify(row)),
+          }).then(({ error }) => {
+            if (error) console.error("snapshot insert error:", error.message);
+          });
 
-            let reviewId: string;
-            let changed = true;
-            
-            if (existingId) {
-              console.log("Updating existing review:", existingId);
-              const { data: old } = await serviceClient.from("guest_reviews").select("review_text").eq("id", existingId).maybeSingle();
-              changed = cleanText(old?.review_text) !== reviewText;
-              const { error: updateError } = await serviceClient.from("guest_reviews").update(reviewPayload).eq("id", existingId);
-              if (updateError) {
-                console.error("Failed to update review:", updateError);
-                continue;
-              }
-              reviewId = existingId;
-              if (changed) reviewsUpdated += 1;
-            } else {
-              console.log("Inserting new review for property:", source.property_id);
-              console.log("Review payload:", JSON.stringify(reviewPayload, null, 2));
-              const insertResult = await serviceClient.from("guest_reviews").insert(reviewPayload).select();
-              if (insertResult.error) {
-                console.error("Failed to insert review:", insertResult.error);
-                throw new Error(`Insert failed: ${insertResult.error.message}`);
-              }
-              if (!insertResult.data || insertResult.data.length === 0) {
-                console.error("No data returned from insert");
-                throw new Error("Insert returned no data");
-              }
-              reviewId = String(insertResult.data[0].id);
-              reviewsNew += 1;
-              console.log("Successfully inserted review:", reviewId);
-            }
-
-            // Insert raw snapshot
-            const { error: snapshotError } = await serviceClient.from("guest_review_raw_snapshots").insert({
-              review_id: reviewId,
-              source_id: source.id,
-              source_url: source.source_url,
-              firecrawl_method: source.platform === "google" ? "serper" : "direct",
-              request_payload: {},
-              response_payload: row,
-              extraction_metadata: { source_name: source.source_name, platform: source.platform },
-              checksum: await sha256(JSON.stringify(row)),
-            });
-            
-            if (snapshotError) {
-              console.error("Failed to insert snapshot:", snapshotError);
-            }
-
-            if (changed && !dryRun) {
-              console.log("Triggering analyzer for review:", reviewId);
-              await fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${serviceRoleKey}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ review_id: reviewId, force: true }),
-              }).catch((e) => console.error("Analyzer call failed:", e));
-            }
-          } catch (rowError) {
-            console.error("Error processing review row:", rowError);
-            continue;
+          if (changed && !dryRun) {
+            fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${serviceRoleKey}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ review_id: reviewId, force: true }),
+            }).catch(() => null);
           }
         }
 
-        const nextPollAt = new Date(now.getTime() + Number(source.poll_frequency_hours ?? 5) * 60 * 60 * 1000).toISOString();
+        const nextPollAt = new Date(now.getTime() + Number(source.poll_frequency_hours ?? 24) * 3_600_000).toISOString();
         await serviceClient.from("guest_review_sources").update({
           last_polled_at: now.toISOString(),
           last_success_at: now.toISOString(),
@@ -650,25 +725,34 @@ Deno.serve(async (req: Request) => {
           reviews_collected: reviewsCollected,
           reviews_new: reviewsNew,
           reviews_updated: reviewsUpdated,
-          result_summary: { source_name: source.source_name, platform: source.platform, dry_run: dryRun },
+          result_summary: {
+            source_name: source.source_name,
+            platform: source.platform,
+            method: collectionMethod,
+            target_date: targetDate,
+            dry_run: dryRun,
+          },
         }).eq("id", runRow.id);
 
         results.push({
           source_id: source.id,
           source_name: source.source_name,
           status: "completed",
+          method: collectionMethod,
           reviews_collected: reviewsCollected,
           reviews_new: reviewsNew,
           reviews_updated: reviewsUpdated,
         });
+
+        if (dueSources.length > 1) await sleep(800);
       } catch (error) {
         const failures = Number(source.consecutive_failures ?? 0) + 1;
-        const health = failures >= 3 ? "degraded" : "healthy";
         const message = error instanceof Error ? error.message : String(error);
+
         await serviceClient.from("guest_review_sources").update({
           last_polled_at: now.toISOString(),
           consecutive_failures: failures,
-          health_status: health,
+          health_status: failures >= 3 ? "degraded" : "healthy",
           last_error: message,
         }).eq("id", source.id);
 
@@ -676,8 +760,6 @@ Deno.serve(async (req: Request) => {
           status: "failed",
           completed_at: new Date().toISOString(),
           reviews_collected: reviewsCollected,
-          reviews_new: reviewsNew,
-          reviews_updated: reviewsUpdated,
           error_count: 1,
           error_message: message,
         }).eq("id", runRow.id);
@@ -685,7 +767,12 @@ Deno.serve(async (req: Request) => {
         await serviceClient.from("guest_review_audit_events").insert({
           property_id: source.property_id,
           event_type: "source_collection_failed",
-          event_payload: { source_id: source.id, source_name: source.source_name, error: message, consecutive_failures: failures },
+          event_payload: {
+            source_id: source.id,
+            source_name: source.source_name,
+            error: message,
+            consecutive_failures: failures,
+          },
         });
 
         results.push({
@@ -697,16 +784,28 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    const succeeded = results.filter((result) => result.status === "completed").length;
+    const failed = results.filter((result) => result.status === "failed").length;
+    const totalNew = results.reduce((sum, result) => sum + Number(result.reviews_new ?? 0), 0);
+
     return new Response(JSON.stringify({
       success: true,
       processed_sources: dueSources.length,
+      total_due: allDue.length,
+      batch_offset: batchOffset,
+      has_more: hasMore,
+      next_batch_offset: hasMore ? batchOffset + maxSources : null,
+      succeeded,
+      failed,
+      total_new_reviews: totalNew,
+      target_date: targetDate,
       results,
     }), {
       status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("guest-review-collector failed:", error);
+    console.error("guest-review-collector fatal:", error);
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : String(error),
