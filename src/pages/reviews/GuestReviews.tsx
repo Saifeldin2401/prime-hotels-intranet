@@ -12,11 +12,16 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Search, LayoutGrid, List, MessageSquare, ShieldAlert, Send, Globe, Settings, CheckCircle2, User, Zap } from 'lucide-react'
+import { RefreshCw, Search, LayoutGrid, List, MessageSquare, ShieldAlert, Send, Globe, Settings, CheckCircle2, User, Zap, BarChart3, Building2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useEffect, useMemo, useState } from 'react'
 import { ReviewListItem } from '@/components/reviews/ReviewListItem'
 import { OTASourceManager } from '@/components/reviews/OTASourceManager'
+import { BulkOperationsToolbar } from '@/components/reviews/BulkOperationsToolbar'
+import { ReviewAnalyticsDashboard } from '@/components/reviews/ReviewAnalyticsDashboard'
+import { MultiHotelDashboard } from '@/components/reviews/MultiHotelDashboard'
+import { QuickStatsSummary } from '@/components/reviews/QuickStatsSummary'
+import { CompactFilterBar } from '@/components/reviews/CompactFilterBar'
 import type { GuestReview } from '@/lib/types'
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from '@/lib/reviewsScope'
 import { useNavigate } from 'react-router-dom'
@@ -98,6 +103,8 @@ export default function GuestReviews() {
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null)
   const [sheetOpen, setSheetOpen] = useState(false)
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
+  const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([])
+  const [activeTab, setActiveTab] = useState('overview')
 
   const [filters, setFilters] = useState({
     propertyId: 'all',
@@ -508,7 +515,7 @@ export default function GuestReviews() {
         </div>
       </div>
 
-      <Tabs defaultValue="overview" className="space-y-8">
+      <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <div className="flex items-center justify-between border-b pb-1 border-muted-foreground/10">
           <TabsList className="bg-transparent h-auto p-0 gap-8">
             <TabsTrigger 
@@ -519,18 +526,32 @@ export default function GuestReviews() {
               Intelligence Feed
             </TabsTrigger>
             <TabsTrigger 
+              value="analytics" 
+              className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
+            >
+              <BarChart3 className="h-3.5 w-3.5 me-2" />
+              Analytics
+            </TabsTrigger>
+            <TabsTrigger 
+              value="properties" 
+              className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
+            >
+              <Building2 className="h-3.5 w-3.5 me-2" />
+              By Property
+            </TabsTrigger>
+            <TabsTrigger 
               value="sources" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <Globe className="h-3.5 w-3.5 me-2" />
-              Source Management
+              Sources
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <Settings className="h-3.5 w-3.5 me-2" />
-              Control Center
+              Settings
             </TabsTrigger>
           </TabsList>
 
@@ -554,62 +575,29 @@ export default function GuestReviews() {
           </div>
         </div>
 
-        <TabsContent value="overview" className="space-y-8 animate-in fade-in duration-700">
-          {/* Enhanced Filtering Command Bar */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-card/40 p-3 rounded-2xl border border-muted-foreground/5 backdrop-blur-sm">
-            <div className="lg:col-span-4 relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-primary transition-colors" />
-              <Input 
-                value={filters.query} 
-                onChange={(e) => setFilters((prev) => ({ ...prev, query: e.target.value }))} 
-                placeholder="Search across reviewer, title or context..." 
-                className="pl-12 h-12 border-none bg-background/50 shadow-none focus-visible:ring-1 focus-visible:ring-primary/20 rounded-xl font-medium"
-              />
-            </div>
-            
-            <div className="lg:col-span-8 flex flex-wrap gap-3 justify-end">
-              <Select value={filters.propertyId} onValueChange={(v) => setFilters(p => ({ ...p, propertyId: v }))}>
-                <SelectTrigger className="w-[180px] h-12 border-none bg-background shadow-none font-bold text-[10px] uppercase tracking-widest rounded-xl">
-                  <SelectValue placeholder="All Properties" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Global Chain</SelectItem>
-                  {propertiesQuery.data?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
+        <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-700">
+          {/* Quick Stats Summary */}
+          <QuickStatsSummary reviews={reviews} propertyNameById={propertyNameById} />
 
-              <Select value={filters.severity} onValueChange={(v) => setFilters(p => ({ ...p, severity: v }))}>
-                <SelectTrigger className="w-[140px] h-12 border-none bg-background shadow-none font-bold text-[10px] uppercase tracking-widest rounded-xl">
-                  <SelectValue placeholder="Severity" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Severities</SelectItem>
-                  {severities.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
+          {/* Bulk Operations Toolbar */}
+          <BulkOperationsToolbar
+            reviews={reviews}
+            selectedIds={selectedReviewIds}
+            onSelectionChange={setSelectedReviewIds}
+            propertyNameById={propertyNameById}
+            filters={filters}
+          />
 
-              <Select value={filters.sentiment} onValueChange={(v) => setFilters(p => ({ ...p, sentiment: v }))}>
-                <SelectTrigger className="w-[140px] h-12 border-none bg-background shadow-none font-bold text-[10px] uppercase tracking-widest rounded-xl">
-                  <SelectValue placeholder="Sentiment" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sentiments</SelectItem>
-                  {sentiments.map(s => <SelectItem key={s} value={s} className="capitalize">{s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-12 w-12 rounded-xl bg-transparent border-muted-foreground/10 hover:bg-background"
-                onClick={() => setFilters({
-                  propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: ''
-                })}
-              >
-                <RefreshCw className="h-4 w-4 opacity-50" />
-              </Button>
-            </div>
-          </div>
+          {/* Compact Filter Bar */}
+          <CompactFilterBar
+            filters={filters}
+            onFilterChange={setFilters}
+            properties={propertiesQuery.data ?? []}
+            platforms={platforms}
+            severities={severities}
+            sentiments={sentiments}
+            statuses={statuses}
+          />
 
           {reviewsQuery.isLoading ? (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -651,6 +639,32 @@ export default function GuestReviews() {
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-8 animate-in fade-in duration-700">
+          <ReviewAnalyticsDashboard
+            reviews={reviews}
+            propertyNameById={propertyNameById}
+            properties={propertiesQuery.data ?? []}
+          />
+        </TabsContent>
+
+        <TabsContent value="properties" className="space-y-8 animate-in fade-in duration-700">
+          <MultiHotelDashboard
+            reviews={reviews}
+            propertyNameById={propertyNameById}
+            properties={propertiesQuery.data ?? []}
+            onReviewClick={openReview}
+            selectedIds={selectedReviewIds}
+            onToggleSelect={(id) => {
+              if (selectedReviewIds.includes(id)) {
+                setSelectedReviewIds(selectedReviewIds.filter((i) => i !== id))
+              } else {
+                setSelectedReviewIds([...selectedReviewIds, id])
+              }
+            }}
+            viewMode={viewMode}
+          />
         </TabsContent>
 
         <TabsContent value="sources">
