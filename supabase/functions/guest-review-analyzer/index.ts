@@ -579,6 +579,48 @@ Deno.serve(async (req: Request) => {
       },
     });
 
+    // ── Auto-create a task for negative / critical reviews ──────────────────
+    if (analysis.sentiment === 'negative' || analysis.critical) {
+      const severityToPriority: Record<string, string> = {
+        critical: 'urgent',
+        high: 'high',
+        medium: 'medium',
+        low: 'low',
+      };
+      const taskPriority = severityToPriority[analysis.severity] ?? 'medium';
+      const dueHoursTask = analysis.critical ? 12 : 24;
+      const taskDueDate = new Date(Date.now() + dueHoursTask * 60 * 60 * 1000).toISOString();
+
+      // Use the general_manager assignee as the task owner, fallback to first assignee
+      const gmMeta = assignmentMeta.find((m) => m.responsibility === 'general_manager');
+      const taskAssigneeId = gmMeta?.assigneeProfileId ?? assignmentMeta[0]?.assigneeProfileId ?? null;
+
+      const taskTitle = analysis.critical
+        ? `URGENT: Guest review requires immediate attention – ${property?.name ?? 'Property'}`
+        : `Guest review follow-up required – ${property?.name ?? 'Property'} (${review.platform ?? 'platform'})`;
+
+      await createClient(supabaseUrl, serviceRoleKey).from('tasks').insert({
+        title: taskTitle,
+        description: [
+          analysis.summaryEn,
+          `Categories: ${analysis.categories.join(', ')}`,
+          `Recommended actions: ${analysis.recommendedActions.join('; ')}`,
+          `Review ID: ${reviewId}`,
+        ].join('\n\n'),
+        status: 'todo',
+        priority: taskPriority,
+        assigned_to_id: taskAssigneeId,
+        assigned_to: taskAssigneeId,
+        property_id: review.property_id,
+        due_date: taskDueDate,
+        sla_hours: dueHoursTask,
+        is_deleted: false,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     await enqueueNotifications(
       createClient(supabaseUrl, serviceRoleKey),
       reviewId,
