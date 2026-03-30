@@ -7,7 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useDashboardFocus } from '@/hooks/useDashboardFocus'
 import { useAreaManagerStats, useCorporateStats, useDashboardStats, useDepartmentHeadStats, useHRStats, usePropertyManagerStats } from '@/hooks/useDashboardStats'
 import { useNotifications } from '@/hooks/useNotifications'
-import { useUndoableAction } from '@/hooks/useUndoableAction.ts'
+import { useUndoableAction } from '@/hooks/useUndoableAction'
 import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import {
