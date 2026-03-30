@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import {
   LineChart,
   Line,
@@ -7,182 +7,401 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  Area,
+  AreaChart,
+  ReferenceLine,
 } from 'recharts'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { format, subDays, parseISO } from 'date-fns'
-import { TrendingUp } from 'lucide-react'
-
-interface GuestReview {
-  id: string
-  rating?: number
-  collected_at?: string
-  sentiment?: string
-  property_id?: string
-}
+import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import type { GuestReview } from '@/lib/types'
 
 interface ReviewTrendsChartProps {
   reviews: GuestReview[]
   days?: number
 }
 
-export function ReviewTrendsChart({ reviews, days = 30 }: ReviewTrendsChartProps) {
+const PERIOD_OPTIONS = [
+  { label: '7D', value: 7 },
+  { label: '30D', value: 30 },
+  { label: '90D', value: 90 },
+]
+
+export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTrendsChartProps) {
+  const [days, setDays] = useState(defaultDays)
+
   const data = useMemo(() => {
     const endDate = new Date()
-    const startDate = subDays(endDate, days)
-    
-    // Create date buckets
-    const dateBuckets: Record<string, { date: string; count: number; avgRating: number; ratings: number[]; positive: number; negative: number; neutral: number }> = {}
-    
-    // Initialize all dates with zero
+
+    const dateBuckets: Record<
+      string,
+      {
+        date: string
+        count: number
+        avgRating: number
+        ratings: number[]
+        positive: number
+        negative: number
+        neutral: number
+        mixed: number
+        critical: number
+      }
+    > = {}
+
     for (let i = 0; i <= days; i++) {
       const date = format(subDays(endDate, i), 'yyyy-MM-dd')
-      dateBuckets[date] = { 
-        date, 
-        count: 0, 
-        avgRating: 0, 
+      dateBuckets[date] = {
+        date,
+        count: 0,
+        avgRating: 0,
         ratings: [],
         positive: 0,
         negative: 0,
-        neutral: 0
+        neutral: 0,
+        mixed: 0,
+        critical: 0,
       }
     }
-    
-    // Fill with review data
+
     reviews.forEach((review) => {
       if (!review.collected_at) return
-      const reviewDate = format(parseISO(review.collected_at), 'yyyy-MM-dd')
-      if (dateBuckets[reviewDate]) {
-        dateBuckets[reviewDate].count++
-        if (review.rating) {
-          dateBuckets[reviewDate].ratings.push(review.rating)
-        }
-        
-        // Sentiment tracking
-        const sentiment = review.sentiment?.toLowerCase()
-        if (sentiment === 'positive') dateBuckets[reviewDate].positive++
-        else if (sentiment === 'negative') dateBuckets[reviewDate].negative++
-        else dateBuckets[reviewDate].neutral++
+      let reviewDate: string
+      try {
+        reviewDate = format(parseISO(review.collected_at), 'yyyy-MM-dd')
+      } catch {
+        return
+      }
+      if (!dateBuckets[reviewDate]) return
+
+      dateBuckets[reviewDate].count++
+      if (review.rating_normalized_5 != null) {
+        dateBuckets[reviewDate].ratings.push(review.rating_normalized_5)
+      }
+
+      const s = review.sentiment ?? 'neutral'
+      if (s === 'positive') dateBuckets[reviewDate].positive++
+      else if (s === 'negative') dateBuckets[reviewDate].negative++
+      else if (s === 'mixed') dateBuckets[reviewDate].mixed++
+      else dateBuckets[reviewDate].neutral++
+
+      if (review.severity === 'critical' || review.critical_flag) {
+        dateBuckets[reviewDate].critical++
       }
     })
-    
-    // Calculate averages and format for chart
+
     return Object.values(dateBuckets)
       .reverse()
       .map((bucket) => ({
         ...bucket,
-        avgRating: bucket.ratings.length > 0 
-          ? Number((bucket.ratings.reduce((a, b) => a + b, 0) / bucket.ratings.length).toFixed(1))
-          : 0,
-        displayDate: format(parseISO(bucket.date), 'MMM dd'),
+        avgRating:
+          bucket.ratings.length > 0
+            ? Number(
+                (bucket.ratings.reduce((a, b) => a + b, 0) / bucket.ratings.length).toFixed(1),
+              )
+            : null,
+        displayDate: format(parseISO(bucket.date), days <= 14 ? 'MMM dd' : days <= 30 ? 'MMM dd' : 'MMM dd'),
+        positivePct:
+          bucket.count > 0 ? Math.round((bucket.positive / bucket.count) * 100) : null,
       }))
   }, [reviews, days])
 
   const stats = useMemo(() => {
-    const totalReviews = reviews.length
-    const avgRating = totalReviews > 0 
-      ? (reviews.reduce((acc, r) => acc + (r.rating || 0), 0) / totalReviews).toFixed(1)
-      : '0'
-    
-    // Calculate trend (compare first half vs second half)
+    const inWindow = reviews.filter((r) => {
+      if (!r.collected_at) return false
+      try {
+        const d = parseISO(r.collected_at)
+        return d >= subDays(new Date(), days)
+      } catch {
+        return false
+      }
+    })
+
+    const total = inWindow.length
+    const rated = inWindow.filter((r) => r.rating_normalized_5 != null)
+    const avgRating =
+      rated.length > 0
+        ? (rated.reduce((s, r) => s + (r.rating_normalized_5 ?? 0), 0) / rated.length).toFixed(1)
+        : '—'
+
+    const positive = inWindow.filter((r) => r.sentiment === 'positive').length
+    const negative = inWindow.filter((r) => r.sentiment === 'negative').length
+    const positivePct = total > 0 ? Math.round((positive / total) * 100) : 0
+
+    // Volume trend: compare second half vs first half
     const midPoint = Math.floor(data.length / 2)
     const firstHalf = data.slice(0, midPoint).reduce((a, b) => a + b.count, 0)
     const secondHalf = data.slice(midPoint).reduce((a, b) => a + b.count, 0)
-    const trend = secondHalf > firstHalf ? 'up' : secondHalf < firstHalf ? 'down' : 'stable'
-    
-    return { totalReviews, avgRating, trend, firstHalf, secondHalf }
-  }, [reviews, data])
+    const trend =
+      secondHalf > firstHalf * 1.1
+        ? 'up'
+        : secondHalf < firstHalf * 0.9
+        ? 'down'
+        : 'stable'
+
+    // Rating trend
+    const firstHalfRatings = data
+      .slice(0, midPoint)
+      .flatMap((d) => d.ratings)
+    const secondHalfRatings = data
+      .slice(midPoint)
+      .flatMap((d) => d.ratings)
+    const firstAvg =
+      firstHalfRatings.length > 0
+        ? firstHalfRatings.reduce((a, b) => a + b, 0) / firstHalfRatings.length
+        : 0
+    const secondAvg =
+      secondHalfRatings.length > 0
+        ? secondHalfRatings.reduce((a, b) => a + b, 0) / secondHalfRatings.length
+        : 0
+    const ratingTrend =
+      secondAvg > firstAvg + 0.1
+        ? 'up'
+        : secondAvg < firstAvg - 0.1
+        ? 'down'
+        : 'stable'
+
+    return {
+      total,
+      avgRating,
+      positivePct,
+      positive,
+      negative,
+      trend,
+      ratingTrend,
+    }
+  }, [reviews, days, data])
+
+  const TrendIcon = ({ direction }: { direction: 'up' | 'down' | 'stable' }) => {
+    if (direction === 'up')
+      return <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+    if (direction === 'down')
+      return <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+    return <Minus className="h-3.5 w-3.5 text-muted-foreground" />
+  }
+
+  const avgRatingNum = parseFloat(String(stats.avgRating))
 
   return (
     <Card className="border-none shadow-sm">
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-sm font-medium flex items-center gap-2">
-            <TrendingUp className="h-4 w-4 text-primary" />
-            Review Trends (Last {days} Days)
-          </CardTitle>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-primary" />
-              Volume
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-yellow-500" />
-              Avg Rating
-            </span>
+          <div>
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              Review Volume & Rating Trends
+            </CardTitle>
+            <CardDescription className="text-xs mt-0.5">
+              Daily review counts and average scores over time
+            </CardDescription>
+          </div>
+          <div className="flex gap-1">
+            {PERIOD_OPTIONS.map((opt) => (
+              <Button
+                key={opt.value}
+                variant={days === opt.value ? 'default' : 'ghost'}
+                size="sm"
+                className="h-6 px-2 text-[10px] font-bold"
+                onClick={() => setDays(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        <div className="h-[200px] w-full">
+        {/* Volume chart */}
+        <div className="h-[180px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+            <AreaChart data={data} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
+              <defs>
+                <linearGradient id="colorPositive" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#22c55e" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorNegative" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="colorVolume" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-              <XAxis 
-                dataKey="displayDate" 
-                tick={{ fontSize: 10 }}
-                interval="preserveStartEnd"
-                tickMargin={8}
+              <XAxis
+                dataKey="displayDate"
+                tick={{ fontSize: 9 }}
+                interval={days <= 14 ? 0 : days <= 30 ? 4 : 9}
+                tickMargin={6}
               />
-              <YAxis yAxisId="left" tick={{ fontSize: 10 }} />
-              <YAxis 
-                yAxisId="right" 
-                orientation="right" 
-                domain={[0, 5]} 
-                tick={{ fontSize: 10 }}
-              />
-              <Tooltip 
-                contentStyle={{ 
-                  backgroundColor: 'white', 
+              <YAxis tick={{ fontSize: 9 }} width={24} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
                   border: '1px solid #e5e7eb',
                   borderRadius: '8px',
-                  fontSize: '12px'
+                  fontSize: '11px',
                 }}
                 formatter={(value: number, name: string) => {
-                  if (name === 'Volume') return [value, 'Reviews']
-                  if (name === 'Avg Rating') return [value, 'Rating']
+                  if (name === 'count') return [value, 'Total']
+                  if (name === 'positive') return [value, 'Positive']
+                  if (name === 'negative') return [value, 'Negative']
                   return [value, name]
                 }}
               />
-              <Line
-                yAxisId="left"
+              <Area
                 type="monotone"
                 dataKey="count"
-                name="Volume"
+                name="count"
                 stroke="#6366f1"
                 strokeWidth={2}
-                dot={{ fill: '#6366f1', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5 }}
+                fill="url(#colorVolume)"
+                dot={false}
+                activeDot={{ r: 4 }}
+              />
+              <Area
+                type="monotone"
+                dataKey="positive"
+                name="positive"
+                stroke="#22c55e"
+                strokeWidth={1.5}
+                fill="url(#colorPositive)"
+                dot={false}
+                activeDot={{ r: 3 }}
+                strokeDasharray="4 2"
+              />
+              <Area
+                type="monotone"
+                dataKey="negative"
+                name="negative"
+                stroke="#ef4444"
+                strokeWidth={1.5}
+                fill="url(#colorNegative)"
+                dot={false}
+                activeDot={{ r: 3 }}
+                strokeDasharray="4 2"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Rating trend chart */}
+        <div className="h-[100px] w-full mt-2">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 2, right: 20, left: 0, bottom: 2 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="displayDate" tick={false} />
+              <YAxis domain={[1, 5]} tick={{ fontSize: 9 }} width={24} />
+              <ReferenceLine yAxisId={0} y={4} stroke="#e5e7eb" strokeDasharray="4 2" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: 'white',
+                  border: '1px solid #e5e7eb',
+                  borderRadius: '8px',
+                  fontSize: '11px',
+                }}
+                formatter={(value: number | null) =>
+                  value != null ? [`${value} ★`, 'Avg Rating'] : ['—', 'Avg Rating']
+                }
               />
               <Line
-                yAxisId="right"
                 type="monotone"
                 dataKey="avgRating"
-                name="Avg Rating"
+                name="avgRating"
                 stroke="#eab308"
                 strokeWidth={2}
-                dot={{ fill: '#eab308', strokeWidth: 0, r: 3 }}
-                activeDot={{ r: 5 }}
+                dot={false}
+                activeDot={{ r: 4 }}
+                connectNulls
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
-        
-        <div className="grid grid-cols-3 gap-4 mt-4 pt-4 border-t">
+
+        {/* Legend */}
+        <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-indigo-500 rounded-full" />
+            Total volume
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-px border-t-2 border-dashed border-green-500" />
+            Positive
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-px border-t-2 border-dashed border-red-500" />
+            Negative
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="w-4 h-0.5 bg-yellow-500 rounded-full" />
+            Avg rating (below)
+          </span>
+        </div>
+
+        {/* Stats row */}
+        <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t">
           <div className="text-center">
-            <p className="text-2xl font-bold">{stats.totalReviews}</p>
-            <p className="text-xs text-muted-foreground">Total Reviews</p>
+            <p className="text-xl font-black">{stats.total}</p>
+            <p className="text-[10px] text-muted-foreground">Reviews</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold">{stats.avgRating}</p>
-            <p className="text-xs text-muted-foreground">Avg Rating</p>
+            <div className="flex items-center justify-center gap-1">
+              <p
+                className={`text-xl font-black ${
+                  !isNaN(avgRatingNum)
+                    ? avgRatingNum >= 4
+                      ? 'text-green-600'
+                      : avgRatingNum >= 3
+                      ? 'text-yellow-600'
+                      : 'text-red-600'
+                    : ''
+                }`}
+              >
+                {stats.avgRating}
+              </p>
+              <TrendIcon direction={stats.ratingTrend} />
+            </div>
+            <p className="text-[10px] text-muted-foreground">Avg Rating</p>
           </div>
           <div className="text-center">
-            <p className={`text-2xl font-bold ${stats.trend === 'up' ? 'text-green-600' : stats.trend === 'down' ? 'text-red-600' : ''}`}>
-              {stats.trend === 'up' ? '↑' : stats.trend === 'down' ? '↓' : '→'}
-            </p>
-            <p className="text-xs text-muted-foreground">
-              {stats.trend === 'up' ? 'Increasing' : stats.trend === 'down' ? 'Decreasing' : 'Stable'}
+            <div className="flex items-center justify-center gap-1">
+              <p
+                className={`text-xl font-black ${
+                  stats.positivePct >= 70
+                    ? 'text-green-600'
+                    : stats.positivePct >= 50
+                    ? 'text-yellow-600'
+                    : 'text-red-600'
+                }`}
+              >
+                {stats.positivePct}%
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">Positive</p>
+          </div>
+          <div className="text-center">
+            <div className="flex items-center justify-center gap-1">
+              <p
+                className={`text-xl font-black ${
+                  stats.trend === 'up'
+                    ? 'text-green-600'
+                    : stats.trend === 'down'
+                    ? 'text-red-600'
+                    : ''
+                }`}
+              >
+                {stats.trend === 'up' ? '↑' : stats.trend === 'down' ? '↓' : '→'}
+              </p>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              Volume{' '}
+              {stats.trend === 'up'
+                ? 'Growing'
+                : stats.trend === 'down'
+                ? 'Declining'
+                : 'Stable'}
             </p>
           </div>
         </div>

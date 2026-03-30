@@ -32,6 +32,16 @@ import { ActivityTimeline } from '@/components/reviews/ActivityTimeline'
 import { ExportReviewsButton } from '@/components/reviews/ExportReviewsButton'
 import { SavedFilterPresets } from '@/components/reviews/SavedFilterPresets'
 import { KeywordCloud } from '@/components/reviews/KeywordCloud'
+import { SentimentBreakdownChart } from '@/components/reviews/SentimentBreakdownChart'
+
+type ReviewWithIssues = GuestReview & {
+  issues?: Array<{
+    category: string
+    severity?: string
+    confidence?: number
+    issue_summary_en?: string | null
+  }>
+}
 import { ReviewPreviewTooltip } from '@/components/reviews/ReviewPreviewTooltip'
 import { useReviewShortcuts, useFilterShortcuts } from '@/hooks/useKeyboardShortcuts'
 import type { GuestReview } from '@/lib/types'
@@ -681,12 +691,30 @@ export default function GuestReviews() {
           )}
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-6 animate-in fade-in duration-700">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <ReviewTrendsChart reviews={reviews} days={30} />
-            <PropertyComparisonChart reviews={reviews} properties={propertiesQuery.data ?? []} />
-            <KeywordCloud reviews={reviews} maxKeywords={25} />
+        <TabsContent value="analytics" className="space-y-8 animate-in fade-in duration-700">
+          {/* Executive Intelligence header */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-black tracking-tight">Executive Intelligence</h2>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Guest Review Analysis — comprehensive performance, sentiment & operational insights
+              </p>
+            </div>
           </div>
+
+          {/* Top charts row: trends + property comparison */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <ReviewTrendsChart reviews={reviews} />
+            <PropertyComparisonChart reviews={reviews} properties={propertiesQuery.data ?? []} />
+          </div>
+
+          {/* Issue category analysis + keyword cloud */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <SentimentBreakdownChart reviews={reviews as ReviewWithIssues[]} />
+            <KeywordCloud reviews={reviews} maxKeywords={30} />
+          </div>
+
+          {/* Full executive analytics dashboard */}
           <ReviewAnalyticsDashboard
             reviews={reviews}
             propertyNameById={propertyNameById}
