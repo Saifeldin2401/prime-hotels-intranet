@@ -20,6 +20,7 @@ export type TriggerEvent =
     | 'AUDIT_FINDING'
     | 'SOP_PUBLISHED'
     | 'CERTIFICATION_EXPIRED'
+    | 'OPERATIONS_ALERT'
 
 export interface TriggerRule {
     id: string
@@ -40,7 +41,7 @@ export interface TriggerCondition {
 }
 
 export interface TriggerAction {
-    type: 'assign_training' | 'assign_quiz' | 'send_notification' | 'assign_required_reading'
+    type: 'assign_training' | 'assign_quiz' | 'send_notification' | 'assign_required_reading' | 'create_task'
     target_id: string
     target_name?: string
     due_days?: number
@@ -338,9 +339,40 @@ export async function onRoleChange(
     })
 }
 
+/**
+ * Trigger an operations alert — fires rules of type OPERATIONS_ALERT.
+ * Use for inventory shortages, F&B threshold breaches, shift anomalies, etc.
+ *
+ * @param alertType   Short machine-readable label, e.g. 'inventory_low', 'fnb_complaint'
+ * @param description Human-readable description of the alert
+ * @param propertyId  Property where the alert originated
+ * @param departmentId Optional: restricts rule matching to a specific department
+ * @param metadata    Arbitrary key-value pairs forwarded to matched rules
+ */
+export async function onOperationsAlert(
+    alertType: string,
+    description: string,
+    propertyId?: string,
+    departmentId?: string,
+    metadata?: Record<string, unknown>
+): Promise<void> {
+    await processTrigger({
+        event: 'OPERATIONS_ALERT',
+        source_type: 'operations',
+        department_id: departmentId,
+        metadata: {
+            alert_type: alertType,
+            description,
+            property_id: propertyId,
+            ...metadata,
+        },
+    })
+}
+
 export const triggerService = {
     processTrigger,
     onSOPPublished,
     onNewHire,
-    onRoleChange
+    onRoleChange,
+    onOperationsAlert,
 }

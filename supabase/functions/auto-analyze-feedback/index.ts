@@ -150,6 +150,53 @@ Deno.serve(async (req) => {
             throw updateError;
         }
 
+        // ── Auto-create a task when the AI identifies an actionable item ─────
+        if (analysis.sentiment === 'negative' && analysis.actionable_item) {
+            const docTitle = (scopedFeedback as any).documents?.title ?? 'Knowledge Base Document';
+            const deptId = (scopedFeedback as any).documents?.department_id ?? null;
+
+            // Resolve a department_head in the same department as the document
+            let assigneeId: string | null = null;
+            if (deptId) {
+                const { data: deptUsers } = await supabase
+                    .from('user_departments')
+                    .select('user_id')
+                    .eq('department_id', deptId);
+                const deptUserIds = (deptUsers ?? []).map((r: any) => r.user_id);
+                if (deptUserIds.length > 0) {
+                    const { data: headRow } = await supabase
+                        .from('user_roles')
+                        .select('user_id')
+                        .eq('role', 'department_head')
+                        .in('user_id', deptUserIds)
+                        .limit(1)
+                        .maybeSingle();
+                    if (headRow?.user_id) assigneeId = headRow.user_id;
+                }
+            }
+
+            const taskTitle = `KB Doc Action: ${String(analysis.actionable_item).slice(0, 100)}`;
+            await supabase.from('tasks').insert({
+                title: taskTitle,
+                description: [
+                    `Document: ${docTitle}`,
+                    `AI Actionable Item: ${analysis.actionable_item}`,
+                    `Themes: ${Array.isArray(analysis.themes) ? analysis.themes.join(', ') : ''}`,
+                    `Feedback ID: ${feedback_id}`,
+                ].join('\n\n'),
+                status: 'todo',
+                priority: 'medium',
+                assigned_to_id: assigneeId,
+                assigned_to: assigneeId,
+                department_id: deptId,
+                due_date: new Date(Date.now() + 7 * 86400000).toISOString(), // 7-day default SLA
+                is_deleted: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            });
+        }
+        // ─────────────────────────────────────────────────────────────────────
+
         return new Response(JSON.stringify({ success: true, analysis }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });

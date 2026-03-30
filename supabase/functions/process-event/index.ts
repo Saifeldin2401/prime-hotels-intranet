@@ -349,6 +349,57 @@ async function executeAction(supabase: any, type: string, config: any, context: 
         if (error) throw error;
     }
 
+    else if (type === 'create_task') {
+        // config: { title, description?, priority?, due_days?, assigned_role? }
+        const title = config.title || `Action required: ${context.event_type}`;
+        const priority = config.priority || 'medium';
+        const dueDays: number = typeof config.due_days === 'number' ? config.due_days : 1;
+        const dueDate = new Date(Date.now() + dueDays * 86400000).toISOString();
+
+        // Resolve assignee: prefer explicit assigned_role lookup, then first affected user
+        let assigneeId: string | null = affectedUsers[0] ?? null;
+        if (config.assigned_role) {
+            const propertyId = context.property_id as string | undefined;
+            const roleQuery = supabase
+                .from('user_roles')
+                .select('user_id')
+                .eq('role', config.assigned_role)
+                .limit(1);
+            const { data: roleRows } = await roleQuery;
+            if (roleRows && roleRows.length > 0) {
+                // For property-scoped roles prefer users in the same property
+                if (propertyId) {
+                    const { data: propUser } = await supabase
+                        .from('user_properties')
+                        .select('user_id')
+                        .eq('property_id', propertyId)
+                        .in('user_id', roleRows.map((r: any) => r.user_id))
+                        .limit(1)
+                        .maybeSingle();
+                    if (propUser?.user_id) assigneeId = propUser.user_id;
+                } else {
+                    assigneeId = roleRows[0].user_id;
+                }
+            }
+        }
+
+        const { error } = await supabase.from('tasks').insert({
+            title,
+            description: config.description || null,
+            status: 'todo',
+            priority,
+            assigned_to_id: assigneeId,
+            assigned_to: assigneeId,
+            property_id: context.property_id ?? null,
+            department_id: context.department_id ?? null,
+            due_date: dueDate,
+            is_deleted: false,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+        });
+        if (error) throw error;
+    }
+
     else if (type === 'start_workflow') {
         const workflowId = config.workflow_id;
         if (!workflowId) throw new Error('start_workflow requires workflow_id');
