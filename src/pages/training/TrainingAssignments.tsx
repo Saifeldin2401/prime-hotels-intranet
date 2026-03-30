@@ -1032,10 +1032,11 @@ export function TrainingAssignmentsPanel({
       switch (assignmentsSortBy) {
         case 'date':
           return new Date(b.latestCreatedAt).getTime() - new Date(a.latestCreatedAt).getTime()
-        case 'priority':
+        case 'priority': {
           const priorityOrder = { compliance: 0, high: 1, normal: 2 }
           return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) - 
                  (priorityOrder[b.priority as keyof typeof priorityOrder] || 2)
+        }
         case 'module':
           return a.moduleTitle.localeCompare(b.moduleTitle)
         case 'dueDate':
