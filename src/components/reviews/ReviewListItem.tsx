@@ -133,6 +133,7 @@ export function ReviewListItem({
       className={cn(
         "group cursor-pointer transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-1 relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/10",
         review.critical_flag && "ring-1 ring-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]",
+        isSelected && "ring-2 ring-primary shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-gradient-to-br from-primary/5 to-blue-50"
       )}
       onClick={() => onClick(review.id)}
     >
@@ -156,9 +157,37 @@ export function ReviewListItem({
         </div>
       )}
 
+      {isSelected && (
+        <>
+          <div className="absolute top-3 right-3 z-50">
+            <div className="bg-blue-600 text-white rounded-full p-2 shadow-lg border-2 border-white">
+              <Check className="h-5 w-5" strokeWidth={3} />
+            </div>
+          </div>
+          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-50">
+            <Badge className="bg-blue-600 text-white border-0 shadow-lg px-3 py-1 text-xs font-bold">
+              SELECTED
+            </Badge>
+          </div>
+        </>
+      )}
+
       <CardHeader className="pb-3 pt-6">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-3">
+            {/* Selection Checkbox */}
+            {onToggleSelect && (
+              <div 
+                className="flex items-center justify-center h-6 w-6 rounded border-2 border-primary/50 bg-white hover:border-primary transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={() => onToggleSelect(review.id)}
+                  className="h-4 w-4 border-0 data-[state=checked]:bg-primary data-[state=checked]:text-white"
+                />
+              </div>
+            )}
             <div 
               className="w-8 h-8 rounded-lg flex items-center justify-center bg-white shadow-sm border border-border/30"
               style={{ color: platformColor }}

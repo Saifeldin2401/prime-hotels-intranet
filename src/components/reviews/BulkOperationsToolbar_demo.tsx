@@ -63,25 +63,36 @@ export function BulkOperationsToolbar({
     }
   };
 
-  // Bulk delete mutation
+  // Simulate backend operations for demo
+  const simulateMutation = (action: string, successMessage: string) => {
+    return new Promise((resolve) => {
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['guest-reviews'] });
+        onSelectionChange([]);
+        toast({
+          title: action,
+          description: successMessage,
+        });
+        resolve(selectedIds);
+      }, 1000);
+    });
+  };
+
+  // Bulk delete mutation (simulated)
   const deleteMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from('guest_reviews')
-        .delete()
-        .in('id', ids);
+      // In production: 
+      // const { error } = await supabase.from('guest_reviews').delete().in('id', ids);
+      // if (error) throw error;
       
-      if (error) throw error;
-      return ids;
+      // For demo, simulate deletion
+      return simulateMutation(
+        'Reviews Deleted',
+        `Successfully deleted ${ids.length} review(s).`
+      );
     },
     onSuccess: (deletedIds) => {
-      queryClient.invalidateQueries({ queryKey: ['guest-reviews'] });
-      onSelectionChange([]);
       setShowDeleteDialog(false);
-      toast({
-        title: 'Reviews Deleted',
-        description: `Successfully deleted ${deletedIds.length} review(s).`,
-      });
     },
     onError: (error) => {
       toast({
@@ -92,24 +103,20 @@ export function BulkOperationsToolbar({
     },
   });
 
-  // Bulk archive mutation (soft delete - mark as archived)
+  // Bulk archive mutation (simulated)
   const archiveMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from('guest_reviews')
-        .update({ status: 'archived', updated_at: new Date().toISOString() })
-        .in('id', ids);
+      // In production:
+      // const { error } = await supabase
+      //   .from('guest_reviews')
+      //   .update({ status: 'archived', updated_at: new Date().toISOString() })
+      //   .in('id', ids);
+      // if (error) throw error;
       
-      if (error) throw error;
-      return ids;
-    },
-    onSuccess: (archivedIds) => {
-      queryClient.invalidateQueries({ queryKey: ['guest-reviews'] });
-      onSelectionChange([]);
-      toast({
-        title: 'Reviews Archived',
-        description: `Successfully archived ${archivedIds.length} review(s).`,
-      });
+      return simulateMutation(
+        'Reviews Archived',
+        `Successfully archived ${ids.length} review(s).`
+      );
     },
     onError: (error) => {
       toast({
@@ -120,28 +127,24 @@ export function BulkOperationsToolbar({
     },
   });
 
-  // Bulk mark as responded
+  // Bulk mark as responded (simulated)
   const markRespondedMutation = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase
-        .from('guest_reviews')
-        .update({ 
-          status: 'responded', 
-          responded_at: new Date().toISOString(),
-          updated_at: new Date().toISOString() 
-        })
-        .in('id', ids);
+      // In production:
+      // const { error } = await supabase
+      //   .from('guest_reviews')
+      //   .update({ 
+      //     status: 'responded', 
+      //     responded_at: new Date().toISOString(),
+      //     updated_at: new Date().toISOString() 
+      //   })
+      //   .in('id', ids);
+      // if (error) throw error;
       
-      if (error) throw error;
-      return ids;
-    },
-    onSuccess: (ids) => {
-      queryClient.invalidateQueries({ queryKey: ['guest-reviews'] });
-      onSelectionChange([]);
-      toast({
-        title: 'Marked as Responded',
-        description: `Successfully marked ${ids.length} review(s) as responded.`,
-      });
+      return simulateMutation(
+        'Marked as Responded',
+        `Successfully marked ${ids.length} review(s) as responded.`
+      );
     },
     onError: (error) => {
       toast({

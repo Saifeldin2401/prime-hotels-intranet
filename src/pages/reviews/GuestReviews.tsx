@@ -22,6 +22,18 @@ import { ReviewAnalyticsDashboard } from '@/components/reviews/ReviewAnalyticsDa
 import { MultiHotelDashboard } from '@/components/reviews/MultiHotelDashboard'
 import { QuickStatsSummary } from '@/components/reviews/QuickStatsSummary'
 import { CompactFilterBar } from '@/components/reviews/CompactFilterBar'
+import { ReviewTrendsChart } from '@/components/reviews/ReviewTrendsChart'
+import { PropertyComparisonChart } from '@/components/reviews/PropertyComparisonChart'
+import { DateRangePicker } from '@/components/reviews/DateRangePicker'
+import { ResponseTemplates, type ResponseTemplate } from '@/components/reviews/ResponseTemplates'
+import { AIResponseGenerator } from '@/components/reviews/AIResponseGenerator'
+import { ReviewComments } from '@/components/reviews/ReviewComments'
+import { ActivityTimeline } from '@/components/reviews/ActivityTimeline'
+import { ExportReviewsButton } from '@/components/reviews/ExportReviewsButton'
+import { SavedFilterPresets } from '@/components/reviews/SavedFilterPresets'
+import { KeywordCloud } from '@/components/reviews/KeywordCloud'
+import { ReviewPreviewTooltip } from '@/components/reviews/ReviewPreviewTooltip'
+import { useReviewShortcuts, useFilterShortcuts } from '@/hooks/useKeyboardShortcuts'
 import type { GuestReview } from '@/lib/types'
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from '@/lib/reviewsScope'
 import { useNavigate } from 'react-router-dom'
@@ -114,6 +126,13 @@ export default function GuestReviews() {
     sentiment: 'all',
     query: '',
   })
+
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
+    from: undefined,
+    to: undefined,
+  })
+
+  const [showTemplates, setShowTemplates] = useState(false)
 
   const propertiesQuery = useQuery({
     queryKey: ['guest-review-properties'],
@@ -457,6 +476,19 @@ export default function GuestReviews() {
   const selectedResponse = responseQuery.data
   const selectedReview = selectedReviewQuery.data
 
+  // Keyboard shortcuts
+  useReviewShortcuts({
+    onClose: () => setSheetOpen(false),
+    onRespond: () => setSheetOpen(true),
+    enabled: sheetOpen,
+  })
+
+  useFilterShortcuts({
+    onFocusSearch: () => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(),
+    onClearFilters: () => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '' }),
+    enabled: !sheetOpen,
+  })
+
   useEffect(() => {
     if (sheetOpen) {
       hydrateResponseDraft(selectedResponse ?? null)
@@ -635,13 +667,26 @@ export default function GuestReviews() {
                   propertyName={propertyNameById.get(review.property_id) || 'Unknown Property'} 
                   ownerName={ownerNameByReviewId.get(review.id)}
                   onClick={openReview}
+                  isSelected={selectedReviewIds.includes(review.id)}
+                  onToggleSelect={(id) => {
+                    if (selectedReviewIds.includes(id)) {
+                      setSelectedReviewIds(selectedReviewIds.filter((i) => i !== id))
+                    } else {
+                      setSelectedReviewIds([...selectedReviewIds, id])
+                    }
+                  }}
                 />
               ))}
             </div>
           )}
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-8 animate-in fade-in duration-700">
+        <TabsContent value="analytics" className="space-y-6 animate-in fade-in duration-700">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <ReviewTrendsChart reviews={reviews} days={30} />
+            <PropertyComparisonChart reviews={reviews} properties={propertiesQuery.data ?? []} />
+            <KeywordCloud reviews={reviews} maxKeywords={25} />
+          </div>
           <ReviewAnalyticsDashboard
             reviews={reviews}
             propertyNameById={propertyNameById}
