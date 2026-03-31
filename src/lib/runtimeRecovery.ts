@@ -60,7 +60,24 @@ export function hasAuthRecoveryParams(search: string, hash: string): boolean {
 }
 
 export function shouldProtectAuthEntry(pathname: string, search: string, hash: string): boolean {
-  return isAuthSensitivePathname(pathname) || hasAuthRecoveryParams(search, hash)
+  const normalized = normalizePathname(pathname)
+  const hasRecoveryParams = hasAuthRecoveryParams(search, hash)
+
+  // Always protect sensitive auth action pages (token exchange pages)
+  const alwaysProtected = ['/reset-password', '/complete-invite']
+  if (alwaysProtected.some(p => normalized === p || normalized.startsWith(`${p}/`))) {
+    return true
+  }
+
+  // For login and forgot-password, only protect if there are auth params to process
+  // This prevents showing recovery screen on normal direct visits to /login
+  const conditionallyProtected = ['/login', '/forgot-password']
+  if (conditionallyProtected.some(p => normalized === p || normalized.startsWith(`${p}/`))) {
+    return hasRecoveryParams
+  }
+
+  // Fallback: protect if there are recovery params on any path
+  return hasRecoveryParams
 }
 
 export function buildCanonicalUrl(
