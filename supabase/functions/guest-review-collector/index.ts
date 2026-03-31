@@ -127,11 +127,81 @@ function normalizeRating(value: unknown): { r5: number | null; r10: number | nul
 
 function parseDate(value: unknown): string | null {
   if (!value) return null;
-  const s = cleanText(value);
+  let s = cleanText(value);
   if (!s) return null;
-  const normalized = s.replace(/^reviewed:\s*/i, "").replace(/^reviewed\s+/i, "").trim();
-  const d = new Date(normalized);
-  return Number.isFinite(d.getTime()) ? d.toISOString() : null;
+  
+  // Remove common prefixes
+  s = s.replace(/^reviewed:\s*/i, "").replace(/^reviewed\s+/i, "").trim();
+  
+  const now = new Date();
+  const lowerS = s.toLowerCase();
+  
+  // Handle relative dates (e.g., "2 days ago", "last week", "yesterday")
+  const relativeMatch = lowerS.match(/(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+ago/);
+  if (relativeMatch) {
+    const amount = parseInt(relativeMatch[1], 10);
+    const unit = relativeMatch[2];
+    const date = new Date(now);
+    if (unit.startsWith("day")) date.setDate(date.getDate() - amount);
+    else if (unit.startsWith("week")) date.setDate(date.getDate() - amount * 7);
+    else if (unit.startsWith("month")) date.setMonth(date.getMonth() - amount);
+    else if (unit.startsWith("year")) date.setFullYear(date.getFullYear() - amount);
+    return date.toISOString();
+  }
+  
+  if (lowerS.includes("yesterday")) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - 1);
+    return date.toISOString();
+  }
+  
+  // Handle "last week", "this week", etc.
+  if (lowerS.includes("last week")) {
+    const date = new Date(now);
+    date.setDate(date.getDate() - 7);
+    return date.toISOString();
+  }
+  
+  // Handle formats like "Mar 2026", "March 2026"
+  const monthYearMatch = s.match(/^([A-Za-z]+)\s+(\d{4})$/);
+  if (monthYearMatch) {
+    const monthNames = ["january", "february", "march", "april", "may", "june",
+                       "july", "august", "september", "october", "november", "december"];
+    const monthIdx = monthNames.findIndex(m => monthYearMatch[1].toLowerCase().startsWith(m));
+    if (monthIdx !== -1) {
+      const date = new Date(parseInt(monthYearMatch[2], 10), monthIdx, 15);
+      if (Number.isFinite(date.getTime())) return date.toISOString();
+    }
+  }
+  
+  // Handle formats like "29 Mar 2026", "March 29, 2026", "2026-03-29"
+  // Try multiple date parsing approaches
+  const dateFormats = [
+    // "29 March 2026" or "29 Mar 2026"
+    { regex: /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/, parser: (m: string[]) => new Date(`${m[2]} ${m[1]}, ${m[3]}`) },
+    // "March 29, 2026"
+    { regex: /([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/, parser: (m: string[]) => new Date(`${m[1]} ${m[2]}, ${m[3]}`) },
+    // ISO format "2026-03-29"
+    { regex: /(\d{4})-(\d{2})-(\d{2})/, parser: (m: string[]) => new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`) },
+  ];
+  
+  for (const fmt of dateFormats) {
+    const match = s.match(fmt.regex);
+    if (match) {
+      try {
+        const d = fmt.parser(match);
+        if (Number.isFinite(d.getTime())) return d.toISOString();
+      } catch {
+        // Continue to next format
+      }
+    }
+  }
+  
+  // Fallback to native Date parsing
+  const d = new Date(s);
+  if (Number.isFinite(d.getTime())) return d.toISOString();
+  
+  return null;
 }
 
 function matchOne(input: string, pattern: RegExp): string | null {
@@ -413,7 +483,13 @@ function parseBookingReviews(html: string): Array<Record<string, unknown>> {
       source_review_id: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
       reviewer_name: toNullableString(matchOne(block, /<span class="bui-avatar-block__title">([\s\S]*?)<\/span>/i)),
       rating: ratingText ? Number(ratingText) : null,
-      published_at: parseDate(matchOne(block, /Reviewed:\s*([^<\n]+)/i)),
+      // Try multiple date patterns for Booking
+      published_at: parseDate(matchOne(block, /Reviewed:\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i))
+        ?? parseDate(matchOne(block, /Reviewed:\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i))
+        ?? parseDate(matchOne(block, /Reviewed:\s*(\d{4}-\d{2}-\d{2})/i))
+        ?? parseDate(matchOne(block, /data-date="(\d{4}-\d{2}-\d{2})"/i))
+        ?? parseDate(matchOne(block, /<span[^>]*class="c-review-block__date"[^>]*>\s*([A-Za-z]+\s+\d{4})\s*<\/span>/i))
+        ?? parseDate(matchOne(block, /Reviewed:\s*([^<\n]+)/i)),
       review_title: toNullableString(matchOne(block, /<h3[^>]*class="[^"]*c-review-block__title[^"]*"[^>]*>([\s\S]*?)<\/h3>/i)),
       review_text: reviewBodies.join("\n").trim(),
       review_url: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
@@ -441,7 +517,12 @@ function parseAgodaReviews(html: string): Array<Record<string, unknown>> {
       matchOne(block, /data-info-type="reviewer-name"[\s\S]*?<strong>([\s\S]*?)<\/strong>/i),
     ),
     rating: Number(matchOne(block, /<div class="Review-comment-leftScore">([0-9.]+)<\/div>/i) ?? ""),
-    published_at: parseDate(matchOne(block, /Reviewed\s+([^<]+)<\/span>/i)),
+    // Try multiple date patterns for Agoda
+    published_at: parseDate(matchOne(block, /Reviewed\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i))
+      ?? parseDate(matchOne(block, /Reviewed\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i))
+      ?? parseDate(matchOne(block, /Reviewed\s+(\d{4}-\d{2}-\d{2})/i))
+      ?? parseDate(matchOne(block, /data-selenium="review-date"[^>]*>([^<]+)/i))
+      ?? parseDate(matchOne(block, /Reviewed\s+([^<]+)<\/span>/i)),
     review_title: toNullableString(matchOne(block, /data-testid="review-title">([\s\S]*?)<\/h4>/i)),
     review_text: sanitizeReviewText(matchOne(block, /data-testid="review-comment">([\s\S]*?)<\/p>/i)),
     review_url: toNullableString(matchOne(block, /data-review-id="([^"]+)"/i)),
