@@ -48,7 +48,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     try {
       await notificationAction.mutateAsync({ notificationId, action: 'mark_read' })
     } catch (_error) {
-      toast.error(t('notifications.failed_to_mark_read', 'Failed to mark as read'))
+      toast.error(t('dashboardNotifications.failed_to_mark_read', 'Failed to mark as read'))
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev)
@@ -65,7 +65,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     try {
       await notificationAction.mutateAsync({ notificationId, action: 'delete' })
     } catch (_error) {
-      toast.error(t('notifications.failed_to_delete', 'Failed to delete notification'))
+      toast.error(t('dashboardNotifications.failed_to_delete', 'Failed to delete notification'))
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev)
@@ -79,7 +79,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     try {
       await markAllRead.mutateAsync()
     } catch (_error) {
-      toast.error(t('notifications.failed_to_mark_all_read', 'Failed to mark all as read'))
+      toast.error(t('dashboardNotifications.failed_to_mark_all_read', 'Failed to mark all as read'))
     }
   }
 
@@ -111,7 +111,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
     if (!notification.is_read) {
       actions.push({
         icon: Check,
-        label: t('notifications.mark_read', 'Mark read'),
+        label: t('dashboardNotifications.mark_read', 'Mark read'),
         onClick: (e: React.MouseEvent) => handleMarkAsRead(notification.id, e),
         variant: 'ghost' as const,
         className: ''
@@ -124,14 +124,14 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
       if (requestId) {
         actions.push({
           icon: ThumbsUp,
-          label: t('notifications.approve', 'Approve'),
+          label: t('dashboardNotifications.approve', 'Approve'),
           onClick: (e: React.MouseEvent) => handleApproveRequest(notification.id, requestId, 'approve', e),
           variant: 'outline' as const,
           className: 'text-emerald-600 border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700'
         })
         actions.push({
           icon: ThumbsDown,
-          label: t('notifications.reject', 'Reject'),
+          label: t('dashboardNotifications.reject', 'Reject'),
           onClick: (e: React.MouseEvent) => handleApproveRequest(notification.id, requestId, 'reject', e),
           variant: 'outline' as const,
           className: 'text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700'
@@ -168,9 +168,9 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
               )}
             </div>
             <div>
-              <CardTitle className="text-lg">{t('notifications.title') || 'Notifications'}</CardTitle>
+              <CardTitle className="text-lg">{t('dashboardNotifications.title') || 'Notifications'}</CardTitle>
               <p className="text-xs text-muted-foreground">
-                {unreadCount > 0 ? t('notifications.unread_count', { count: unreadCount }) || `${unreadCount} unread` : t('notifications.all_caught_up') || 'All caught up!'}
+                {unreadCount > 0 ? t('dashboardNotifications.unread_count', { count: unreadCount }) || `${unreadCount} unread` : t('dashboardNotifications.all_caught_up') || 'All caught up!'}
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
           ) : notifications?.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[400px] text-muted-foreground">
               <Bell className="w-16 h-16 mb-4 opacity-20" />
-              <p>{t('notifications.no_notifications') || 'No notifications yet'}</p>
+              <p>{t('dashboardNotifications.no_notifications') || 'No notifications yet'}</p>
             </div>
           ) : (
             <>
@@ -207,11 +207,11 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                   disabled={markAllRead.isPending || unreadCount === 0}
                 >
                   <CheckCheck className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
-                  {t('notifications.mark_all_read') || 'Mark all read'}
+                  {t('dashboardNotifications.mark_all_read') || 'Mark all read'}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700">
                   <Trash2 className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
-                  {t('notifications.clear_all') || 'Clear all'}
+                  {t('dashboardNotifications.clear_all') || 'Clear all'}
                 </Button>
               </div>
 
@@ -339,7 +339,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                                     }
                                   }}
                                 >
-                                  {t('notifications.view_details') || 'View details'}
+                                  {t('dashboardNotifications.view_details') || 'View details'}
                                 </Button>
                               )}
                             </div>

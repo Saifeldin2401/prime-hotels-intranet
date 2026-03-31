@@ -50,6 +50,7 @@
     "messaging": "Messages",
     "announcements": "Announcements",
     "documents": "Documents",
+    "media_library": "Media Library",
     "user_management": "Users",
     "property_management": "Properties",
     "departments": "Departments",
@@ -102,7 +103,7 @@
         "admin": "Administration",
         "settings": "Settings"
     },
-    "notifications": {
+    "navNotifications": {
         "welcome_back": "Welcome back!",
         "new_notifications": "You have {{count}} new notifications.",
         "view_all": "View all",

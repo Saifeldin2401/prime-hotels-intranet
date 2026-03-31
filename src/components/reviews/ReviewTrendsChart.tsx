@@ -16,20 +16,22 @@ import { Button } from '@/components/ui/button'
 import { format, subDays, parseISO } from 'date-fns'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { GuestReview } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 interface ReviewTrendsChartProps {
   reviews: GuestReview[]
   days?: number
 }
 
-const PERIOD_OPTIONS = [
-  { label: '7D', value: 7 },
-  { label: '30D', value: 30 },
-  { label: '90D', value: 90 },
-]
-
 export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTrendsChartProps) {
+  const { t } = useTranslation('reviews')
   const [days, setDays] = useState(defaultDays)
+
+  const periodOptions = [
+    { label: t('analytics.timeRange.7d'), value: 7 },
+    { label: t('analytics.timeRange.30d'), value: 30 },
+    { label: t('analytics.timeRange.90d'), value: 90 },
+  ]
 
   const data = useMemo(() => {
     const endDate = new Date()
@@ -182,6 +184,12 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
 
   const avgRatingNum = parseFloat(String(stats.avgRating))
 
+  const getTrendLabel = () => {
+    if (stats.trend === 'up') return t('analytics.volumeGrowing')
+    if (stats.trend === 'down') return t('analytics.volumeDeclining')
+    return t('analytics.volumeStable')
+  }
+
   return (
     <Card className="border-none shadow-sm">
       <CardHeader className="pb-2">
@@ -189,14 +197,14 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
           <div>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Review Volume & Rating Trends
+              {t('analytics.volumeTrends')}
             </CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Daily review counts and average scores over time
+              {t('analytics.volumeTrendsDesc')}
             </CardDescription>
           </div>
           <div className="flex gap-1">
-            {PERIOD_OPTIONS.map((opt) => (
+            {periodOptions.map((opt) => (
               <Button
                 key={opt.value}
                 variant={days === opt.value ? 'default' : 'ghost'}
@@ -245,9 +253,9 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
                   fontSize: '11px',
                 }}
                 formatter={(value: number, name: string) => {
-                  if (name === 'count') return [value, 'Total']
-                  if (name === 'positive') return [value, 'Positive']
-                  if (name === 'negative') return [value, 'Negative']
+                  if (name === 'count') return [value, t('analytics.totalVolume')]
+                  if (name === 'positive') return [value, t('analytics.positive')]
+                  if (name === 'negative') return [value, t('analytics.negative')]
                   return [value, name]
                 }}
               />
@@ -303,7 +311,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
                   fontSize: '11px',
                 }}
                 formatter={(value: number | null) =>
-                  value != null ? [`${value} ★`, 'Avg Rating'] : ['—', 'Avg Rating']
+                  value != null ? [`${value} ★`, t('analytics.avgRating')] : ['—', t('analytics.avgRating')]
                 }
               />
               <Line
@@ -324,19 +332,19 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
         <div className="flex flex-wrap gap-4 mt-2 text-[10px] text-muted-foreground">
           <span className="flex items-center gap-1">
             <span className="w-4 h-0.5 bg-indigo-500 rounded-full" />
-            Total volume
+            {t('analytics.totalVolume')}
           </span>
           <span className="flex items-center gap-1">
             <span className="w-4 h-px border-t-2 border-dashed border-green-500" />
-            Positive
+            {t('analytics.positive')}
           </span>
           <span className="flex items-center gap-1">
             <span className="w-4 h-px border-t-2 border-dashed border-red-500" />
-            Negative
+            {t('analytics.negative')}
           </span>
           <span className="flex items-center gap-1">
             <span className="w-4 h-0.5 bg-yellow-500 rounded-full" />
-            Avg rating (below)
+            {t('analytics.avgRating')} ({t('analytics.belowAvg')})
           </span>
         </div>
 
@@ -344,7 +352,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
         <div className="grid grid-cols-4 gap-3 mt-4 pt-4 border-t">
           <div className="text-center">
             <p className="text-xl font-black">{stats.total}</p>
-            <p className="text-[10px] text-muted-foreground">Reviews</p>
+            <p className="text-[10px] text-muted-foreground">{t('analytics.reviews')}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
@@ -363,7 +371,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
               </p>
               <TrendIcon direction={stats.ratingTrend} />
             </div>
-            <p className="text-[10px] text-muted-foreground">Avg Rating</p>
+            <p className="text-[10px] text-muted-foreground">{t('analytics.avgRating')}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
@@ -379,7 +387,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
                 {stats.positivePct}%
               </p>
             </div>
-            <p className="text-[10px] text-muted-foreground">Positive</p>
+            <p className="text-[10px] text-muted-foreground">{t('analytics.positive')}</p>
           </div>
           <div className="text-center">
             <div className="flex items-center justify-center gap-1">
@@ -396,12 +404,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
               </p>
             </div>
             <p className="text-[10px] text-muted-foreground">
-              Volume{' '}
-              {stats.trend === 'up'
-                ? 'Growing'
-                : stats.trend === 'down'
-                ? 'Declining'
-                : 'Stable'}
+              {getTrendLabel()}
             </p>
           </div>
         </div>

@@ -42,6 +42,7 @@
     "staff_dashboard": "لوحتي",
     "directory": "دليل الموظفين",
     "documents": "المستندات",
+    "media_library": "مكتبة الوسائط",
     "training_dashboard": "نظرة عامة على التدريب",
     "lms_admin": "إدارة نظام التعلم",
     "training_paths": "مسارات التعلم",
@@ -105,7 +106,7 @@
     "governance_controls": "ضوابط الحوكمة",
     "governance_risk": "مخاطر الحوكمة",
     "governance_executive": "لوحة الحوكمة التنفيذية",
-    "notifications": {
+    "navNotifications": {
         "welcome_back": "مرحباً بعودتك!",
         "new_notifications": "لديك {{count}} إشعارات جديدة.",
         "view_all": "عرض الكل",

@@ -68,8 +68,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: true,
-    // Security: Use sessionStorage in production for better security
-    storage: isDevMode ? createSafeStorage('local') : createSafeStorage('session'),
+    // Use localStorage for consistent session persistence across tabs
+    storage: createSafeStorage('local'),
   },
   // Security: Add global request headers
   global: {

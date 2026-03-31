@@ -15,6 +15,7 @@ type QuizQuestionRow = {
   id: string
   question_text?: string | null
   question_type?: string | null
+  status?: string | null
   correct_answer?: string | null
   explanation?: string | null
   hint?: string | null
@@ -146,10 +147,22 @@ function validateQuestionLink(link: QuizQuestionLinkRow) {
 
   const questionText = normalizeText(question.question_text)
   const questionType = normalizeQuestionType(question.question_type)
+  const questionStatus = normalizeText(question.status).toLowerCase()
   const options = getEffectiveOptions(question)
   const correctOptions = options.filter(option => option.is_correct)
   const correctAnswer = normalizeText(question.correct_answer)
   const duplicateOptionCount = options.length - new Set(options.map(option => option.text.toLowerCase())).size
+
+  if (questionStatus !== 'published') {
+    issues.push({
+      code: 'question_not_published',
+      severity: 'warning',
+      message: `${label} is not published yet.`,
+      questionId: question.id,
+      questionOrder: link.display_order,
+      fixable: false
+    })
+  }
 
   if (!questionText) {
     issues.push({
@@ -307,6 +320,7 @@ async function fetchQuizDefinition(quizId: string) {
           id,
           question_text,
           question_type,
+          status,
           correct_answer,
           explanation,
           hint,
@@ -533,11 +547,13 @@ async function applyQuestionRepair(payload: RepairPayload) {
 }
 
 async function publishQuizAndQuestions(quizId: string, questionIds: string[]) {
+  const timestamp = new Date().toISOString()
+
   const { error: quizError } = await supabase
     .from('learning_quizzes')
     .update({
       status: 'published',
-      updated_at: new Date().toISOString()
+      updated_at: timestamp
     })
     .eq('id', quizId)
 
@@ -548,7 +564,7 @@ async function publishQuizAndQuestions(quizId: string, questionIds: string[]) {
       .from('knowledge_questions')
       .update({
         status: 'published',
-        updated_at: new Date().toISOString()
+        updated_at: timestamp
       })
       .in('id', questionIds)
 
@@ -625,13 +641,23 @@ export const quizIntegrityService = {
       issues = validateQuizDefinition(quiz)
     }
 
-    if (options?.autoPublish && !issues.some(issue => issue.severity === 'error') && quiz.status !== 'published') {
-      const questionIds = (quiz.questions || [])
-        .map(link => link.question?.id)
-        .filter((questionId): questionId is string => !!questionId)
+    const questionIds = (quiz.questions || [])
+      .map(link => link.question?.id)
+      .filter((questionId): questionId is string => !!questionId)
+    const hasUnpublishedQuestions = (quiz.questions || []).some(
+      (link) => normalizeText(link.question?.status).toLowerCase() !== 'published'
+    )
 
+    if (
+      options?.autoPublish &&
+      !issues.some(issue => issue.severity === 'error') &&
+      (quiz.status !== 'published' || hasUnpublishedQuestions)
+    ) {
       await publishQuizAndQuestions(quiz.id, questionIds)
       autoPublished = true
+
+      quiz = await fetchQuizDefinition(quizId)
+      issues = validateQuizDefinition(quiz)
     }
 
     return {

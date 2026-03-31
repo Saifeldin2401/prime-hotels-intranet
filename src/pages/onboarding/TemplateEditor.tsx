@@ -10,7 +10,9 @@ import { useCreateOnboardingTemplate, useOnboardingTemplate, useUpdateOnboarding
 import { useTrainingModules } from '@/hooks/useTraining'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
-import React, { useEffect, useId, useState } from 'react'
+import React, { useEffect, useId, useRef, useState } from 'react'
+import { useFormPersistence } from '@/hooks/useFormPersistence'
+import { AlertTriangle } from 'lucide-react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
@@ -65,6 +67,51 @@ export default function TemplateEditor() {
     const [tasks, setTasks] = useState<OnboardingTaskDefinition[]>([
         { title: '', description: '', assignee_role: 'self', due_day_offset: 0 }
     ])
+
+    // ============================================
+    // FORM PERSISTENCE
+    // ============================================
+    const [hasMounted, setHasMounted] = useState(false)
+    const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+    const restoredDraftRef = useRef(false)
+
+    const formPersistence = useFormPersistence({
+      key: `onboarding_template_${id || 'new'}`,
+      enabled: !isEditMode,
+      debounceMs: 500,
+      version: 1,
+    })
+
+    useEffect(() => {
+      if (isEditMode) {
+        setHasMounted(true)
+        return
+      }
+
+      const draft = formPersistence.loadDraft()
+      if (draft) {
+        if (draft.title) setTitle(draft.title)
+        if (draft.targetType) setTargetType(draft.targetType)
+        if (draft.role) setRole(draft.role)
+        if (draft.jobTitle) setJobTitle(draft.jobTitle)
+        if (draft.requiredTrainingIds) setRequiredTrainingIds(draft.requiredTrainingIds)
+        if (draft.tasks) setTasks(draft.tasks)
+
+        if (!restoredDraftRef.current) {
+          restoredDraftRef.current = true
+          setShowRestorePrompt(true)
+          setTimeout(() => setShowRestorePrompt(false), 8000)
+        }
+      }
+      setHasMounted(true)
+    }, [isEditMode, formPersistence])
+
+    useEffect(() => {
+      if (!hasMounted || isEditMode) return
+      formPersistence.saveDraft({
+        title, targetType, role, jobTitle, requiredTrainingIds, tasks
+      })
+    }, [hasMounted, isEditMode, formPersistence, title, targetType, role, jobTitle, requiredTrainingIds, tasks])
 
     // Load existing data
     useEffect(() => {
@@ -154,6 +201,7 @@ export default function TemplateEditor() {
             createTemplate(templateData, {
                 onSuccess: () => {
                     toast({ title: t('actions.template_created') })
+                    formPersistence.clearDraft()
                     navigate('/admin/onboarding/templates')
                 },
                 onError: (err) => {
@@ -167,8 +215,33 @@ export default function TemplateEditor() {
         return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
     }
 
+    if (!hasMounted && !isEditMode) {
+        return <div className="flex justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>
+    }
+
     return (
         <div className="space-y-6 p-8 max-w-4xl mx-auto">
+            {/* Restore Draft Prompt */}
+            {!isEditMode && showRestorePrompt && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <span className="text-sm text-amber-800 dark:text-amber-300">
+                            Draft template restored from previous session
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>Keep</Button>
+                        <Button variant="outline" size="sm" onClick={() => {
+                            formPersistence.clearDraft()
+                            setTitle('')
+                            setTasks([{ title: '', description: '', assignee_role: 'self', due_day_offset: 0 }])
+                            setShowRestorePrompt(false)
+                            toast({ title: 'Draft cleared' })
+                        }}>Clear Draft</Button>
+                    </div>
+                </div>
+            )}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" onClick={() => navigate('/admin/onboarding/templates')}>
                     <ArrowLeft className="mr-2 h-4 w-4" /> {t('actions.back')}

@@ -14,6 +14,8 @@ import arDashboard from './locales/ar/dashboard.json';
 import arDirectory from './locales/ar/directory.json';
 import arDocuments from './locales/ar/documents.json';
 import arHr from './locales/ar/hr.json';
+import arMedia from './locales/ar/media.json';
+import arReviews from './locales/ar/reviews.json';
 import arJobs from './locales/ar/jobs.json';
 import arKnowledge from './locales/ar/knowledge.json';
 import arMaintenance from './locales/ar/maintenance.json';
@@ -36,6 +38,8 @@ import enDashboard from './locales/en/dashboard.json';
 import enDirectory from './locales/en/directory.json';
 import enDocuments from './locales/en/documents.json';
 import enHr from './locales/en/hr.json';
+import enMedia from './locales/en/media.json';
+import enReviews from './locales/en/reviews.json';
 import enJobs from './locales/en/jobs.json';
 import enKnowledge from './locales/en/knowledge.json';
 import enMaintenance from './locales/en/maintenance.json';
@@ -93,6 +97,8 @@ const resources = {
     learning: enLearning,
     requests: enRequests,
     extracted: enExtracted,
+    media: enMedia,
+    reviews: enReviews,
   },
   ar: {
     common: arCommon,
@@ -123,6 +129,8 @@ const resources = {
     learning: arLearning,
     requests: arRequests,
     extracted: arExtracted,
+    media: arMedia,
+    reviews: arReviews,
   },
 };
 

@@ -80,11 +80,14 @@ export default function MyApprovals() {
 
   // Fetch pending document approvals for the current user
   const { data: pendingApprovals, isLoading } = useQuery({
-    queryKey: ['pending-approvals', user?.id],
+    queryKey: ['pending-approvals', user?.id, primaryRole],
     queryFn: async () => {
       if (!user) return []
 
-      const { data, error } = await supabase
+      // Corporate/regional admins can see all pending approvals
+      const isTopAdmin = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin' || primaryRole === 'regional_hr'
+      
+      let query = supabase
         .from('document_approvals')
         .select(`
           *,
@@ -106,8 +109,14 @@ export default function MyApprovals() {
         `)
         .eq('status', 'pending')
         .eq('is_active', true)
-        .eq('approver_id', user.id)
         .order('created_at', { ascending: false })
+
+      // Non-admin users only see their assigned approvals
+      if (!isTopAdmin) {
+        query = query.eq('approver_id', user.id)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       return data as (DocumentApproval & {

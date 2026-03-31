@@ -537,7 +537,7 @@ export function useDocument(documentId: string) {
  */
 export function useCreateDocument() {
   const queryClient = useQueryClient()
-  const { user } = useAuth()
+  const { user, primaryRole } = useAuth()
   const { currentProperty } = useProperty()
 
   return useMutation({
@@ -556,13 +556,23 @@ export function useCreateDocument() {
         throw new Error('A valid property_id is required for non-global documents')
       }
 
+      // Regional admins, corporate admins, and HR can auto-publish documents
+      const canAutoPublish = primaryRole === 'regional_admin' || primaryRole === 'regional_hr' || primaryRole === 'corporate_admin'
+      const now = new Date().toISOString()
+
       const { data, error } = await supabase
         .from('documents')
         .insert({
           ...document,
           property_id: resolvedPropertyId ?? document.property_id ?? null,
           created_by: user.id,
-          status: 'DRAFT',
+          status: canAutoPublish ? 'PUBLISHED' : 'DRAFT',
+          // Set published fields for auto-published documents
+          ...(canAutoPublish && {
+            last_published_at: now,
+            last_published_by: user.id,
+            published_version_number: document.current_version || 1,
+          }),
         })
         .select()
         .single()
@@ -570,11 +580,11 @@ export function useCreateDocument() {
       if (error) throw error
       return data
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       queryClient.invalidateQueries({ queryKey: ['documents-paginated'] })
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
-      crudToasts.create.success('Document')
+      crudToasts.create.success(data?.status === 'PUBLISHED' ? 'Document published' : 'Document created as draft')
     },
     onError: () => crudToasts.create.error('document')
   })
@@ -762,7 +772,8 @@ export function useDocumentFolders(parentId?: string | null) {
         .from('document_folders')
         .select(`
           *,
-          parent:document_folders!parent_id(id, name)
+          parent:document_folders!parent_id(id, name),
+          document_count:documents(count)
         `)
         .order('name', { ascending: true })
 
@@ -776,8 +787,13 @@ export function useDocumentFolders(parentId?: string | null) {
 
       if (error) throw error
 
-      // Note: exact per-folder counts require a separate aggregate query or view.
-      return (data || []) as DocumentFolder[]
+      // Transform document_count from subquery result
+      const foldersWithCount = (data || []).map(folder => ({
+        ...folder,
+        document_count: (folder as { document_count?: [{ count: number }] }).document_count?.[0]?.count || 0
+      }))
+
+      return foldersWithCount as DocumentFolder[]
     },
   })
 }
@@ -794,14 +810,18 @@ export function useDocumentFolderTree() {
       const { data, error } = await supabase
         .from('document_folders')
         .select(`
-          *
+          *,
+          document_count:documents(count)
         `)
         .order('name', { ascending: true })
 
       if (error) throw error
 
       // Build tree structure
-      const folders = (data || []) as DocumentFolder[]
+      const folders = (data || []).map(folder => ({
+        ...folder,
+        document_count: (folder as { document_count?: [{ count: number }] }).document_count?.[0]?.count || 0
+      })) as DocumentFolder[]
 
       const folderMap = new Map(folders.map(f => [f.id, { ...f, children: [] as DocumentFolder[] }]))
       const rootFolders: DocumentFolder[] = []
@@ -1545,6 +1565,7 @@ export function useDocumentBulkMove() {
         .select('id')
 
       if (error) {
+        console.error('Bulk move error:', error)
         ids.forEach(id => result.failed.push({ id, error: error.message }))
       } else {
         data?.forEach(item => result.success.push(item.id))

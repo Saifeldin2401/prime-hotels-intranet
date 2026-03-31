@@ -11,6 +11,7 @@ import { DashboardRoutes } from './modules/DashboardRoutes'
 import { GuestReviewRoutes } from './modules/GuestReviewRoutes'
 import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
+import { MediaRoutes } from './modules/MediaRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
 import { OperationsRoutes } from './modules/OperationsRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
@@ -75,6 +76,7 @@ export const router = createBrowserRouter(
             {GuestReviewRoutes()}
             {TrainingRoutes()}
             {KnowledgeRoutes()}
+            {MediaRoutes()}
             {DashboardRoutes()}
             {MiscRoutes()}
 

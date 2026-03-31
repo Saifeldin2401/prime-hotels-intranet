@@ -15,10 +15,12 @@ import { cn } from "@/lib/utils";
 import {
     Archive,
     Check,
+    Copy,
     Download,
     FileText,
     FolderInput,
     Loader2,
+    Mail,
     Share2,
     Tags,
     Trash2,
@@ -41,6 +43,8 @@ interface DocumentBulkActionsBarProps {
   onDelete?: (documentIds: string[]) => void;
   onDownload?: (documentIds: string[]) => void;
   onShare?: (documentIds: string[]) => void;
+  onDuplicate?: (documentIds: string[]) => void;
+  onEmail?: (documentIds: string[]) => void;
   isProcessing?: boolean;
   className?: string;
 }
@@ -63,6 +67,8 @@ export function DocumentBulkActionsBar({
   onDelete,
   onDownload,
   onShare,
+  onDuplicate,
+  onEmail,
   isProcessing,
   className,
 }: DocumentBulkActionsBarProps) {
@@ -205,6 +211,30 @@ export function DocumentBulkActionsBar({
             Archive
           </Button>
 
+          {/* Duplicate */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/20 gap-1.5 whitespace-nowrap"
+            onClick={() => onDuplicate?.(selectedIds)}
+            disabled={isProcessing}
+          >
+            <Copy className="w-4 h-4" />
+            Duplicate
+          </Button>
+
+          {/* Email */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-white hover:bg-white/20 gap-1.5 whitespace-nowrap"
+            onClick={() => onEmail?.(selectedIds)}
+            disabled={isProcessing}
+          >
+            <Mail className="w-4 h-4" />
+            Email
+          </Button>
+
           <Separator orientation="vertical" className="h-6 bg-white/20 mx-1" />
 
           {/* Download */}
@@ -290,6 +320,7 @@ export function DocumentBulkActionsBar({
             <div className="space-y-1 max-h-[300px] overflow-auto">
               {/* Root option */}
               <button
+                type="button"
                 onClick={() => setSelectedFolderId(null)}
                 className={cn(
                   "w-full flex items-center gap-3 p-3 rounded-md text-left transition-colors",
@@ -305,6 +336,7 @@ export function DocumentBulkActionsBar({
 
               {flatFolders.map((folder) => (
                 <button
+                  type="button"
                   key={folder.id}
                   onClick={() => setSelectedFolderId(folder.id)}
                   className={cn(
@@ -384,6 +416,7 @@ export function DocumentBulkActionsBar({
               ) : (
                 tags.map((tag) => (
                   <button
+                    type="button"
                     key={tag.id}
                     onClick={() =>
                       setSelectedTagIds((prev) =>

@@ -15,6 +15,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { RefreshCw, Search, LayoutGrid, List, MessageSquare, ShieldAlert, Send, Globe, Settings, CheckCircle2, User, Zap, BarChart3, Building2 } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { ReviewListItem } from '@/components/reviews/ReviewListItem'
 import { OTASourceManager } from '@/components/reviews/OTASourceManager'
 import { BulkOperationsToolbar } from '@/components/reviews/BulkOperationsToolbar'
@@ -117,6 +118,7 @@ const severityBadgeClass = (severity?: string | null) => {
 }
 
 export default function GuestReviews() {
+  const { t } = useTranslation('reviews')
   const { toast } = useToast()
   const { user } = useAuth()
   const queryClient = useQueryClient()
@@ -343,10 +345,10 @@ export default function GuestReviews() {
       await queryClient.invalidateQueries({ queryKey: ['guest-review-assignments', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-review', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-reviews'] })
-      toast({ title: 'Updated', description: 'Assignment updated.' })
+      toast({ title: t('notifications.updated'), description: t('notifications.assignmentUpdated') })
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
+      toast({ title: t('notifications.error'), description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
     }
   })
 
@@ -385,10 +387,10 @@ export default function GuestReviews() {
       await queryClient.invalidateQueries({ queryKey: ['guest-review-response', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-review', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-reviews'] })
-      toast({ title: 'Saved', description: 'Response updated.' })
+      toast({ title: t('notifications.saved'), description: t('notifications.responseUpdated') })
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
+      toast({ title: t('notifications.error'), description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
     }
   })
 
@@ -404,10 +406,10 @@ export default function GuestReviews() {
       await queryClient.invalidateQueries({ queryKey: ['guest-review-assignments', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-review-response', selectedReviewId] })
       await queryClient.invalidateQueries({ queryKey: ['guest-reviews'] })
-      toast({ title: 'Reanalyzed', description: 'AI analysis has been re-run.' })
+      toast({ title: t('notifications.reanalyzed'), description: t('notifications.aiAnalysisRerun') })
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
+      toast({ title: t('notifications.error'), description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
     }
   })
 
@@ -417,10 +419,10 @@ export default function GuestReviews() {
       if (error) throw error
     },
     onSuccess: () => {
-      toast({ title: 'Slack test sent', description: 'Check your Slack channel for the test message.' })
+      toast({ title: t('notifications.slackTestSent'), description: t('notifications.checkSlack') })
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
+      toast({ title: t('notifications.error'), description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
     }
   })
 
@@ -432,10 +434,10 @@ export default function GuestReviews() {
       if (error) throw error
     },
     onSuccess: () => {
-      toast({ title: 'Sync started', description: 'Collector triggered for active review sources.' })
+      toast({ title: t('notifications.syncStarted'), description: t('notifications.collectorTriggered') })
     },
     onError: (error) => {
-      toast({ title: 'Error', description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
+      toast({ title: t('notifications.error'), description: error instanceof Error ? error.message : String(error), variant: 'destructive' })
     },
   })
 
@@ -524,10 +526,10 @@ export default function GuestReviews() {
             <div className="w-1.5 h-10 bg-hotel-navy dark:bg-hotel-gold rounded-full" />
             <div>
               <h1 className="text-4xl font-black tracking-tight text-hotel-navy dark:text-hotel-gold leading-none">
-                Guest Review Intelligence
+                {t('title')}
               </h1>
               <p className="text-sm font-medium text-muted-foreground mt-2 tracking-tight max-w-xl">
-                Multi-platform sentiment monitoring & automated escalation hub for Prime Hotel Properties.
+                {t('subtitle')}
               </p>
             </div>
           </div>
@@ -541,7 +543,7 @@ export default function GuestReviews() {
             className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest bg-transparent border-muted-foreground/20 hover:bg-primary/5 text-muted-foreground"
           >
             <ShieldAlert className="h-3.5 w-3.5 me-2" />
-            Test Slack
+            {t('actions.testSlack')}
           </Button>
           <div className="w-px h-6 bg-muted-foreground/10 self-center" />
           <Button 
@@ -552,7 +554,7 @@ export default function GuestReviews() {
             className="h-9 px-4 font-bold text-[10px] uppercase tracking-widest bg-transparent border-muted-foreground/20 hover:bg-primary/5 text-muted-foreground"
           >
             <RefreshCw className={cn('h-3.5 w-3.5 me-2', reviewsQuery.isFetching ? 'animate-spin' : '')} />
-            Refresh Hub
+            {t('actions.refreshHub')}
           </Button>
         </div>
       </div>
@@ -565,35 +567,35 @@ export default function GuestReviews() {
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <LayoutGrid className="h-3.5 w-3.5 me-2" />
-              Intelligence Feed
+              {t('tabs.overview')}
             </TabsTrigger>
             <TabsTrigger 
               value="analytics" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <BarChart3 className="h-3.5 w-3.5 me-2" />
-              Analytics
+              {t('tabs.analytics')}
             </TabsTrigger>
             <TabsTrigger 
               value="properties" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <Building2 className="h-3.5 w-3.5 me-2" />
-              By Property
+              {t('tabs.properties')}
             </TabsTrigger>
             <TabsTrigger 
               value="sources" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <Globe className="h-3.5 w-3.5 me-2" />
-              Sources
+              {t('tabs.sources')}
             </TabsTrigger>
             <TabsTrigger 
               value="settings" 
               className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
             >
               <Settings className="h-3.5 w-3.5 me-2" />
-              Settings
+              {t('tabs.settings')}
             </TabsTrigger>
           </TabsList>
 
@@ -652,16 +654,16 @@ export default function GuestReviews() {
                 <div className="w-24 h-24 bg-card shadow-2xl rounded-3xl flex items-center justify-center mb-8 mx-auto ring-1 ring-muted-foreground/10 rotate-3">
                   <MessageSquare className="h-10 w-10 text-primary opacity-40" />
                 </div>
-                <h3 className="text-2xl font-black text-hotel-navy tracking-tight mb-3">No reviews discovered</h3>
+                <h3 className="text-2xl font-black text-hotel-navy tracking-tight mb-3">{t('empty.title')}</h3>
                 <p className="text-sm text-muted-foreground max-w-sm mx-auto font-medium leading-relaxed">
-                  Refine your intelligence criteria or verify that your OTA sources are successfully polling.
+                  {t('empty.description')}
                 </p>
                 <Button 
                   variant="outline" 
                   className="mt-8 rounded-full px-8 h-12 font-bold text-xs uppercase tracking-widest border-muted-foreground/20"
                   onClick={() => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '' })}
                 >
-                  Reset Parameters
+                  {t('actions.resetParameters')}
                 </Button>
               </div>
             </Card>
@@ -674,7 +676,7 @@ export default function GuestReviews() {
                 <ReviewListItem 
                   key={review.id} 
                   review={review} 
-                  propertyName={propertyNameById.get(review.property_id) || 'Unknown Property'} 
+                  propertyName={propertyNameById.get(review.property_id) || t('reviewCard.unknownProperty')} 
                   ownerName={ownerNameByReviewId.get(review.id)}
                   onClick={openReview}
                   isSelected={selectedReviewIds.includes(review.id)}
@@ -695,9 +697,9 @@ export default function GuestReviews() {
           {/* Executive Intelligence header */}
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-lg font-black tracking-tight">Executive Intelligence</h2>
+              <h2 className="text-lg font-black tracking-tight">{t('analytics.title')}</h2>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Guest Review Analysis — comprehensive performance, sentiment & operational insights
+                {t('analytics.subtitle')}
               </p>
             </div>
           </div>
@@ -752,23 +754,23 @@ export default function GuestReviews() {
                   <Settings className="h-6 w-6" />
                 </div>
                 <div>
-                  <CardTitle className="text-2xl font-black tracking-tight text-hotel-navy">Intelligence Control Center</CardTitle>
-                  <CardDescription className="text-sm font-medium">Use operational actions here and open full admin settings when needed.</CardDescription>
+                  <CardTitle className="text-2xl font-black tracking-tight text-hotel-navy">{t('settings.title')}</CardTitle>
+                  <CardDescription className="text-sm font-medium">{t('settings.description')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-10 pt-0">
               <div className="grid md:grid-cols-2 gap-8 py-10 border-t border-muted-foreground/5">
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Scraping Logic</h4>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{t('settings.scrapingLogic.title')}</h4>
                   <p className="text-sm font-medium text-foreground/70 leading-relaxed">
-                    Automated scraping intervals are managed at the individual source level. For chain-wide overrides, please contact system administration.
+                    {t('settings.scrapingLogic.description')}
                   </p>
                 </div>
                 <div className="space-y-4">
-                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Notification Webhooks</h4>
+                  <h4 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">{t('settings.webhooks.title')}</h4>
                   <p className="text-sm font-medium text-foreground/70 leading-relaxed">
-                    Slack and Email integrations are currently active. AI-driven critical alerts are dispatched immediately upon detection.
+                    {t('settings.webhooks.description')}
                   </p>
                 </div>
               </div>
@@ -779,14 +781,14 @@ export default function GuestReviews() {
                   className="h-11 font-bold text-[11px] uppercase tracking-widest"
                 >
                   <RefreshCw className={cn('h-4 w-4 me-2', collectorMutation.isPending && 'animate-spin')} />
-                  Sync Reviews Now
+                  {t('actions.syncNow')}
                 </Button>
                 <Button
                   variant="outline"
                   onClick={() => navigate('/admin/reviews/settings')}
                   className="h-11 font-bold text-[11px] uppercase tracking-widest bg-transparent"
                 >
-                  Open Full Settings
+                  {t('actions.openFullSettings')}
                 </Button>
               </div>
             </CardContent>
@@ -801,10 +803,10 @@ export default function GuestReviews() {
         >
           <DialogHeader className="sr-only">
             <DialogTitle>
-              {selectedReview?.review_title || 'Guest review details'}
+              {selectedReview?.review_title || t('dialog.title')}
             </DialogTitle>
             <DialogDescription>
-              Detailed guest review analysis, assignments, and response management.
+              {t('dialog.description')}
             </DialogDescription>
           </DialogHeader>
           {selectedReview && (
@@ -821,17 +823,17 @@ export default function GuestReviews() {
                       {selectedReview.platform}
                     </Badge>
                     <Badge className={cn("text-[10px] font-bold tracking-widest uppercase px-3 h-6 border-none shadow-sm", severityBadgeClass(selectedReview.severity))}>
-                      {selectedReview.severity || 'NORMAL'}
+                      {selectedReview.severity || t('status.normal')}
                     </Badge>
                   </div>
                   
                   <div>
                     <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-white leading-tight">
-                      {selectedReview.review_title || 'Review Intelligence'}
+                      {selectedReview.review_title || t('dialog.title')}
                     </h2>
                     <p className="text-sm font-medium text-white/80 mt-2 flex items-center gap-2">
                       <User className="h-4 w-4" />
-                      {selectedReview.reviewer_name || 'Anonymous Guest'}
+                      {selectedReview.reviewer_name || t('reviewCard.anonymous')}
                       <span className="opacity-50">•</span>
                       {propertyNameById.get(selectedReview.property_id)}
                     </p>
@@ -848,7 +850,7 @@ export default function GuestReviews() {
                       <div className="p-1.5 bg-hotel-gold/10 rounded-lg">
                         <Zap className="h-4 w-4 text-hotel-gold saturate-150" />
                       </div>
-                      <h3 className="text-xs font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold">Executive AI Summary</h3>
+                      <h3 className="text-xs font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold">{t('executiveSummary.title')}</h3>
                     </div>
                     <Button 
                       variant="ghost" 
@@ -857,12 +859,12 @@ export default function GuestReviews() {
                       disabled={reanalyzeMutation.isPending}
                       className="h-8 text-[10px] tracking-widest uppercase font-bold text-slate-500 hover:bg-hotel-navy hover:text-white dark:hover:bg-hotel-gold dark:hover:text-hotel-navy transition-colors bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-700"
                     >
-                      <RefreshCw className={cn("h-3 w-3 mr-2", reanalyzeMutation.isPending && "animate-spin")} /> Re-Analyze
+                      <RefreshCw className={cn("h-3 w-3 mr-2", reanalyzeMutation.isPending && "animate-spin")} /> {t('actions.reanalyze')}
                     </Button>
                   </div>
                   <div className="space-y-4">
                     <p className="text-sm font-medium leading-relaxed italic text-slate-700 dark:text-slate-300 pr-4">
-                      "{selectedReview.manager_brief_en || "Intelligence module currently processing this feedback..."}"
+                      "{selectedReview.manager_brief_en || t('executiveSummary.processing')}"
                     </p>
                     {selectedReview.summary_ar && (
                       <div className="pt-4 border-t border-slate-200 dark:border-slate-800 mt-4">
@@ -878,21 +880,21 @@ export default function GuestReviews() {
                   <TabsList className="w-full h-auto p-1.5 bg-slate-100 dark:bg-slate-900 rounded-xl grid grid-cols-2 mb-8 border border-slate-200 dark:border-slate-800">
                     <TabsTrigger value="response" className="py-3 rounded-lg font-bold text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-hotel-navy dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-hotel-gold data-[state=active]:shadow-sm">
                       <Send className="h-4 w-4 mr-2" />
-                      Response Engine
+                      {t('responseEngine.title')}
                     </TabsTrigger>
                     <TabsTrigger value="content" className="py-3 rounded-lg font-bold text-xs uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-hotel-navy dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-hotel-gold data-[state=active]:shadow-sm">
                       <List className="h-4 w-4 mr-2" />
-                      Raw Intelligence
+                      {t('rawIntelligence.title')}
                     </TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="response" className="space-y-8 animate-in fade-in duration-500 m-0">
                     <div className="space-y-3">
-                      <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold ml-1">Internal Notes & Action Plan</Label>
+                      <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold ml-1">{t('responseEngine.internalNotes')}</Label>
                       <Textarea 
                         value={responseDraft.internal_notes} 
                         onChange={(e) => setResponseDraft(p => ({ ...p, internal_notes: e.target.value }))} 
-                        placeholder="Operational steps taken or team member assigned..."
+                        placeholder={t('responseEngine.internalNotesPlaceholder')}
                         className="min-h-[100px] text-sm resize-y rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-hotel-gold/50 shadow-sm"
                       />
                     </div>
@@ -900,27 +902,27 @@ export default function GuestReviews() {
                     <div className="grid md:grid-cols-2 gap-6">
                       <div className="space-y-3">
                          <div className="flex items-center justify-between ml-1">
-                          <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold">Verified English Response</Label>
-                           <Badge variant="secondary" className="text-[8px] font-bold h-5 px-2 bg-hotel-gold/10 text-hotel-gold border border-hotel-gold/20 shadow-sm">AI ASSISTED</Badge>
+                          <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold">{t('responseEngine.englishResponse')}</Label>
+                           <Badge variant="secondary" className="text-[8px] font-bold h-5 px-2 bg-hotel-gold/10 text-hotel-gold border border-hotel-gold/20 shadow-sm">{t('responseEngine.aiAssisted')}</Badge>
                          </div>
                         <Textarea 
                           value={responseDraft.edited_response_en} 
                           onChange={(e) => setResponseDraft(p => ({ ...p, edited_response_en: e.target.value }))} 
-                          placeholder="Craft the official response here..."
+                          placeholder={t('responseEngine.englishPlaceholder')}
                           className="min-h-[160px] text-sm resize-y rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-hotel-gold/50 shadow-sm"
                         />
                       </div>
 
                       <div className="space-y-3">
                          <div className="flex items-center justify-between ml-1 flex-row-reverse">
-                           <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold mt-1" dir="rtl">الرد المعتمد باللغة العربية</Label>
-                           <Badge variant="secondary" className="text-[8px] font-bold h-5 px-2 bg-hotel-gold/10 text-hotel-gold border border-hotel-gold/20 shadow-sm whitespace-nowrap">ترجمة ذكية</Badge>
+                           <Label className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold mt-1" dir="rtl">{t('responseEngine.arabicResponse')}</Label>
+                           <Badge variant="secondary" className="text-[8px] font-bold h-5 px-2 bg-hotel-gold/10 text-hotel-gold border border-hotel-gold/20 shadow-sm whitespace-nowrap">{t('responseEngine.smartTranslation')}</Badge>
                          </div>
                         <Textarea 
                           value={responseDraft.edited_response_ar} 
                           onChange={(e) => setResponseDraft(p => ({ ...p, edited_response_ar: e.target.value }))} 
                           dir="rtl"
-                          placeholder="صغ الرد الرسمي هنا..."
+                          placeholder={t('responseEngine.arabicPlaceholder')}
                           className="min-h-[160px] text-sm font-arabic font-bold resize-y rounded-xl bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus-visible:ring-hotel-gold/50 text-right shadow-sm"
                         />
                       </div>
@@ -934,8 +936,8 @@ export default function GuestReviews() {
                         {responseDraft.posted_externally ? <CheckCircle2 className="h-6 w-6" /> : <ShieldAlert className="h-6 w-6 opacity-70" />}
                       </div>
                        <div className="flex-1">
-                        <p className="text-xs font-bold uppercase tracking-widest mb-1 text-slate-900 dark:text-slate-100">Status: {responseDraft.posted_externally ? "Published Externally" : "Internal Review"}</p>
-                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">Marking as posted updates the global dashboard status.</p>
+                        <p className="text-xs font-bold uppercase tracking-widest mb-1 text-slate-900 dark:text-slate-100">{t('responseEngine.status', { status: responseDraft.posted_externally ? t('status.publishedExternally') : t('status.internalReview') })}</p>
+                        <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400">{t('responseEngine.statusDescription')}</p>
                       </div>
                       <Switch 
                         checked={responseDraft.posted_externally} 
@@ -950,7 +952,7 @@ export default function GuestReviews() {
                       disabled={saveResponseMutation.isPending}
                     >
                       <CheckCircle2 className="h-4 w-4 mr-3" />
-                      Commit Final Response
+                      {t('actions.commitResponse')}
                     </Button>
                   </TabsContent>
 
@@ -958,7 +960,7 @@ export default function GuestReviews() {
                     <section className="space-y-3">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-hotel-navy dark:bg-hotel-gold" />
-                        Platform Guest Verbatim
+                        {t('rawIntelligence.platformVerbatim')}
                       </h3>
                       <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 shadow-sm">
                         <p className="text-sm font-medium text-slate-800 dark:text-slate-200 leading-relaxed italic pr-4">
@@ -970,12 +972,12 @@ export default function GuestReviews() {
                     <section className="space-y-3">
                       <h3 className="text-[10px] font-bold uppercase tracking-widest text-hotel-navy dark:text-hotel-gold flex items-center gap-2">
                         <div className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                        Identified Operational Issues
+                        {t('rawIntelligence.operationalIssues')}
                       </h3>
                       <div className="space-y-4">
                         {issuesQuery.data?.length === 0 ? (
                           <div className="p-8 text-center text-slate-500 dark:text-slate-400 italic border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50 dark:bg-slate-900/50 font-medium text-sm">
-                            No distinct operational anomalies detected.
+                            {t('rawIntelligence.noAnomalies')}
                           </div>
                         ) : (
                           issuesQuery.data?.map(issue => (
@@ -1009,8 +1011,8 @@ export default function GuestReviews() {
           {!selectedReview && (
             <div className="flex min-h-[240px] items-center justify-center p-8 text-center text-sm font-medium text-muted-foreground">
               {selectedReviewId
-                ? 'This review is no longer available or you no longer have access to it.'
-                : 'Select a review to inspect its details.'}
+                ? t('dialog.reviewUnavailable')
+                : t('dialog.selectReview')}
             </div>
           )}
         </DialogContent>

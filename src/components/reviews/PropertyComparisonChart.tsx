@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Building2, Star, MessageSquare, TrendingUp } from 'lucide-react'
 import type { GuestReview } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 interface PropertyComparisonChartProps {
   reviews: GuestReview[]
@@ -30,17 +31,16 @@ const getRatingColor = (value: number) => {
   return '#ef4444'
 }
 
-const getRatingLabel = (value: number) => {
-  if (value >= 4.5) return { text: 'Excellent', cls: 'bg-green-100 text-green-700' }
-  if (value >= 4.0) return { text: 'Good', cls: 'bg-lime-100 text-lime-700' }
-  if (value >= 3.5) return { text: 'Average', cls: 'bg-yellow-100 text-yellow-700' }
-  if (value >= 3.0) return { text: 'Below Avg', cls: 'bg-orange-100 text-orange-700' }
-  return { text: 'Poor', cls: 'bg-red-100 text-red-700' }
-}
-
 export function PropertyComparisonChart({ reviews, properties }: PropertyComparisonChartProps) {
+  const { t } = useTranslation('reviews')
   const [viewMode, setViewMode] = useState<ViewMode>('chart')
   const [sortBy, setSortBy] = useState<'rating' | 'volume' | 'sentiment'>('rating')
+
+  const sortOptions = [
+    { key: 'rating', label: t('analytics.rating') },
+    { key: 'volume', label: t('analytics.volume') },
+    { key: 'sentiment', label: t('analytics.sentiment') },
+  ]
 
   const data = useMemo(() => {
     const propertyStats: Record<
@@ -133,6 +133,15 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
 
   const totalReviews = data.reduce((s, d) => s + d.total, 0)
 
+  const getRatingLabel = (value: number | null) => {
+    if (value === null) return null
+    if (value >= 4.5) return { text: t('analytics.excellent'), cls: 'bg-green-100 text-green-700' }
+    if (value >= 4.0) return { text: t('analytics.good'), cls: 'bg-lime-100 text-lime-700' }
+    if (value >= 3.5) return { text: t('analytics.average'), cls: 'bg-yellow-100 text-yellow-700' }
+    if (value >= 3.0) return { text: t('analytics.belowAvg'), cls: 'bg-orange-100 text-orange-700' }
+    return { text: t('analytics.poor'), cls: 'bg-red-100 text-red-700' }
+  }
+
   return (
     <Card className="border-none shadow-sm">
       <CardHeader className="pb-2">
@@ -140,10 +149,10 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
           <div>
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Building2 className="h-4 w-4 text-primary" />
-              Property-by-Property Comparison
+              {t('analytics.propertyComparison')}
             </CardTitle>
             <CardDescription className="text-xs mt-0.5">
-              Multi-metric performance across all properties
+              {t('analytics.propertyComparisonDesc')}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -154,7 +163,7 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                 className="h-6 px-2 text-[10px] font-bold"
                 onClick={() => setViewMode('chart')}
               >
-                Chart
+                {t('analytics.chart')}
               </Button>
               <Button
                 variant={viewMode === 'table' ? 'default' : 'ghost'}
@@ -162,19 +171,15 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                 className="h-6 px-2 text-[10px] font-bold"
                 onClick={() => setViewMode('table')}
               >
-                Table
+                {t('analytics.table')}
               </Button>
             </div>
           </div>
         </div>
         {/* Sort controls */}
         <div className="flex items-center gap-2 mt-2">
-          <span className="text-[10px] text-muted-foreground font-semibold">Sort by:</span>
-          {[
-            { key: 'rating', label: 'Rating' },
-            { key: 'volume', label: 'Volume' },
-            { key: 'sentiment', label: 'Sentiment' },
-          ].map((opt) => (
+          <span className="text-[10px] text-muted-foreground font-semibold">{t('analytics.sortBy')}</span>
+          {sortOptions.map((opt) => (
             <button
               key={opt.key}
               onClick={() => setSortBy(opt.key as typeof sortBy)}
@@ -214,7 +219,7 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                       fontSize: '11px',
                     }}
                     formatter={(value: number, name: string) => {
-                      if (name === 'avgRating') return [`${value} ★`, 'Avg Rating']
+                      if (name === 'avgRating') return [`${value} ★`, t('table.avgRating')]
                       return [value, name]
                     }}
                     labelFormatter={(label) => `${label}`}
@@ -238,9 +243,9 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold truncate max-w-[140px]">{p.name}</span>
                     <div className="flex items-center gap-2 text-[10px]">
-                      <span className="text-muted-foreground">{p.total} reviews</span>
+                      <span className="text-muted-foreground">{t('analytics.reviewsCount', { count: p.total })}</span>
                       {p.critical > 0 && (
-                        <span className="text-red-600 font-bold">{p.critical} critical</span>
+                        <span className="text-red-600 font-bold">{p.critical} {t('severity.critical')}</span>
                       )}
                     </div>
                   </div>
@@ -248,14 +253,14 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                     <div
                       className="h-full bg-green-500 rounded-l"
                       style={{ width: `${p.sentimentScore}%` }}
-                      title={`${p.sentimentScore}% positive`}
+                      title={`${p.sentimentScore}% ${t('analytics.positive')}`}
                     />
                     <div
                       className="h-full bg-red-400 rounded-r"
                       style={{
                         width: `${p.total > 0 ? Math.round((p.negative / p.total) * 100) : 0}%`,
                       }}
-                      title={`${p.total > 0 ? Math.round((p.negative / p.total) * 100) : 0}% negative`}
+                      title={`${p.total > 0 ? Math.round((p.negative / p.total) * 100) : 0}% ${t('analytics.negative')}`}
                     />
                     <div className="h-full bg-muted flex-1 rounded-r" />
                   </div>
@@ -267,23 +272,23 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
             <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t text-[10px]">
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-green-500" />
-                <span>Excellent (4.5+)</span>
+                <span>{t('analytics.excellent')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-lime-500" />
-                <span>Good (4.0–4.5)</span>
+                <span>{t('analytics.good')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-yellow-500" />
-                <span>Average (3.5–4.0)</span>
+                <span>{t('analytics.average')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-orange-500" />
-                <span>Below Avg (3.0–3.5)</span>
+                <span>{t('analytics.belowAvg')}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-3 h-3 rounded bg-red-500" />
-                <span>Poor (&lt;3.0)</span>
+                <span>{t('analytics.poor')}</span>
               </div>
             </div>
           </>
@@ -293,19 +298,19 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <th className="pb-2 text-left">Property</th>
-                  <th className="pb-2 text-right">Reviews</th>
-                  <th className="pb-2 text-right">Avg ★</th>
-                  <th className="pb-2 text-right">Positive</th>
-                  <th className="pb-2 text-right">Response</th>
-                  <th className="pb-2 text-right">Critical</th>
-                  <th className="pb-2 text-right">Pending</th>
-                  <th className="pb-2 text-center">Grade</th>
+                  <th className="pb-2 text-left">{t('table.property')}</th>
+                  <th className="pb-2 text-right">{t('table.reviews')}</th>
+                  <th className="pb-2 text-right">{t('table.avgRating')}</th>
+                  <th className="pb-2 text-right">{t('table.positive')}</th>
+                  <th className="pb-2 text-right">{t('table.responseRate')}</th>
+                  <th className="pb-2 text-right">{t('table.critical')}</th>
+                  <th className="pb-2 text-right">{t('table.pending')}</th>
+                  <th className="pb-2 text-center">{t('table.grade')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-muted/40">
                 {data.map((p, idx) => {
-                  const label = p.avgRating != null ? getRatingLabel(p.avgRating) : null
+                  const label = getRatingLabel(p.avgRating)
                   return (
                     <tr key={p.id} className="hover:bg-muted/20 transition-colors">
                       <td className="py-2 font-semibold">
@@ -378,7 +383,7 @@ export function PropertyComparisonChart({ reviews, properties }: PropertyCompari
                             {label.text}
                           </Badge>
                         ) : (
-                          <Badge variant="secondary" className="text-[9px]">N/A</Badge>
+                          <Badge variant="secondary" className="text-[9px]">{t('table.na')}</Badge>
                         )}
                       </td>
                     </tr>

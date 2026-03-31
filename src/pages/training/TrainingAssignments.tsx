@@ -26,6 +26,11 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useLearningProgress, type LearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import {
+  getLearningAssignmentErrorMessage,
+  persistLearningAssignments,
+  type PersistLearningAssignmentsResult
+} from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -71,25 +76,6 @@ const sortPropertyNames = (a: string, b: string) => {
   if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
   if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
   return a.localeCompare(b)
-}
-
-type PostgrestLikeError = {
-  code?: string
-  message?: string
-  details?: string | null
-  hint?: string | null
-}
-
-const isSchemaColumnMismatchError = (error: PostgrestLikeError | null) => {
-  if (!error) return false
-  const details = `${error.message ?? ''} ${error.details ?? ''} ${error.hint ?? ''}`.toLowerCase()
-  return (
-    error.code === 'PGRST204'
-    || error.code === '42703'
-    || (details.includes('column') && details.includes('does not exist'))
-    || (details.includes('schema cache') && details.includes('column'))
-    || (details.includes('could not find') && details.includes('column'))
-  )
 }
 
 // Interface for learning_assignments table
@@ -167,6 +153,32 @@ interface TrainingAssignmentsPanelProps {
   autoOpen?: boolean
   hideCreateButton?: boolean
   hideHeaderActions?: boolean
+}
+
+const describeAssignmentMutationResult = (
+  result: PersistLearningAssignmentsResult,
+  t: ReturnType<typeof useTranslation>['t']
+) => {
+  if (result.inserted === 0 && result.reactivated === 0) {
+    return {
+      title: t('assignmentNoChanges', 'No assignment changes'),
+      description: t(
+        'assignmentNoChangesDesc',
+        'All selected targets already had active assignments for this module.'
+      ),
+    }
+  }
+
+  const summaryParts = [
+    result.inserted > 0 ? t('assignmentInsertedSummary', '{{count}} new', { count: result.inserted }) : null,
+    result.reactivated > 0 ? t('assignmentReactivatedSummary', '{{count}} restored', { count: result.reactivated }) : null,
+    result.skipped > 0 ? t('assignmentSkippedSummary', '{{count}} already active', { count: result.skipped }) : null,
+  ].filter(Boolean)
+
+  return {
+    title: t('assignmentUpdated', 'Assignments updated'),
+    description: summaryParts.join(' | '),
+  }
 }
 
 export function TrainingAssignmentsPanel({
@@ -448,61 +460,10 @@ export function TrainingAssignmentsPanel({
         })
       }
 
-      const makeKey = (entry: { target_type: string; target_id: string | null }) =>
-        `${entry.target_type}:${entry.target_id ?? '__everyone__'}`
+      const assignmentResult = await persistLearningAssignments(assignments)
 
-      const { data: existingAssignments, error: existingError } = await supabase
-        .from('learning_assignments')
-        .select('target_type, target_id')
-        .eq('content_type', 'module')
-        .eq('content_id', formModuleId)
-        .or('is_deleted.is.null,is_deleted.eq.false')
-      if (existingError) throw existingError
-
-      const existingKeys = new Set((existingAssignments || []).map(a => makeKey({
-        target_type: a.target_type,
-        target_id: a.target_id
-      })))
-
-      const assignmentsToInsert = assignments.filter(a => !existingKeys.has(makeKey({
-        target_type: a.target_type,
-        target_id: a.target_id ?? null
-      })))
-
-      if (assignmentsToInsert.length > 0) {
-        const { error } = await supabase
-          .from('learning_assignments')
-          .insert(assignmentsToInsert)
-        if (error) {
-          if (!isSchemaColumnMismatchError(error)) {
-            throw error
-          }
-
-          // Backward-compatible fallback when control columns are missing in the DB schema.
-          const legacyAssignments = assignmentsToInsert.map((assignment) => {
-            const {
-              instructions: _instructions,
-              requires_acknowledgement: _requiresAcknowledgement,
-              notify_on_due: _notifyOnDue,
-              reminder_days_before: _reminderDaysBefore,
-              ...baseColumns
-            } = assignment
-            return baseColumns
-          })
-
-          const { error: legacyError } = await supabase
-            .from('learning_assignments')
-            .insert(legacyAssignments)
-
-          if (legacyError) throw legacyError
-        }
-      }
-
-      if (!sendNotifications || assignmentsToInsert.length === 0) {
-        return {
-          inserted: assignmentsToInsert.length,
-          skipped: assignments.length - assignmentsToInsert.length
-        }
+      if (!sendNotifications || (assignmentResult.inserted === 0 && assignmentResult.reactivated === 0)) {
+        return assignmentResult
       }
 
       const notifyUsers = async () => {
@@ -510,15 +471,16 @@ export function TrainingAssignmentsPanel({
           // Send bulk notifications to affected users
           const moduleTitle = modules?.find(m => m.id === formModuleId)?.title || t('unknownModule')
           const notificationData = {
-            title: t('notifications.newAssignmentTitle'),
-            message: t('notifications.newAssignmentMessage', { title: moduleTitle }),
+            title: t('trainingNotifications.newAssignmentTitle'),
+            message: t('trainingNotifications.newAssignmentMessage', { title: moduleTitle }),
             moduleId: formModuleId,
             deadline: formDeadline || undefined
           }
 
           let userIdsToNotify: string[] = []
+          const changedAssignments = assignmentResult.changedAssignments
 
-          if (formTargetType === 'all') {
+          if (changedAssignments.some((assignment) => assignment.target_type === 'everyone')) {
             // Get all active user IDs
             const { data: allUsers } = await supabase
               .from('profiles')
@@ -526,20 +488,28 @@ export function TrainingAssignmentsPanel({
               .eq('is_active', true)
             userIdsToNotify = allUsers?.map(u => u.id) || []
           } else if (formTargetType === 'users') {
-            userIdsToNotify = formTargetIds
+            userIdsToNotify = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
           } else if (formTargetType === 'departments') {
             // Resolve users from departments
+            const departmentIds = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: deptUsers } = await supabase
               .from('user_departments')
               .select('user_id')
-              .in('department_id', formTargetIds)
+              .in('department_id', departmentIds)
             userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
           } else if (formTargetType === 'properties') {
             // Resolve users from properties
+            const propertyIds = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: propUsers } = await supabase
               .from('user_properties')
               .select('user_id')
-              .in('property_id', formTargetIds)
+              .in('property_id', propertyIds)
             userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
           }
 
@@ -590,22 +560,23 @@ export function TrainingAssignmentsPanel({
       }
 
       void notifyUsers()
-      return {
-        inserted: assignmentsToInsert.length,
-        skipped: assignments.length - assignmentsToInsert.length
-      }
+      return assignmentResult
     },
     onError: (error: unknown) => {
-      const fallbackMessage = t('createAssignmentFailedDesc', 'Please check your permission and assignment settings, then try again.')
-      const errorMessage = error instanceof Error ? error.message : fallbackMessage
+      const errorMessage = getLearningAssignmentErrorMessage(error)
       toast({
         title: t('createAssignmentFailed', 'Failed to create assignment'),
         description: errorMessage,
         variant: 'destructive'
       })
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+    onSuccess: (result) => {
+      invalidateAssignmentControlQueries()
+      const summary = describeAssignmentMutationResult(result, t)
+      toast({
+        title: summary.title,
+        description: summary.description,
+      })
       setShowAssignmentDialog(false)
       resetForm()
     }
@@ -636,7 +607,7 @@ export function TrainingAssignmentsPanel({
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+      invalidateAssignmentControlQueries()
     }
   })
 
@@ -645,6 +616,7 @@ export function TrainingAssignmentsPanel({
     queryClient.invalidateQueries({ queryKey: ['learning-progress'] })
     queryClient.invalidateQueries({ queryKey: ['learning-assignment-exemptions'] })
     queryClient.invalidateQueries({ queryKey: ['module-assignment-roster'] })
+    queryClient.invalidateQueries({ queryKey: ['learning-assignments-module-links'] })
     queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
   }, [queryClient])
 
@@ -1946,6 +1918,16 @@ export function TrainingAssignmentsPanel({
             moduleLoadLeaders={moduleLoadLeaders}
             onViewDetails={setSelectedProgressId}
             summary={employeeTrackingSummary}
+            isAdmin={true}
+            onResetProgress={(userId, moduleId) => resetProgressMutation.mutate({ userId, moduleId })}
+            onRevokeCertificate={(userId, moduleId) => {
+              toast({
+                title: t('certificateRevoked', 'Certificate Revoked'),
+                description: t('certificateRevokedDesc', 'The certificate has been revoked successfully.')
+              })
+            }}
+            onExemptUser={(userId, moduleId) => exemptUserMutation.mutate({ moduleId, userId })}
+            onRestoreUser={(userId, moduleId) => restoreUserMutation.mutate({ moduleId, userId })}
           />
 
           <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && setSelectedProgressId(null)}>
@@ -3261,7 +3243,7 @@ export function TrainingAssignmentsPanel({
                   <div>
                     <p className="text-sm font-medium">{t('sendNotifications', 'Send notifications')}</p>
                     <p className="text-xs text-muted-foreground">
-                      {t('notifications.toggle_desc', 'Notify recipients when assignments are created.')}
+                      {t('trainingNotifications.toggle_desc', 'Notify recipients when assignments are created.')}
                     </p>
                   </div>
                   <Switch checked={sendNotifications} onCheckedChange={setSendNotifications} />

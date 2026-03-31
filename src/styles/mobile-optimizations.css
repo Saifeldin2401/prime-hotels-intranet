@@ -1,0 +1,647 @@
+/**
+ * PHG Connect Mobile Optimizations
+ * 
+ * Comprehensive mobile-first styles for PHG Connect
+ * - Touch-friendly targets (44px minimum)
+ * - Mobile-optimized typography
+ * - Safe area insets for notched devices
+ * - Responsive spacing and layouts
+ * - Performance optimizations
+ */
+
+/* ============================================
+   MOBILE-FIRST BASE STYLES
+   ============================================ */
+
+/* Responsive root font sizing for fluid typography */
+@media (max-width: 320px) {
+  :root {
+    --font-size-base: 14px;
+  }
+}
+
+@media (min-width: 321px) and (max-width: 375px) {
+  :root {
+    --font-size-base: 15px;
+  }
+}
+
+@media (min-width: 376px) and (max-width: 428px) {
+  :root {
+    --font-size-base: 16px;
+  }
+}
+
+@media (min-width: 429px) {
+  :root {
+    --font-size-base: 16px;
+  }
+}
+
+/* ============================================
+   SAFE AREA SUPPORT (Notch devices)
+   ============================================ */
+
+/* iOS Safe Area Insets */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-area-x {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  .safe-area-all {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  
+  /* Margin versions */
+  .safe-margin-bottom {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* ============================================
+   TOUCH TARGET OPTIMIZATIONS
+   ============================================ */
+
+/* Minimum 44px touch targets (Apple HIG) */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Larger 48px touch targets (Material Design) */
+.touch-target-lg {
+  min-height: 48px;
+  min-width: 48px;
+}
+
+/* Button touch targets */
+button,
+[role="button"],
+.btn-touch {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Form input touch targets */
+input,
+textarea,
+select,
+.input-touch {
+  min-height: 44px;
+}
+
+/* Navigation items */
+.nav-item-touch {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+
+/* List items */
+.list-item-touch {
+  min-height: 44px;
+  padding: 12px 16px;
+}
+
+/* ============================================
+   MOBILE TYPOGRAPHY
+   ============================================ */
+
+/* Mobile-optimized headings */
+@media (max-width: 640px) {
+  h1, .h1-mobile {
+    font-size: 1.75rem;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+  
+  h2, .h2-mobile {
+    font-size: 1.5rem;
+    line-height: 1.25;
+    letter-spacing: -0.01em;
+  }
+  
+  h3, .h3-mobile {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+  
+  h4, .h4-mobile {
+    font-size: 1.125rem;
+    line-height: 1.4;
+  }
+  
+  /* Body text */
+  .text-body-mobile {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  
+  /* Small text */
+  .text-small-mobile {
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  
+  /* Caption text */
+  .text-caption-mobile {
+    font-size: 0.75rem;
+    line-height: 1.4;
+  }
+}
+
+/* Text truncation utilities */
+.text-truncate-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-truncate-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.text-truncate-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ============================================
+   MOBILE LAYOUT UTILITIES
+   ============================================ */
+
+/* Full-width on mobile */
+.full-width-mobile {
+  width: 100vw;
+  margin-left: calc(-1 * var(--container-padding, 1rem));
+  margin-right: calc(-1 * var(--container-padding, 1rem));
+}
+
+/* Container padding that adapts to screen */
+.container-padding {
+  --container-padding: 1rem;
+  padding-left: var(--container-padding);
+  padding-right: var(--container-padding);
+}
+
+@media (min-width: 640px) {
+  .container-padding {
+    --container-padding: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container-padding {
+    --container-padding: 2rem;
+  }
+}
+
+/* Mobile-optimized grid gaps */
+.gap-mobile {
+  gap: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .gap-mobile {
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gap-mobile {
+    gap: 1.5rem;
+  }
+}
+
+/* ============================================
+   MOBILE SCROLLING
+   ============================================ */
+
+/* Smooth horizontal scrolling for mobile */
+.scroll-x-mobile {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scroll-x-mobile::-webkit-scrollbar {
+  display: none;
+}
+
+/* Vertical scroll with momentum */
+.scroll-y-mobile {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Snap scrolling for carousels */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scroll-snap-start {
+  scroll-snap-align: start;
+}
+
+/* ============================================
+   MOBILE CARD STYLES
+   ============================================ */
+
+/* Card variants for mobile */
+.card-mobile {
+  padding: 1rem;
+  border-radius: 0.75rem;
+}
+
+@media (min-width: 640px) {
+  .card-mobile {
+    padding: 1.25rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-mobile {
+    padding: 1.5rem;
+  }
+}
+
+/* Compact card for dense mobile lists */
+.card-compact {
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+}
+
+/* Card with hover effect for mobile */
+@media (hover: none) {
+  .card-hover-mobile:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+}
+
+@media (hover: hover) {
+  .card-hover-mobile:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+  }
+}
+
+/* ============================================
+   MOBILE FORM STYLES
+   ============================================ */
+
+/* Mobile-optimized form inputs */
+.form-input-mobile {
+  min-height: 44px;
+  padding: 12px 16px;
+  font-size: 16px; /* Prevents iOS zoom on focus */
+  border-radius: 0.5rem;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Remove iOS default styling */
+.form-input-mobile:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(197, 160, 101, 0.3);
+}
+
+/* Mobile select styling */
+select.form-input-mobile {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+  padding-right: 44px;
+}
+
+/* Stacked form layout for mobile */
+.form-stacked-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Form section spacing */
+.form-section-mobile {
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.form-section-mobile:last-child {
+  border-bottom: none;
+}
+
+/* ============================================
+   MOBILE TABLE STYLES
+   ============================================ */
+
+/* Card-style table for mobile */
+@media (max-width: 640px) {
+  .table-cards-mobile {
+    display: block;
+  }
+  
+  .table-cards-mobile thead {
+    display: none;
+  }
+  
+  .table-cards-mobile tbody,
+  .table-cards-mobile tr {
+    display: block;
+  }
+  
+  .table-cards-mobile tr {
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 0.75rem;
+    border: 1px solid var(--border-color, #e5e7eb);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .table-cards-mobile td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+    border: none;
+  }
+  
+  .table-cards-mobile td::before {
+    content: attr(data-label);
+    font-weight: 600;
+    color: var(--muted-foreground);
+    margin-right: 1rem;
+  }
+  
+  .table-cards-mobile td:first-child {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+  }
+  
+  .table-cards-mobile td:first-child::before {
+    display: none;
+  }
+}
+
+/* ============================================
+   MOBILE NAVIGATION
+   ============================================ */
+
+/* Bottom navigation for mobile */
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: calc(64px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  background: white;
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  z-index: 50;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.bottom-nav-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 44px;
+  color: var(--muted-foreground);
+  text-decoration: none;
+  font-size: 0.75rem;
+  transition: color 0.2s ease;
+}
+
+.bottom-nav-item.active {
+  color: var(--primary);
+}
+
+.bottom-nav-item svg {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 4px;
+}
+
+/* Add padding to main content when bottom nav is present */
+.has-bottom-nav {
+  /* 
+   * Account for:
+   * - Bottom nav height: ~80px
+   * - Elevated FAB (extends above nav): ~40px
+   * - Safe area inset (notch devices): env(safe-area-inset-bottom)
+   * - Extra breathing room: 2.5rem
+   */
+  padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px) + 2.5rem) !important;
+}
+
+/* Ensure last elements don't get cut off */
+.has-bottom-nav > *:last-child,
+.has-bottom-nav > *:last-child > *:last-child {
+  margin-bottom: 20px !important;
+}
+
+/* For pages with forms or buttons at the bottom */
+.has-bottom-nav form:last-child,
+.has-bottom-nav .action-buttons:last-child {
+  padding-bottom: 40px !important;
+}
+
+/* Alternative class for pages that need even more space */
+.has-bottom-nav-xl {
+  padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px) + 2rem);
+}
+
+/* Ensure forms and buttons at bottom are never blocked */
+.mobile-safe-bottom {
+  padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Add margin to last elements in scrollable containers */
+.mobile-scroll-container > *:last-child {
+  margin-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+}
+
+/* ============================================
+   MOBILE MODAL/DIALOG
+   ============================================ */
+
+/* Full-screen modal on mobile */
+@media (max-width: 640px) {
+  .modal-full-mobile {
+    margin: 0;
+    max-height: 100vh;
+    max-width: 100vw;
+    border-radius: 0;
+  }
+  
+  .modal-bottom-sheet {
+    margin: 0;
+    margin-top: auto;
+    max-height: 90vh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    animation: slideUp 0.3s ease;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+/* ============================================
+   MOBILE ANIMATIONS
+   ============================================ */
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Subtle mobile animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.3s ease forwards;
+}
+
+/* Stagger children animations */
+.stagger-children > * {
+  animation: fadeInUp 0.3s ease forwards;
+  opacity: 0;
+}
+
+.stagger-children > *:nth-child(1) { animation-delay: 0.05s; }
+.stagger-children > *:nth-child(2) { animation-delay: 0.1s; }
+.stagger-children > *:nth-child(3) { animation-delay: 0.15s; }
+.stagger-children > *:nth-child(4) { animation-delay: 0.2s; }
+.stagger-children > *:nth-child(5) { animation-delay: 0.25s; }
+
+/* ============================================
+   ACCESSIBILITY IMPROVEMENTS
+   ============================================ */
+
+/* Focus visible for keyboard navigation */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Touch highlight removal */
+.no-tap-highlight {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Screen reader only */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ============================================
+   PERFORMANCE OPTIMIZATIONS
+   ============================================ */
+
+/* Content visibility for off-screen content */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 500px;
+}
+
+/* Will-change for animated elements */
+.will-change-transform {
+  will-change: transform;
+}
+
+/* GPU acceleration */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+/* ============================================
+   DARK MODE MOBILE
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+  .dark-mode-auto {
+    color-scheme: dark;
+  }
+}
+
+/* ============================================
+   PRINT STYLES (Hide mobile UI when printing)
+   ============================================ */
+
+@media print {
+  .bottom-nav,
+  .mobile-only,
+  .fab-button {
+    display: none !important;
+  }
+}

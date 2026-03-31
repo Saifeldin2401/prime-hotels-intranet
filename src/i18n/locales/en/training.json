@@ -286,9 +286,10 @@
     "viewDownloadCertificates": "View and download your earned certificates",
     "views": "Views",
     "wellDone": "Well Done!",
-    "notifications": {
+    "trainingNotifications": {
         "newAssignmentTitle": "New Training Assigned",
-        "newAssignmentMessage": "You have been assigned: {{title}}"
+        "newAssignmentMessage": "You have been assigned: {{title}}",
+        "toggle_desc": "Notify recipients when assignments are created."
     },
     "settings": {
         "title": "Settings",

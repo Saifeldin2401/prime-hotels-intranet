@@ -17,6 +17,7 @@ import {
     ChevronUp,
     Eye,
     EyeOff,
+    FolderOpen,
     HelpCircle,
     Play,
     Plus,
@@ -29,6 +30,12 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
 
+import { MediaPicker } from '@/components/media/MediaPicker'
+import type { MediaAsset } from '@/lib/types/media'
+import { useMedia } from '@/hooks/useMedia'
+import { useProperties } from '@/hooks/useProperties'
+import { DocumentPicker } from '@/components/documents/DocumentPicker'
+import type { Document } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
@@ -44,7 +51,13 @@ interface VideoContentBuilderProps {
 export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProps) {
     const [showPreview, setShowPreview] = useState(true)
     const [isUploading, setIsUploading] = useState(false)
+    const [showMediaPicker, setShowMediaPicker] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
+    
+    // Get user's primary property for media uploads
+    const { data: properties } = useProperties()
+    const primaryProperty = properties?.[0]
+    const { uploadFile } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false })
 
     const isValidUrl = useMemo(() => {
         try {
@@ -54,6 +67,15 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
             return false
         }
     }, [value])
+
+    // Handle media selection from picker
+    const handleMediaSelect = useCallback((assets: MediaAsset[]) => {
+        if (assets.length > 0) {
+            onChange(assets[0].public_url)
+            toast.success('Video selected from library')
+        }
+        setShowMediaPicker(false)
+    }, [onChange])
 
     // Extract YouTube video ID
     const getYouTubeId = (url: string): string | null => {
@@ -118,25 +140,36 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                 <div className="flex flex-col gap-3 p-4 border-2 border-dashed rounded-lg bg-muted/30">
                     <div className="flex items-center justify-between gap-4">
                         <div className="space-y-1">
-                            <p className="text-sm font-medium">Upload Internal Video</p>
+                            <p className="text-sm font-medium">Internal Video</p>
                             <p className="text-xs text-muted-foreground">
-                                Upload secure MP4/MOV files up to 500MB directly to PRIME Cloud
+                                Upload or select from your media library
                             </p>
                         </div>
-                        <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
-                            className="gap-2 shrink-0"
-                        >
-                            {isUploading ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                            ) : (
-                                <Upload className="h-4 w-4" />
-                            )}
-                            {isUploading ? 'Uploading to PRIME Cloud...' : 'Upload Video File'}
-                        </Button>
+                        <div className="flex gap-2 shrink-0">
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={() => setShowMediaPicker(true)}
+                                className="gap-2"
+                            >
+                                <FolderOpen className="h-4 w-4" />
+                                Browse Library
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => fileInputRef.current?.click()}
+                                disabled={isUploading}
+                                className="gap-2"
+                            >
+                                {isUploading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                ) : (
+                                    <Upload className="h-4 w-4" />
+                                )}
+                                {isUploading ? 'Uploading...' : 'Upload'}
+                            </Button>
+                        </div>
                     </div>
                     <input
                         ref={fileInputRef}
@@ -149,9 +182,18 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
 
                             setIsUploading(true)
                             try {
+                                // Upload to Supabase storage first
                                 const url = await uploadFileToSupabase(file, 'media')
+                                
+                                // Then sync to Media Library
+                                await uploadFile(file, {
+                                    title: file.name.replace(/\.[^/.]+$/, ''),
+                                    category: 'knowledgebase',
+                                    property_id: primaryProperty?.id,
+                                })
+                                
                                 onChange(url)
-                                toast.success('Video uploaded successfully to PRIME Cloud')
+                                toast.success('Video uploaded and added to Media Library')
                             } catch (error) {
                                 console.error('Upload error:', error)
                                 toast.error((error as Error).message || 'Failed to upload video')
@@ -160,6 +202,15 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                                 if (fileInputRef.current) fileInputRef.current.value = ''
                             }
                         }}
+                    />
+
+                    {/* MediaPicker Dialog */}
+                    <MediaPicker
+                        open={showMediaPicker}
+                        onOpenChange={setShowMediaPicker}
+                        onSelect={handleMediaSelect}
+                        config={{ allowedTypes: ['video'], multiple: false, category: 'knowledgebase' }}
+                        title="Select Video from Library"
                     />
                 </div>
 
@@ -558,36 +609,47 @@ interface VisualContentBuilderProps {
 
 export function VisualContentBuilder({ images, onChange }: VisualContentBuilderProps) {
     const [isUploading, setIsUploading] = useState(false)
+    
+    // Get user's primary property for media uploads
+    const { data: properties } = useProperties()
+    const primaryProperty = properties?.[0]
+    const { uploadFile } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false })
 
     const handleFileUpload = useCallback((files: FileList | null) => {
         if (!files) return
 
         setIsUploading(true)
 
-        Array.from(files).forEach((file, index) => {
-            const reader = new FileReader()
-
-            reader.onload = () => {
+        Array.from(files).forEach(async (file, index) => {
+            try {
+                // Upload to Supabase storage first
+                const url = await uploadFileToSupabase(file, 'media')
+                
+                // Then sync to Media Library
+                await uploadFile(file, {
+                    title: file.name.replace(/\.[^/.]+$/, ''),
+                    category: 'knowledgebase',
+                    property_id: primaryProperty?.id,
+                })
+                
+                // Add to local state
                 const newImage: VisualImage = {
                     id: crypto.randomUUID(),
-                    url: reader.result as string,
+                    url: url,
                     caption: file.name.replace(/\.[^/.]+$/, ''),
                     order: images.length + index
                 }
                 onChange([...images, newImage])
+                
+                toast.success('Image uploaded and added to Media Library')
+            } catch (error) {
+                console.error('Upload error:', error)
+                toast.error(`Failed to upload ${file.name}`)
             }
-
-            reader.onerror = () => {
-                console.error('Failed to read file:', file.name)
-            }
-
-            reader.onloadend = () => {
-                setIsUploading(false)
-            }
-
-            reader.readAsDataURL(file)
         })
-    }, [images, onChange])
+
+        setIsUploading(false)
+    }, [images, onChange, uploadFile, primaryProperty?.id])
 
     const updateImage = (id: string, caption: string) => {
         onChange(images.map(img =>

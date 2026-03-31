@@ -48,7 +48,7 @@
         "read": "Read",
         "pinned": "Pinned"
     },
-    "notifications": {
+    "announcementNotifications": {
         "viewed_title": "Announcement Viewed",
         "viewed_message": "You viewed: {{title}}"
     },

@@ -1,5 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Star, MessageSquare, TrendingUp, Building } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface GuestReview {
   id: string;
@@ -15,6 +16,8 @@ interface QuickStatsSummaryProps {
 }
 
 export function QuickStatsSummary({ reviews }: QuickStatsSummaryProps) {
+  const { t } = useTranslation('reviews');
+
   const totalReviews = reviews.length;
   const averageRating =
     totalReviews > 0
@@ -25,22 +28,22 @@ export function QuickStatsSummary({ reviews }: QuickStatsSummaryProps) {
 
   const stats = [
     {
-      label: 'Total Reviews',
+      label: t('analytics.reviews'),
       value: totalReviews,
       icon: MessageSquare,
     },
     {
-      label: 'Average Rating',
+      label: t('analytics.avgRating'),
       value: averageRating.toFixed(1),
       icon: Star,
     },
     {
-      label: 'Platforms',
+      label: t('filters.platform'),
       value: platforms,
       icon: TrendingUp,
     },
     {
-      label: 'Properties',
+      label: t('filters.property'),
       value: properties,
       icon: Building,
     },

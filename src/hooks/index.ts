@@ -29,6 +29,7 @@ export * from './useAccountActions';
 export * from './useAchievements';
 export * from './useAuth';
 export * from './useDashboardPreferences';
+export * from './useMediaQuery';
 export * from './useNotifications';
 export * from './usePins';
 export * from './useProperties';

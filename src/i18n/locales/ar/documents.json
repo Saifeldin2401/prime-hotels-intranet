@@ -2,6 +2,7 @@
     "title": "مكتبة المستندات السحابية",
     "description": "إدارة مركزية للمستندات مع تخزين سحابي وتعاون",
     "filter": "تصفية",
+    "filters": "عوامل التصفية",
     "upload_document": "رفع مستند",
     "storage": {
         "title": "نظرة عامة على التخزين",
@@ -10,26 +11,34 @@
         "used": "مستخدم: {{value}} جيجابايت",
         "total": "المجموع: {{value}} جيجابايت",
         "shared_docs": "{{count}} مستند مشترك",
-        "percent_used": "{{percent}}% مستخدم"
+        "percent_used": "{{percent}}% مستخدم",
+        "files_stored": "{{count}} ملف مخزن",
+        "expiring_soon_badge": "{{count}} تنتهي صلاحيتها قريباً"
     },
     "search_placeholder": "البحث في المستندات، المجلدات، أو الوسوم...",
     "folders": {
         "all": "كل المستندات",
         "drafts": "المسودات",
         "pending": "قيد المراجعة",
-        "published": "منشور"
+        "published": "منشور",
+        "title": "المجلدات",
+        "new_folder": "مجلد جديد"
     },
     "unit_files": "ملفات",
+    "unit_documents": "مستندات",
     "tabs": {
         "documents": "المستندات",
-        "folders": "المجلدات",
+        "folders": "حسب المجلد",
         "shared": "مشتركة",
         "recent": "الأخيرة",
-        "favorites": "المفضلة"
+        "favorites": "المفضلة",
+        "trash": "المحذوفات",
+        "expiring": "تنتهي صلاحيتها",
+        "analytics": "التحليلات"
     },
     "empty": {
         "title": "لا توجد مستندات",
-        "description": "ابدأ برفع أول مستند لك إلى المكتبة."
+        "description": "ابدأ برفع أول مستند لك أو اضبط عوامل التصفية."
     },
     "document": {
         "all_properties": "كل المنشآت",
@@ -37,7 +46,8 @@
         "department_specific": "خاص بالقسم",
         "role_specific": "خاص بالدور",
         "acknowledged": "تم الإقرار",
-        "acknowledge": "إقرار"
+        "acknowledge": "إقرار",
+        "expiringSoon": "{{count}} تنتهي صلاحيتها قريباً"
     },
     "status": {
         "DRAFT": "مسودة",
@@ -86,19 +96,77 @@
     },
     "actions": {
         "download": "تحميل",
-        "preview": "معاينة"
+        "preview": "معاينة",
+        "edit": "تعديل",
+        "delete": "حذف",
+        "duplicate": "نسخ",
+        "move": "نقل",
+        "archive": "أرشفة",
+        "unarchive": "إلغاء الأرشفة",
+        "restore": "استعادة",
+        "permanent_delete": "حذف نهائي",
+        "add_tags": "إضافة وسوم",
+        "email": "بريد إلكتروني",
+        "submit_for_approval": "إرسال للموافقة",
+        "view": "عرض",
+        "open": "فتح",
+        "copyUrl": "نسخ الرابط"
     },
     "common": {
         "all_departments": "كل الأقسام",
         "all_properties": "كل المنشآت",
         "unknown": "غير معروف",
-        "all_roles": "كل الأدوار"
+        "all_roles": "كل الأدوار",
+        "popular_tags": "الوسوم الشائعة",
+        "quick_stats": "إحصائيات سريعة"
+    },
+    "stats": {
+        "total_documents": "إجمالي المستندات",
+        "published": "منشور",
+        "pending_review": "قيد المراجعة",
+        "expiring_soon": "تنتهي صلاحيتها قريباً"
+    },
+    "sort": {
+        "label": "الترتيب حسب:",
+        "recently_added": "أضيف مؤخراً",
+        "name": "الاسم",
+        "size": "الحجم",
+        "expiry_date": "تاريخ الانتهاء"
+    },
+    "selection": {
+        "selected": "{{count}} محدد",
+        "documents_count": "{{count}} مستند"
     },
     "foldername": "اسم المجلد...",
     "uploaddocument": "رفع مستند",
-    "uploadvisualcontentimages": "Upload visual content images",
-    "allowcomments": "Allow comments",
-    "addacommentrequiredforreturnreject": "Add a comment (required for return/reject)...",
-    "addcomment": "Add Comment",
-    "addacomment": "Add a comment..."
+    "uploadvisualcontentimages": "رفع صور المحتوى المرئي",
+    "allowcomments": "السماح بالتعليقات",
+    "addacommentrequiredforreturnreject": "أضف تعليقاً (مطلوب للإرجاع/الرفض)...",
+    "addcomment": "إضافة تعليق",
+    "addacomment": "أضف تعليقاً...",
+    "viewMode": {
+        "list": "عرض قائمة",
+        "grid": "عرض شبكي"
+    },
+    "bulkActions": {
+        "selected": "{{count}} محدد",
+        "deleteSuccess": "تم نقل {{count}} مستندات إلى سلة المحذوفات",
+        "restoreSuccess": "تم استعادة {{count}} مستندات",
+        "undo": "تراجع",
+        "duplicateTitle": "{{title}} (نسخة)"
+    },
+    "notifications": {
+        "noDocumentsFound": "لم يتم العثور على مستندات للنسخ",
+        "duplicateSuccess": "تم نسخ {{count}} مستندات",
+        "deleteError": "فشل حذف المستندات",
+        "restoreError": "فشل استعادة المستندات",
+        "duplicateError": "فشل نسخ المستندات",
+        "emailSubject": "مستندات من مكتبة المستندات",
+        "emailBody": "إليك المستندات التي طلبتها:"
+    },
+    "ai": {
+        "assistant": "مساعد الذكاء الاصطناعي",
+        "summarize": "تلخيص",
+        "analyzing": "جاري التحليل..."
+    }
 }

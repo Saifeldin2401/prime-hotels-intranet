@@ -1,0 +1,80 @@
+{
+  "title": "Media Library",
+  "subtitle": "Manage and organize media assets for reuse across the platform",
+  "actions": {
+    "upload": "Upload Files",
+    "uploading": "Uploading...",
+    "edit": "Edit",
+    "delete": "Delete",
+    "copyUrl": "Copy URL",
+    "open": "Open",
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "addTag": "Add"
+  },
+  "tabs": {
+    "all": "All Assets",
+    "video": "Videos",
+    "image": "Images"
+  },
+  "stats": {
+    "totalAssets": "Total Assets",
+    "videos": "Videos",
+    "images": "Images",
+    "totalStorage": "Total Storage"
+  },
+  "mediaTypes": {
+    "video": "Video",
+    "image": "Image"
+  },
+  "categories": {
+    "training": "Training",
+    "knowledgebase": "Knowledge Base",
+    "announcement": "Announcements",
+    "general": "General",
+    "compliance": "Compliance",
+    "onboarding": "Onboarding",
+    "marketing": "Marketing",
+    "other": "Other"
+  },
+  "editDialog": {
+    "title": "Edit Media Asset",
+    "description": "Update the details for this media file.",
+    "fields": {
+      "title": "Title",
+      "titlePlaceholder": "Enter a descriptive title",
+      "description": "Description",
+      "descriptionPlaceholder": "Optional description",
+      "category": "Category",
+      "tags": "Tags",
+      "tagsPlaceholder": "Add a tag and press Enter"
+    }
+  },
+  "deleteDialog": {
+    "title": "Delete Media Asset",
+    "description": "Are you sure you want to delete <strong>{{title}}</strong>? This action cannot be undone.",
+    "warning": "Warning: This asset is used in {{count}} place(s).",
+    "confirm": "Delete"
+  },
+  "empty": {
+    "title": "No media assets found",
+    "description": "Upload files to get started with your media library",
+    "searchDescription": "Try adjusting your search filters"
+  },
+  "search": {
+    "placeholder": "Search media..."
+  },
+  "viewMode": {
+    "grid": "Grid view",
+    "list": "List view"
+  },
+  "card": {
+    "uses": "{{count}} uses"
+  },
+  "notifications": {
+    "urlCopied": "URL copied to clipboard",
+    "deleteSuccess": "Media asset deleted successfully",
+    "updateSuccess": "Media asset updated successfully",
+    "uploadSuccess": "File uploaded successfully"
+  }
+}

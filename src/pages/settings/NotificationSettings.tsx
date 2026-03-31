@@ -30,9 +30,9 @@ export function NotificationSettings() {
                 <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50">
                     <CardTitle className="flex items-center gap-2">
                         <Bell className="h-5 w-5 text-hotel-gold" />
-                        {t('notifications.title')}
+                        {t('notificationSettings.title')}
                     </CardTitle>
-                    <CardDescription>{t('notifications.description')}</CardDescription>
+                    <CardDescription>{t('notificationSettings.description')}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6 pt-6">
                     <div className="flex items-center justify-between pb-4 border-b border-border/50">
@@ -41,8 +41,8 @@ export function NotificationSettings() {
                                 <Globe className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                             </div>
                             <div>
-                                <Label className="text-base font-medium">{t('notifications.browser_notifications')}</Label>
-                                <p className="text-sm text-gray-500">{t('notifications.types.browser_notifications_desc_detailed')}</p>
+                                <Label className="text-base font-medium">{t('notificationSettings.browser_notifications')}</Label>
+                                <p className="text-sm text-gray-500">{t('notificationSettings.types.browser_notifications_desc_detailed')}</p>
                             </div>
                         </div>
                         <Switch
@@ -57,7 +57,7 @@ export function NotificationSettings() {
                                     if (permission === 'granted') {
                                         handleToggle('browser_push_enabled')
                                     } else {
-                                        toast.error(t('notifications.types.permission_error'))
+                                        toast.error(t('notificationSettings.types.permission_error'))
                                     }
                                 } else {
                                     handleToggle('browser_push_enabled')
@@ -72,8 +72,8 @@ export function NotificationSettings() {
                                 <Mail className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <Label className="text-base font-medium">{t('notifications.types.enable_all_emails')}</Label>
-                                <p className="text-sm text-gray-500">{t('notifications.types.enable_all_emails_desc')}</p>
+                                <Label className="text-base font-medium">{t('notificationSettings.types.enable_all_emails')}</Label>
+                                <p className="text-sm text-gray-500">{t('notificationSettings.types.enable_all_emails_desc')}</p>
                             </div>
                         </div>
                         <Switch
@@ -100,8 +100,8 @@ export function NotificationSettings() {
                                     <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                                 </div>
                                 <div>
-                                    <Label className="text-base font-medium">{t('notifications.types.approvals')}</Label>
-                                    <p className="text-sm text-gray-500">{t('notifications.types.approvals_desc')}</p>
+                                    <Label className="text-base font-medium">{t('notificationSettings.types.approvals')}</Label>
+                                    <p className="text-sm text-gray-500">{t('notificationSettings.types.approvals_desc')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
@@ -131,8 +131,8 @@ export function NotificationSettings() {
                                     <BookOpen className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                                 </div>
                                 <div>
-                                    <Label className="text-base font-medium">{t('notifications.types.training')}</Label>
-                                    <p className="text-sm text-gray-500">{t('notifications.types.training_desc')}</p>
+                                    <Label className="text-base font-medium">{t('notificationSettings.types.training')}</Label>
+                                    <p className="text-sm text-gray-500">{t('notificationSettings.types.training_desc')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
@@ -162,8 +162,8 @@ export function NotificationSettings() {
                                     <AlertCircle className="h-5 w-5 text-purple-600 dark:text-purple-400" />
                                 </div>
                                 <div>
-                                    <Label className="text-base font-medium">{t('notifications.types.announcements')}</Label>
-                                    <p className="text-sm text-gray-500">{t('notifications.types.announcements_desc')}</p>
+                                    <Label className="text-base font-medium">{t('notificationSettings.types.announcements')}</Label>
+                                    <p className="text-sm text-gray-500">{t('notificationSettings.types.announcements_desc')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
@@ -193,8 +193,8 @@ export function NotificationSettings() {
                                     <Wrench className="h-5 w-5 text-orange-600 dark:text-orange-400" />
                                 </div>
                                 <div>
-                                    <Label className="text-base font-medium">{t('notifications.types.maintenance')}</Label>
-                                    <p className="text-sm text-gray-500">{t('notifications.types.maintenance_desc')}</p>
+                                    <Label className="text-base font-medium">{t('notificationSettings.types.maintenance')}</Label>
+                                    <p className="text-sm text-gray-500">{t('notificationSettings.types.maintenance_desc')}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-8">
@@ -228,7 +228,7 @@ export function NotificationSettings() {
                         <div className="flex items-center justify-between">
                             <CardTitle className="text-base flex items-center gap-2">
                                 <Clock className="h-4 w-4 text-hotel-gold" />
-                                {t('notifications.scheduling.title')}
+                                {t('notificationSettings.scheduling.title')}
                             </CardTitle>
                             <Switch
                                 checked={preferences.quiet_hours_enabled}
@@ -237,10 +237,10 @@ export function NotificationSettings() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 pt-4 space-y-4">
-                        <p className="text-sm text-gray-500">{t('notifications.scheduling.description')}</p>
+                        <p className="text-sm text-gray-500">{t('notificationSettings.scheduling.description')}</p>
                         <div className={`flex items-center gap-4 ${preferences.quiet_hours_enabled ? '' : 'opacity-40 pointer-events-none'}`}>
                             <div className="flex-1 space-y-1.5">
-                                <Label className="text-xs uppercase font-semibold text-gray-400">{t('notifications.scheduling.from')}</Label>
+                                <Label className="text-xs uppercase font-semibold text-gray-400">{t('notificationSettings.scheduling.from')}</Label>
                                 <input
                                     type="time"
                                     value={preferences.quiet_hours_start || '22:00'}
@@ -249,7 +249,7 @@ export function NotificationSettings() {
                                 />
                             </div>
                             <div className="flex-1 space-y-1.5">
-                                <Label className="text-xs uppercase font-semibold text-gray-400">{t('notifications.scheduling.to')}</Label>
+                                <Label className="text-xs uppercase font-semibold text-gray-400">{t('notificationSettings.scheduling.to')}</Label>
                                 <input
                                     type="time"
                                     value={preferences.quiet_hours_end || '08:00'}
@@ -271,8 +271,8 @@ export function NotificationSettings() {
                     <CardContent className="p-6 pt-4 space-y-6">
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">{t('notifications.sounds.enable')}</Label>
-                                <p className="text-xs text-gray-500">{t('notifications.sounds.enable_desc')}</p>
+                                <Label className="text-sm font-medium">{t('notificationSettings.sounds.enable')}</Label>
+                                <p className="text-xs text-gray-500">{t('notificationSettings.sounds.enable_desc')}</p>
                             </div>
                             <Switch
                                 checked={preferences.notification_sounds_enabled ?? true}
@@ -281,8 +281,8 @@ export function NotificationSettings() {
                         </div>
                         <div className="flex items-center justify-between">
                             <div className="space-y-0.5">
-                                <Label className="text-sm font-medium">{t('notifications.digest.title')}</Label>
-                                <p className="text-xs text-gray-500">{t('notifications.digest.description')}</p>
+                                <Label className="text-sm font-medium">{t('notificationSettings.digest.title')}</Label>
+                                <p className="text-xs text-gray-500">{t('notificationSettings.digest.description')}</p>
                             </div>
                             <Switch
                                 checked={preferences.daily_digest_enabled}

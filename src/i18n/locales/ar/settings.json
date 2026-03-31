@@ -46,7 +46,7 @@
         "en": "الإنجليزية",
         "ar": "العربية"
     },
-    "notifications": {
+    "notificationSettings": {
         "title": "تفضيلات الإشعارات",
         "description": "إدارة كيفية تلقي الإشعارات",
         "email_notifications": "إشعارات البريد الإلكتروني",

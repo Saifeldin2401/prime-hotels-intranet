@@ -2,6 +2,7 @@
     "title": "Document Cloud Library",
     "description": "Centralized document management with cloud storage and collaboration",
     "filter": "Filter",
+    "filters": "Filters",
     "upload_document": "Upload Document",
     "storage": {
         "title": "Storage Overview",
@@ -10,26 +11,34 @@
         "used": "Used: {{value}} GB",
         "total": "Total: {{value}} GB",
         "shared_docs": "{{count}} shared documents",
-        "percent_used": "{{percent}}% used"
+        "percent_used": "{{percent}}% used",
+        "files_stored": "{{count}} files stored",
+        "expiring_soon_badge": "{{count}} expiring soon"
     },
     "search_placeholder": "Search documents, folders, or tags...",
     "folders": {
         "all": "All Documents",
         "drafts": "Drafts",
         "pending": "Pending Review",
-        "published": "Published"
+        "published": "Published",
+        "title": "Folders",
+        "new_folder": "New Folder"
     },
     "unit_files": "files",
+    "unit_documents": "documents",
     "tabs": {
         "documents": "Documents",
-        "folders": "Folders",
+        "folders": "By Folder",
         "shared": "Shared",
         "recent": "Recent",
-        "favorites": "Favorites"
+        "favorites": "Favorites",
+        "trash": "Trash",
+        "expiring": "Expiring",
+        "analytics": "Analytics"
     },
     "empty": {
         "title": "No documents found",
-        "description": "Start by uploading your first document to the library."
+        "description": "Start by uploading your first document or adjust your filters."
     },
     "document": {
         "all_properties": "All properties",
@@ -37,7 +46,8 @@
         "department_specific": "Department-specific",
         "role_specific": "Role-specific",
         "acknowledged": "Acknowledged",
-        "acknowledge": "Acknowledge"
+        "acknowledge": "Acknowledge",
+        "expiringSoon": "{{count}} expiring soon"
     },
     "status": {
         "DRAFT": "Draft",
@@ -86,13 +96,46 @@
     },
     "actions": {
         "download": "Download",
-        "preview": "Preview"
+        "preview": "Preview",
+        "edit": "Edit",
+        "delete": "Delete",
+        "duplicate": "Duplicate",
+        "move": "Move",
+        "archive": "Archive",
+        "unarchive": "Unarchive",
+        "restore": "Restore",
+        "permanent_delete": "Delete Permanently",
+        "add_tags": "Add Tags",
+        "email": "Email",
+        "submit_for_approval": "Submit for Approval",
+        "view": "View",
+        "open": "Open",
+        "copyUrl": "Copy URL"
     },
     "common": {
         "all_departments": "All Departments",
         "all_properties": "All Properties",
         "unknown": "Unknown",
-        "all_roles": "All Roles"
+        "all_roles": "All Roles",
+        "popular_tags": "Popular Tags",
+        "quick_stats": "Quick Stats"
+    },
+    "stats": {
+        "total_documents": "Total Documents",
+        "published": "Published",
+        "pending_review": "Pending Review",
+        "expiring_soon": "Expiring Soon"
+    },
+    "sort": {
+        "label": "Sort by:",
+        "recently_added": "Recently Added",
+        "name": "Name",
+        "size": "Size",
+        "expiry_date": "Expiry Date"
+    },
+    "selection": {
+        "selected": "{{count}} selected",
+        "documents_count": "{{count}} documents"
     },
     "foldername": "Folder name...",
     "uploaddocument": "Upload Document",
@@ -100,5 +143,30 @@
     "allowcomments": "Allow comments",
     "addacommentrequiredforreturnreject": "Add a comment (required for return/reject)...",
     "addcomment": "Add Comment",
-    "addacomment": "Add a comment..."
+    "addacomment": "Add a comment...",
+    "viewMode": {
+        "list": "List view",
+        "grid": "Grid view"
+    },
+    "bulkActions": {
+        "selected": "{{count}} selected",
+        "deleteSuccess": "{{count}} documents moved to trash",
+        "restoreSuccess": "Restored {{count}} documents",
+        "undo": "Undo",
+        "duplicateTitle": "{{title}} (Copy)"
+    },
+    "notifications": {
+        "noDocumentsFound": "No documents found to duplicate",
+        "duplicateSuccess": "Duplicated {{count}} documents",
+        "deleteError": "Failed to delete documents",
+        "restoreError": "Failed to restore documents",
+        "duplicateError": "Failed to duplicate documents",
+        "emailSubject": "Documents from Document Library",
+        "emailBody": "Here are the documents you requested:"
+    },
+    "ai": {
+        "assistant": "AI Assistant",
+        "summarize": "Summarize",
+        "analyzing": "Analyzing..."
+    }
 }

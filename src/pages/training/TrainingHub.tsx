@@ -169,6 +169,7 @@ export default function TrainingHub() {
         .from('learning_assignments')
         .select('content_id')
         .eq('content_type', 'module')
+        .or('is_deleted.is.null,is_deleted.eq.false')
       if (error) throw error
       return data || []
     },

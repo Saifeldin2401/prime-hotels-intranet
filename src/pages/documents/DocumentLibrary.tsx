@@ -65,6 +65,7 @@ import {
     Grid,
     Heart,
     List,
+    Loader2,
     MoreVertical,
     Pencil,
     Plus,
@@ -149,7 +150,7 @@ export default function DocumentLibrary() {
     void summarizeDocument(contentToSummarize, selectedForAI.title)
   }, [aiPanelOpen, selectedForAI, summarizeDocument])
 
-  // Data fetching
+  // Data fetching - show all documents regardless of content_type
   const { data: documents = [], isLoading } = useDocuments({
     search: filters.search || undefined,
     folder_id: filters.folderId,
@@ -161,14 +162,14 @@ export default function DocumentLibrary() {
     status: filters.status || undefined,
     include_deleted: activeTab === 'trash',
     include_archived: activeTab !== 'documents',
-    contentType: 'document'
+    contentType: null, // Show all types including 'sop', 'policy', 'guide', etc.
   })
 
   const { data: stats } = useDocumentStats()
   const { data: folders = [] } = useDocumentFolders()
   const { data: tags = [] } = useDocumentTags()
-  const { data: favorites = new Set() } = useFavorites()
-  const favoritesSet = favorites
+  const { data: favorites = [] } = useFavorites()
+  const favoritesSet = new Set(Array.isArray(favorites) ? favorites : [])
 
   // Mutations
   const submitForApproval = useSubmitForApproval()
@@ -280,12 +281,11 @@ export default function DocumentLibrary() {
     }
   }, [bulkDelete, bulkRestore, selectedDocuments])
 
-  const handleBulkMove = useCallback(async (folderId: string | null) => {
-    const selectedIds = Array.from(selectedDocuments)
-    if (selectedIds.length === 0) return
+  const handleBulkMove = useCallback(async (documentIds: string[], folderId: string | null) => {
+    if (documentIds.length === 0) return
 
     const previousFolderByDocument = documents
-      .filter((doc) => selectedIds.includes(doc.id))
+      .filter((doc) => documentIds.includes(doc.id))
       .reduce<Record<string, string | null>>((acc, doc) => {
         acc[doc.id] = doc.folder_id || null
         return acc
@@ -293,7 +293,7 @@ export default function DocumentLibrary() {
 
     setBulkActionLoading(true)
     try {
-      const result = await bulkMove.mutateAsync({ ids: selectedIds, folderId })
+      const result = await bulkMove.mutateAsync({ ids: documentIds, folderId })
       setSelectedDocuments(new Set())
 
       if (result.success.length > 0) {
@@ -342,7 +342,7 @@ export default function DocumentLibrary() {
     } finally {
       setBulkActionLoading(false)
     }
-  }, [bulkMove, documents, queryClient, selectedDocuments])
+  }, [bulkMove, documents, queryClient])
 
   const handleBulkAddTags = useCallback(async (tagIds: string[]) => {
     const selectedIds = Array.from(selectedDocuments)
@@ -789,7 +789,7 @@ export default function DocumentLibrary() {
               className={cn(showFilters && "bg-hotel-navy/5")}
             >
               <Filter className="w-4 h-4 mr-2" />
-              Filters
+              {t('filters')}
               {Object.values(filters).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) && (
                 <span className="ml-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
               )}
@@ -816,7 +816,7 @@ export default function DocumentLibrary() {
 
             <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all">
               <Plus className="w-4 h-4 mr-2" />
-              Upload Document
+              {t('upload_document')}
             </Button>
           </div>
         }
@@ -831,15 +831,15 @@ export default function DocumentLibrary() {
                 <Cloud className="h-4 w-4 sm:h-5 sm:w-5 text-hotel-gold-dark" />
               </div>
               <div>
-                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">Storage Overview</h3>
-                <p className="text-xs sm:text-sm text-gray-600">{storageStats.documents} files stored</p>
+                <h3 className="font-semibold text-hotel-navy text-sm sm:text-base">{t('storage.title')}</h3>
+                <p className="text-xs sm:text-sm text-gray-600">{t('storage.files_stored', { count: storageStats.documents })}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {stats?.expiringSoon ? (
                 <EnhancedBadge variant="warning" className="text-xs">
                   <AlertTriangle className="w-3 h-3 mr-1" />
-                  {stats.expiringSoon} expiring soon
+                  {t('storage.expiring_soon_badge', { count: stats.expiringSoon })}
                 </EnhancedBadge>
               ) : null}
               <EnhancedBadge variant="gold" className="text-xs">
@@ -875,6 +875,56 @@ export default function DocumentLibrary() {
           onMove={handleBulkMove}
           onTag={handleBulkAddTags}
           onArchive={handleBulkArchive}
+          onDuplicate={async (ids) => {
+            try {
+              // Fetch documents to duplicate
+              const { data: docsToDuplicate, error: fetchError } = await supabase
+                .from('documents')
+                .select('*')
+                .in('id', ids)
+              
+              if (fetchError) throw fetchError
+              
+              if (!docsToDuplicate || docsToDuplicate.length === 0) {
+                toast.error('No documents found to duplicate')
+                return
+              }
+              
+              // Create duplicates with new titles
+              const duplicates = docsToDuplicate.map(doc => ({
+                ...doc,
+                id: undefined, // Let Supabase generate new ID
+                title: `${doc.title} (Copy)`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+                created_by: user?.id,
+                view_count: 0,
+                download_count: 0,
+                status: 'DRAFT'
+              }))
+              
+              const { data: newDocs, error: insertError } = await supabase
+                .from('documents')
+                .insert(duplicates)
+                .select('id, title')
+              
+              if (insertError) throw insertError
+              
+              toast.success(`Duplicated ${newDocs?.length || 0} documents`)
+              queryClient.invalidateQueries({ queryKey: ['documents'] })
+              setSelectedDocuments(new Set())
+            } catch (error) {
+              console.error('Duplicate error:', error)
+              toast.error(error instanceof Error ? error.message : 'Failed to duplicate documents')
+            }
+          }}
+          onEmail={(ids) => {
+            // Open email client with document links
+            const documentLinks = ids.map(id => `${window.location.origin}/documents/${id}`).join('\n')
+            const subject = `Documents from Document Library`
+            const body = `Here are the documents you requested:\n\n${documentLinks}`
+            window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
+          }}
           isProcessing={bulkActionLoading}
         />
       )}
@@ -889,7 +939,7 @@ export default function DocumentLibrary() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-hotel-navy flex items-center gap-2">
                   <FolderOpen className="w-4 h-4" />
-                  Folders
+                  {t('folders.title')}
                 </h3>
                 <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
                   <Plus className="w-4 h-4" />
@@ -909,7 +959,7 @@ export default function DocumentLibrary() {
             <div className="p-4">
               <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
                 <Tag className="w-4 h-4" />
-                Popular Tags
+                {t('common.popular_tags')}
               </h3>
               <div className="flex flex-wrap gap-2">
                 {tags.slice(0, 10).map(tag => (
@@ -946,23 +996,23 @@ export default function DocumentLibrary() {
             <div className="p-4">
               <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
                 <BarChart3 className="w-4 h-4" />
-                Quick Stats
+                {t('common.quick_stats')}
               </h3>
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Documents</span>
+                  <span className="text-gray-600">{t('stats.total_documents')}</span>
                   <span className="font-medium">{stats?.total || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Published</span>
+                  <span className="text-gray-600">{t('stats.published')}</span>
                   <span className="font-medium text-green-600">{stats?.published || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Pending Review</span>
+                  <span className="text-gray-600">{t('stats.pending_review')}</span>
                   <span className="font-medium text-amber-600">{stats?.pending || 0}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Expiring Soon</span>
+                  <span className="text-gray-600">{t('stats.expiring_soon')}</span>
                   <span className="font-medium text-red-600">{stats?.expiringSoon || 0}</span>
                 </div>
               </div>
@@ -974,12 +1024,12 @@ export default function DocumentLibrary() {
         <div className="lg:col-span-3 content-contain">
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as DocumentTab)}>
             <TabsList className="mb-4">
-              <TabsTrigger value="documents">All Documents</TabsTrigger>
-              <TabsTrigger value="folders">By Folder</TabsTrigger>
-              <TabsTrigger value="recent">Recent</TabsTrigger>
-              <TabsTrigger value="favorites">Favorites</TabsTrigger>
-              <TabsTrigger value="expiring">Expiring</TabsTrigger>
-              <TabsTrigger value="trash">Trash</TabsTrigger>
+              <TabsTrigger value="documents">{t('tabs.documents')}</TabsTrigger>
+              <TabsTrigger value="folders">{t('tabs.folders')}</TabsTrigger>
+              <TabsTrigger value="recent">{t('tabs.recent')}</TabsTrigger>
+              <TabsTrigger value="favorites">{t('tabs.favorites')}</TabsTrigger>
+              <TabsTrigger value="expiring">{t('tabs.expiring')}</TabsTrigger>
+              <TabsTrigger value="trash">{t('tabs.trash')}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="documents" className="space-y-4">
@@ -994,19 +1044,19 @@ export default function DocumentLibrary() {
                       />
                       <span className="text-sm text-gray-500">
                         {selectedDocuments.size > 0 
-                          ? `${selectedDocuments.size} selected` 
-                          : `${documents.length} documents`
+                          ? t('selection.selected', { count: selectedDocuments.size })
+                          : t('selection.documents_count', { count: documents.length })
                         }
                       </span>
                     </div>
                     {documents.length > 0 && (
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-gray-400">Sort by:</span>
+                        <span className="text-xs text-gray-400">{t('sort.label')}</span>
                         <select className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer">
-                          <option>Recently Added</option>
-                          <option>Name</option>
-                          <option>Size</option>
-                          <option>Expiry Date</option>
+                          <option>{t('sort.recently_added')}</option>
+                          <option>{t('sort.name')}</option>
+                          <option>{t('sort.size')}</option>
+                          <option>{t('sort.expiry_date')}</option>
                         </select>
                       </div>
                     )}
@@ -1020,10 +1070,10 @@ export default function DocumentLibrary() {
                       {documents.length === 0 ? (
                         <EmptyState
                           icon={FileText}
-                          title="No documents found"
-                          description="Start by uploading your first document or adjust your filters."
+                          title={t('empty.title')}
+                          description={t('empty.description')}
                           action={{
-                            label: 'Upload Document',
+                            label: t('upload_document'),
                             onClick: () => setUploadDialogOpen(true),
                             icon: Plus
                           }}

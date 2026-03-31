@@ -41,6 +41,12 @@ export interface Document {
   departments?: { id: string; name: string } | null
   properties?: { id: string; name: string } | null
   profiles?: { id: string; full_name: string | null } | null
+  // AI Auto-tagging fields
+  ai_tags?: string[] | null
+  ai_category?: string | null
+  ai_summary?: string | null
+  ai_processed_at?: string | null
+  file_size?: number | null
 }
 
 export interface SystemWikiSubtopic {

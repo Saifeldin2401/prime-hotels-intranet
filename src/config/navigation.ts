@@ -423,24 +423,6 @@ export const ROUTES: RouteConfig[] = [
         title: 'payslips_management',
         icon: Wallet,
         description: 'Create and publish payslips',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
-        order: 6.8
-    },
-    {
-        path: '/hr/team',
-        title: 'my_team',
-        icon: Users,
-        description: 'Manage your direct reports',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
-        group: 'hr_management',
-        order: 6.9
-    },
-    {
-        path: '/hr/motivational-content',
-        title: 'motivational_content',
-        icon: Target,
-        description: 'Manage global dashboard motivational quotes',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
         group: 'hr_management',
         order: 6.95
@@ -568,6 +550,24 @@ export const ROUTES: RouteConfig[] = [
         group: 'knowledge_base',
         order: 3
     },
+    {
+        path: '/media',
+        title: 'media_library',
+        icon: FolderOpen,
+        description: 'Media library - manage videos, images, and documents for reuse',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'knowledge_base',
+        order: 4
+    },
+    {
+        path: '/documents',
+        title: 'documents',
+        icon: FileText,
+        description: 'Document library and file management',
+        allowedRoles: 'all',
+        group: 'knowledge_base',
+        order: 5
+    },
 
     // -------------------------------------------------------------------------
     // LEARNING GROUP (Personal)
@@ -687,15 +687,6 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: 'all',
         group: 'communication',
         order: 2
-    },
-    {
-        path: '/documents',
-        title: 'documents',
-        icon: FileText,
-        description: 'Document library and file management',
-        allowedRoles: 'all',
-        group: 'knowledge_base',
-        order: 4
     },
 
     // -------------------------------------------------------------------------

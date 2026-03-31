@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { useToast } from '@/components/ui/use-toast'
+import { getLearningAssignmentErrorMessage } from '@/lib/learningAssignmentMutations'
 import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
 import type { LearningAssignment } from '@/types/learning'
@@ -263,8 +264,25 @@ export default function AssignmentManager() {
 
         try {
             setCreating(true)
-            await learningService.createAssignment(formData as any)
-            toast({ title: 'Success', description: 'Assignment created successfully' })
+            const result = await learningService.createAssignment(formData as any) as {
+                inserted?: number
+                reactivated?: number
+                skipped?: number
+            }
+            const inserted = result?.inserted ?? 0
+            const reactivated = result?.reactivated ?? 0
+            const skipped = result?.skipped ?? 0
+            const description = inserted === 0 && reactivated === 0
+                ? 'No new assignment was created because this target already has an active assignment.'
+                : [
+                    inserted > 0 ? `${inserted} new` : null,
+                    reactivated > 0 ? `${reactivated} restored` : null,
+                    skipped > 0 ? `${skipped} already active` : null,
+                ].filter(Boolean).join(' | ')
+            toast({
+                title: inserted === 0 && reactivated === 0 ? 'No changes' : 'Success',
+                description,
+            })
             setShowModal(false)
             // Reset form
             setFormData({
@@ -278,7 +296,11 @@ export default function AssignmentManager() {
             loadAssignments()
         } catch (error) {
             console.error(error)
-            toast({ title: 'Error', description: 'Failed to create assignment', variant: 'destructive' })
+            toast({
+                title: 'Error',
+                description: getLearningAssignmentErrorMessage(error),
+                variant: 'destructive'
+            })
         } finally {
             setCreating(false)
         }

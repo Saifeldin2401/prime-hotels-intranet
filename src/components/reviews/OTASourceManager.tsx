@@ -25,7 +25,7 @@ import { useTranslation } from "react-i18next"
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from "@/lib/reviewsScope"
 
 export function OTASourceManager() {
-  const { t } = useTranslation(['dashboard', 'common'])
+  const { t } = useTranslation('reviews')
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [selectedPropertyId, setSelectedPropertyId] = useState<string>("all")
@@ -79,13 +79,13 @@ export function OTASourceManager() {
     },
     onSuccess: () => {
       toast({ 
-        title: "Sync Started", 
-        description: "Review collection has been triggered for all active sources." 
+        title: t('notifications.syncStarted'), 
+        description: t('notifications.collectorTriggered')
       })
     },
     onError: (error: any) => {
       toast({ 
-        title: "Sync Failed", 
+        title: t('notifications.syncFailed'), 
         description: error.message,
         variant: "destructive"
       })
@@ -104,7 +104,7 @@ export function OTASourceManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest-review-sources"] })
-      toast({ title: t('common:actions.success'), description: "OTA source added successfully." })
+      toast({ title: t('notifications.sourceAdded'), description: t('notifications.otaSourceAdded') })
       setIsAddDialogOpen(false)
       setNewSource({
         property_id: "",
@@ -116,7 +116,7 @@ export function OTASourceManager() {
     },
     onError: (error: any) => {
       toast({ 
-        title: t('common:errors.failed'), 
+        title: t('notifications.error'), 
         description: error.message,
         variant: "destructive"
       })
@@ -133,7 +133,7 @@ export function OTASourceManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest-review-sources"] })
-      toast({ title: t('common:actions.updated'), description: "Polling setting updated successfully." })
+      toast({ title: t('notifications.updated'), description: t('notifications.pollingUpdated') })
     }
   })
 
@@ -144,7 +144,7 @@ export function OTASourceManager() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["guest-review-sources"] })
-      toast({ title: t('common:actions.deleted'), description: "The OTA source has been removed." })
+      toast({ title: t('notifications.deleted'), description: t('notifications.sourceRemoved') })
     }
   })
 
@@ -170,10 +170,10 @@ export function OTASourceManager() {
             </div>
             <div>
               <h2 className="text-3xl font-black tracking-tight text-hotel-navy dark:text-hotel-gold leading-none">
-                OTA Intelligence Hub
+                {t('sources.title')}
               </h2>
               <p className="text-sm font-medium text-muted-foreground mt-1 tracking-tight">
-                Chain-wide monitoring & automated review collection
+                {t('sources.subtitle')}
               </p>
             </div>
           </div>
@@ -183,10 +183,10 @@ export function OTASourceManager() {
           <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
             <SelectTrigger className="w-[200px] h-10 border-none bg-background shadow-none font-bold text-xs uppercase tracking-widest">
               <Filter className="h-3.5 w-3.5 me-2 opacity-50" />
-              <SelectValue placeholder="All Properties" />
+              <SelectValue placeholder={t('sources.allProperties')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Global Chain</SelectItem>
+              <SelectItem value="all">{t('sources.globalChain')}</SelectItem>
               {properties?.map(p => (
                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
               ))}
@@ -203,7 +203,7 @@ export function OTASourceManager() {
             className="h-10 px-4 font-bold text-[10px] uppercase tracking-[0.2em] hover:bg-primary/5"
           >
             <RefreshCw className={cn("h-3.5 w-3.5 me-2", syncAllMutation.isPending && "animate-spin")} />
-            Sync All
+            {t('sources.syncAll')}
           </Button>
 
           <Button 
@@ -211,7 +211,7 @@ export function OTASourceManager() {
             className="h-10 px-6 font-bold text-[10px] uppercase tracking-[0.2em] shadow-[0_10px_20px_rgba(var(--primary),0.2)] hover:shadow-primary/30 transition-all active:scale-95"
           >
             <Plus className="h-3.5 w-3.5 me-2" />
-            Add Source
+            {t('sources.addSource')}
           </Button>
         </div>
       </div>
@@ -219,10 +219,10 @@ export function OTASourceManager() {
       {/* Glassmorphic Metrics Grid */}
       <div className="grid gap-4 md:grid-cols-4">
         {[
-          { label: "Total Sources", value: sources?.length || 0, icon: Activity, detail: `Across ${visiblePropertyCount} properties`, color: "text-foreground" },
-          { label: "Active Polling", value: sources?.filter(s => s.polling_enabled).length || 0, icon: Zap, detail: "Real-time scraping active", color: "text-emerald-600" },
-          { label: "Source Health", value: `${Math.round(((sources?.filter(s => s.health_status === 'healthy').length || 0) / (sources?.length || 1)) * 100)}%`, icon: ShieldCheck, detail: "Operational efficiency", color: "text-primary" },
-          { label: "Issues Found", value: sources?.filter(s => s.health_status !== 'healthy' && s.health_status !== 'unknown').length || 0, icon: AlertCircle, detail: "Connection challenges", color: "text-orange-600" }
+          { label: t('sources.totalSources'), value: sources?.length || 0, icon: Activity, detail: t('sources.acrossProperties', { count: visiblePropertyCount }), color: "text-foreground" },
+          { label: t('sources.activePolling'), value: sources?.filter(s => s.polling_enabled).length || 0, icon: Zap, detail: t('sources.realTimeScraping'), color: "text-emerald-600" },
+          { label: t('sources.sourceHealth'), value: `${Math.round(((sources?.filter(s => s.health_status === 'healthy').length || 0) / (sources?.length || 1)) * 100)}%`, icon: ShieldCheck, detail: t('sources.operationalEfficiency'), color: "text-primary" },
+          { label: t('sources.issuesFound'), value: sources?.filter(s => s.health_status !== 'healthy' && s.health_status !== 'unknown').length || 0, icon: AlertCircle, detail: t('sources.connectionChallenges'), color: "text-orange-600" }
         ].map((metric, i) => (
           <Card key={i} className="group relative border-none bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl shadow-none overflow-hidden transition-all duration-500 hover:translate-y-[-2px]">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-muted/50 via-primary/10 to-transparent" />
@@ -245,9 +245,9 @@ export function OTASourceManager() {
       ) : sourcesError ? (
         <Card className="border border-destructive/20 bg-destructive/5">
           <CardHeader>
-            <CardTitle className="text-destructive">Unable to load sources</CardTitle>
+            <CardTitle className="text-destructive">{t('sources.unableToLoad')}</CardTitle>
             <CardDescription className="text-destructive/90">
-              The sources query failed. This is usually a permissions mismatch (RLS/user property scope) or missing table access.
+              {t('sources.permissionsError')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -263,17 +263,17 @@ export function OTASourceManager() {
             <div className="w-24 h-24 bg-card shadow-2xl rounded-3xl flex items-center justify-center mb-8 mx-auto ring-1 ring-muted-foreground/10 rotate-3 group hover:rotate-0 transition-transform duration-500">
               <Globe className="h-10 w-10 text-primary opacity-40" />
             </div>
-            <h3 className="font-black text-2xl text-hotel-navy tracking-tight mb-3">No active tracking sources</h3>
+            <h3 className="font-black text-2xl text-hotel-navy tracking-tight mb-3">{t('sources.noActiveSources')}</h3>
             <p className="text-sm text-muted-foreground/80 max-w-xs mx-auto leading-relaxed font-medium">
-              Initialize your intelligence network by adding property links from our global database.
+              {t('sources.initializeNetwork')}
             </p>
             <div className="flex items-center justify-center gap-4 mt-10">
                <Button variant="outline" size="lg" onClick={() => setIsAddDialogOpen(true)} className="rounded-full px-8 h-12 font-bold text-xs uppercase tracking-widest border-muted-foreground/20 hover:bg-background">
-                Manual Add
+                {t('sources.manualAdd')}
               </Button>
               <Button onClick={() => syncAllMutation.mutate()} size="lg" className="rounded-full px-8 h-12 font-bold text-xs uppercase tracking-widest shadow-xl shadow-primary/20">
                 <Zap className="h-4 w-4 me-2 fill-current" />
-                Bulk Sync Links
+                {t('sources.bulkSyncLinks')}
               </Button>
             </div>
           </div>
@@ -310,7 +310,7 @@ export function OTASourceManager() {
                           source.health_status === 'healthy' ? "text-green-600" : 
                           source.health_status === 'disabled' ? "text-red-600" : "text-muted-foreground"
                         )}>
-                          {source.health_status}
+                          {t(`sources.${source.health_status}`, { defaultValue: source.health_status })}
                         </span>
                       </div>
                     </div>
@@ -325,22 +325,22 @@ export function OTASourceManager() {
                   </CardTitle>
                   <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest">
                     <div className="w-1.5 h-1.5 rounded-full bg-primary/30" />
-                    {property?.name || 'Chain Headquarter'}
+                    {property?.name || t('sources.chainHeadquarter')}
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-6 px-6 pb-6 mt-auto">
                   <div className="grid grid-cols-2 gap-4 py-4 border-y border-muted-foreground/5">
                     <div className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">Interval</span>
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">{t('sources.interval')}</span>
                       <p className="text-xs font-black flex items-center gap-1.5 text-foreground/80">
                         <RefreshCw className="h-3 w-3 opacity-40" />
                         {source.poll_frequency_hours}H
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">Last Sync</span>
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">{t('sources.lastSync')}</span>
                       <p className="text-xs font-black truncate text-foreground/80">
-                        {source.last_success_at ? new Date(source.last_success_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'PENDING'}
+                        {source.last_success_at ? new Date(source.last_success_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : t('sources.pending')}
                       </p>
                     </div>
                   </div>
@@ -349,7 +349,7 @@ export function OTASourceManager() {
                     <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest px-0 group-hover:px-2 transition-all bg-transparent border-primary/20 hover:bg-primary/5 hover:text-primary rounded-lg" asChild>
                       <a href={source.source_url} target="_blank" rel="noreferrer">
                         <Globe className="h-3.5 w-3.5 me-2" />
-                        Platform View
+                        {t('sources.platformView')}
                         <ExternalLink className="h-3 w-3 ms-2 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
                       </a>
                     </Button>
@@ -359,7 +359,7 @@ export function OTASourceManager() {
                         size="icon" 
                         className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-muted-foreground/10 rounded-full opacity-40 group-hover:opacity-100 transition-opacity"
                         onClick={() => {
-                          if(confirm("Permanently disconnect this review source?")) {
+                          if(confirm(t('sources.confirmDisconnect'))) {
                             deleteSourceMutation.mutate(source.id)
                           }
                         }}
@@ -382,15 +382,15 @@ export function OTASourceManager() {
             <div className="absolute top-0 right-0 p-8 opacity-10">
               <Plus className="h-24 w-24" />
             </div>
-            <DialogTitle className="text-2xl font-black tracking-tight mb-2">Connect Channel</DialogTitle>
+            <DialogTitle className="text-2xl font-black tracking-tight mb-2">{t('sources.connectChannel')}</DialogTitle>
             <DialogDescription className="text-white/60 font-medium">
-              Integrate a new OTA platform into the chain's intelligence network.
+              {t('sources.integrateOTA')}
             </DialogDescription>
           </div>
           <div className="p-8 space-y-6 bg-card">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">Internal Name</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">{t('sources.internalName')}</Label>
                 <Input 
                   value={newSource.source_name}
                   onChange={(e) => setNewSource(prev => ({ ...prev, source_name: e.target.value }))}
@@ -399,13 +399,13 @@ export function OTASourceManager() {
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">Platform</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">{t('filters.platform')}</Label>
                 <Select 
                   value={newSource.platform} 
                   onValueChange={(val: GuestReviewPlatform) => setNewSource(prev => ({ ...prev, platform: val }))}
                 >
                   <SelectTrigger className="h-11 bg-muted/30 border-none font-medium">
-                    <SelectValue placeholder="Select platform" />
+                    <SelectValue placeholder={t('filters.platform')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="booking">Booking.com</SelectItem>
@@ -420,13 +420,13 @@ export function OTASourceManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">Associate Property</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">{t('sources.associateProperty')}</Label>
               <Select 
                 value={newSource.property_id} 
                 onValueChange={(val) => setNewSource(prev => ({ ...prev, property_id: val }))}
               >
                 <SelectTrigger className="h-11 bg-muted/30 border-none font-medium">
-                  <SelectValue placeholder="Select target property" />
+                  <SelectValue placeholder={t('sources.selectProperty')} />
                 </SelectTrigger>
                 <SelectContent>
                   {properties?.map(p => (
@@ -437,7 +437,7 @@ export function OTASourceManager() {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">Channel Listing URL</Label>
+              <Label className="text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">{t('sources.channelListingURL')}</Label>
               <Input 
                 value={newSource.source_url}
                 onChange={(e) => setNewSource(prev => ({ ...prev, source_url: e.target.value }))}
@@ -448,7 +448,7 @@ export function OTASourceManager() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between ml-1">
-                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">Scraping Interval (Hours)</Label>
+                <Label className="text-[10px] font-black uppercase tracking-widest opacity-60">{t('sources.scrapingInterval')}</Label>
                 <span className="text-[10px] font-bold text-primary">{newSource.poll_frequency_hours}H</span>
               </div>
               <Input 
@@ -463,14 +463,14 @@ export function OTASourceManager() {
 
             <div className="flex gap-3 pt-4">
               <Button variant="outline" onClick={() => setIsAddDialogOpen(false)} className="flex-1 h-12 font-bold uppercase text-[10px] tracking-widest bg-transparent border-muted-foreground/20">
-                Cancel
+                {t('sources.cancel')}
               </Button>
               <Button 
                 disabled={!newSource.property_id || !newSource.source_url || !newSource.source_name}
                 onClick={() => addSourceMutation.mutate(newSource)}
                 className="flex-1 h-12 font-bold uppercase text-[10px] tracking-widest shadow-xl shadow-primary/20"
               >
-                Authorize Source
+                {t('sources.authorizeSource')}
               </Button>
             </div>
           </div>

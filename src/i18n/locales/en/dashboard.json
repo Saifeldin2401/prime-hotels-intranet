@@ -134,7 +134,7 @@
         "days": "{{count}}d",
         "team_member": "Team Member"
     },
-    "notifications": {
+    "dashboardNotifications": {
         "title": "Notifications",
         "unread_count": "{{count}} unread",
         "unread_count_other": "{{count}} unread",

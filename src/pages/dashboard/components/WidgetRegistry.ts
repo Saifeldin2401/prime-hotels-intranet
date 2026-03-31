@@ -58,6 +58,7 @@ const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'Pinne
 const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
 const ShiftHandoverWidget = lazyWidget(() => import('./ShiftHandoverWidget'), 'ShiftHandoverWidget')
 const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
+const GuestReviewsWidget = lazyWidget(() => import('./GuestReviewsWidget'), 'GuestReviewsWidget')
 
 /**
  * WIDGET_REGISTRY
@@ -225,6 +226,15 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
+    },
+    guestReviews: {
+        id: 'guestReviews',
+        component: GuestReviewsWidget,
+        title: 'Guest Reviews',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'medium',
+        gridSize: { w: 1, h: 2 }
     }
 }
 
@@ -250,6 +260,7 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
         ],
         sidebar: [
             'motivation',
+            'guestReviews',
             'announcements',
             'pinnedItems',
             'knowledgeBase',
@@ -270,6 +281,7 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
         ],
         sidebar: [
             'motivation',
+            'guestReviews',
             'maintenance',
             'announcements',
             'eliteSpotlight',

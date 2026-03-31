@@ -43,6 +43,8 @@ export interface LearningProgress {
 export function useLearningProgress() {
     return useQuery({
         queryKey: ['learning-progress'],
+        staleTime: 0, // Disable stale time - always fetch fresh data
+        refetchOnWindowFocus: true, // Refresh when user returns to tab
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('learning_progress')

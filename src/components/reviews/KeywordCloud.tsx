@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Hash, MessageSquare } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface GuestReview {
   id: string
@@ -87,6 +88,8 @@ const BOOST_WORDS = new Set([
 ])
 
 export function KeywordCloud({ reviews, maxKeywords = 30, className }: KeywordCloudProps) {
+  const { t } = useTranslation('reviews')
+
   const keywords = useMemo(() => {
     const wordCounts: Record<string, number> = {}
     const wordContexts: Record<string, string[]> = {}
@@ -204,14 +207,14 @@ export function KeywordCloud({ reviews, maxKeywords = 30, className }: KeywordCl
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
             <Hash className="h-4 w-4 text-primary" />
-            Most Mentioned Topics
+            {t('analytics.mentionedTopics')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="text-center py-8 text-muted-foreground">
             <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
-            <p className="text-sm">Not enough data</p>
-            <p className="text-xs">More reviews needed to generate insights</p>
+            <p className="text-sm">{t('analytics.notEnoughData')}</p>
+            <p className="text-xs">{t('analytics.moreReviewsNeeded')}</p>
           </div>
         </CardContent>
       </Card>
@@ -223,7 +226,7 @@ export function KeywordCloud({ reviews, maxKeywords = 30, className }: KeywordCl
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium flex items-center gap-2">
           <Hash className="h-4 w-4 text-primary" />
-          Most Mentioned Topics
+          {t('analytics.mentionedTopics')}
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -233,7 +236,7 @@ export function KeywordCloud({ reviews, maxKeywords = 30, className }: KeywordCl
               key={keyword.word}
               variant="secondary"
               className={`${getSizeClass(keyword.score)} ${getColorClass(keyword.word)} cursor-default transition-colors`}
-              title={`Mentioned ${keyword.count} times${keyword.contexts.length > 0 ? `: "${keyword.contexts[0]}..."` : ''}`}
+              title={`${t('analytics.mentioned')} ${keyword.count} ${t('analytics.times')}${keyword.contexts.length > 0 ? `: "${keyword.contexts[0]}..."` : ''}`}
             >
               {keyword.word}
               <span className="ml-1 opacity-60 text-[10px]">
@@ -246,19 +249,19 @@ export function KeywordCloud({ reviews, maxKeywords = 30, className }: KeywordCl
         <div className="flex flex-wrap gap-3 mt-4 pt-4 border-t text-[10px] text-muted-foreground">
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-green-100" />
-            <span>Positive</span>
+            <span>{t('analytics.positive')}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-red-100" />
-            <span>Negative</span>
+            <span>{t('analytics.negative')}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-blue-100" />
-            <span>Service</span>
+            <span>{t('analytics.service')}</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="w-2 h-2 rounded bg-muted" />
-            <span>Other</span>
+            <span>{t('analytics.other')}</span>
           </div>
         </div>
       </CardContent>

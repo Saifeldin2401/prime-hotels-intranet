@@ -1,15 +1,25 @@
 /**
  * MobileNavigation Component
  * 
- * Bottom navigation bar for mobile devices.
- * Redesigned with glassmorphism and floating action button.
+ * Enhanced bottom navigation bar for mobile devices.
+ * Features a prominent central FAB and user profile avatar.
+ * 
+ * Design inspired by modern mobile app navigation patterns:
+ * - Central floating action button (FAB) for quick actions
+ * - User avatar in menu button
+ * - Smooth animations and haptic feedback
+ * - Safe area support for notched devices
  */
 
-import { ActionSheet } from '@/components/mobile/ActionSheet'
+import { ActionSheet, QuickActionButton, QuickActionGrid } from '@/components/mobile/ActionSheet'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { useAuth } from '@/hooks/useAuth'
 import { useNavigation } from '@/hooks/useNavigation'
+import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
-import { GraduationCap, Home, LayoutDashboard, Menu, MessageSquare } from 'lucide-react'
-import { useCallback, useState } from 'react'
+import { Bell, Briefcase, Home, LayoutGrid, Plus, User } from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
@@ -18,43 +28,76 @@ interface MobileNavigationProps {
   className?: string
 }
 
+interface NavItem {
+  path: string
+  icon: React.ReactNode
+  activeIcon?: React.ReactNode
+  label: string
+  badge?: number
+  exact?: boolean
+}
+
+/**
+ * MobileNavigation - Premium bottom navigation with FAB and avatar
+ * 
+ * Features:
+ * - Haptic feedback on tap
+ * - Safe area support for notched devices
+ * - Badge notifications with pulse animation
+ * - Prominent quick action FAB with golden accent
+ * - User avatar in menu button
+ * - Active state highlighting with smooth transitions
+ * - Animated indicator for selected tab
+ */
 export function MobileNavigation({ onMenuClick, className }: MobileNavigationProps) {
   const { t } = useTranslation('nav')
   const location = useLocation()
   const navigate = useNavigate()
-  const { quickActions: _quickActions } = useNavigation()
+  const { groupedNavigation } = useNavigation()
+  const { notifications } = useNotifications()
+  const { profile } = useAuth()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
 
-  const handleHaptic = useCallback((e?: React.MouseEvent) => {
-    // Blur to prevent aria-hidden conflict
-    if (e && e.currentTarget instanceof HTMLElement) {
+  // Calculate unread notifications
+  const unreadCount = useMemo(() => {
+    return notifications?.filter(n => !n.is_read).length || 0
+  }, [notifications])
+
+  // Get user initials for avatar fallback
+  const userInitials = useMemo(() => {
+    if (!profile?.full_name) return 'U'
+    return profile.full_name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }, [profile?.full_name])
+
+  // Haptic feedback
+  const handleHaptic = useCallback((e?: React.MouseEvent | React.TouchEvent) => {
+    if (e && 'currentTarget' in e && e.currentTarget instanceof HTMLElement) {
       e.currentTarget.blur()
     }
-
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       try {
         navigator.vibrate(10)
-      } catch (_e) {
-        // Ignore
+      } catch {
+        // Ignore vibration errors
       }
     }
   }, [])
 
+  // Quick action handlers
   const handleFabClick = useCallback((event: React.MouseEvent) => {
     handleHaptic(event)
     setIsSheetOpen(true)
   }, [handleHaptic])
 
-  const handleNewRequestAction = useCallback(() => {
+  const handleQuickAction = useCallback((path: string) => {
     handleHaptic()
     setIsSheetOpen(false)
-    navigate('/hr/leave-requests')
-  }, [handleHaptic, navigate])
-
-  const handleReportIssueAction = useCallback(() => {
-    handleHaptic()
-    setIsSheetOpen(false)
-    navigate('/maintenance/submit')
+    navigate(path)
   }, [handleHaptic, navigate])
 
   const handleMenuClickWrapper = useCallback(() => {
@@ -62,119 +105,241 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
     onMenuClick?.()
   }, [handleHaptic, onMenuClick])
 
+  // Check if a path is active
+  const isActive = useCallback((path: string, exact = false) => {
+    if (exact) return location.pathname === path
+    return location.pathname.startsWith(path)
+  }, [location.pathname])
+
   return (
-    <div className={cn("fixed bottom-[max(env(safe-area-inset-bottom),1rem)] inset-x-4 z-30 max-w-full mx-auto print:hidden", className)}>
+    <>
+      {/* Bottom Navigation Bar */}
       <nav
-        className="bg-white/90 backdrop-blur-xl border border-white/20 shadow-2xl rounded-2xl px-2 py-2 flex items-center justify-between relative"
+        className={cn(
+          'fixed bottom-0 left-0 right-0 z-50',
+          'print:hidden',
+          className
+        )}
         aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
       >
-        {/* Home */}
-        <Link
-          to="/"
-          onClick={handleHaptic}
-          className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
-            location.pathname === '/'
-              ? "text-hotel-primary"
-              : "text-gray-400 hover:text-gray-600"
-          )}
-        >
-          <div className={cn("p-1.5 rounded-full transition-all", location.pathname === '/' && "bg-hotel-primary/10")}>
-            <Home className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] font-medium">{t('home', 'Home')}</span>
-        </Link>
+        {/* Glassmorphism Background */}
+        <div className="absolute inset-0 bg-white/90 backdrop-blur-xl border-t border-slate-200/50 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]" />
+        
+        {/* Safe Area Spacer */}
+        <div className="relative flex items-end justify-around h-20 max-w-lg mx-auto pb-safe">
+          
+          {/* Home */}
+          <NavButton
+            to="/"
+            isActive={isActive('/', true)}
+            onClick={handleHaptic}
+            icon={<Home className="w-5 h-5" />}
+            activeIcon={<Home className="w-5 h-5 fill-current" />}
+            label={t('home', 'Home')}
+          />
 
-        {/* Training */}
-        <Link
-          to="/training"
-          onClick={handleHaptic}
-          className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
-            location.pathname.startsWith('/training')
-              ? "text-hotel-primary"
-              : "text-gray-400 hover:text-gray-600"
-          )}
-        >
-          <div className={cn("p-1.5 rounded-full transition-all", location.pathname.startsWith('/training') && "bg-hotel-primary/10")}>
-            <GraduationCap className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] font-medium">{t('training', 'Training')}</span>
-        </Link>
+          {/* Tasks */}
+          <NavButton
+            to="/tasks"
+            isActive={isActive('/tasks')}
+            onClick={handleHaptic}
+            icon={<Briefcase className="w-5 h-5" />}
+            activeIcon={<Briefcase className="w-5 h-5 fill-current" />}
+            label={t('tasks', 'Tasks')}
+          />
 
-        {/* Floating Action Button (FAB) */}
-        <div className="relative -top-6">
-          <ActionSheet
-            open={isSheetOpen}
-            onOpenChange={setIsSheetOpen}
-            trigger={
-              <button
-                onClick={handleFabClick}
-                className="w-14 h-14 rounded-full bg-hotel-gold text-white shadow-lg shadow-hotel-gold/40 flex items-center justify-center transform active:scale-95 transition-transform border-4 border-gray-50"
-              >
-                <div className="relative">
-                  <LayoutDashboard className="w-6 h-6" />
-                </div>
-              </button>
-            }
-            title={t('quickActions', 'Quick Actions')}
-            description={t('quickActionsDesc', 'Access common tasks instantly')}
+          {/* Floating Action Button (FAB) */}
+          <div className="relative -top-2 px-2">
+            <button
+              onClick={handleFabClick}
+              className={cn(
+                // Base styles
+                'w-16 h-16 rounded-full',
+                'bg-gradient-to-br from-amber-400 via-amber-500 to-amber-600',
+                'text-white',
+                // Enhanced shadow
+                'shadow-lg shadow-amber-500/40',
+                // Flex center
+                'flex items-center justify-center',
+                // Transitions
+                'transform transition-all duration-300 ease-out',
+                'active:scale-90 hover:scale-105',
+                // White ring border
+                'ring-4 ring-white',
+                // Touch target
+                'touch-target',
+                // Hover glow effect
+                'hover:shadow-amber-500/50 hover:shadow-xl'
+              )}
+              aria-label={t('quickActions', 'Quick Actions')}
+            >
+              <div className="relative">
+                <LayoutGrid className="w-7 h-7" strokeWidth={2} />
+                {/* Subtle shine effect */}
+                <div className="absolute inset-0 bg-white/20 rounded-full blur-sm" />
+              </div>
+            </button>
+            {/* Optional: Pulse ring animation */}
+            <div className="absolute inset-0 rounded-full ring-4 ring-amber-400/30 animate-ping pointer-events-none" />
+          </div>
+
+          {/* Notifications */}
+          <NavButton
+            to="/notifications"
+            isActive={isActive('/notifications')}
+            onClick={handleHaptic}
+            icon={<Bell className="w-5 h-5" />}
+            activeIcon={<Bell className="w-5 h-5 fill-current" />}
+            label={t('alerts', 'Alerts')}
+            badge={unreadCount > 0 ? unreadCount : undefined}
+          />
+
+          {/* Menu with User Avatar */}
+          <button
+            onClick={handleMenuClickWrapper}
+            className={cn(
+              'flex flex-col items-center justify-center gap-1',
+              'w-16 h-14 rounded-2xl transition-all duration-300',
+              'min-h-[44px] min-w-[44px]',
+              'group',
+              'text-muted-foreground hover:text-foreground'
+            )}
+            aria-label={t('menu', 'Menu')}
           >
-            <div className="grid grid-cols-2 gap-3 py-4">
-              <button
-                onClick={handleNewRequestAction}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
-              >
-                <div className="h-10 w-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
-                  <MessageSquare className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-medium">{t('newRequest', 'New Request')}</span>
-              </button>
-              <button
-                onClick={handleReportIssueAction}
-                className="flex flex-col items-center justify-center gap-2 p-4 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors border border-gray-100"
-              >
-                <div className="h-10 w-10 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center">
-                  <LayoutDashboard className="w-5 h-5" />
-                </div>
-                <span className="text-xs font-medium">{t('reportIssue', 'Report Issue')}</span>
-              </button>
-              {/* Add more quick actions as needed */}
+            <div className="relative">
+              <Avatar className={cn(
+                'h-7 w-7 transition-all duration-300',
+                'ring-2 ring-transparent group-hover:ring-slate-200',
+                'group-active:scale-95'
+              )}>
+                <AvatarImage 
+                  src={profile?.avatar_url || undefined} 
+                  alt={profile?.full_name || 'User'}
+                  className="object-cover"
+                />
+                <AvatarFallback className="bg-gradient-to-br from-emerald-400 to-teal-500 text-white text-[10px] font-medium">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+              {/* Online indicator dot */}
+              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-white" />
             </div>
-          </ActionSheet>
+            <span className="text-[10px] font-medium">{t('menu', 'Menu')}</span>
+          </button>
         </div>
-
-        {/* Messages */}
-        <Link
-          to="/messaging"
-          onClick={handleHaptic}
-          className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 min-h-[44px]",
-            location.pathname.startsWith('/messaging')
-              ? "text-hotel-primary"
-              : "text-gray-400 hover:text-gray-600"
-          )}
-        >
-          <div className={cn("p-1.5 rounded-full transition-all", location.pathname.startsWith('/messaging') && "bg-hotel-primary/10")}>
-            <MessageSquare className="w-5 h-5" />
-            {/* Simple dot for unread messages if needed */}
-          </div>
-          <span className="text-[10px] font-medium">{t('chat', 'Chat')}</span>
-        </Link>
-
-        {/* Menu */}
-        <button
-          onClick={handleMenuClickWrapper}
-          className={cn(
-            "flex-1 flex flex-col items-center justify-center gap-1 py-1 px-1 rounded-xl transition-all duration-200 text-gray-400 hover:text-gray-600 min-h-[44px]"
-          )}
-        >
-          <div className="p-1.5 rounded-full">
-            <Menu className="w-5 h-5" />
-          </div>
-          <span className="text-[10px] font-medium">{t('menu', 'Menu')}</span>
-        </button>
       </nav>
-    </div>
+
+      {/* Quick Actions Sheet */}
+      <ActionSheet
+        open={isSheetOpen}
+        onOpenChange={setIsSheetOpen}
+        title={t('quickActions', 'Quick Actions')}
+        description={t('quickActionsDesc', 'Access common tasks instantly')}
+        showCloseButton={true}
+      >
+        <QuickActionGrid className="py-4">
+          {/* Leave Request */}
+          <QuickActionButton
+            icon={<Briefcase className="w-6 h-6" />}
+            label={t('leaveRequest', 'Leave Request')}
+            description="Submit time off"
+            color="blue"
+            onClick={() => handleQuickAction('/hr/leave-requests')}
+          />
+
+          {/* Maintenance */}
+          <QuickActionButton
+            icon={<LayoutGrid className="w-6 h-6" />}
+            label={t('maintenance', 'Maintenance')}
+            description="Report issues"
+            color="amber"
+            onClick={() => handleQuickAction('/maintenance/submit')}
+          />
+
+          {/* Profile */}
+          <QuickActionButton
+            icon={<User className="w-6 h-6" />}
+            label={t('profile', 'Profile')}
+            description="View account"
+            color="green"
+            onClick={() => handleQuickAction('/profile')}
+          />
+
+          {/* Notifications */}
+          <QuickActionButton
+            icon={<Bell className="w-6 h-6" />}
+            label={t('notifications', 'Notifications')}
+            description="View alerts"
+            color="purple"
+            onClick={() => handleQuickAction('/notifications')}
+          />
+        </QuickActionGrid>
+      </ActionSheet>
+    </>
+  )
+}
+
+/**
+ * NavButton - Individual navigation button with active states
+ */
+interface NavButtonProps {
+  to: string
+  isActive: boolean
+  onClick: (e: React.MouseEvent) => void
+  icon: React.ReactNode
+  activeIcon?: React.ReactNode
+  label: string
+  badge?: number
+}
+
+function NavButton({ to, isActive, onClick, icon, activeIcon, label, badge }: NavButtonProps) {
+  return (
+    <Link
+      to={to}
+      onClick={onClick}
+      className={cn(
+        'flex flex-col items-center justify-center gap-1',
+        'w-16 h-14 rounded-2xl transition-all duration-300',
+        'min-h-[44px] min-w-[44px]',
+        'relative',
+        isActive 
+          ? 'text-amber-600' 
+          : 'text-slate-400 hover:text-slate-600'
+      )}
+    >
+      {/* Active indicator dot */}
+      {isActive && (
+        <div className="absolute -top-1 w-1 h-1 rounded-full bg-amber-500 animate-in fade-in zoom-in duration-200" />
+      )}
+      
+      {/* Icon container */}
+      <div className={cn(
+        'relative p-1.5 rounded-xl transition-all duration-300',
+        isActive && 'bg-amber-50'
+      )}>
+        {isActive ? activeIcon || icon : icon}
+        
+        {/* Badge */}
+        {badge !== undefined && badge > 0 && (
+          <Badge 
+            variant="destructive" 
+            className={cn(
+              'absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[9px] flex items-center justify-center',
+              'animate-in zoom-in duration-200'
+            )}
+          >
+            {badge > 99 ? '99+' : badge}
+          </Badge>
+        )}
+      </div>
+      
+      {/* Label */}
+      <span className={cn(
+        'text-[10px] font-medium transition-all duration-300',
+        isActive ? 'text-amber-600' : 'text-slate-400'
+      )}>
+        {label}
+      </span>
+    </Link>
   )
 }

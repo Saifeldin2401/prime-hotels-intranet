@@ -6,13 +6,26 @@ import { PropertyProvider } from '@/contexts/PropertyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { router } from '@/routes/router'
-import { QueryClient, QueryClientProvider, dehydrate, focusManager, hydrate, onlineManager } from '@tanstack/react-query'
+import { isEnabled } from '@/lib/featureFlags'
+import { QueryClient, QueryClientProvider, dehydrate, focusManager, hydrate, onlineManager, type DehydratedState, type Query } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useEffect, useState, type ComponentType } from 'react'
 import { RouterProvider } from 'react-router-dom'
 
-const QUERY_CACHE_KEY = 'prime_query_cache_v1'
+const QUERY_CACHE_KEY = 'prime_query_cache_v3'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
+const LEGACY_QUERY_CACHE_KEYS = ['prime_query_cache_v1', 'prime_query_cache_v2']
+const NON_PERSISTED_QUERY_PREFIXES = new Set([
+  'learning-progress',
+  'learning-assignments',
+  'learning-assignment-exemptions',
+  'learning-assignments-module-links',
+  'my-assignments',
+  'module-assignment-roster',
+  'training-progress',
+  'training-assignments',
+  'assignment-progress',
+])
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -31,6 +44,49 @@ const queryClient = new QueryClient({
   },
 })
 
+const getPrimaryQueryKey = (queryKey: readonly unknown[]) => {
+  const primaryKey = queryKey[0]
+  return typeof primaryKey === 'string' ? primaryKey : null
+}
+
+const shouldPersistQuery = (query: Pick<Query, 'queryKey' | 'meta' | 'state'>) => {
+  if (query.meta?.persist === false) return false
+  if (query.state.status !== 'success') return false
+
+  const primaryKey = getPrimaryQueryKey(query.queryKey)
+  if (primaryKey && NON_PERSISTED_QUERY_PREFIXES.has(primaryKey)) {
+    return false
+  }
+
+  const data = query.state.data as unknown
+  if (Array.isArray(data) && data.length > 200) {
+    return false
+  }
+
+  return true
+}
+
+const filterDehydratedState = (state: DehydratedState): DehydratedState => ({
+  ...state,
+  queries: state.queries.filter((query) => shouldPersistQuery({
+    queryKey: query.queryKey,
+    meta: query.meta,
+    state: query.state,
+  } as Pick<Query, 'queryKey' | 'meta' | 'state'>)),
+})
+
+const clearLegacyQueryCaches = () => {
+  if (typeof window === 'undefined') return
+
+  LEGACY_QUERY_CACHE_KEYS.forEach((cacheKey) => {
+    try {
+      window.sessionStorage.removeItem(cacheKey)
+    } catch {
+      // Ignore storage cleanup errors.
+    }
+  })
+}
+
 const restoreQueryCache = () => {
   if (typeof window === 'undefined') return
   try {
@@ -42,7 +98,7 @@ const restoreQueryCache = () => {
       window.sessionStorage.removeItem(QUERY_CACHE_KEY)
       return
     }
-    hydrate(queryClient, parsed.state)
+    hydrate(queryClient, filterDehydratedState(parsed.state))
   } catch {
     // Ignore cache restore errors
   }
@@ -52,14 +108,7 @@ const persistQueryCache = () => {
   if (typeof window === 'undefined') return
   try {
     const state = dehydrate(queryClient, {
-      shouldDehydrateQuery: (query) => {
-        if (query.state.status !== 'success') return false
-        const data = query.state.data as unknown
-        if (Array.isArray(data) && data.length > 200) {
-          return false
-        }
-        return true
-      }
+      shouldDehydrateQuery: shouldPersistQuery
     })
     window.sessionStorage.setItem(
       QUERY_CACHE_KEY,
@@ -75,6 +124,7 @@ const persistQueryCache = () => {
   }
 }
 
+clearLegacyQueryCaches()
 restoreQueryCache()
 
 const shouldEnableVercelInsights = () => {
@@ -133,22 +183,40 @@ function App() {
   }, [])
 
   useEffect(() => {
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    
+    const debouncedFocusManager = isEnabled('debouncedFocusManager')
+    const debounceMs = debouncedFocusManager ? 500 : 0
+
     focusManager.setEventListener((handleFocus) => {
       const onFocus = () => {
-        if (document.visibilityState === 'visible') {
-          handleFocus()
-        }
+        if (document.visibilityState !== 'visible') return
+        
+        // Clear existing timer to debounce rapid focus events
+        if (debounceTimer) clearTimeout(debounceTimer)
+        
+        // Debounce: wait after focus stabilizes
+        debounceTimer = setTimeout(() => {
+          // Only refetch if we're still visible and online
+          if (document.visibilityState === 'visible' && navigator.onLine) {
+            handleFocus()
+          }
+        }, debounceMs)
       }
       window.addEventListener('focus', onFocus)
       document.addEventListener('visibilitychange', onFocus)
       return () => {
         window.removeEventListener('focus', onFocus)
         document.removeEventListener('visibilitychange', onFocus)
+        if (debounceTimer) clearTimeout(debounceTimer)
       }
     })
 
     onlineManager.setEventListener((handleOnline) => {
-      const onOnline = () => handleOnline(true)
+      const onOnline = () => {
+        // Delay to let network stabilize before marking as online
+        setTimeout(() => handleOnline(true), 1000)
+      }
       const onOffline = () => handleOnline(false)
       window.addEventListener('online', onOnline)
       window.addEventListener('offline', onOffline)

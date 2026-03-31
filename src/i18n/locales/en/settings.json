@@ -46,7 +46,7 @@
         "en": "English",
         "ar": "Arabic"
     },
-    "notifications": {
+    "notificationSettings": {
         "title": "Notification Preferences",
         "description": "Manage how you receive notifications",
         "email_notifications": "Email Notifications",

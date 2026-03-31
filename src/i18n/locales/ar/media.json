@@ -1,0 +1,80 @@
+{
+  "title": "مكتبة الوسائط",
+    "subtitle": "إدارة وتنظيم أصول الوسائط لإعادة الاستخدام عبر المنصة",
+    "actions": {
+      "upload": "رفع ملفات",
+      "uploading": "جاري الرفع...",
+      "edit": "تعديل",
+      "delete": "حذف",
+      "copyUrl": "نسخ الرابط",
+      "open": "فتح",
+      "save": "حفظ التغييرات",
+      "cancel": "إلغاء",
+      "addTag": "إضافة"
+    },
+    "tabs": {
+      "all": "كل الأصول",
+      "video": "الفيديوهات",
+      "image": "الصور"
+    },
+    "stats": {
+      "totalAssets": "إجمالي الأصول",
+      "videos": "الفيديوهات",
+      "images": "الصور",
+      "totalStorage": "إجمالي التخزين"
+    },
+    "mediaTypes": {
+      "video": "فيديو",
+      "image": "صورة"
+    },
+    "categories": {
+      "training": "تدريب",
+      "knowledgebase": "قاعدة المعرفة",
+      "announcement": "إعلانات",
+      "general": "عام",
+      "compliance": "الامتثال",
+      "onboarding": "التأهيل",
+      "marketing": "تسويق",
+      "other": "أخرى"
+    },
+    "editDialog": {
+      "title": "تعديل أصل الوسائط",
+      "description": "تحديث التفاصيل لملف الوسائط هذا.",
+      "fields": {
+        "title": "العنوان",
+        "titlePlaceholder": "أدخل عنواناً وصفياً",
+        "description": "الوصف",
+        "descriptionPlaceholder": "وصف اختياري",
+        "category": "الفئة",
+        "tags": "الوسوم",
+        "tagsPlaceholder": "أضف وسم واضغط Enter"
+      }
+    },
+    "deleteDialog": {
+      "title": "حذف أصل الوسائط",
+      "description": "هل أنت متأكد من حذف <strong>{{title}}</strong>؟ لا يمكن التراجع عن هذا الإجراء.",
+      "warning": "تحذير: هذا الأصل مستخدم في {{count}} مكان/أماكن.",
+      "confirm": "حذف"
+    },
+    "empty": {
+      "title": "لم يتم العثور على أصول وسائط",
+      "description": "ارفع ملفات للبدء في مكتبة الوسائط الخاصة بك",
+      "searchDescription": "حاول ضبط عوامل تصفية البحث"
+    },
+    "search": {
+      "placeholder": "البحث في الوسائط..."
+    },
+    "viewMode": {
+      "grid": "عرض شبكي",
+      "list": "عرض قائمة"
+    },
+    "card": {
+      "uses": "{{count}} استخدامات"
+    },
+    "notifications": {
+      "urlCopied": "تم نسخ الرابط إلى الحافظة",
+      "deleteSuccess": "تم حذف أصل الوسائط بنجاح",
+      "updateSuccess": "تم تحديث أصل الوسائط بنجاح",
+      "uploadSuccess": "تم رفع الملف بنجاح"
+    }
+}

@@ -1,14 +1,27 @@
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger
+} from '@/components/ui/accordion'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu'
 import { EmptyState } from '@/components/ui/empty-state'
 import { Progress } from '@/components/ui/progress'
 import { Separator } from '@/components/ui/separator'
 import type { LearningProgress } from '@/hooks/useLearningProgress'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, BookOpen, CheckCircle2, Clock, Eye, Filter, Loader2, Search, TrendingUp } from 'lucide-react'
+import { AlertTriangle, BookOpen, CheckCircle2, Clock, Eye, Filter, Loader2, MoreVertical, RotateCcw, Search, Shield, TrendingUp, UserX } from 'lucide-react'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 
@@ -83,6 +96,12 @@ interface EmployeeProgressTrackerProps {
   moduleLoadLeaders: TrackerGroup[]
   onViewDetails: (id: string) => void
   summary: TrackerSummary
+  // Admin action controls
+  onResetProgress?: (userId: string, moduleId: string) => void
+  onRevokeCertificate?: (userId: string, moduleId: string) => void
+  onExemptUser?: (userId: string, moduleId: string) => void
+  onRestoreUser?: (userId: string, moduleId: string) => void
+  isAdmin?: boolean
 }
 
 /* ─── Small circular progress ring ─── */
@@ -121,14 +140,19 @@ function ProgressRing({ value, size = 44, stroke = 4 }: { value: number; size?: 
 /* ─── Status filter tabs for module list ─── */
 type ModuleFilterTab = 'all' | 'active' | 'completed'
 
-/* ─── Unified module list with filter tabs ─── */
+/* ─── Unified module list with filter tabs and admin actions ─── */
 function ModuleListPanel({
   records,
   getProgressStatusMeta,
   onViewDetails,
   formatDate,
   formatDuration,
-  t
+  t,
+  userId,
+  onResetProgress,
+  onRevokeCertificate,
+  onExemptUser,
+  isAdmin
 }: {
   records: TrackerRecord[]
   getProgressStatusMeta: (status: LearningProgress['status']) => TrackerStatusMeta
@@ -136,6 +160,11 @@ function ModuleListPanel({
   formatDate: (value: string) => string
   formatDuration: (seconds?: number | null) => string
   t: any
+  userId: string
+  onResetProgress?: (userId: string, moduleId: string) => void
+  onRevokeCertificate?: (userId: string, moduleId: string) => void
+  onExemptUser?: (userId: string, moduleId: string) => void
+  isAdmin?: boolean
 }) {
   const [moduleFilter, setModuleFilter] = useState<ModuleFilterTab>('all')
 
@@ -232,6 +261,52 @@ function ModuleListPanel({
                     <Badge variant="outline" className={cn("text-[11px]", statusMeta.badgeClass)}>
                       {statusMeta.label}
                     </Badge>
+                    {isAdmin && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="size-7 hover:bg-slate-200/60"
+                            title={t('actions', 'Actions')}
+                          >
+                            <MoreVertical className="size-3.5" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>{t('adminActions', 'Admin Actions')}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {onResetProgress && (
+                            <DropdownMenuItem
+                              onClick={() => onResetProgress(userId, record.id)}
+                              className="text-amber-600"
+                            >
+                              <RotateCcw className="size-4 mr-2" />
+                              {t('resetProgress', 'Reset Progress')}
+                            </DropdownMenuItem>
+                          )}
+                          {isCompleted && onRevokeCertificate && (
+                            <DropdownMenuItem
+                              onClick={() => onRevokeCertificate(userId, record.id)}
+                              className="text-rose-600"
+                            >
+                              <Shield className="size-4 mr-2" />
+                              {t('revokeCertificate', 'Revoke Certificate')}
+                            </DropdownMenuItem>
+                          )}
+                          {onExemptUser && (
+                            <DropdownMenuItem
+                              onClick={() => onExemptUser(userId, record.id)}
+                              className="text-slate-600"
+                            >
+                              <UserX className="size-4 mr-2" />
+                              {t('exemptUser', 'Exempt User')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                     <Button
                       type="button"
                       variant="ghost"
@@ -287,7 +362,12 @@ export function EmployeeProgressTracker({
   metrics,
   moduleLoadLeaders,
   onViewDetails,
-  summary
+  summary,
+  onResetProgress,
+  onRevokeCertificate,
+  onExemptUser,
+  onRestoreUser,
+  isAdmin
 }: EmployeeProgressTrackerProps) {
   const { t } = useTranslation('training')
 
@@ -495,6 +575,11 @@ export function EmployeeProgressTracker({
                               formatDate={formatDate}
                               formatDuration={formatDuration}
                               t={t}
+                              userId={group.userId}
+                              onResetProgress={onResetProgress}
+                              onRevokeCertificate={onRevokeCertificate}
+                              onExemptUser={onExemptUser}
+                              isAdmin={isAdmin}
                             />
                           </div>
 

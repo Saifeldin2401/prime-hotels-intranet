@@ -28,6 +28,7 @@ import {
   BarChart3,
 } from 'lucide-react'
 import type { GuestReview } from '@/lib/types'
+import { useTranslation } from 'react-i18next'
 
 interface ReviewAnalyticsDashboardProps {
   reviews: GuestReview[]
@@ -42,21 +43,12 @@ const SENTIMENT_COLORS: Record<string, string> = {
   mixed: '#f97316',
 }
 
-const PLATFORM_LABELS: Record<string, string> = {
-  google: 'Google',
-  booking: 'Booking.com',
-  expedia: 'Expedia',
-  tripadvisor: 'TripAdvisor',
-  agoda: 'Agoda',
-  hotels_com: 'Hotels.com',
-  airbnb: 'Airbnb',
-  manual_import: 'Manual',
-}
-
 export function ReviewAnalyticsDashboard({
   reviews,
   propertyNameById,
 }: ReviewAnalyticsDashboardProps) {
+  const { t } = useTranslation('reviews')
+
   // ── Core metrics ──────────────────────────────────────────────────────────
   const metrics = useMemo(() => {
     const total = reviews.length
@@ -165,7 +157,6 @@ export function ReviewAnalyticsDashboard({
     return Object.entries(map)
       .map(([platform, s]) => ({
         platform,
-        label: PLATFORM_LABELS[platform] ?? platform,
         total: s.total,
         avgRating:
           s.ratings.length > 0
@@ -187,11 +178,11 @@ export function ReviewAnalyticsDashboard({
     return Object.entries(metrics.sentimentCounts)
       .filter(([, v]) => v > 0)
       .map(([key, value]) => ({
-        name: key.charAt(0).toUpperCase() + key.slice(1),
+        name: t(`analytics.${key}`),
         value,
         color: SENTIMENT_COLORS[key] ?? '#94a3b8',
       }))
-  }, [metrics])
+  }, [metrics, t])
 
   // ── Property-level overview ───────────────────────────────────────────────
   const propertyOverview = useMemo(() => {
@@ -228,9 +219,9 @@ export function ReviewAnalyticsDashboard({
       <Card>
         <CardContent className="py-12 text-center text-muted-foreground">
           <BarChart3 className="h-10 w-10 mx-auto mb-3 opacity-30" />
-          <p className="text-sm font-medium">No review data available</p>
+          <p className="text-sm font-medium">{t('analytics.noReviewData')}</p>
           <p className="text-xs mt-1">
-            Connect your OTA sources to start generating intelligence
+            {t('analytics.connectOTA')}
           </p>
         </CardContent>
       </Card>
@@ -261,15 +252,37 @@ export function ReviewAnalyticsDashboard({
     return 'bg-red-500'
   }
 
+  const getNpsLabel = () => {
+    if (metrics.nps >= 50) return t('analytics.excellentRating')
+    if (metrics.nps >= 0) return t('analytics.acceptable')
+    return t('analytics.needsAttention')
+  }
+
+  const getQualityBadge = (avgRating: number | null) => {
+    if (avgRating == null) {
+      return <Badge variant="secondary" className="text-[9px]">{t('table.na')}</Badge>
+    }
+    if (avgRating >= 4.5) {
+      return <Badge className="bg-green-100 text-green-700 text-[9px]">{t('analytics.excellent')}</Badge>
+    }
+    if (avgRating >= 4.0) {
+      return <Badge className="bg-lime-100 text-lime-700 text-[9px]">{t('analytics.good')}</Badge>
+    }
+    if (avgRating >= 3.5) {
+      return <Badge className="bg-yellow-100 text-yellow-700 text-[9px]">{t('analytics.average')}</Badge>
+    }
+    return <Badge className="bg-red-100 text-red-700 text-[9px]">{t('analytics.poor')}</Badge>
+  }
+
   return (
     <div className="space-y-6">
       {/* ── Section header ──────────────────────────────────────────────── */}
       <div>
         <h2 className="text-sm font-black uppercase tracking-[0.15em] text-muted-foreground mb-1">
-          Executive Intelligence Summary
+          {t('analytics.executiveSummary')}
         </h2>
         <p className="text-xs text-muted-foreground">
-          Aggregated from {metrics.total} review{metrics.total !== 1 ? 's' : ''} across all filtered properties
+          {t('analytics.executiveSummaryDesc', { count: metrics.total, plural: metrics.total !== 1 ? 's' : '' })}
         </p>
       </div>
 
@@ -280,17 +293,13 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                NPS
+                {t('analytics.nps')}
               </p>
               <Zap className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
             <p className={`text-3xl font-black ${npsColor}`}>{metrics.nps}</p>
             <p className="text-[10px] text-muted-foreground mt-1">
-              {metrics.nps >= 50
-                ? 'Excellent'
-                : metrics.nps >= 0
-                ? 'Acceptable'
-                : 'Needs Attention'}
+              {getNpsLabel()}
             </p>
           </CardContent>
         </Card>
@@ -300,14 +309,14 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Avg Rating
+                {t('analytics.avgRating')}
               </p>
               <Star className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
             <p className={`text-3xl font-black ${ratingColor(metrics.avgRating)}`}>
               {metrics.avgRating.toFixed(1)}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-1">out of 5.0</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t('analytics.outOf', { total: '5.0' })}</p>
           </CardContent>
         </Card>
 
@@ -316,7 +325,7 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Positive
+                {t('analytics.positive')}
               </p>
               <ThumbsUp className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
@@ -332,7 +341,7 @@ export function ReviewAnalyticsDashboard({
               {metrics.positivePct}%
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
-              {metrics.sentimentCounts.positive} reviews
+              {t('analytics.reviewsCount', { count: metrics.sentimentCounts.positive })}
             </p>
           </CardContent>
         </Card>
@@ -342,7 +351,7 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Response Rate
+                {t('analytics.responseRate')}
               </p>
               <CheckCircle2 className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
@@ -368,7 +377,7 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                SLA Rate
+                {t('analytics.slaRate')}
               </p>
               <Clock className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
@@ -385,12 +394,12 @@ export function ReviewAnalyticsDashboard({
                 >
                   {metrics.slaRate}%
                 </p>
-                <p className="text-[10px] text-muted-foreground mt-1">on-time responses</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('analytics.onTime')}</p>
               </>
             ) : (
               <>
                 <p className="text-3xl font-black text-muted-foreground/40">—</p>
-                <p className="text-[10px] text-muted-foreground mt-1">no SLA data</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('analytics.noSlaData')}</p>
               </>
             )}
           </CardContent>
@@ -401,7 +410,7 @@ export function ReviewAnalyticsDashboard({
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                Critical
+                {t('severity.critical')}
               </p>
               <ShieldAlert className="h-3.5 w-3.5 text-muted-foreground/50" />
             </div>
@@ -417,7 +426,7 @@ export function ReviewAnalyticsDashboard({
               {metrics.critical}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">
-              {metrics.escalated > 0 ? `${metrics.escalated} escalated` : 'none escalated'}
+              {metrics.escalated > 0 ? `${metrics.escalated} ${t('analytics.escalated')}` : t('analytics.noneEscalated')}
             </p>
           </CardContent>
         </Card>
@@ -428,23 +437,23 @@ export function ReviewAnalyticsDashboard({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <MessageSquare className="h-4 w-4 text-primary" />
-            Review Pipeline Status
+            {t('analytics.pipelineStatus')}
           </CardTitle>
           <CardDescription className="text-xs">
-            Current distribution of reviews across workflow stages
+            {t('analytics.pipelineDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {(() => {
             const stages = [
-              { key: 'collected', label: 'Collected', color: 'bg-slate-400' },
-              { key: 'analyzed', label: 'Analyzed', color: 'bg-blue-400' },
-              { key: 'assigned', label: 'Assigned', color: 'bg-indigo-500' },
-              { key: 'acknowledged', label: 'Acknowledged', color: 'bg-purple-500' },
-              { key: 'response_pending', label: 'Pending Response', color: 'bg-yellow-500' },
-              { key: 'responded', label: 'Responded', color: 'bg-green-500' },
-              { key: 'closed', label: 'Closed', color: 'bg-green-700' },
-              { key: 'escalated', label: 'Escalated', color: 'bg-red-500' },
+              { key: 'collected', label: t('analytics.collected'), color: 'bg-slate-400' },
+              { key: 'analyzed', label: t('analytics.analyzed'), color: 'bg-blue-400' },
+              { key: 'assigned', label: t('analytics.assigned'), color: 'bg-indigo-500' },
+              { key: 'acknowledged', label: t('analytics.acknowledged'), color: 'bg-purple-500' },
+              { key: 'response_pending', label: t('analytics.pendingResponse'), color: 'bg-yellow-500' },
+              { key: 'responded', label: t('analytics.responded'), color: 'bg-green-500' },
+              { key: 'closed', label: t('analytics.closed'), color: 'bg-green-700' },
+              { key: 'escalated', label: t('analytics.escalated'), color: 'bg-red-500' },
             ]
             const statusCounts: Record<string, number> = {}
             reviews.forEach((r) => {
@@ -479,10 +488,10 @@ export function ReviewAnalyticsDashboard({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-primary" />
-              Sentiment Distribution
+              {t('analytics.sentimentDistribution')}
             </CardTitle>
             <CardDescription className="text-xs">
-              AI-classified sentiment across all reviews
+              {t('analytics.sentimentDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -546,10 +555,10 @@ export function ReviewAnalyticsDashboard({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <Star className="h-4 w-4 text-primary" />
-              Rating Distribution
+              {t('analytics.ratingDistribution')}
             </CardTitle>
             <CardDescription className="text-xs">
-              Breakdown of all normalized star ratings
+              {t('analytics.ratingDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -578,10 +587,10 @@ export function ReviewAnalyticsDashboard({
             </div>
             <div className="mt-4 pt-4 border-t flex items-center justify-between text-xs text-muted-foreground">
               <span>
-                <span className="font-semibold text-foreground">{metrics.total}</span> total reviews
+                <span className="font-semibold text-foreground">{metrics.total}</span> {t('analytics.totalReviews', { count: metrics.total })}
               </span>
               <span>
-                Avg:{' '}
+                {t('analytics.avg')}:{' '}
                 <span className={`font-bold ${ratingColor(metrics.avgRating)}`}>
                   {metrics.avgRating.toFixed(2)} / 5.00
                 </span>
@@ -596,10 +605,10 @@ export function ReviewAnalyticsDashboard({
         <CardHeader className="pb-2">
           <CardTitle className="text-sm font-semibold flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" />
-            Platform Performance Breakdown
+            {t('analytics.platformPerformance')}
           </CardTitle>
           <CardDescription className="text-xs">
-            Review volume, quality, and response metrics per OTA source
+            {t('analytics.platformDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -607,18 +616,18 @@ export function ReviewAnalyticsDashboard({
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                  <th className="pb-2 text-left">Platform</th>
-                  <th className="pb-2 text-right">Reviews</th>
-                  <th className="pb-2 text-right">Avg Rating</th>
-                  <th className="pb-2 text-right">Positive</th>
-                  <th className="pb-2 text-right">Response Rate</th>
-                  <th className="pb-2 text-center">Quality</th>
+                  <th className="pb-2 text-left">{t('table.platform')}</th>
+                  <th className="pb-2 text-right">{t('table.reviews')}</th>
+                  <th className="pb-2 text-right">{t('table.avgRating')}</th>
+                  <th className="pb-2 text-right">{t('table.positive')}</th>
+                  <th className="pb-2 text-right">{t('table.responseRate')}</th>
+                  <th className="pb-2 text-center">{t('table.quality')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-muted/50">
                 {platformStats.map((p) => (
                   <tr key={p.platform} className="hover:bg-muted/20 transition-colors">
-                    <td className="py-2.5 font-semibold">{p.label}</td>
+                    <td className="py-2.5 font-semibold">{t(`platforms.${p.platform}`, { defaultValue: p.platform })}</td>
                     <td className="py-2.5 text-right">
                       <span className="font-bold">{p.total}</span>
                       <span className="text-muted-foreground text-xs ml-1">
@@ -661,17 +670,7 @@ export function ReviewAnalyticsDashboard({
                       </span>
                     </td>
                     <td className="py-2.5 text-center">
-                      {p.avgRating == null ? (
-                        <Badge variant="secondary" className="text-[9px]">N/A</Badge>
-                      ) : p.avgRating >= 4.5 ? (
-                        <Badge className="bg-green-100 text-green-700 text-[9px]">Excellent</Badge>
-                      ) : p.avgRating >= 4.0 ? (
-                        <Badge className="bg-lime-100 text-lime-700 text-[9px]">Good</Badge>
-                      ) : p.avgRating >= 3.5 ? (
-                        <Badge className="bg-yellow-100 text-yellow-700 text-[9px]">Average</Badge>
-                      ) : (
-                        <Badge className="bg-red-100 text-red-700 text-[9px]">Poor</Badge>
-                      )}
+                      {getQualityBadge(p.avgRating)}
                     </td>
                   </tr>
                 ))}
@@ -687,10 +686,10 @@ export function ReviewAnalyticsDashboard({
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 text-primary" />
-              Property Intelligence Snapshot
+              {t('analytics.propertySnapshot')}
             </CardTitle>
             <CardDescription className="text-xs">
-              Average rating and critical flag count per property
+              {t('analytics.propertyDesc')}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -711,8 +710,8 @@ export function ReviewAnalyticsDashboard({
                       fontSize: '12px',
                     }}
                     formatter={(value: number, name: string) => {
-                      if (name === 'avgRating') return [value, 'Avg Rating']
-                      if (name === 'critical') return [value, 'Critical']
+                      if (name === 'avgRating') return [value, t('table.avgRating')]
+                      if (name === 'critical') return [value, t('severity.critical')]
                       return [value, name]
                     }}
                   />
@@ -724,10 +723,10 @@ export function ReviewAnalyticsDashboard({
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-                    <th className="pb-1.5 text-left">Property</th>
-                    <th className="pb-1.5 text-right">Reviews</th>
-                    <th className="pb-1.5 text-right">Avg Rating</th>
-                    <th className="pb-1.5 text-right">Critical</th>
+                    <th className="pb-1.5 text-left">{t('table.property')}</th>
+                    <th className="pb-1.5 text-right">{t('table.reviews')}</th>
+                    <th className="pb-1.5 text-right">{t('table.avgRating')}</th>
+                    <th className="pb-1.5 text-right">{t('table.critical')}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-muted/40">
@@ -760,4 +759,3 @@ export function ReviewAnalyticsDashboard({
     </div>
   )
 }
-

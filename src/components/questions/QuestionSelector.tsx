@@ -43,8 +43,8 @@ export function QuestionSelector({
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
     const { data, isLoading } = useQuestions({
-        search: search || undefined
-        // Removed status: 'published' to allow selecting drafts
+        search: search || undefined,
+        status: 'published'
     })
 
     const questions = data?.questions?.filter(q => !excludeIds.includes(q.id)) || []

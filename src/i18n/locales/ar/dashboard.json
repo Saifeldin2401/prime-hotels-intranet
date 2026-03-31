@@ -7,6 +7,8 @@
         "documents": "المستندات الأخيرة",
         "training": "تقدم التدريب",
         "announcements": "الإعلانات",
+        "announcements_desc": "إعلانات غير مقروءة",
+        "unread_announcements": "إعلانات غير مقروءة",
         "tasks": "مهامي",
         "maintenance": "طلبات الصيانة",
         "quick_actions": "إجراءات سريعة",
@@ -105,7 +107,7 @@
             "days": "{{count}} ي",
             "team_member": "عضو الفريق"
         },
-        "notifications": {
+        "dashboardNotifications": {
             "title": "الإشعارات",
             "unread_count": "{{count}} غير مقروء",
             "unread_count_other": "{{count}} غير مقروءة",
@@ -176,6 +178,42 @@
             "no_birthdays": "لا توجد أعياد ميلاد اليوم.",
             "no_birthdays_week": "لا توجد أعياد ميلاد في الأيام السبعة القادمة.",
             "send_wish": "إرسال تهنئة"
+        },
+        "elite_spotlight": {
+            "title": "نقطة الضوء",
+            "birthday_celebration": "احتفال عيد الميلاد",
+            "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق Prime Hotels!",
+            "coming_up_on": "سيأتي في",
+            "coo_title": "المدير التنفيذي للعمليات"
+        },
+        "guest_reviews": {
+            "title": "تقييمات الضيوف",
+            "all_properties": "جميع المنشآت",
+            "select_property": "اختر المنشأة",
+            "avg_rating": "متوسط التقييم",
+            "total": "الإجمالي",
+            "pending": "معلق",
+            "response_rate": "معدل الاستجابة",
+            "critical": "حرج",
+            "critical_short": "حرج",
+            "manage_reviews": "إدارة التقييمات",
+            "view_all": "عرض الكل",
+            "no_reviews": "لا توجد تقييمات بعد",
+            "check_back": "ستظهر التقييمات هنا"
+        },
+        "pinned_items": "العناصر المثبتة",
+        "pinned_items_desc": "وصول سريع للعناصر المهمة",
+        "pinned": {
+            "title": "العناصر المثبتة",
+            "subtitle": "وصول سريع للعناصر المهمة",
+            "empty": "لا توجد عناصر مثبتة بعد",
+            "empty_desc": "ثبت المستندات والمهام والتدريب والإعلانات المهمة للوصول السريع من لوحة التحكم.",
+            "limit": "يمكنك تثبيت حتى 10 عناصر",
+            "pin_items": "ثبت العناصر المهمة للوصول السريع"
+        },
+        "motivational_quotes": {
+            "ibn_arabi_1": "من عرف نفسه عرف ربه.",
+            "ibn_arabi_1_author": "— ابن عربي"
         }
     },
     "focus": {
@@ -516,6 +554,9 @@
         "maintenance_issues": "مشاكل الصيانة",
         "job_title_missing": "المسمى الوظيفي غير محدد",
         "quick_actions": {
+            "title": "إجراءات سريعة",
+            "subtitle": "اختصارات سريعة للمهام الشائعة",
+            "view_all": "عرض الكل",
             "compliance": "الامتثال",
             "approvals_desc": "مراجعة وإدارة الموافقات",
             "staff": "الموظفون",
@@ -688,7 +729,29 @@
         "happy_birthday": "🎂 عيد ميلاد سعيد {{name}}!",
         "birthday_in": "عيد ميلاد {{name}} بعد {{days}} أيام",
         "welcome_team": "مرحباً بـ {{name}} في الفريق!",
-        "joined_as": "انضم كـ {{role}}"
+        "joined_as": "انضم كـ {{role}}",
+        "new_article": "مقالة جديدة: {{title}}",
+        "read_article": "قراءة المقال",
+        "completed_training": "أكمل {{name}} تدريب \"{{title}}\"",
+        "training_congrats": "تهانينا على إكمال التدريب!"
+    },
+    "time": {
+        "days_ago": "منذ {{count}} أيام",
+        "day_ago": "منذ يوم واحد",
+        "days_ago_other": "منذ {{count}} أيام",
+        "hours_ago": "منذ {{count}} ساعات",
+        "about_hours_ago": "منذ {{count}} ساعات تقريباً",
+        "about_hours_ago_one": "منذ ساعة تقريباً",
+        "minutes_ago": "منذ {{count}} دقائق"
+    },
+    "activity": {
+        "new_article": "مقالة جديدة",
+        "read_article": "قراءة المقال",
+        "comments_count": "{{count}} تعليقات",
+        "comments_count_one": "{{count}} تعليق",
+        "post": "نشر",
+        "operations": "العمليات",
+        "acknowledged": "تم الإقرار"
     },
     "hospitality_news": {
         "title": "أخبار الضيافة",
@@ -710,15 +773,24 @@
         "good_to_see_you": "يسعدنا رؤيتك،",
         "focus_mode": "وضع التركيز",
         "focus_mode_on": "وضع التركيز مفعّل",
+        "primary_focus": "التركيز الرئيسي",
+        "unread_alerts": "لديك {{count}} تنبيهات غير مقروءة",
+        "unread_alerts_one": "لديك تنبيه واحد غير مقروء",
+        "view_details": "عرض تفاصيل لوحة التحكم",
         "ticker": {
             "action_required": "مطلوب اتخاذ إجراء: {{count}} مهام عاجلة معلقة",
+            "action_required_one": "مطلوب اتخاذ إجراء: مهمة عاجلة واحدة معلقة",
             "caught_up": "لقد أنجزت جميع المهام العاجلة",
             "next_meeting": "الاجتماع القادم: {{title}} في {{time}}",
             "announcement": "إعلان: {{title}}",
             "active_tasks": "لديك {{count}} مهام نشطة في قائمتك",
+            "active_tasks_one": "لديك مهمة نشطة واحدة في قائمتك",
             "milestone": "إنجاز: تم إكمال {{count}} وحدات تدريبية",
+            "milestone_one": "إنجاز: تم إكمال وحدة تدريبية واحدة",
             "operational_focus": "التركيز التشغيلي: {{name}}",
-            "system_operational": "PRIME Connect يعمل بشكل طبيعي"
+            "system_operational": "PRIME Connect يعمل بشكل طبيعي",
+            "announcement_label": "إعلان:",
+            "operating_normally": "يعمل بشكل طبيعي"
         },
         "stats": {
             "tasks": "المهام",
@@ -735,6 +807,15 @@
         "meetings": "الاجتماعات",
         "completion": "الإكمال"
     },
+    "performance_overview": {
+        "title": "نظرة عامة على الأداء",
+        "week": "أسبوع",
+        "month": "شهر",
+        "quarter": "ربع سنة",
+        "export": "تصدير",
+        "real_time_metrics": "مقاييس فورية بناءً على البيانات الفعلية",
+        "total_tasks": "إجمالي المهام"
+    },
     "action": {
         "continue": "متابعة"
     },
@@ -742,7 +823,9 @@
         "attendance_rate": "معدل الحضور",
         "task_completion": "إكمال المهام",
         "training_progress": "تقدم التدريب",
-        "response_time": "وقت الاستجابة"
+        "response_time": "وقت الاستجابة",
+        "my_work": "عملي",
+        "my_team": "فريقي"
     },
     "pending_widget": {
         "title": "العناصر المعلقة",
@@ -761,7 +844,8 @@
     "activity_widget": {
         "assigned": "تم التعيين {{date}}",
         "due": "مستحق {{date}}",
-        "default_training_title": "تعيين تدريب"
+        "default_training_title": "تعيين تدريب",
+        "subtitle": "آخر التحديثات والمهام"
     },
     "active_users": {
         "title": "أعضاء الفريق النشطون",
@@ -778,9 +862,11 @@
         "minutes": "{{count}} د",
         "hours": "{{count}} س",
         "days": "{{count}} ي",
-        "team_member": "عضو الفريق"
+        "team_member": "عضو الفريق",
+        "team_members_active": "أعضاء فريق نشطون",
+        "one_member_active": "عضو فريق نشط"
     },
-    "notifications": {
+    "dashboardNotifications": {
         "title": "الإشعارات",
         "unread_count": "{{count}} غير مقروء",
         "unread_count_other": "{{count}} غير مقروءة",
@@ -805,13 +891,14 @@
         "title": "قاعدة المعرفة",
         "view_all": "عرض الكل",
         "progress": "تقدم القراءة المطلوبة",
-        "required": "قراءة مطلوبة",
+        "required": "قراءة مطلقة",
         "recently_updated": "تم تحديثه مؤخراً",
         "updated_at": "تم التحديث {{time}}",
         "all_caught_up": "لقد انتهيت من كل شيء!",
         "explore": "استكشاف قاعدة المعرفة",
         "no_articles": "لا توجد مقالات",
-        "no_articles_desc": "سيظهر المحتوى الجديد هنا."
+        "no_articles_desc": "سيظهر المحتوى الجديد هنا.",
+        "subtitle": "المقالات والإجراءات القياسية الحديثة"
     },
     "team_list": {
         "title": "فريق القسم",
@@ -845,6 +932,12 @@
         "view_previous": "عرض الفائزين السابقين",
         "manage": "إدارة موظف الشهر",
         "no_employee_found": "لم يتم العثور على موظف"
+    },
+    "elite_spotlight": {
+        "title": "نقطة الضوء",
+        "birthday_celebration": "احتفال عيد الميلاد",
+        "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق Prime Hotels!",
+        "coming_up_on": "سيأتي في"
     },
     "subtitle": "مركزك الموحد للمعرفة التشغيلية",
     "dismissnotification": "تجاهل الإشعار",
@@ -954,9 +1047,28 @@
     },
     "pins": {
         "title": "العناصر المثبتة",
-        "empty": "ثبت العناصر المهمة للوصول السريع",
+        "empty": {
+            "title": "لا توجد عناصر مثبتة بعد",
+            "description": "ثبت المستندات والمهام والتدريب والإعلانات المهمة للوصول السريع من لوحة التحكم.",
+            "limit_info": "يمكنك تثبيت حتى {{max}} عناصر"
+        },
         "max_reached": "تم الوصول للحد الأقصى 10 عناصر. قم بإلغاء تثبيت عنصر أولاً.",
-        "view_all": "عرض جميع العناصر المثبتة"
+        "view_all": "عرض جميع العناصر المثبتة",
+        "dialog": {
+            "title": "جميع العناصر المثبتة",
+            "description": "إدارة العناصر المثبتة للوصول السريع"
+        },
+        "actions": {
+            "unpin": "إلغاء التثبيت"
+        },
+        "types": {
+            "document": "مستند",
+            "sop": "إجراء قياسي",
+            "training": "تدريب",
+            "task": "مهمة",
+            "announcement": "إعلان",
+            "knowledge": "معرفة"
+        }
     },
     "customize": {
         "title": "تخصيص لوحة التحكم",
@@ -991,9 +1103,12 @@
         "hr_title": "نظرة عامة على الموارد البشرية",
         "total_properties": "المنشآت",
         "total_staff": "إجمالي الموظفين",
+        "total_employees": "إجمالي الموظفين",
         "compliance_rate": "التزام الموظفين",
+        "employee_engagement": "التزام الموظفين",
         "maintenance_efficiency": "كفاءة الصيانة",
         "open_vacancies": "الوظائف الشاغرة",
+        "open_positions": "الوظائف الشاغرة",
         "total_tickets": "إجمالي التذاكر",
         "active_departments": "الأقسام",
         "pending_tasks": "المهام المعلقة",
@@ -1005,7 +1120,38 @@
         "pending_approvals": "الموافقات المعلقة",
         "performance_score": "نقاط الأداء",
         "pending_leave": "الإجازات المعلقة",
-        "new_hires": "الموظفون الجدد",
-        "open_positions": "الوظائف المفتوحة"
+        "new_hires": "الموظفون الجدد"
+    },
+    "weather": {
+        "cloudy": "غائم",
+        "sunny": "مشمس",
+        "rainy": "ممطر",
+        "clear": "صافٍ",
+        "partly_cloudy": "غائم جزئياً"
+    },
+    "time_remaining": {
+        "in": "بعد",
+        "h": "س",
+        "m": "د"
+    },
+    "prayer_times": {
+        "in": "بعد",
+        "duhr": "الظهر",
+        "fajr": "الفجر",
+        "asr": "العصر",
+        "maghrib": "المغرب",
+        "isha": "العشاء"
+    },
+    "reviews": {
+        "anonymous_guest": "ضيف مجهول",
+        "unknown_property": "غير معروف",
+        "no_reviews": "لا توجد تقييمات بعد",
+        "check_back": "ستظهر التقييمات هنا",
+        "avg_rating": "متوسط التقييم",
+        "total": "الإجمالي",
+        "pending": "معلق",
+        "critical": "حرج",
+        "response_rate": "معدل الاستجابة",
+        "manage": "إدارة التقييمات"
     }
 }

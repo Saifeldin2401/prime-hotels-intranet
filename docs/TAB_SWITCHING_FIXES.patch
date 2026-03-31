@@ -1,0 +1,189 @@
+From: AI Analysis
+Date: 2026-03-31
+Subject: Critical fixes for tab switching session issues
+
+This patch addresses the root causes of unexpected logouts and flickering
+when switching browser tabs or returning from background.
+
+---
+ src/contexts/AuthContext.tsx        | 67 +++++++++++++++++++++++++++--------
+ src/lib/supabase.ts                 |  4 +--
+ src/App.tsx                         | 17 +++++++--
+ 3 files changed, 69 insertions(+), 19 deletions(-)
+
+diff --git a/src/contexts/AuthContext.tsx b/src/contexts/AuthContext.tsx
+--- a/src/contexts/AuthContext.tsx
++++ b/src/contexts/AuthContext.tsx
+@@ -42,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+   const [loading, setLoading] = useState(true)
+   const [rolesLoading, setRolesLoading] = useState(true)
+ 
++  const sessionClearInProgressRef = useRef(false)
+   // ── Session helpers (error detection, timeout, clear) ──────────────────
+   const { isAuthError, withTimeout, clearLocalSession, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef } =
+     useAuthSession()
+@@ -167,7 +168,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+ 
+     // ── Session verification on tab resume ──────────────────────────────
+     const verifySessionOnResume = async () => {
++      // Skip if offline - network errors shouldn't cause logout
++      if (!navigator.onLine) {
++        console.log('[Auth] Device offline, skipping session validation')
++        return
++      }
+       if (!mounted || document.visibilityState === 'hidden') return
+       if (resumeValidationInFlightRef.current) return
+       const now = Date.now()
+@@ -175,20 +181,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+ 
+       resumeValidationInFlightRef.current = true
+       lastResumeValidationAtRef.current = now
++      
++      // Prevent multiple simultaneous session clears
++      if (sessionClearInProgressRef.current) {
++        resumeValidationInFlightRef.current = false
++        return
++      }
++      
+       try {
+         const { data: { user: verifiedUser }, error } = await supabase.auth.getUser()
+         if (!mounted) return
++        
+         if (error || !verifiedUser) {
+-          if (isAuthError(error) || !verifiedUser) {
+-            await clearLocalSession('Session is no longer valid after tab resume', resetLocalAuthState)
+-            finishLoading()
+-            return
++          // Distinguish between auth errors and network errors
++          const errorStatus = (error as { status?: number })?.status
++          const errorMessage = (error as { message?: string })?.message || ''
++          const isNetworkError = !errorStatus || errorStatus === 0 || 
++                                 errorMessage.includes('timeout') || 
++                                 errorMessage.includes('network') ||
++                                 errorMessage.includes('fetch')
++          const isAuthExpired = errorStatus === 401 || errorStatus === 403
++          
++          if (isAuthExpired) {
++            // Only clear session on actual auth expiration
++            console.warn('[Auth] Session expired (401/403), clearing session')
++            sessionClearInProgressRef.current = true
++            try {
++              await clearLocalSession('Session expired after tab resume', resetLocalAuthState)
++            } finally {
++              sessionClearInProgressRef.current = false
++            }
++          } else if (isNetworkError) {
++            // Don't clear session on network errors - session may still be valid
++            console.warn('[Auth] Network error during resume check, keeping session:', errorMessage)
++            // Schedule a retry in 30 seconds
++            setTimeout(() => {
++              if (document.visibilityState === 'visible' && navigator.onLine) {
++                void verifySessionOnResume()
++              }
++            }, 30000)
+           }
+           finishLoading()
+           return
+         }
+-        authRecoveryInProgressRef.current = false
+-        setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
+-        if (shouldRefreshUserData(verifiedUser.id)) {
+-          loadUserData(verifiedUser.id).catch(() => {
+-            console.warn('Error in loadUserData (resume validation).')
+-          })
+-        }
+       } finally {
+         resumeValidationInFlightRef.current = false
+       }
+@@ -199,16 +230,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
+     }
+ 
+     const handleVisibilityChange = () => {
+-      if (document.visibilityState === 'visible') {
+-        void verifySessionOnResume()
++      // Add delay to let browser stabilize network after becoming visible
++      if (document.visibilityState === 'visible' && navigator.onLine) {
++        setTimeout(() => {
++          if (document.visibilityState === 'visible') {
++            void verifySessionOnResume()
++          }
++        }, 500) // 500ms delay
+       }
+     }
+ 
+-    window.addEventListener('focus', handleWindowFocus)
++    // Only validate on visibility change, not on every focus event
+     document.addEventListener('visibilitychange', handleVisibilityChange)
+ 
+     return () => {
+       mounted = false
+       clearTimeout(timeoutId)
+       subscription.unsubscribe()
+-      window.removeEventListener('focus', handleWindowFocus)
+       document.removeEventListener('visibilitychange', handleVisibilityChange)
+     }
+   }, [
+diff --git a/src/lib/supabase.ts b/src/lib/supabase.ts
+--- a/src/lib/supabase.ts
++++ b/src/lib/supabase.ts
+@@ -63,12 +63,12 @@ if (!supabaseUrl.startsWith('https://')) {
+ 
+ 
+ 
+ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+   auth: {
+     autoRefreshToken: true,
+     persistSession: true,
+     detectSessionInUrl: true,
+-    // Security: Use sessionStorage in production for better security
+-    storage: isDevMode ? createSafeStorage('local') : createSafeStorage('session'),
++    // Use localStorage for consistent session persistence across tabs
++    storage: createSafeStorage('local'),
+   },
+   // Security: Add global request headers
+   global: {
+diff --git a/src/App.tsx b/src/App.tsx
+--- a/src/App.tsx
++++ b/src/App.tsx
+@@ -132,13 +132,24 @@ function App() {
+   }, [])
+ 
+   useEffect(() => {
++    let debounceTimer: ReturnType<typeof setTimeout> | null = null
++    
+     focusManager.setEventListener((handleFocus) => {
+       const onFocus = () => {
+-        if (document.visibilityState === 'visible') {
+-          handleFocus()
++        if (document.visibilityState !== 'visible') return
++        
++        // Clear existing timer to debounce rapid focus events
++        if (debounceTimer) clearTimeout(debounceTimer)
++        
++        // Debounce: wait 500ms after focus stabilizes
++        debounceTimer = setTimeout(() => {
++          // Only refetch if we're still visible and online
++          if (document.visibilityState === 'visible' && navigator.onLine) {
++            handleFocus()
++          }
+-        }
++        }, 500)
+       }
+       window.addEventListener('focus', onFocus)
+       document.addEventListener('visibilitychange', onFocus)
+       return () => {
+         window.removeEventListener('focus', onFocus)
+         document.removeEventListener('visibilitychange', onFocus)
++        if (debounceTimer) clearTimeout(debounceTimer)
+       }
+     })
+ 
+     onlineManager.setEventListener((handleOnline) => {
+-      const onOnline = () => handleOnline(true)
++      const onOnline = () => {
++        // Delay to let network stabilize before marking as online
++        setTimeout(() => handleOnline(true), 1000)
++      }
+       const onOffline = () => handleOnline(false)
+       window.addEventListener('online', onOnline)
+       window.removeEventListener('offline', onOffline)

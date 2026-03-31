@@ -17,6 +17,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { learningService } from '@/services/learningService'
+import { quizIntegrityService } from '@/services/quizIntegrityService'
 import type { LearningQuiz } from '@/types/learning'
 import { ArrowDown, ArrowUp, GripVertical, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -51,6 +52,31 @@ export default function QuizBuilder() {
     const [showAIModal, setShowAIModal] = useState(false)
     const [showSelector, setShowSelector] = useState(false)
 
+    const ensureSavedQuizIntegrity = async (quizId: string, quizStatus?: string | null) => {
+        const report = await quizIntegrityService.ensureQuizIntegrity(quizId, {
+            autoRepair: true,
+            autoPublish: quizStatus === 'published'
+        })
+
+        const blockingIssues = report.issues
+            .filter(issue => issue.severity === 'error')
+            .map(issue => issue.message)
+
+        if (blockingIssues.length > 0) {
+            throw new Error(blockingIssues.slice(0, 2).join(' '))
+        }
+
+        if (report.repairedQuestionIds.length > 0 || report.autoPublished) {
+            toast({
+                title: t('common.success'),
+                description: t(
+                    'training:quizzes.builder.quiz_integrity_repaired',
+                    'The quiz questions were repaired and published automatically.'
+                )
+            })
+        }
+    }
+
     const handleSelectQuestions = async (selectedIds: string[]) => {
         if (!id) return
 
@@ -62,6 +88,8 @@ export default function QuizBuilder() {
             for (let i = 0; i < selectedIds.length; i++) {
                 await learningService.addQuestionToQuiz(id, selectedIds[i], currentCount + i)
             }
+
+            await ensureSavedQuizIntegrity(id, quiz.status)
 
             toast({ title: t('common.success'), description: t('training:quizzes.builder.questions_added_success', { count: selectedIds.length }) })
             setShowSelector(false)
@@ -90,6 +118,8 @@ export default function QuizBuilder() {
             for (let i = 0; i < ids.length; i++) {
                 await learningService.addQuestionToQuiz(id, ids[i], currentCount + i)
             }
+
+            await ensureSavedQuizIntegrity(id, quiz.status)
 
             toast({ title: t('common.success'), description: t('training:quizzes.builder.ai_generated_success', { count }) })
             setShowAIModal(false)
@@ -150,10 +180,12 @@ export default function QuizBuilder() {
             let savedQuiz
             if (id) {
                 savedQuiz = await learningService.updateQuiz(id, quizData)
+                await ensureSavedQuizIntegrity(id, quizData.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_updated') })
             } else {
                 quizData.created_by = user.id
                 savedQuiz = await learningService.createQuiz(quizData)
+                await ensureSavedQuizIntegrity(savedQuiz.id, quizData.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_created') })
                 navigate(`/learning/quizzes/${savedQuiz.id}`, { replace: true })
             }

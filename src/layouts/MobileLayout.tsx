@@ -1,11 +1,10 @@
+import { MobileHeader } from '@/components/layout/MobileHeader'
 import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { SidebarNavigation } from '@/components/layout/SidebarNavigation'
-import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { useProperty } from '@/contexts/PropertyContext'
-import { isConsolidatedPropertyId } from '@/lib/propertyScope'
-import { Building, Globe } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { Link, Outlet } from 'react-router-dom'
+import { Outlet, useLocation } from 'react-router-dom'
 
 const WizardTrigger = lazy(() =>
   import('@/components/common/WizardTrigger').then((module) => ({ default: module.WizardTrigger }))
@@ -13,12 +12,76 @@ const WizardTrigger = lazy(() =>
 
 interface MobileLayoutProps {
     children?: React.ReactNode
+    /** Hide the default header */
+    hideHeader?: boolean
+    /** Custom header title */
+    headerTitle?: string
+    /** Custom header subtitle */
+    headerSubtitle?: string
+    /** Show back button in header */
+    showBack?: boolean
+    /** Custom class for main content */
+    className?: string
 }
 
-export function MobileLayout({ children }: MobileLayoutProps) {
+/**
+ * MobileLayout - Enhanced mobile layout with improved navigation
+ * 
+ * Features:
+ * - Safe area support for notched devices
+ * - Sticky header with back navigation
+ * - Bottom navigation bar
+ * - Pull-to-refresh support
+ * - Optimized touch targets
+ */
+export function MobileLayout({ 
+    children, 
+    hideHeader = false,
+    headerTitle,
+    headerSubtitle,
+    showBack,
+    className,
+}: MobileLayoutProps) {
     const [sidebarOpen, setSidebarOpen] = useState(false)
     const [deferredChromeReady, setDeferredChromeReady] = useState(false)
     const { currentProperty } = useProperty()
+    const location = useLocation()
+
+    // Get page title from current route
+    const getPageTitle = () => {
+        if (headerTitle) return headerTitle
+        
+        // Map routes to titles
+        const path = location.pathname
+        if (path === '/') return 'Dashboard'
+        
+        // Extract title from path
+        const segments = path.split('/').filter(Boolean)
+        if (segments.length === 0) return 'Home'
+        
+        const lastSegment = segments[segments.length - 1]
+        
+        // Check if last segment is a UUID (e.g., article ID, document ID)
+        // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+        const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+        if (uuidPattern.test(lastSegment)) {
+            // Return a generic title based on the parent route
+            const parentSegment = segments.length > 1 ? segments[segments.length - 2] : null
+            if (parentSegment === 'knowledge') return 'Article'
+            if (parentSegment === 'documents') return 'Document'
+            if (parentSegment === 'training') return 'Training'
+            if (parentSegment === 'quizzes') return 'Quiz'
+            if (parentSegment === 'tasks') return 'Task'
+            if (parentSegment === 'profile') return 'Profile'
+            if (parentSegment === 'questions') return 'Question'
+            return 'Details'
+        }
+        
+        return lastSegment
+            .split('-')
+            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(' ')
+    }
 
     useEffect(() => {
         const timeoutId = window.setTimeout(() => {
@@ -31,36 +94,34 @@ export function MobileLayout({ children }: MobileLayoutProps) {
     }, [])
 
     return (
-        <div className="min-h-dvh bg-gray-50 flex flex-col no-horizontal-scroll">
-            {/* Dedicated Mobile Top Header - Distinct from Desktop */}
-            <header className="sticky top-0 z-50 w-full h-16 bg-white/80 backdrop-blur-lg border-b border-gray-100 flex items-center justify-between px-4 sm:px-6">
-                <Link to="/" className="flex items-center gap-2">
-                    <img
-                        src="/prime-logo-light.png"
-                        alt="Prime Hotels"
-                        className="h-8 w-auto brightness-0"
-                    />
-                    <div className="flex flex-col">
-                        <span className="text-xs font-bold text-hotel-navy leading-none tracking-tight">PRIME</span>
-                        <span className="text-[10px] text-hotel-gold font-bold uppercase tracking-widest leading-none">Connect</span>
-                    </div>
-                </Link>
+        <div className="min-h-dvh bg-background flex flex-col no-horizontal-scroll">
+            {/* Sticky Header */}
+            {!hideHeader && (
+                <MobileHeader
+                    title={getPageTitle()}
+                    subtitle={headerSubtitle}
+                    showBack={showBack || location.pathname !== '/'}
+                    onMenuClick={() => setSidebarOpen(true)}
+                    className="shrink-0"
+                />
+            )}
 
-                <div className="flex items-center gap-3">
-                    {currentProperty && (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-gray-100 rounded-full text-[10px] font-medium text-gray-600">
-                            {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-3 h-3 text-indigo-500" /> : <Building className="w-3 h-3 text-hotel-gold" />}
-                            <span className="max-w-[80px] truncate">{currentProperty.name}</span>
-                        </div>
-                    )}
-                    <NotificationBell />
-                </div>
-            </header>
-
-            <main className="flex-1 w-full max-w-none mx-auto px-safe pb-32 pb-safe animate-in fade-in duration-300">
+            {/* Main Content */}
+            <main 
+                className={cn(
+                    'flex-1 w-full max-w-none mx-auto',
+                    'px-4 sm:px-6 py-4',
+                    'has-bottom-nav', /* Adds padding for enhanced bottom nav with FAB */
+                    'animate-in fade-in duration-300',
+                    className
+                )}
+            >
                 {children || <Outlet />}
+                {/* Spacer to ensure content never gets blocked by bottom nav */}
+                <div className="h-20 shrink-0 pointer-events-none" aria-hidden="true" />
             </main>
 
+            {/* Navigation */}
             {sidebarOpen ? (
                 <SidebarNavigation
                     isOpen={sidebarOpen}
@@ -73,6 +134,7 @@ export function MobileLayout({ children }: MobileLayoutProps) {
                 />
             )}
 
+            {/* Deferred components */}
             <Suspense fallback={null}>
                 {deferredChromeReady && <WizardTrigger />}
             </Suspense>

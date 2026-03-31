@@ -1,4 +1,5 @@
 @import './editor/styles/ai-content.css';
+@import './styles/mobile-optimizations.css';
 
 @tailwind base;
 @tailwind components;
@@ -924,6 +925,37 @@ select:focus-visible {
 
   .touch-target-lg {
     @apply min-h-[48px] min-w-[48px];
+  }
+
+  /* Bottom nav padding utilities */
+  .pb-nav {
+    /* Standard padding for mobile bottom navigation - increased for FAB */
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px) + 2.5rem) !important;
+  }
+
+  .pb-nav-xl {
+    /* Extra padding for pages with bottom forms */
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px) + 3rem) !important;
+  }
+
+  /* Toast swipe animations */
+  @keyframes swipe-out {
+    from {
+      transform: translateX(var(--radix-toast-swipe-end-x));
+    }
+    to {
+      transform: translateX(100%);
+      opacity: 0;
+    }
+  }
+
+  /* Mobile toast improvements */
+  [data-sonner-toast] {
+    @apply touch-pan-y;
+  }
+
+  [data-sonner-toast][data-swipe=move] {
+    transform: translateX(var(--radix-toast-swipe-move-x));
   }
 
   /* Mobile-optimized scrolling */

@@ -5,6 +5,10 @@ import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
+import { MediaPicker } from '@/components/media/MediaPicker'
+import type { MediaAsset } from '@/lib/types/media'
+import { DocumentPicker } from '@/components/documents/DocumentPicker'
+import type { Document } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -18,6 +22,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -33,6 +38,7 @@ import {
     FileQuestion,
     Layers,
     ListChecks,
+    Loader2,
     Plus,
     RotateCcw,
     RotateCw,
@@ -58,7 +64,7 @@ const MAX_UPLOAD_SIZE_BYTES: Record<'image' | 'audio' | 'document', number> = {
   audio: 25 * 1024 * 1024,
   document: 15 * 1024 * 1024
 }
-const ALLOWED_UPLOAD_MIME_TYPES: Record<'image' | 'audio' | 'document', string[]> = {
+const ALLOWED_UPLOAD_MIME_TYPES: Record<'image' | 'audio' | 'document' | 'video', string[]> = {
   image: ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'],
   audio: ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/mp4'],
   document: [
@@ -66,12 +72,14 @@ const ALLOWED_UPLOAD_MIME_TYPES: Record<'image' | 'audio' | 'document', string[]
     'application/msword',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'text/plain'
-  ]
+  ],
+  video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/avi', 'video/mov']
 }
-const ALLOWED_UPLOAD_EXTENSIONS: Record<'image' | 'audio' | 'document', string[]> = {
+const ALLOWED_UPLOAD_EXTENSIONS: Record<'image' | 'audio' | 'document' | 'video', string[]> = {
   image: ['jpg', 'jpeg', 'png', 'webp', 'gif', 'svg'],
   audio: ['mp3', 'wav', 'ogg', 'webm', 'm4a'],
-  document: ['pdf', 'doc', 'docx', 'txt']
+  document: ['pdf', 'doc', 'docx', 'txt'],
+  video: ['mp4', 'webm', 'mov', 'avi', 'mkv']
 }
 
 interface ContentBlockForm {
@@ -388,6 +396,7 @@ export function TrainingBuilder() {
   const [createdModuleId, setCreatedModuleId] = useState<string | null>(null)
   const rawModuleId = isNewRoute ? createdModuleId : id || null
   const moduleId = isValidUuid(rawModuleId) ? rawModuleId : null
+  const [moduleStatus, setModuleStatus] = useState('draft')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [estimatedDuration, setEstimatedDuration] = useState('')
@@ -412,6 +421,7 @@ export function TrainingBuilder() {
   const hydratedModuleRef = useRef<string | null>(null)
 
   const hydrateModuleState = useCallback((loadedModule: TrainingModule) => {
+    setModuleStatus(loadedModule.status || 'draft')
     setTitle(loadedModule.title)
     setDescription(loadedModule.description || '')
     const normalizedEstimate = normalizeEstimatedDuration(loadedModule.estimated_duration_minutes)
@@ -437,6 +447,7 @@ export function TrainingBuilder() {
   useEffect(() => {
     if (isNewRoute) {
       hydratedModuleRef.current = null
+      setModuleStatus('draft')
       return
     }
     setCreatedModuleId(null)
@@ -541,12 +552,125 @@ export function TrainingBuilder() {
   const [selectedContent, setSelectedContent] = useState<ContentBlockForm | null>(null)
   const [showTitleField, setShowTitleField] = useState(true)
   const [showAdvancedBlockOptions, setShowAdvancedBlockOptions] = useState(false)
-  const [mediaInputMode, setMediaInputMode] = useState<'upload' | 'link'>('upload')
+  const [mediaInputMode, setMediaInputMode] = useState<'upload' | 'link' | 'library'>('upload')
   const [savedBlocks, setSavedBlocks] = useState<ContentBlockForm[]>([])
   const [recentUploads, setRecentUploads] = useState<RecentUpload[]>([])
+  const [showVideoMediaPicker, setShowVideoMediaPicker] = useState(false)
+  const [showDocumentPicker, setShowDocumentPicker] = useState(false)
   const [showTemplatePreview, setShowTemplatePreview] = useState(false)
   const [showTemplateApplyConfirm, setShowTemplateApplyConfirm] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TrainingTemplate | null>(null)
+
+  // ============================================
+  // FORM PERSISTENCE - Save draft on tab switch
+  // ============================================
+  const [hasMounted, setHasMounted] = useState(false)
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+  const restoredDraftRef = useRef(false)
+
+  const formPersistence = useFormPersistence<{
+    title: string
+    description: string
+    estimatedDuration: string
+    useEstimatedDuration: boolean
+    validityPeriod: string
+    passingScore: string
+    maxAttempts: string
+    allowRetake: boolean
+    category: string
+    difficultyLevel: string
+    audience: string
+    contentLanguage: string
+    templatePreset: string
+    certificateEnabled: boolean
+    timeLimit: number | null
+    showFeedback: boolean
+    autoAdvance: boolean
+    randomizeQuestions: boolean
+    showAnswers: boolean
+    sections: TrainingSection[]
+  }>({
+    key: `training_builder_${id || 'new'}`,
+    enabled: isNewRoute, // Only persist for new modules, not when editing
+    debounceMs: 1000,
+    version: 1,
+  })
+
+  // Hydrate from draft on mount for new modules
+  useEffect(() => {
+    if (!isNewRoute) {
+      setHasMounted(true)
+      return
+    }
+
+    const draft = formPersistence.loadDraft()
+    if (draft) {
+      if (draft.title) setTitle(draft.title)
+      if (draft.description) setDescription(draft.description)
+      if (draft.estimatedDuration) setEstimatedDuration(draft.estimatedDuration)
+      if (draft.useEstimatedDuration !== undefined) setUseEstimatedDuration(draft.useEstimatedDuration)
+      if (draft.validityPeriod) setValidityPeriod(draft.validityPeriod)
+      if (draft.passingScore) setPassingScore(draft.passingScore)
+      if (draft.maxAttempts) setMaxAttempts(draft.maxAttempts)
+      if (draft.allowRetake !== undefined) setAllowRetake(draft.allowRetake)
+      if (draft.category) setCategory(draft.category)
+      if (draft.difficultyLevel) setDifficultyLevel(draft.difficultyLevel)
+      if (draft.audience) setAudience(draft.audience)
+      if (draft.contentLanguage) setContentLanguage(draft.contentLanguage)
+      if (draft.templatePreset) setTemplatePreset(draft.templatePreset)
+      if (draft.certificateEnabled !== undefined) setCertificateEnabled(draft.certificateEnabled)
+      if (draft.timeLimit !== undefined) setTimeLimit(draft.timeLimit)
+      if (draft.showFeedback !== undefined) setShowFeedback(draft.showFeedback)
+      if (draft.autoAdvance !== undefined) setAutoAdvance(draft.autoAdvance)
+      if (draft.randomizeQuestions !== undefined) setRandomizeQuestions(draft.randomizeQuestions)
+      if (draft.showAnswers !== undefined) setShowAnswers(draft.showAnswers)
+      if (draft.sections && draft.sections.length > 0) {
+        setSections(draft.sections)
+      }
+
+      if (!restoredDraftRef.current) {
+        restoredDraftRef.current = true
+        setShowRestorePrompt(true)
+        setTimeout(() => setShowRestorePrompt(false), 8000)
+      }
+    }
+    setHasMounted(true)
+  }, [isNewRoute, formPersistence])
+
+  // Save draft when important fields change
+  useEffect(() => {
+    if (!hasMounted || !isNewRoute) return
+
+    formPersistence.saveDraft({
+      title,
+      description,
+      estimatedDuration,
+      useEstimatedDuration,
+      validityPeriod,
+      passingScore,
+      maxAttempts,
+      allowRetake,
+      category,
+      difficultyLevel,
+      audience,
+      contentLanguage,
+      templatePreset,
+      certificateEnabled,
+      timeLimit,
+      showFeedback,
+      autoAdvance,
+      randomizeQuestions,
+      showAnswers,
+      sections,
+    })
+  }, [
+    hasMounted, isNewRoute, formPersistence,
+    title, description, estimatedDuration, useEstimatedDuration,
+    validityPeriod, passingScore, maxAttempts, allowRetake,
+    category, difficultyLevel, audience, contentLanguage, templatePreset,
+    certificateEnabled, timeLimit, showFeedback, autoAdvance,
+    randomizeQuestions, showAnswers, sections,
+  ])
 
   // Content blocks state (legacy - will be migrated to sections)
   const [contentBlocks, setContentBlocks] = useState<ContentBlockForm[]>([])
@@ -1331,7 +1455,7 @@ export function TrainingBuilder() {
 
   const [uploading, setUploading] = useState(false)
 
-  const isSupportedUpload = (file: File, type: 'image' | 'document' | 'audio') => {
+  const isSupportedUpload = (file: File, type: 'image' | 'document' | 'audio' | 'video') => {
     const extension = (file.name.split('.').pop() || '').toLowerCase()
     const allowedMimes = ALLOWED_UPLOAD_MIME_TYPES[type]
     const allowedExtensions = ALLOWED_UPLOAD_EXTENSIONS[type]
@@ -1340,7 +1464,7 @@ export function TrainingBuilder() {
     return mimeAllowed || extensionAllowed
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document' | 'audio') => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'document' | 'audio' | 'video') => {
     const file = e.target.files?.[0]
     if (!file) return
 
@@ -1634,6 +1758,8 @@ export function TrainingBuilder() {
         if (error) throw error
       }
 
+      setModuleStatus('published')
+
       removeEncryptedLocalStorage(draftKey)
 
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
@@ -1765,7 +1891,8 @@ export function TrainingBuilder() {
 
   const handleSave = async () => {
     try {
-      const quizzesReady = await ensureLinkedQuizzesIntegrity('save')
+      const integrityMode = moduleStatus === 'published' ? 'publish' : 'save'
+      const quizzesReady = await ensureLinkedQuizzesIntegrity(integrityMode)
       if (!quizzesReady) return
 
       // First save the module
@@ -1781,6 +1908,9 @@ export function TrainingBuilder() {
         title: t('moduleSaved'),
         description: t('moduleSavedDescription', { defaultValue: 'Your training module has been saved successfully.' })
       })
+      
+      // Clear draft on successful save
+      formPersistence.clearDraft()
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({
@@ -2540,12 +2670,53 @@ export function TrainingBuilder() {
     return null
   }
 
+  // Prevent hydration mismatch
+  if (!hasMounted && isNewRoute) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
+
   const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending || saveQuestionsMutation.isPending
   const stepContent = renderStepContent()
   const rightPanelContent = renderRightPanel()
 
   return (
     <div className={`min-h-screen bg-background flex flex-col ${isRTL ? 'text-right' : 'text-left'}`}>
+      {/* Restore Draft Prompt */}
+      {isNewRoute && showRestorePrompt && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 p-4">
+          <div className="container mx-auto flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Loader2 className="w-5 h-5 text-amber-600" />
+              <span className="text-sm text-amber-800 dark:text-amber-300">
+                Draft training module restored from previous session
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>
+                Keep
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => {
+                  formPersistence.clearDraft()
+                  setTitle('')
+                  setDescription('')
+                  setSections([])
+                  setShowRestorePrompt(false)
+                  toast({ title: 'Draft cleared' })
+                }}
+              >
+                Clear Draft
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <BuilderHeader
         title={title}
@@ -2875,19 +3046,93 @@ export function TrainingBuilder() {
 
             {currentBlock.type === 'video' && (
               <div className={isRTL ? 'text-right' : ''}>
-                <Label>{t('builder.embedUrl')}</Label>
-                <Input
-                  value={currentBlock.content_url}
-                  onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
-                  onBlur={(e) => {
-                    const derived = deriveTitleFromUrl(e.target.value)
-                    if (!currentBlock.title?.trim() && derived) {
-                      setCurrentBlock({ ...currentBlock, title: derived })
-                    }
-                  }}
-                  placeholder="https://youtube.com/watch?v=..."
-                  className={isRTL ? 'text-right' : ''}
-                />
+                <Label>{t('builder.videoUrl', 'Video URL')}</Label>
+                <div className="space-y-3">
+                  <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={mediaInputMode === 'upload' ? 'default' : 'outline'}
+                      onClick={() => setMediaInputMode('upload')}
+                    >
+                      {t('builder.uploadFile', 'Upload file')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={mediaInputMode === 'library' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setMediaInputMode('library')
+                        setShowVideoMediaPicker(true)
+                      }}
+                    >
+                      {t('builder.mediaLibrary', 'Media Library')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={mediaInputMode === 'link' ? 'default' : 'outline'}
+                      onClick={() => setMediaInputMode('link')}
+                    >
+                      {t('builder.useLink', 'Use link')}
+                    </Button>
+                  </div>
+                  
+                  {mediaInputMode === 'link' && (
+                    <Input
+                      value={currentBlock.content_url}
+                      onChange={(e) => setCurrentBlock({ ...currentBlock, content_url: e.target.value })}
+                      onBlur={(e) => {
+                        const derived = deriveTitleFromUrl(e.target.value)
+                        if (!currentBlock.title?.trim() && derived) {
+                          setCurrentBlock({ ...currentBlock, title: derived })
+                        }
+                      }}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className={isRTL ? 'text-right' : ''}
+                    />
+                  )}
+                  
+                  {mediaInputMode === 'upload' && (
+                    <div className={`flex items-center gap-2 ${isRTL ? 'justify-end' : ''}`}>
+                      <div className="relative">
+                        <Input
+                          type="file"
+                          accept="video/*"
+                          onChange={(e) => handleFileUpload(e, 'video')}
+                          disabled={uploading}
+                          className="hidden"
+                          id="video-upload"
+                        />
+                        <label
+                          htmlFor="video-upload"
+                          className={`flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover:bg-gray-50 transition-colors ${uploading ? 'opacity-50 cursor-not-allowed' : ''} ${isRTL ? 'flex-row-reverse' : ''}`}
+                        >
+                          <Upload className="w-4 h-4 text-gray-500" />
+                          <span className="text-sm text-gray-600">{uploading ? t('uploading') : t('builder.uploadVideo', 'Upload Video')}</span>
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {recentUploadsForType.length > 0 && (
+                    <div className="rounded-md border border-slate-200 bg-white/80 p-3">
+                      <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.recentUploads', 'Recent uploads')}</div>
+                      <div className="mt-2 space-y-2">
+                        {recentUploadsForType.map(item => (
+                          <button
+                            key={item.url}
+                            type="button"
+                            onClick={() => setCurrentBlock({ ...currentBlock, content_url: item.url, title: currentBlock.title?.trim() ? currentBlock.title : item.name })}
+                            className={cn("w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-left text-xs text-slate-600 hover:border-hotel-gold", isRTL ? "text-right" : "text-left")}
+                          >
+                            {item.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -3082,6 +3327,17 @@ export function TrainingBuilder() {
                     <Button
                       type="button"
                       size="sm"
+                      variant={mediaInputMode === 'library' ? 'default' : 'outline'}
+                      onClick={() => {
+                        setMediaInputMode('library')
+                        setShowDocumentPicker(true)
+                      }}
+                    >
+                      {t('builder.documentLibrary', 'Document Library')}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
                       variant={mediaInputMode === 'link' ? 'default' : 'outline'}
                       onClick={() => setMediaInputMode('link')}
                     >
@@ -3226,6 +3482,32 @@ export function TrainingBuilder() {
           </div>
         </DialogContent>
       </Dialog >
+
+      {/* Media Library Picker for Video Blocks */}
+      <MediaPicker
+        open={showVideoMediaPicker}
+        onOpenChange={setShowVideoMediaPicker}
+        onSelect={(assets) => {
+          if (assets.length > 0 && currentBlock) {
+            setCurrentBlock({ ...currentBlock, content_url: assets[0].public_url })
+          }
+        }}
+        config={{ allowedTypes: ['video'], multiple: false, category: 'training' }}
+        title={t('builder.selectVideo', 'Select Video from Library')}
+      />
+
+      {/* Document Library Picker for Document Blocks */}
+      <DocumentPicker
+        open={showDocumentPicker}
+        onOpenChange={setShowDocumentPicker}
+        onSelect={(docs) => {
+          if (docs.length > 0 && currentBlock) {
+            setCurrentBlock({ ...currentBlock, content_url: docs[0].file_url, title: docs[0].title })
+          }
+        }}
+        config={{ allowedTypes: ['pdf', 'doc', 'docx'], multiple: false }}
+        title={t('builder.selectDocument', 'Select Document from Library')}
+      />
 
       {/* Template Preview Dialog */}
       <Dialog open={showTemplatePreview} onOpenChange={setShowTemplatePreview}>

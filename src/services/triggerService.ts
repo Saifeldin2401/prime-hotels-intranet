@@ -6,6 +6,7 @@
  */
 
 import { createBulkNotifications } from '@/lib/notificationService'
+import { persistLearningAssignments } from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 
 // ============================================================================
@@ -153,12 +154,7 @@ async function _assignTrainingToUsers(
         created_at: new Date().toISOString()
     }))
 
-    // Note: Upsert conflict on generic (target_id, content_id) if constraint exists
-    const { error } = await supabase
-        .from('learning_assignments')
-        .upsert(assignments) // removed specific conflict target constraint name as it might differ
-
-    if (error) throw error
+    await persistLearningAssignments(assignments)
 }
 
 async function _assignQuizToUsers(
@@ -179,11 +175,7 @@ async function _assignQuizToUsers(
         due_date: dueDate
     }))
 
-    const { error } = await supabase
-        .from('learning_assignments')
-        .upsert(assignments)
-
-    if (error) throw error
+    await persistLearningAssignments(assignments)
 }
 
 async function _assignRequiredReading(

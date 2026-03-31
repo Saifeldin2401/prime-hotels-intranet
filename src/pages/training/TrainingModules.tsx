@@ -9,6 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth'
 import { useDebounce } from '@/hooks/useDebounce'
 import { createBulkNotifications } from '@/lib/notificationService'
+import {
+    getLearningAssignmentErrorMessage,
+    persistLearningAssignments,
+    type PersistLearningAssignmentsResult,
+} from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
 import { cn } from '@/lib/utils'
@@ -49,6 +54,32 @@ interface TrainingModule {
   updated_at?: string
   certificate_enabled?: boolean
   is_active?: boolean
+}
+
+const describeAssignmentMutationResult = (
+  result: PersistLearningAssignmentsResult,
+  t: ReturnType<typeof useTranslation>['t']
+) => {
+  if (result.inserted === 0 && result.reactivated === 0) {
+    return {
+      title: t('assignmentNoChanges', 'No assignment changes'),
+      description: t(
+        'assignmentNoChangesDesc',
+        'All selected targets already had active assignments for this module.'
+      ),
+    }
+  }
+
+  const summaryParts = [
+    result.inserted > 0 ? t('assignmentInsertedSummary', '{{count}} new', { count: result.inserted }) : null,
+    result.reactivated > 0 ? t('assignmentReactivatedSummary', '{{count}} restored', { count: result.reactivated }) : null,
+    result.skipped > 0 ? t('assignmentSkippedSummary', '{{count}} already active', { count: result.skipped }) : null,
+  ].filter(Boolean)
+
+  return {
+    title: t('assignmentUpdated', 'Assignments updated'),
+    description: summaryParts.join(' | '),
+  }
 }
 
 export default function TrainingModules() {
@@ -417,41 +448,10 @@ export default function TrainingModules() {
         })
       }
 
-      const makeKey = (entry: { target_type: string; target_id: string | null }) =>
-        `${entry.target_type}:${entry.target_id ?? '__everyone__'}`
+      const assignmentResult = await persistLearningAssignments(assignments)
 
-      const { data: existingAssignments, error: existingError } = await supabase
-        .from('learning_assignments')
-        .select('target_type, target_id')
-        .eq('content_type', 'module')
-        .eq('content_id', assigningModuleId)
-        .or('is_deleted.is.null,is_deleted.eq.false')
-
-      if (existingError) throw existingError
-
-      const existingKeys = new Set((existingAssignments || []).map(a => makeKey({
-        target_type: a.target_type,
-        target_id: a.target_id
-      })))
-
-      const assignmentsToInsert = assignments.filter(a => !existingKeys.has(makeKey({
-        target_type: a.target_type,
-        target_id: a.target_id ?? null
-      })))
-
-      if (assignmentsToInsert.length > 0) {
-        const { error } = await supabase
-          .from('learning_assignments')
-          .insert(assignmentsToInsert)
-
-        if (error) throw error
-      }
-
-      if (assignmentsToInsert.length === 0) {
-        return {
-          inserted: 0,
-          skipped: assignments.length
-        }
+      if (assignmentResult.inserted === 0 && assignmentResult.reactivated === 0) {
+        return assignmentResult
       }
 
       const notifyUsers = async () => {
@@ -459,30 +459,39 @@ export default function TrainingModules() {
           // Send bulk notifications
           const module = modules?.find(m => m.id === assigningModuleId)
           const notificationData = {
-            title: t('notifications.newAssignmentTitle'),
-            message: t('notifications.newAssignmentMessage', { title: module?.title || t('trainingModule') }),
+            title: t('trainingNotifications.newAssignmentTitle'),
+            message: t('trainingNotifications.newAssignmentMessage', { title: module?.title || t('trainingModule') }),
             moduleId: assigningModuleId,
             deadline
           }
 
           let userIdsToNotify: string[] = []
+          const changedAssignments = assignmentResult.changedAssignments
 
-          if (targetType === 'all') {
+          if (changedAssignments.some((assignment) => assignment.target_type === 'everyone')) {
             const { data: allUsers } = await supabase.from('profiles').select('id').eq('is_active', true)
             userIdsToNotify = allUsers?.map(u => u.id) || []
           } else if (targetType === 'users') {
-            userIdsToNotify = targetIds
+            userIdsToNotify = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
           } else if (targetType === 'departments') {
+            const departmentIds = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: deptUsers } = await supabase
               .from('user_departments')
               .select('user_id')
-              .in('department_id', targetIds)
+              .in('department_id', departmentIds)
             userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
           } else if (targetType === 'properties') {
+            const propertyIds = changedAssignments
+              .map((assignment) => assignment.target_id)
+              .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: propUsers } = await supabase
               .from('user_properties')
               .select('user_id')
-              .in('property_id', targetIds)
+              .in('property_id', propertyIds)
             userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
           }
 
@@ -532,19 +541,21 @@ export default function TrainingModules() {
       }
 
       void notifyUsers()
-      return {
-        inserted: assignmentsToInsert.length,
-        skipped: assignments.length - assignmentsToInsert.length
-      }
+      return assignmentResult
     },
     onError: (error: unknown) => {
-      const message = error instanceof Error
-        ? error.message
-        : t('assignFailedDesc', 'Please try again.')
-      showErrorToast(t('assignFailed', 'Assign failed'), message)
+      showErrorToast(
+        t('assignFailed', 'Assign failed'),
+        getLearningAssignmentErrorMessage(error)
+      )
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })
+      queryClient.invalidateQueries({ queryKey: ['module-assignment-roster'] })
+      queryClient.invalidateQueries({ queryKey: ['learning-assignments-module-links'] })
+      queryClient.invalidateQueries({ queryKey: ['my-assignments'] })
+      const summary = describeAssignmentMutationResult(result, t)
+      showSuccessToast(summary.title, summary.description)
       setShowAssignDialog(false)
       setAssigningModuleId(null)
     }

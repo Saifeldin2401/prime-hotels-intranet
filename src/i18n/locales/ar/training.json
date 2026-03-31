@@ -286,9 +286,10 @@
     "viewDownloadCertificates": "عرض وتحميل شهاداتك المكتسبة",
     "views": "المشاهدات",
     "wellDone": "أحسنت!",
-    "notifications": {
+    "trainingNotifications": {
         "newAssignmentTitle": "تم تعيين تدريب جديد",
-        "newAssignmentMessage": "تم تعيينك لـ: {{title}}"
+        "newAssignmentMessage": "تم تعيينك لـ: {{title}}",
+        "toggle_desc": "إبلاغ المستلمين عند إنشاء المهام."
     },
     "settings": {
         "title": "الإعدادات",

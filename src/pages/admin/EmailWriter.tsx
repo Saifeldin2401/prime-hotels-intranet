@@ -1,5 +1,5 @@
-import { Loader2, Mail, Send, Sparkles, Users } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { AlertTriangle, Loader2, Mail, Send, Sparkles, Users } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -402,9 +402,15 @@ export default function EmailWriter() {
   const appBaseUrl = useMemo(() => EMAIL_BASE_DOMAIN, [])
   const defaultLogoUrl = useMemo(() => `${EMAIL_BASE_DOMAIN}/prime-logo-white-full.png`, [])
 
+  // Track if component has mounted to prevent hydration mismatches
+  const [hasMounted, setHasMounted] = useState(false)
+  const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+  const restoredDraftRef = useRef(false)
+
   const { data: users, isLoading: usersLoading } = useProfiles({ limit: 200 })
   const { data: properties = [] } = useProperties()
 
+  // State with localStorage persistence - load on mount only
   const [targetMode, setTargetMode] = useState<'users' | 'property' | 'department' | 'all'>('users')
 
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([])
@@ -417,37 +423,143 @@ export default function EmailWriter() {
   const templateMeta = useMemo(() => TEMPLATE_OPTIONS.find((o) => o.key === templateKey)!, [templateKey])
 
   const [contentMode, setContentMode] = useState<EmailContentMode>('template')
-  const [language, setLanguage] = useState<'en' | 'ar'>(() => (localStorage.getItem('email_writer_language') as 'en' | 'ar') || 'en')
-  const [bilingualEnabled, setBilingualEnabled] = useState(() => localStorage.getItem('email_writer_bilingual') === 'true')
+  const [language, setLanguage] = useState<'en' | 'ar'>('en')
+  const [bilingualEnabled, setBilingualEnabled] = useState(false)
 
-  const [subject, setSubject] = useState(() => localStorage.getItem('email_writer_subject') || '')
-  const [subjectAr, setSubjectAr] = useState(() => localStorage.getItem('email_writer_subjectAr') || '')
-  const [shortMessage, setShortMessage] = useState(() => localStorage.getItem('email_writer_shortMessage') || '')
-  const [shortMessageAr, setShortMessageAr] = useState(() => localStorage.getItem('email_writer_shortMessageAr') || '')
-  const [body, setBody] = useState(() => localStorage.getItem('email_writer_body') || '')
-  const [bodyAr, setBodyAr] = useState(() => localStorage.getItem('email_writer_bodyAr') || '')
-  const [htmlBody, setHtmlBody] = useState(() => localStorage.getItem('email_writer_htmlBody') || '')
-  const [textBody, setTextBody] = useState(() => localStorage.getItem('email_writer_textBody') || '')
-  const [actionUrl, setActionUrl] = useState(() => localStorage.getItem('email_writer_actionUrl') || '/notifications')
-  const [actionLabel, setActionLabel] = useState(() => localStorage.getItem('email_writer_actionLabel') || 'Open PRIME Connect')
-  const [actionLabelAr, setActionLabelAr] = useState(() => localStorage.getItem('email_writer_actionLabelAr') || 'فتح PRIME Connect')
+  const [subject, setSubject] = useState('')
+  const [subjectAr, setSubjectAr] = useState('')
+  const [shortMessage, setShortMessage] = useState('')
+  const [shortMessageAr, setShortMessageAr] = useState('')
+  const [body, setBody] = useState('')
+  const [bodyAr, setBodyAr] = useState('')
+  const [htmlBody, setHtmlBody] = useState('')
+  const [textBody, setTextBody] = useState('')
+  const [actionUrl, setActionUrl] = useState('/notifications')
+  const [actionLabel, setActionLabel] = useState('Open PRIME Connect')
+  const [actionLabelAr, setActionLabelAr] = useState('فتح PRIME Connect')
+  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'critical'>('normal')
+
+  // ============================================
+  // HYDRATION: Load from localStorage ONCE on mount
+  // ============================================
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    
+    try {
+      const saved = {
+        language: localStorage.getItem('email_writer_language') as 'en' | 'ar' | null,
+        bilingual: localStorage.getItem('email_writer_bilingual'),
+        subject: localStorage.getItem('email_writer_subject'),
+        subjectAr: localStorage.getItem('email_writer_subjectAr'),
+        shortMessage: localStorage.getItem('email_writer_shortMessage'),
+        shortMessageAr: localStorage.getItem('email_writer_shortMessageAr'),
+        body: localStorage.getItem('email_writer_body'),
+        bodyAr: localStorage.getItem('email_writer_bodyAr'),
+        htmlBody: localStorage.getItem('email_writer_htmlBody'),
+        textBody: localStorage.getItem('email_writer_textBody'),
+        actionUrl: localStorage.getItem('email_writer_actionUrl'),
+        actionLabel: localStorage.getItem('email_writer_actionLabel'),
+        actionLabelAr: localStorage.getItem('email_writer_actionLabelAr'),
+        targetMode: localStorage.getItem('email_writer_targetMode'),
+        selectedUsers: localStorage.getItem('email_writer_selectedUsers'),
+        selectedProperty: localStorage.getItem('email_writer_selectedProperty'),
+        selectedDepartment: localStorage.getItem('email_writer_selectedDepartment'),
+        templateKey: localStorage.getItem('email_writer_templateKey'),
+        contentMode: localStorage.getItem('email_writer_contentMode'),
+        priority: localStorage.getItem('email_writer_priority'),
+      }
+
+      // Only restore if there's actual data
+      const hasContent = saved.subject || saved.body || saved.shortMessage
+      const hasRecipients = saved.selectedUsers || saved.selectedProperty || saved.selectedDepartment
+
+      if (hasContent || hasRecipients) {
+        if (saved.language) setLanguage(saved.language)
+        if (saved.bilingual) setBilingualEnabled(saved.bilingual === 'true')
+        if (saved.subject !== null) setSubject(saved.subject)
+        if (saved.subjectAr !== null) setSubjectAr(saved.subjectAr)
+        if (saved.shortMessage !== null) setShortMessage(saved.shortMessage)
+        if (saved.shortMessageAr !== null) setShortMessageAr(saved.shortMessageAr)
+        if (saved.body !== null) setBody(saved.body)
+        if (saved.bodyAr !== null) setBodyAr(saved.bodyAr)
+        if (saved.htmlBody !== null) setHtmlBody(saved.htmlBody)
+        if (saved.textBody !== null) setTextBody(saved.textBody)
+        if (saved.actionUrl !== null) setActionUrl(saved.actionUrl)
+        if (saved.actionLabel !== null) setActionLabel(saved.actionLabel)
+        if (saved.actionLabelAr !== null) setActionLabelAr(saved.actionLabelAr)
+        if (saved.targetMode) setTargetMode(saved.targetMode as any)
+        if (saved.selectedUsers) setSelectedUserIds(JSON.parse(saved.selectedUsers))
+        if (saved.selectedProperty) setSelectedPropertyId(saved.selectedProperty)
+        if (saved.selectedDepartment) setSelectedDepartmentId(saved.selectedDepartment)
+        if (saved.templateKey) setTemplateKey(saved.templateKey as EmailTemplateKey)
+        if (saved.contentMode) setContentMode(saved.contentMode as EmailContentMode)
+        if (saved.priority) setPriority(saved.priority as any)
+
+        // Show restore prompt
+        if (hasContent && !restoredDraftRef.current) {
+          restoredDraftRef.current = true
+          setShowRestorePrompt(true)
+          setTimeout(() => setShowRestorePrompt(false), 8000)
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to load email draft:', e)
+    }
+    
+    setHasMounted(true)
+  }, [])
+
+  // ============================================
+  // PERSISTENCE: Save to localStorage on changes
+  // ============================================
+  const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
-    localStorage.setItem('email_writer_language', language)
-    localStorage.setItem('email_writer_bilingual', String(bilingualEnabled))
-    localStorage.setItem('email_writer_subject', subject)
-    localStorage.setItem('email_writer_subjectAr', subjectAr)
-    localStorage.setItem('email_writer_shortMessage', shortMessage)
-    localStorage.setItem('email_writer_shortMessageAr', shortMessageAr)
-    localStorage.setItem('email_writer_body', body)
-    localStorage.setItem('email_writer_bodyAr', bodyAr)
-    localStorage.setItem('email_writer_htmlBody', htmlBody)
-    localStorage.setItem('email_writer_textBody', textBody)
-    localStorage.setItem('email_writer_actionUrl', actionUrl)
-    localStorage.setItem('email_writer_actionLabel', actionLabel)
-    localStorage.setItem('email_writer_actionLabelAr', actionLabelAr)
-  }, [language, bilingualEnabled, subject, subjectAr, shortMessage, shortMessageAr, body, bodyAr, htmlBody, textBody, actionUrl, actionLabel, actionLabelAr])
-  const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'critical'>('normal')
+    if (!hasMounted || typeof window === 'undefined') return
+
+    // Debounce save to reduce storage writes
+    if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      try {
+        localStorage.setItem('email_writer_language', language)
+        localStorage.setItem('email_writer_bilingual', String(bilingualEnabled))
+        localStorage.setItem('email_writer_subject', subject)
+        localStorage.setItem('email_writer_subjectAr', subjectAr)
+        localStorage.setItem('email_writer_shortMessage', shortMessage)
+        localStorage.setItem('email_writer_shortMessageAr', shortMessageAr)
+        localStorage.setItem('email_writer_body', body)
+        localStorage.setItem('email_writer_bodyAr', bodyAr)
+        localStorage.setItem('email_writer_htmlBody', htmlBody)
+        localStorage.setItem('email_writer_textBody', textBody)
+        localStorage.setItem('email_writer_actionUrl', actionUrl)
+        localStorage.setItem('email_writer_actionLabel', actionLabel)
+        localStorage.setItem('email_writer_actionLabelAr', actionLabelAr)
+        localStorage.setItem('email_writer_targetMode', targetMode)
+        localStorage.setItem('email_writer_selectedUsers', JSON.stringify(selectedUserIds))
+        localStorage.setItem('email_writer_selectedProperty', selectedPropertyId)
+        localStorage.setItem('email_writer_selectedDepartment', selectedDepartmentId)
+        localStorage.setItem('email_writer_templateKey', templateKey)
+        localStorage.setItem('email_writer_contentMode', contentMode)
+        localStorage.setItem('email_writer_priority', priority)
+      } catch (e) {
+        console.warn('Failed to save email draft:', e)
+      }
+    }, 300)
+
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    }
+  }, [hasMounted, language, bilingualEnabled, subject, subjectAr, shortMessage, shortMessageAr, 
+      body, bodyAr, htmlBody, textBody, actionUrl, actionLabel, actionLabelAr, targetMode, 
+      selectedUserIds, selectedPropertyId, selectedDepartmentId, templateKey, contentMode, priority])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+    }
+  }, [])
 
   const [userPickerOpen, setUserPickerOpen] = useState(false)
   const [userSearch, setUserSearch] = useState('')
@@ -589,6 +701,47 @@ export default function EmailWriter() {
     setSelectedUserIds([])
     setSelectedPropertyId('')
     setSelectedDepartmentId('')
+  }, [])
+
+  const clearAllDrafts = useCallback(() => {
+    // Reset all form state
+    setSubject('')
+    setSubjectAr('')
+    setShortMessage('')
+    setShortMessageAr('')
+    setBody('')
+    setBodyAr('')
+    setHtmlBody('')
+    setTextBody('')
+    setSelectedUserIds([])
+    setSelectedPropertyId('')
+    setSelectedDepartmentId('')
+    setTargetMode('users')
+    setTemplateKey('system_generic_alert')
+    setContentMode('template')
+    setLanguage('en')
+    setBilingualEnabled(false)
+    setPriority('normal')
+    setActionUrl('/notifications')
+    setActionLabel('Open PRIME Connect')
+    setActionLabelAr('فتح PRIME Connect')
+    
+    // Clear localStorage
+    if (typeof window !== 'undefined') {
+      const keys = [
+        'email_writer_language', 'email_writer_bilingual', 'email_writer_subject',
+        'email_writer_subjectAr', 'email_writer_shortMessage', 'email_writer_shortMessageAr',
+        'email_writer_body', 'email_writer_bodyAr', 'email_writer_htmlBody',
+        'email_writer_textBody', 'email_writer_actionUrl', 'email_writer_actionLabel',
+        'email_writer_actionLabelAr', 'email_writer_targetMode', 'email_writer_selectedUsers',
+        'email_writer_selectedProperty', 'email_writer_selectedDepartment',
+        'email_writer_templateKey', 'email_writer_contentMode', 'email_writer_priority'
+      ]
+      keys.forEach(key => localStorage.removeItem(key))
+    }
+    
+    setShowRestorePrompt(false)
+    toast.success('Draft cleared')
   }, [])
 
   const handleAIDraft = useCallback(async () => {
@@ -1022,22 +1175,44 @@ Return ONLY valid JSON:
       })
 
       toast.success(`Queued ${recipientCount} email(s)`)
-      setSubject('')
-      setShortMessage('')
-      setBody('')
-      setHtmlBody('')
-      setTextBody('')
-      setActionUrl('/notifications')
-      setActionLabel('Open PRIME Connect')
-      clearRecipients()
+      clearAllDrafts()
     } catch (err) {
       console.error('Send failed:', err)
       toast.error('Failed to send email')
     }
-  }, [actionLabel, actionUrl, body, canSend, clearRecipients, createBatch, priority, recipientCount, recipientUserIds, shortMessage, subject, templateMeta.domain, templateMeta.key])
+  }, [actionLabel, actionUrl, body, canSend, clearRecipients, clearAllDrafts, createBatch, priority, recipientCount, recipientUserIds, shortMessage, subject, templateMeta.domain, templateMeta.key])
+
+  // Prevent hydration mismatch
+  if (!hasMounted) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
+      {/* Restore Prompt */}
+      {showRestorePrompt && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-amber-600" />
+            <span className="text-sm text-amber-800 dark:text-amber-300">
+              Draft content restored from previous session
+            </span>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>
+              Keep
+            </Button>
+            <Button variant="outline" size="sm" onClick={clearAllDrafts}>
+              Clear Draft
+            </Button>
+          </div>
+        </div>
+      )}
+
       <PageHeader
         title={t('email_writer.title', { ns: 'admin', defaultValue: 'Email Writer' })}
         description={t('email_writer.description', {
@@ -1508,6 +1683,9 @@ Return ONLY valid JSON:
 
               <Button variant="outline" className="w-full" onClick={clearRecipients}>
                 {t('email_writer.clear_recipients', { ns: 'admin', defaultValue: 'Clear recipients' })}
+              </Button>
+              <Button variant="outline" className="w-full mt-2" onClick={clearAllDrafts}>
+                Clear all drafts
               </Button>
             </CardContent>
           </Card>

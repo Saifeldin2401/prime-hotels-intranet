@@ -90,7 +90,11 @@ export default defineConfig({
     // Security: Rate limiting middleware
     middlewareMode: false,
   },
-  optimizeDeps: {},
+  optimizeDeps: {
+    // `marked` is imported by lazy-loaded routes. Excluding it avoids Vite's
+    // prebundle cache serving stale `.vite/deps/marked.js` during local dev.
+    exclude: ['marked'],
+  },
   build: {
     // Security: Build optimizations
     minify: 'terser',

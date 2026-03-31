@@ -15,8 +15,10 @@ import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
 import { useCreateWorkflow, useUpdateWorkflow, useUpdateWorkflowSteps, useWorkflowSteps } from '@/hooks/useWorkflows'
 import { supabase } from '@/lib/supabase'
 import { GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from "react-i18next"
+import { useFormPersistence } from '@/hooks/useFormPersistence'
+import { AlertTriangle } from 'lucide-react'
 
 interface WorkflowEditorProps {
     workflow: WorkflowDefinition
@@ -66,6 +68,69 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const [scheduleCron, setScheduleCron] = useState('0 9 * * *')
     const [simpleAction, setSimpleAction] = useState<'none' | 'send_training_reminders' | 'custom'>('none')
     const isNewWorkflow = !workflow.id
+
+    // ============================================
+    // FORM PERSISTENCE - Save draft on tab switch
+    // ============================================
+    const [hasMounted, setHasMounted] = useState(false)
+    const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+    const restoredDraftRef = useRef(false)
+
+    const formPersistence = useFormPersistence({
+      key: `workflow_editor_${workflow.id || 'new'}`,
+      enabled: isNewWorkflow,
+      debounceMs: 500,
+      version: 1,
+    })
+
+    // Hydrate from draft on mount
+    useEffect(() => {
+      if (!isNewWorkflow) {
+        setHasMounted(true)
+        return
+      }
+
+      const draft = formPersistence.loadDraft()
+      if (draft) {
+        if (draft.name) setName(draft.name)
+        if (draft.description) setDescription(draft.description)
+        if (draft.type) setType(draft.type)
+        if (draft.triggerConfig) setTriggerConfig(draft.triggerConfig)
+        if (draft.actionConfig) setActionConfig(draft.actionConfig)
+        if (draft.localSteps) setLocalSteps(draft.localSteps)
+        if (draft.eventType) setEventType(draft.eventType)
+        if (draft.scheduleCron) setScheduleCron(draft.scheduleCron)
+        if (draft.simpleAction) setSimpleAction(draft.simpleAction)
+
+        if (!restoredDraftRef.current) {
+          restoredDraftRef.current = true
+          setShowRestorePrompt(true)
+          setTimeout(() => setShowRestorePrompt(false), 8000)
+        }
+      }
+      setHasMounted(true)
+    }, [isNewWorkflow, formPersistence])
+
+    // Save draft when state changes
+    useEffect(() => {
+      if (!hasMounted || !isNewWorkflow) return
+
+      formPersistence.saveDraft({
+        name,
+        description,
+        type,
+        triggerConfig,
+        actionConfig,
+        localSteps,
+        eventType,
+        scheduleCron,
+        simpleAction,
+      })
+    }, [
+      hasMounted, isNewWorkflow, formPersistence,
+      name, description, type, triggerConfig, actionConfig,
+      localSteps, eventType, scheduleCron, simpleAction,
+    ])
 
     const eventOptions = useMemo(() => ([
         { value: 'NEW_HIRE', label: 'New Hire' },
@@ -226,6 +291,14 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         setLocalSteps(updatedSteps)
     }
 
+    if (!hasMounted && isNewWorkflow) {
+      return (
+        <div className="flex items-center justify-center h-48">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      )
+    }
+
     const handleSave = async () => {
         try {
             let workflowId = workflow.id
@@ -305,6 +378,37 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
     return (
         <div className="space-y-6">
+            {/* Restore Draft Prompt */}
+            {isNewWorkflow && showRestorePrompt && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <span className="text-sm text-amber-800 dark:text-amber-300">
+                            Draft workflow restored from previous session
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>
+                            Keep
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => {
+                                formPersistence.clearDraft()
+                                setName('')
+                                setDescription('')
+                                setLocalSteps([])
+                                setShowRestorePrompt(false)
+                                toast({ title: 'Draft cleared' })
+                            }}
+                        >
+                            Clear Draft
+                        </Button>
+                    </div>
+                </div>
+            )}
+
             {isNewWorkflow && (
                 <div className="space-y-3 rounded-lg border bg-muted/30 p-4">
                     <div>

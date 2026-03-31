@@ -14,6 +14,7 @@ import {
     VideoContentBuilder,
     VisualContentBuilder
 } from '@/components/knowledge'
+import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { Badge } from '@/components/ui/badge'
@@ -61,6 +62,7 @@ import {
     ArrowLeft,
     Building2,
     Clock,
+    FolderOpen,
     Link as LinkIcon,
     List,
     Loader2,
@@ -101,12 +103,75 @@ interface ArticleFormData {
     faq_items: FAQItem[]
     video_url: string
     images
+    // AI Auto-tagging fields
+    ai_tags: string[]
+    ai_category: string
+    ai_processed_at: string
 }
 
 const isUuid = (value?: string | null): value is string => {
     if (!value) return false
     // Accept any canonical UUID-like identifier stored in DB (including legacy non-RFC variant IDs).
     return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)
+}
+
+// AI Document Tagging Helpers
+function generateAITags(fileName: string, title: string): string[] {
+    const text = `${fileName} ${title}`.toLowerCase()
+    const tags: string[] = []
+    
+    // Document type tags
+    if (fileName.endsWith('.pdf')) tags.push('pdf')
+    if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) tags.push('word')
+    if (fileName.endsWith('.xls') || fileName.endsWith('.xlsx')) tags.push('excel')
+    
+    // Content-based tags
+    const tagKeywords: Record<string, string[]> = {
+        'guest-services': ['guest', 'customer', 'stay', 'check-in', 'check-out'],
+        'reviews': ['review', 'feedback', 'rating', 'online'],
+        'sop': ['sop', 'procedure', 'standard', 'operating'],
+        'hr': ['hr', 'employee', 'staff', 'training', 'policy'],
+        'finance': ['finance', 'budget', 'invoice', 'payment', 'billing'],
+        'operations': ['operations', 'housekeeping', 'maintenance', 'front-desk'],
+        'safety': ['safety', 'security', 'emergency', 'fire', 'compliance'],
+        'marketing': ['marketing', 'sales', 'promotion', 'booking'],
+        'f&b': ['food', 'beverage', 'restaurant', 'menu', 'kitchen'],
+        'events': ['event', 'conference', 'banquet', 'meeting', 'wedding']
+    }
+    
+    for (const [tag, keywords] of Object.entries(tagKeywords)) {
+        if (keywords.some(kw => text.includes(kw))) {
+            tags.push(tag)
+        }
+    }
+    
+    // Add document type if no specific category found
+    if (tags.length === 1) { // Only has file type tag
+        tags.push('document')
+    }
+    
+    return [...new Set(tags)].slice(0, 8) // Max 8 tags, unique
+}
+
+function categorizeDocument(tags: string[]): string {
+    const categoryMap: Record<string, string> = {
+        'guest-services': 'Guest Services',
+        'reviews': 'Operations',
+        'sop': 'Operations',
+        'hr': 'HR & Training',
+        'finance': 'Finance',
+        'operations': 'Operations',
+        'safety': 'Safety & Compliance',
+        'marketing': 'Sales & Marketing',
+        'f&b': 'Food & Beverage',
+        'events': 'Events'
+    }
+    
+    for (const tag of tags) {
+        if (categoryMap[tag]) return categoryMap[tag]
+    }
+    
+    return 'General'
 }
 
 export default function KnowledgeEditor() {
@@ -117,6 +182,12 @@ export default function KnowledgeEditor() {
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id)
+
+    // Mount and hydration tracking
+    const [hasMounted, setHasMounted] = useState(false)
+    const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+    const restoredDraftRef = useRef(false)
+    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const [formData, setFormData] = useState<ArticleFormData>({
         title: '',
@@ -137,18 +208,105 @@ export default function KnowledgeEditor() {
         checklist_items: [],
         faq_items: [],
         video_url: '',
-        images: []
+        images: [],
+        ai_tags: [],
+        ai_category: '',
+        ai_processed_at: '',
     })
 
-    // Fetch existing data if editing
-    // We need to fetch from 'documents' table now
-    // Since useKnowledgeArticle calls service, and service queries documents, it *should* work if service returns correct shape.
-    // But service `getArticleById` maps `documents` result to `KnowledgeArticle` type.
-    // If I didn't update `KnowledgeArticle` type, it might have mismatch.
-    // I'll rely on manual fetch here to be safe and clear about columns.
+    // ============================================
+    // HYDRATION: Load draft from localStorage on mount
+    // ============================================
+    useEffect(() => {
+        if (isEditing && id) {
+            // Don't load draft if editing existing - load from DB instead
+            return
+        }
 
-    // Actually, let's just use what we have, but I'll add a useEffect to load data manually if needed.
-    // Or simpler: Load it here.
+        try {
+            const savedDraft = localStorage.getItem('knowledge_editor_draft')
+            if (savedDraft) {
+                const parsed = JSON.parse(savedDraft)
+                if (parsed && parsed.title) {
+                    setFormData(prev => ({
+                        ...prev,
+                        ...parsed,
+                        // Ensure arrays are valid
+                        checklist_items: parsed.checklist_items || [],
+                        faq_items: parsed.faq_items || [],
+                        images: parsed.images || [],
+                        specific_department_ids: parsed.specific_department_ids || [],
+                        ai_tags: parsed.ai_tags || [],
+                    }))
+                    
+                    if (!restoredDraftRef.current) {
+                        restoredDraftRef.current = true
+                        setShowRestorePrompt(true)
+                        setTimeout(() => setShowRestorePrompt(false), 8000)
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Failed to load knowledge draft:', e)
+        }
+        setHasMounted(true)
+    }, [isEditing, id])
+
+    // ============================================
+    // PERSISTENCE: Save to localStorage on changes
+    // ============================================
+    useEffect(() => {
+        if (!hasMounted || isEditing) return
+        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        
+        // Only save if there's actual content
+        if (!formData.title && !formData.content && !formData.description) return
+
+        saveTimeoutRef.current = setTimeout(() => {
+            try {
+                const draftToSave = {
+                    title: formData.title,
+                    description: formData.description,
+                    summary: formData.summary,
+                    content: formData.content,
+                    file_url: formData.file_url,
+                    storage_path: formData.storage_path,
+                    content_type: formData.content_type,
+                    visibility: formData.visibility,
+                    requires_acknowledgment: formData.requires_acknowledgment,
+                    featured: formData.featured,
+                    department_id: formData.department_id,
+                    category_id: formData.category_id,
+                    target_property_id: formData.target_property_id,
+                    specific_department_ids: formData.specific_department_ids,
+                    linked_training_id: formData.linked_training_id,
+                    checklist_items: formData.checklist_items,
+                    faq_items: formData.faq_items,
+                    video_url: formData.video_url,
+                    images: formData.images,
+                    ai_tags: formData.ai_tags,
+                    ai_category: formData.ai_category,
+                    ai_processed_at: formData.ai_processed_at,
+                }
+                localStorage.setItem('knowledge_editor_draft', JSON.stringify(draftToSave))
+            } catch (e) {
+                console.warn('Failed to save knowledge draft:', e)
+            }
+        }, 500)
+
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        }
+    }, [formData, hasMounted, isEditing])
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        }
+    }, [])
+
+    // Fetch existing data if editing
 
     const { data: relatedArticles = [], refetch: refetchRelated } = useRelatedArticles(id || '')
     const { departments } = useDepartments(currentProperty?.id)
@@ -303,6 +461,7 @@ export default function KnowledgeEditor() {
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiLanguage, setAiLanguage] = useState('English')
     const [isForbidden, setIsForbidden] = useState(false)
+    const [showDocumentPicker, setShowDocumentPicker] = useState(false)
     const [beautifyOptions, setBeautifyOptions] = useState({
         includeTables: true,
         includeMermaid: false,
@@ -651,7 +810,11 @@ export default function KnowledgeEditor() {
                             checklist_items: data.checklist_items || [],
                             faq_items: data.faq_items || [],
                             video_url: data.video_url || '',
-                            images: data.images || []
+                            images: data.images || [],
+                            // AI Auto-tagging fields
+                            ai_tags: data.ai_tags || [],
+                            ai_category: data.ai_category || '',
+                            ai_processed_at: data.ai_processed_at || '',
                         })
                     }
                 })
@@ -1060,6 +1223,9 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     ? t('editor.alerts.submitted_for_review')
                     : (isEditing ? t('editor.alerts.update_success', { type: typeLabel }) : t('editor.alerts.save_success', { type: typeLabel })))
                 redirectToArticleId = data.id
+                
+                // Clear draft on successful save
+                localStorage.removeItem('knowledge_editor_draft')
             }
 
             let syncedArticleData = savedArticleData
@@ -1165,8 +1331,64 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
         return null
     }
 
+    // Prevent hydration mismatch
+    if (!hasMounted && !isEditing) {
+        return (
+            <div className="flex items-center justify-center h-96">
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-6">
+            {/* Restore Draft Prompt */}
+            {!isEditing && showRestorePrompt && (
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        <span className="text-sm text-amber-800 dark:text-amber-300">
+                            Draft article restored from previous session
+                        </span>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>
+                            Keep
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => {
+                            localStorage.removeItem('knowledge_editor_draft')
+                            setFormData({
+                                title: '',
+                                description: '',
+                                summary: '',
+                                content: '',
+                                file_url: '',
+                                storage_path: '',
+                                content_type: 'document',
+                                visibility: 'all_properties' as KnowledgeVisibility,
+                                requires_acknowledgment: false,
+                                featured: false,
+                                department_id: null,
+                                category_id: null,
+                                target_property_id: null,
+                                specific_department_ids: [],
+                                linked_training_id: null,
+                                checklist_items: [],
+                                faq_items: [],
+                                video_url: '',
+                                images: [],
+                                ai_tags: [],
+                                ai_category: '',
+                                ai_processed_at: '',
+                            })
+                            setShowRestorePrompt(false)
+                            toast.success('Draft cleared')
+                        }}>
+                            Clear Draft
+                        </Button>
+                    </div>
+                </div>
+            )}
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
@@ -1337,6 +1559,26 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             </div>
 
                             <div>
+                                <Label>Document Library</Label>
+                                <div className="mt-1 flex items-center gap-2">
+                                    <Button
+                                        type="button"
+                                        variant="secondary"
+                                        onClick={() => setShowDocumentPicker(true)}
+                                        className="gap-2"
+                                    >
+                                        <FolderOpen className="h-4 w-4" />
+                                        Browse Library
+                                    </Button>
+                                    {formData.file_url && (
+                                        <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                            Document selected
+                                        </Badge>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div>
                                 <Label>{t('editor.upload_label')}</Label>
                                 <div className="mt-1 flex items-center gap-2">
                                     <Input
@@ -1381,6 +1623,13 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                                                 updateField('file_url', publicUrl)
                                                 updateField('storage_path', fileName)
+                                                
+                                                // Auto-generate AI tags based on filename and title
+                                                const aiTags = generateAITags(file.name, formData.title || file.name)
+                                                updateField('ai_tags', aiTags)
+                                                updateField('ai_category', categorizeDocument(aiTags))
+                                                updateField('ai_processed_at', new Date().toISOString())
+                                                
                                                 toast.success(t('editor.alerts.upload_success'))
 
                                                 // Auto-set title if empty
@@ -1848,6 +2097,21 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     </Card>
                 </div>
             </div>
+
+            {/* Document Picker Dialog */}
+            <DocumentPicker
+                open={showDocumentPicker}
+                onOpenChange={setShowDocumentPicker}
+                onSelect={(docs) => {
+                    if (docs.length > 0) {
+                        updateField('file_url', docs[0].file_url)
+                        updateField('title', docs[0].title)
+                        toast.success('Document selected from library')
+                    }
+                }}
+                config={{ allowedTypes: ['pdf'], multiple: false }}
+                title="Select Document from Library"
+            />
         </div >
     )
 }

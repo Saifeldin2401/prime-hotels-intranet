@@ -1,3 +1,8 @@
+import {
+    getLearningAssignmentErrorMessage,
+    persistLearningAssignments,
+    type PersistLearningAssignmentsResult,
+} from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 import type {
     CreateAssignmentDTO,
@@ -614,12 +619,18 @@ export const learningService = {
     // ==========================================
 
     async createAssignment(assignment: CreateAssignmentDTO) {
-        const { error } = await supabase
-            .from('learning_assignments')
-            .insert(assignment)
+        try {
+            const result = await persistLearningAssignments([
+                {
+                    ...assignment,
+                    target_id: assignment.target_type === 'everyone' ? null : assignment.target_id,
+                }
+            ])
 
-        if (error) throw error
-        return { success: true } as unknown as LearningAssignment
+            return result as PersistLearningAssignmentsResult & LearningAssignment
+        } catch (error) {
+            throw new Error(getLearningAssignmentErrorMessage(error))
+        }
     },
 
     async updateAssignment(id: string, updates: Partial<CreateAssignmentDTO>) {
@@ -1186,9 +1197,8 @@ export const learningService = {
         }
 
         if (targetAssignments.length === 0) {
-            const { error: insertError } = await supabase
-                .from('learning_assignments')
-                .insert({
+            const assignmentResult = await persistLearningAssignments([
+                {
                     target_type: 'user',
                     target_id: toUserId,
                     content_type: 'module',
@@ -1202,9 +1212,12 @@ export const learningService = {
                     requires_acknowledgement: preferredSource.requires_acknowledgement ?? false,
                     notify_on_due: preferredSource.notify_on_due ?? true,
                     reminder_days_before: preferredSource.reminder_days_before ?? [],
-                })
+                }
+            ])
 
-            if (insertError) throw insertError
+            if (assignmentResult.inserted === 0 && assignmentResult.reactivated === 0) {
+                throw new Error('The selected replacement user already has an active assignment for this module.')
+            }
         }
 
         await supabase
