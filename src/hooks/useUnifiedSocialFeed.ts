@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 
 function buildCurrentUser(params: {
   userId: string
@@ -32,6 +33,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
   const { user, profile, primaryRole, roles, departments, properties } = useAuth()
   const { currentProperty } = useProperty()
   const { t, i18n } = useTranslation('common')
+  const navigate = useNavigate()
 
   const currentUser = useMemo(() => {
     if (!user?.id) return null
@@ -216,7 +218,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           actionButton: {
             text: t('social_feed.actions.read_article', 'Read Article'),
             onClick: () => {
-              window.location.href = `/knowledge/${d.id}`
+              navigate(`/knowledge/${d.id}`)
             }
           }
         })
@@ -263,7 +265,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           actionButton: {
             text: t('social_feed.actions.view_task', 'View Task'),
             onClick: () => {
-              window.location.href = `/tasks/${task.id}`
+              navigate(`/tasks/${task.id}`)
             }
           }
         })
@@ -304,7 +306,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           actionButton: {
             text: t('social_feed.actions.start_training', 'Start Training'),
             onClick: () => {
-              window.location.href = `/training/${assignment.training_module_id}`
+              navigate(`/training/${assignment.training_module_id}`)
             }
           }
         })

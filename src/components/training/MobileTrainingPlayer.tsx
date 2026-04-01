@@ -31,6 +31,7 @@ import {
     ChevronLeft,
     ChevronRight,
     Clock,
+    Download,
     FileText,
     Headphones,
     Languages,

@@ -35,6 +35,7 @@ import { Link, useNavigate } from 'react-router-dom'
 
 
 export default function JobPostings({ embedded = false }: { embedded?: boolean }) {
+    const navigate = useNavigate()
     const { roles } = useAuth()
     const { t } = useTranslation('jobs')
     const navigate = useNavigate()

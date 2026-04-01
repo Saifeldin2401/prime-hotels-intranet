@@ -234,10 +234,43 @@ export function SidebarNavigation({
     const hasActiveBadge = group.items.some(item => item.badgeCount && item.badgeCount > 0)
 
     if (isMobile) {
-      // Mobile: Show items directly without collapsible groups
+      // Mobile: Show collapsible groups with same role/grouping rules as desktop
       return (
-        <div key={group.config.id} className="space-y-1">
-          {group.items.map(renderNavItem)}
+        <div key={group.config.id} className="mb-2">
+          {group.config.collapsible ? (
+            <button
+              onClick={() => toggleGroup(group.config.id)}
+              className={cn(
+                "flex items-center gap-3 w-full px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-colors rounded-xl",
+                "text-white/60 hover:text-white hover:bg-white/10",
+                isExpanded && "text-white/90 bg-white/5"
+              )}
+            >
+              <GroupIcon className="h-4 w-4" />
+              <span className="flex-1 text-left">
+                {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+              </span>
+              {hasActiveBadge && (
+                <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse flex-shrink-0" />
+              )}
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 transition-transform duration-200 flex-shrink-0",
+                  isExpanded && "rotate-180"
+                )}
+              />
+            </button>
+          ) : (
+            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap overflow-hidden">
+              {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+            </div>
+          )}
+
+          {isExpanded && (
+            <div className="space-y-1 mt-1 ms-2 ps-2 border-s border-white/10">
+              {group.items.map(renderNavItem)}
+            </div>
+          )}
         </div>
       )
     }

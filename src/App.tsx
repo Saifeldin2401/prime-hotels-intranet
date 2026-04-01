@@ -1,3 +1,4 @@
+import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -15,6 +16,7 @@ import { RouterProvider } from 'react-router-dom'
 const QUERY_CACHE_KEY = 'prime_query_cache_v4'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
 const LEGACY_QUERY_CACHE_KEYS = ['prime_query_cache_v1', 'prime_query_cache_v2', 'prime_query_cache_v3']
+const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
 const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'learning-progress',
   'learning-assignments',
@@ -142,9 +144,53 @@ const shouldEnableVercelInsights = () => {
   )
 }
 
+const hasPendingAppUpdate = () => {
+  if (typeof window === 'undefined') return false
+  return Boolean((window as Window & { __PHG_UPDATE_AVAILABLE__?: boolean }).__PHG_UPDATE_AVAILABLE__)
+}
+
+const applyPendingAppUpdate = async () => {
+  if (typeof window === 'undefined') return
+
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  const waitingWorker = registrations.find((registration) => registration.waiting)?.waiting
+
+  if (!waitingWorker) {
+    window.location.reload()
+    return
+  }
+
+  await new Promise<void>((resolve) => {
+    let didResolve = false
+
+    const finish = () => {
+      if (didResolve) return
+      didResolve = true
+      resolve()
+    }
+
+    const handleControllerChange = () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
+      finish()
+      window.location.reload()
+    }
+
+    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange, { once: true })
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' })
+
+    window.setTimeout(() => {
+      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
+      finish()
+      window.location.reload()
+    }, 3000)
+  })
+}
+
 function App() {
   const [VercelAnalytics, setVercelAnalytics] = useState<ComponentType | null>(null)
   const [VercelSpeedInsights, setVercelSpeedInsights] = useState<ComponentType | null>(null)
+  const [isUpdateAvailable, setIsUpdateAvailable] = useState(() => hasPendingAppUpdate())
+  const [isApplyingUpdate, setIsApplyingUpdate] = useState(false)
 
   useEffect(() => {
     if (!shouldEnableVercelInsights()) return
@@ -167,6 +213,12 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        persistQueryCache()
+      }
+    }
+
     const handlePageHide = () => {
       persistQueryCache()
     }
@@ -175,10 +227,12 @@ function App() {
       persistQueryCache()
     }
 
+    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('pagehide', handlePageHide)
     window.addEventListener('beforeunload', handleBeforeUnload)
 
     return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
       window.removeEventListener('pagehide', handlePageHide)
       window.removeEventListener('beforeunload', handleBeforeUnload)
     }
@@ -229,6 +283,17 @@ function App() {
     })
   }, [])
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    const handleUpdateAvailable = () => {
+      setIsUpdateAvailable(true)
+    }
+
+    window.addEventListener(UPDATE_AVAILABLE_EVENT, handleUpdateAvailable)
+    return () => window.removeEventListener(UPDATE_AVAILABLE_EVENT, handleUpdateAvailable)
+  }, [])
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
@@ -245,6 +310,35 @@ function App() {
           {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
         </ThemeProvider>
         <Toaster />
+        {isUpdateAvailable && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-4 z-50 flex justify-center px-4">
+            <div className="pointer-events-auto flex w-full max-w-xl items-center justify-between gap-3 rounded-xl border bg-background/95 px-4 py-3 shadow-lg backdrop-blur">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">A new version is ready</p>
+                <p className="text-xs text-muted-foreground">Update when convenient. Your current work stays in place until you reload.</p>
+              </div>
+              <div className="flex shrink-0 items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => setIsUpdateAvailable(false)} disabled={isApplyingUpdate}>
+                  Later
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={async () => {
+                    setIsApplyingUpdate(true)
+                    try {
+                      await applyPendingAppUpdate()
+                    } finally {
+                      setIsApplyingUpdate(false)
+                    }
+                  }}
+                  disabled={isApplyingUpdate}
+                >
+                  {isApplyingUpdate ? 'Updating...' : 'Update'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
         {VercelAnalytics && <VercelAnalytics />}
         {VercelSpeedInsights && <VercelSpeedInsights />}
       </QueryClientProvider>

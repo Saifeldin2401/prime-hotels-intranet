@@ -21,10 +21,7 @@ export { MobileHeader } from '../layout/MobileHeader'
 export { MobileDashboard } from '../dashboard/MobileDashboard'
 export { MobileStatsGrid } from '../dashboard/MobileStatsGrid'
 
-// Training Components
-export { MobileTrainingPlayer } from '../training/MobileTrainingPlayer'
-export { MobileQuizPlayer } from '../training/MobileQuizPlayer'
-export { MobileVideoPlayer } from '../training/MobileVideoPlayer'
+// Training Components (import directly from source when needed to avoid bundle bloat)
 
 // Knowledge Components
 export { MobileKnowledgeViewer } from '../knowledge/MobileKnowledgeViewer'

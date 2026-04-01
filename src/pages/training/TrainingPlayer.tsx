@@ -502,7 +502,8 @@ export default function TrainingPlayer() {
         enabled: !!id && isValidModuleId,
         staleTime: 0,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
         meta: { persist: false },
     })
 

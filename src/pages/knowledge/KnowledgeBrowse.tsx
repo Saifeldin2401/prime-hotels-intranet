@@ -25,7 +25,7 @@ import {
     Video
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 const CONTENT_TYPES: {
     type: KnowledgeContentType
@@ -91,6 +91,7 @@ const CONTENT_TYPES: {
 
 export default function KnowledgeBrowse() {
     const { t } = useTranslation(['knowledge', 'common'])
+    const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const departmentId = searchParams.get('department')
     const typeFilter = searchParams.get('type')
@@ -131,6 +132,10 @@ export default function KnowledgeBrowse() {
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        navigate('/knowledge/browse')
+                                    }}
                                 >
                                     ×
                                 </Link>
@@ -142,6 +147,10 @@ export default function KnowledgeBrowse() {
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
+                                    onClick={(e) => {
+                                        e.preventDefault()
+                                        navigate('/knowledge/browse')
+                                    }}
                                 >
                                     ×
                                 </Link>

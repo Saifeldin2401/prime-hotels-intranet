@@ -81,6 +81,7 @@ export default function TemplateEditor() {
       debounceMs: 500,
       version: 1,
     })
+    const { loadDraft, saveDraft, clearDraft } = formPersistence
 
     useEffect(() => {
       if (isEditMode) {
@@ -88,7 +89,7 @@ export default function TemplateEditor() {
         return
       }
 
-      const draft = formPersistence.loadDraft()
+      const draft = loadDraft()
       if (draft) {
         if (draft.title) setTitle(draft.title)
         if (draft.targetType) setTargetType(draft.targetType)
@@ -104,14 +105,14 @@ export default function TemplateEditor() {
         }
       }
       setHasMounted(true)
-    }, [isEditMode, formPersistence])
+    }, [isEditMode, loadDraft])
 
     useEffect(() => {
       if (!hasMounted || isEditMode) return
-      formPersistence.saveDraft({
+      saveDraft({
         title, targetType, role, jobTitle, requiredTrainingIds, tasks
       })
-    }, [hasMounted, isEditMode, formPersistence, title, targetType, role, jobTitle, requiredTrainingIds, tasks])
+    }, [hasMounted, isEditMode, saveDraft, title, targetType, role, jobTitle, requiredTrainingIds, tasks])
 
     // Load existing data
     useEffect(() => {
@@ -201,7 +202,7 @@ export default function TemplateEditor() {
             createTemplate(templateData, {
                 onSuccess: () => {
                     toast({ title: t('actions.template_created') })
-                    formPersistence.clearDraft()
+                    clearDraft()
                     navigate('/admin/onboarding/templates')
                 },
                 onError: (err) => {
@@ -233,7 +234,7 @@ export default function TemplateEditor() {
                     <div className="flex gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>Keep</Button>
                         <Button variant="outline" size="sm" onClick={() => {
-                            formPersistence.clearDraft()
+                            clearDraft()
                             setTitle('')
                             setTasks([{ title: '', description: '', assignee_role: 'self', due_day_offset: 0 }])
                             setShowRestorePrompt(false)
