@@ -21,6 +21,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
@@ -415,7 +416,7 @@ export function MobileKnowledgeViewer() {
                                     theme === 'dark' && 'prose-invert',
                                     theme === 'sepia' && 'prose-amber'
                                 )}
-                                dangerouslySetInnerHTML={{ __html: article.content }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.content) }}
                             />
 
                             {/* Bilingual Content (if translated) */}
@@ -431,7 +432,7 @@ export function MobileKnowledgeViewer() {
                                         <div 
                                             className="prose max-w-none"
                                             dir="rtl"
-                                            dangerouslySetInnerHTML={{ __html: article.content_ar }}
+                                            dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.content_ar) }}
                                         />
                                     </m.div>
                                 )}

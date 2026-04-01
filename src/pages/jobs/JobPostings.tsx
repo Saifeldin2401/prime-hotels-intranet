@@ -30,13 +30,14 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 
 
 export default function JobPostings({ embedded = false }: { embedded?: boolean }) {
     const { roles } = useAuth()
     const { t } = useTranslation('jobs')
+    const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
@@ -193,7 +194,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                         description={t('createFirst')}
                         action={canManageJobs ? {
                             label: t('create'),
-                            onClick: () => window.location.href = '/jobs/new',
+                            onClick: () => navigate('/jobs/new'),
                             icon: Plus
                         } : undefined}
                     />
@@ -342,7 +343,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                         description={searchTerm ? t('tryAdjusting') : t('createFirst')}
                         action={canManageJobs && !searchTerm ? {
                             label: t('create'),
-                            onClick: () => window.location.href = '/jobs/new',
+                            onClick: () => navigate('/jobs/new'),
                             icon: Plus
                         } : undefined}
                     />

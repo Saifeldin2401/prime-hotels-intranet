@@ -131,10 +131,6 @@ export default function KnowledgeBrowse() {
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        window.location.href = '/knowledge/browse'
-                                    }}
                                 >
                                     ×
                                 </Link>
@@ -146,10 +142,6 @@ export default function KnowledgeBrowse() {
                                 <Link
                                     to="/knowledge/browse"
                                     className="ml-1 hover:text-red-600"
-                                    onClick={(e) => {
-                                        e.preventDefault()
-                                        window.location.href = '/knowledge/browse'
-                                    }}
                                 >
                                     ×
                                 </Link>
