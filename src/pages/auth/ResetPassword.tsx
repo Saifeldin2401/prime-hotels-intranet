@@ -69,9 +69,14 @@ export default function ResetPassword() {
     useEffect(() => {
         if (awaitingConfirmation) return
 
+        // Reset in-flight flag on mount/cleanup to prevent stale state on mobile
+        validationInFlightRef.current = false
+
         const checkSession = async () => {
             if (validationInFlightRef.current) return
             validationInFlightRef.current = true
+            setValidatingToken(true)
+            setServiceUnavailableMessage(null)
             let isTokenCurrentlyValid = false
             let temporaryFailureMessage: string | null = null
 
@@ -171,8 +176,6 @@ export default function ResetPassword() {
             }
         }
 
-        setValidatingToken(true)
-        setServiceUnavailableMessage(null)
         void checkSession()
     }, [awaitingConfirmation, validationNonce])
 
