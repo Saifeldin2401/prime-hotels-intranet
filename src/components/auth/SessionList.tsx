@@ -17,7 +17,7 @@ interface Session {
 
 export function SessionList() {
     const { t: t_ext } = useTranslation('extracted');
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -56,8 +56,10 @@ export function SessionList() {
   }
 
   const handleSignOutAll = async () => {
-    // Sign out from all devices
-    await supabase.auth.signOut()
+    // Sign out from all devices using global scope, then use AuthContext signOut
+    // to properly reset local state
+    await supabase.auth.signOut({ scope: 'global' })
+    await signOut()
     window.location.href = '/login'
   }
 

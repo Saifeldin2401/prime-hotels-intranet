@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 interface UseInactivityTimeoutOptions {
@@ -45,10 +46,39 @@ export function useInactivityTimeout({
 
         if (onTimeout) {
             onTimeout()
-        } else {
-            await signOut()
+            return
         }
-    }, [clearAllTimers, onTimeout, signOut])
+
+        // Before logging out, verify the session is actually expired server-side.
+        // On mobile, timers are suspended during backgrounding — the user may have
+        // been active on another tab or the session may have been refreshed.
+        try {
+            const { data, error } = await supabase.auth.getUser()
+            if (error || !data?.user) {
+                // Session truly expired — proceed with logout
+                await signOut()
+            } else {
+                // Session is still valid — try refreshing activity from other tabs
+                const otherTabActivity = localStorage.getItem(STORAGE_KEY)
+                if (otherTabActivity) {
+                    const elapsed = Date.now() - parseInt(otherTabActivity, 10)
+                    if (elapsed < timeoutMs) {
+                        // Another tab was active — don't log out, just reset timers
+                        // This will be handled by the visibility change handler
+                        return
+                    }
+                }
+                // User genuinely inactive but session valid — still log them out for security
+                await signOut()
+            }
+        } catch {
+            // Network error — don't logout, user might just have flaky connection
+            // Re-check when network is available
+            if (import.meta.env.DEV) {
+                console.warn('[InactivityTimeout] Network error during session check, deferring logout')
+            }
+        }
+    }, [clearAllTimers, onTimeout, signOut, timeoutMs])
 
     const handleWarning = useCallback(() => {
         const now = Date.now()
@@ -130,24 +160,30 @@ export function useInactivityTimeout({
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
                 // When hidden, we don't clear timers because we want the background timeout to fire
-                // if the tab stays open in the background. 
-                // However, we should refresh the "last activity" if it's been updated by other tabs.
+                // if the tab stays open in the background.
                 return
             }
 
-            // returning to the tab: check if we timed out while away
-            const now = Date.now()
-            const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
-            const elapsed = now - lastActivity
+            // Returning to the tab: check if we timed out while away.
+            // Use a small delay on mobile to let localStorage sync from other tabs
+            // and network to stabilize after backgrounding.
+            const checkAfterResume = () => {
+                const now = Date.now()
+                const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
+                const elapsed = now - lastActivity
 
-            if (elapsed >= timeoutMs) {
-                handleTimeout()
-            } else if (elapsed >= warningMs) {
-                handleWarning()
-            } else {
-                // Not even in warning zone, just reset timers based on the synchronized last activity
-                resetTimers(true)
+                if (elapsed >= timeoutMs) {
+                    handleTimeout()
+                } else if (elapsed >= warningMs) {
+                    handleWarning()
+                } else {
+                    // Not even in warning zone, just reset timers based on the synchronized last activity
+                    resetTimers(true)
+                }
             }
+
+            // Brief delay allows localStorage cross-tab sync to complete
+            setTimeout(checkAfterResume, 100)
         }
 
         // Listen for activity in other tabs

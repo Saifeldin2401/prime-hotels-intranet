@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { classifyAuthError } from '@/lib/authErrorUtils'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { useCallback, useRef } from 'react'
 
@@ -69,6 +70,25 @@ export function useUserDataLoader(
     updated_at: new Date().toISOString(),
   })
 
+  /**
+   * Attempt to recover from an auth error by refreshing the token.
+   * Returns true if recovery succeeded, false if session should be cleared.
+   */
+  const attemptAuthRecovery = useCallback(async (context: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession()
+      if (data?.session?.user && !error) {
+        if (import.meta.env.DEV) {
+          console.log(`[Auth] Token refresh recovered session during ${context}`)
+        }
+        return true
+      }
+    } catch {
+      // Refresh failed
+    }
+    return false
+  }, [])
+
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
     async (userId: string) => {
@@ -80,6 +100,30 @@ export function useUserDataLoader(
         activeUserIdRef.current = userId
         setRolesLoading(true)
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
+
+        /**
+         * Handle an auth error from a data query: try token refresh first,
+         * only clear session if refresh also fails with an auth error.
+         */
+        const handleQueryAuthError = async (queryName: string, error: unknown): Promise<boolean> => {
+          if (!isAuthError(error)) return false
+
+          // Check if this is actually a network/transient error misclassified
+          const classification = classifyAuthError(error)
+          if (!classification.shouldLogout) {
+            if (import.meta.env.DEV) {
+              console.warn(`[Auth] ${queryName} error classified as non-fatal, keeping session`)
+            }
+            return false
+          }
+
+          // Try refreshing the token before giving up
+          const recovered = await attemptAuthRecovery(queryName)
+          if (recovered) return false // Don't treat as fatal — caller should continue
+
+          await clearLocalSession(`${queryName} auth error (refresh failed)`, resetLocalAuthState)
+          return true // Fatal — caller should stop
+        }
 
         // ── Load profile ──────────────────────────────────────────
         const profilePromise = supabase
@@ -97,10 +141,7 @@ export function useUserDataLoader(
         const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
         if (profileError) {
-          if (isAuthError(profileError)) {
-            await clearLocalSession('Profile request returned auth/session error', resetLocalAuthState)
-            return
-          }
+          if (await handleQueryAuthError('Profile', profileError)) return
           console.warn('Error loading profile.')
           // Try fallback from auth metadata
           const { data: { user } } = await supabase.auth.getUser()
@@ -137,10 +178,7 @@ export function useUserDataLoader(
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
-            if (isAuthError(rolesError)) {
-              await clearLocalSession('Roles request returned auth/session error', resetLocalAuthState)
-              return
-            }
+            if (await handleQueryAuthError('Roles', rolesError)) return
             console.warn('Error loading roles.')
             setRolesLoading(false)
           } else {
@@ -156,10 +194,7 @@ export function useUserDataLoader(
         if (propertiesResult.status === 'fulfilled') {
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
-            if (isAuthError(propertiesError)) {
-              await clearLocalSession('Properties request returned auth/session error', resetLocalAuthState)
-              return
-            }
+            if (await handleQueryAuthError('Properties', propertiesError)) return
             console.warn('Error loading properties.')
           } else {
             const props = directProps?.map((up) => up.properties).filter(Boolean) || []
@@ -173,10 +208,7 @@ export function useUserDataLoader(
         if (departmentsResult.status === 'fulfilled') {
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
-            if (isAuthError(departmentsError)) {
-              await clearLocalSession('Departments request returned auth/session error', resetLocalAuthState)
-              return
-            }
+            if (await handleQueryAuthError('Departments', departmentsError)) return
             console.warn('Error loading departments.')
           } else {
             const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
@@ -188,14 +220,19 @@ export function useUserDataLoader(
 
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
-        if (isAuthError(error)) {
-          await clearLocalSession('User data load failed due to auth/session error', resetLocalAuthState)
+        // For unexpected top-level errors, classify before deciding
+        const classification = classifyAuthError(error)
+        if (classification.shouldLogout) {
+          const recovered = await attemptAuthRecovery('loadUserData')
+          if (!recovered) {
+            await session.clearLocalSession('User data load failed due to auth error (refresh failed)', resetLocalAuthState)
+          }
           return
         }
         console.warn('Unexpected error loading user data.')
       }
     },
-    [session, state, resetLocalAuthState]
+    [session, state, resetLocalAuthState, attemptAuthRecovery]
   )
 
   return {
