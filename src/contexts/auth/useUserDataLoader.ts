@@ -137,23 +137,23 @@ export function useUserDataLoader(
           10000,
           'Profile load'
         ) as any
-        if (isStale()) return
+        if (isStale()) { setRolesLoading(false); return }
         const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
         if (profileError) {
-          if (await handleQueryAuthError('Profile', profileError)) return
+          if (await handleQueryAuthError('Profile', profileError)) { setRolesLoading(false); return }
           console.warn('Error loading profile.')
           // Try fallback from auth metadata
           const { data: { user } } = await supabase.auth.getUser()
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           if (user) setProfile(buildFallbackProfile(user))
         } else if (profileData) {
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           setProfile(profileData)
         } else {
           // No profile row yet — use auth metadata
           const { data: { user } } = await supabase.auth.getUser()
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           if (user) setProfile(buildFallbackProfile(user))
         }
 
@@ -172,13 +172,13 @@ export function useUserDataLoader(
           PromiseSettledResult<{ data?; error? }>,
         ]
 
-        if (isStale()) return
+        if (isStale()) { setRolesLoading(false); return }
 
         // Handle roles
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
-            if (await handleQueryAuthError('Roles', rolesError)) return
+            if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
             console.warn('Error loading roles.')
             setRolesLoading(false)
           } else {
@@ -220,6 +220,8 @@ export function useUserDataLoader(
 
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
+        // Always clear rolesLoading on error to prevent infinite skeleton
+        state.setRolesLoading(false)
         // For unexpected top-level errors, classify before deciding
         const classification = classifyAuthError(error)
         if (classification.shouldLogout) {
