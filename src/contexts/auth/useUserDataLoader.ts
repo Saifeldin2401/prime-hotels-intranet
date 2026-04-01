@@ -14,7 +14,6 @@ interface UserDataState {
 interface SessionHelpers {
   isAuthError: (error: unknown) => boolean
   withTimeout: <T>(promise: Promise<T>, ms: number, label: string) => Promise<T>
-  clearLocalSession: (reason: string, onCleared: () => void) => Promise<void>
 }
 
 /**
@@ -24,7 +23,6 @@ interface SessionHelpers {
 export function useUserDataLoader(
   state: UserDataState,
   session: SessionHelpers,
-  resetLocalAuthState: () => void
 ) {
   const loadSeqRef = useRef(0)
   const activeUserIdRef = useRef<string | null>(null)
@@ -73,7 +71,7 @@ export function useUserDataLoader(
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
     async (userId: string) => {
-      const { isAuthError, withTimeout, clearLocalSession } = session
+      const { isAuthError, withTimeout } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
       const shouldClearSession = async (error: unknown, reason: string) => {
         if (!isAuthError(error)) return false
@@ -89,9 +87,12 @@ export function useUserDataLoader(
       }
 
       try {
+        console.log('[Auth Debug] loadUserData started for userId:', userId)
         const loadId = ++loadSeqRef.current
+        console.log('[Auth Debug] loadId:', loadId)
         activeUserIdRef.current = userId
         setRolesLoading(true)
+        console.log('[Auth Debug] setRolesLoading(true) called')
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
 
         // ── Load profile ──────────────────────────────────────────
@@ -110,10 +111,11 @@ export function useUserDataLoader(
         const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
         if (profileError) {
-          if (await shouldClearSession(profileError, 'Profile request returned auth/session error')) {
-            return
+          if (isAuthError(profileError)) {
+            console.warn('Profile load hit an auth/session error; preserving current auth state.')
+          } else {
+            console.warn('Error loading profile.')
           }
-          console.warn('Error loading profile.')
           // Try fallback from auth metadata
           const { data: { user } } = await supabase.auth.getUser()
           if (isStale()) return
@@ -149,10 +151,11 @@ export function useUserDataLoader(
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
-            if (await shouldClearSession(rolesError, 'Roles request returned auth/session error')) {
-              return
+            if (isAuthError(rolesError)) {
+              console.warn('Roles load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading roles.')
             }
-            console.warn('Error loading roles.')
             setRolesLoading(false)
           } else {
             setRoles(directRoles || [])
@@ -167,10 +170,11 @@ export function useUserDataLoader(
         if (propertiesResult.status === 'fulfilled') {
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
-            if (await shouldClearSession(propertiesError, 'Properties request returned auth/session error')) {
-              return
+            if (isAuthError(propertiesError)) {
+              console.warn('Properties load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading properties.')
             }
-            console.warn('Error loading properties.')
           } else {
             const props = directProps?.map((up) => up.properties).filter(Boolean) || []
             setProperties(props)
@@ -183,10 +187,11 @@ export function useUserDataLoader(
         if (departmentsResult.status === 'fulfilled') {
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
-            if (await shouldClearSession(departmentsError, 'Departments request returned auth/session error')) {
-              return
+            if (isAuthError(departmentsError)) {
+              console.warn('Departments load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading departments.')
             }
-            console.warn('Error loading departments.')
           } else {
             const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
             setDepartments(depts)
@@ -197,13 +202,19 @@ export function useUserDataLoader(
 
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
-        if (await shouldClearSession(error, 'User data load failed due to auth/session error')) {
+        console.error('[Auth Debug] CATCH BLOCK ERROR:', error)
+        console.error('[Auth Debug] Error stack:', (error as Error).stack)
+        if (isAuthError(error)) {
+          console.warn('User data load hit an auth/session error; preserving current auth state.')
+          state.setRolesLoading(false)
           return
         }
         console.warn('Unexpected error loading user data.')
+      } finally {
+        console.log('[Auth Debug] loadUserData completed/finally for userId:', userId)
       }
     },
-    [session, state, resetLocalAuthState]
+    [session, state]
   )
 
   return {

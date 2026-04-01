@@ -7,6 +7,7 @@ interface UseInactivityTimeoutOptions {
     onTimeout?: () => void
     onWarning?: () => void
     enabled?: boolean
+    pauseWhenHidden?: boolean
 }
 
 const STORAGE_KEY = 'prime_last_activity'
@@ -34,7 +35,8 @@ export function useInactivityTimeout({
     warningMs = DEFAULT_WARNING_MS,
     onTimeout,
     onWarning,
-    enabled = true
+    enabled = true,
+    pauseWhenHidden = true
 }: UseInactivityTimeoutOptions = {}) {
     const { user, signOut } = useAuth()
     const [showWarning, setShowWarning] = useState(false)
@@ -148,13 +150,19 @@ export function useInactivityTimeout({
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                // When hidden, we don't clear timers because we want the background timeout to fire
-                // if the tab stays open in the background. 
-                // However, we should refresh the "last activity" if it's been updated by other tabs.
+                if (pauseWhenHidden) {
+                    clearAllTimers()
+                    setShowWarning(false)
+                }
                 return
             }
 
-            // returning to the tab: check if we timed out while away
+            if (pauseWhenHidden) {
+                resetTimers(true)
+                return
+            }
+
+            // Returning to the tab: check if we timed out while away.
             const now = Date.now()
             const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
             const elapsed = now - lastActivity
@@ -199,7 +207,18 @@ export function useInactivityTimeout({
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('storage', handleStorageChange)
         }
-    }, [effectiveEnabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
+    }, [
+        enabled,
+        user,
+        resetTimers,
+        handleActivity,
+        clearAllTimers,
+        handleTimeout,
+        handleWarning,
+        timeoutMs,
+        warningMs,
+        pauseWhenHidden,
+    ])
 
     return {
         showWarning: effectiveEnabled && showWarning,

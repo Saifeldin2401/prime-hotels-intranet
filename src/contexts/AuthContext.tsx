@@ -2,7 +2,7 @@ import type { AppRole } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { analytics } from '@/services/analyticsService'
-import type { User } from '@supabase/supabase-js'
+import type { Session, User } from '@supabase/supabase-js'
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { shouldSuppressAuthenticatedAppState } from '@/lib/authFlowState'
@@ -47,8 +47,12 @@ const CONFIG = {
   visibilityDebounceMs: 500,
   // Minimum time between validation attempts
   validationThrottleMs: 5000,
-  // Ignore quick tab flips that do not represent a real background/resume cycle
+  // Ignore quick tab switches that are common on mobile browsers
   minHiddenDurationMs: 15000,
+  // Refresh the auth session after longer background periods
+  refreshAfterHiddenMs: 10 * 60 * 1000,
+  // Refresh slightly before expiry to avoid resume-edge races
+  sessionExpiryBufferMs: 2 * 60 * 1000,
   // Retry configuration for network errors
   maxRetries: 3,
   baseRetryDelayMs: 1000,
@@ -96,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const { loadUserData, shouldRefreshUserData, syncProfileRef, syncRolesRef } =
-    useUserDataLoader(stateSetters, sessionHelpers, resetLocalAuthState)
+    useUserDataLoader(stateSetters, sessionHelpers)
 
   // Keep refs in sync
   useEffect(() => { syncProfileRef(profile) }, [profile, syncProfileRef])
@@ -203,7 +207,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     // ── Session verification on tab resume ──────────────────────────────
-    const verifySessionOnResume = async (retryAttempt = 0): Promise<void> => {
+    const isSessionNearExpiry = (session: Session) => {
+      const expiresAt = typeof session.expires_at === 'number' ? session.expires_at * 1000 : 0
+      return expiresAt > 0 && expiresAt - Date.now() <= CONFIG.sessionExpiryBufferMs
+    }
+
+    const verifySessionOnResume = async (hiddenDurationMs: number, retryAttempt = 0): Promise<void> => {
       // Skip if offline - network errors shouldn't cause logout
       if (!navigator.onLine) {
         recordAuthEvent({
@@ -233,17 +242,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recordAuthEvent({
           type: 'session_validation',
           success: true,
-          details: { attempt: retryAttempt },
+          details: { attempt: retryAttempt, hiddenDurationMs },
         })
 
-        const { data: { user: verifiedUser }, error } = await supabase.auth.getUser()
+        const { data: { session }, error } = await supabase.auth.getSession()
 
         if (!mounted) return
 
-        if (error || !verifiedUser) {
-          const errorMsg = getErrorMessage(error)
-          const errorCode = getErrorCode(error)
-          const classification = classifyAuthError(error)
+        if (error || !session?.user) {
+          const missingSession = !error && !session?.user
+          const errorMsg = missingSession
+            ? 'No session found during resume validation'
+            : getErrorMessage(error)
+          const errorCode = missingSession ? 'missing_session' : getErrorCode(error)
+          const classification = missingSession
+            ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
+            : classifyAuthError(error)
 
           recordAuthEvent({
             type: 'session_validation',
@@ -254,6 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               errorType: classification.type,
               shouldLogout: classification.shouldLogout,
               retryable: classification.retryable,
+              hiddenDurationMs,
             },
           })
 
@@ -281,7 +296,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             retryTimeoutRef.current = setTimeout(() => {
               if (mounted && document.visibilityState === 'visible') {
-                void verifySessionOnResume(retryAttempt + 1)
+                void verifySessionOnResume(hiddenDurationMs, retryAttempt + 1)
               }
             }, delay)
           } else if (classification.type === 'network_error') {
@@ -295,17 +310,89 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
+        let nextUser = session.user
+
+        setUser((current) => (current?.id === nextUser.id ? current : nextUser))
+
+        const shouldRefreshAuthSession =
+          hiddenDurationMs >= CONFIG.refreshAfterHiddenMs || isSessionNearExpiry(session)
+
+        if (shouldRefreshAuthSession) {
+          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+
+          if (!mounted) return
+
+          if (refreshError || !refreshData.session?.user) {
+            const missingSession = !refreshError && !refreshData.session?.user
+            const errorMsg = missingSession
+              ? 'No session returned from refresh after tab resume'
+              : getErrorMessage(refreshError)
+            const errorCode = missingSession ? 'missing_refresh_session' : getErrorCode(refreshError)
+            const classification = missingSession
+              ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
+              : classifyAuthError(refreshError)
+
+            recordAuthEvent({
+              type: 'token_refresh',
+              success: false,
+              error: errorMsg,
+              errorCode,
+              details: {
+                errorType: classification.type,
+                shouldLogout: classification.shouldLogout,
+                retryable: classification.retryable,
+                hiddenDurationMs,
+              },
+            })
+
+            if (classification.shouldLogout) {
+              sessionClearInProgressRef.current = true
+              try {
+                await clearLocalSession('Session refresh failed after tab resume', resetLocalAuthState)
+                recordAuthEvent({
+                  type: 'logout',
+                  success: true,
+                  details: { reason: 'session_expired', context: 'tab_resume_refresh' },
+                })
+              } finally {
+                sessionClearInProgressRef.current = false
+              }
+              finishLoading()
+              return
+            }
+
+            if (classification.retryable && retryAttempt < CONFIG.maxRetries) {
+              const delay = getRetryDelay(retryAttempt, CONFIG.baseRetryDelayMs)
+              retryTimeoutRef.current = setTimeout(() => {
+                if (mounted && document.visibilityState === 'visible') {
+                  void verifySessionOnResume(hiddenDurationMs, retryAttempt + 1)
+                }
+              }, delay)
+            }
+
+            finishLoading()
+            return
+          }
+
+          nextUser = refreshData.session.user
+          setUser((current) => (current?.id === nextUser.id ? current : nextUser))
+          recordAuthEvent({
+            type: 'token_refresh',
+            success: true,
+            details: { userId: nextUser.id, hiddenDurationMs },
+          })
+        }
+
         // Success - session is valid
         recordAuthEvent({
           type: 'session_validation',
           success: true,
-          details: { userId: verifiedUser.id },
+          details: { userId: nextUser.id, hiddenDurationMs },
         })
 
         authRecoveryInProgressRef.current = false
-        setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
-        if (shouldRefreshUserData(verifiedUser.id)) {
-          loadUserData(verifiedUser.id).catch(() => {
+        if (shouldRefreshUserData(nextUser.id)) {
+          loadUserData(nextUser.id).catch(() => {
             console.warn('[Auth] Error in loadUserData (resume validation).')
           })
         }
@@ -335,21 +422,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return
       }
 
-      const hiddenAt = hiddenAtRef.current
-      hiddenAtRef.current = null
-      if (hiddenAt && Date.now() - hiddenAt < CONFIG.minHiddenDurationMs) {
-        return
-      }
-
       // Add delay to let browser stabilize network after becoming visible
       if (document.visibilityState === 'visible' && navigator.onLine) {
+        const hiddenDurationMs = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0
+        hiddenAtRef.current = null
+
+        if (hiddenDurationMs < CONFIG.minHiddenDurationMs) {
+          return
+        }
+
         const debounceMs = isEnabled('smartSessionValidation') 
           ? CONFIG.visibilityDebounceMs 
           : 0
 
         visibilityTimeoutRef.current = setTimeout(() => {
           if (document.visibilityState === 'visible') {
-            void verifySessionOnResume()
+            void verifySessionOnResume(hiddenDurationMs)
           }
         }, debounceMs)
       }
@@ -373,26 +461,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────
   const signIn = async (email: string, password: string) => {
+    console.log('[Auth Debug] signIn called')
     try {
       setLoading(true)
       setRolesLoading(true)
+      console.log('[Auth Debug] Calling supabase.auth.signInWithPassword...')
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      console.log('[Auth Debug] signInWithPassword result:', { hasUser: !!data.user, hasError: !!error })
       if (error) {
+        console.log('[Auth Debug] signIn error:', error)
         setLoading(false)
         setRolesLoading(false)
         return { error }
       }
       if (data.user) {
+        console.log('[Auth Debug] User signed in, setting user state...')
         setUser(data.user)
         setLoading(false)
-        loadUserData(data.user.id).catch(() => {
-          console.warn('[Auth] Error loading user data after sign in.')
+        console.log('[Auth Debug] Calling loadUserData...')
+        loadUserData(data.user.id).catch((err) => {
+          console.error('[Auth Debug] loadUserData error:', err)
         })
       } else {
+        console.log('[Auth Debug] No user in signIn data')
         setLoading(false)
       }
       return { error: null }
     } catch (error) {
+      console.error('[Auth Debug] signIn CATCH error:', error)
       setLoading(false)
       setRolesLoading(false)
       return { error: error as Error }
@@ -413,17 +509,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession()
       if (error || !session?.user) {
-        const classification = classifyAuthError(error)
+        const missingSession = !error && !session?.user
+        const classification = missingSession
+          ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
+          : classifyAuthError(error)
         recordAuthEvent({
           type: 'token_refresh',
           success: false,
-          error: getErrorMessage(error),
-          errorCode: getErrorCode(error),
-          details: {
-            shouldLogout: classification.shouldLogout,
-            retryable: classification.retryable,
-            errorType: classification.type,
-          },
+          error: missingSession ? 'No session returned from refresh' : getErrorMessage(error),
         })
         if (classification.shouldLogout) {
           await clearLocalSession('Session refresh failed', resetLocalAuthState)

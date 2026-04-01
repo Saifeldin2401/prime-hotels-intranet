@@ -216,7 +216,8 @@ export default function TrainingPlayerEnhanced() {
         enabled: !!id && isValidModuleId,
         staleTime: 0,
         refetchOnMount: 'always',
-        refetchOnWindowFocus: true,
+        refetchOnWindowFocus: false,
+        refetchOnReconnect: true,
         meta: { persist: false },
     })
 
