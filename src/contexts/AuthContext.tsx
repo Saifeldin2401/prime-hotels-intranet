@@ -395,8 +395,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [
     clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData,
-    isAuthError, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef,
-    cleanupTimers,
+    isAuthError, cleanupTimers,
   ])
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────

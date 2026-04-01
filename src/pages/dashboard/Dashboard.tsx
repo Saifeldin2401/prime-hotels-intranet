@@ -32,9 +32,9 @@ const preloadWidgets = () => {
       () => import('./components/AnnouncementsWidget'),
     ]
     
-    widgetImports.forEach(importFn => {
+    widgetImports.forEach(async importFn => {
       try {
-        importFn()
+        await importFn()
       } catch {
         // Silent fail - will retry when actually needed
       }

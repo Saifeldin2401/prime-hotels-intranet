@@ -38,7 +38,6 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
     const navigate = useNavigate()
     const { roles } = useAuth()
     const { t } = useTranslation('jobs')
-    const navigate = useNavigate()
     const queryClient = useQueryClient()
     const [searchTerm, setSearchTerm] = useState('')
     const [statusFilter, setStatusFilter] = useState('all')
@@ -209,7 +208,6 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                         action={{
                             label: t('filters.clear'),
                             onClick: () => {
-                                setSearchTerm('')
                                 setSearchTerm('')
                                 setStatusFilter('all')
                             }

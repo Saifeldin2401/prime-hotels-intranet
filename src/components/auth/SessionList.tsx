@@ -86,7 +86,7 @@ export function SessionList() {
                 <div>
                   <p className="font-medium">{t_ext('current_session', 'Current Session')}</p>
                   <p className="text-sm text-muted-foreground">
-                    {t_ext('last_active', 'Last active:')}{formatDateTime(session.updated_at)}
+                    {t_ext('last_active', 'Last active:')} {formatDateTime(session.updated_at)}
                   </p>
                   {session.ip && (
                     <p className="text-sm text-muted-foreground">{t_ext('ip', 'IP:')}{session.ip}</p>
