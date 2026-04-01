@@ -19,7 +19,34 @@ import {
     X,
     Zap
 } from 'lucide-react'
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { useEffect, useState, useCallback, useMemo, Suspense, lazy } from 'react'
+
+// Preload critical widgets on dashboard mount
+const preloadWidgets = () => {
+  // Use requestIdleCallback to preload when browser is idle
+  const preload = () => {
+    const widgetImports = [
+      () => import('./components/QuickInsights'),
+      () => import('./components/StatsGrid'),
+      () => import('./components/QuickActions'),
+      () => import('./components/AnnouncementsWidget'),
+    ]
+    
+    widgetImports.forEach(importFn => {
+      try {
+        importFn()
+      } catch {
+        // Silent fail - will retry when actually needed
+      }
+    })
+  }
+  
+  if ('requestIdleCallback' in window) {
+    window.requestIdleCallback(preload, { timeout: 2000 })
+  } else {
+    setTimeout(preload, 100)
+  }
+}
 // Dynamic Registry and Permissions
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
 import { WIDGET_REGISTRY, useDynamicLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
@@ -62,7 +89,19 @@ function RegistryWidgetRenderer({
 
   return (
     <m.div variants={itemVariants} key={id} layout className="relative group">
-      <Suspense fallback={<Skeleton className="w-full h-[200px] rounded-xl" />}>
+      <Suspense fallback={
+        <div className="w-full h-[200px] rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <Skeleton className="h-8 w-8 rounded-lg" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="h-20 w-full rounded-lg" />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-20 rounded" />
+            <Skeleton className="h-8 w-20 rounded" />
+          </div>
+        </div>
+      }>
         {id === 'statsGrid' ? (
           <WidgetComponent stats={statsList} isLoading={statsLoading} {...extraProps} />
         ) : (
@@ -111,6 +150,9 @@ export function IntegratedDashboard() {
   const [showCustomize, setShowCustomize] = useState(false)
 
   useEffect(() => {
+    // Preload critical widget chunks for faster rendering
+    preloadWidgets()
+    
     const timer = window.setTimeout(() => {
       setDeferredWidgetsReady(true)
     }, 250)
