@@ -48,3 +48,8 @@ export function RoleBasedRedirect() {
 
 // Note: Helper function getDashboardPathForRole moved to lib/navigation.ts if needed
 // Removed from this file to fix fast refresh warning - export only one component per file
+
+export function getDashboardPathForRole(role: string): string {
+  // All roles now use unified dashboard
+  return '/dashboard';
+}

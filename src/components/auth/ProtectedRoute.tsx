@@ -5,7 +5,7 @@ import { ROLES, type AppRole } from '@/lib/constants'
 import { useTranslation } from 'react-i18next'
 import { Navigate } from 'react-router-dom'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
-import { getDashboardPathForRole } from './RoleBasedRedirect'
+// getDashboardPathForRole removed - now always returns '/dashboard'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -76,7 +76,7 @@ export function ProtectedRoute({
     if (primaryRole && !roleAllowed(primaryRole, allowedRoles)) {
       // Use smart fallback - redirect to user's correct dashboard
       if (smartFallback && primaryRole) {
-        const correctDashboard = getDashboardPathForRole(primaryRole)
+        const correctDashboard = '/dashboard'
         return <Navigate to={correctDashboard} replace />
       }
       return <Navigate to={fallbackPath} replace />
@@ -86,7 +86,7 @@ export function ProtectedRoute({
   // Check permission-based access
   if (requiredPermission && !hasPermission(requiredPermission, requiredPropertyId, requiredDepartmentId)) {
     if (smartFallback && primaryRole) {
-      const correctDashboard = getDashboardPathForRole(primaryRole)
+      const correctDashboard = '/dashboard'
       return <Navigate to={correctDashboard} replace />
     }
     return <Navigate to={fallbackPath} replace />
