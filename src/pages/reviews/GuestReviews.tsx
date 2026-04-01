@@ -138,6 +138,7 @@ export default function GuestReviews() {
     severity: 'all',
     sentiment: 'all',
     query: '',
+    sort: 'newest_critical' as const,
   })
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({

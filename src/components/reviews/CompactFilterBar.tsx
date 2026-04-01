@@ -10,6 +10,7 @@ interface Filters {
   severity: string;
   sentiment: string;
   query: string;
+  sort: 'newest_critical' | 'newest' | 'critical' | 'oldest' | 'highest_rating' | 'lowest_rating';
 }
 
 interface CompactFilterBarProps {
@@ -43,6 +44,7 @@ export function CompactFilterBar({
       severity: 'all',
       sentiment: 'all',
       query: '',
+      sort: 'newest_critical',
     });
   };
 
@@ -91,6 +93,19 @@ export function CompactFilterBar({
             {p}
           </option>
         ))}
+      </select>
+
+      <select
+        value={filters.sort}
+        onChange={(e) => onFilterChange({ ...filters, sort: e.target.value as Filters['sort'] })}
+        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+      >
+        <option value="newest_critical">Newest + Critical</option>
+        <option value="newest">Newest First</option>
+        <option value="critical">Most Critical</option>
+        <option value="highest_rating">Highest Rating</option>
+        <option value="lowest_rating">Lowest Rating</option>
+        <option value="oldest">Oldest First</option>
       </select>
 
       <Button variant="outline" size="sm" onClick={handleSearch} className="h-9">

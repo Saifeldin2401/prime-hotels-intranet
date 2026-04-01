@@ -1,5 +1,4 @@
 import { useAuth } from '@/hooks/useAuth';
-
 import { useTranslation } from "react-i18next";
 import { Navigate } from 'react-router-dom';
 
@@ -46,10 +45,5 @@ export function RoleBasedRedirect() {
     return <Navigate to="/dashboard" replace />
 }
 
-// Note: Helper function getDashboardPathForRole moved to lib/navigation.ts if needed
-// Removed from this file to fix fast refresh warning - export only one component per file
-
-export function getDashboardPathForRole(role: string): string {
-  // All roles now use unified dashboard
-  return '/dashboard';
-}
+// Note: getDashboardPathForRole function removed from this file to fix fast refresh warning.
+// It now always returns '/dashboard' and is inlined in ProtectedRoute.tsx where needed.
