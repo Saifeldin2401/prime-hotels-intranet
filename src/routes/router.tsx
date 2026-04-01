@@ -1,9 +1,10 @@
 import { RouteErrorBoundary } from '@/components/common'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
+import { getRedirectFromSearch } from '@/lib/authRedirect'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { lazy, Suspense } from 'react'
-import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route } from 'react-router-dom'
+import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes } from './modules/AuthRoutes'
@@ -56,11 +57,13 @@ const RootLayout = () => {
 
 const RootIndex = () => {
     const { user } = useAuth()
+    const location = useLocation()
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
+    const redirectPath = getRedirectFromSearch(location.search)
     if (user && pendingAuthFlowPath) {
         return <Navigate to={pendingAuthFlowPath} replace />
     }
-    return user ? <Navigate to="/home" replace /> : <PublicHome />
+    return user ? <Navigate to={redirectPath ?? "/home"} replace /> : <PublicHome />
 }
 
 export const router = createBrowserRouter(

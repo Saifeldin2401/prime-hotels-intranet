@@ -8,14 +8,16 @@ import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { router } from '@/routes/router'
 import { isEnabled } from '@/lib/featureFlags'
-import { QueryClient, QueryClientProvider, dehydrate, focusManager, hydrate, onlineManager, type DehydratedState, type Query } from '@tanstack/react-query'
+import { QueryClientProvider, dehydrate, focusManager, hydrate, onlineManager, type DehydratedState, type Query } from '@tanstack/react-query'
+import { queryClient } from '@/lib/queryClient'
+import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useEffect, useState, type ComponentType } from 'react'
 import { RouterProvider } from 'react-router-dom'
 
 const QUERY_CACHE_KEY = 'prime_query_cache_v4'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
-const LEGACY_QUERY_CACHE_KEYS = ['prime_query_cache_v1', 'prime_query_cache_v2', 'prime_query_cache_v3']
 const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
 const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'learning-progress',
@@ -30,23 +32,6 @@ const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'training-assignments',
   'assignment-progress',
 ])
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: true,
-      refetchOnMount: false,
-      staleTime: 1000 * 60 * 2,
-      gcTime: 1000 * 60 * 5,
-      retry: (failureCount, error) => {
-        if (failureCount >= 2) return false
-        const status = Number((error as { status?: number })?.status ?? 0)
-        return status === 0 || status >= 500
-      },
-    },
-  },
-})
 
 const getPrimaryQueryKey = (queryKey: readonly unknown[]) => {
   const primaryKey = queryKey[0]
@@ -78,18 +63,6 @@ const filterDehydratedState = (state: DehydratedState): DehydratedState => ({
     state: query.state,
   } as Pick<Query, 'queryKey' | 'meta' | 'state'>)),
 })
-
-const clearLegacyQueryCaches = () => {
-  if (typeof window === 'undefined') return
-
-  LEGACY_QUERY_CACHE_KEYS.forEach((cacheKey) => {
-    try {
-      window.sessionStorage.removeItem(cacheKey)
-    } catch {
-      // Ignore storage cleanup errors.
-    }
-  })
-}
 
 const restoreQueryCache = () => {
   if (typeof window === 'undefined') return
@@ -128,7 +101,6 @@ const persistQueryCache = () => {
   }
 }
 
-clearLegacyQueryCaches()
 restoreQueryCache()
 
 const shouldEnableVercelInsights = () => {
@@ -184,6 +156,46 @@ const applyPendingAppUpdate = async () => {
       window.location.reload()
     }, 3000)
   })
+}
+
+function DashboardPrefetcher() {
+  const { user, roles, departments, properties, rolesLoading } = useAuth()
+  const { currentProperty, propertyIds } = useProperty()
+
+  useEffect(() => {
+    if (!user?.id || rolesLoading) return
+
+    // Prefetch dashboard JS chunk so navigation feels instant
+    void import('@/pages/dashboard/Dashboard')
+
+    // Warm the cache with base dashboard stats
+    const prefetch = async () => {
+      const { fetchDashboardStats } = await import('@/hooks/useDashboardStats')
+      await queryClient.prefetchQuery({
+        queryKey: [
+          'dashboard-stats',
+          user.id,
+          currentProperty?.id,
+          roles.map(r => r.role).sort(),
+          departments.map(d => d.id).sort(),
+          properties.map(p => p.id).sort(),
+        ],
+        queryFn: () => fetchDashboardStats({
+          userId: user.id,
+          authUserId: user.id,
+          currentPropertyId: currentProperty?.id,
+          propertyIds,
+          roles,
+          departments,
+          properties,
+        }),
+        staleTime: 2 * 60 * 1000,
+      })
+    }
+    void prefetch()
+  }, [user, rolesLoading, currentProperty?.id, propertyIds, roles, departments, properties])
+
+  return null
 }
 
 function App() {
@@ -302,6 +314,7 @@ function App() {
             <PropertyProvider>
               <UserSettingsProvider>
                 <PresenceProvider>
+                  <DashboardPrefetcher />
                   <RouterProvider router={router} />
                 </PresenceProvider>
               </UserSettingsProvider>

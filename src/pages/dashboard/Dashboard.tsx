@@ -52,22 +52,37 @@ import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
 import { WIDGET_REGISTRY, useDynamicLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
 
 // Static Widgets
-import { SocialFeed } from '@/components/social/SocialFeed'
-import { DashboardCustomizeModal } from './components/DashboardCustomizeModal'
-import { NotificationsPanel } from './components/NotificationsPanel'
+const SocialFeed = lazy(() => import('@/components/social/SocialFeed').then(m => ({ default: m.SocialFeed })))
+const DashboardCustomizeModal = lazy(() => import('./components/DashboardCustomizeModal').then(m => ({ default: m.DashboardCustomizeModal })))
+const NotificationsPanel = lazy(() => import('./components/NotificationsPanel').then(m => ({ default: m.NotificationsPanel })))
 import { WelcomeHeader } from './components/WelcomeHeader'
 
 import { useTranslation } from "react-i18next"
 import { useNavigate } from 'react-router-dom'
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
+
+const itemVariants = {
+  hidden: { translateY: 20, opacity: 0 },
+  visible: {
+    translateY: 0,
+    opacity: 1
+  }
+}
+
 interface RegistryWidgetRendererProps {
   id: WidgetId
   effectivePermittedWidgets: WidgetId[]
   visibleWidgets: Record<string, boolean>
-  itemVariants: {
-    hidden: { translateY: number; opacity: number }
-    visible: { translateY: number; opacity: number }
-  }
+  itemVariants: typeof itemVariants
   statsList: Array<Record<string, unknown>>
   statsLoading: boolean
   extraProps?: Record<string, unknown>
@@ -133,12 +148,14 @@ export function IntegratedDashboard() {
   const isManager = primaryRole === 'property_manager'
   const isHR = primaryRole === 'property_hr'
   const isDeptHead = primaryRole === 'department_head'
+  const isAreaManager = primaryRole === 'area_manager'
+  const isCorporate = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin' || primaryRole === 'super_admin'
 
-  const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats()
-  const { data: hrStats, isLoading: hrLoading } = useHRStats()
+  const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats({ enabled: isManager })
+  const { data: hrStats, isLoading: hrLoading } = useHRStats({ enabled: isHR })
   const { data: deptHeadStats, isLoading: deptHeadLoading } = useDepartmentHeadStats()
-  const { isLoading: areaLoading } = useAreaManagerStats()
-  const { isLoading: corpLoading } = useCorporateStats()
+  const { isLoading: areaLoading } = useAreaManagerStats({ enabled: isAreaManager })
+  const { isLoading: corpLoading } = useCorporateStats({ enabled: isCorporate })
   const [deferredWidgetsReady, setDeferredWidgetsReady] = useState(false)
 
   const statsLoading = baseLoading || managerLoading || hrLoading || deptHeadLoading || areaLoading || corpLoading
@@ -337,11 +354,22 @@ export function IntegratedDashboard() {
     }
 
     return baseStats.slice(0, 4)
-  }, [t, ready, stats, managerStats, hrStats, deptHeadStats, unreadCount, isManager, isHR, isDeptHead])
+  }, [t, ready, stats, managerStats, hrStats, deptHeadStats, isManager, isHR, isDeptHead])
 
   const effectiveRole = primaryRole || 'staff'
   // Use dynamic layout profile based on full user context (role + multi-property status)
   const layoutProfile = useDynamicLayoutProfile()
+
+  const widgetRendererProps = useMemo(() => ({
+    effectivePermittedWidgets,
+    visibleWidgets,
+    itemVariants,
+    statsList,
+    statsLoading,
+    extraProps: {
+      focusMode
+    }
+  }), [effectivePermittedWidgets, visibleWidgets, statsList, statsLoading, focusMode])
 
   // Only block on initial auth loading or missing user.
   // Don't block on missing profile — render with fallback data to avoid infinite skeleton.
@@ -357,24 +385,6 @@ export function IntegratedDashboard() {
     )
   }
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  }
-
-  const itemVariants = {
-    hidden: { translateY: 20, opacity: 0 },
-    visible: {
-      translateY: 0,
-      opacity: 1
-    }
-  }
-
   const showFocusToggle = ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'department_head'].includes(effectiveRole)
 
   const handleFocusModeChange = (nextMode: 'my_work' | 'my_team') => {
@@ -385,17 +395,6 @@ export function IntegratedDashboard() {
     }
 
     setFocusMode(nextMode)
-  }
-
-  const widgetRendererProps = {
-    effectivePermittedWidgets,
-    visibleWidgets,
-    itemVariants,
-    statsList,
-    statsLoading,
-    extraProps: {
-      focusMode
-    }
   }
 
   const renderWidget = (widgetId: DashboardWidgetId) => {

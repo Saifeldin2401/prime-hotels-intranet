@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Filter, X } from 'lucide-react';
 
-interface Filters {
+export interface Filters {
   propertyId: string;
   platform: string;
   status: string;
@@ -28,6 +28,9 @@ export function CompactFilterBar({
   onFilterChange,
   properties,
   platforms,
+  severities,
+  sentiments,
+  statuses,
 }: CompactFilterBarProps) {
   const [localQuery, setLocalQuery] = useState(filters.query);
 
@@ -91,6 +94,45 @@ export function CompactFilterBar({
         {platforms.map((p) => (
           <option key={p} value={p}>
             {p}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.severity}
+        onChange={(e) => onFilterChange({ ...filters, severity: e.target.value })}
+        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+      >
+        <option value="all">All Severities</option>
+        {severities.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.sentiment}
+        onChange={(e) => onFilterChange({ ...filters, sentiment: e.target.value })}
+        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+      >
+        <option value="all">All Sentiments</option>
+        {sentiments.map((s) => (
+          <option key={s} value={s}>
+            {s}
+          </option>
+        ))}
+      </select>
+
+      <select
+        value={filters.status}
+        onChange={(e) => onFilterChange({ ...filters, status: e.target.value })}
+        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
+      >
+        <option value="all">All Statuses</option>
+        {statuses.map((s) => (
+          <option key={s} value={s}>
+            {s}
           </option>
         ))}
       </select>

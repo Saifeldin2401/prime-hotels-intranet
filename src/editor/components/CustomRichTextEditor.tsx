@@ -9,7 +9,7 @@ import { mergeToolbarConfig } from '@/editor/toolbar/toolbarConfig'
 import type { EditorOutput, RichTextEditorProps, SaveState } from '@/editor/types'
 import { copyToClipboard } from '@/editor/utils/clipboard'
 import { serializeEditorContent } from '@/editor/utils/serialization'
-import { uploadImageToSupabase, uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
+import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import type { Editor } from '@tiptap/react'
@@ -138,7 +138,7 @@ export function CustomRichTextEditor({
       setIsUploadingImage(true)
       try {
         for (const file of imageFiles) {
-          const publicUrl = await uploadImageToSupabase(file, supabaseBucket)
+          const publicUrl = await uploadFileToSupabase(file, supabaseBucket)
           if (!publicUrl) continue
 
           const chain = currentEditor.chain().focus()

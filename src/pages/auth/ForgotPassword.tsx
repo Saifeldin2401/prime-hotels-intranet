@@ -2,14 +2,18 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { getRedirectFromSearch } from '@/lib/authRedirect'
 import { supabase } from '@/lib/supabase'
 import { AlertCircle, ArrowLeft, CheckCircle, Loader2, Mail } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 export default function ForgotPassword() {
     const { t } = useTranslation('auth')
+    const location = useLocation()
+    const redirectPath = getRedirectFromSearch(location.search)
+    const loginUrl = redirectPath ? `/login?redirect=${encodeURIComponent(redirectPath)}` : '/login'
     const [email, setEmail] = useState('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -83,7 +87,7 @@ export default function ForgotPassword() {
                         >
                             {t('forgot_password.try_different')}
                         </Button>
-                        <Link to="/login" className="w-full">
+                        <Link to={loginUrl} className="w-full">
                             <Button variant="ghost" className="w-full">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 {t('forgot_password.back_to_login')}
@@ -136,7 +140,7 @@ export default function ForgotPassword() {
                                 t('forgot_password.send_link')
                             )}
                         </Button>
-                        <Link to="/login" className="w-full">
+                        <Link to={loginUrl} className="w-full">
                             <Button variant="ghost" className="w-full">
                                 <ArrowLeft className="h-4 w-4 mr-2" />
                                 {t('forgot_password.back_to_login')}

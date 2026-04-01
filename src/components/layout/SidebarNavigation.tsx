@@ -143,6 +143,7 @@ export function SidebarNavigation({
           key={item.path}
           to={item.resolvedPath}
           onClick={handleNavClick}
+          onMouseEnter={() => { if (item.path === '/dashboard' || item.resolvedPath === '/dashboard') void import('@/pages/dashboard/Dashboard') }}
           className={cn(
             "flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
             "active:scale-[0.98]",
@@ -180,6 +181,7 @@ export function SidebarNavigation({
         key={item.path}
         to={item.resolvedPath}
         onClick={handleNavClick}
+        onMouseEnter={() => { if (item.path === '/dashboard' || item.resolvedPath === '/dashboard') void import('@/pages/dashboard/Dashboard') }}
         data-nav={navId}
         className={cn(
           "flex items-center gap-3 px-3 py-2.5 lg:py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",

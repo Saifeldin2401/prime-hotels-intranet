@@ -12,17 +12,19 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { RefreshCw, Search, LayoutGrid, List, MessageSquare, ShieldAlert, Send, Globe, Settings, CheckCircle2, User, Zap, BarChart3, Building2 } from 'lucide-react'
+import { RefreshCw, Search, LayoutGrid, List, MessageSquare, ShieldAlert, Send, Globe, Settings, CheckCircle2, User, Zap, BarChart3, Building2, Activity } from 'lucide-react'
 import { Switch } from '@/components/ui/switch'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import { Bell, BellRing, Radio, Volume2, VolumeX } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { ReviewListItem } from '@/components/reviews/ReviewListItem'
 import { OTASourceManager } from '@/components/reviews/OTASourceManager'
+import { ReviewMonitoringDashboard } from '@/components/reviews/ReviewMonitoringDashboard'
 import { BulkOperationsToolbar } from '@/components/reviews/BulkOperationsToolbar'
 import { ReviewAnalyticsDashboard } from '@/components/reviews/ReviewAnalyticsDashboard'
 import { MultiHotelDashboard } from '@/components/reviews/MultiHotelDashboard'
 import { QuickStatsSummary } from '@/components/reviews/QuickStatsSummary'
-import { CompactFilterBar } from '@/components/reviews/CompactFilterBar'
+import { CompactFilterBar, type Filters } from '@/components/reviews/CompactFilterBar'
 import { ReviewTrendsChart } from '@/components/reviews/ReviewTrendsChart'
 import { PropertyComparisonChart } from '@/components/reviews/PropertyComparisonChart'
 import { DateRangePicker } from '@/components/reviews/DateRangePicker'
@@ -131,14 +133,14 @@ export default function GuestReviews() {
   const [selectedReviewIds, setSelectedReviewIds] = useState<string[]>([])
   const [activeTab, setActiveTab] = useState('overview')
 
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<Filters>({
     propertyId: 'all',
     platform: 'all',
     status: 'all',
     severity: 'all',
     sentiment: 'all',
     query: '',
-    sort: 'newest_critical' as const,
+    sort: 'newest_critical',
   })
 
   const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
@@ -146,7 +148,99 @@ export default function GuestReviews() {
     to: undefined,
   })
 
-  const [showTemplates, setShowTemplates] = useState(false)
+  // Monitoring system states
+  const [isMonitoring, setIsMonitoring] = useState(true)
+  const [soundEnabled, setSoundEnabled] = useState(false)
+  const [newReviewCount, setNewReviewCount] = useState(0)
+  const [lastCheckedAt, setLastCheckedAt] = useState<Date>(new Date())
+  const [recentReviews, setRecentReviews] = useState<Set<string>>(new Set())
+  const audioRef = useRef<HTMLAudioElement | null>(null)
+  const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Monitoring system: Check for new reviews every 30 seconds
+  const checkForNewReviews = useCallback(async () => {
+    if (!isMonitoring) return
+    
+    try {
+      const { data, error } = await supabase
+        .from('guest_reviews')
+        .select('id, reviewer_name, platform, severity, critical_flag, collected_at')
+        .gt('collected_at', lastCheckedAt.toISOString())
+        .order('collected_at', { ascending: false })
+        .limit(10)
+      
+      if (error) throw error
+      
+      if (data && data.length > 0) {
+        const newIds = new Set(recentReviews)
+        let criticalCount = 0
+        
+        data.forEach((review) => {
+          if (!newIds.has(review.id)) {
+            newIds.add(review.id)
+            if (review.critical_flag || review.severity === 'critical') {
+              criticalCount++
+            }
+          }
+        })
+        
+        if (newIds.size > recentReviews.size) {
+          setRecentReviews(newIds)
+          setNewReviewCount(prev => prev + (newIds.size - recentReviews.size))
+          
+          // Show toast notification
+          const newCount = newIds.size - recentReviews.size
+          toast({
+            title: `${newCount} New Review${newCount > 1 ? 's' : ''} Detected`,
+            description: criticalCount > 0 
+              ? `⚠️ ${criticalCount} critical review${criticalCount > 1 ? 's' : ''} require attention`
+              : 'New guest feedback has arrived',
+            variant: criticalCount > 0 ? 'destructive' : 'default',
+          })
+          
+          // Play sound if enabled and critical
+          if (soundEnabled && criticalCount > 0 && audioRef.current) {
+            audioRef.current.play().catch(() => {})
+          }
+          
+          // Refresh the reviews list
+          queryClient.invalidateQueries({ queryKey: ['guest-reviews'] })
+        }
+      }
+      
+      setLastCheckedAt(new Date())
+    } catch (err) {
+      console.error('Error checking for new reviews:', err)
+    }
+  }, [isMonitoring, lastCheckedAt, recentReviews, soundEnabled, toast, queryClient])
+
+  // Set up monitoring interval
+  useEffect(() => {
+    if (isMonitoring) {
+      monitoringIntervalRef.current = setInterval(checkForNewReviews, 30000) // Check every 30 seconds
+    }
+    
+    return () => {
+      if (monitoringIntervalRef.current) {
+        clearInterval(monitoringIntervalRef.current)
+      }
+    }
+  }, [isMonitoring, checkForNewReviews])
+
+  // Clear new review badge when user clicks to view
+  const clearNewReviews = () => {
+    setNewReviewCount(0)
+    setRecentReviews(new Set())
+  }
+
+  // Mark a review as "seen" (remove from recent)
+  const markReviewSeen = (reviewId: string) => {
+    setRecentReviews(prev => {
+      const next = new Set(prev)
+      next.delete(reviewId)
+      return next
+    })
+  }
 
   const propertiesQuery = useQuery({
     queryKey: ['guest-review-properties'],
@@ -169,8 +263,57 @@ export default function GuestReviews() {
         .from('guest_reviews')
         .select('*')
         .neq('property_id', GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID)
-        .order('collected_at', { ascending: false })
-        .limit(200)
+
+      // FIXED: Filter out reviews older than 90 days based on published_at (original review date)
+      // This prevents old reviews from appearing when they're newly collected
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
+      query = query.or(`published_at.gte.${ninetyDaysAgo},and(published_at.is.null,collected_at.gte.${ninetyDaysAgo})`)
+
+      // Apply sorting based on filter selection
+      // FIXED: Use collected_at consistently as the system-of-record timestamp
+      switch (filters.sort) {
+        case 'newest_critical':
+          // Sort by critical flag first (critical first), then by collected_at (system time)
+          query = query
+            .order('critical_flag', { ascending: false })
+            .order('collected_at', { ascending: false })
+          break
+        case 'newest':
+          // Sort by collected_at (newest first) - system collection time
+          query = query
+            .order('collected_at', { ascending: false })
+          break
+        case 'oldest':
+          // Sort by collected_at (oldest first)
+          query = query
+            .order('collected_at', { ascending: true })
+          break
+        case 'critical':
+          // Sort by severity (critical first), then by collected_at
+          query = query
+            .order('severity', { ascending: false })
+            .order('critical_flag', { ascending: false })
+            .order('collected_at', { ascending: false })
+          break
+        case 'highest_rating':
+          // Sort by rating (highest first), then by collected_at
+          query = query
+            .order('rating_normalized_5', { ascending: false })
+            .order('collected_at', { ascending: false })
+          break
+        case 'lowest_rating':
+          // Sort by rating (lowest first), then by collected_at
+          query = query
+            .order('rating_normalized_5', { ascending: true })
+            .order('collected_at', { ascending: false })
+          break
+        default:
+          // Default to newest first by collection time
+          query = query
+            .order('collected_at', { ascending: false })
+      }
+
+      query = query.limit(200)
 
       if (filters.propertyId !== 'all') query = query.eq('property_id', filters.propertyId)
       if (filters.platform !== 'all') query = query.eq('platform', filters.platform)
@@ -444,6 +587,39 @@ export default function GuestReviews() {
   })
 
   const reviews = reviewsQuery.data ?? []
+  
+  // Sort reviews based on selected sort option
+  // FIXED: Consistently use collected_at as system-of-record timestamp
+  const sortedReviews = useMemo(() => {
+    const severityOrder = { critical: 4, high: 3, medium: 2, low: 1, null: 0 }
+    const sorted = [...reviews]
+    
+    switch (filters.sort) {
+      case 'newest_critical':
+        return sorted.sort((a, b) => {
+          // First by critical flag
+          if (a.critical_flag !== b.critical_flag) return b.critical_flag ? 1 : -1
+          // Then by collected_at (system collection time)
+          const dateDiff = new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime()
+          if (dateDiff !== 0) return dateDiff
+          return (severityOrder[b.severity as keyof typeof severityOrder] || 0) - (severityOrder[a.severity as keyof typeof severityOrder] || 0)
+        })
+      case 'newest':
+        // Sort by collected_at (system collection time)
+        return sorted.sort((a, b) => new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime())
+      case 'oldest':
+        return sorted.sort((a, b) => new Date(a.collected_at).getTime() - new Date(b.collected_at).getTime())
+      case 'critical':
+        return sorted.sort((a, b) => (severityOrder[b.severity as keyof typeof severityOrder] || 0) - (severityOrder[a.severity as keyof typeof severityOrder] || 0))
+      case 'highest_rating':
+        return sorted.sort((a, b) => (b.rating_normalized_5 || 0) - (a.rating_normalized_5 || 0))
+      case 'lowest_rating':
+        return sorted.sort((a, b) => (a.rating_normalized_5 || 0) - (b.rating_normalized_5 || 0))
+      default:
+        return sorted
+    }
+  }, [reviews, filters.sort])
+
   const ownerNameByReviewId = useMemo(() => {
     const rows = reviewOwnersQuery.data ?? []
     const profileById = new Map((assigneeProfilesQuery.data ?? []).map((row) => [row.id, row]))
@@ -499,7 +675,7 @@ export default function GuestReviews() {
 
   useFilterShortcuts({
     onFocusSearch: () => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(),
-    onClearFilters: () => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '' }),
+    onClearFilters: () => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '', sort: 'newest_critical' }),
     enabled: !sheetOpen,
   })
 
@@ -536,7 +712,47 @@ export default function GuestReviews() {
             </div>
           </div>
         </div>
-        <div className="flex gap-2 bg-muted/30 p-1 rounded-xl border border-muted-foreground/10 backdrop-blur-sm">
+        <div className="flex gap-2 bg-muted/30 p-1 rounded-xl border border-muted-foreground/10 backdrop-blur-sm items-center">
+          {/* Live Monitoring Indicator */}
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all",
+            isMonitoring ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+          )}>
+            <Radio className={cn("h-3.5 w-3.5", isMonitoring && "animate-pulse")} />
+            <span className="text-[10px] font-bold uppercase tracking-wider">
+              {isMonitoring ? 'Live' : 'Paused'}
+            </span>
+          </div>
+
+          {/* New Reviews Badge */}
+          {newReviewCount > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={clearNewReviews}
+              className="h-9 px-3 font-bold text-[10px] uppercase tracking-wider animate-in zoom-in"
+            >
+              <BellRing className="h-3.5 w-3.5 me-1.5 animate-pulse" />
+              {newReviewCount} New
+            </Button>
+          )}
+
+          {/* Sound Toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSoundEnabled(!soundEnabled)}
+            className={cn(
+              "h-9 px-3 font-bold text-[10px] uppercase tracking-wider",
+              soundEnabled ? "bg-primary/10 text-primary border-primary/30" : ""
+            )}
+          >
+            {soundEnabled ? <Volume2 className="h-3.5 w-3.5 me-1.5" /> : <VolumeX className="h-3.5 w-3.5 me-1.5" />}
+            Sound
+          </Button>
+
+          <div className="w-px h-6 bg-muted-foreground/10" />
+
           <Button 
             variant="outline" 
             size="sm" 
@@ -561,6 +777,13 @@ export default function GuestReviews() {
         </div>
       </div>
 
+      {/* Audio element for notification sound */}
+      <audio
+        ref={audioRef}
+        src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBTGH0fPTgjMGHm7A7+OZSA0PVanu8LdnHgUuh9Dz2YU2Bhxqv+zplkcODVGm5O+4ZSAEMYrO89GFNwYdcfDr4ZdJDQtPp+XysWUeBjiS1/LNfi0GI33R8tOENAcdcO/r4phJDQxPp+XyxGUhBjqT1/PQfS4GI3/R8tSFNwYccPDs4phJDQxPp+TwxmUgBjiT1/PQfS4GI3/R8tSFNwYccPDs4phJDQxPp+TwxmUgBjiT1/PQfS4GI3/R8tSFNwYccPDs4phJDQxPp+TwxmUgBjiT1/PQfS4GI3/R8tSFNwYccPDs4phJDQxPp+TwxmUgBjiT1/PQfS4GI3/R8tSFNwYccPDs4phJDQw=="
+        preload="auto"
+      />
+
       <Tabs defaultValue="overview" value={activeTab} onValueChange={setActiveTab} className="space-y-8">
         <div className="flex items-center justify-between border-b pb-1 border-muted-foreground/10">
           <TabsList className="bg-transparent h-auto p-0 gap-8">
@@ -584,6 +807,13 @@ export default function GuestReviews() {
             >
               <Building2 className="h-3.5 w-3.5 me-2" />
               {t('tabs.properties')}
+            </TabsTrigger>
+            <TabsTrigger 
+              value="monitoring" 
+              className="px-0 pb-3 bg-transparent border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent rounded-none h-auto font-black text-[11px] uppercase tracking-[0.2em] shadow-none"
+            >
+              <Activity className="h-3.5 w-3.5 me-2" />
+              Monitoring
             </TabsTrigger>
             <TabsTrigger 
               value="sources" 
@@ -663,7 +893,7 @@ export default function GuestReviews() {
                 <Button 
                   variant="outline" 
                   className="mt-8 rounded-full px-8 h-12 font-bold text-xs uppercase tracking-widest border-muted-foreground/20"
-                  onClick={() => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '' })}
+                  onClick={() => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '', sort: 'newest_critical' })}
                 >
                   {t('actions.resetParameters')}
                 </Button>
@@ -674,14 +904,18 @@ export default function GuestReviews() {
               "gap-6",
               viewMode === 'grid' ? "grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" : "flex flex-col"
             )}>
-              {reviews.map((review) => (
+              {sortedReviews.map((review) => (
                 <ReviewListItem 
                   key={review.id} 
                   review={review} 
                   propertyName={propertyNameById.get(review.property_id) || t('reviewCard.unknownProperty')} 
                   ownerName={ownerNameByReviewId.get(review.id)}
-                  onClick={openReview}
+                  onClick={(id) => {
+                    markReviewSeen(id)
+                    openReview(id)
+                  }}
                   isSelected={selectedReviewIds.includes(review.id)}
+                  isNew={recentReviews.has(review.id)}
                   onToggleSelect={(id) => {
                     if (selectedReviewIds.includes(id)) {
                       setSelectedReviewIds(selectedReviewIds.filter((i) => i !== id))
@@ -742,6 +976,10 @@ export default function GuestReviews() {
             }}
             viewMode={viewMode}
           />
+        </TabsContent>
+
+        <TabsContent value="monitoring" className="space-y-6 animate-in fade-in duration-700">
+          <ReviewMonitoringDashboard />
         </TabsContent>
 
         <TabsContent value="sources">

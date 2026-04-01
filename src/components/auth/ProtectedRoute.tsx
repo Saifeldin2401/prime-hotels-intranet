@@ -1,9 +1,10 @@
 ﻿import { useAuth } from '@/hooks/useAuth'
 import type { Permission } from '@/hooks/usePermissions'
 import { usePermissions } from '@/hooks/usePermissions'
+import { buildLoginUrl } from '@/lib/authRedirect'
 import { ROLES, type AppRole } from '@/lib/constants'
 import { useTranslation } from 'react-i18next'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
 // getDashboardPathForRole removed - now always returns '/dashboard'
 
@@ -33,6 +34,7 @@ export function ProtectedRoute({
   const { user, primaryRole, rolesLoading, loading } = useAuth()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
+  const location = useLocation()
 
   const roleAllowed = (role: AppRole, allowed: AppRole[]) => {
     if (allowed.includes(role)) return true
@@ -55,7 +57,7 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />
+    return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
   }
 
   // Check role-based access

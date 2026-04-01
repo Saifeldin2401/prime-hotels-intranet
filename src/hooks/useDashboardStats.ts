@@ -30,20 +30,51 @@ const getSettledCount = (result: PromiseSettledResult<unknown>, label: string): 
     return payload?.count ?? 0
 }
 
-const getSettledData = <T,>(result: PromiseSettledResult<unknown>, label: string, fallback: T): T => {
-    if (result.status === 'rejected') {
-        console.warn(`${label} query rejected:`, settledReasonToMessage(result.reason))
-        return fallback
-    }
-    const payload = result.value as SettledPayload
-    if (payload?.error) {
-        console.warn(`${label} query returned error:`, payload.error.message || 'Unknown error')
-        return fallback
-    }
-    if (payload && 'data' in payload && payload.data !== undefined && payload.data !== null) {
-        return payload.data as T
-    }
-    return fallback
+export interface FetchDashboardStatsInput {
+  userId: string
+  currentPropertyId?: string | null
+  propertyIds: string[]
+  roles: { role: string }[]
+  departments: { id: string }[]
+  properties: { id: string }[]
+}
+
+export async function fetchDashboardStats(input: FetchDashboardStatsInput) {
+  const { userId, currentPropertyId, propertyIds, roles, departments, properties } = input
+  const isScoped = isRealPropertyId(currentPropertyId)
+  const scopePropertyIds = isScoped && currentPropertyId ? [currentPropertyId] : (propertyIds.length > 0 ? propertyIds : [])
+
+  const { data, error } = await supabase.rpc('get_dashboard_summary', {
+    p_user_id: userId,
+    p_scope_property_ids: scopePropertyIds,
+    p_roles: roles.map(r => r.role),
+    p_department_ids: departments.map(d => d.id),
+    p_property_ids: properties.map(p => p.id),
+  })
+
+  if (error) {
+    throw error
+  }
+
+  const result = (typeof data === 'string' ? JSON.parse(data) : data) as {
+    documentsCount?: number
+    completedTraining?: number
+    inProgressTraining?: number
+    unreadAnnouncements?: number
+    pendingApprovals?: number
+    unreadNotifications?: number
+    pendingTasks?: number
+  } | null
+
+  return {
+    documentsCount: result?.documentsCount ?? 0,
+    completedTraining: result?.completedTraining ?? 0,
+    inProgressTraining: result?.inProgressTraining ?? 0,
+    unreadAnnouncements: result?.unreadAnnouncements ?? 0,
+    pendingApprovals: result?.pendingApprovals ?? 0,
+    unreadNotifications: result?.unreadNotifications ?? 0,
+    pendingTasks: result?.pendingTasks ?? 0,
+  }
 }
 
 export function useDashboardStats() {
@@ -51,161 +82,25 @@ export function useDashboardStats() {
     const { currentProperty, propertyIds } = useProperty()
 
     return useQuery({
-        queryKey: ['dashboard-stats', user?.id, currentProperty?.id],
+        queryKey: [
+          'dashboard-stats',
+          user?.id,
+          currentProperty?.id,
+          roles.map(r => r.role).sort(),
+          departments.map(d => d.id).sort(),
+          properties.map(p => p.id).sort(),
+        ],
         queryFn: async () => {
             const userId = profile?.id || user?.id
-            if (!userId) return null
-
-            const isScoped = isRealPropertyId(currentProperty?.id)
-
-            const dashboardSettled = await Promise.allSettled([
-                // 1. Documents Count (Scoped)
-                (async () => {
-                    const q = supabase
-                        .from('documents')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('status', 'PUBLISHED')
-                        .eq('is_deleted', false)
-
-                    if (isScoped) {
-                        q.eq('property_id', currentProperty?.id)
-                    } else if (propertyIds.length > 0) {
-                        q.in('property_id', propertyIds)
-                    }
-                    return q
-                })(),
-
-                // 2. Training Progress
-                supabase
-                    .from('learning_progress')
-                    .select('status')
-                    .eq('user_id', userId)
-                    .eq('content_type', 'module')
-                    .or('is_deleted.is.null,is_deleted.eq.false'),
-
-                // 3. Announcements (Recent 100 for better client-side filtering)
-                supabase
-                    .from('announcements')
-                    .select('id, created_at, target_audience, created_by')
-                    .order('created_at', { ascending: false })
-                    .limit(100),
-
-                // 4. Read Announcements
-                supabase
-                    .from('announcement_reads')
-                    .select('announcement_id')
-                    .eq('user_id', userId),
-
-                // 5. Pending Requests (workflow)
-                supabase
-                    .from('requests')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('current_assignee_id', userId)
-                    .in('status', ['pending_supervisor_approval', 'pending_hr_review']),
-
-                // 6. Pending Document Approvals
-                supabase
-                    .from('document_approvals')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('approver_id', userId)
-                    .eq('status', 'pending')
-                    .eq('is_active', true),
-
-                // 7. Legacy Approval Requests (if still used)
-                supabase
-                    .from('approval_requests')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('current_approver_id', userId)
-                    .eq('status', 'pending'),
-
-                // 8. Unread Notifications
-                supabase
-                    .from('notifications')
-                    .select('id', { count: 'exact', head: true })
-                    .eq('user_id', userId)
-                    .is('read_at', null),
-
-                // 9. Pending Tasks (Scoped)
-                (async () => {
-                    const q = supabase
-                        .from('tasks')
-                        .select('id', { count: 'exact', head: true })
-                        .eq('assigned_to_id', userId)
-                        .in('status', ['open', 'todo', 'in_progress', 'pending'])
-
-                    if (isScoped) {
-                        q.eq('property_id', currentProperty?.id)
-                    } else if (propertyIds.length > 0) {
-                        q.in('property_id', propertyIds)
-                    }
-                    return q
-                })()
-            ])
-
-            // Process Results
-            const documentsCount = getSettledCount(dashboardSettled[0], 'Dashboard documents')
-            const trainingProgress = getSettledData<Array<{ status: string }>>(
-                dashboardSettled[1],
-                'Dashboard training progress',
-                []
-            )
-            const completedTraining = trainingProgress.filter(t => t.status === 'completed').length
-            const inProgressTraining = trainingProgress.filter(t => t.status === 'in_progress').length
-
-            type DashboardAnnouncement = {
-                id: string
-                created_by: string | null
-                target_audience?: { type?: string; values?: string[] } | null
-            }
-            const announcements = getSettledData<DashboardAnnouncement[]>(
-                dashboardSettled[2],
-                'Dashboard announcements',
-                []
-            )
-            const readAnnouncements = getSettledData<Array<{ announcement_id: string }>>(
-                dashboardSettled[3],
-                'Dashboard read announcements',
-                []
-            )
-            const readIds = new Set(readAnnouncements.map(r => r.announcement_id))
-
-            // Filter announcements by audience (same logic as useAnnouncements)
-            const filteredAnnouncements = announcements.filter(announcement => {
-                if (announcement.created_by === user?.id) return true
-                const audience = announcement.target_audience
-                if (!audience || audience.type === 'all') return true
-                const values = audience.values || []
-
-                switch (audience.type) {
-                    case 'role':
-                        return roles.some(userRole => values.includes(userRole.role))
-                    case 'department':
-                        return departments.some(dept => values.includes(dept.id))
-                    case 'property':
-                        return properties.some(prop => values.includes(prop.id))
-                    case 'individual':
-                        return values.includes(user?.id || '')
-                    default:
-                        return true
-                }
+            if (!userId || !user?.id) return null
+            return fetchDashboardStats({
+              userId,
+              currentPropertyId: currentProperty?.id,
+              propertyIds,
+              roles,
+              departments,
+              properties,
             })
-
-            const unreadAnnouncements = filteredAnnouncements.filter(a => !readIds.has(a.id)).length
-
-            const pendingApprovals = getSettledCount(dashboardSettled[4], 'Dashboard pending requests') +
-                getSettledCount(dashboardSettled[5], 'Dashboard pending document approvals') +
-                getSettledCount(dashboardSettled[6], 'Dashboard pending legacy approvals')
-            const unreadNotifications = getSettledCount(dashboardSettled[7], 'Dashboard unread notifications')
-
-            return {
-                documentsCount,
-                completedTraining,
-                inProgressTraining,
-                unreadAnnouncements,
-                pendingApprovals,
-                unreadNotifications,
-                pendingTasks: getSettledCount(dashboardSettled[8], 'Dashboard pending tasks')
-            }
         },
         enabled: !!user?.id,
         staleTime: 120000, // Fresh for 2 minutes
@@ -223,7 +118,7 @@ export interface PropertyManagerStats {
     trainingCompletion: number
 }
 
-export function usePropertyManagerStats() {
+export function usePropertyManagerStats(options?: { enabled?: boolean }) {
     const { currentProperty, propertyIds } = useProperty()
 
     return useQuery({
@@ -347,7 +242,8 @@ export function usePropertyManagerStats() {
             }
         },
         refetchInterval: 120000,
-        staleTime: 60000
+        staleTime: 60000,
+        enabled: options?.enabled ?? true
     })
 }
 
@@ -516,9 +412,9 @@ export interface HRStats {
     openPositions: number
 }
 
-export function useHRStats(propertyId?: string) {
+export function useHRStats(options?: { propertyId?: string; enabled?: boolean }) {
     const { currentProperty, propertyIds } = useProperty()
-    const propId = propertyId || currentProperty?.id
+    const propId = options?.propertyId || currentProperty?.id
 
     return useQuery({
         queryKey: ['hr-stats', propId],
@@ -659,7 +555,7 @@ export function useHRStats(propertyId?: string) {
         },
         refetchInterval: 300000,
         staleTime: 120000,
-        enabled: !!propId
+        enabled: (options?.enabled ?? true) && !!propId
     })
 }
 
@@ -672,12 +568,13 @@ export interface AreaManagerStats {
     openIssues: number
 }
 
-export function useAreaManagerStats(propertyId?: string) {
+export function useAreaManagerStats(options?: { propertyId?: string; enabled?: boolean }) {
     const { propertyIds } = useProperty()
 
     return useQuery({
-        queryKey: ['area-manager-stats', propertyId],
+        queryKey: ['area-manager-stats', options?.propertyId],
         queryFn: async (): Promise<AreaManagerStats> => {
+            const propertyId = options?.propertyId
             const isScoped = isRealPropertyId(propertyId)
 
             // Pre-fetch users if we need to filter by property/cluster
@@ -821,7 +718,8 @@ export function useAreaManagerStats(propertyId?: string) {
             }
         },
         refetchInterval: 300000,
-        staleTime: 120000
+        staleTime: 120000,
+        enabled: options?.enabled ?? true
     })
 }
 
@@ -835,12 +733,13 @@ export interface CorporateStats {
     totalTickets: number
 }
 
-export function useCorporateStats(propertyId?: string) {
+export function useCorporateStats(options?: { propertyId?: string; enabled?: boolean }) {
     const { propertyIds } = useProperty()
 
     return useQuery({
-        queryKey: ['corporate-stats', propertyId],
+        queryKey: ['corporate-stats', options?.propertyId],
         queryFn: async (): Promise<CorporateStats> => {
+            const propertyId = options?.propertyId
             const isScoped = isRealPropertyId(propertyId)
 
             // Pre-fetch users if we need to filter by property/cluster
@@ -964,7 +863,8 @@ export function useCorporateStats(propertyId?: string) {
             }
         },
         refetchInterval: 300000,
-        staleTime: 120000
+        staleTime: 120000,
+        enabled: options?.enabled ?? true
     })
 }
 

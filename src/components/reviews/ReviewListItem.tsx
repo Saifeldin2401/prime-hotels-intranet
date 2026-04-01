@@ -12,6 +12,7 @@ interface ReviewListItemProps {
   ownerName?: string | null
   onClick: (id: string) => void
   isSelected?: boolean
+  isNew?: boolean
   onToggleSelect?: (id: string) => void
   viewMode?: "grid" | "list"
 }
@@ -83,21 +84,27 @@ function getSeverityEmoji(severity: string | null): string {
   }
 }
 
-function formatReviewDate(dateString: string | null, createdAt?: string | null): { label: string; fullDate: string; isNew: boolean } {
-  if (!dateString) return { label: "Unknown", fullDate: "", isNew: false }
+function formatReviewDate(dateString: string | null, fallbackDate?: string | null): { label: string; fullDate: string; isNew: boolean; hasValidDate: boolean } {
+  // FIXED: Use collected_at as fallback chain for consistent date display
+  const effectiveDate = dateString || fallbackDate
+  if (!effectiveDate) return { label: "Unknown", fullDate: "", isNew: false, hasValidDate: false }
   
-  const date = new Date(dateString)
+  const date = new Date(effectiveDate)
+  // Validate the date is valid
+  if (Number.isNaN(date.getTime())) {
+    return { label: "Unknown", fullDate: "", isNew: false, hasValidDate: false }
+  }
+  
   const now = new Date()
   
-  // Check if this is a brand NEW review (created today, not just refreshed)
-  const createdDate = createdAt ? new Date(createdAt) : date
-  const isBrandNew = createdDate.getFullYear() === now.getFullYear() && 
-                     createdDate.getMonth() === now.getMonth() && 
-                     createdDate.getDate() === now.getDate()
+  // Check if this is a brand NEW review (collected today)
+  const isBrandNew = date.getFullYear() === now.getFullYear() && 
+                     date.getMonth() === now.getMonth() && 
+                     date.getDate() === now.getDate()
   
   // For brand new reviews, show "NEW" badge
   if (isBrandNew) {
-    return { label: "NEW", fullDate: date.toLocaleString(), isNew: true }
+    return { label: "NEW", fullDate: date.toLocaleString(), isNew: true, hasValidDate: true }
   }
   
   // For older reviews, show the actual date
@@ -107,12 +114,13 @@ function formatReviewDate(dateString: string | null, createdAt?: string | null):
                       date.getMonth() === yesterday.getMonth() && 
                       date.getDate() === yesterday.getDate()
   
-  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isNew: false }
+  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isNew: false, hasValidDate: true }
   
   return {
     label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     fullDate: date.toLocaleString(),
-    isNew: false
+    isNew: false,
+    hasValidDate: true
   }
 }
 
@@ -133,6 +141,7 @@ export function ReviewListItem({
   ownerName, 
   onClick,
   isSelected,
+  isNew = false,
   onToggleSelect,
   viewMode = "grid"
 }: ReviewListItemProps) {
@@ -141,7 +150,8 @@ export function ReviewListItem({
   const displayOwnerType = isAssignedState ? "Owner" : "Guest"
   const platformColor = getPlatformColor(review.platform)
   const propertyColor = getPropertyColor(propertyName)
-  const dateInfo = formatReviewDate(review.published_at || review.created_at)
+  // FIXED: Use published_at as primary display date, with collected_at as fallback for consistency
+  const dateInfo = formatReviewDate(review.published_at, review.collected_at)
 
   const getSeverityColor = (severity: string | null) => {
     switch (severity?.toLowerCase()) {
@@ -167,7 +177,8 @@ export function ReviewListItem({
       className={cn(
         "group cursor-pointer transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-1 relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/10",
         review.critical_flag && "ring-1 ring-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]",
-        isSelected && "ring-2 ring-primary shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-gradient-to-br from-primary/5 to-blue-50"
+        isSelected && "ring-2 ring-primary shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-gradient-to-br from-primary/5 to-blue-50",
+        isNew && "ring-2 ring-green-400 shadow-[0_0_20px_rgba(34,197,94,0.3)] animate-pulse"
       )}
       onClick={() => onClick(review.id)}
     >
@@ -187,6 +198,14 @@ export function ReviewListItem({
         <div className="absolute top-0 right-0 w-20 h-20 pointer-events-none overflow-hidden z-10">
           <div className="bg-red-600 text-white text-[9px] font-black py-1 px-8 text-center transform rotate-45 translate-x-5 -translate-y-1 uppercase shadow-2xl">
             Critical
+          </div>
+        </div>
+      )}
+
+      {isNew && !review.critical_flag && (
+        <div className="absolute top-0 right-0 w-20 h-20 pointer-events-none overflow-hidden z-10">
+          <div className="bg-green-500 text-white text-[9px] font-black py-1 px-8 text-center transform rotate-45 translate-x-5 -translate-y-1 uppercase shadow-2xl animate-pulse">
+            NEW
           </div>
         </div>
       )}

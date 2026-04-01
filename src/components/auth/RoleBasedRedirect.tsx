@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
+import { getRedirectFromSearch } from '@/lib/authRedirect';
 import { useTranslation } from "react-i18next";
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 
 /**
  * Unified Dashboard Routing
@@ -10,6 +11,8 @@ import { Navigate } from 'react-router-dom';
 export function RoleBasedRedirect() {
     const { t: t_ext } = useTranslation('extracted');
     const { user, loading, rolesLoading } = useAuth()
+    const location = useLocation()
+    const redirectPath = getRedirectFromSearch(location.search)
 
     // Show loading while auth is loading
     if (loading) {
@@ -24,7 +27,10 @@ export function RoleBasedRedirect() {
     }
 
     if (!user) {
-        return <Navigate to="/login" replace />
+        const loginUrl = redirectPath
+            ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+            : '/login'
+        return <Navigate to={loginUrl} replace />
     }
 
     // Wait for roles to load
@@ -41,8 +47,8 @@ export function RoleBasedRedirect() {
         )
     }
 
-    // Always redirect to unified dashboard
-    return <Navigate to="/dashboard" replace />
+    // Always redirect to unified dashboard (or preserved deep link)
+    return <Navigate to={redirectPath ?? "/dashboard"} replace />
 }
 
 // Note: getDashboardPathForRole function removed from this file to fix fast refresh warning.

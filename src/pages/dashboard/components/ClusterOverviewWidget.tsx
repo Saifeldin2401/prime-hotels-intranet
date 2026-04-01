@@ -57,7 +57,7 @@ interface ClusterMetricCard {
 function ClusterGMOverview() {
     const { t } = useTranslation('dashboard')
     const { currentProperty, propertyIds, availableProperties } = useProperty()
-    const { data: stats, isLoading } = useCorporateStats(currentProperty?.id)
+    const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
     const navigate = useNavigate()
 
     const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
@@ -164,7 +164,7 @@ function ClusterGMOverview() {
 function ClusterHROverview() {
     const { t } = useTranslation('dashboard')
     const { currentProperty, availableProperties } = useProperty()
-    const { data: stats, isLoading } = useHRStats(currentProperty?.id)
+    const { data: stats, isLoading } = useHRStats({ propertyId: currentProperty?.id })
 
     const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
     const propertyCount = availableProperties.filter(p => isRealPropertyId(p.id)).length
@@ -574,7 +574,7 @@ export function ClusterOverviewWidget() {
 function ClusterManagerOverview() {
     const { t } = useTranslation('dashboard')
     const { currentProperty, availableProperties } = useProperty()
-    const { data: stats, isLoading } = useCorporateStats(currentProperty?.id)
+    const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
     const navigate = useNavigate()
 
     const isConsolidatedView = !isRealPropertyId(currentProperty?.id)

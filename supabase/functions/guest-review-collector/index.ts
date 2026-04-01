@@ -199,7 +199,15 @@ function parseDate(value: unknown): string | null {
   
   // Fallback to native Date parsing
   const d = new Date(s);
-  if (Number.isFinite(d.getTime())) return d.toISOString();
+  if (Number.isFinite(d.getTime())) {
+    // If the parsed date is in the future, it's likely missing a year and defaulted to current year
+    // In that case, assume it's from last year (e.g., "Jan 2" in April 2026 should be Jan 2, 2025)
+    const now = new Date();
+    if (d > now) {
+      d.setFullYear(d.getFullYear() - 1);
+    }
+    return d.toISOString();
+  }
   
   return null;
 }
@@ -434,20 +442,26 @@ async function fetchSerperReviews(
   return mapSerperReviews(reviews);
 }
 
-function reviewsUrl(url: string, platform: string): string {
+function reviewsUrl(url: string, platform: string, sinceDate?: string): string {
   if (platform === "booking") {
     const match = url.match(/booking\.com\/hotel\/([^/]+)\/([^./]+)(?:\.[a-z-]+)?\.html/i);
     if (match) {
       const country = match[1];
       const slug = match[2];
-      return `https://www.booking.com/reviewlist.html?pagename=${slug}&cc1=${country}&type=total&order=review_date_and_time&rows=25`;
+      // Only fetch 10 most recent reviews, sorted by date
+      let reviewUrl = `https://www.booking.com/reviewlist.html?pagename=${slug}&cc1=${country}&type=total&order=review_date_and_time&rows=10`;
+      // Add date filter if provided (for incremental collection)
+      if (sinceDate) {
+        reviewUrl += `&checkin=${sinceDate}`;
+      }
+      return reviewUrl;
     }
   }
   return url;
 }
 
-async function fetchWithScraperApi(url: string, apiKey: string, platform: string): Promise<string> {
-  const targetUrl = reviewsUrl(url, platform);
+async function fetchWithScraperApi(url: string, apiKey: string, platform: string, sinceDate?: string): Promise<string> {
+  const targetUrl = reviewsUrl(url, platform, sinceDate);
   const params = new URLSearchParams({ api_key: apiKey, url: targetUrl, country_code: "us" });
   if (SCRAPER_RENDER_PLATFORMS.has(platform)) {
     params.set("render", "true");
@@ -545,6 +559,17 @@ async function collectPlatformReviews(
   serviceClient: ReturnType<typeof createClient>,
 ): Promise<{ method: string; reviews: Array<Record<string, unknown>> }> {
   const platform = String(source.platform ?? "");
+  
+  // Calculate since date for incremental collection (last 7 days or since last success)
+  let sinceDate: string | undefined;
+  if (source.last_success_at) {
+    const lastSuccess = new Date(String(source.last_success_at));
+    sinceDate = lastSuccess.toISOString().slice(0, 10);
+  } else {
+    // Default to 7 days ago for initial collection
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    sinceDate = weekAgo.toISOString().slice(0, 10);
+  }
 
   if (platform === "google") {
     if (!serperKey) throw new Error("SERPER_API_KEY not configured for Google source");
@@ -556,13 +581,13 @@ async function collectPlatformReviews(
 
   if (platform === "booking") {
     if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Booking source");
-    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform);
+    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform, sinceDate);
     return { method: "scraperapi+booking-html", reviews: parseBookingReviews(html) };
   }
 
   if (platform === "agoda") {
     if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Agoda source");
-    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform);
+    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform, sinceDate);
     return { method: "scraperapi+agoda-html", reviews: parseAgodaReviews(html) };
   }
 
@@ -667,7 +692,26 @@ Deno.serve(async (req: Request) => {
 
           const sourceReviewId = toNullableString(row.source_review_id ?? row.review_id ?? row.id);
           const reviewerName = toNullableString(row.reviewer_name ?? row.reviewer ?? row.author);
-          const publishedAt = parseDate(row.published_at ?? row.date ?? row.created_at);
+          
+          // Parse the review date
+          let publishedAt = parseDate(row.published_at ?? row.date ?? row.created_at);
+          
+          // FIXED: Skip reviews from before 2026 - only collect current year reviews
+          if (publishedAt) {
+            const reviewDate = new Date(publishedAt);
+            const reviewYear = reviewDate.getFullYear();
+            if (reviewYear < 2026) {
+              console.log(`[guest-review-collector] Skipping old review from ${reviewYear}: ${reviewerName || 'Unknown'}`);
+              continue; // Skip this review - too old
+            }
+          }
+          
+          // FIXED: Ensure published_at is always set with proper fallback chain
+          if (!publishedAt) {
+            publishedAt = new Date().toISOString();
+            console.warn(`[guest-review-collector] Date parsing failed for review, using current timestamp as fallback. Source: ${source.source_name}`);
+          }
+          
           const rating = normalizeRating(row.rating ?? row.score ?? row.stars);
           const dedupeHash = await sha256([
             String(source.property_id),

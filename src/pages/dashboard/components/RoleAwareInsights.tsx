@@ -51,7 +51,7 @@ interface InsightCard {
 function CorporateInsights() {
     const { t } = useTranslation('dashboard')
     const { currentProperty } = useProperty()
-    const { data: stats, isLoading } = useCorporateStats(currentProperty?.id)
+    const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
 
     if (isLoading) return <InsightsSkeleton />
     if (!stats) return null
@@ -110,7 +110,7 @@ function DepartmentHeadInsights() {
 function HRInsights() {
     const { t } = useTranslation('dashboard')
     const { currentProperty } = useProperty()
-    const { data: stats, isLoading } = useHRStats(currentProperty?.id)
+    const { data: stats, isLoading } = useHRStats({ propertyId: currentProperty?.id })
 
     if (isLoading) return <InsightsSkeleton />
     if (!stats) return null

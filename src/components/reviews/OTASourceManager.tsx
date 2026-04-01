@@ -9,7 +9,7 @@ import { Switch } from "@/components/ui/switch"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import type { GuestReviewSource, GuestReviewPlatform } from "@/lib/types"
-import { Globe, Plus, Trash2, AlertCircle, CheckCircle2, Cloud, ExternalLink, RefreshCw, Activity, Zap, ShieldCheck, Filter } from "lucide-react"
+import { Globe, Plus, Trash2, AlertCircle, CheckCircle2, Cloud, ExternalLink, RefreshCw, Activity, Zap, ShieldCheck, Filter, Play, Clock, AlertTriangle } from "lucide-react"
 import { useState } from "react"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
@@ -23,6 +23,39 @@ import {
 } from "@/components/ui/dialog"
 import { useTranslation } from "react-i18next"
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from "@/lib/reviewsScope"
+
+// Format time ago
+function formatTimeAgo(dateString: string | null): string {
+  if (!dateString) return 'Never'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = now.getTime() - date.getTime()
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  const diffDays = Math.floor(diffMs / 86400000)
+  
+  if (diffMins < 1) return 'Just now'
+  if (diffMins < 60) return `${diffMins}m ago`
+  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffDays < 7) return `${diffDays}d ago`
+  return date.toLocaleDateString()
+}
+
+// Format next poll time
+function formatNextPoll(dateString: string | null): string {
+  if (!dateString) return 'Not scheduled'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diffMs = date.getTime() - now.getTime()
+  
+  if (diffMs < 0) return 'Overdue'
+  const diffMins = Math.floor(diffMs / 60000)
+  const diffHours = Math.floor(diffMs / 3600000)
+  
+  if (diffMins < 60) return `in ${diffMins}m`
+  if (diffHours < 24) return `in ${diffHours}h`
+  return date.toLocaleDateString()
+}
 
 export function OTASourceManager() {
   const { t } = useTranslation('reviews')
@@ -66,6 +99,37 @@ export function OTASourceManager() {
       const { data, error } = await query.order("created_at", { ascending: false })
       if (error) throw error
       return data as GuestReviewSource[]
+    }
+  })
+
+  // Collect Now Mutation for individual source
+  const collectNowMutation = useMutation({
+    mutationFn: async (sourceId: string) => {
+      const { data, error } = await supabase.functions.invoke('guest-review-collector', {
+        body: { 
+          source_id: sourceId,
+          run_mode: 'manual',
+          max_sources: 1
+        }
+      })
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
+      const totalNew = data?.total_new_reviews || 0
+      toast({ 
+        title: totalNew > 0 ? `Collected ${totalNew} new reviews` : 'No new reviews found',
+        description: 'Collection completed successfully'
+      })
+      queryClient.invalidateQueries({ queryKey: ["guest-review-sources"] })
+      queryClient.invalidateQueries({ queryKey: ["guest-reviews"] })
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: 'Collection failed', 
+        description: error.message,
+        variant: "destructive"
+      })
     }
   })
 
@@ -308,9 +372,12 @@ export function OTASourceManager() {
                         {getHealthIcon(source.health_status)}
                         <span className={cn("text-[8px] font-black uppercase tracking-widest", 
                           source.health_status === 'healthy' ? "text-green-600" : 
+                          source.health_status === 'degraded' ? "text-orange-500" :
                           source.health_status === 'disabled' ? "text-red-600" : "text-muted-foreground"
                         )}>
-                          {t(`sources.${source.health_status}`, { defaultValue: source.health_status })}
+                          {source.health_status === 'healthy' ? 'Healthy' :
+                           source.health_status === 'degraded' ? 'Degraded' :
+                           source.health_status === 'disabled' ? 'Disabled' : 'Unknown'}
                         </span>
                       </div>
                     </div>
@@ -328,45 +395,87 @@ export function OTASourceManager() {
                     {property?.name || t('sources.chainHeadquarter')}
                   </div>
                 </CardHeader>
-                <CardContent className="space-y-6 px-6 pb-6 mt-auto">
-                  <div className="grid grid-cols-2 gap-4 py-4 border-y border-muted-foreground/5">
+                <CardContent className="space-y-4 px-6 pb-6 mt-auto">
+                  {/* REAL Monitoring Stats */}
+                  <div className="grid grid-cols-2 gap-3 py-3 border-y border-muted-foreground/5">
                     <div className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">{t('sources.interval')}</span>
-                      <p className="text-xs font-black flex items-center gap-1.5 text-foreground/80">
-                        <RefreshCw className="h-3 w-3 opacity-40" />
-                        {source.poll_frequency_hours}H
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em] flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        Last Check
+                      </span>
+                      <p className={cn("text-xs font-black", 
+                        !source.last_success_at ? "text-red-500" :
+                        new Date().getTime() - new Date(source.last_success_at).getTime() > 24 * 60 * 60 * 1000 ? "text-orange-500" : "text-green-600"
+                      )}>
+                        {formatTimeAgo(source.last_success_at)}
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">{t('sources.lastSync')}</span>
-                      <p className="text-xs font-black truncate text-foreground/80">
-                        {source.last_success_at ? new Date(source.last_success_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : t('sources.pending')}
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em] flex items-center gap-1">
+                        <AlertTriangle className="h-3 w-3" />
+                        Errors
+                      </span>
+                      <p className={cn("text-xs font-black",
+                        (source.consecutive_failures || 0) > 2 ? "text-red-500" :
+                        (source.consecutive_failures || 0) > 0 ? "text-orange-500" : "text-green-600"
+                      )}>
+                        {source.consecutive_failures || 0} failures
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">Next Check</span>
+                      <p className="text-xs font-black text-foreground/80">
+                        {formatNextPoll(source.next_poll_at)}
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase text-muted-foreground/50 tracking-[0.1em]">Interval</span>
+                      <p className="text-xs font-black text-foreground/80">
+                        {source.poll_frequency_hours}H
                       </p>
                     </div>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <Button variant="outline" size="sm" className="h-9 text-[10px] font-black uppercase tracking-widest px-0 group-hover:px-2 transition-all bg-transparent border-primary/20 hover:bg-primary/5 hover:text-primary rounded-lg" asChild>
+                  {/* COLLECT NOW Button */}
+                  <Button 
+                    variant="default"
+                    size="sm"
+                    onClick={() => collectNowMutation.mutate(source.id)}
+                    disabled={collectNowMutation.isPending && collectNowMutation.variables === source.id}
+                    className="w-full h-10 font-bold text-[10px] uppercase tracking-widest bg-hotel-navy hover:bg-hotel-navy/90 text-white"
+                  >
+                    {collectNowMutation.isPending && collectNowMutation.variables === source.id ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 me-2 animate-spin" />
+                        Collecting...
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3.5 w-3.5 me-2" />
+                        Collect Now
+                      </>
+                    )}
+                  </Button>
+                  
+                  <div className="flex items-center justify-between pt-2">
+                    <Button variant="outline" size="sm" className="h-8 text-[10px] font-black uppercase tracking-widest px-2 bg-transparent border-primary/20 hover:bg-primary/5 hover:text-primary rounded-lg" asChild>
                       <a href={source.source_url} target="_blank" rel="noreferrer">
-                        <Globe className="h-3.5 w-3.5 me-2" />
-                        {t('sources.platformView')}
-                        <ExternalLink className="h-3 w-3 ms-2 opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100" />
+                        <Globe className="h-3 w-3 me-1.5" />
+                        View
                       </a>
                     </Button>
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="outline" 
-                        size="icon" 
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-muted-foreground/10 rounded-full opacity-40 group-hover:opacity-100 transition-opacity"
-                        onClick={() => {
-                          if(confirm(t('sources.confirmDisconnect'))) {
-                            deleteSourceMutation.mutate(source.id)
-                          }
-                        }}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/5 border-muted-foreground/10 rounded-full"
+                      onClick={() => {
+                        if(confirm(t('sources.confirmDisconnect'))) {
+                          deleteSourceMutation.mutate(source.id)
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>

@@ -68,14 +68,3 @@ export async function uploadFileToSupabase(
   return publicUrl
 }
 
-/**
- * Deprecated: Use uploadFileToSupabase instead
- */
-export async function uploadImageToSupabase(
-  file: File,
-  bucket = 'documents',
-  maxUploadMb = DEFAULT_MAX_UPLOAD_MB,
-): Promise<string> {
-  return uploadFileToSupabase(file, bucket, maxUploadMb)
-}
-

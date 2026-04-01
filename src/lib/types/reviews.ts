@@ -70,6 +70,7 @@ export interface GuestReviewSource {
   next_poll_at: string | null
   health_status: 'healthy' | 'degraded' | 'disabled'
   last_error: string | null
+  consecutive_failures: number
   created_at: string
   updated_at: string
 }

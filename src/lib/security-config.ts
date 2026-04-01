@@ -97,6 +97,7 @@ export const securityConfig = {
       ],
       // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],
+      'media-src': ["'self'", "blob:", "data:", "https://*.supabase.co"],
       'worker-src': ["'self'", "blob:"],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],

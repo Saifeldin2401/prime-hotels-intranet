@@ -55,10 +55,14 @@ export function useGuestReviews(options?: {
       const sinceISO = sinceDate.toISOString()
 
       // Build query - filter by property if available
+      // FIXED: Use published_at consistently as the canonical review date
+      // FIXED: Add 90-day filter to prevent old reviews from appearing
+      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
       let query = supabase
         .from('guest_reviews')
         .select('*')
-        .gte('collected_at', sinceISO)
+        .or(`published_at.gte.${ninetyDaysAgo},and(published_at.is.null,collected_at.gte.${ninetyDaysAgo})`)
+        .order('published_at', { ascending: false, nullsFirst: false })
         .order('collected_at', { ascending: false })
 
       // Filter by property if specified (for head office users or specific property views)
@@ -107,6 +111,7 @@ export function useGuestReviews(options?: {
       ).length
 
       // Get most recent reviews with high priority first
+      // FIXED: Use published_at consistently for date sorting
       const recentReviews = reviewList
         .sort((a, b) => {
           // Prioritize critical reviews
@@ -114,8 +119,10 @@ export function useGuestReviews(options?: {
           const bCritical = b.critical_flag || b.severity === 'critical' ? 2 : b.severity === 'high' ? 1 : 0
           if (bCritical !== aCritical) return bCritical - aCritical
           
-          // Then by date
-          return new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime()
+          // Then by published_at (canonical review date), fallback to collected_at
+          const aDate = new Date(a.published_at || a.collected_at || a.created_at).getTime()
+          const bDate = new Date(b.published_at || b.collected_at || b.created_at).getTime()
+          return bDate - aDate
         })
         .slice(0, limit)
 
@@ -129,8 +136,9 @@ export function useGuestReviews(options?: {
       }
     },
     enabled: enabled && !!user,
-    refetchInterval: 300000, // Refetch every 5 minutes
-    staleTime: 60000, // Consider data fresh for 1 minute
+    refetchInterval: 60000, // Refetch every 1 minute for fresher data
+    staleTime: 15000, // Align with GuestReviews.tsx (15 seconds)
+    gcTime: 300000, // Keep in cache for 5 minutes
   })
 }
 
