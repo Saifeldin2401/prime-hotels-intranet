@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { GuestReview } from "@/lib/types"
-import { Star, TrendingDown, TrendingUp, User, MessageCircle, AlertCircle, Check, Square } from "lucide-react"
+import { Star, TrendingDown, TrendingUp, User, MessageCircle, AlertCircle, Check, Square, Calendar } from "lucide-react"
 
 interface ReviewListItemProps {
   review: GuestReview
@@ -83,6 +83,25 @@ function getSeverityEmoji(severity: string | null): string {
   }
 }
 
+function formatReviewDate(dateString: string | null): { label: string; fullDate: string; isToday: boolean } {
+  if (!dateString) return { label: "Unknown", fullDate: "", isToday: false }
+  const date = new Date(dateString)
+  const now = new Date()
+  const isToday = date.toDateString() === now.toDateString()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+  const isYesterday = date.toDateString() === yesterday.toDateString()
+  
+  if (isToday) return { label: "Today", fullDate: date.toLocaleString(), isToday: true }
+  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isToday: false }
+  
+  return {
+    label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    fullDate: date.toLocaleString(),
+    isToday: false
+  }
+}
+
 function getDisplayTitle(review: GuestReview) {
   if (review.review_title?.trim()) return review.review_title.trim()
   const reviewer = review.reviewer_name?.trim()
@@ -108,6 +127,7 @@ export function ReviewListItem({
   const displayOwnerType = isAssignedState ? "Owner" : "Guest"
   const platformColor = getPlatformColor(review.platform)
   const propertyColor = getPropertyColor(propertyName)
+  const dateInfo = formatReviewDate(review.collected_at)
 
   const getSeverityColor = (severity: string | null) => {
     switch (severity?.toLowerCase()) {
@@ -202,19 +222,27 @@ export function ReviewListItem({
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-muted/30">
-            {getSentimentIcon(review.sentiment)}
-            <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest leading-none">
-              {review.sentiment}
-            </span>
-          </div>
+          
+          {/* Date Badge - Prominent */}
+          <Badge 
+            className={cn(
+              "text-[9px] px-2 py-0.5 font-bold tracking-wide border-0 flex items-center gap-1",
+              dateInfo.isToday 
+                ? "bg-blue-100 text-blue-700" 
+                : "bg-slate-100 text-slate-600"
+            )}
+            title={dateInfo.fullDate}
+          >
+            <Calendar className="h-3 w-3" />
+            {dateInfo.label}
+          </Badge>
         </div>
 
         <CardTitle className="text-lg font-bold line-clamp-1 group-hover:text-primary transition-colors pr-8">
           {getDisplayTitle(review)}
         </CardTitle>
 
-        <div className="flex items-center gap-2 mt-2 min-w-0">
+        <div className="flex items-center gap-2 mt-2 min-w-0 flex-wrap">
           <Badge className={cn("text-[10px] h-5 px-2 font-bold tracking-tighter border-none", getSeverityColor(review.severity))} variant="outline">
             {getSeverityEmoji(review.severity)} {review.severity?.toUpperCase() || "NORMAL"}
           </Badge>
@@ -224,6 +252,13 @@ export function ReviewListItem({
               style={{ backgroundColor: propertyColor }}
             />
             <span className="truncate">{propertyName}</span>
+          </div>
+          {/* Sentiment Badge moved here for better organization */}
+          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30">
+            {getSentimentIcon(review.sentiment)}
+            <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest leading-none">
+              {review.sentiment}
+            </span>
           </div>
         </div>
       </CardHeader>
@@ -250,7 +285,7 @@ export function ReviewListItem({
                 {displayOwnerName}
               </span>
               <span className="text-muted-foreground font-medium text-[10px]">
-                {displayOwnerType} - {new Date(review.collected_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                {displayOwnerType}
               </span>
             </div>
           </div>

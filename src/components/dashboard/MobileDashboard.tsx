@@ -13,7 +13,7 @@
  * - Sticky bottom safe area handling
  */
 
-import { MobileStatsGrid } from './MobileStatsGrid'
+// MobileStatsGrid import removed - not currently used
 import { ActionSheet, QuickActionButton, QuickActionGrid } from '@/components/mobile/ActionSheet'
 import { PullToRefresh } from '@/components/mobile/PullToRefresh'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -81,9 +81,9 @@ export function MobileDashboard() {
     const navigate = useNavigate()
     const queryClient = useQueryClient()
     const { user, profile, signOut } = useAuth()
-    const { data: stats, isLoading } = useDashboardStats()
+    const { data: stats, isLoading: _isLoading } = useDashboardStats()
     const { notifications, unreadCount, isLoading: isLoadingNotifications } = useNotifications()
-    const { feedItems, isLoading: feedLoading, currentUser, onReact, onComment, onShare } = useUnifiedSocialFeed({ enabled: true })
+    const { feedItems, isLoading: feedLoading } = useUnifiedSocialFeed({ enabled: true })
     const { data: guestReviewData, isLoading: isLoadingReviews } = useGuestReviews({ limit: 3, daysBack: 30 })
     const [showQuickActions, setShowQuickActions] = useState(false)
     const [showProfile, setShowProfile] = useState(false)

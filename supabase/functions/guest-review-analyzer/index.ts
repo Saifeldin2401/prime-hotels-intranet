@@ -345,6 +345,7 @@ async function enqueueNotifications(
         assignment_id: assignment.id,
         notification_kind: critical ? "critical_alert" : "review_alert",
         channel: "email",
+        scheduled_for: new Date().toISOString(),
         payload: {
           ...payloadBase,
           recipientEmails: [assigneeEmail],
@@ -363,6 +364,7 @@ async function enqueueNotifications(
         endpoint_id: ep.id,
         notification_kind: critical ? "critical_alert" : "review_alert",
         channel: ep.channel,
+        scheduled_for: new Date().toISOString(),
         payload: {
           ...payloadBase,
           secretName: ep.secret_name,
@@ -374,7 +376,14 @@ async function enqueueNotifications(
   }
 
   if (queues.length > 0) {
-    await supabase.from("guest_review_notification_queue").insert(queues);
+    const { error: queueError } = await supabase.from("guest_review_notification_queue").insert(queues);
+    if (queueError) {
+      console.error("Failed to insert notifications to queue:", queueError.message, queueError.code);
+      throw new Error(`Notification queue insert failed: ${queueError.message}`);
+    }
+    console.log(`Successfully queued ${queues.length} notifications for review ${reviewId}`);
+  } else {
+    console.log(`No notifications to queue for review ${reviewId}`);
   }
 }
 
