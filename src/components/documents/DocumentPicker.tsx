@@ -31,7 +31,7 @@ import {
   FileText,
   Search,
   FolderOpen,
-  Tag,
+  // Tag import removed - not used
   Check,
   File,
   FileSpreadsheet,
@@ -176,7 +176,7 @@ function UploadTab({
   allowedTypes?: string[]
 }) {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
   const { currentProperty } = useProperty()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -286,7 +286,7 @@ export function DocumentPicker({
   title = 'Select Documents',
 }: DocumentPickerProps) {
   const { t } = useTranslation()
-  const { user } = useAuth()
+  const { user: _user } = useAuth()
   const { data: documents, isLoading, refetch } = useDocuments({
     status: 'PUBLISHED',
   })
@@ -348,10 +348,7 @@ export function DocumentPicker({
     setSearchQuery('')
   }, [selectedDocs, onSelect, onOpenChange])
 
-  const isSelected = useCallback(
-    (doc: Document) => selectedDocs.some((d) => d.id === doc.id),
-    [selectedDocs]
-  )
+  // isSelected helper function removed - not used in current implementation
 
   const handleUploadComplete = (doc: Document) => {
     refetch()

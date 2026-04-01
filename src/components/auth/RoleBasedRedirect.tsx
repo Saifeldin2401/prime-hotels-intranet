@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-import type { AppRole } from '@/lib/constants';
+// AppRole import removed - not used
 import { useTranslation } from "react-i18next";
 import { Navigate } from 'react-router-dom';
 

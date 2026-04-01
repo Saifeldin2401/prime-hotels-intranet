@@ -84,7 +84,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 viewport: viewport,
             }
 
-            const renderTask = page.render(renderContext as any)
+            const renderTask = page.render(renderContext as pdfjsLib.RenderParameters)
             renderTaskRef.current = renderTask
 
             await renderTask.promise

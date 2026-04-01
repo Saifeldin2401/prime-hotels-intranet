@@ -51,6 +51,7 @@ export interface GuestReview {
   manager_brief_ar: string | null
   response_sla_due_at: string | null
   collected_at: string
+  created_at: string
   published_at: string | null
   responded_at: string | null
 }

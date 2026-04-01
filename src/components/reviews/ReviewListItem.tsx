@@ -83,22 +83,36 @@ function getSeverityEmoji(severity: string | null): string {
   }
 }
 
-function formatReviewDate(dateString: string | null): { label: string; fullDate: string; isToday: boolean } {
-  if (!dateString) return { label: "Unknown", fullDate: "", isToday: false }
+function formatReviewDate(dateString: string | null, createdAt?: string | null): { label: string; fullDate: string; isNew: boolean } {
+  if (!dateString) return { label: "Unknown", fullDate: "", isNew: false }
+  
   const date = new Date(dateString)
   const now = new Date()
-  const isToday = date.toDateString() === now.toDateString()
+  
+  // Check if this is a brand NEW review (created today, not just refreshed)
+  const createdDate = createdAt ? new Date(createdAt) : date
+  const isBrandNew = createdDate.getFullYear() === now.getFullYear() && 
+                     createdDate.getMonth() === now.getMonth() && 
+                     createdDate.getDate() === now.getDate()
+  
+  // For brand new reviews, show "NEW" badge
+  if (isBrandNew) {
+    return { label: "NEW", fullDate: date.toLocaleString(), isNew: true }
+  }
+  
+  // For older reviews, show the actual date
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  const isYesterday = date.toDateString() === yesterday.toDateString()
+  const isYesterday = date.getFullYear() === yesterday.getFullYear() && 
+                      date.getMonth() === yesterday.getMonth() && 
+                      date.getDate() === yesterday.getDate()
   
-  if (isToday) return { label: "Today", fullDate: date.toLocaleString(), isToday: true }
-  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isToday: false }
+  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isNew: false }
   
   return {
     label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     fullDate: date.toLocaleString(),
-    isToday: false
+    isNew: false
   }
 }
 
@@ -127,7 +141,7 @@ export function ReviewListItem({
   const displayOwnerType = isAssignedState ? "Owner" : "Guest"
   const platformColor = getPlatformColor(review.platform)
   const propertyColor = getPropertyColor(propertyName)
-  const dateInfo = formatReviewDate(review.collected_at)
+  const dateInfo = formatReviewDate(review.collected_at, review.created_at)
 
   const getSeverityColor = (severity: string | null) => {
     switch (severity?.toLowerCase()) {
@@ -227,8 +241,8 @@ export function ReviewListItem({
           <Badge 
             className={cn(
               "text-[9px] px-2 py-0.5 font-bold tracking-wide border-0 flex items-center gap-1",
-              dateInfo.isToday 
-                ? "bg-blue-100 text-blue-700" 
+              dateInfo.isNew 
+                ? "bg-green-100 text-green-700" 
                 : "bg-slate-100 text-slate-600"
             )}
             title={dateInfo.fullDate}

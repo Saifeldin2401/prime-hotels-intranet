@@ -97,8 +97,7 @@ export function MobileDashboard() {
         return t('good_evening', 'Good Evening')
     }
 
-    const today = format(new Date(), 'EEEE, MMMM d')
-    const shortDate = format(new Date(), 'MMM d, yyyy')
+    // Date formatting removed - unused in current implementation
 
     // Enhanced quick stats with color schemes
     const quickStats = useMemo(() => [
