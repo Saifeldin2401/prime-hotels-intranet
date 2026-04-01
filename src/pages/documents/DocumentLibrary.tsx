@@ -3,6 +3,7 @@ import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanne
 import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
 import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
 import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
+import { DocumentPublishDialog } from '@/components/documents/DocumentPublishDialog'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -56,6 +57,7 @@ import { format } from 'date-fns'
 import {
     AlertTriangle,
     BarChart3,
+    BookOpen,
     Clock,
     Cloud,
     Eye,
@@ -137,6 +139,8 @@ export default function DocumentLibrary() {
   const [showFilters, setShowFilters] = useState(false)
   const [aiPanelOpen, setAiPanelOpen] = useState(false)
   const [selectedForAI, setSelectedForAI] = useState<Document | null>(null)
+  const [selectedForPublish, setSelectedForPublish] = useState<Document | null>(null)
+  const [publishDialogOpen, setPublishDialogOpen] = useState(false)
   const virtualListParentRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -462,6 +466,12 @@ export default function DocumentLibrary() {
     setAiPanelOpen(true)
   }, [])
 
+  const handleOpenPublishDialog = useCallback((doc: Document, e: MouseEvent) => {
+    e.stopPropagation()
+    setSelectedForPublish(doc)
+    setPublishDialogOpen(true)
+  }, [])
+
   const handleKeyboardActivate = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
@@ -609,6 +619,12 @@ export default function DocumentLibrary() {
                   <Sparkles className="w-4 h-4 mr-2" />
                   AI Assistant
                 </DropdownMenuItem>
+                {doc.content_type === 'document' && (
+                  <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
+                    <BookOpen className="w-4 h-4 mr-2" />
+                    Publish to Knowledge Base
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
                   onClick={(e) => handleDelete(doc.id, e)}
@@ -759,6 +775,12 @@ export default function DocumentLibrary() {
                 <Sparkles className="w-4 h-4 mr-2" />
                 AI Assistant
               </DropdownMenuItem>
+              {doc.content_type === 'document' && (
+                <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Publish to Knowledge Base
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 
                 onClick={(e) => handleDelete(doc.id, e)}
@@ -1379,6 +1401,17 @@ export default function DocumentLibrary() {
         itemName="document"
         onConfirm={handleConfirmDelete}
         isLoading={deleteDocument.isPending}
+      />
+
+      {/* Publish to Knowledge Base Dialog */}
+      <DocumentPublishDialog
+        document={selectedForPublish}
+        open={publishDialogOpen}
+        onOpenChange={setPublishDialogOpen}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+          queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+        }}
       />
     </div>
   )

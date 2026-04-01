@@ -130,10 +130,17 @@ self.addEventListener('fetch', (event) => {
 
                     const safeNetworkResponse = toSafeResponse(request, response);
                     if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                        // Preserve the original request URL by creating a new response
+                        // that returns index.html content but reports the original URL
+                        const preservedResponse = new Response(safeNetworkResponse.body, {
+                            status: safeNetworkResponse.status,
+                            statusText: safeNetworkResponse.statusText,
+                            headers: safeNetworkResponse.headers,
+                        });
                         if (!skipCachedShell) {
                             await cacheAppShell(safeNetworkResponse.clone(), '/index.html');
                         }
-                        return safeNetworkResponse;
+                        return preservedResponse;
                     }
                 } catch (error) {
                     console.warn(`[SW ${VERSION}] Shell fetch failed:`, error);
@@ -142,7 +149,12 @@ self.addEventListener('fetch', (event) => {
                 if (!skipCachedShell) {
                     const cachedShell = await getCachedAppShell(request);
                     if (cachedShell) {
-                        return cachedShell;
+                        // Create a new response from the cached shell to preserve original URL
+                        return new Response(cachedShell.body, {
+                            status: cachedShell.status,
+                            statusText: cachedShell.statusText,
+                            headers: cachedShell.headers,
+                        });
                     }
                 }
 

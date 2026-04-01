@@ -16,6 +16,7 @@ export type AuditEventType =
     | 'document.deleted'
     | 'document.viewed'
     | 'document.downloaded'
+    | 'document.published_to_knowledge'
     | 'approval.created'
     | 'approval.approved'
     | 'approval.rejected'
