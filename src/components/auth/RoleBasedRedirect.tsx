@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth';
-// AppRole import removed - not used
+
 import { useTranslation } from "react-i18next";
 import { Navigate } from 'react-router-dom';
 
@@ -47,8 +47,4 @@ export function RoleBasedRedirect() {
 }
 
 // Note: Helper function getDashboardPathForRole moved to lib/navigation.ts if needed
-
-export function getDashboardPathForRole(role: string): string {
-  // All roles now use unified dashboard
-  return '/dashboard';
-}
+// Removed from this file to fix fast refresh warning - export only one component per file

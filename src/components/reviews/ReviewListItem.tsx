@@ -141,7 +141,7 @@ export function ReviewListItem({
   const displayOwnerType = isAssignedState ? "Owner" : "Guest"
   const platformColor = getPlatformColor(review.platform)
   const propertyColor = getPropertyColor(propertyName)
-  const dateInfo = formatReviewDate(review.collected_at, review.created_at)
+  const dateInfo = formatReviewDate(review.published_at || review.created_at)
 
   const getSeverityColor = (severity: string | null) => {
     switch (severity?.toLowerCase()) {
