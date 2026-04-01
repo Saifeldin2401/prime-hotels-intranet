@@ -41,35 +41,57 @@ export function useAuthSession() {
     })
   }, [])
 
+  // Promise for in-flight session clear to prevent concurrent clears
+  const clearPromiseRef = useRef<Promise<void> | null>(null)
+
   /**
    * Clears the local Supabase auth session with retry logic.
    * Call `onCleared` after the session is removed to reset local state.
+   *
+   * If a clear is already in progress, subsequent calls wait for it
+   * to complete and still invoke onCleared (ensuring state is reset).
    */
   const clearLocalSession = useCallback(
     async (reason: string, onCleared: () => void) => {
-      if (authRecoveryInProgressRef.current) return
-      authRecoveryInProgressRef.current = true
-      try {
-        console.warn(`[Auth] ${reason}. Clearing local session.`)
-        const maxAttempts = 3
-        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
-          try {
-            await supabase.auth.signOut({ scope: 'local' })
-            break
-          } catch (error) {
-            if (attempt === maxAttempts - 1) {
-              throw error
-            }
-            const delayMs = 250 * (2 ** attempt)
-            await new Promise((resolve) => setTimeout(resolve, delayMs))
-          }
+      // If a clear is already in flight, wait for it then reset state
+      if (authRecoveryInProgressRef.current && clearPromiseRef.current) {
+        if (import.meta.env.DEV) {
+          console.log(`[Auth] Session clear already in progress, waiting. New reason: ${reason}`)
         }
-      } catch (error) {
-        console.warn('Failed to clear local auth session:', error)
-      } finally {
+        await clearPromiseRef.current.catch(() => {})
         onCleared()
-        authRecoveryInProgressRef.current = false
+        return
       }
+
+      authRecoveryInProgressRef.current = true
+
+      const doClean = async () => {
+        try {
+          console.warn(`[Auth] ${reason}. Clearing local session.`)
+          const maxAttempts = 3
+          for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+            try {
+              await supabase.auth.signOut({ scope: 'local' })
+              break
+            } catch (error) {
+              if (attempt === maxAttempts - 1) {
+                throw error
+              }
+              const delayMs = 250 * (2 ** attempt)
+              await new Promise((resolve) => setTimeout(resolve, delayMs))
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to clear local auth session:', error)
+        } finally {
+          onCleared()
+          authRecoveryInProgressRef.current = false
+          clearPromiseRef.current = null
+        }
+      }
+
+      clearPromiseRef.current = doClean()
+      await clearPromiseRef.current
     },
     []
   )

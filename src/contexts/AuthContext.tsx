@@ -2,7 +2,7 @@ import type { AppRole } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { analytics } from '@/services/analyticsService'
-import type { Session, User } from '@supabase/supabase-js'
+import type { User } from '@supabase/supabase-js'
 import type { ReactNode } from 'react'
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { shouldSuppressAuthenticatedAppState } from '@/lib/authFlowState'
@@ -42,17 +42,18 @@ const ROLE_ORDER: Record<AppRole, number> = {
 }
 
 // ─── Configuration ─────────────────────────────────────────────────────────
+// Detect mobile browsers for adjusted timing
+const isMobileBrowser = () => {
+  if (typeof navigator === 'undefined') return false
+  return /Android|iPhone|iPad|iPod|Mobile|webOS/i.test(navigator.userAgent)
+}
+
 const CONFIG = {
   // Debounce time before validating session after tab becomes visible
-  visibilityDebounceMs: 500,
+  // Mobile needs longer — network takes 1-3s to stabilize after backgrounding
+  visibilityDebounceMs: isMobileBrowser() ? 2000 : 500,
   // Minimum time between validation attempts
   validationThrottleMs: 5000,
-  // Ignore quick tab switches that are common on mobile browsers
-  minHiddenDurationMs: 15000,
-  // Refresh the auth session after longer background periods
-  refreshAfterHiddenMs: 10 * 60 * 1000,
-  // Refresh slightly before expiry to avoid resume-edge races
-  sessionExpiryBufferMs: 2 * 60 * 1000,
   // Retry configuration for network errors
   maxRetries: 3,
   baseRetryDelayMs: 1000,
@@ -74,7 +75,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionClearInProgressRef = useRef(false)
   const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const hiddenAtRef = useRef<number | null>(null)
 
   // ── Session helpers (error detection, timeout, clear) ──────────────────
   const { isAuthError, withTimeout, clearLocalSession, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef } =
@@ -100,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   )
 
   const { loadUserData, shouldRefreshUserData, syncProfileRef, syncRolesRef } =
-    useUserDataLoader(stateSetters, sessionHelpers)
+    useUserDataLoader(stateSetters, sessionHelpers, resetLocalAuthState)
 
   // Keep refs in sync
   useEffect(() => { syncProfileRef(profile) }, [profile, syncProfileRef])
@@ -207,12 +207,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     // ── Session verification on tab resume ──────────────────────────────
-    const isSessionNearExpiry = (session: Session) => {
-      const expiresAt = typeof session.expires_at === 'number' ? session.expires_at * 1000 : 0
-      return expiresAt > 0 && expiresAt - Date.now() <= CONFIG.sessionExpiryBufferMs
-    }
-
-    const verifySessionOnResume = async (hiddenDurationMs: number, retryAttempt = 0): Promise<void> => {
+    const verifySessionOnResume = async (retryAttempt = 0): Promise<void> => {
       // Skip if offline - network errors shouldn't cause logout
       if (!navigator.onLine) {
         recordAuthEvent({
@@ -242,22 +237,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         recordAuthEvent({
           type: 'session_validation',
           success: true,
-          details: { attempt: retryAttempt, hiddenDurationMs },
+          details: { attempt: retryAttempt },
         })
 
-        const { data: { session }, error } = await supabase.auth.getSession()
+        const { data: { user: verifiedUser }, error } = await supabase.auth.getUser()
 
         if (!mounted) return
 
-        if (error || !session?.user) {
-          const missingSession = !error && !session?.user
-          const errorMsg = missingSession
-            ? 'No session found during resume validation'
-            : getErrorMessage(error)
-          const errorCode = missingSession ? 'missing_session' : getErrorCode(error)
-          const classification = missingSession
-            ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
-            : classifyAuthError(error)
+        if (error || !verifiedUser) {
+          const errorMsg = getErrorMessage(error)
+          const errorCode = getErrorCode(error)
+          const classification = classifyAuthError(error)
 
           recordAuthEvent({
             type: 'session_validation',
@@ -268,18 +258,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               errorType: classification.type,
               shouldLogout: classification.shouldLogout,
               retryable: classification.retryable,
-              hiddenDurationMs,
             },
           })
 
           if (classification.shouldLogout) {
-            // Only clear session on actual auth expiration
+            // Access token expired — try refreshing before giving up
             if (import.meta.env.DEV) {
-              console.warn('[Auth] Session expired, clearing session:', errorMsg)
+              console.warn('[Auth] Session validation failed, attempting token refresh before logout:', errorMsg)
             }
+            try {
+              const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
+              if (refreshData?.session?.user && !refreshError) {
+                // Refresh succeeded — session is still valid
+                recordAuthEvent({
+                  type: 'token_refresh',
+                  success: true,
+                  details: { context: 'tab_resume_recovery', userId: refreshData.session.user.id },
+                })
+                authRecoveryInProgressRef.current = false
+                setUser((current) => (current?.id === refreshData.session!.user.id ? current : refreshData.session!.user))
+                if (shouldRefreshUserData(refreshData.session.user.id)) {
+                  loadUserData(refreshData.session.user.id).catch(() => {
+                    console.warn('[Auth] Error in loadUserData (resume recovery).')
+                  })
+                }
+                finishLoading()
+                return
+              }
+            } catch {
+              // Refresh also failed — proceed with logout
+            }
+
+            // Refresh failed — actually clear session
             sessionClearInProgressRef.current = true
             try {
-              await clearLocalSession('Session expired after tab resume', resetLocalAuthState)
+              await clearLocalSession('Session expired after tab resume (refresh also failed)', resetLocalAuthState)
               recordAuthEvent({
                 type: 'logout',
                 success: true,
@@ -296,7 +309,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }
             retryTimeoutRef.current = setTimeout(() => {
               if (mounted && document.visibilityState === 'visible') {
-                void verifySessionOnResume(hiddenDurationMs, retryAttempt + 1)
+                void verifySessionOnResume(retryAttempt + 1)
               }
             }, delay)
           } else if (classification.type === 'network_error') {
@@ -310,89 +323,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        let nextUser = session.user
-
-        setUser((current) => (current?.id === nextUser.id ? current : nextUser))
-
-        const shouldRefreshAuthSession =
-          hiddenDurationMs >= CONFIG.refreshAfterHiddenMs || isSessionNearExpiry(session)
-
-        if (shouldRefreshAuthSession) {
-          const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
-
-          if (!mounted) return
-
-          if (refreshError || !refreshData.session?.user) {
-            const missingSession = !refreshError && !refreshData.session?.user
-            const errorMsg = missingSession
-              ? 'No session returned from refresh after tab resume'
-              : getErrorMessage(refreshError)
-            const errorCode = missingSession ? 'missing_refresh_session' : getErrorCode(refreshError)
-            const classification = missingSession
-              ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
-              : classifyAuthError(refreshError)
-
-            recordAuthEvent({
-              type: 'token_refresh',
-              success: false,
-              error: errorMsg,
-              errorCode,
-              details: {
-                errorType: classification.type,
-                shouldLogout: classification.shouldLogout,
-                retryable: classification.retryable,
-                hiddenDurationMs,
-              },
-            })
-
-            if (classification.shouldLogout) {
-              sessionClearInProgressRef.current = true
-              try {
-                await clearLocalSession('Session refresh failed after tab resume', resetLocalAuthState)
-                recordAuthEvent({
-                  type: 'logout',
-                  success: true,
-                  details: { reason: 'session_expired', context: 'tab_resume_refresh' },
-                })
-              } finally {
-                sessionClearInProgressRef.current = false
-              }
-              finishLoading()
-              return
-            }
-
-            if (classification.retryable && retryAttempt < CONFIG.maxRetries) {
-              const delay = getRetryDelay(retryAttempt, CONFIG.baseRetryDelayMs)
-              retryTimeoutRef.current = setTimeout(() => {
-                if (mounted && document.visibilityState === 'visible') {
-                  void verifySessionOnResume(hiddenDurationMs, retryAttempt + 1)
-                }
-              }, delay)
-            }
-
-            finishLoading()
-            return
-          }
-
-          nextUser = refreshData.session.user
-          setUser((current) => (current?.id === nextUser.id ? current : nextUser))
-          recordAuthEvent({
-            type: 'token_refresh',
-            success: true,
-            details: { userId: nextUser.id, hiddenDurationMs },
-          })
-        }
-
         // Success - session is valid
         recordAuthEvent({
           type: 'session_validation',
           success: true,
-          details: { userId: nextUser.id, hiddenDurationMs },
+          details: { userId: verifiedUser.id },
         })
 
         authRecoveryInProgressRef.current = false
-        if (shouldRefreshUserData(nextUser.id)) {
-          loadUserData(nextUser.id).catch(() => {
+        setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
+        if (shouldRefreshUserData(verifiedUser.id)) {
+          loadUserData(verifiedUser.id).catch(() => {
             console.warn('[Auth] Error in loadUserData (resume validation).')
           })
         }
@@ -417,27 +358,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         visibilityTimeoutRef.current = null
       }
 
-      if (document.visibilityState === 'hidden') {
-        hiddenAtRef.current = Date.now()
-        return
-      }
-
       // Add delay to let browser stabilize network after becoming visible
-      if (document.visibilityState === 'visible' && navigator.onLine) {
-        const hiddenDurationMs = hiddenAtRef.current ? Date.now() - hiddenAtRef.current : 0
-        hiddenAtRef.current = null
-
-        if (hiddenDurationMs < CONFIG.minHiddenDurationMs) {
+      if (document.visibilityState === 'visible') {
+        // Don't validate if offline — no point, and it avoids false auth failures
+        if (!navigator.onLine) {
+          recordAuthEvent({
+            type: 'tab_resume',
+            success: false,
+            details: { reason: 'offline_on_resume' },
+          })
           return
         }
 
-        const debounceMs = isEnabled('smartSessionValidation') 
-          ? CONFIG.visibilityDebounceMs 
+        const debounceMs = isEnabled('smartSessionValidation')
+          ? CONFIG.visibilityDebounceMs
           : 0
 
         visibilityTimeoutRef.current = setTimeout(() => {
-          if (document.visibilityState === 'visible') {
-            void verifySessionOnResume(hiddenDurationMs)
+          // Re-check conditions after debounce — user might have switched away again
+          if (document.visibilityState === 'visible' && navigator.onLine) {
+            void verifySessionOnResume()
           }
         }, debounceMs)
       }
@@ -461,34 +401,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────
   const signIn = async (email: string, password: string) => {
-    console.log('[Auth Debug] signIn called')
     try {
       setLoading(true)
       setRolesLoading(true)
-      console.log('[Auth Debug] Calling supabase.auth.signInWithPassword...')
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      console.log('[Auth Debug] signInWithPassword result:', { hasUser: !!data.user, hasError: !!error })
       if (error) {
-        console.log('[Auth Debug] signIn error:', error)
         setLoading(false)
         setRolesLoading(false)
         return { error }
       }
       if (data.user) {
-        console.log('[Auth Debug] User signed in, setting user state...')
         setUser(data.user)
         setLoading(false)
-        console.log('[Auth Debug] Calling loadUserData...')
-        loadUserData(data.user.id).catch((err) => {
-          console.error('[Auth Debug] loadUserData error:', err)
+        loadUserData(data.user.id).catch(() => {
+          console.warn('[Auth] Error loading user data after sign in.')
         })
       } else {
-        console.log('[Auth Debug] No user in signIn data')
         setLoading(false)
       }
       return { error: null }
     } catch (error) {
-      console.error('[Auth Debug] signIn CATCH error:', error)
       setLoading(false)
       setRolesLoading(false)
       return { error: error as Error }
@@ -509,17 +441,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession()
       if (error || !session?.user) {
-        const missingSession = !error && !session?.user
-        const classification = missingSession
-          ? { type: 'auth_expired' as const, shouldLogout: true, retryable: false }
-          : classifyAuthError(error)
+        const classification = classifyAuthError(error)
         recordAuthEvent({
           type: 'token_refresh',
           success: false,
-          error: missingSession ? 'No session returned from refresh' : getErrorMessage(error),
+          error: getErrorMessage(error),
+          details: { errorType: classification.type, shouldLogout: classification.shouldLogout },
         })
+        // Only logout on actual auth expiration, not network/server errors
         if (classification.shouldLogout) {
-          await clearLocalSession('Session refresh failed', resetLocalAuthState)
+          await clearLocalSession('Session refresh failed - token expired', resetLocalAuthState)
+        } else if (import.meta.env.DEV) {
+          console.warn('[Auth] Token refresh failed due to transient error, keeping session:', getErrorMessage(error))
         }
         return
       }
@@ -533,13 +466,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRolesLoading(true)
       await loadUserData(session.user.id)
     } catch (error) {
+      const classification = classifyAuthError(error)
       console.error('[Auth] Unexpected error in refreshSession:', error)
       recordAuthEvent({
         type: 'token_refresh',
         success: false,
         error: getErrorMessage(error),
-        details: { unexpected: true },
+        details: { unexpected: true, errorType: classification.type },
       })
+      // Don't logout on unexpected/network errors during refresh
+      if (classification.shouldLogout) {
+        await clearLocalSession('Session refresh failed - auth error', resetLocalAuthState)
+      }
     }
   }
 

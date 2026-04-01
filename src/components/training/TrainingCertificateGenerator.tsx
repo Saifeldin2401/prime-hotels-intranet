@@ -119,6 +119,7 @@ export function TrainingCertificateGenerator({
   const navigate = useNavigate()
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
+  const navigate = useNavigate()
   const { user } = useAuth()
 
   const [selectedTemplate, setSelectedTemplate] = useState<string>('')

@@ -5,7 +5,6 @@ import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/utils'
 import { useEffect, useState } from 'react'
 import { useTranslation } from "react-i18next"
-import { useNavigate } from 'react-router-dom'
 
 interface Session {
   id: string
@@ -18,8 +17,7 @@ interface Session {
 
 export function SessionList() {
     const { t: t_ext } = useTranslation('extracted');
-  const navigate = useNavigate()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -58,9 +56,11 @@ export function SessionList() {
   }
 
   const handleSignOutAll = async () => {
-    // Sign out from all devices
-    await supabase.auth.signOut()
-    navigate('/login')
+    // Sign out from all devices using global scope, then use AuthContext signOut
+    // to properly reset local state
+    await supabase.auth.signOut({ scope: 'global' })
+    await signOut()
+    window.location.href = '/login'
   }
 
   if (loading) {

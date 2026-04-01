@@ -301,7 +301,10 @@ export function IntegratedDashboard() {
   // Use dynamic layout profile based on full user context (role + multi-property status)
   const layoutProfile = useDynamicLayoutProfile()
 
-  if (loading || (!user || !profile) || (rolesLoading && !primaryRole)) {
+  // Only block on initial auth loading or missing user.
+  // Don't block on missing profile — render with fallback data to avoid infinite skeleton.
+  // Don't block on rolesLoading if we already have a role resolved.
+  if (loading || !user) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-4">

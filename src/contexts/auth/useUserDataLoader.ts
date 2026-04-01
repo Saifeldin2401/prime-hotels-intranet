@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase'
-import { classifyAuthError, getErrorMessage } from '@/lib/authErrorUtils'
+import { classifyAuthError } from '@/lib/authErrorUtils'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { useCallback, useRef } from 'react'
 
@@ -14,6 +14,7 @@ interface UserDataState {
 interface SessionHelpers {
   isAuthError: (error: unknown) => boolean
   withTimeout: <T>(promise: Promise<T>, ms: number, label: string) => Promise<T>
+  clearLocalSession: (reason: string, onCleared: () => void) => Promise<void>
 }
 
 /**
@@ -23,6 +24,7 @@ interface SessionHelpers {
 export function useUserDataLoader(
   state: UserDataState,
   session: SessionHelpers,
+  resetLocalAuthState: () => void
 ) {
   const loadSeqRef = useRef(0)
   const activeUserIdRef = useRef<string | null>(null)
@@ -68,32 +70,60 @@ export function useUserDataLoader(
     updated_at: new Date().toISOString(),
   })
 
+  /**
+   * Attempt to recover from an auth error by refreshing the token.
+   * Returns true if recovery succeeded, false if session should be cleared.
+   */
+  const attemptAuthRecovery = useCallback(async (context: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.auth.refreshSession()
+      if (data?.session?.user && !error) {
+        if (import.meta.env.DEV) {
+          console.log(`[Auth] Token refresh recovered session during ${context}`)
+        }
+        return true
+      }
+    } catch {
+      // Refresh failed
+    }
+    return false
+  }, [])
+
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
     async (userId: string) => {
-      const { isAuthError, withTimeout } = session
+      const { isAuthError, withTimeout, clearLocalSession } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
-      const shouldClearSession = async (error: unknown, reason: string) => {
-        if (!isAuthError(error)) return false
-
-        const classification = classifyAuthError(error)
-        if (!classification.shouldLogout) {
-          console.warn(`[Auth] Preserving session during user data load: ${reason}`, getErrorMessage(error))
-          return false
-        }
-
-        await clearLocalSession(reason, resetLocalAuthState)
-        return true
-      }
 
       try {
-        console.log('[Auth Debug] loadUserData started for userId:', userId)
         const loadId = ++loadSeqRef.current
-        console.log('[Auth Debug] loadId:', loadId)
         activeUserIdRef.current = userId
         setRolesLoading(true)
-        console.log('[Auth Debug] setRolesLoading(true) called')
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
+
+        /**
+         * Handle an auth error from a data query: try token refresh first,
+         * only clear session if refresh also fails with an auth error.
+         */
+        const handleQueryAuthError = async (queryName: string, error: unknown): Promise<boolean> => {
+          if (!isAuthError(error)) return false
+
+          // Check if this is actually a network/transient error misclassified
+          const classification = classifyAuthError(error)
+          if (!classification.shouldLogout) {
+            if (import.meta.env.DEV) {
+              console.warn(`[Auth] ${queryName} error classified as non-fatal, keeping session`)
+            }
+            return false
+          }
+
+          // Try refreshing the token before giving up
+          const recovered = await attemptAuthRecovery(queryName)
+          if (recovered) return false // Don't treat as fatal — caller should continue
+
+          await clearLocalSession(`${queryName} auth error (refresh failed)`, resetLocalAuthState)
+          return true // Fatal — caller should stop
+        }
 
         // ── Load profile ──────────────────────────────────────────
         const profilePromise = supabase
@@ -107,26 +137,23 @@ export function useUserDataLoader(
           10000,
           'Profile load'
         ) as any
-        if (isStale()) return
+        if (isStale()) { setRolesLoading(false); return }
         const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
         if (profileError) {
-          if (isAuthError(profileError)) {
-            console.warn('Profile load hit an auth/session error; preserving current auth state.')
-          } else {
-            console.warn('Error loading profile.')
-          }
+          if (await handleQueryAuthError('Profile', profileError)) { setRolesLoading(false); return }
+          console.warn('Error loading profile.')
           // Try fallback from auth metadata
           const { data: { user } } = await supabase.auth.getUser()
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           if (user) setProfile(buildFallbackProfile(user))
         } else if (profileData) {
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           setProfile(profileData)
         } else {
           // No profile row yet — use auth metadata
           const { data: { user } } = await supabase.auth.getUser()
-          if (isStale()) return
+          if (isStale()) { setRolesLoading(false); return }
           if (user) setProfile(buildFallbackProfile(user))
         }
 
@@ -145,17 +172,14 @@ export function useUserDataLoader(
           PromiseSettledResult<{ data?; error? }>,
         ]
 
-        if (isStale()) return
+        if (isStale()) { setRolesLoading(false); return }
 
         // Handle roles
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
-            if (isAuthError(rolesError)) {
-              console.warn('Roles load hit an auth/session error; preserving current auth state.')
-            } else {
-              console.warn('Error loading roles.')
-            }
+            if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
+            console.warn('Error loading roles.')
             setRolesLoading(false)
           } else {
             setRoles(directRoles || [])
@@ -170,11 +194,8 @@ export function useUserDataLoader(
         if (propertiesResult.status === 'fulfilled') {
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
-            if (isAuthError(propertiesError)) {
-              console.warn('Properties load hit an auth/session error; preserving current auth state.')
-            } else {
-              console.warn('Error loading properties.')
-            }
+            if (await handleQueryAuthError('Properties', propertiesError)) return
+            console.warn('Error loading properties.')
           } else {
             const props = directProps?.map((up) => up.properties).filter(Boolean) || []
             setProperties(props)
@@ -187,11 +208,8 @@ export function useUserDataLoader(
         if (departmentsResult.status === 'fulfilled') {
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
-            if (isAuthError(departmentsError)) {
-              console.warn('Departments load hit an auth/session error; preserving current auth state.')
-            } else {
-              console.warn('Error loading departments.')
-            }
+            if (await handleQueryAuthError('Departments', departmentsError)) return
+            console.warn('Error loading departments.')
           } else {
             const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
             setDepartments(depts)
@@ -202,19 +220,21 @@ export function useUserDataLoader(
 
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
-        console.error('[Auth Debug] CATCH BLOCK ERROR:', error)
-        console.error('[Auth Debug] Error stack:', (error as Error).stack)
-        if (isAuthError(error)) {
-          console.warn('User data load hit an auth/session error; preserving current auth state.')
-          state.setRolesLoading(false)
+        // Always clear rolesLoading on error to prevent infinite skeleton
+        state.setRolesLoading(false)
+        // For unexpected top-level errors, classify before deciding
+        const classification = classifyAuthError(error)
+        if (classification.shouldLogout) {
+          const recovered = await attemptAuthRecovery('loadUserData')
+          if (!recovered) {
+            await session.clearLocalSession('User data load failed due to auth error (refresh failed)', resetLocalAuthState)
+          }
           return
         }
         console.warn('Unexpected error loading user data.')
-      } finally {
-        console.log('[Auth Debug] loadUserData completed/finally for userId:', userId)
       }
     },
-    [session, state]
+    [session, state, resetLocalAuthState, attemptAuthRecovery]
   )
 
   return {
