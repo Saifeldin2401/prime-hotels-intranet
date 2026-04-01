@@ -141,11 +141,14 @@ export function RequiredReadingWidget({
     )
 }
 
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
 function ReadingItem({ item }: { item: RequiredReading }) {
-    const isOverdue = item.due_date && new Date(item.due_date) < new Date()
+    const now = new Date();
+    const isOverdue = item.due_date && new Date(item.due_date) < now
     const isDueSoon = item.due_date &&
-        new Date(item.due_date) > new Date() &&
-        new Date(item.due_date) < new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        new Date(item.due_date) > now &&
+        new Date(item.due_date).getTime() - now.getTime() < SEVEN_DAYS_MS
 
     return (
         <Link

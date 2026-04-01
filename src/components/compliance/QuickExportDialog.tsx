@@ -43,10 +43,10 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
   const [exportName, setExportName] = useState('')
   const [description, setDescription] = useState('')
   const [format, setFormat] = useState<AuditExportFormat>('pdf')
-  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>({
+  const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => ({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     to: new Date(),
-  })
+  }))
   const [selectedEntities, setSelectedEntities] = useState<string[]>(['profiles', 'documents'])
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 

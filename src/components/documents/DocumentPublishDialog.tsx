@@ -40,7 +40,7 @@ import {
 import type { Document } from '@/lib/types';
 import type { KnowledgeVisibility } from '@/types/knowledge';
 import { FileText, BookOpen, Eye, Shield, Users, Building, Globe, Check, Loader2 } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -107,7 +107,7 @@ export function DocumentPublishDialog({
   const [newTag, setNewTag] = useState('');
 
   // Reset form when document changes
-  useMemo(() => {
+  useEffect(() => {
     if (document) {
       setTitle(document.title);
       setDescription(document.description || '');
@@ -118,7 +118,7 @@ export function DocumentPublishDialog({
       setAutoPublish(false);
       setTags([]);
     }
-  }, [document, open]);
+  }, [document?.id, open]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
