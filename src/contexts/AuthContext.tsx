@@ -47,6 +47,8 @@ const CONFIG = {
   visibilityDebounceMs: 500,
   // Minimum time between validation attempts
   validationThrottleMs: 5000,
+  // Ignore quick tab flips that do not represent a real background/resume cycle
+  minHiddenDurationMs: 15000,
   // Retry configuration for network errors
   maxRetries: 3,
   baseRetryDelayMs: 1000,
@@ -68,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionClearInProgressRef = useRef(false)
   const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const hiddenAtRef = useRef<number | null>(null)
 
   // ── Session helpers (error detection, timeout, clear) ──────────────────
   const { isAuthError, withTimeout, clearLocalSession, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef } =
@@ -327,6 +330,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         visibilityTimeoutRef.current = null
       }
 
+      if (document.visibilityState === 'hidden') {
+        hiddenAtRef.current = Date.now()
+        return
+      }
+
+      const hiddenAt = hiddenAtRef.current
+      hiddenAtRef.current = null
+      if (hiddenAt && Date.now() - hiddenAt < CONFIG.minHiddenDurationMs) {
+        return
+      }
+
       // Add delay to let browser stabilize network after becoming visible
       if (document.visibilityState === 'visible' && navigator.onLine) {
         const debounceMs = isEnabled('smartSessionValidation') 
@@ -399,12 +413,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession()
       if (error || !session?.user) {
+        const classification = classifyAuthError(error)
         recordAuthEvent({
           type: 'token_refresh',
           success: false,
           error: getErrorMessage(error),
+          errorCode: getErrorCode(error),
+          details: {
+            shouldLogout: classification.shouldLogout,
+            retryable: classification.retryable,
+            errorType: classification.type,
+          },
         })
-        await clearLocalSession('Session refresh failed', resetLocalAuthState)
+        if (classification.shouldLogout) {
+          await clearLocalSession('Session refresh failed', resetLocalAuthState)
+        }
         return
       }
       recordAuthEvent({

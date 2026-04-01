@@ -233,12 +233,17 @@ export default function TrainingModules() {
 
       if (error) throw error
       // Format department name with property for disambiguation
-      return (data || []).map((d) => ({
-        id: d.id,
-        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
-        propertyName: d.property?.name,
-        rawName: d.name
-      }))
+      return (data || []).map((d) => {
+        // Supabase returns property as array from the relation
+        const propertyArray = d.property as unknown as Array<{ id: string; name: string }> | null
+        const propertyName = propertyArray?.[0]?.name
+        return {
+          id: d.id,
+          name: propertyName ? `${d.name} (${propertyName})` : d.name,
+          propertyName: propertyName,
+          rawName: d.name
+        }
+      })
     },
     enabled: showAssignDialog
   })

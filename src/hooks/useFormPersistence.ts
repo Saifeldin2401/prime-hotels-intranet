@@ -198,6 +198,7 @@ export function useFormPersistence<T extends Record<string, unknown>>(
     const checkDraft = () => {
       const data = storage.getItem(fullKey)
       setHasDraft(!!data)
+      setIsHydrated(true)
     }
     checkDraft()
   }, [fullKey, storage])
@@ -257,9 +258,9 @@ export function useFormPersistence<T extends Record<string, unknown>>(
   }, [enabled, storage, backupStorage, fullKey, backupKey, version, maxAgeMs])
 
   /**
-   * Save draft to storage
+   * Persist draft to storage immediately.
    */
-  const saveDraft = useCallback((data: T) => {
+  const persistDraft = useCallback((data: T) => {
     if (!enabled) return
 
     try {
@@ -312,9 +313,9 @@ export function useFormPersistence<T extends Record<string, unknown>>(
   }, [storage, backupStorage, fullKey, backupKey])
 
   /**
-   * Queue a save with debouncing
+   * Save draft with debouncing to avoid excessive storage writes.
    */
-  const queueSave = useCallback((data: T) => {
+  const saveDraft = useCallback((data: T) => {
     if (!enabled) return
 
     pendingDataRef.current = data
@@ -324,13 +325,21 @@ export function useFormPersistence<T extends Record<string, unknown>>(
       clearTimeout(saveTimeoutRef.current)
     }
 
+    if (debounceMs <= 0) {
+      if (pendingDataRef.current) {
+        persistDraft(pendingDataRef.current)
+        pendingDataRef.current = null
+      }
+      return
+    }
+
     saveTimeoutRef.current = setTimeout(() => {
       if (pendingDataRef.current) {
-        saveDraft(pendingDataRef.current)
+        persistDraft(pendingDataRef.current)
         pendingDataRef.current = null
       }
     }, debounceMs)
-  }, [enabled, saveDraft, debounceMs])
+  }, [enabled, persistDraft, debounceMs])
 
   /**
    * Mark as saved (call after successful submit)
@@ -351,10 +360,39 @@ export function useFormPersistence<T extends Record<string, unknown>>(
       }
       // Save any pending changes
       if (pendingDataRef.current && enabled) {
-        saveDraft(pendingDataRef.current)
+        persistDraft(pendingDataRef.current)
       }
     }
-  }, [enabled, saveDraft])
+  }, [enabled, persistDraft])
+
+  // Flush pending changes when the page is backgrounded or discarded.
+  useEffect(() => {
+    if (!enabled || typeof window === 'undefined') return
+
+    const flushPendingDraft = () => {
+      if (!pendingDataRef.current) return
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
+      persistDraft(pendingDataRef.current)
+      pendingDataRef.current = null
+    }
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        flushPendingDraft()
+      }
+    }
+
+    window.addEventListener('pagehide', flushPendingDraft)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    return () => {
+      window.removeEventListener('pagehide', flushPendingDraft)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+    }
+  }, [enabled, persistDraft])
 
   // Cross-tab synchronization
   useEffect(() => {
@@ -374,10 +412,8 @@ export function useFormPersistence<T extends Record<string, unknown>>(
     return () => window.removeEventListener('storage', handleStorageChange)
   }, [enabled, fullKey])
 
-  // Memoize the return object to prevent infinite loops when used in dependency arrays
-  // NOTE: Only include stable values and callbacks in dependencies.
-  // State values (hasUnsavedChanges, lastSavedAt, hasDraft) are accessed directly
-  // and should NOT be in the dependency array to avoid infinite loops.
+  // Memoize the return object so callback references stay stable for consumers
+  // that depend on individual methods instead of the full object.
   const returnValue = useMemo(() => ({
     isHydrated,
     hasUnsavedChanges,
@@ -387,7 +423,16 @@ export function useFormPersistence<T extends Record<string, unknown>>(
     saveDraft,
     clearDraft,
     markSaved,
-  }), [isHydrated, loadDraft, saveDraft, clearDraft, markSaved])
+  }), [
+    isHydrated,
+    hasUnsavedChanges,
+    lastSavedAt,
+    hasDraft,
+    loadDraft,
+    saveDraft,
+    clearDraft,
+    markSaved,
+  ])
   
   return returnValue
 }

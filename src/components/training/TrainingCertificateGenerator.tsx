@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
 interface CertificateTemplate {
@@ -115,6 +116,7 @@ export function TrainingCertificateGenerator({
   userId,
   className
 }: TrainingCertificateGeneratorProps) {
+  const navigate = useNavigate()
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
   const { user } = useAuth()
@@ -514,7 +516,7 @@ export function TrainingCertificateGenerator({
               <Label>{t('certificateGenerator.selectCompletion')}</Label>
               <Select value={trainingCompletionId || ''} onValueChange={(value) => {
                 // This would typically navigate to the specific completion
-                window.location.href = `/training/certificates/${value}`
+                navigate(`/training/certificates/${value}`)
               }}>
                 <SelectTrigger className={isRTL ? 'flex-row-reverse' : ''}>
                   <SelectValue placeholder={t('certificateGenerator.selectCompletionPlaceholder')} />

@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { classifyAuthError, getErrorMessage } from '@/lib/authErrorUtils'
 import type { Department, Profile, Property, UserRole } from '@/lib/types'
 import { useCallback, useRef } from 'react'
 
@@ -74,6 +75,18 @@ export function useUserDataLoader(
     async (userId: string) => {
       const { isAuthError, withTimeout, clearLocalSession } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
+      const shouldClearSession = async (error: unknown, reason: string) => {
+        if (!isAuthError(error)) return false
+
+        const classification = classifyAuthError(error)
+        if (!classification.shouldLogout) {
+          console.warn(`[Auth] Preserving session during user data load: ${reason}`, getErrorMessage(error))
+          return false
+        }
+
+        await clearLocalSession(reason, resetLocalAuthState)
+        return true
+      }
 
       try {
         const loadId = ++loadSeqRef.current
@@ -97,8 +110,7 @@ export function useUserDataLoader(
         const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
 
         if (profileError) {
-          if (isAuthError(profileError)) {
-            await clearLocalSession('Profile request returned auth/session error', resetLocalAuthState)
+          if (await shouldClearSession(profileError, 'Profile request returned auth/session error')) {
             return
           }
           console.warn('Error loading profile.')
@@ -137,8 +149,7 @@ export function useUserDataLoader(
         if (rolesResult.status === 'fulfilled') {
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
-            if (isAuthError(rolesError)) {
-              await clearLocalSession('Roles request returned auth/session error', resetLocalAuthState)
+            if (await shouldClearSession(rolesError, 'Roles request returned auth/session error')) {
               return
             }
             console.warn('Error loading roles.')
@@ -156,8 +167,7 @@ export function useUserDataLoader(
         if (propertiesResult.status === 'fulfilled') {
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
-            if (isAuthError(propertiesError)) {
-              await clearLocalSession('Properties request returned auth/session error', resetLocalAuthState)
+            if (await shouldClearSession(propertiesError, 'Properties request returned auth/session error')) {
               return
             }
             console.warn('Error loading properties.')
@@ -173,8 +183,7 @@ export function useUserDataLoader(
         if (departmentsResult.status === 'fulfilled') {
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
-            if (isAuthError(departmentsError)) {
-              await clearLocalSession('Departments request returned auth/session error', resetLocalAuthState)
+            if (await shouldClearSession(departmentsError, 'Departments request returned auth/session error')) {
               return
             }
             console.warn('Error loading departments.')
@@ -188,8 +197,7 @@ export function useUserDataLoader(
 
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
-        if (isAuthError(error)) {
-          await clearLocalSession('User data load failed due to auth/session error', resetLocalAuthState)
+        if (await shouldClearSession(error, 'User data load failed due to auth/session error')) {
           return
         }
         console.warn('Unexpected error loading user data.')

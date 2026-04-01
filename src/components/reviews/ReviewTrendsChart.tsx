@@ -369,7 +369,7 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
               >
                 {stats.avgRating}
               </p>
-              <TrendIcon direction={stats.ratingTrend} />
+              <TrendIcon direction={stats.ratingTrend as 'up' | 'down' | 'stable'} />
             </div>
             <p className="text-[10px] text-muted-foreground">{t('analytics.avgRating')}</p>
           </div>

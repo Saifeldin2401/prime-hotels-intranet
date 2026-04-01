@@ -42,6 +42,7 @@ type ReviewWithIssues = GuestReview & {
     confidence?: number
     issue_summary_en?: string | null
   }>
+  [key: string]: unknown
 }
 import { ReviewPreviewTooltip } from '@/components/reviews/ReviewPreviewTooltip'
 import { useReviewShortcuts, useFilterShortcuts } from '@/hooks/useKeyboardShortcuts'
@@ -621,11 +622,11 @@ export default function GuestReviews() {
 
         <TabsContent value="overview" className="space-y-6 animate-in fade-in duration-700">
           {/* Quick Stats Summary */}
-          <QuickStatsSummary reviews={reviews} propertyNameById={propertyNameById} />
+          <QuickStatsSummary reviews={reviews as ReviewWithIssues[]} propertyNameById={propertyNameById} />
 
           {/* Bulk Operations Toolbar */}
           <BulkOperationsToolbar
-            reviews={reviews}
+            reviews={reviews as ReviewWithIssues[]}
             selectedIds={selectedReviewIds}
             onSelectionChange={setSelectedReviewIds}
             propertyNameById={propertyNameById}
@@ -726,7 +727,7 @@ export default function GuestReviews() {
 
         <TabsContent value="properties" className="space-y-8 animate-in fade-in duration-700">
           <MultiHotelDashboard
-            reviews={reviews}
+            reviews={reviews as ReviewWithIssues[]}
             propertyNameById={propertyNameById}
             properties={propertiesQuery.data ?? []}
             onReviewClick={openReview}

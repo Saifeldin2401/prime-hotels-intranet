@@ -37,10 +37,12 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
+import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { useCategories, useRelatedArticles } from '@/hooks/useKnowledge'
 import { useProperties } from '@/hooks/useProperties'
 import { useTagSuggestions } from '@/hooks/useTagSuggestions'
 import { useTrainingModules } from '@/hooks/useTraining'
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges'
 import { scanFile } from '@/hooks/useVirusScan'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { aiService } from '@/lib/gemini'
@@ -107,6 +109,62 @@ interface ArticleFormData {
     ai_tags: string[]
     ai_category: string
     ai_processed_at: string
+    // Index signature for useFormPersistence compatibility
+    [key: string]: unknown
+}
+
+const createEmptyArticleFormData = (): ArticleFormData => ({
+    title: '',
+    description: '',
+    summary: '',
+    content: '',
+    file_url: '',
+    storage_path: '',
+    content_type: 'document',
+    visibility: 'all_properties',
+    requires_acknowledgment: false,
+    featured: false,
+    department_id: null,
+    category_id: null,
+    target_property_id: null,
+    specific_department_ids: [],
+    linked_training_id: null,
+    checklist_items: [],
+    faq_items: [],
+    video_url: '',
+    images: [],
+    ai_tags: [],
+    ai_category: '',
+    ai_processed_at: '',
+})
+
+const hasDraftableArticleContent = (formData: ArticleFormData) => {
+    const richTextContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+
+    return Boolean(
+        formData.title.trim() ||
+        formData.description.trim() ||
+        formData.summary.trim() ||
+        richTextContent ||
+        formData.file_url.trim() ||
+        formData.storage_path.trim() ||
+        formData.video_url.trim() ||
+        formData.department_id ||
+        formData.category_id ||
+        formData.target_property_id ||
+        formData.linked_training_id ||
+        formData.requires_acknowledgment ||
+        formData.featured ||
+        formData.content_type !== 'document' ||
+        formData.visibility !== 'all_properties' ||
+        formData.checklist_items.length > 0 ||
+        formData.faq_items.length > 0 ||
+        formData.images.length > 0 ||
+        formData.ai_tags.length > 0 ||
+        formData.ai_category.trim() ||
+        formData.ai_processed_at.trim() ||
+        formData.specific_department_ids.length > 0
+    )
 }
 
 const isUuid = (value?: string | null): value is string => {
@@ -186,125 +244,92 @@ export default function KnowledgeEditor() {
     // Mount and hydration tracking
     const [hasMounted, setHasMounted] = useState(false)
     const [showRestorePrompt, setShowRestorePrompt] = useState(false)
+    const [allowUnsafeNavigation, setAllowUnsafeNavigation] = useState(false)
     const restoredDraftRef = useRef(false)
-    const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-    const [formData, setFormData] = useState<ArticleFormData>({
-        title: '',
-        description: '',
-        summary: '',
-        content: '',
-        file_url: '',
-        storage_path: '',
-        content_type: 'document',
-        visibility: 'all_properties' as KnowledgeVisibility,
-        requires_acknowledgment: false,
-        featured: false,
-        department_id: null,
-        category_id: null,
-        target_property_id: null,
-        specific_department_ids: [],
-        linked_training_id: null,
-        checklist_items: [],
-        faq_items: [],
-        video_url: '',
-        images: [],
-        ai_tags: [],
-        ai_category: '',
-        ai_processed_at: '',
+    const [formData, setFormData] = useState<ArticleFormData>(() => createEmptyArticleFormData())
+
+    const formPersistence = useFormPersistence<ArticleFormData>({
+        key: `knowledge_editor_${id || 'new'}`,
+        enabled: !isEditing,
+        debounceMs: 500,
+        version: 2,
+        validate: (draft) => typeof draft === 'object' && draft !== null,
+        transformAfterLoad: (draft) => ({
+            ...createEmptyArticleFormData(),
+            ...draft,
+            content_type: draft.content_type || 'document',
+            visibility: (draft.visibility || 'all_properties') as KnowledgeVisibility,
+            department_id: draft.department_id || null,
+            category_id: draft.category_id || null,
+            target_property_id: draft.target_property_id || null,
+            linked_training_id: draft.linked_training_id || null,
+            checklist_items: Array.isArray(draft.checklist_items) ? draft.checklist_items : [],
+            faq_items: Array.isArray(draft.faq_items) ? draft.faq_items : [],
+            images: Array.isArray(draft.images) ? draft.images : [],
+            ai_tags: Array.isArray(draft.ai_tags) ? draft.ai_tags : [],
+            specific_department_ids: Array.isArray(draft.specific_department_ids) ? draft.specific_department_ids : [],
+        }),
     })
+    const { loadDraft, saveDraft, clearDraft, markSaved, hasDraft, hasUnsavedChanges } = formPersistence
+
+    const shouldWarnOnExit =
+        !allowUnsafeNavigation &&
+        !isEditing &&
+        hasMounted &&
+        (hasDraft || hasUnsavedChanges || hasDraftableArticleContent(formData))
+    const { Dialog: UnsavedChangesDialog } = useUnsavedChanges(shouldWarnOnExit)
 
     // ============================================
-    // HYDRATION: Load draft from localStorage on mount
+    // HYDRATION: Load draft from persisted storage on mount
     // ============================================
     useEffect(() => {
-        if (isEditing && id) {
-            // Don't load draft if editing existing - load from DB instead
+        if (isEditing) {
+            setHasMounted(true)
             return
         }
 
-        try {
-            const savedDraft = localStorage.getItem('knowledge_editor_draft')
-            if (savedDraft) {
-                const parsed = JSON.parse(savedDraft)
-                if (parsed && parsed.title) {
-                    setFormData(prev => ({
-                        ...prev,
-                        ...parsed,
-                        // Ensure arrays are valid
-                        checklist_items: parsed.checklist_items || [],
-                        faq_items: parsed.faq_items || [],
-                        images: parsed.images || [],
-                        specific_department_ids: parsed.specific_department_ids || [],
-                        ai_tags: parsed.ai_tags || [],
-                    }))
-                    
-                    if (!restoredDraftRef.current) {
-                        restoredDraftRef.current = true
-                        setShowRestorePrompt(true)
-                        setTimeout(() => setShowRestorePrompt(false), 8000)
-                    }
-                }
+        const draft = loadDraft()
+        if (draft && hasDraftableArticleContent(draft as ArticleFormData)) {
+            setFormData(draft as ArticleFormData)
+
+            if (!restoredDraftRef.current) {
+                restoredDraftRef.current = true
+                setShowRestorePrompt(true)
+                setTimeout(() => setShowRestorePrompt(false), 8000)
             }
-        } catch (e) {
-            console.warn('Failed to load knowledge draft:', e)
         }
         setHasMounted(true)
-    }, [isEditing, id])
+    }, [isEditing, loadDraft])
 
     // ============================================
-    // PERSISTENCE: Save to localStorage on changes
+    // PERSISTENCE: Save draft on changes
     // ============================================
     useEffect(() => {
         if (!hasMounted || isEditing) return
-        if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-        
-        // Only save if there's actual content
-        if (!formData.title && !formData.content && !formData.description) return
-
-        saveTimeoutRef.current = setTimeout(() => {
-            try {
-                const draftToSave = {
-                    title: formData.title,
-                    description: formData.description,
-                    summary: formData.summary,
-                    content: formData.content,
-                    file_url: formData.file_url,
-                    storage_path: formData.storage_path,
-                    content_type: formData.content_type,
-                    visibility: formData.visibility,
-                    requires_acknowledgment: formData.requires_acknowledgment,
-                    featured: formData.featured,
-                    department_id: formData.department_id,
-                    category_id: formData.category_id,
-                    target_property_id: formData.target_property_id,
-                    specific_department_ids: formData.specific_department_ids,
-                    linked_training_id: formData.linked_training_id,
-                    checklist_items: formData.checklist_items,
-                    faq_items: formData.faq_items,
-                    video_url: formData.video_url,
-                    images: formData.images,
-                    ai_tags: formData.ai_tags,
-                    ai_category: formData.ai_category,
-                    ai_processed_at: formData.ai_processed_at,
-                }
-                localStorage.setItem('knowledge_editor_draft', JSON.stringify(draftToSave))
-            } catch (e) {
-                console.warn('Failed to save knowledge draft:', e)
+        if (!hasDraftableArticleContent(formData)) {
+            if (hasDraft) {
+                clearDraft()
+            } else {
+                markSaved()
             }
-        }, 500)
-
-        return () => {
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+            return
         }
-    }, [formData, hasMounted, isEditing])
 
-    // Cleanup on unmount
+        saveDraft(formData)
+    }, [clearDraft, formData, hasDraft, hasMounted, isEditing, markSaved, saveDraft])
+
     useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+        if (!shouldWarnOnExit) return
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault()
+            event.returnValue = ''
         }
-    }, [])
+
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [shouldWarnOnExit])
 
     // Fetch existing data if editing
 
@@ -1225,7 +1250,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 redirectToArticleId = data.id
                 
                 // Clear draft on successful save
-                localStorage.removeItem('knowledge_editor_draft')
+                clearDraft()
             }
 
             let syncedArticleData = savedArticleData
@@ -1264,7 +1289,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 )
                 queryClient.setQueriesData(
                     { queryKey: ['knowledge-article', savedArticleId], exact: false },
-                    (existing) => existing ? { ...existing, ...syncedArticleData } : syncedArticleData
+                    (existing: Record<string, unknown> | undefined) => 
+                        existing ? { ...existing, ...syncedArticleData } : syncedArticleData
                 )
                 queryClient.setQueriesData(
                     { queryKey: ['knowledge-articles'], exact: false },
@@ -1316,6 +1342,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             ])
 
             if (redirectToArticleId) {
+                setAllowUnsafeNavigation(true)
                 navigate(`/knowledge/${redirectToArticleId}`)
             }
         } catch (error) {
@@ -1342,6 +1369,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
     return (
         <div className="space-y-6">
+            <UnsavedChangesDialog />
             {/* Restore Draft Prompt */}
             {!isEditing && showRestorePrompt && (
                 <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
@@ -1356,31 +1384,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             Keep
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => {
-                            localStorage.removeItem('knowledge_editor_draft')
-                            setFormData({
-                                title: '',
-                                description: '',
-                                summary: '',
-                                content: '',
-                                file_url: '',
-                                storage_path: '',
-                                content_type: 'document',
-                                visibility: 'all_properties' as KnowledgeVisibility,
-                                requires_acknowledgment: false,
-                                featured: false,
-                                department_id: null,
-                                category_id: null,
-                                target_property_id: null,
-                                specific_department_ids: [],
-                                linked_training_id: null,
-                                checklist_items: [],
-                                faq_items: [],
-                                video_url: '',
-                                images: [],
-                                ai_tags: [],
-                                ai_category: '',
-                                ai_processed_at: '',
-                            })
+                            clearDraft()
+                            setFormData(createEmptyArticleFormData())
                             setShowRestorePrompt(false)
                             toast.success('Draft cleared')
                         }}>

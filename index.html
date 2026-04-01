@@ -87,73 +87,7 @@
   <div id="root"></div>
   <script>
     (() => {
-      const authSensitivePrefixes = ['/login', '/forgot-password', '/reset-password', '/complete-invite']
-      const normalizePathname = (pathname) => {
-        if (!pathname) return '/'
-        const normalized = pathname.endsWith('/') && pathname.length > 1
-          ? pathname.replace(/\/+$/, '')
-          : pathname
-        return normalized || '/'
-      }
-
-      const currentPathname = normalizePathname(window.location.pathname)
-      const hasAuthParams =
-        /(?:^|[?&])(token_hash|code|access_token|refresh_token)=/i.test(window.location.search)
-        || /(?:^|[?&])type=(?:recovery|invite|signup|magiclink|email|email_change)\b/i.test(window.location.search)
-        || /(?:^|[#&])(access_token|refresh_token)=/i.test(window.location.hash)
-
-      const isSensitiveEntry = authSensitivePrefixes.some((prefix) =>
-        currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
-      ) || hasAuthParams
-
-      window.__PHG_BOOTSTRAP_PROMISE__ = (async () => {
-        if (!isSensitiveEntry || !('navigator' in window)) {
-          return
-        }
-
-        let shouldReload = false
-
-        if ('serviceWorker' in navigator) {
-          const registrations = await navigator.serviceWorker.getRegistrations()
-          if (registrations.length > 0) {
-            shouldReload = true
-          }
-          await Promise.allSettled(registrations.map((registration) => registration.unregister()))
-        }
-
-        if ('caches' in window) {
-          const cacheKeys = await caches.keys()
-          const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
-          if (staleCacheKeys.length > 0) {
-            shouldReload = true
-          }
-          await Promise.allSettled(staleCacheKeys.map((key) => caches.delete(key)))
-        }
-
-        if (shouldReload) {
-          const target = new URL(window.location.href)
-          if (target.hostname === 'www.phg-connect.com') {
-            const hostRedirectKey = '__phg_www_host_redirect_attempted__'
-            let shouldCanonicalize = true
-            try {
-              if (sessionStorage.getItem(hostRedirectKey) === '1') {
-                shouldCanonicalize = false
-              } else {
-                sessionStorage.setItem(hostRedirectKey, '1')
-              }
-            } catch {
-              // Continue with canonicalization by default.
-            }
-            if (shouldCanonicalize) {
-              target.hostname = 'phg-connect.com'
-            }
-          }
-          target.pathname = window.location.pathname
-          target.search = window.location.search
-          target.hash = window.location.hash
-          window.location.replace(target.toString())
-        }
-      })().catch(() => undefined)
+      window.__PHG_BOOTSTRAP_PROMISE__ = Promise.resolve()
     })()
   </script>
   <script type="module">

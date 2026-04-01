@@ -13,6 +13,22 @@ const STORAGE_KEY = 'prime_last_activity'
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
 const DEFAULT_WARNING_MS = 25 * 60 * 1000 // 25 minutes (shows warning 5 mins before timeout)
 
+function isLikelyMobileDevice() {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return false
+
+    const ua = navigator.userAgent || ''
+    const userAgentData = navigator as Navigator & {
+        userAgentData?: {
+            mobile?: boolean
+        }
+    }
+
+    if (userAgentData.userAgentData?.mobile) return true
+    if (/android|iphone|ipad|ipod|mobile/i.test(ua)) return true
+
+    return window.matchMedia?.('(pointer: coarse)').matches ?? false
+}
+
 export function useInactivityTimeout({
     timeoutMs = DEFAULT_TIMEOUT_MS,
     warningMs = DEFAULT_WARNING_MS,
@@ -23,6 +39,8 @@ export function useInactivityTimeout({
     const { user, signOut } = useAuth()
     const [showWarning, setShowWarning] = useState(false)
     const [remainingTime, setRemainingTime] = useState(timeoutMs - warningMs)
+    const mobileDevice = isLikelyMobileDevice()
+    const effectiveEnabled = enabled && !mobileDevice
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -85,7 +103,7 @@ export function useInactivityTimeout({
     }, [timeoutMs, warningMs, onWarning, handleTimeout])
 
     const resetTimers = useCallback((isExternalUpdate = false) => {
-        if (!enabled || !user) return
+        if (!effectiveEnabled || !user) return
 
         clearAllTimers()
         setShowWarning(false)
@@ -101,7 +119,7 @@ export function useInactivityTimeout({
 
         // Set timeout timer
         timeoutRef.current = setTimeout(handleTimeout, timeoutMs)
-    }, [enabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
+    }, [effectiveEnabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
 
     const extendSession = useCallback(() => {
         resetTimers()
@@ -117,8 +135,9 @@ export function useInactivityTimeout({
     }, [resetTimers, showWarning])
 
     useEffect(() => {
-        if (!enabled || !user) {
+        if (!effectiveEnabled || !user) {
             clearAllTimers()
+            setShowWarning(false)
             return
         }
 
@@ -180,10 +199,10 @@ export function useInactivityTimeout({
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('storage', handleStorageChange)
         }
-    }, [enabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
+    }, [effectiveEnabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
 
     return {
-        showWarning,
+        showWarning: effectiveEnabled && showWarning,
         remainingTime,
         remainingMinutes: Math.ceil(remainingTime / 60000),
         remainingSeconds: Math.ceil(remainingTime / 1000),

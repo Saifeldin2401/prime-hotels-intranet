@@ -1,6 +1,12 @@
 {
     "title": "Approvals",
     "description": "Review and manage pending approval requests.",
+    "unknown_date": "Unknown date",
+    "document": "Document",
+    "document_not_available": "Document not available",
+    "requested": "Requested",
+    "reported": "Reported",
+    "filter": "Filter",
     "documents_tab": "Documents",
     "leaves_tab": "Leave Requests",
     "maintenance_tab": "Maintenance",

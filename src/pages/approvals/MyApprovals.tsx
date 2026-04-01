@@ -458,7 +458,7 @@ export default function MyApprovals() {
         .eq('id', ticketId)
         .single()
 
-      const updatePayload = {
+      const updatePayload: Record<string, unknown> = {
         status: 'in_progress',
         assigned_to_id: assignedToId,
         updated_at: new Date().toISOString(),

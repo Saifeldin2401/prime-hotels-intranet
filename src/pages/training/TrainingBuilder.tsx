@@ -55,7 +55,7 @@ const RichTextEditor = lazy(() => import('@/components/ui/RichTextEditor'))
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
 type BuilderStep = 'setup' | 'structure' | 'content' | 'rules' | 'preview' | 'publish'
-type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'document' }
+type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'document' | 'video' }
 
 const TRAINING_BUILDER_SAVED_BLOCKS_KEY = 'training_builder_saved_blocks_v1'
 const TRAINING_BUILDER_RECENT_UPLOADS_KEY = 'training_builder_recent_uploads_v1'
@@ -595,6 +595,7 @@ export function TrainingBuilder() {
     debounceMs: 1000,
     version: 1,
   })
+  const { loadDraft, saveDraft, clearDraft } = formPersistence
 
   // Hydrate from draft on mount for new modules
   useEffect(() => {
@@ -603,7 +604,7 @@ export function TrainingBuilder() {
       return
     }
 
-    const draft = formPersistence.loadDraft()
+    const draft = loadDraft()
     if (draft) {
       if (draft.title) setTitle(draft.title)
       if (draft.description) setDescription(draft.description)
@@ -635,13 +636,13 @@ export function TrainingBuilder() {
       }
     }
     setHasMounted(true)
-  }, [isNewRoute, formPersistence])
+  }, [isNewRoute, loadDraft])
 
   // Save draft when important fields change
   useEffect(() => {
     if (!hasMounted || !isNewRoute) return
 
-    formPersistence.saveDraft({
+    saveDraft({
       title,
       description,
       estimatedDuration,
@@ -664,7 +665,7 @@ export function TrainingBuilder() {
       sections,
     })
   }, [
-    hasMounted, isNewRoute, formPersistence,
+    hasMounted, isNewRoute, saveDraft,
     title, description, estimatedDuration, useEstimatedDuration,
     validityPeriod, passingScore, maxAttempts, allowRetake,
     category, difficultyLevel, audience, contentLanguage, templatePreset,
@@ -1101,10 +1102,10 @@ export function TrainingBuilder() {
         setDescription(draft.description || '')
         setCategory(draft.category || '')
         setDifficultyLevel(draft.difficultyLevel || 'beginner')
-        setEstimatedDuration(draft.estimatedDuration || '')
+        setEstimatedDuration(String(draft.estimatedDuration || ''))
         setUseEstimatedDuration(draft.useEstimatedDuration ?? !!draft.estimatedDuration)
-        setValidityPeriod(draft.validityPeriod || '')
-        setPassingScore(draft.passingScore || '80')
+        setValidityPeriod(String(draft.validityPeriod || ''))
+        setPassingScore(String(draft.passingScore || '80'))
         setCertificateEnabled(draft.certificateEnabled ?? true)
         setAudience(draft.audience || 'all')
         setContentLanguage(draft.contentLanguage || 'bilingual')
@@ -1910,7 +1911,7 @@ export function TrainingBuilder() {
       })
       
       // Clear draft on successful save
-      formPersistence.clearDraft()
+      clearDraft()
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({
@@ -2703,7 +2704,7 @@ export function TrainingBuilder() {
                 variant="outline" 
                 size="sm" 
                 onClick={() => {
-                  formPersistence.clearDraft()
+                  clearDraft()
                   setTitle('')
                   setDescription('')
                   setSections([])

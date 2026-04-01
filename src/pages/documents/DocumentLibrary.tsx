@@ -1,7 +1,7 @@
 import { DocumentBulkActionsBar } from '@/components/documents/DocumentBulkActionsBar'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
 import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
-import { DocumentSearchAdvanced } from '@/components/documents/DocumentSearchAdvanced'
+import { DocumentSearchAdvanced, type ConfidentialityLevel } from '@/components/documents/DocumentSearchAdvanced'
 import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
 import { DocumentPublishDialog } from '@/components/documents/DocumentPublishDialog'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
@@ -162,7 +162,7 @@ export default function DocumentLibrary() {
     file_type: filters.fileType || undefined,
     date_from: filters.dateFrom?.toISOString(),
     date_to: filters.dateTo?.toISOString(),
-    confidentiality_level: filters.confidentiality || undefined,
+    confidentiality_level: filters.confidentiality as "public" | "internal" | "confidential" | "restricted" | undefined,
     status: filters.status || undefined,
     include_deleted: activeTab === 'trash',
     include_archived: activeTab !== 'documents',
@@ -554,7 +554,7 @@ export default function DocumentLibrary() {
           <div className="space-y-2 text-xs text-gray-500 text-center">
             <div className="flex items-center justify-center gap-2">
               <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
-              <StatusBadge status={doc.status} size="sm" />
+              <StatusBadge status={doc.status} />
             </div>
             <p>{formatFileSize(doc.file_size || 0)}</p>
             <p>{formatRelativeTime(doc.created_at)}</p>
@@ -876,8 +876,29 @@ export default function DocumentLibrary() {
       {/* Advanced Filters */}
       {showFilters && (
         <DocumentSearchAdvanced
-          filters={filters}
-          onFiltersChange={setFilters}
+          filters={{
+            query: filters.search || undefined,
+            folderId: filters.folderId,
+            confidentiality: filters.confidentiality ? [filters.confidentiality as ConfidentialityLevel] : undefined,
+            tagIds: filters.tags.length > 0 ? filters.tags : undefined,
+            fileTypes: filters.fileType ? [filters.fileType] : undefined,
+            dateFrom: filters.dateFrom || undefined,
+            dateTo: filters.dateTo || undefined,
+            authorIds: filters.authorId ? [filters.authorId] : undefined,
+          }}
+          onFiltersChange={(newFilters) => {
+            setFilters(prev => ({
+              ...prev,
+              search: newFilters.query || '',
+              folderId: newFilters.folderId ?? null,
+              confidentiality: newFilters.confidentiality?.[0] || null,
+              tags: newFilters.tagIds || [],
+              fileType: newFilters.fileTypes?.[0] || null,
+              dateFrom: newFilters.dateFrom || null,
+              dateTo: newFilters.dateTo || null,
+              authorId: newFilters.authorIds?.[0] || null,
+            }))
+          }}
           onSearch={() => {}}
           availableTags={tags}
           resultCount={documents.length}
@@ -971,7 +992,6 @@ export default function DocumentLibrary() {
                 folders={folders}
                 selectedFolderId={filters.folderId}
                 onSelectFolder={(id) => setFilters(prev => ({ ...prev, folderId: id }))}
-                folderStats={folderStats}
               />
             </div>
           </EnhancedCard>
@@ -1002,11 +1022,10 @@ export default function DocumentLibrary() {
                     style={{ 
                       backgroundColor: `${tag.color}20`, 
                       color: tag.color,
-                      ringColor: filters.tags.includes(tag.id) ? tag.color : undefined
-                    }}
+                      '--tw-ring-color': filters.tags.includes(tag.id) ? tag.color : undefined
+                    } as React.CSSProperties}
                   >
                     {tag.name}
-                    <span className="ml-1 opacity-60">({tag.document_count || 0})</span>
                   </button>
                 ))}
               </div>

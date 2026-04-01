@@ -10,10 +10,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
-    Cell,
     ColumnDef,
     flexRender,
-    Header,
     Row,
 } from '@tanstack/react-table'
 import { ChevronRight, MoreVertical } from 'lucide-react'

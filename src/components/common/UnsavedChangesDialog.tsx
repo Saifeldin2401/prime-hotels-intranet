@@ -8,6 +8,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useTranslation } from 'react-i18next'
 
 interface UnsavedChangesDialogProps {
     open: boolean
@@ -20,6 +21,8 @@ export function UnsavedChangesDialog({
     onContinue,
     onCancel,
 }: UnsavedChangesDialogProps) {
+    const { t } = useTranslation()
+
     return (
         <AlertDialog open={open} onOpenChange={onCancel}>
             <AlertDialogContent>

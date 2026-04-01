@@ -82,6 +82,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
       debounceMs: 500,
       version: 1,
     })
+    const { loadDraft, saveDraft, clearDraft } = formPersistence
 
     // Hydrate from draft on mount
     useEffect(() => {
@@ -90,7 +91,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         return
       }
 
-      const draft = formPersistence.loadDraft()
+      const draft = loadDraft()
       if (draft) {
         if (draft.name) setName(draft.name)
         if (draft.description) setDescription(draft.description)
@@ -109,13 +110,13 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         }
       }
       setHasMounted(true)
-    }, [isNewWorkflow, formPersistence])
+    }, [isNewWorkflow, loadDraft])
 
     // Save draft when state changes
     useEffect(() => {
       if (!hasMounted || !isNewWorkflow) return
 
-      formPersistence.saveDraft({
+      saveDraft({
         name,
         description,
         type,
@@ -127,7 +128,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
         simpleAction,
       })
     }, [
-      hasMounted, isNewWorkflow, formPersistence,
+      hasMounted, isNewWorkflow, saveDraft,
       name, description, type, triggerConfig, actionConfig,
       localSteps, eventType, scheduleCron, simpleAction,
     ])
@@ -395,7 +396,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                             variant="outline" 
                             size="sm" 
                             onClick={() => {
-                                formPersistence.clearDraft()
+                                clearDraft()
                                 setName('')
                                 setDescription('')
                                 setLocalSteps([])

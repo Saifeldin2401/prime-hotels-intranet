@@ -378,12 +378,17 @@ export function TrainingAssignmentsPanel({
       const { data, error } = await supabase.from('departments').select('id, name, property_id, property:properties(name)').order('name')
       if (error) throw error
       // Format with property name for disambiguation
-      return (data || []).map((d) => ({
-        id: d.id,
-        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name,
-        propertyName: d.property?.name,
-        rawName: d.name
-      }))
+      return (data || []).map((d) => {
+        const propertyName = Array.isArray(d.property) && d.property.length > 0 
+          ? d.property[0]?.name 
+          : (d.property as { name?: string } | null)?.name
+        return {
+          id: d.id,
+          name: propertyName ? `${d.name} (${propertyName})` : d.name,
+          propertyName: propertyName,
+          rawName: d.name
+        }
+      })
     }
   })
 

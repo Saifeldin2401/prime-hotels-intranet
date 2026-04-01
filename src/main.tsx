@@ -16,6 +16,7 @@ if (typeof globalThis.t_ext !== 'function') {
 const STALE_MODULE_RELOAD_KEY = '__stale_module_reload_done__'
 const STALE_MODULE_SW_RESET_KEY = '__stale_module_sw_reset_done__'
 const PWA_DISABLED_CLEANUP_KEY = '__pwa_disabled_cleanup_done__'
+const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
 
 function extractErrorMessage(reason: unknown): string {
   if (typeof reason === 'string') return reason
@@ -177,6 +178,30 @@ const reportNonFatalError = (message: string, error: unknown) => {
   }
 }
 
+const notifyAppUpdateAvailable = () => {
+  if (typeof window === 'undefined') return
+
+  const updateState = window as Window & {
+    __PHG_UPDATE_AVAILABLE__?: boolean
+  }
+
+  if (updateState.__PHG_UPDATE_AVAILABLE__) return
+
+  updateState.__PHG_UPDATE_AVAILABLE__ = true
+  window.dispatchEvent(new CustomEvent(UPDATE_AVAILABLE_EVENT))
+
+  if (sentryEnabled) {
+    Sentry.captureMessage('pwa_update_available', {
+      level: 'info',
+      tags: { scope: 'pwa' },
+      extra: {
+        route: window.location.pathname + window.location.search + window.location.hash,
+        buildVersion: SERVICE_WORKER_BUILD_VERSION,
+      },
+    })
+  }
+}
+
 if (redirectPath) {
   if (import.meta.env.PROD && sentryEnabled) {
     Sentry.captureMessage('spa_route_404', {
@@ -223,30 +248,19 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       return
     }
 
-    let refreshing = false
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (refreshing) return
-      refreshing = true
-      window.location.reload()
-    })
-
     navigator.serviceWorker
       .register(`/sw.js?v=${encodeURIComponent(SERVICE_WORKER_BUILD_VERSION)}`)
       .then((registration) => {
-        const activateWaitingWorker = () => {
-          if (registration.waiting) {
-            registration.waiting.postMessage({ type: 'SKIP_WAITING' })
-          }
-        }
-
         registration.update().catch(() => {})
 
-        // If an update is already waiting when the page loads, activate it now.
-        activateWaitingWorker()
+        if (registration.waiting) {
+          devLog('[PWA] Update already waiting; leaving activation to the next full launch.')
+          notifyAppUpdateAvailable()
+        }
 
         // Check for updates every hour
         setInterval(() => {
-          registration.update();
+          registration.update().catch(() => {})
         }, 1000 * 60 * 60);
 
         registration.onupdatefound = () => {
@@ -255,9 +269,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
-                  // New content is available; activate and reload automatically.
-                  devLog('[PWA] New content available, activating update.');
-                  activateWaitingWorker()
+                  // Do not force activation/reload while the user is active.
+                  devLog('[PWA] New content available; activation deferred until next launch.');
+                  notifyAppUpdateAvailable()
                 }
               }
             };
