@@ -91,7 +91,7 @@ export function EmployeeOfMonthWidget() {
                             <Skeleton className="h-5 w-40" />
                             <Skeleton className="h-4 w-28" />
                         </div>
-                    ) : winner ? (
+                    ) : winner?.user?.id ? (
                         <m.div
                             initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -101,14 +101,14 @@ export function EmployeeOfMonthWidget() {
                                 <div className="absolute -inset-1.5 bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-200 rounded-full blur-md opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                                 <button
                                     type="button"
-                                    onClick={() => navigate(`/profile/${winner.user.id}`)}
+                                    onClick={() => winner?.user?.id && navigate(`/profile/${winner.user.id}`)}
                                     className="rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
-                                    aria-label={`Open profile for ${winner.user.full_name}`}
+                                    aria-label={`Open profile for ${winner?.user?.full_name || 'Winner'}`}
                                 >
                                     <Avatar className="w-24 h-24 border-[3px] border-white shadow-md relative cursor-pointer ring-1 ring-slate-100 hover:scale-105 transition-transform duration-300">
-                                        <AvatarImage src={winner.user.avatar_url || undefined} alt={winner.user.full_name} className="object-cover" />
+                                        <AvatarImage src={winner?.user?.avatar_url || undefined} alt={winner?.user?.full_name || 'Winner'} className="object-cover" />
                                         <AvatarFallback className="bg-amber-50 text-amber-600 text-2xl font-bold">
-                                            {winner.user.full_name.substring(0, 2).toUpperCase()}
+                                            {(winner?.user?.full_name || '??').substring(0, 2).toUpperCase()}
                                         </AvatarFallback>
                                     </Avatar>
                                 </button>
@@ -120,14 +120,14 @@ export function EmployeeOfMonthWidget() {
                             <button
                                 type="button"
                                 className="font-extrabold text-xl text-slate-800 mb-1 hover:text-amber-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 rounded"
-                                onClick={() => navigate(`/profile/${winner.user.id}`)}
+                                onClick={() => winner?.user?.id && navigate(`/profile/${winner.user.id}`)}
                             >
-                                {winner.user.full_name}
+                                {winner?.user?.full_name || 'Employee of the Month'}
                             </button>
 
                             <div className="flex flex-col items-center gap-1 mb-5">
                                 <p className="text-[13px] text-slate-500 font-bold tracking-wide uppercase">
-                                    {winner.user.job_title}
+                                    {winner?.user?.job_title || t('widgets.employee_of_the_month.no_job_title', 'Team Member')}
                                 </p>
                             </div>
 
@@ -142,9 +142,10 @@ export function EmployeeOfMonthWidget() {
                                 variant="ghost"
                                 size="sm"
                                 className="w-full mt-4 font-bold text-amber-600 hover:text-amber-700 hover:bg-amber-50 h-10 rounded-xl transition-colors"
-                                onClick={() => navigate(`/profile/${winner.user.id}`)}
+                                onClick={() => winner?.user?.id && navigate(`/profile/${winner.user.id}`)}
+                                disabled={!winner?.user?.id}
                             >
-                                Congratulate
+                                {t('widgets.employee_of_the_month.congratulate', 'Congratulate')}
                                 <ChevronRight className={cn("w-4 h-4 ml-1", isRTL && "rotate-180")} />
                             </Button>
                         </m.div>

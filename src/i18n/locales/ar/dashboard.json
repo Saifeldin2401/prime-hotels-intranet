@@ -1,4 +1,4 @@
-﻿{
+{
     "title": "لوحة التحكم",
     "welcome": "مرحباً بك، {{name}}",
     "property_overview": "نظرة عامة للمنشأة: {{name}}",
@@ -162,13 +162,13 @@
             "refresh": "تحديث"
         },
         "employee_of_the_month": {
-            "title": "موظف الشهر",
-            "congratulations": "تهانينا!",
-            "no_winner": "لم يتم الإعلان عن فائز لهذا الشهر بعد.",
-            "view_previous": "عرض الفائزين السابقين",
-            "manage": "إدارة موظف الشهر",
-            "no_employee_found": "لم يتم العثور على موظف"
-        },
+        "title": "???? ?????",
+        "congratulations": "???????!",
+        "no_winner": "?? ??? ??????? ?? ???? ???? ????? ???.",
+        "view_previous": "??? ???????? ????????",
+        "manage": "?????",
+        "no_employee_found": "?? ??? ?????? ??? ????"
+    },
         "birthdays": {
             "title": "أعياد الميلاد اليوم",
             "desc": "احتفل بأعضاء الفريق الذين لديهم أعياد ميلاد اليوم.",
@@ -924,14 +924,6 @@
     },
     "motivation": {
         "refresh": "تحديث"
-    },
-    "employee_of_the_month": {
-        "title": "موظف الشهر",
-        "congratulations": "تهانينا!",
-        "no_winner": "لم يتم الإعلان عن فائز لهذا الشهر بعد.",
-        "view_previous": "عرض الفائزين السابقين",
-        "manage": "إدارة موظف الشهر",
-        "no_employee_found": "لم يتم العثور على موظف"
     },
     "elite_spotlight": {
         "title": "نقطة الضوء",

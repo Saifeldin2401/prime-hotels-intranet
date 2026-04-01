@@ -499,7 +499,11 @@ export default function TrainingPlayer() {
                 referencedTitles
             }
         },
-        enabled: !!id && isValidModuleId
+        enabled: !!id && isValidModuleId,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchOnWindowFocus: true,
+        meta: { persist: false },
     })
 
     const activeBlock = moduleData?.blocks[activeBlockIndex]

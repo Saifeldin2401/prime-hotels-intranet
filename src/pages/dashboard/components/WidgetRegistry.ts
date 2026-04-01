@@ -56,6 +56,8 @@ const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget')
 const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
 const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'PinnedItemsWidget')
 const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
+const ClusterOverviewWidget = lazyWidget(() => import('./ClusterOverviewWidget'), 'ClusterOverviewWidget')
+const PropertyComparisonWidget = lazyWidget(() => import('./PropertyComparisonWidget'), 'PropertyComparisonWidget')
 const ShiftHandoverWidget = lazyWidget(() => import('./ShiftHandoverWidget'), 'ShiftHandoverWidget')
 const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
 const GuestReviewsWidget = lazyWidget(() => import('./GuestReviewsWidget'), 'GuestReviewsWidget')
@@ -235,6 +237,24 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'medium',
         gridSize: { w: 1, h: 2 }
+    },
+    clusterOverview: {
+        id: 'clusterOverview',
+        component: ClusterOverviewWidget,
+        title: 'Cluster Overview',
+        requiredRoles: ['all'], // Show for all roles - component checks isMultiPropertyUser
+        defaultVisible: true,
+        sensitivity: 'high',
+        gridSize: { w: 2, h: 2 }
+    },
+    propertyComparison: {
+        id: 'propertyComparison',
+        component: PropertyComparisonWidget,
+        title: 'Property Comparison',
+        requiredRoles: ['all'], // Show for all roles - component checks isMultiPropertyUser
+        defaultVisible: true,
+        sensitivity: 'high',
+        gridSize: { w: 2, h: 2 }
     }
 }
 
@@ -248,10 +268,11 @@ export interface LayoutProfile {
     bottomFullWidth?: DashboardWidgetId[]
 }
 
-export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutProfile> = {
+export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staff', LayoutProfile> = {
     corporate: {
         mainColumn: [
-            'quickInsights',
+            'clusterOverview',
+            'propertyComparison',
             'roleAwareInsights',
             'performanceChart',
             'eliteSpotlight',
@@ -259,6 +280,7 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
             'hospitalityNews'
         ],
         sidebar: [
+            'quickInsights',
             'motivation',
             'guestReviews',
             'announcements',
@@ -267,11 +289,36 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
             'onlineUsers'
         ],
         bottomFullWidth: [
-            'socialFeed' // Internal Activity
+            'socialFeed'
+        ]
+    },
+    cluster: {
+        mainColumn: [
+            'clusterOverview',
+            'propertyComparison',
+            'roleAwareInsights',
+            'performanceChart',
+            'eliteSpotlight',
+            'quickActions',
+            'hospitalityNews'
+        ],
+        sidebar: [
+            'quickInsights',
+            'motivation',
+            'guestReviews',
+            'teamActivity',
+            'announcements',
+            'pinnedItems',
+            'knowledgeBase'
+        ],
+        bottomFullWidth: [
+            'socialFeed'
         ]
     },
     manager: {
         mainColumn: [
+            'clusterOverview',
+            'propertyComparison',
             'quickInsights',
             'roleAwareInsights',
             ['tasks', 'calendar'],
@@ -294,6 +341,8 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
     },
     staff: {
         mainColumn: [
+            'clusterOverview',
+            'propertyComparison',
             'motivation',
             ['tasks', 'calendar'],
             'training',
@@ -314,6 +363,16 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'manager' | 'staff', LayoutPr
     }
 }
 
+import type { DashboardContext } from '@/lib/dashboardPermissions'
+import { getRoleBasedLayoutProfile as getDynamicLayoutProfile, getDashboardContext } from '@/lib/dashboardPermissions'
+import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
+
+/**
+ * Get layout profile based on user role and context
+ * This function is kept for backward compatibility
+ * @deprecated Use useDynamicLayoutProfile hook instead for context-aware layouts
+ */
 export const getLayoutProfile = (role: AppRole | null | undefined): LayoutProfile => {
     if (!role) return LAYOUT_PROFILES.staff
 
@@ -321,9 +380,61 @@ export const getLayoutProfile = (role: AppRole | null | undefined): LayoutProfil
         return LAYOUT_PROFILES.corporate
     }
 
+    if (['regional_hr'].includes(role)) {
+        return LAYOUT_PROFILES.cluster
+    }
+
     if (['property_manager', 'property_hr', 'department_head', 'manager'].includes(role)) {
         return LAYOUT_PROFILES.manager
     }
 
     return LAYOUT_PROFILES.staff
+}
+
+/**
+ * Hook to get dynamic layout profile based on full user context
+ * Considers role, multi-property status, and department access
+ */
+export function useDynamicLayoutProfile(): LayoutProfile {
+    const { primaryRole, departments, properties } = useAuth()
+    const { isMultiPropertyUser, propertyIds } = useProperty()
+
+    const context: DashboardContext = getDashboardContext(
+        primaryRole,
+        isMultiPropertyUser,
+        departments.map(d => d.id),
+        propertyIds
+    )
+
+    return getDynamicLayoutProfile(context)
+}
+
+/**
+ * Hook to check if a widget should be visible to current user
+ */
+export function useWidgetVisibility(widgetId: string): boolean {
+    const { primaryRole, departments, properties } = useAuth()
+    const { isMultiPropertyUser, propertyIds } = useProperty()
+
+    const context = getDashboardContext(
+        primaryRole,
+        isMultiPropertyUser,
+        departments.map(d => d.id),
+        propertyIds
+    )
+
+    const widget = WIDGET_REGISTRY[widgetId]
+    if (!widget) return false
+
+    // Check role-based access
+    if (widget.requiredRoles.includes('all')) {
+        // For cluster widgets, also check multi-property
+        if ((widgetId === 'clusterOverview' || widgetId === 'propertyComparison') && !isMultiPropertyUser) {
+            return false
+        }
+        return true
+    }
+
+    if (!primaryRole) return false
+    return widget.requiredRoles.includes(primaryRole)
 }

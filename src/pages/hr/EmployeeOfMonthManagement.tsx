@@ -8,6 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
+import { EOMAutomationSettings } from '@/components/hr/EOMAutomationSettings'
+import { EOMPendingReview } from '@/components/hr/EOMPendingReview'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { createNotification, NotificationTemplates } from '@/lib/notificationService'
@@ -317,6 +319,17 @@ export default function EmployeeOfMonthManagement() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Automation Settings - Full Width */}
+                <div className="lg:col-span-3">
+                    <EOMPendingReview onReviewed={fetchWinners} />
+                </div>
+
+                {/* Automation Settings */}
+                <div className="lg:col-span-1">
+                    <EOMAutomationSettings onRunCalculation={fetchWinners} />
+                </div>
+
+                {/* Manual Selection Form */}
                 <div className="lg:col-span-1">
                     <Card className="sticky top-24 border-hotel-gold/20 shadow-lg">
                         <CardHeader>
@@ -490,6 +503,7 @@ export default function EmployeeOfMonthManagement() {
                     </Card>
                 </div>
 
+                {/* History - Now in remaining 2 columns */}
                 <div className="lg:col-span-2 space-y-4">
                     <h2 className="text-xl font-bold flex items-center gap-2 mb-4 text-hotel-charcoal">
                         <Calendar className="h-5 w-5 text-hotel-gold" />

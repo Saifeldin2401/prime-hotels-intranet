@@ -58,6 +58,14 @@
             "title": "Today\u0027s Birthdays",
             "desc": "Celebrate team members with birthdays today.",
             "no_birthdays": "No birthdays today."
+        },
+        "employee_of_the_month": {
+            "title": "Employee of the Month",
+            "congratulations": "Congratulations!",
+            "no_winner": "No winner announced yet for this month.",
+            "view_previous": "View Previous Winners",
+            "manage": "Manage EOM",
+            "no_employee_found": "No Employee Found"
         }
     },
     "focus": {
@@ -191,14 +199,6 @@
     },
     "motivation": {
         "refresh": "Refresh"
-    },
-    "employee_of_the_month": {
-        "title": "Employee of the Month",
-        "congratulations": "Congratulations!",
-        "no_winner": "No winner announced yet for this month.",
-        "view_previous": "View Previous Winners",
-        "manage": "Manage EOM",
-        "no_employee_found": "No Employee Found"
     },
     "analytics": {
         "title": "Analytics Dashboard",

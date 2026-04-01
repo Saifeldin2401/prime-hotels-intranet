@@ -12,16 +12,18 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useEffect, useState, type ComponentType } from 'react'
 import { RouterProvider } from 'react-router-dom'
 
-const QUERY_CACHE_KEY = 'prime_query_cache_v3'
+const QUERY_CACHE_KEY = 'prime_query_cache_v4'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
-const LEGACY_QUERY_CACHE_KEYS = ['prime_query_cache_v1', 'prime_query_cache_v2']
+const LEGACY_QUERY_CACHE_KEYS = ['prime_query_cache_v1', 'prime_query_cache_v2', 'prime_query_cache_v3']
 const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'learning-progress',
   'learning-assignments',
   'learning-assignment-exemptions',
   'learning-assignments-module-links',
+  'learning-quizzes',
   'my-assignments',
   'module-assignment-roster',
+  'training-module-full',
   'training-progress',
   'training-assignments',
   'assignment-progress',

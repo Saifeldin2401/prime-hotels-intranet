@@ -22,7 +22,7 @@ import {
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 // Dynamic Registry and Permissions
 import { useWidgetPermissions } from '@/hooks/useWidgetPermissions'
-import { WIDGET_REGISTRY, getLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
+import { WIDGET_REGISTRY, useDynamicLayoutProfile, type DashboardWidgetId, type WidgetId } from './components/WidgetRegistry'
 
 // Static Widgets
 import { SocialFeed } from '@/components/social/SocialFeed'
@@ -298,7 +298,8 @@ export function IntegratedDashboard() {
   }, [t, ready, stats, managerStats, hrStats, deptHeadStats, unreadCount, isManager, isHR, isDeptHead])
 
   const effectiveRole = primaryRole || 'staff'
-  const layoutProfile = useMemo(() => getLayoutProfile(effectiveRole), [effectiveRole])
+  // Use dynamic layout profile based on full user context (role + multi-property status)
+  const layoutProfile = useDynamicLayoutProfile()
 
   if (loading || (!user || !profile) || (rolesLoading && !primaryRole)) {
     return (
