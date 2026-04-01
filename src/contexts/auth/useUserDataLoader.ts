@@ -13,7 +13,6 @@ interface UserDataState {
 interface SessionHelpers {
   isAuthError: (error: unknown) => boolean
   withTimeout: <T>(promise: Promise<T>, ms: number, label: string) => Promise<T>
-  clearLocalSession: (reason: string, onCleared: () => void) => Promise<void>
 }
 
 /**
@@ -23,7 +22,6 @@ interface SessionHelpers {
 export function useUserDataLoader(
   state: UserDataState,
   session: SessionHelpers,
-  resetLocalAuthState: () => void
 ) {
   const loadSeqRef = useRef(0)
   const activeUserIdRef = useRef<string | null>(null)
@@ -72,7 +70,7 @@ export function useUserDataLoader(
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
     async (userId: string) => {
-      const { isAuthError, withTimeout, clearLocalSession } = session
+      const { isAuthError, withTimeout } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
 
       try {
@@ -98,10 +96,10 @@ export function useUserDataLoader(
 
         if (profileError) {
           if (isAuthError(profileError)) {
-            await clearLocalSession('Profile request returned auth/session error', resetLocalAuthState)
-            return
+            console.warn('Profile load hit an auth/session error; preserving current auth state.')
+          } else {
+            console.warn('Error loading profile.')
           }
-          console.warn('Error loading profile.')
           // Try fallback from auth metadata
           const { data: { user } } = await supabase.auth.getUser()
           if (isStale()) return
@@ -138,10 +136,10 @@ export function useUserDataLoader(
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
             if (isAuthError(rolesError)) {
-              await clearLocalSession('Roles request returned auth/session error', resetLocalAuthState)
-              return
+              console.warn('Roles load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading roles.')
             }
-            console.warn('Error loading roles.')
             setRolesLoading(false)
           } else {
             setRoles(directRoles || [])
@@ -157,10 +155,10 @@ export function useUserDataLoader(
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
             if (isAuthError(propertiesError)) {
-              await clearLocalSession('Properties request returned auth/session error', resetLocalAuthState)
-              return
+              console.warn('Properties load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading properties.')
             }
-            console.warn('Error loading properties.')
           } else {
             const props = directProps?.map((up) => up.properties).filter(Boolean) || []
             setProperties(props)
@@ -174,10 +172,10 @@ export function useUserDataLoader(
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
             if (isAuthError(departmentsError)) {
-              await clearLocalSession('Departments request returned auth/session error', resetLocalAuthState)
-              return
+              console.warn('Departments load hit an auth/session error; preserving current auth state.')
+            } else {
+              console.warn('Error loading departments.')
             }
-            console.warn('Error loading departments.')
           } else {
             const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
             setDepartments(depts)
@@ -189,13 +187,14 @@ export function useUserDataLoader(
         lastUserDataRefreshRef.current = Date.now()
       } catch (error) {
         if (isAuthError(error)) {
-          await clearLocalSession('User data load failed due to auth/session error', resetLocalAuthState)
+          console.warn('User data load hit an auth/session error; preserving current auth state.')
+          state.setRolesLoading(false)
           return
         }
         console.warn('Unexpected error loading user data.')
       }
     },
-    [session, state, resetLocalAuthState]
+    [session, state]
   )
 
   return {
