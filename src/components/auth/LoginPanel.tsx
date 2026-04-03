@@ -6,7 +6,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { getRedirectFromSearch } from '@/lib/authRedirect'
 import { Eye, EyeOff, Loader2, Lock, User } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 interface LoginPanelProps {
@@ -23,18 +23,24 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
     const navigate = useNavigate()
     const location = useLocation()
     
-    // Get redirect info from URL before navigation loses it
-    const redirectPath = getRedirectFromSearch(location.search)
-    const pendingAuthFlowPath = getAuthFlowRedirectPath()
-    const postLoginDestination = pendingAuthFlowPath ?? redirectPath ?? '/'
+    // Use ref to preserve redirect across renders - critical for when auth state changes during login
+    const postLoginDestinationRef = useRef<string>('/')
     
-    // Debug logging for production troubleshooting
-    console.log('[LoginPanel] Redirect debug:', {
-        search: location.search,
-        redirectPath,
-        pendingAuthFlowPath,
-        postLoginDestination
-    })
+    useEffect(() => {
+        // Capture redirect on mount (or when location changes)
+        const redirectPath = getRedirectFromSearch(location.search)
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        const destination = pendingAuthFlowPath ?? redirectPath ?? '/'
+        
+        console.log('[LoginPanel] Captured redirect:', {
+            search: location.search,
+            redirectPath,
+            pendingAuthFlowPath,
+            destination
+        })
+        
+        postLoginDestinationRef.current = destination
+    }, [location.search])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -64,7 +70,7 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
                     title: 'Welcome back!',
                     description: 'Redirecting to your dashboard...',
                 })
-                navigate(postLoginDestination, { replace: true })
+                navigate(postLoginDestinationRef.current, { replace: true })
             }
         } catch (_err) {
             toast({
