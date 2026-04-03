@@ -46,6 +46,7 @@ export function ProtectedRoute({
   }
 
   if (loading) {
+    console.log('[ProtectedRoute] Still loading auth...')
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -57,7 +58,12 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
+    const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
+    console.log('[ProtectedRoute] No user, redirecting to login:', { 
+      pathname: location.pathname, 
+      loginUrl 
+    })
+    return <Navigate to={loginUrl} replace />
   }
 
   // Check role-based access

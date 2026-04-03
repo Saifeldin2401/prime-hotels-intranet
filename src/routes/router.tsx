@@ -56,10 +56,28 @@ const RootLayout = () => {
 }
 
 const RootIndex = () => {
-    const { user } = useAuth()
+    const { user, loading } = useAuth()
     const location = useLocation()
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const redirectPath = getRedirectFromSearch(location.search)
+    
+    console.log('[RootIndex] State:', {
+        hasUser: !!user,
+        loading,
+        pathname: location.pathname,
+        search: location.search,
+        pendingAuthFlowPath,
+        redirectPath
+    })
+    
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            </div>
+        )
+    }
+    
     if (user && pendingAuthFlowPath) {
         return <Navigate to={pendingAuthFlowPath} replace />
     }
