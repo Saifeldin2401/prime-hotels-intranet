@@ -2,7 +2,16 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { lazy } from 'react'
-import { Navigate, Route, useParams } from 'react-router-dom'
+import { Navigate, Route, useLocation, useParams } from 'react-router-dom'
+
+// Helper component to preserve query params during redirect
+const PreserveQueryNavigate = ({ to }: { to: string }) => {
+  const location = useLocation()
+  // Handle merging query params if 'to' already has some
+  const hasQueryParams = to.includes('?')
+  const preservedSearch = location.search ? (hasQueryParams ? location.search.replace('?', '&') : location.search) : ''
+  return <Navigate to={`${to}${preservedSearch}`} replace />
+}
 
 const TrainingHub = lazy(() => import('@/pages/training/TrainingHub'))
 const MyCertificates = lazy(() => import('@/pages/training/MyCertificates'))
@@ -19,18 +28,20 @@ const MicrolearningViewer = lazy(() => import('@/pages/learning/MicrolearningVie
 
 const TrainingBuilderRedirect = () => {
     const { id } = useParams()
-    return <Navigate to={`/training/hub/${id}?view=builder`} replace />
+    const location = useLocation()
+    const search = location.search ? location.search.replace('?', '&') : ''
+    return <Navigate to={`/training/hub/${id}?view=builder${search}`} replace />
 }
 
 export const TrainingRoutes = () => (
     <>
         <Route
             path="/training"
-            element={<Navigate to="/training/hub" replace />}
+            element={<PreserveQueryNavigate to="/training/hub" />}
         />
         <Route
             path="/training/modules"
-            element={<Navigate to="/training/hub?view=list" replace />}
+            element={<PreserveQueryNavigate to="/training/hub?view=list" />}
         />
         <Route
             path="/training/hub"
@@ -56,7 +67,7 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/training/my"
-            element={<Navigate to="/learning/my" replace />}
+            element={<PreserveQueryNavigate to="/learning/my" />}
         />
         <Route
             path="/training/certificates"
@@ -70,7 +81,7 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/training/builder"
-            element={<Navigate to="/training/hub?view=builder" replace />}
+            element={<PreserveQueryNavigate to="/training/hub?view=builder" />}
         />
         <Route
             path="/training/builder/:id"
@@ -82,7 +93,7 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/training/assignments"
-            element={<Navigate to="/training/hub?view=assignments" replace />}
+            element={<PreserveQueryNavigate to="/training/hub?view=assignments" />}
         />
         <Route
             path="/training/assignments/rules"
@@ -166,7 +177,7 @@ export const TrainingRoutes = () => (
         />
         <Route
             path="/learning"
-            element={<Navigate to="/learning/my" replace />}
+            element={<PreserveQueryNavigate to="/learning/my" />}
         />
         <Route
             path="/learning/microlearning/:id"

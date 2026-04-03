@@ -2,9 +2,18 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { lazy } from 'react'
-import { Navigate, Route } from 'react-router-dom'
+import { Navigate, Route, useLocation } from 'react-router-dom'
 
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'))
+
+// Helper component to preserve query params during redirect
+const PreserveQueryNavigate = ({ to }: { to: string }) => {
+  const location = useLocation()
+  // Handle merging query params if 'to' already has some
+  const hasQueryParams = to.includes('?')
+  const preservedSearch = location.search ? (hasQueryParams ? location.search.replace('?', '&') : location.search) : ''
+  return <Navigate to={`${to}${preservedSearch}`} replace />
+}
 
 export function DashboardRoutes() {
   return (
@@ -23,34 +32,34 @@ export function DashboardRoutes() {
         }
       />
       
-      {/* Legacy redirects */}
+      {/* Legacy redirects - preserve query params (e.g., ?redirect=...) */}
       <Route
         path="/home"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/staff-dashboard"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/dashboard/property-manager"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/dashboard/property-hr"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/dashboard/department-head"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/dashboard/regional-hr"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
       <Route
         path="/dashboard/corporate-admin"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
       />
     </>
   )

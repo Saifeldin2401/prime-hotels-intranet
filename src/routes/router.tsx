@@ -6,6 +6,15 @@ import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
 
+// Helper component to preserve query params during redirect
+const PreserveQueryNavigate = ({ to }: { to: string }) => {
+  const location = useLocation()
+  // Handle merging query params if 'to' already has some
+  const hasQueryParams = to.includes('?')
+  const preservedSearch = location.search ? (hasQueryParams ? location.search.replace('?', '&') : location.search) : ''
+  return <Navigate to={`${to}${preservedSearch}`} replace />
+}
+
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes } from './modules/AuthRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
@@ -79,9 +88,9 @@ const RootIndex = () => {
     }
     
     if (user && pendingAuthFlowPath) {
-        return <Navigate to={pendingAuthFlowPath} replace />
+        return <Navigate to={`${pendingAuthFlowPath}${location.search}`} replace />
     }
-    return user ? <Navigate to={redirectPath ?? "/home"} replace /> : <PublicHome />
+    return user ? <Navigate to={`${redirectPath ?? "/home"}${location.search}`} replace /> : <PublicHome />
 }
 
 export const router = createBrowserRouter(
@@ -101,7 +110,7 @@ export const router = createBrowserRouter(
             {DashboardRoutes()}
             {MiscRoutes()}
 
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<PreserveQueryNavigate to="/" />} />
         </Route>
     )
 )

@@ -13,6 +13,16 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const redirectPath = getRedirectFromSearch(location.search)
 
+    console.log('[PublicOnlyRoute] Debug:', {
+        hasUser: !!user,
+        loading,
+        pathname: location.pathname,
+        search: location.search,
+        redirectPath,
+        pendingAuthFlowPath,
+        finalDestination: pendingAuthFlowPath ?? redirectPath ?? "/home"
+    })
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-background">
@@ -22,7 +32,9 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     }
 
     if (user) {
-        return <Navigate to={pendingAuthFlowPath ?? redirectPath ?? "/home"} replace />
+        const destination = pendingAuthFlowPath ?? redirectPath ?? "/home"
+        console.log('[PublicOnlyRoute] User logged in, navigating to:', destination)
+        return <Navigate to={destination} replace />
     }
 
     return <>{children}</>
