@@ -112,23 +112,38 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
     departmentId: explicitDepartmentId
   } = options
 
+  const isAdmin = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin'
   const roleValues = uniqueStrings((roles || []).map((roleRow) => roleRow?.role))
   const canSearchDraftContent = roleValues.some((role) => SEARCH_DRAFT_ROLES.has(role))
   const canSearchUsers = USER_SEARCH_ROLES.has(primaryRole || '')
   const canViewAllTasks = ALL_TASKS_ROLES.has(primaryRole || '')
   const canViewAllReferrals = ALL_REFERRALS_ROLES.has(primaryRole || '')
 
+  const userPropertyIds = uniqueStrings((properties || []).map((p) => p?.id))
+  const userDepartmentIds = uniqueStrings((departments || []).map((d) => d?.id))
+
   const scopedPropertyIds = (() => {
-    if (isRealPropertyId(explicitPropertyId)) return [explicitPropertyId]
-    if (isRealPropertyId(currentProperty?.id)) return [currentProperty.id]
-    if (propertyIds.length > 0) return propertyIds
-    return uniqueStrings((properties || []).map((property) => property?.id))
+    // If an explicit property is provided, ensure it's within the user's authorized properties
+    if (isRealPropertyId(explicitPropertyId)) {
+      if (isAdmin) return [explicitPropertyId]
+      if (userPropertyIds.includes(explicitPropertyId)) return [explicitPropertyId]
+      // Fallback to authorized properties if override is invalid/unauthorized
+    }
+    
+    if (isRealPropertyId(currentProperty?.id)) {
+      const id = currentProperty.id
+      if (isAdmin || userPropertyIds.includes(id)) return [id]
+    }
+    
+    return isAdmin && propertyIds.length === 0 ? [] : userPropertyIds
   })()
 
-  const userDepartmentIds = uniqueStrings((departments || []).map((department) => department?.id))
-  const scopedDepartmentIds = explicitDepartmentId
-    ? [explicitDepartmentId]
-    : userDepartmentIds
+  const scopedDepartmentIds = (() => {
+    if (explicitDepartmentId) {
+      if (isAdmin || userDepartmentIds.includes(explicitDepartmentId)) return [explicitDepartmentId]
+    }
+    return userDepartmentIds
+  })()
 
   const matchesAnnouncementAudience = (announcement): boolean => {
     if (!user?.id) return false

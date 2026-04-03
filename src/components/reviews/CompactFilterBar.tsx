@@ -1,7 +1,11 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Search, SlidersHorizontal, X, ArrowUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { useTranslation } from 'react-i18next';
 
 export interface Filters {
   propertyId: string;
@@ -10,7 +14,7 @@ export interface Filters {
   severity: string;
   sentiment: string;
   query: string;
-  sort: 'newest_critical' | 'newest' | 'critical' | 'oldest' | 'highest_rating' | 'lowest_rating';
+  sort: 'newest' | 'critical' | 'oldest' | 'highest_rating' | 'lowest_rating';
 }
 
 interface CompactFilterBarProps {
@@ -32,13 +36,15 @@ export function CompactFilterBar({
   sentiments,
   statuses,
 }: CompactFilterBarProps) {
+  const { t } = useTranslation('reviews');
   const [localQuery, setLocalQuery] = useState(filters.query);
+  const [expanded, setExpanded] = useState(false);
 
-  const handleSearch = () => {
+  const handleSearch = useCallback(() => {
     onFilterChange({ ...filters, query: localQuery });
-  };
+  }, [filters, localQuery, onFilterChange]);
 
-  const clearFilters = () => {
+  const clearFilters = useCallback(() => {
     setLocalQuery('');
     onFilterChange({
       propertyId: 'all',
@@ -47,9 +53,9 @@ export function CompactFilterBar({
       severity: 'all',
       sentiment: 'all',
       query: '',
-      sort: 'newest_critical',
+      sort: 'newest',
     });
-  };
+  }, [onFilterChange]);
 
   const hasActiveFilters =
     filters.propertyId !== 'all' ||
@@ -59,107 +65,170 @@ export function CompactFilterBar({
     filters.sentiment !== 'all' ||
     filters.query !== '';
 
+  const activeFilterCount = [
+    filters.propertyId !== 'all',
+    filters.platform !== 'all',
+    filters.status !== 'all',
+    filters.severity !== 'all',
+    filters.sentiment !== 'all',
+    filters.query !== '',
+  ].filter(Boolean).length;
+
   return (
-    <div className="flex flex-wrap items-center gap-3 p-4 bg-muted/30 rounded-xl border border-muted-foreground/10">
-      <div className="relative flex-1 min-w-[200px]">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Search reviews..."
-          value={localQuery}
-          onChange={(e) => setLocalQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          className="pl-9 h-9"
-        />
+    <div className="space-y-3">
+      {/* Primary bar — search + sort + toggle */}
+      <div className="flex items-center gap-2">
+        {/* Search input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder={t('filters.searchPlaceholder')}
+            value={localQuery}
+            onChange={(e) => {
+              setLocalQuery(e.target.value);
+              // Auto-search when clearing
+              if (e.target.value === '') {
+                onFilterChange({ ...filters, query: '' });
+              }
+            }}
+            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            className="ps-9 h-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-sm shadow-sm focus-visible:ring-primary/30"
+          />
+        </div>
+
+        {/* Sort selector */}
+        <Select
+          value={filters.sort}
+          onValueChange={(value) => onFilterChange({ ...filters, sort: value as Filters['sort'] })}
+        >
+          <SelectTrigger className="w-[180px] h-10 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 rounded-xl text-sm shadow-sm">
+            <ArrowUpDown className="h-3.5 w-3.5 me-1.5 text-muted-foreground shrink-0" />
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="newest">{t('sort.newest')}</SelectItem>
+            <SelectItem value="oldest">{t('sort.oldest')}</SelectItem>
+            <SelectItem value="critical">{t('sort.mostCritical')}</SelectItem>
+            <SelectItem value="highest_rating">{t('sort.highestRating')}</SelectItem>
+            <SelectItem value="lowest_rating">{t('sort.lowestRating')}</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Filter toggle */}
+        <Button
+          variant={expanded ? "secondary" : "outline"}
+          size="sm"
+          onClick={() => setExpanded(!expanded)}
+          className={cn(
+            "h-10 px-3 rounded-xl gap-1.5 shadow-sm",
+            expanded && "bg-primary/10 text-primary border-primary/20"
+          )}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          <span className="text-xs font-semibold">{t('filters.title')}</span>
+          {activeFilterCount > 0 && (
+            <Badge className="h-5 w-5 p-0 flex items-center justify-center text-[10px] font-bold bg-primary text-primary-foreground rounded-full">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+
+        {/* Clear filters */}
+        {hasActiveFilters && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-10 px-2.5 rounded-xl text-muted-foreground hover:text-destructive"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
-      <select
-        value={filters.propertyId}
-        onChange={(e) => onFilterChange({ ...filters, propertyId: e.target.value })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="all">All Properties</option>
-        {properties.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      {/* Expanded filter row */}
+      {expanded && (
+        <div className="flex items-center gap-2 flex-wrap p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-700/60 animate-in slide-in-from-top-1 duration-200">
+          {/* Property */}
+          <Select
+            value={filters.propertyId}
+            onValueChange={(value) => onFilterChange({ ...filters, propertyId: value })}
+          >
+            <SelectTrigger className="w-[160px] h-9 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+              <SelectValue placeholder={t('filters.property')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')} {t('filters.property')}</SelectItem>
+              {properties.map((p) => (
+                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <select
-        value={filters.platform}
-        onChange={(e) => onFilterChange({ ...filters, platform: e.target.value })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="all">All Platforms</option>
-        {platforms.map((p) => (
-          <option key={p} value={p}>
-            {p}
-          </option>
-        ))}
-      </select>
+          {/* Platform */}
+          <Select
+            value={filters.platform}
+            onValueChange={(value) => onFilterChange({ ...filters, platform: value })}
+          >
+            <SelectTrigger className="w-[140px] h-9 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+              <SelectValue placeholder={t('filters.platform')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')} {t('filters.platform')}</SelectItem>
+              {platforms.map((p) => (
+                <SelectItem key={p} value={p}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <select
-        value={filters.severity}
-        onChange={(e) => onFilterChange({ ...filters, severity: e.target.value })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="all">All Severities</option>
-        {severities.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+          {/* Severity */}
+          <Select
+            value={filters.severity}
+            onValueChange={(value) => onFilterChange({ ...filters, severity: value })}
+          >
+            <SelectTrigger className="w-[140px] h-9 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+              <SelectValue placeholder={t('filters.severity')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')} {t('filters.severity')}</SelectItem>
+              {severities.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <select
-        value={filters.sentiment}
-        onChange={(e) => onFilterChange({ ...filters, sentiment: e.target.value })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="all">All Sentiments</option>
-        {sentiments.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
+          {/* Sentiment */}
+          <Select
+            value={filters.sentiment}
+            onValueChange={(value) => onFilterChange({ ...filters, sentiment: value })}
+          >
+            <SelectTrigger className="w-[140px] h-9 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+              <SelectValue placeholder={t('filters.sentiment')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')} {t('filters.sentiment')}</SelectItem>
+              {sentiments.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-      <select
-        value={filters.status}
-        onChange={(e) => onFilterChange({ ...filters, status: e.target.value })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="all">All Statuses</option>
-        {statuses.map((s) => (
-          <option key={s} value={s}>
-            {s}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={filters.sort}
-        onChange={(e) => onFilterChange({ ...filters, sort: e.target.value as Filters['sort'] })}
-        className="h-9 px-3 rounded-md border border-input bg-background text-sm"
-      >
-        <option value="newest_critical">Newest + Critical</option>
-        <option value="newest">Newest First</option>
-        <option value="critical">Most Critical</option>
-        <option value="highest_rating">Highest Rating</option>
-        <option value="lowest_rating">Lowest Rating</option>
-        <option value="oldest">Oldest First</option>
-      </select>
-
-      <Button variant="outline" size="sm" onClick={handleSearch} className="h-9">
-        <Filter className="h-4 w-4 mr-2" />
-        Apply
-      </Button>
-
-      {hasActiveFilters && (
-        <Button variant="ghost" size="sm" onClick={clearFilters} className="h-9">
-          <X className="h-4 w-4 mr-2" />
-          Clear
-        </Button>
+          {/* Status */}
+          <Select
+            value={filters.status}
+            onValueChange={(value) => onFilterChange({ ...filters, status: value })}
+          >
+            <SelectTrigger className="w-[140px] h-9 bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg text-xs">
+              <SelectValue placeholder={t('filters.status')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t('filters.all')} {t('filters.status')}</SelectItem>
+              {statuses.map((s) => (
+                <SelectItem key={s} value={s}>{s.replace(/_/g, ' ')}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       )}
     </div>
   );

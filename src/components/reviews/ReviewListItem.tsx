@@ -1,9 +1,10 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
 import { cn } from "@/lib/utils"
 import type { GuestReview } from "@/lib/types"
-import { Star, TrendingDown, TrendingUp, User, MessageCircle, AlertCircle, Check, Square, Calendar } from "lucide-react"
+import { Star, TrendingDown, TrendingUp, Minus, User, MessageCircle, Calendar, Clock, MapPin } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 interface ReviewListItemProps {
   review: GuestReview
@@ -74,273 +75,304 @@ function getPropertyColor(propertyName: string): string {
   return colors[Math.abs(hash) % colors.length]
 }
 
-function getSeverityEmoji(severity: string | null): string {
-  switch (severity?.toLowerCase()) {
-    case "critical": return "🔴"
-    case "high": return "🟠"
-    case "medium": return "🟡"
-    case "low": return "🟢"
-    default: return "⚪"
-  }
+function StarRating({ rating, maxStars = 5 }: { rating: number | null; maxStars?: number }) {
+  const normalized = rating ?? 0
+  const fullStars = Math.floor(normalized)
+  const hasHalf = normalized - fullStars >= 0.3
+  
+  return (
+    <div className="flex items-center gap-0.5">
+      {Array.from({ length: maxStars }, (_, i) => (
+        <Star
+          key={i}
+          className={cn(
+            "h-3.5 w-3.5 transition-colors",
+            i < fullStars
+              ? "fill-amber-400 text-amber-400"
+              : i === fullStars && hasHalf
+                ? "fill-amber-400/50 text-amber-400"
+                : "fill-transparent text-slate-300 dark:text-slate-600"
+          )}
+        />
+      ))}
+      <span className="ms-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 tabular-nums">
+        {normalized.toFixed(1)}
+      </span>
+    </div>
+  )
 }
 
-function formatReviewDate(dateString: string | null, fallbackDate?: string | null): { label: string; fullDate: string; isNew: boolean; hasValidDate: boolean } {
-  // FIXED: Use collected_at as fallback chain for consistent date display
+function ReviewerAvatar({ name, platform }: { name: string | null; platform: string }) {
+  const initials = name
+    ? name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()
+    : "?"
+  const platformColor = getPlatformColor(platform)
+  
+  return (
+    <div
+      className="relative h-10 w-10 shrink-0 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-sm ring-2 ring-white dark:ring-slate-800"
+      style={{ backgroundColor: platformColor }}
+    >
+      {initials}
+      <div
+        className="absolute -bottom-0.5 -end-0.5 h-4 w-4 rounded-full bg-white dark:bg-slate-800 flex items-center justify-center shadow-sm"
+      >
+        {getPlatformIcon(platform, "h-2.5 w-2.5")}
+      </div>
+    </div>
+  )
+}
+
+function SentimentIndicator({ sentiment, t }: { sentiment: string | null; t: (key: string) => string }) {
+  const config = {
+    positive: { icon: TrendingUp, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-950/40", label: t("sentiment.positive") },
+    negative: { icon: TrendingDown, color: "text-red-600 dark:text-red-400", bg: "bg-red-50 dark:bg-red-950/40", label: t("sentiment.negative") },
+    mixed: { icon: Minus, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-950/40", label: t("sentiment.mixed") },
+    neutral: { icon: Minus, color: "text-slate-500 dark:text-slate-400", bg: "bg-slate-50 dark:bg-slate-900", label: t("sentiment.neutral") },
+  }
+  
+  const cfg = config[sentiment as keyof typeof config] ?? config.neutral
+  const Icon = cfg.icon
+  
+  return (
+    <div className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5", cfg.bg)}>
+      <Icon className={cn("h-3 w-3", cfg.color)} />
+      <span className={cn("text-[10px] font-semibold capitalize", cfg.color)}>{cfg.label}</span>
+    </div>
+  )
+}
+
+function SeverityDot({ severity, t }: { severity: string | null; t: (key: string) => string }) {
+  const colors: Record<string, string> = {
+    critical: "bg-red-500 shadow-red-500/50 shadow-[0_0_6px]",
+    high: "bg-orange-500",
+    medium: "bg-amber-400",
+    low: "bg-emerald-500",
+  }
+  const dotColor = colors[severity?.toLowerCase() ?? ""] ?? "bg-slate-300 dark:bg-slate-600"
+  const label = severity ? t(`severity.${severity.toLowerCase()}`) : t("status.normal")
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className={cn("h-2 w-2 rounded-full", dotColor)} />
+      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+    </div>
+  )
+}
+
+function formatReviewDate(
+  dateString: string | null,
+  fallbackDate?: string | null,
+  t?: (key: string) => string
+): { label: string; fullDate: string; isNew: boolean; hasValidDate: boolean } {
   const effectiveDate = dateString || fallbackDate
-  if (!effectiveDate) return { label: "Unknown", fullDate: "", isNew: false, hasValidDate: false }
+  if (!effectiveDate) return { label: t?.("date.unknown") ?? "Unknown", fullDate: "", isNew: false, hasValidDate: false }
   
   const date = new Date(effectiveDate)
-  // Validate the date is valid
   if (Number.isNaN(date.getTime())) {
-    return { label: "Unknown", fullDate: "", isNew: false, hasValidDate: false }
+    return { label: t?.("date.unknown") ?? "Unknown", fullDate: "", isNew: false, hasValidDate: false }
   }
   
   const now = new Date()
   
-  // Check if this is a brand NEW review (collected today)
-  const isBrandNew = date.getFullYear() === now.getFullYear() && 
-                     date.getMonth() === now.getMonth() && 
+  const isBrandNew = date.getFullYear() === now.getFullYear() &&
+                     date.getMonth() === now.getMonth() &&
                      date.getDate() === now.getDate()
   
-  // For brand new reviews, show "NEW" badge
   if (isBrandNew) {
-    return { label: "NEW", fullDate: date.toLocaleString(), isNew: true, hasValidDate: true }
+    return { label: t?.("date.today") ?? "Today", fullDate: date.toLocaleString(), isNew: true, hasValidDate: true }
   }
   
-  // For older reviews, show the actual date
   const yesterday = new Date(now)
   yesterday.setDate(yesterday.getDate() - 1)
-  const isYesterday = date.getFullYear() === yesterday.getFullYear() && 
-                      date.getMonth() === yesterday.getMonth() && 
+  const isYesterday = date.getFullYear() === yesterday.getFullYear() &&
+                      date.getMonth() === yesterday.getMonth() &&
                       date.getDate() === yesterday.getDate()
   
-  if (isYesterday) return { label: "Yesterday", fullDate: date.toLocaleString(), isNew: false, hasValidDate: true }
+  if (isYesterday) return { label: t?.("date.yesterday") ?? "Yesterday", fullDate: date.toLocaleString(), isNew: false, hasValidDate: true }
+  
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24))
+  if (diffDays < 7) {
+    return {
+      label: t?.("date.daysAgo")?.replace("{{count}}", String(diffDays)) ?? `${diffDays}d ago`,
+      fullDate: date.toLocaleString(),
+      isNew: false,
+      hasValidDate: true,
+    }
+  }
   
   return {
     label: date.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     fullDate: date.toLocaleString(),
     isNew: false,
-    hasValidDate: true
+    hasValidDate: true,
   }
 }
 
-function getDisplayTitle(review: GuestReview) {
+function getDisplayTitle(review: GuestReview, t: (key: string) => string) {
   if (review.review_title?.trim()) return review.review_title.trim()
   const reviewer = review.reviewer_name?.trim()
   if (reviewer) {
     const firstName = reviewer.split(" ")[0]
-    return `${firstName} Feedback`
+    return t("card.reviewerFeedback").replace("{{name}}", firstName)
   }
-  const platformLabel = review.platform ? review.platform.toUpperCase() : "Guest"
-  return `${platformLabel} Feedback`
+  const platformLabel = review.platform ? review.platform.charAt(0).toUpperCase() + review.platform.slice(1) : t("card.guest")
+  return t("card.platformFeedback").replace("{{platform}}", platformLabel)
 }
 
-export function ReviewListItem({ 
-  review, 
-  propertyName, 
-  ownerName, 
+export function ReviewListItem({
+  review,
+  propertyName,
+  ownerName,
   onClick,
   isSelected,
   isNew = false,
   onToggleSelect,
-  viewMode = "grid"
 }: ReviewListItemProps) {
-  const isAssignedState = ["assigned", "acknowledged", "response_pending", "escalated"].includes(String(review.status))
-  const displayOwnerName = ownerName || (isAssignedState ? "Unassigned" : (review.reviewer_name?.split(" ")[0] || "Guest"))
-  const displayOwnerType = isAssignedState ? "Owner" : "Guest"
-  const platformColor = getPlatformColor(review.platform)
+  const { t } = useTranslation("reviews")
   const propertyColor = getPropertyColor(propertyName)
-  // FIXED: Use published_at as primary display date, with collected_at as fallback for consistency
-  const dateInfo = formatReviewDate(review.published_at, review.collected_at)
+  const dateInfo = formatReviewDate(review.published_at, review.collected_at, t)
 
-  const getSeverityColor = (severity: string | null) => {
-    switch (severity?.toLowerCase()) {
-      case "critical": return "bg-red-500/10 text-red-600 border-red-200"
-      case "high": return "bg-orange-500/10 text-orange-600 border-orange-200"
-      case "medium": return "bg-yellow-500/10 text-yellow-600 border-yellow-200"
-      case "low": return "bg-green-500/10 text-green-600 border-green-200"
-      default: return "bg-muted/50 text-muted-foreground"
-    }
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "outline" | "destructive" }> = {
+    collected: { label: t("analytics.collected"), variant: "outline" },
+    analyzed: { label: t("analytics.analyzed"), variant: "outline" },
+    assigned: { label: t("analytics.assigned"), variant: "secondary" },
+    acknowledged: { label: t("analytics.acknowledged"), variant: "secondary" },
+    response_pending: { label: t("analytics.pendingResponse"), variant: "destructive" },
+    responded: { label: t("analytics.responded"), variant: "default" },
+    closed: { label: t("analytics.closed"), variant: "default" },
+    escalated: { label: t("analytics.escalated"), variant: "destructive" },
   }
 
-  const getSentimentIcon = (sentiment: string | null) => {
-    switch (sentiment?.toLowerCase()) {
-      case "positive": return <TrendingUp className="h-4 w-4 text-green-500" />
-      case "negative": return <TrendingDown className="h-4 w-4 text-red-500" />
-      case "mixed": return <TrendingDown className="h-4 w-4 text-yellow-500" />
-      default: return null
-    }
-  }
+  const statusCfg = statusConfig[review.status] ?? { label: review.status, variant: "outline" as const }
 
   return (
     <Card
       className={cn(
-        "group cursor-pointer transition-all duration-500 hover:shadow-[0_20px_50px_rgba(0,0,0,0.1)] hover:-translate-y-1 relative overflow-hidden border-none bg-gradient-to-br from-card to-muted/10",
-        review.critical_flag && "ring-1 ring-red-500/30 shadow-[0_0_20px_rgba(239,68,68,0.1)]",
-        isSelected && "ring-2 ring-primary shadow-[0_0_30px_rgba(59,130,246,0.4)] bg-gradient-to-br from-primary/5 to-blue-50",
-        isNew && "ring-2 ring-green-400 shadow-[0_0_20px_rgba(34,197,94,0.3)] animate-pulse"
+        "group relative cursor-pointer overflow-hidden border transition-all duration-300",
+        "hover:shadow-lg hover:-translate-y-0.5",
+        "bg-white dark:bg-slate-900/80",
+        "border-slate-200/80 dark:border-slate-700/60",
+        review.critical_flag && "border-red-300 dark:border-red-800/60 bg-red-50/30 dark:bg-red-950/20",
+        isSelected && "ring-2 ring-primary/60 border-primary/40 shadow-md",
+        isNew && !review.critical_flag && "border-emerald-300 dark:border-emerald-800/60"
       )}
       onClick={() => onClick(review.id)}
     >
-      {/* Platform color accent at top */}
+      {/* Top accent — subtle platform color line */}
       <div
-        className="absolute top-0 left-0 right-0 h-1"
-        style={{ backgroundColor: platformColor }}
+        className="h-0.5 w-full"
+        style={{ background: `linear-gradient(90deg, ${getPlatformColor(review.platform)}, transparent)` }}
       />
 
-      {/* Property color accent on left */}
-      <div
-        className="absolute top-0 bottom-0 left-0 w-1"
-        style={{ backgroundColor: propertyColor }}
-      />
-
+      {/* Critical ribbon */}
       {review.critical_flag && (
-        <div className="absolute top-0 right-0 w-20 h-20 pointer-events-none overflow-hidden z-10">
-          <div className="bg-red-600 text-white text-[9px] font-black py-1 px-8 text-center transform rotate-45 translate-x-5 -translate-y-1 uppercase shadow-2xl">
-            Critical
+        <div className="absolute top-2.5 end-0 z-10">
+          <div className="bg-red-600 text-white text-[9px] font-bold tracking-wider uppercase ps-3 pe-2 py-0.5 rounded-s-full shadow-sm">
+            {t("severity.critical")}
           </div>
         </div>
       )}
 
+      {/* New indicator */}
       {isNew && !review.critical_flag && (
-        <div className="absolute top-0 right-0 w-20 h-20 pointer-events-none overflow-hidden z-10">
-          <div className="bg-green-500 text-white text-[9px] font-black py-1 px-8 text-center transform rotate-45 translate-x-5 -translate-y-1 uppercase shadow-2xl animate-pulse">
-            NEW
+        <div className="absolute top-2.5 end-0 z-10">
+          <div className="bg-emerald-500 text-white text-[9px] font-bold tracking-wider uppercase ps-3 pe-2 py-0.5 rounded-s-full shadow-sm animate-pulse">
+            {t("date.new")}
           </div>
         </div>
       )}
 
-      {isSelected && (
-        <>
-          <div className="absolute top-3 right-3 z-50">
-            <div className="bg-blue-600 text-white rounded-full p-2 shadow-lg border-2 border-white">
-              <Check className="h-5 w-5" strokeWidth={3} />
-            </div>
-          </div>
-          <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-50">
-            <Badge className="bg-blue-600 text-white border-0 shadow-lg px-3 py-1 text-xs font-bold">
-              SELECTED
-            </Badge>
-          </div>
-        </>
-      )}
-
-      <CardHeader className="pb-3 pt-6">
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-3">
-            {/* Selection Checkbox */}
-            {onToggleSelect && (
-              <div 
-                className="flex items-center justify-center h-6 w-6 rounded border-2 border-primary/50 bg-white hover:border-primary transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Checkbox
-                  checked={isSelected}
-                  onCheckedChange={() => onToggleSelect(review.id)}
-                  className="h-4 w-4 border-0 data-[state=checked]:bg-primary data-[state=checked]:text-white"
-                />
-              </div>
-            )}
-            <div 
-              className="w-8 h-8 rounded-lg flex items-center justify-center bg-white shadow-sm border border-border/30"
-              style={{ color: platformColor }}
+      <div className="p-5">
+        {/* Header: Avatar + Info + Selection */}
+        <div className="flex items-start gap-3 mb-4">
+          {/* Selection checkbox */}
+          {onToggleSelect && (
+            <div
+              className="pt-1"
+              onClick={(e) => e.stopPropagation()}
             >
-              {getPlatformIcon(review.platform, "w-5 h-5")}
+              <Checkbox
+                checked={isSelected}
+                onCheckedChange={() => onToggleSelect(review.id)}
+                className="h-4 w-4 rounded border-slate-300 dark:border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:text-primary-foreground"
+              />
             </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{review.platform}</span>
-              <div className="flex items-center gap-1">
-                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                <span className="text-xs font-bold text-yellow-700">{review.rating_normalized_10?.toFixed(1) || review.rating_normalized_5?.toFixed(1) || "?"}</span>
-              </div>
-            </div>
-          </div>
-          
-          {/* Date Badge - Prominent */}
-          <Badge 
-            className={cn(
-              "text-[9px] px-2 py-0.5 font-bold tracking-wide border-0 flex items-center gap-1",
-              dateInfo.isNew 
-                ? "bg-green-100 text-green-700" 
-                : "bg-slate-100 text-slate-600"
-            )}
-            title={dateInfo.fullDate}
-          >
-            <Calendar className="h-3 w-3" />
-            {dateInfo.label}
-          </Badge>
-        </div>
-
-        <CardTitle className="text-lg font-bold line-clamp-1 group-hover:text-primary transition-colors pr-8">
-          {getDisplayTitle(review)}
-        </CardTitle>
-
-        <div className="flex items-center gap-2 mt-2 min-w-0 flex-wrap">
-          <Badge className={cn("text-[10px] h-5 px-2 font-bold tracking-tighter border-none", getSeverityColor(review.severity))} variant="outline">
-            {getSeverityEmoji(review.severity)} {review.severity?.toUpperCase() || "NORMAL"}
-          </Badge>
-          <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground min-w-0 opacity-80" title={propertyName}>
-            <div 
-              className="h-2 w-2 rounded-full" 
-              style={{ backgroundColor: propertyColor }}
-            />
-            <span className="truncate">{propertyName}</span>
-          </div>
-          {/* Sentiment Badge moved here for better organization */}
-          <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-muted/30">
-            {getSentimentIcon(review.sentiment)}
-            <span className="text-[9px] text-muted-foreground uppercase font-black tracking-widest leading-none">
-              {review.sentiment}
-            </span>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="pb-6 pt-1">
-        <div className="relative">
-          <p className="text-sm text-foreground/70 line-clamp-3 leading-relaxed font-medium mb-6 min-h-[4.5rem] italic pr-4">
-            "{review.summary_en || review.review_text}"
-          </p>
-          {review.summary_ar && (
-            <p className="text-sm text-foreground/60 line-clamp-1 leading-relaxed font-arabic mb-4 opacity-70" dir="rtl">
-              {review.summary_ar}
-            </p>
           )}
-        </div>
 
-        <div className="flex items-center justify-between pt-4 border-t border-muted/50">
-          <div className="flex items-center gap-3 text-[11px]">
-            <div className="h-7 w-7 rounded-full bg-primary/10 flex items-center justify-center text-primary border border-primary/20">
-              <User className="h-3.5 w-3.5" />
+          {/* Reviewer avatar */}
+          <ReviewerAvatar name={review.reviewer_name} platform={review.platform} />
+
+          {/* Reviewer info */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">
+                {review.reviewer_name || t("reviewCard.anonymous")}
+              </h4>
+              {review.vip_flag && (
+                <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 border-0 text-[9px] px-1.5 py-0 font-bold">
+                  VIP
+                </Badge>
+              )}
             </div>
-            <div className="flex flex-col">
-              <span className="font-bold text-foreground/90 leading-none mb-0.5 max-w-[150px] truncate" title={displayOwnerName}>
-                {displayOwnerName}
-              </span>
-              <span className="text-muted-foreground font-medium text-[10px]">
-                {displayOwnerType}
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Calendar className="h-3 w-3 shrink-0" />
+              <span title={dateInfo.fullDate}>{dateInfo.label}</span>
+              <span className="opacity-30">·</span>
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate" title={propertyName}>
+                <span className="inline-block h-1.5 w-1.5 rounded-full me-1 align-middle" style={{ backgroundColor: propertyColor }} />
+                {propertyName}
               </span>
             </div>
           </div>
+        </div>
 
-          <div className="flex items-center gap-2">
-            {review.vip_flag && (
-              <Badge className="bg-amber-100 text-amber-700 border-0 text-[9px] px-1.5 py-0">
-                VIP
-              </Badge>
+        {/* Review title */}
+        <h3 className="text-[15px] font-bold text-slate-800 dark:text-slate-200 leading-snug mb-2 line-clamp-1 group-hover:text-primary transition-colors pe-6">
+          {getDisplayTitle(review, t)}
+        </h3>
+
+        {/* Star rating */}
+        <div className="mb-3">
+          <StarRating rating={review.rating_normalized_5} />
+        </div>
+
+        {/* Review text preview */}
+        <p className="text-[13px] text-slate-600 dark:text-slate-400 leading-relaxed line-clamp-2 mb-4">
+          {review.summary_en || review.review_text}
+        </p>
+
+        {/* Arabic summary if available */}
+        {review.summary_ar && (
+          <p className="text-[12px] text-slate-500 dark:text-slate-500 line-clamp-1 mb-4 font-arabic" dir="rtl">
+            {review.summary_ar}
+          </p>
+        )}
+
+        {/* Footer: Metadata chips */}
+        <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <SeverityDot severity={review.severity} t={t} />
+            <SentimentIndicator sentiment={review.sentiment} t={t} />
+          </div>
+
+          <div className="flex items-center gap-1.5">
+            {ownerName && (
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground" title={ownerName}>
+                <User className="h-3 w-3" />
+                <span className="max-w-[80px] truncate">{ownerName}</span>
+              </div>
             )}
             <Badge
-              variant="secondary"
-              className={cn(
-                "text-[9px] px-1.5 py-0 border-0",
-                review.status === "responded" ? "bg-green-100 text-green-700" : "bg-slate-100 text-slate-600",
-              )}
+              variant={statusCfg.variant}
+              className="text-[9px] font-semibold px-1.5 py-0 h-5"
             >
-              {review.status === "responded" ? "✓ Responded" : review.status.replace(/_/g, " ")}
+              {statusCfg.label}
             </Badge>
           </div>
         </div>
-      </CardContent>
+      </div>
     </Card>
   )
 }

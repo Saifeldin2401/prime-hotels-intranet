@@ -5,11 +5,11 @@
     "overview": "Intelligence Feed",
     "analytics": "Analytics",
     "properties": "By Property",
+    "monitoring": "Monitoring",
     "sources": "Sources",
     "settings": "Settings"
   },
   "actions": {
-    "testSlack": "Test Slack",
     "refreshHub": "Refresh Hub",
     "syncNow": "Sync Reviews Now",
     "openFullSettings": "Open Full Settings",
@@ -24,23 +24,64 @@
     "expires": "Expires {{date}}",
     "expired": "Expired"
   },
+  "monitoring": {
+    "live": "Live",
+    "paused": "Paused",
+    "sound": "Sound",
+    "new": "New"
+  },
+  "sort": {
+    "newestCritical": "Newest + Critical",
+    "newest": "Newest First",
+    "oldest": "Oldest First",
+    "mostCritical": "Most Critical",
+    "highestRating": "Highest Rating",
+    "lowestRating": "Lowest Rating"
+  },
+  "pagination": {
+    "showing": "Showing",
+    "of": "of",
+    "previous": "Previous",
+    "next": "Next"
+  },
+  "date": {
+    "today": "Today",
+    "yesterday": "Yesterday",
+    "daysAgo": "{{count}}d ago",
+    "unknown": "Unknown",
+    "new": "NEW"
+  },
+  "card": {
+    "reviewerFeedback": "{{name}} Feedback",
+    "platformFeedback": "{{platform}} Feedback",
+    "guest": "Guest"
+  },
+  "sentiment": {
+    "positive": "Positive",
+    "negative": "Negative",
+    "mixed": "Mixed",
+    "neutral": "Neutral"
+  },
+  "stats": {
+    "pendingCount": "{{count}} pending"
+  },
   "responseEngine": {
     "title": "Response Engine",
-    "internalNotes": "Internal Notes & Action Plan",
-    "internalNotesPlaceholder": "Operational steps taken or team member assigned...",
-    "englishResponse": "Verified English Response",
-    "arabicResponse": "Verified Arabic Response",
-    "aiAssisted": "AI ASSISTED",
-    "smartTranslation": "Smart Translation",
     "englishPlaceholder": "Draft official response here...",
     "arabicPlaceholder": "Draft official response here...",
     "status": "Status: {{status}}",
-    "statusDescription": "Marking as published updates public dashboard state."
+    "statusDescription": "Marking as published updates public dashboard state.",
+    "internalNotes": "Internal Team Notes",
+    "internalNotesPlaceholder": "Add any internal context here...",
+    "englishResponse": "Official English Response",
+    "arabicResponse": "Official Arabic Response",
+    "aiAssisted": "AI GENERATED",
+    "smartTranslation": "SMART ARABIC"
   },
   "rawIntelligence": {
-    "title": "Raw Intelligence",
-    "platformVerbatim": "Guest Verbatim from Platform",
-    "operationalIssues": "Operational Issues Identified",
+    "title": "Raw Signal",
+    "platformVerbatim": "Guest Feedback Verbatim",
+    "operationalIssues": "Operational Findings",
     "noAnomalies": "No distinctive operational anomalies detected."
   },
   "analytics": {
@@ -84,9 +125,12 @@
     "moreReviewsNeeded": "More reviews needed to generate insights",
     "service": "Service",
     "other": "Other",
-    "executiveSummary": "Executive Intelligence Summary",
-    "executiveSummaryDesc": "Aggregated from {{count}} review{{plural}} across all filtered properties",
-    "nps": "NPS",
+    "executiveSummary": {
+      "title": "Executive Summary",
+      "processing": "The intelligence unit is currently processing this feedback...",
+      "overall": "Aggregated from {{count}} review{{plural}} across all filtered properties",
+      "nps": "NPS"
+    },
     "excellentRating": "Excellent",
     "acceptable": "Acceptable",
     "needsAttention": "Needs Attention",
@@ -129,6 +173,14 @@
       "30d": "30D",
       "90d": "90D"
     }
+  },
+  "propertyDashboard": {
+    "title": "Property Performance Comparison",
+    "subtitle": "Cross-property analytics for {{count}} properties",
+    "name": "Name",
+    "expandAll": "Expand All",
+    "collapseAll": "Collapse All",
+    "recentReviews": "Recent Reviews"
   },
   "sources": {
     "title": "OTA Intelligence Hub",
