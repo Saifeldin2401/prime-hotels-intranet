@@ -108,7 +108,7 @@ export default defineConfig({
     },
     // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
     // referenced in the bundle (Sentry plugin deletes .map files after upload anyway).
-    sourcemap: enableSentryUpload ? 'hidden' : (process.env.NODE_ENV !== 'production'),
+    sourcemap: enableSentryUpload ? 'hidden' : false,
     rollupOptions: {
       output: {
         manualChunks(id) {

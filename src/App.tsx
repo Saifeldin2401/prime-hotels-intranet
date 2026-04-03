@@ -182,7 +182,6 @@ function DashboardPrefetcher() {
         ],
         queryFn: () => fetchDashboardStats({
           userId: user.id,
-          authUserId: user.id,
           currentPropertyId: currentProperty?.id,
           propertyIds,
           roles,
@@ -199,8 +198,8 @@ function DashboardPrefetcher() {
 }
 
 function App() {
-  const [VercelAnalytics, setVercelAnalytics] = useState<ComponentType | null>(null)
-  const [VercelSpeedInsights, setVercelSpeedInsights] = useState<ComponentType | null>(null)
+  const [analyticsConfig, setAnalyticsConfig] = useState<{ component: ComponentType; props: object } | null>(null)
+  const [speedInsightsConfig, setSpeedInsightsConfig] = useState<{ component: ComponentType; props: object } | null>(null)
   const [isUpdateAvailable, setIsUpdateAvailable] = useState(() => hasPendingAppUpdate())
   const [isApplyingUpdate, setIsApplyingUpdate] = useState(false)
 
@@ -215,8 +214,16 @@ function App() {
       ])
 
       if (cancelled) return
-      setVercelAnalytics(() => Analytics)
-      setVercelSpeedInsights(() => SpeedInsights)
+      
+      // Pass configuration as single object to avoid deprecated parameter warnings
+      setAnalyticsConfig({
+        component: Analytics,
+        props: {}
+      })
+      setSpeedInsightsConfig({
+        component: SpeedInsights,
+        props: {}
+      })
     })()
 
     return () => {
@@ -352,8 +359,8 @@ function App() {
             </div>
           </div>
         )}
-        {VercelAnalytics && <VercelAnalytics />}
-        {VercelSpeedInsights && <VercelSpeedInsights />}
+        {analyticsConfig && <analyticsConfig.component {...analyticsConfig.props} />}
+        {speedInsightsConfig && <speedInsightsConfig.component {...speedInsightsConfig.props} />}
       </QueryClientProvider>
     </ErrorBoundary>
   )
