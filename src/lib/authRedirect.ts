@@ -15,6 +15,45 @@ function isAuthRoute(path: string): boolean {
 }
 
 /**
+ * Check if two origins match, handling edge cases like:
+ * - www vs non-www
+ * - trailing ports
+ * - HTTP vs HTTPS (in production should always be HTTPS)
+ */
+function originsMatch(parsedOrigin: string, windowOrigin: string): boolean {
+  // Direct match
+  if (parsedOrigin === windowOrigin) return true
+  
+  try {
+    const parsedUrl = new URL(parsedOrigin)
+    const windowUrl = new URL(windowOrigin)
+    
+    // Compare hostname (handle www vs non-www)
+    let parsedHost = parsedUrl.hostname.toLowerCase()
+    let windowHost = windowUrl.hostname.toLowerCase()
+    
+    // Strip www prefix for comparison
+    if (parsedHost.startsWith('www.')) parsedHost = parsedHost.slice(4)
+    if (windowHost.startsWith('www.')) windowHost = windowHost.slice(4)
+    
+    if (parsedHost !== windowHost) return false
+    
+    // Compare port (default ports for http/https should match)
+    const parsedPort = parsedUrl.port || (parsedUrl.protocol === 'https:' ? '443' : '80')
+    const windowPort = windowUrl.port || (windowUrl.protocol === 'https:' ? '443' : '80')
+    
+    if (parsedPort !== windowPort) return false
+    
+    // Protocol must match in production
+    if (parsedUrl.protocol !== windowUrl.protocol) return false
+    
+    return true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Sanitize a redirect candidate to prevent open-redirect attacks.
  * Only allows relative paths that start with '/' and are not
  * protocol-relative URLs.
@@ -29,11 +68,27 @@ export function sanitizeRedirectPath(candidate: string | null | undefined): stri
   try {
     // Reject anything that parses as an absolute URL to another origin
     const parsed = new URL(trimmed, window.location.href)
-    if (parsed.origin !== window.location.origin) return null
+    
+    // Use robust origin comparison
+    if (!originsMatch(parsed.origin, window.location.origin)) {
+      console.warn('[authRedirect] Origin mismatch, rejecting redirect:', {
+        parsed: parsed.origin,
+        window: window.location.origin,
+        candidate: trimmed
+      })
+      return null
+    }
+    
     const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`
-    if (isAuthRoute(parsed.pathname)) return null
+    if (isAuthRoute(parsed.pathname)) {
+      console.warn('[authRedirect] Auth route rejected:', parsed.pathname)
+      return null
+    }
+    
+    console.log('[authRedirect] Valid redirect path:', safePath)
     return safePath
-  } catch {
+  } catch (e) {
+    console.warn('[authRedirect] Failed to parse redirect:', trimmed, e)
     return null
   }
 }

@@ -27,6 +27,14 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
     const redirectPath = getRedirectFromSearch(location.search)
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const postLoginDestination = pendingAuthFlowPath ?? redirectPath ?? '/'
+    
+    // Debug logging for production troubleshooting
+    console.log('[LoginPanel] Redirect debug:', {
+        search: location.search,
+        redirectPath,
+        pendingAuthFlowPath,
+        postLoginDestination
+    })
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
