@@ -135,8 +135,13 @@ export function ReviewMonitoringDashboard() {
   // Trigger manual collection
   const triggerCollectionMutation = useMutation({
     mutationFn: async () => {
+      // Reset poll schedule so all sources become immediately due
       const { error } = await supabase.rpc('trigger_review_collector')
       if (error) throw error
+      // Fire the edge function to actually collect reviews
+      await supabase.functions.invoke('guest-review-collector', {
+        body: { run_mode: 'manual' },
+      })
     },
     onSuccess: () => {
       toast({ title: 'Collection triggered', description: 'Review collection has been started' })
@@ -207,7 +212,11 @@ export function ReviewMonitoringDashboard() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => queryClient.invalidateQueries({ queryKey: ["review-monitoring-stats", "review-active-alerts", "review-collection-health"] })}
+            onClick={() => {
+              queryClient.invalidateQueries({ queryKey: ["review-monitoring-stats"] })
+              queryClient.invalidateQueries({ queryKey: ["review-active-alerts"] })
+              queryClient.invalidateQueries({ queryKey: ["review-collection-health"] })
+            }}
             className="h-9 font-bold text-[10px] uppercase tracking-widest"
           >
             <RefreshCw className="h-3.5 w-3.5 me-2" />

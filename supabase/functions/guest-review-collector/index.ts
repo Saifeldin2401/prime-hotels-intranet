@@ -42,6 +42,20 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
+function isServiceRoleJwt(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    // Decode payload (base64url)
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function decodeHtmlEntities(value: string): string {
   try {
     const doc = new DOMParser().parseFromString(`<body>${value}</body>`, "text/html");
@@ -627,10 +641,9 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const vaultServiceRoleKey = await getVaultSecret(serviceClient, "service_role_key");
     const isInternalService =
       timingSafeBearerMatch(authHeader, serviceRoleKey) ||
-      (vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false);
+      isServiceRoleJwt(authHeader);
 
     if (!isInternalService) {
       const ctx = await getManualContext(supabaseUrl, anonKey, authHeader, serviceClient);
