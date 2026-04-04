@@ -5,6 +5,7 @@
 
 import { Calendar, Download, FileText } from 'lucide-react'
 import { useState } from 'react'
+import { format as formatDate } from 'date-fns'
 
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -42,7 +43,7 @@ interface QuickExportDialogProps {
 export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps) {
   const [exportName, setExportName] = useState('')
   const [description, setDescription] = useState('')
-  const [format, setFormat] = useState<AuditExportFormat>('pdf')
+  const [selectedFormat, setSelectedFormat] = useState<AuditExportFormat>('pdf')
   const [dateRange, setDateRange] = useState<{ from?: Date; to?: Date }>(() => ({
     from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     to: new Date(),
@@ -51,7 +52,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false)
 
   const createExport = useCreateAuditExport()
-  const { data: _templates } = useExportTemplates(format)
+  const { data: _templates } = useExportTemplates(selectedFormat)
 
   const handleSubmit = async () => {
     const scope: ExportScope = {
@@ -62,10 +63,10 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
     }
 
     await createExport.mutateAsync({
-      exportName: exportName || `Audit Export ${format(new Date(), 'yyyy-MM-dd')}`,
+      exportName: exportName || `Audit Export ${formatDate(new Date(), 'yyyy-MM-dd')}`,
       description,
       scope,
-      format,
+      format: selectedFormat,
     })
 
     onOpenChange(false)
@@ -75,7 +76,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
   const resetForm = () => {
     setExportName('')
     setDescription('')
-    setFormat('pdf')
+    setSelectedFormat('pdf')
     setDateRange({
       from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       to: new Date(),
@@ -134,7 +135,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
           {/* Format */}
           <div className="space-y-2">
             <Label>Export Format</Label>
-            <Select value={format} onValueChange={(v) => setFormat(v as AuditExportFormat)}>
+            <Select value={selectedFormat} onValueChange={(v) => setSelectedFormat(v as AuditExportFormat)}>
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -152,7 +153,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">
-              {EXPORT_FORMATS[format].description}
+              {EXPORT_FORMATS[selectedFormat].description}
             </p>
           </div>
 
@@ -172,11 +173,11 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
                   {dateRange.from ? (
                     dateRange.to ? (
                       <>
-                        {format(dateRange.from, 'LLL dd, y')} -{' '}
-                        {format(dateRange.to, 'LLL dd, y')}
+                        {formatDate(dateRange.from, 'LLL dd, y')} -{' '}
+                        {formatDate(dateRange.to, 'LLL dd, y')}
                       </>
                     ) : (
-                      format(dateRange.from, 'LLL dd, y')
+                      formatDate(dateRange.from, 'LLL dd, y')
                     )
                   ) : (
                     'Select date range'

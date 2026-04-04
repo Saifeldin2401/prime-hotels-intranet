@@ -79,7 +79,7 @@ interface FileQueueItem {
 }
 
 interface ExtractedData {
-    records
+    records: Array<Record<string, string | number | null | undefined>>
     detectedFormat: 'pms_daily' | 'occupancy' | 'revenue' | 'unknown'
     dateRange: { start: string; end: string }
     summary: {
@@ -231,7 +231,7 @@ function parsePMSDailyReport(rows: string[][], properties = [], fileName: string
     if (!businessDate) businessDate = new Date().toISOString().split('T')[0]
     if (kpiHeaderRow === -1) return { data: [], detected: true }
     const headers = rows[kpiHeaderRow]; const values = rows[kpiHeaderRow + 1];
-    const extracted = {
+    const extracted: Record<string, string | number | null> = {
         business_date: businessDate,
         rooms_available: '105',
         detected_property_id: headerPropertyId,
@@ -272,10 +272,11 @@ function parseStandardTemplate(rows: string[][], properties = [], fileName: stri
         contextConfidence = contextDetection.confidence
     }
 
-    const records = []
+    const records: Array<Record<string, string | number | null | undefined>> = []
     for (let i = headerRow + 1; i < rows.length; i++) {
         const row = rows[i]; if (!row || row.every(c => !c)) continue
-        const record = {}; headers.forEach((h, idx) => { record[h] = row[idx] || '' })
+        const record: Record<string, string | number | null | undefined> = {}
+        headers.forEach((h, idx) => { record[h] = row[idx] || '' })
 
         // Record-level property detection
         if (hotelNameIdx !== -1 && row[hotelNameIdx]) {
@@ -291,10 +292,10 @@ function parseStandardTemplate(rows: string[][], properties = [], fileName: stri
         if (record.business_date) records.push(record)
     }
 
-    const { score, issues, fieldConfidence } = calculateQualityScore(records)
+    const { score, issues, fieldConfidence } = calculateQualityScore(records as Record<string, string>[])
     const uniqueProperties = new Set(records.map(r => r.detected_property_id).filter(Boolean))
 
-    return { records, detectedFormat: format, dateRange: { start: records[0]?.business_date || '', end: records[records.length - 1]?.business_date || '' }, summary: { totalRecords: records.length, roomsSold: records.reduce((sum, r) => sum + (parseInt(String(r.rooms_sold)) || 0), 0), totalRevenue: records.reduce((sum, r) => sum + (parseFloat(String(r.room_revenue)) || 0), 0), propertiesFound: uniqueProperties.size }, qualityScore: score, qualityIssues: issues, fieldConfidence }
+    return { records, detectedFormat: format, dateRange: { start: String(records[0]?.business_date || ''), end: String(records[records.length - 1]?.business_date || '') }, summary: { totalRecords: records.length, roomsSold: records.reduce((sum, r) => sum + (parseInt(String(r.rooms_sold)) || 0), 0), totalRevenue: records.reduce((sum, r) => sum + (parseFloat(String(r.room_revenue)) || 0), 0), propertiesFound: uniqueProperties.size }, qualityScore: score, qualityIssues: issues, fieldConfidence }
 }
 
 // ========== MAIN COMPONENT ==========
@@ -1120,7 +1121,7 @@ export default function DataImport() {
                                                                                     <option key={p.id} value={p.id}>{p.name}</option>
                                                                                 ))}
                                                                             </select>
-                                                                            {record.detected_confidence < 90 && record.detected_property_id && (
+                                                                            {Number(record.detected_confidence) < 90 && record.detected_property_id && (
                                                                                 <span className="text-[10px] text-orange-500 flex items-center gap-1 font-medium">
                                                                                     <AlertTriangle className="w-3 h-3" />
                                                                                     {t('data_import.review.match_confidence', {

@@ -263,13 +263,14 @@ export function CalendarWidget() {
         id: `shift-${shift.id}`,
         title: `${t('schedule.calendar.shift', 'Shift')}: ${shift.shift_type || t('schedule.calendar.work', 'Work')}`,
         start_time: shiftStart,
+        start_date: shiftStart,
         end_time: shiftEnd,
         type: 'shift',
-        location: shift.location || t('schedule.calendar.property', 'Property')
+        location: shift.location || shift.property?.name || t('schedule.calendar.property', 'Property')
       }
     })
 
-    const ksaHolidays = KSA_HOLIDAYS_2026
+    const ksaHolidays: CalendarHolidayEvent[] = KSA_HOLIDAYS_2026
       .filter(h => {
         const hDate = parseISO(h.date)
         return isSameMonth(hDate, currentDate) && !fetchedHolidays.some(fh => fh.start_time.startsWith(h.date))
@@ -278,6 +279,7 @@ export function CalendarWidget() {
         id: `holiday-${h.date}`,
         title: isRTL ? h.nameAr : h.name,
         start_time: `${h.date}T00:00:00`,
+        start_date: `${h.date}T00:00:00`,
         type: 'holiday',
         location: t('common.ksa', 'Saudi Arabia')
       }))
@@ -310,9 +312,7 @@ export function CalendarWidget() {
 
   const getEventsForDate = (date: Date) => {
     return allEvents.filter((event) => {
-      const eventDateRaw = event.start_time || event.start_date
-      if (!eventDateRaw) return false
-      const eventDate = parseISO(eventDateRaw)
+      const eventDate = parseISO(event.start_time)
       return isSameDay(eventDate, date)
     })
   }

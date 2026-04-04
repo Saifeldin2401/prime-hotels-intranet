@@ -34,6 +34,7 @@ const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const SIEMIntegrations = lazy(() => import('@/pages/admin/SIEMIntegrations'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
+const AutomationControlCenter = lazy(() => import('@/pages/admin/AutomationControlCenter'))
 
 export const AdminRoutes = () => (
     <>
@@ -357,6 +358,16 @@ export const AdminRoutes = () => (
                         <MotionWrapper>
                             <ReportBuilder />
                         </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/automation"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <AutomationControlCenter />
                     </AppLayout>
                 </ProtectedRoute>
             }

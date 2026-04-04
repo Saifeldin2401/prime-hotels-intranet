@@ -18,16 +18,21 @@ type SettledPayload = {
     error?: { message?: string } | null
 }
 
-type ScopeQuery = {
-    in: (column: string, values: string[]) => ScopeQuery
-}
-
 type PendingLeaveRequest = {
     id: string
+    type?: string | null
+    start_date?: string | null
+    end_date?: string | null
+    reason?: string | null
+    status?: string | null
+    created_at?: string | null
+    requester?: Array<{ id: string; full_name: string | null; avatar_url: string | null; email: string | null }> | null
+    property?: Array<{ id: string; name: string | null }> | null
+    department?: Array<{ id: string; name: string | null }> | null
 }
 
 type WorkflowRequestRow = {
-    leave_request?: PendingLeaveRequest | null
+    leave_request?: PendingLeaveRequest[] | PendingLeaveRequest | null
 }
 
 const settledReasonToMessage = (reason: unknown) => {
@@ -90,13 +95,14 @@ export function useApprovalStats() {
             const propertyIds = properties.map(p => p.id)
             const departmentIds = departments.map(d => d.id)
 
-            const applyScope = (query: ScopeQuery) => {
+            const applyScope = <T,>(query: T): T | null => {
+                const scopedQuery = query as any
                 if (!role) return query
                 if (role === 'department_head') {
-                    return departmentIds.length > 0 ? query.in('department_id', departmentIds) : null
+                    return departmentIds.length > 0 ? scopedQuery.in('department_id', departmentIds) : null
                 }
                 if (role === 'property_hr' || role === 'property_manager') {
-                    return propertyIds.length > 0 ? query.in('property_id', propertyIds) : null
+                    return propertyIds.length > 0 ? scopedQuery.in('property_id', propertyIds) : null
                 }
                 return query
             }
@@ -224,9 +230,9 @@ export function usePendingApprovals() {
 
             if (workflowError) throw workflowError
 
-            const workflowItems = ((workflowRows || []) as WorkflowRequestRow[])
-                .map((row) => row.leave_request)
-                .filter((item): item is PendingLeaveRequest => Boolean(item))
+            const workflowItems = ((workflowRows || []) as unknown as WorkflowRequestRow[])
+                .map((row) => Array.isArray(row.leave_request) ? row.leave_request[0] : row.leave_request)
+                .filter((item): item is PendingLeaveRequest => Boolean(item?.id))
 
             // 2) Legacy pending leave requests without workflow linkage (fallback)
             let legacyQuery = supabase

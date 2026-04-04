@@ -64,13 +64,13 @@ export function useCreateAuditExport() {
   return useMutation({
     mutationFn: async (params: CreateExportParams): Promise<CreateExportResponse> => {
       const { data, error } = await withTimeout(
-        supabase.rpc('create_audit_export', {
+        Promise.resolve(supabase.rpc('create_audit_export', {
           p_export_name: params.exportName,
           p_description: params.description || '',
           p_scope: params.scope,
           p_format: params.format,
           p_retention_days: params.retentionDays || 90,
-        }),
+        })),
         AUDIT_EXPORT_TIMEOUT_MS,
         `Audit export request timed out after ${Math.floor(AUDIT_EXPORT_TIMEOUT_MS / 1000)}s`
       )

@@ -286,7 +286,7 @@ export function OTASourceManager() {
           { label: t('sources.totalSources'), value: sources?.length || 0, icon: Activity, detail: t('sources.acrossProperties', { count: visiblePropertyCount }), color: "text-foreground" },
           { label: t('sources.activePolling'), value: sources?.filter(s => s.polling_enabled).length || 0, icon: Zap, detail: t('sources.realTimeScraping'), color: "text-emerald-600" },
           { label: t('sources.sourceHealth'), value: `${Math.round(((sources?.filter(s => s.health_status === 'healthy').length || 0) / (sources?.length || 1)) * 100)}%`, icon: ShieldCheck, detail: t('sources.operationalEfficiency'), color: "text-primary" },
-          { label: t('sources.issuesFound'), value: sources?.filter(s => s.health_status !== 'healthy' && s.health_status !== 'unknown').length || 0, icon: AlertCircle, detail: t('sources.connectionChallenges'), color: "text-orange-600" }
+          { label: t('sources.issuesFound'), value: sources?.filter(s => s.health_status !== 'healthy').length || 0, icon: AlertCircle, detail: t('sources.connectionChallenges'), color: "text-orange-600" }
         ].map((metric, i) => (
           <Card key={i} className="group relative border-none bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl shadow-none overflow-hidden transition-all duration-500 hover:translate-y-[-2px]">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-muted/50 via-primary/10 to-transparent" />

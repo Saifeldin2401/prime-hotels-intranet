@@ -1,60 +1,12 @@
+import type { AllowedRoles, Permission } from '@/features/access/policy'
+import { canRoleAccess } from '@/features/access/policy'
 import { useAuth } from '@/hooks/useAuth'
-import { ROLES, type AppRole } from '@/lib/constants'
 import { isConsolidatedPropertyId, roleSupportsConsolidatedView } from '@/lib/propertyScope'
 import { useMemo } from 'react'
 
-export type Permission =
-  // Training permissions
-  | 'training.view'
-  | 'training.create'
-  | 'training.edit'
-  | 'training.delete'
-  | 'training.assign'
-  | 'training.report'
-  | 'training.export'
-  // User management permissions
-  | 'users.view'
-  | 'users.create'
-  | 'users.edit'
-  | 'users.delete'
-  | 'users.assign_roles'
-  // Document permissions
-  | 'documents.view'
-  | 'documents.create'
-  | 'documents.edit'
-  | 'documents.delete'
-  | 'documents.approve'
-  | 'documents.export'
-  // Announcement permissions
-  | 'announcements.view'
-  | 'announcements.create'
-  | 'announcements.edit'
-  | 'announcements.delete'
-  // Task permissions
-  | 'tasks.reassign'
-  | 'tasks.escalate'
-  // HR permissions
-  | 'hr.export'
-  | 'hr.manage_referrals'
-  | 'hr.manage_candidates'
-  // Operations permissions
-  | 'operations.export'
-  // Approval permissions
-  | 'approvals.view'
-  // Maintenance
-  | 'maintenance.view'
-  // Analytics
-  | 'analytics.view'
-  // Scheduling
-  | 'scheduling.manage'
-  // System permissions
-  | 'system.view_logs'
-  | 'system.manage_settings'
-  | 'system.export_data'
-
 interface PermissionConfig {
   [key: string]: {
-    roles: (AppRole | 'all')[]
+    roles: AllowedRoles
     requiresPropertyAccess?: boolean
     requiresDepartmentAccess?: boolean
   }
@@ -132,24 +84,8 @@ export function usePermissions() {
       const config = PERMISSION_CONFIG[permission]
       if (!config) return false
 
-      // Check role-based access
-      if (!config.roles.includes('all')) {
-        if (!primaryRole) {
-          return false
-        }
-
-        const currentLevel = ROLES[primaryRole]?.level ?? Number.MAX_SAFE_INTEGER
-        const direct = config.roles.includes(primaryRole)
-        const inherited = config.roles.some((allowed) => {
-          if (allowed === 'all') return true
-          const allowedRole = allowed as AppRole
-          const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
-          return currentLevel <= allowedLevel
-        })
-
-        if (!direct && !inherited) {
-          return false
-        }
+      if (!canRoleAccess(primaryRole, config.roles)) {
+        return false
       }
 
       // Check property access if required
@@ -235,3 +171,5 @@ export function usePermission(permission: Permission, propertyId?: string, depar
   const { hasPermission } = usePermissions()
   return hasPermission(permission, propertyId, departmentId)
 }
+
+export type { Permission }

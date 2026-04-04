@@ -7,6 +7,9 @@ export interface Announcement {
   content: string
   priority: AnnouncementPriority
   pinned: boolean
+  requires_acknowledgment?: boolean
+  allow_comments?: boolean
+  category?: string | null
   scheduled_at: string | null
   expires_at: string | null
   created_by: string

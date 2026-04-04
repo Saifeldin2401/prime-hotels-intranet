@@ -44,13 +44,13 @@ export function useDepartmentStaff(departmentId: string | undefined, propertyId:
 
                 if (staffError) throw staffError
 
-                const staffMembers = userDepts
-                    ?.map((ud) => ud.profiles)
+                const staffMembers = (userDepts || [])
+                    .map((ud) => Array.isArray(ud.profiles) ? ud.profiles[0] : ud.profiles)
                     .filter(Boolean)
                     .map((profile) => ({
                         ...profile,
                         status: 'off_duty' // Default
-                    })) || []
+                    })) as DepartmentStaffMember[]
 
                 // 2. "Smart" Feature: Check active shifts for these users
                 if (staffMembers.length > 0) {

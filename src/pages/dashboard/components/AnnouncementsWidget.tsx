@@ -124,7 +124,7 @@ export function AnnouncementsWidget() {
                 </m.div>
               ) : (
                 announcements?.map((announcement, index: number) => {
-                  const isHighPriority = announcement.priority === 'high' || announcement.priority === 'urgent';
+                  const isHighPriority = announcement.priority === 'important' || announcement.priority === 'critical';
                   const isNew = new Date().getTime() - new Date(announcement.created_at).getTime() < 1000 * 60 * 60 * 24 * 2; // 48 hours
                   const requiresAck = announcement.requires_acknowledgment || isHighPriority;
                   const hasRead = isRead(announcement.id);

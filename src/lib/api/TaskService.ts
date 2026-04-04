@@ -110,7 +110,7 @@ export class TaskService {
      * Update an existing task
      */
     static async updateTask(id: string, updates: UpdateTaskInput): Promise<Task> {
-        const payload = { ...updates }
+        const payload: UpdateTaskInput & { assigned_to_id?: string } = { ...updates }
 
         // If updating assigned_to, also update assigned_to_id
         if (updates.assigned_to) {

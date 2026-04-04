@@ -7,7 +7,8 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import type { AuditExportStatus } from '@/types/audit'
-import { CheckCircle, Clock, LucideIcon, XCircle } from 'lucide-react'
+import { CheckCircle, Clock, XCircle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 
 interface ExportStatusCardProps {
   status: AuditExportStatus

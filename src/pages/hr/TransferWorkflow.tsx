@@ -160,7 +160,7 @@ export default function TransferWorkflow() {
                                 <SelectContent>
                                     {employees?.map((emp) => (
                                         <SelectItem key={emp.id} value={emp.id}>
-                                            {emp.full_name} ({emp.user_properties?.[0]?.properties?.name || t('history.no_transfers').replace('transfers', 'property')})
+                                            {emp.full_name} ({emp.properties?.[0]?.name || t('history.no_transfers').replace('transfers', 'property')})
                                             {/* Fallback for no property? Just 'No property' -> local string. I should fix it. */}
                                         </SelectItem>
                                     ))}

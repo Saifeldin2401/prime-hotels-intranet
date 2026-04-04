@@ -476,7 +476,7 @@ export default function RoutingHealth() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Scope</label>
-                  <Select value={scopeType} onValueChange={(v) => setScopeType(v)}>
+                  <Select value={scopeType} onValueChange={(v) => setScopeType(v as typeof scopeType)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

@@ -33,6 +33,12 @@ const decodeBase64 = (value: string): Uint8Array => {
   return bytes
 }
 
+const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer => {
+  const buffer = new ArrayBuffer(bytes.byteLength)
+  new Uint8Array(buffer).set(bytes)
+  return buffer
+}
+
 const getOrCreateKey = async (): Promise<CryptoKey | null> => {
   if (typeof window === 'undefined' || !window.crypto?.subtle) return null
 
@@ -44,7 +50,7 @@ const getOrCreateKey = async (): Promise<CryptoKey | null> => {
     const rawKey = decodeBase64(existing)
     writeToStorage(window.localStorage, SECURE_STORAGE_KEY, existing)
     writeToStorage(window.sessionStorage, SECURE_STORAGE_KEY, existing)
-    return window.crypto.subtle.importKey('raw', rawKey, 'AES-GCM', false, ['encrypt', 'decrypt'])
+    return window.crypto.subtle.importKey('raw', toArrayBuffer(rawKey), 'AES-GCM', false, ['encrypt', 'decrypt'])
   }
 
   const key = await window.crypto.subtle.generateKey(
@@ -65,7 +71,7 @@ const encryptPayload = async (payload: unknown): Promise<string | null> => {
 
   const iv = window.crypto.getRandomValues(new Uint8Array(12))
   const data = new TextEncoder().encode(JSON.stringify(payload))
-  const encrypted = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, data)
+  const encrypted = await window.crypto.subtle.encrypt({ name: 'AES-GCM', iv: toArrayBuffer(iv) }, key, data)
   const cipherBytes = new Uint8Array(encrypted)
   return `v1:${encodeBase64(iv)}:${encodeBase64(cipherBytes)}`
 }
@@ -81,7 +87,7 @@ const decryptPayload = async <T>(value: string): Promise<T | null> => {
   if (!key) return null
 
   try {
-    const decrypted = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, cipher)
+    const decrypted = await window.crypto.subtle.decrypt({ name: 'AES-GCM', iv: toArrayBuffer(iv) }, key, toArrayBuffer(cipher))
     const text = new TextDecoder().decode(new Uint8Array(decrypted))
     return JSON.parse(text) as T
   } catch {

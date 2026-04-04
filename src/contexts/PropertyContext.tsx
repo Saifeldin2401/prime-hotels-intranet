@@ -21,6 +21,25 @@ interface PropertyContextType {
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined)
 
+const createPseudoProperty = (name: string, address: string): Property => ({
+    id: CONSOLIDATED_PROPERTY_ID,
+    name,
+    address,
+    phone: '',
+    is_active: true,
+    latitude: null,
+    longitude: null,
+    created_at: new Date().toISOString()
+})
+
+const toProperty = (value: unknown): Property | null => {
+    if (!value || Array.isArray(value) || typeof value !== 'object') {
+        return null
+    }
+
+    return value as Property
+}
+
 export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const { user, primaryRole } = useAuth()
     const [currentProperty, setCurrentProperty] = useState<Property | null>(null)
@@ -53,14 +72,10 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (error) throw error
 
                 // Add Group-level option for corporate users (also acts as Head Office)
-                const allOption: Property = {
-                    id: CONSOLIDATED_PROPERTY_ID,
-                    name: 'PRIME GROUP (HEAD OFFICE)',
-                    address: 'Corporate Headquarters & Global Operations',
-                    phone: '',
-                    is_active: true,
-                    created_at: new Date().toISOString()
-                }
+                const allOption = createPseudoProperty(
+                    'PRIME GROUP (HEAD OFFICE)',
+                    'Corporate Headquarters & Global Operations'
+                )
 
                 // Filter out the redundant 'PRIME Head Office' from the list if it exists
                 const filteredData = (data || []).filter(p => p.name !== 'PRIME Head Office')
@@ -75,7 +90,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (error) throw error
 
                 const mappedProperties = (data ?? [])
-                    .map((item) => item.property as Property | null | undefined)
+                    .map((item) => toProperty(item.property))
                     .filter((p): p is Property => !!p)
 
                 const uniqueProperties = Array.from(
@@ -85,14 +100,10 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 // If user is assigned to 2+ properties, add a cluster aggregation option
                 if (uniqueProperties.length > 1) {
                     const clusterNames = uniqueProperties.map((property) => property.name).join(' & ')
-                    const clusterOption: Property = {
-                        id: CONSOLIDATED_PROPERTY_ID,
-                        name: `My Cluster (${uniqueProperties.length})`,
-                        address: clusterNames,
-                        phone: '',
-                        is_active: true,
-                        created_at: new Date().toISOString()
-                    }
+                    const clusterOption = createPseudoProperty(
+                        `My Cluster (${uniqueProperties.length})`,
+                        clusterNames
+                    )
                     props = [clusterOption, ...uniqueProperties]
                 } else {
                     props = uniqueProperties

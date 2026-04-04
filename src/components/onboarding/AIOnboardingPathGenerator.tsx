@@ -85,7 +85,12 @@ export function AIOnboardingPathGenerator({
         }
     })
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        employeeName: string
+        role: string
+        department: string
+        priorExperience: 'none' | 'some_hospitality' | 'experienced_hospitality' | 'internal_transfer'
+    }>({
         employeeName: '',
         role: '',
         department: '',
@@ -243,7 +248,10 @@ export function AIOnboardingPathGenerator({
                             </Label>
                             <Select
                                 value={formData.priorExperience}
-                                onValueChange={(value) => setFormData(prev => ({ ...prev, priorExperience: value }))}
+                                onValueChange={(value) => setFormData(prev => ({
+                                    ...prev,
+                                    priorExperience: value as typeof prev.priorExperience
+                                }))}
                             >
                                 <SelectTrigger>
                                     <SelectValue />

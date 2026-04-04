@@ -91,12 +91,12 @@ export default function TemplateEditor() {
 
       const draft = loadDraft()
       if (draft) {
-        if (draft.title) setTitle(draft.title)
-        if (draft.targetType) setTargetType(draft.targetType)
-        if (draft.role) setRole(draft.role)
-        if (draft.jobTitle) setJobTitle(draft.jobTitle)
-        if (draft.requiredTrainingIds) setRequiredTrainingIds(draft.requiredTrainingIds)
-        if (draft.tasks) setTasks(draft.tasks)
+        if (typeof draft.title === 'string') setTitle(draft.title)
+        if (draft.targetType === 'role' || draft.targetType === 'job_title' || draft.targetType === 'all') setTargetType(draft.targetType)
+        if (draft.role === 'all' || (typeof draft.role === 'string' && Object.prototype.hasOwnProperty.call(ROLES, draft.role))) setRole(draft.role as AppRole | 'all')
+        if (typeof draft.jobTitle === 'string') setJobTitle(draft.jobTitle)
+        if (Array.isArray(draft.requiredTrainingIds)) setRequiredTrainingIds(draft.requiredTrainingIds.filter((id): id is string => typeof id === 'string'))
+        if (Array.isArray(draft.tasks)) setTasks(draft.tasks as OnboardingTaskDefinition[])
 
         if (!restoredDraftRef.current) {
           restoredDraftRef.current = true

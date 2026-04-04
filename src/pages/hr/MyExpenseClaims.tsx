@@ -27,6 +27,7 @@ import type { ExpenseClaim } from '@/lib/types'
 import { format } from 'date-fns'
 import { Eye, FileText, Loader2, Plus, Receipt } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 const EXPENSE_CATEGORIES: Array<{ value: ExpenseClaim['category']; label: string }> = [
@@ -51,6 +52,7 @@ const STATUS_CLASSES: Record<string, string> = {
 }
 
 export default function MyExpenseClaims() {
+  const { t } = useTranslation()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const [category, setCategory] = useState<ExpenseClaim['category']>('travel')

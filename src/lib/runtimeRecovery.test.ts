@@ -33,6 +33,7 @@ describe('runtimeRecovery', () => {
   it('canonicalizes PHG hosts to the apex domain', () => {
     expect(canonicalizeAppUrl('https://www.phg-connect.com/some/path?x=1')).toBe('https://phg-connect.com')
     expect(canonicalizeAppUrl('https://phg-connect.com')).toBe('https://phg-connect.com')
+    expect(canonicalizeAppUrl('http://localhost:5173')).toBe('https://phg-connect.com')
     expect(canonicalizeAppUrl(undefined)).toBe('https://phg-connect.com')
   })
 

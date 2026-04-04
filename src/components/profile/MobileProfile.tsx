@@ -56,13 +56,22 @@ export function MobileProfile() {
     const [isEditing, setIsEditing] = useState(false)
     const [showEditSheet, setShowEditSheet] = useState(false)
     const [activeSection, setActiveSection] = useState<string | null>(null)
+    const primaryProperty = profile?.properties?.[0] ?? null
+    const primaryDepartment = profile?.departments?.[0] ?? null
+    const yearsOfService =
+        profile?.hire_date
+            ? Math.max(0, new Date().getFullYear() - new Date(profile.hire_date).getFullYear())
+            : null
+    const emergencyContact = [profile?.emergency_contact_name, profile?.emergency_contact_phone]
+        .filter(Boolean)
+        .join(' • ')
 
     // Form state
     const [formData, setFormData] = useState({
         full_name: profile?.full_name || '',
         phone: profile?.phone || '',
-        address: profile?.address || '',
-        emergency_contact: profile?.emergency_contact || '',
+        address: primaryProperty?.address || '',
+        emergency_contact: emergencyContact,
     })
 
     const sections: ProfileSection[] = [
@@ -154,7 +163,7 @@ export function MobileProfile() {
                             {profile?.job_title || 'Staff Member'}
                         </p>
                         <Badge variant="secondary" className="mt-2">
-                            {profile?.department?.name || 'General'}
+                            {primaryDepartment?.name || 'General'}
                         </Badge>
                     </div>
                 </div>
@@ -165,19 +174,19 @@ export function MobileProfile() {
                         <CardContent className="p-4">
                             <div className="grid grid-cols-3 gap-4 text-center">
                                 <div>
-                                    <p className="text-2xl font-bold">{profile?.years_of_service || '-'}</p>
+                                    <p className="text-2xl font-bold">{yearsOfService ?? '-'}</p>
                                     <p className="text-xs text-muted-foreground">
                                         {t('years', 'Years')}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold">{profile?.completed_trainings || '-'}</p>
+                                    <p className="text-2xl font-bold">-</p>
                                     <p className="text-xs text-muted-foreground">
                                         {t('trainings', 'Trainings')}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-2xl font-bold">{profile?.certifications || '-'}</p>
+                                    <p className="text-2xl font-bold">-</p>
                                     <p className="text-xs text-muted-foreground">
                                         {t('certs', 'Certs')}
                                     </p>
@@ -239,21 +248,21 @@ export function MobileProfile() {
                                 <Building className="h-4 w-4 text-muted-foreground shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs text-muted-foreground">{t('property', 'Property')}</p>
-                                    <p className="font-medium">{profile?.property?.name || '-'}</p>
+                                    <p className="font-medium">{primaryProperty?.name || '-'}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs text-muted-foreground">{t('department', 'Department')}</p>
-                                    <p className="font-medium">{profile?.department?.name || '-'}</p>
+                                    <p className="font-medium">{primaryDepartment?.name || '-'}</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
                                 <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-xs text-muted-foreground">{t('location', 'Location')}</p>
-                                    <p className="font-medium">{profile?.property?.address || '-'}</p>
+                                    <p className="font-medium">{primaryProperty?.address || '-'}</p>
                                 </div>
                             </div>
                         </CardContent>

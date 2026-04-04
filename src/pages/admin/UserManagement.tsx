@@ -50,6 +50,10 @@ interface AccountActionNote {
   } | null
 }
 
+type AccountActionNoteRow = Omit<AccountActionNote, 'created_by'> & {
+  created_by: AccountActionNote['created_by'] | AccountActionNote['created_by'][]
+}
+
 export default function UserManagement() {
   const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
@@ -162,7 +166,10 @@ export default function UserManagement() {
         .limit(5)
 
       if (error) throw error
-      return (data || []) as AccountActionNote[]
+      return ((data || []) as AccountActionNoteRow[]).map((note) => ({
+        ...note,
+        created_by: Array.isArray(note.created_by) ? (note.created_by[0] ?? null) : note.created_by
+      }))
     }
   })
 

@@ -603,7 +603,7 @@ export default function KnowledgeViewer() {
                 // Add section link button if not already present
                 if (!heading.querySelector('.section-link-btn')) {
                     heading.classList.add('group', 'relative')
-                    heading.style.position = 'relative'
+                    ;(heading as HTMLElement).style.position = 'relative'
                 }
 
                 items.push({

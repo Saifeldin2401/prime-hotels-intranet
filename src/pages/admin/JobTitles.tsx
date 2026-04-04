@@ -173,7 +173,8 @@ export default function JobTitles() {
             })
         },
         onError: (error) => {
-            if (error.code === '23503') {
+            const errorCode = (error as Error & { code?: string }).code
+            if (errorCode === '23503') {
                 toast({
                     title: t('common.error'),
                     description: t('job_titles.errors.restricted_delete'),

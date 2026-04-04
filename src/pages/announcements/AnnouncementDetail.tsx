@@ -28,6 +28,16 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
+type AnnouncementProfile = {
+    id: string
+    full_name: string
+    avatar_url?: string
+}
+
+function getAnnouncementProfile(profile: AnnouncementProfile | AnnouncementProfile[] | null | undefined) {
+    return Array.isArray(profile) ? (profile[0] ?? null) : (profile ?? null)
+}
+
 export default function AnnouncementDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -51,8 +61,11 @@ export default function AnnouncementDetail() {
                 .single()
 
             if (error) throw error
-            return data as Announcement & {
-                created_by_profile?: { id: string; full_name: string; avatar_url?: string }
+            return {
+                ...data,
+                created_by_profile: getAnnouncementProfile(data.created_by_profile as AnnouncementProfile | AnnouncementProfile[] | null | undefined) ?? undefined
+            } as Announcement & {
+                created_by_profile?: AnnouncementProfile
                 requires_acknowledgment?: boolean
                 allow_comments?: boolean
                 category?: string
@@ -110,7 +123,10 @@ export default function AnnouncementDetail() {
                 .order('acknowledged_at', { ascending: false })
 
             if (error) throw error
-            return data || []
+            return (data || []).map((ack) => ({
+                ...ack,
+                user: getAnnouncementProfile(ack.user as AnnouncementProfile | AnnouncementProfile[] | null | undefined) ?? undefined
+            }))
         }
     })
 
@@ -131,7 +147,10 @@ export default function AnnouncementDetail() {
                 .order('created_at', { ascending: true })
 
             if (error) throw error
-            return data || []
+            return (data || []).map((comment) => ({
+                ...comment,
+                user: getAnnouncementProfile(comment.user as AnnouncementProfile | AnnouncementProfile[] | null | undefined) ?? undefined
+            }))
         }
     })
 

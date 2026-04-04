@@ -41,7 +41,7 @@ export function PIISummaryChart({ data, isLoading = false, detailed = false }: P
   return (
     <div className="space-y-4">
       {highRiskDays > 0 && (
-        <Alert variant="warning">
+        <Alert className="border-amber-200 bg-amber-50 text-amber-900">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
             {highRiskDays} day(s) with elevated PII access risk detected in the last week

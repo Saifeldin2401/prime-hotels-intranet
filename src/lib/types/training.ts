@@ -83,6 +83,7 @@ export interface TrainingProgress {
   training_id: string
   assignment_id: string | null
   status: TrainingProgressStatus
+  progress_percentage?: number | null
   started_at: string | null
   completed_at: string | null
   quiz_score: number | null

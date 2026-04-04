@@ -24,7 +24,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, LazyMotion, domAnimation, m, PanInfo, useAnimation } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m, useAnimation } from 'framer-motion'
+import type { PanInfo } from 'framer-motion'
 import {
     BookOpen,
     CheckCircle2,

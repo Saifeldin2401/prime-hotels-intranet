@@ -441,7 +441,7 @@ export default function EmailWriterEnhanced() {
   const targetMode = targetModeState.value
   const setTargetMode = targetModeState.setValue
 
-  const selectedUserIdsState = usePersistentState<string[]>('[]', {
+  const selectedUserIdsState = usePersistentState<string[]>([], {
     key: 'email_selected_users',
     backupKey: 'email_selected_users_backup',
   })

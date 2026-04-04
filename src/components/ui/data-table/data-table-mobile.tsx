@@ -5,13 +5,16 @@
  * Displays table data as interactive cards on mobile devices.
  */
 
-import { Badge, BadgeProps } from '@/components/ui/badge'
+import { Badge } from '@/components/ui/badge'
+import type { BadgeProps } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import {
-    ColumnDef,
     flexRender,
+} from '@tanstack/react-table'
+import type {
+    ColumnDef,
     Row,
 } from '@tanstack/react-table'
 import { ChevronRight, MoreVertical } from 'lucide-react'
@@ -264,12 +267,11 @@ export function DataTableMobile<TData>({
                       key={cell.id}
                       className="flex items-center justify-between gap-4"
                     >
-                      <dt className="text-sm text-muted-foreground shrink-0">
-                        {flexRender(
-                          cell.column.columnDef.header,
-                          cell.getContext()
-                        )}
-                      </dt>
+                    <dt className="text-sm text-muted-foreground shrink-0">
+                        {typeof cell.column.columnDef.header === 'string'
+                          ? cell.column.columnDef.header
+                          : cell.column.id}
+                    </dt>
                       <dd className="text-sm font-medium text-right">
                         {flexRender(
                           cell.column.columnDef.cell,

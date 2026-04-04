@@ -1,14 +1,10 @@
-/**
- * Miscellaneous hooks barrel export.
- * Import from '@/hooks/misc' for organized access.
- */
-export { useAchievements } from '../useAchievements'
-export { useAnalytics } from '../useAnalytics'
-export { useAnalyticsStats } from '../useAnalyticsStats'
-export { usePrayerTimes } from '../usePrayerTimes'
-export { useQuotes } from '../useQuotes'
-export { useRequests } from '../useRequests'
-export { useTasks } from '../useTasks'
-export { useTaskTemplates } from '../useTaskTemplates'
-export { useUnifiedSocialFeed } from '../useUnifiedSocialFeed'
-export { useWeather } from '../useWeather'
+export * from '../useAchievements'
+export * from '../useAnalytics'
+export * from '../useAnalyticsStats'
+export * from '../usePrayerTimes'
+export * from '../useQuotes'
+export * from '../useRequests'
+export * from '../useTasks'
+export * from '../useTaskTemplates'
+export * from '../useUnifiedSocialFeed'
+export * from '../useWeather'

@@ -11,6 +11,7 @@ export interface MaintenanceTicket {
   property_id: string | null
   department_id: string | null
   room_number: string | null
+  location?: string | null
   reported_by_id: string
   assigned_to_id: string | null
   estimated_completion_date: string | null

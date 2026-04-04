@@ -109,12 +109,14 @@ export default defineConfig({
     // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
     // referenced in the bundle (Sentry plugin deletes .map files after upload anyway).
     sourcemap: enableSentryUpload ? 'hidden' : false,
+    // Raise chunk size warning limit - mermaid/excel/editor are heavy by nature and already split
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
 
-          // Large visualization / document libraries
+          // Large visualization / document libraries - these are the biggest chunks
           if (
             id.includes('/node_modules/mermaid') ||
             id.includes('/node_modules/d3-') ||

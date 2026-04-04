@@ -162,6 +162,7 @@ interface EditPMSDialogProps {
 }
 
 function EditPMSDialog({ pms, open, onClose, onSave }: EditPMSDialogProps) {
+    const { t } = useTranslation(['operations', 'common'])
     const [formData, setFormData] = useState({
         pms_type: pms?.pms_type || 'other',
         pms_name: pms?.pms_name || '',

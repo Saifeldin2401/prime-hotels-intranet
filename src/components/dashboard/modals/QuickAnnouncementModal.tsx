@@ -33,6 +33,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useQuickCreateAnnouncement } from '@/hooks/useQuickCreate'
+import type { AppRole } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 
@@ -122,7 +123,7 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
   ]
 
   // Get available roles for current user
-  const availableRoles = roles.map(r => r.role)
+  const availableRoles = roles.map((r) => r.role as AppRole)
   const roleOptions = [
     { value: 'staff', label: t('roles.staff') || 'Staff' },
     { value: 'department_head', label: t('roles.department_head') || 'Department Head' },
@@ -130,7 +131,11 @@ export function QuickAnnouncementModal({ open, onOpenChange }: QuickAnnouncement
     { value: 'property_hr', label: t('roles.property_hr') || 'Property HR' },
     { value: 'regional_hr', label: t('roles.regional_hr') || 'Regional HR' },
     { value: 'regional_admin', label: t('roles.regional_admin') || 'Regional Admin' },
-  ].filter(r => availableRoles.includes(r.value as string) || ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].some(ar => availableRoles.includes(ar as string)))
+  ].filter((roleOption) =>
+    availableRoles.includes(roleOption.value as AppRole)
+    || (['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'] as AppRole[])
+      .some((role) => availableRoles.includes(role))
+  )
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

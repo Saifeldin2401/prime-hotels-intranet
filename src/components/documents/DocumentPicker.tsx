@@ -176,7 +176,7 @@ function UploadTab({
   allowedTypes?: string[]
 }) {
   const { t } = useTranslation()
-  const { user: _user } = useAuth()
+  const { user } = useAuth()
   const { currentProperty } = useProperty()
   const [uploading, setUploading] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)

@@ -4,7 +4,49 @@ import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from "../_shared/
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+type SupportedAiTask = 'chat' | 'summarization'
 
+interface ParsedAiRequest {
+  model?: string
+  prompt: string
+  task: SupportedAiTask
+  temperature?: number
+  max_tokens?: number
+  maxOutputTokens?: number
+}
+
+const SUPPORTED_TASKS = new Set<SupportedAiTask>(['chat', 'summarization'])
+
+function parseAiRequest(input: unknown): ParsedAiRequest {
+  if (!input || typeof input !== 'object') {
+    throw new Error('Invalid AI request payload.')
+  }
+
+  const body = input as Record<string, unknown>
+  const unsupportedFields = ['provider', 'action', 'context'].filter((field) => field in body)
+  if (unsupportedFields.length > 0) {
+    throw new Error(`Unsupported AI request fields: ${unsupportedFields.join(', ')}`)
+  }
+
+  const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : ''
+  if (!prompt) {
+    throw new Error('AI prompt is required.')
+  }
+
+  const taskValue = typeof body.task === 'string' ? body.task : 'chat'
+  if (!SUPPORTED_TASKS.has(taskValue as SupportedAiTask)) {
+    throw new Error(`Unsupported AI task: ${taskValue}`)
+  }
+
+  return {
+    model: typeof body.model === 'string' && body.model.trim().length > 0 ? body.model.trim() : undefined,
+    prompt,
+    task: taskValue as SupportedAiTask,
+    temperature: typeof body.temperature === 'number' ? body.temperature : undefined,
+    max_tokens: typeof body.max_tokens === 'number' ? body.max_tokens : undefined,
+    maxOutputTokens: typeof body.maxOutputTokens === 'number' ? body.maxOutputTokens : undefined,
+  }
+}
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -58,19 +100,14 @@ serve(async (req) => {
 
         // 3. Parse Request
 
-        const reqBody = await req.json()
-
         const {
             model,
             prompt,
-            provider,
             task,
-            action,
-            context,
             temperature,
             max_tokens,
             maxOutputTokens,
-        } = reqBody
+        } = parseAiRequest(await req.json())
 
 
 

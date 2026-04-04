@@ -2,6 +2,7 @@ import { buildAIPrompt } from '@/editor/ai/promptBuilder'
 import type { AIConfig, AIRequestPayload } from '@/editor/types'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
 import { supabase } from '@/lib/supabase'
+import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse } from '@/types/ai'
 
 export interface OpenAIResult {
   html: string
@@ -32,25 +33,27 @@ export async function requestAISuggestion(
   })
 
   try {
-    const { data, error } = await supabase.functions.invoke('process-ai-request', {
-      body: {
-        model,
-        prompt: prompt.system + '\n\n' + prompt.user,
-        temperature,
-        max_tokens: maxOutputTokens
-      }
+    const request: ProcessAiRequest = {
+      model,
+      prompt: prompt.system + '\n\n' + prompt.user,
+      temperature,
+      max_tokens: maxOutputTokens,
+    }
+
+    const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
+      body: request
     })
 
     if (error) {
       throw new Error(`AI Gateway Error: ${error.message}`)
     }
 
-    if (data && data.success === false) {
+    if (isProcessAiErrorResponse(data)) {
       throw new Error(data.error || 'AI request failed')
     }
 
     // Extract content using the shared utility which handles multiple possible response fields
-    const rawContent = data?.response ?? data?.generated_text ?? data?.result ?? ''
+    const rawContent = data?.response ?? data?.result ?? ''
     const html = extractTextFromAiResponse(rawContent, [
       'contentHtml',
       'content_html',

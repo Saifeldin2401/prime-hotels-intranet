@@ -47,7 +47,7 @@ const TooltipTrigger = React.forwardRef<HTMLButtonElement, TooltipTriggerProps>(
     const { setOpen } = context
     
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children as React.ReactElement, {
+      return React.cloneElement(children as React.ReactElement<any>, {
         onMouseEnter: () => setOpen(true),
         onMouseLeave: () => setOpen(false),
         onFocus: () => setOpen(true),

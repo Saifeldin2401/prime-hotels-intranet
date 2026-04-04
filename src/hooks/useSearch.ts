@@ -52,6 +52,8 @@ const uniqueStrings = (values: Array<string | null | undefined>) =>
 const dedupeById = <T extends { id: string }>(rows: T[]) =>
   Array.from(new Map(rows.map((row) => [row.id, row])).values())
 
+const toPromise = <T,>(value: PromiseLike<T>): Promise<T> => Promise.resolve(value)
+
 const applyIdsScope = <T,>(query: T, column: string, ids: string[]): T => {
   const q = query as any
   if (ids.length === 1) return q.eq(column, ids[0])
@@ -319,7 +321,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
           try {
             const trainingLimit = Math.ceil(limit / 4)
             const textFilter = `title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,category.ilike.%${escapedQuery}%`
-            const trainingQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
+            const trainingQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
 
             const buildTrainingQuery = () => {
               let q = supabase
@@ -334,9 +336,9 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            trainingQueries.push(buildTrainingQuery().is('property_id', null))
+            trainingQueries.push(toPromise(buildTrainingQuery().is('property_id', null)))
             if (scopedPropertyIds.length > 0) {
-              trainingQueries.push(applyIdsScope(buildTrainingQuery(), 'property_id', scopedPropertyIds))
+              trainingQueries.push(toPromise(applyIdsScope(buildTrainingQuery(), 'property_id', scopedPropertyIds)))
             }
 
             const trainingResults = await Promise.all(trainingQueries)
@@ -366,7 +368,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         if (includeAnnouncements) {
           try {
             const announcementsLimit = Math.ceil(limit / 2)
-            const announcementQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
+            const announcementQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
 
             const buildAnnouncementsQuery = () =>
               supabase
@@ -375,9 +377,9 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
                 .or(`title.ilike.%${escapedQuery}%,content.ilike.%${escapedQuery}%`)
                 .limit(announcementsLimit)
 
-            announcementQueries.push(buildAnnouncementsQuery().is('property_id', null))
+            announcementQueries.push(toPromise(buildAnnouncementsQuery().is('property_id', null)))
             if (scopedPropertyIds.length > 0) {
-              announcementQueries.push(applyIdsScope(buildAnnouncementsQuery(), 'property_id', scopedPropertyIds))
+              announcementQueries.push(toPromise(applyIdsScope(buildAnnouncementsQuery(), 'property_id', scopedPropertyIds)))
             }
 
             const announcementResults = await Promise.all(announcementQueries)
@@ -402,7 +404,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         if (includeSOPs) {
           try {
             const sopLimit = Math.ceil(limit / 4)
-            const sopQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
+            const sopQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
 
             const buildSopQuery = () => {
               let q = supabase
@@ -418,12 +420,12 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            sopQueries.push(buildSopQuery().is('property_id', null).is('department_id', null))
+            sopQueries.push(toPromise(buildSopQuery().is('property_id', null).is('department_id', null)))
             if (scopedPropertyIds.length > 0) {
-              sopQueries.push(applyIdsScope(buildSopQuery(), 'property_id', scopedPropertyIds))
+              sopQueries.push(toPromise(applyIdsScope(buildSopQuery(), 'property_id', scopedPropertyIds)))
             }
             if (scopedDepartmentIds.length > 0) {
-              sopQueries.push(applyIdsScope(buildSopQuery(), 'department_id', scopedDepartmentIds))
+              sopQueries.push(toPromise(applyIdsScope(buildSopQuery(), 'department_id', scopedDepartmentIds)))
             }
 
             const sopResults = await Promise.all(sopQueries)
@@ -468,12 +470,12 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
               return q
             }
 
-            const taskQueries: Array<Promise<{ data; error: { message?: string } | null }>> = []
+            const taskQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
             if (canViewAllTasks) {
-              taskQueries.push(buildTaskBaseQuery())
+              taskQueries.push(toPromise(buildTaskBaseQuery()))
             } else if (user?.id) {
-              taskQueries.push(buildTaskBaseQuery().eq('assigned_to_id', user.id))
-              taskQueries.push(buildTaskBaseQuery().eq('created_by_id', user.id))
+              taskQueries.push(toPromise(buildTaskBaseQuery().eq('assigned_to_id', user.id)))
+              taskQueries.push(toPromise(buildTaskBaseQuery().eq('created_by_id', user.id)))
             }
 
             const taskResults = await Promise.all(taskQueries)
@@ -708,7 +710,7 @@ export function useSearchSuggestions(query: string) {
       if (suggestions.length < 5) {
         try {
           const docSuggestionLimit = 3
-          const docQueryResults: Array<{ data }> = []
+          const docQueryResults: Array<{ data: any }> = []
 
           const runDocumentSuggestionQuery = async (mutate) => {
             let q = supabase
@@ -744,7 +746,7 @@ export function useSearchSuggestions(query: string) {
           })))
 
           if (suggestions.length < 8) {
-            const sopQueries: Array<Promise<{ data }>> = []
+            const sopQueries: Array<PromiseLike<{ data: any }>> = []
 
             const buildSopSuggestionQuery = () => {
               let q = supabase
@@ -757,12 +759,12 @@ export function useSearchSuggestions(query: string) {
               return q
             }
 
-            sopQueries.push(buildSopSuggestionQuery().is('property_id', null).is('department_id', null))
+            sopQueries.push(toPromise(buildSopSuggestionQuery().is('property_id', null).is('department_id', null)))
             if (scopedPropertyIds.length > 0) {
-              sopQueries.push(applyIdsScope(buildSopSuggestionQuery(), 'property_id', scopedPropertyIds))
+              sopQueries.push(toPromise(applyIdsScope(buildSopSuggestionQuery(), 'property_id', scopedPropertyIds)))
             }
             if (scopedDepartmentIds.length > 0) {
-              sopQueries.push(applyIdsScope(buildSopSuggestionQuery(), 'department_id', scopedDepartmentIds))
+              sopQueries.push(toPromise(applyIdsScope(buildSopSuggestionQuery(), 'department_id', scopedDepartmentIds)))
             }
 
             const sopResults = await Promise.all(sopQueries)

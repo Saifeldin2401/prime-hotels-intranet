@@ -28,6 +28,15 @@ interface RecentExportsTableProps {
   showAll?: boolean
 }
 
+const badgeVariantMap = {
+  default: 'default',
+  primary: 'navy',
+  secondary: 'secondary',
+  destructive: 'destructive',
+  warning: 'outline',
+  success: 'gold',
+} as const
+
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
@@ -131,7 +140,7 @@ export function RecentExportsTable({ exports, isLoading = false, showAll = false
               </div>
             </TableCell>
             <TableCell>
-              <Badge variant={EXPORT_STATUSES[exportItem.status]?.color || 'default'}>
+              <Badge variant={badgeVariantMap[EXPORT_STATUSES[exportItem.status]?.color || 'default']}>
                 <span className="flex items-center gap-1">
                   {getStatusIcon(exportItem.status)}
                   {EXPORT_STATUSES[exportItem.status]?.label || exportItem.status}

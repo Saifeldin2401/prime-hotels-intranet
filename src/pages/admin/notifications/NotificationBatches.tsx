@@ -100,7 +100,9 @@ export default function NotificationBatches() {
                                             <div className="flex flex-col">
                                                 <span>{t(`notification_batches.types.${batch.job_type}`, { ns: 'admin', defaultValue: batch.job_type })}</span>
                                                 <span className="text-xs text-muted-foreground text-ellipsis overflow-hidden max-w-[200px]">
-                                                    {batch.metadata?.title || t('no_title', { ns: 'common', defaultValue: 'No title' })}
+                                                    {typeof batch.metadata?.title === 'string'
+                                                        ? batch.metadata.title
+                                                        : t('no_title', { ns: 'common', defaultValue: 'No title' })}
                                                 </span>
                                             </div>
                                         </TableCell>

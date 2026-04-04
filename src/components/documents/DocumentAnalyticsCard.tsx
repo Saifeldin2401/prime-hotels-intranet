@@ -78,7 +78,20 @@ function calculateTrend(
   };
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+interface AnalyticsTooltipEntry {
+  color?: string
+  dataKey?: string | number
+  name?: string
+  value?: number | string
+}
+
+interface AnalyticsTooltipProps {
+  active?: boolean
+  payload?: AnalyticsTooltipEntry[]
+  label?: string | number
+}
+
+const CustomTooltip = ({ active, payload, label }: AnalyticsTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border shadow-lg">
@@ -90,7 +103,9 @@ const CustomTooltip = ({ active, payload, label }) => {
               style={{ backgroundColor: entry.color }}
             />
             <span className="text-muted-foreground capitalize">{entry.name}:</span>
-            <span className="font-medium">{entry.value.toLocaleString()}</span>
+            <span className="font-medium">
+              {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
+            </span>
           </div>
         ))}
       </div>

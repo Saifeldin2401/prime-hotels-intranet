@@ -1,6 +1,7 @@
 
 
 import { supabase } from './supabase'
+import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse } from '@/types/ai'
 
 
 
@@ -178,11 +179,9 @@ const cleanText = (text: string): string => {
 async function callHuggingFace(model: string, prompt: string) {
 
   try {
-
-    const { data, error } = await supabase.functions.invoke('process-ai-request', {
-
-      body: { model, prompt }
-
+    const request: ProcessAiRequest = { model, prompt }
+    const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
+      body: request
     })
 
 
@@ -199,7 +198,7 @@ async function callHuggingFace(model: string, prompt: string) {
 
 
 
-    if (data && data.success === false) {
+    if (isProcessAiErrorResponse(data)) {
 
       // Check for session expiry
 
@@ -221,7 +220,7 @@ async function callHuggingFace(model: string, prompt: string) {
 
     // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
 
-    return (data.response || data.generated_text || data.result) as string
+    return (data.response || data.result) as string
 
   } catch (error: unknown) {
 

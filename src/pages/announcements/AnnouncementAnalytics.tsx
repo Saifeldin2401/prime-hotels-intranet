@@ -41,6 +41,12 @@ interface ComplianceBreakdownRow {
     acknowledged_users: number
 }
 
+type DepartmentLookupRow = {
+    id: string
+    name: string
+    property: { name?: string | null } | Array<{ name?: string | null }> | null
+}
+
 const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], showAckTime?: boolean }) => (
     <div className="space-y-2">
         {users.length === 0 ? (
@@ -148,10 +154,10 @@ export default function AnnouncementAnalytics() {
             if (error) throw error
 
             const map = new Map<string, { departmentName: string; propertyName?: string }>()
-            ;(data || []).forEach((row) => {
+            ;((data || []) as DepartmentLookupRow[]).forEach((row) => {
                 map.set(row.id, {
                     departmentName: row.name,
-                    propertyName: row.property?.name
+                    propertyName: Array.isArray(row.property) ? row.property[0]?.name : row.property?.name
                 })
             })
             return map

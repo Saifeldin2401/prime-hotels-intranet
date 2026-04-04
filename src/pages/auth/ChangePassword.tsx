@@ -10,9 +10,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { AlertCircle, Check, Eye, EyeOff, Loader2, Lock, ShieldCheck, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 export default function ChangePassword() {
+    const { t } = useTranslation()
     const { user, profile, loading: authLoading, signOut, refreshSession } = useAuth()
     const navigate = useNavigate()
     const { toast } = useToast()

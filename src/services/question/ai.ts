@@ -23,10 +23,7 @@ export async function generateQuestionsWithAI(
             difficulty: request.difficulty,
             includeHints: request.include_hints,
             includeExplanations: request.include_explanations,
-            language: languageMap[request.language || 'en'] || 'English',
-            groundedOnly: request.grounded_only,
-            includeCitations: request.include_citations,
-            sourceTitle: request.source_title || request.sop_title
+            language: languageMap[request.language || 'en'] || 'English'
         })
 
         // Map to GeneratedQuestion format
@@ -54,18 +51,18 @@ export async function generateQuestionsWithAI(
             }
 
             return ({
-            question_text: q.question_text,
-            question_type: normalizeQuestionType(q.question_type),
-            difficulty_level: normalizeDifficulty(q.difficulty_level || request.difficulty || 'medium'),
-            options: q.options?.map(opt => ({
+            question_text: enriched.question_text,
+            question_type: normalizeQuestionType(enriched.question_type),
+            difficulty_level: normalizeDifficulty(enriched.difficulty_level || request.difficulty || 'medium'),
+            options: enriched.options?.map(opt => ({
                 text: opt,
-                is_correct: opt === q.correct_answer,
-                feedback: includeExplanations && opt === q.correct_answer ? (q.explanation || undefined) : undefined
+                is_correct: opt === enriched.correct_answer,
+                feedback: includeExplanations && opt === enriched.correct_answer ? (enriched.explanation || undefined) : undefined
             })),
-            correct_answer: q.correct_answer,
-            explanation: includeExplanations ? q.explanation : undefined,
-            hint: includeHints ? q.hint : undefined,
-            linked_section: includeCitations ? (enriched.source_snippet || q.linked_section) : q.linked_section,
+            correct_answer: enriched.correct_answer,
+            explanation: includeExplanations ? enriched.explanation : undefined,
+            hint: includeHints ? enriched.hint : undefined,
+            linked_section: includeCitations ? (enriched.source_snippet || enriched.linked_section) : enriched.linked_section,
             source_snippet: includeCitations ? enriched.source_snippet : undefined,
             confidence_score: enriched.confidence_score || 0.9,
             tags: enriched.tags?.length ? enriched.tags : baseTags

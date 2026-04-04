@@ -110,17 +110,21 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                         key={item.id}
                         className="flex items-start gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
                     >
+                        {(() => {
+                            const requester = Array.isArray(item.requester) ? item.requester[0] : item.requester
+                            return (
+                                <>
                         <Avatar className="h-9 w-9">
-                            <AvatarImage src={item.requester?.avatar_url || undefined} />
+                            <AvatarImage src={requester?.avatar_url || undefined} />
                             <AvatarFallback className="text-xs">
-                                {item.requester?.full_name?.charAt(0) || '?'}
+                                {requester?.full_name?.charAt(0) || '?'}
                             </AvatarFallback>
                         </Avatar>
 
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                                 <span className="font-medium text-sm truncate">
-                                    {item.requester?.full_name || 'Unknown'}
+                                    {requester?.full_name || 'Unknown'}
                                 </span>
                                 <Badge variant="outline" className="text-xs shrink-0">
                                     {leaveTypeLabels[item.type] || item.type}
@@ -170,6 +174,9 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                                 </TooltipContent>
                             </Tooltip>
                         </div>
+                                </>
+                            )
+                        })()}
                     </div>
                 ))}
 

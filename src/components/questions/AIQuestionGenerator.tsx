@@ -231,10 +231,12 @@ export function AIQuestionGenerator({
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i)
                     const textContent = await page.getTextContent()
-                    const pageText = textContent.items
-                        .filter((item) => item.str)
-                        .map((item) => item.str)
-                        .join(' ')
+                    const pageText = textContent.items.reduce((text, item) => {
+                        if ('str' in item && typeof item.str === 'string') {
+                            return `${text}${text ? ' ' : ''}${item.str}`
+                        }
+                        return text
+                    }, '')
                     fullText += pageText + '\n'
                 }
 

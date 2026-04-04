@@ -62,11 +62,19 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
+type ReviewArticle = KnowledgeArticle & {
+    title_ar?: string
+    description_ar?: string
+    content_ar?: string
+    translation_status?: string
+    last_translated_at?: string
+}
+
 export default function KnowledgeReview() {
     const { t: t_ext } = useTranslation('extracted');
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const navigate = useNavigate()
-    const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null)
+    const [selectedArticle, setSelectedArticle] = useState<ReviewArticle | null>(null)
     const [reviewComment, setReviewComment] = useState('')
     const [reviewAction, setReviewAction] = useState<'approve' | 'reject' | 'changes' | null>(null)
     const [statusFilter, setStatusFilter] = useState<string>(KNOWLEDGE_STATUS.PENDING_REVIEW)
@@ -128,7 +136,7 @@ export default function KnowledgeReview() {
 
             const seen = new Set<string>()
             const documents = (data || [])
-                .map((row) => row.document)
+                .map((row) => Array.isArray(row.document) ? row.document[0] : row.document)
                 .filter(Boolean)
                 .filter((doc) => {
                     if (seen.has(doc.id)) return false
@@ -136,7 +144,7 @@ export default function KnowledgeReview() {
                     return true
                 })
 
-            return documents as KnowledgeArticle[]
+            return documents as ReviewArticle[]
         },
         enabled: !!profile && !!user?.id
     })
@@ -153,7 +161,7 @@ export default function KnowledgeReview() {
             // 'changes' keeps as DRAFT
 
             // Update document content and status
-            const updatePayload = { status: newStatus }
+            const updatePayload: Record<string, unknown> = { status: newStatus }
 
             // If in translation mode or translation fields were edited, include them
             if (activeTab === 'translation' || translationData.title_ar) {

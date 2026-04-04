@@ -57,6 +57,7 @@ function AssignmentProgressDialog({
     open: boolean,
     onOpenChange: (open: boolean) => void
 }) {
+    const { t } = useTranslation()
     const { data: progress, isLoading } = useAssignmentProgress(assignmentId)
 
     return (

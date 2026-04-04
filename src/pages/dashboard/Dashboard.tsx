@@ -143,13 +143,14 @@ export function IntegratedDashboard() {
   const navigate = useNavigate()
   const { user, profile, primaryRole, loading, rolesLoading } = useAuth()
   const { data: baseStats, isLoading: baseLoading, refetch: refetchBase } = useDashboardStats()
+  const primaryRoleValue = primaryRole as string | undefined
 
   // Role-specific hooks
   const isManager = primaryRole === 'property_manager'
   const isHR = primaryRole === 'property_hr'
   const isDeptHead = primaryRole === 'department_head'
-  const isAreaManager = primaryRole === 'area_manager'
-  const isCorporate = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin' || primaryRole === 'super_admin'
+  const isAreaManager = primaryRoleValue === 'area_manager'
+  const isCorporate = primaryRoleValue === 'corporate_admin' || primaryRoleValue === 'regional_admin' || primaryRoleValue === 'super_admin'
 
   const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats({ enabled: isManager })
   const { data: hrStats, isLoading: hrLoading } = useHRStats({ enabled: isHR })

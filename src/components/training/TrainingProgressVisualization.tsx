@@ -239,7 +239,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     const sortedCategories = Object.entries(categoryData)
       .map(([category, count]) => ({
         category,
-        count,
+        count: Number(count),
         fullMark: 100,
         fill: getCategoryColor(category)
       }))

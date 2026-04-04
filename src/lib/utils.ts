@@ -41,6 +41,10 @@ export function formatRelativeTime(date: Date | string | null | undefined): stri
   return formatDate(d)
 }
 
+export function formatDistanceToNow(date: Date | string | null | undefined): string {
+  return formatRelativeTime(date)
+}
+
 /**
  * Format file size in bytes to human readable format
  */

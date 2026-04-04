@@ -62,6 +62,42 @@ function normalizeContentType(value: unknown): KnowledgeArticle['content_type'] 
         : 'document'
 }
 
+function toStringValue(value: unknown, fallback = ''): string {
+    return typeof value === 'string' ? value : fallback
+}
+
+function toOptionalString(value: unknown): string | undefined {
+    return typeof value === 'string' ? value : undefined
+}
+
+function toNullableString(value: unknown): string | null {
+    return typeof value === 'string' ? value : null
+}
+
+function toNumberValue(value: unknown, fallback = 0): number {
+    return typeof value === 'number' ? value : fallback
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | undefined {
+    if (Array.isArray(value)) {
+        return value[0]
+    }
+
+    return value ?? undefined
+}
+
+function normalizeNamedJoin(value: RawKnowledgeJoin | null | undefined): { id: string; name: string; name_ar?: string } | undefined {
+    if (!value?.id) {
+        return undefined
+    }
+
+    return {
+        id: toStringValue(value.id),
+        name: toStringValue(value.name, 'Unknown'),
+        name_ar: toOptionalString(value.name)
+    }
+}
+
 /**
  * Expand search query with synonyms for hotel jargon
  */
@@ -338,17 +374,18 @@ export async function getRequiredReading(userId: string, propertyId?: string): P
 
         // 3. Map to RequiredReading type
         return hydratedDocs.map(d => {
-            const acknowledgment = ackMap.get(d.id)
+            const documentId = toStringValue(d.id)
+            const acknowledgment = ackMap.get(documentId)
             return {
-                id: d.id, // Using document ID as the listing ID
-                document_id: d.id,
-                title: d.title,
+                id: documentId, // Using document ID as the listing ID
+                document_id: documentId,
+                title: toStringValue(d.title),
                 content_type: normalizeContentType(d.content_type),
                 is_acknowledged: !!acknowledgment,
                 acknowledged_at: acknowledgment?.acknowledged_at,
                 // In a real system, due_date might come from a specific assignment table
                 // For global required reading, we might not have a strict due date, or default to creation + 7 days
-                due_date: new Date(new Date(d.created_at).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                due_date: new Date(new Date(toStringValue(d.created_at)).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString(),
                 is_overdue: false,
                 priority: 'high'
             }
@@ -425,10 +462,10 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
     const hydratedDocs = await hydratePublishedSnapshotsForList(dedupedDocs)
 
     return hydratedDocs.map(doc => ({
-        document_id: doc.id,
-        title: doc.title,
-        description: doc.description,
-        content_type: doc.content_type,
+        document_id: toStringValue(doc.id),
+        title: toStringValue(doc.title),
+        description: toOptionalString(doc.description),
+        content_type: normalizeContentType(doc.content_type),
         show_as: 'link'
     }))
 }
@@ -456,16 +493,18 @@ export async function getComments(documentId: string): Promise<KnowledgeComment[
         throw error
     }
 
-    return (data || []).map(comment => ({
+    return ((data || []) as Array<Record<string, unknown>>).map(comment => {
+        const user = firstRelation(comment.user as { id: string; full_name: string; avatar_url?: string | null } | Array<{ id: string; full_name: string; avatar_url?: string | null }> | null | undefined)
+        return ({
         ...comment,
-        author: comment.user
+        author: user
             ? {
-                id: comment.user.id,
-                full_name: comment.user.full_name,
-                avatar_url: comment.user.avatar_url || undefined
+                id: user.id,
+                full_name: user.full_name,
+                avatar_url: user.avatar_url || undefined
             }
             : undefined
-    })) as KnowledgeComment[]
+    })}) as KnowledgeComment[]
 }
 
 export async function createComment(documentId: string, userId: string, content: string, parentId?: string, isQuestion = false): Promise<KnowledgeComment | null> {
@@ -751,18 +790,21 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
             return []
         }
 
-        const relatedDocs = (data || []).map(d => d.related_document).filter(Boolean) as RawKnowledgeArticle[]
+        const relatedDocs = (data || [])
+            .map(d => firstRelation(d.related_document as RawKnowledgeArticle | RawKnowledgeArticle[] | null | undefined))
+            .filter(Boolean) as RawKnowledgeArticle[]
         const hydratedDocs = await hydratePublishedSnapshotsForList(relatedDocs)
         const docMap = new Map(hydratedDocs.map(doc => [doc.id, doc]))
 
         return (data || []).map(d => {
-            const doc = docMap.get(d.related_document_id) || (d.related_document as RawKnowledgeArticle | null) || {}
+            const relatedDocument = firstRelation(d.related_document as RawKnowledgeArticle | RawKnowledgeArticle[] | null | undefined)
+            const doc = docMap.get(d.related_document_id) || relatedDocument || {}
             return {
-                id: doc.id || d.related_document_id,
-                title: doc.title || 'Untitled',
+                id: toStringValue(doc.id, d.related_document_id),
+                title: toStringValue(doc.title, 'Untitled'),
                 content_type: normalizeContentType(doc.content_type),
                 relation_type: 'automated',
-                score: d.relevance_score
+                score: typeof d.relevance_score === 'number' ? d.relevance_score : undefined
             }
         })
     } catch (e) {
@@ -924,35 +966,44 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
 
     return {
         ...data,
+        id: toStringValue(data.id),
+        code: toStringValue(data.code),
+        title: toStringValue(data.title, 'Untitled'),
+        status: toStringValue(data.status, 'DRAFT') as KnowledgeArticle['status'],
+        featured: Boolean(data.featured),
+        requires_acknowledgment: Boolean(data.requires_acknowledgment),
+        view_count: toNumberValue(data.view_count),
+        created_at: toStringValue(data.created_at),
+        updated_at: toStringValue(data.updated_at),
         content_type: (typeof data.content_type === 'string' ? data.content_type.toLowerCase() : 'document') as KnowledgeArticle['content_type'],
         visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as KnowledgeArticle['visibility_scope'],
-        linked_training_id: data.linked_training_id || sopData?.linked_training_id,
-        linked_quiz_id: data.linked_quiz_id || sopData?.linked_quiz_id,
-        department: finalDepartment || (data.department_id ? { id: data.department_id, name: 'Department' } : undefined),
-        category: category || (data.category_id ? { id: data.category_id, name: 'Category' } : undefined),
-        version: data.current_version || data.version || 1,
-        current_version: data.current_version || data.version || 1,
-        published_version_number: data.published_version_number ?? null,
-        last_published_at: data.last_published_at ?? null,
-        estimated_read_time: data.estimated_read_time || computeReadMinutes(data.content),
-        updated_by: data.updated_by ?? null,
+        linked_training_id: toNullableString(data.linked_training_id) || toNullableString(sopData?.linked_training_id),
+        linked_quiz_id: toNullableString(data.linked_quiz_id) || toNullableString(sopData?.linked_quiz_id),
+        department: normalizeNamedJoin(finalDepartment) || (toOptionalString(data.department_id) ? { id: toStringValue(data.department_id), name: 'Department' } : undefined),
+        category: normalizeNamedJoin(category) || (toOptionalString(data.category_id) ? { id: toStringValue(data.category_id), name: 'Category' } : undefined),
+        version: toNumberValue(data.current_version, toNumberValue(data.version, 1)),
+        current_version: toNumberValue(data.current_version, toNumberValue(data.version, 1)),
+        published_version_number: typeof data.published_version_number === 'number' ? data.published_version_number : null,
+        last_published_at: toNullableString(data.last_published_at),
+        estimated_read_time: typeof data.estimated_read_time === 'number' ? data.estimated_read_time : computeReadMinutes(toNullableString(data.content)),
+        updated_by: toNullableString(data.updated_by),
         author: author
             ? {
-                id: author.id,
-                full_name: author.full_name || 'System admin',
-                avatar_url: author.avatar_url || undefined
+                id: toStringValue(author.id),
+                full_name: toStringValue(author.full_name, 'System admin'),
+                avatar_url: toOptionalString(author.avatar_url)
             }
             : undefined,
         last_editor: lastEditor
             ? {
-                id: lastEditor.id,
-                full_name: lastEditor.full_name || 'System admin',
-                avatar_url: lastEditor.avatar_url || undefined
+                id: toStringValue(lastEditor.id),
+                full_name: toStringValue(lastEditor.full_name, 'System admin'),
+                avatar_url: toOptionalString(lastEditor.avatar_url)
             }
             : undefined,
         tags: [],
         department_access_ids: Array.isArray(data.document_department_access)
-            ? data.document_department_access.map((d) => d.department_id)
+            ? data.document_department_access.map((d) => d.department_id).filter((departmentId): departmentId is string => typeof departmentId === 'string')
             : []
     }
 }

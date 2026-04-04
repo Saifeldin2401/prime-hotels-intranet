@@ -40,15 +40,14 @@ describe('validateForm', () => {
     }
 
     const result = validateForm(schema, invalidData)
+    const errors = 'errors' in result ? result.errors : undefined
 
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.errors).toEqual({
-        name: 'Name must be at least 2 characters',
-        age: 'Must be at least 18',
-        email: 'Invalid email address'
-      })
-    }
+    expect(errors).toEqual({
+      name: 'Name must be at least 2 characters',
+      age: 'Must be at least 18',
+      email: 'Invalid email address'
+    })
   })
 
   it('should handle nested errors correctly', () => {
@@ -63,14 +62,13 @@ describe('validateForm', () => {
     }
 
     const result = validateForm(schema, invalidNestedData)
+    const errors = 'errors' in result ? result.errors : undefined
 
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.errors).toEqual({
-        'address.street': 'Street too short',
-        'address.city': 'City too short'
-      })
-    }
+    expect(errors).toEqual({
+      'address.street': 'Street too short',
+      'address.city': 'City too short'
+    })
   })
 
   it('should handle non-Zod errors gracefully', () => {
@@ -81,10 +79,9 @@ describe('validateForm', () => {
     } as unknown as z.ZodSchema<unknown>
 
     const result = validateForm(throwingSchema, 'test')
+    const errors = 'errors' in result ? result.errors : undefined
 
     expect(result.success).toBe(false)
-    if (!result.success) {
-      expect(result.errors).toEqual({ _form: 'Validation failed' })
-    }
+    expect(errors).toEqual({ _form: 'Validation failed' })
   })
 })

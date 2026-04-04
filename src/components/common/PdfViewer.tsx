@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, FileText, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
+import type { RenderParameters } from 'pdfjs-dist/types/src/display/api';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 // Set worker source locally using Vite's URL handling
@@ -84,7 +85,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 viewport: viewport,
             }
 
-            const renderTask = page.render(renderContext as pdfjsLib.RenderParameters)
+            const renderTask = page.render(renderContext as RenderParameters)
             renderTaskRef.current = renderTask
 
             await renderTask.promise
