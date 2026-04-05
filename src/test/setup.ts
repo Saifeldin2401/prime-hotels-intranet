@@ -38,30 +38,39 @@ Object.defineProperty(window, 'matchMedia', {
 // Mock scrollTo
 window.scrollTo = vi.fn()
 
-// Mock localStorage
-const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+// Mock localStorage with in-memory storage
+const createLocalStorageMock = () => {
+  const store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
+    removeItem: vi.fn((key: string) => { delete store[key] }),
+    clear: vi.fn(() => { for (const key in store) delete store[key] }),
+  }
 }
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
+  value: createLocalStorageMock(),
 })
 
-// Mock sessionStorage
-const sessionStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+// Mock sessionStorage with in-memory storage
+const createStorageMock = () => {
+  const store: Record<string, string> = {}
+  return {
+    getItem: vi.fn((key: string) => store[key] ?? null),
+    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
+    removeItem: vi.fn((key: string) => { delete store[key] }),
+    clear: vi.fn(() => { for (const key in store) delete store[key] }),
+  }
 }
 Object.defineProperty(window, 'sessionStorage', {
-  value: sessionStorageMock,
+  value: createStorageMock(),
 })
 
 // Cleanup after each test
 afterEach(() => {
   cleanup()
   vi.clearAllMocks()
+  // Reset storage mocks
+  window.sessionStorage.clear()
+  window.localStorage.clear()
 })

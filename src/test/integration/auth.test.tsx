@@ -128,7 +128,9 @@ describe('Error Handling', () => {
     
     mockClient.from.mockReturnValue({
       select: vi.fn().mockReturnThis(),
-      then: vi.fn().mockRejectedValue(new Error('Network error'))
+      then: vi.fn((onFulfilled: any, onRejected: any) => {
+        return Promise.reject(new Error('Network error')).then(onFulfilled, onRejected)
+      })
     })
 
     await expect(
