@@ -1,8 +1,9 @@
 import { useAuth } from '@/hooks/useAuth'
-import { getRedirectFromSearch, consumePostLoginRedirect } from '@/lib/authRedirect'
-import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { getRedirectFromSearch } from '@/lib/authRedirect'
+import { getAuthFlowRedirectPath, clearAuthFlowState } from '@/lib/authFlowState'
+import { useEffect, useRef } from 'react'
+import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from 'react-router-dom'
-import { useEffect, useState } from 'react'
 
 interface PublicOnlyRouteProps {
     children: React.ReactNode
@@ -11,36 +12,45 @@ interface PublicOnlyRouteProps {
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const { user, loading } = useAuth()
     const location = useLocation()
+    const { t } = useTranslation('extracted');
+    const hasRedirected = useRef(false)
     
-    // We capture it once on mount or when auth state changes from unauthenticated to authenticated
-    const [destination, setDestination] = useState<string | null>(null)
+    // Get redirect paths
+    const pendingAuthFlowPath = getAuthFlowRedirectPath()
+    const redirectPath = getRedirectFromSearch(location.search)
     
+    // Clear auth flow state after we capture it to prevent stale redirects
     useEffect(() => {
-        if (user && !destination) {
-            const pendingAuthFlowPath = getAuthFlowRedirectPath()
-            const urlRedirect = getRedirectFromSearch(location.search)
-            const sessionRedirect = consumePostLoginRedirect()
-            setDestination(pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home")
+        if (user && pendingAuthFlowPath && !hasRedirected.current) {
+            clearAuthFlowState()
         }
-    }, [user, destination, location.search])
+    }, [user, pendingAuthFlowPath])
 
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-background">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-muted-foreground">{t('loading', 'Loading...')}</p>
+                </div>
             </div>
         )
     }
 
-    if (user && destination) {
+    if (user) {
+        // Priority: 1. Auth flow paths (reset-password, complete-invite)
+        //          2. Redirect from query param (deep link preservation)
+        //          3. Default to /home (which redirects to /dashboard)
+        let destination = '/home'
+        
+        if (pendingAuthFlowPath) {
+            destination = pendingAuthFlowPath
+        } else if (redirectPath) {
+            destination = redirectPath
+        }
+        
+        hasRedirected.current = true
         return <Navigate to={destination} replace />
-    } else if (user) {
-        // Fallback if effect hasn't fired yet but user is true
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-background">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-        )
     }
 
     return <>{children}</>

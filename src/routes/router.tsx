@@ -1,9 +1,9 @@
 import { RouteErrorBoundary } from '@/components/common'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
-import { buildLoginUrl, getRedirectFromSearch } from '@/lib/authRedirect'
-import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { buildLoginUrl, getRedirectFromSearch, consumePostLoginRedirect } from '@/lib/authRedirect'
+import { getAuthFlowRedirectPath, clearAuthFlowState } from '@/lib/authFlowState'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
 
 import { AdminRoutes } from './modules/AdminRoutes'
@@ -25,9 +25,6 @@ const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 const RootLayout = () => {
     const { loading } = useAuth()
 
-    // Only wait for auth session loading here.
-    // Role loading is handled by ProtectedRoute for protected routes,
-    // so public routes (login, public home) aren't blocked.
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen bg-background">
@@ -57,18 +54,34 @@ const RootLayout = () => {
 const RootIndex = () => {
     const { user, loading } = useAuth()
     const location = useLocation()
-    const [destination, setDestination] = useState<string | null>(null)
     
+    // Compute destination synchronously to avoid flicker
+    const destination = useMemo(() => {
+        if (!user) return null
+        
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        const urlRedirect = getRedirectFromSearch(location.search)
+        const sessionRedirect = consumePostLoginRedirect()
+        
+        // Priority: auth flow > URL param > session storage > default
+        const dest = pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home"
+        
+        console.log('[RootIndex] Redirecting authenticated user:', {
+            to: dest,
+            pendingAuthFlowPath,
+            urlRedirect,
+            sessionRedirect
+        })
+        
+        return dest
+    }, [user, location.search])
+    
+    // Clear auth flow state after redirect is computed
     useEffect(() => {
-        if (user && !destination) {
-            import('@/lib/authRedirect').then(({ consumePostLoginRedirect, getRedirectFromSearch }) => {
-                const pendingAuthFlowPath = getAuthFlowRedirectPath()
-                const urlRedirect = getRedirectFromSearch(location.search)
-                const sessionRedirect = consumePostLoginRedirect()
-                setDestination(pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home")
-            })
+        if (user && getAuthFlowRedirectPath()) {
+            clearAuthFlowState()
         }
-    }, [user, destination, location.search])
+    }, [user])
 
     if (loading) {
         return (
@@ -79,13 +92,7 @@ const RootIndex = () => {
     }
 
     if (user && destination) {
-        return <Navigate to={`${destination}${location.search}`} replace />
-    } else if (user) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            </div>
-        )
+        return <Navigate to={destination} replace />
     }
 
     // Not authenticated — redirect to login, preserving any ?redirect= param
@@ -137,3 +144,11 @@ export const router = createBrowserRouter(
         </Route>
     )
 )
+
+// Initialize global deep link handler for React Native / mobile integration
+// This is done lazily to avoid circular dependencies
+if (typeof window !== 'undefined') {
+    import('@/lib/authRedirect').then(({ registerGlobalDeeplinkHandler }) => {
+        registerGlobalDeeplinkHandler((path) => router.navigate(path))
+    })
+}

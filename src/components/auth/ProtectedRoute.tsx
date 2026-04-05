@@ -6,10 +6,11 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { canRoleAccess, type Permission } from '@/features/access/policy'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
-import { buildLoginUrl } from '@/lib/authRedirect'
+import { buildLoginUrl, setPostLoginRedirect } from '@/lib/authRedirect'
 import type { AppRole } from '@/lib/constants'
 
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
+import { useEffect } from 'react'
 
 interface ProtectedRouteProps {
   children: ReactNode
@@ -34,6 +35,13 @@ export function ProtectedRoute({
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
   const location = useLocation()
+
+  // Save current location for post-login redirect when user is not authenticated
+  useEffect(() => {
+    if (!user && !loading) {
+      setPostLoginRedirect(location.pathname, location.search, location.hash)
+    }
+  }, [user, loading, location])
 
   if (loading) {
     return (

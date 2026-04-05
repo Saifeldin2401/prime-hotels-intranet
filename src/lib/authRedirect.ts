@@ -192,7 +192,8 @@ export function buildLoginUrl(pathname: string, search = '', hash = ''): string 
 export function getRedirectFromSearch(search: string): string | null {
   // 1. URL parameters (highest priority)
   const params = new URLSearchParams(search)
-  const raw = params.get(REDIRECT_PARAM) || params.get(REDIRECT_PARAM_ALT)
+  // Check for various common redirect parameter names
+  const raw = params.get(REDIRECT_PARAM) || params.get(REDIRECT_PARAM_ALT) || params.get('__redirect')
   const urlRedirect = sanitizeRedirectPath(raw)
   
   if (urlRedirect) {
@@ -213,3 +214,43 @@ export function getRedirectFromSearch(search: string): string | null {
   
   return null
 }
+
+/**
+ * Global deep link handler for React Native / mobile app integration.
+ * This can be called from the native side to trigger a navigation in the web app.
+ * 
+ * Usage from Native (WebView):
+ * window.__PHG_HANDLE_DEEPLINK__('/knowledge/123')
+ */
+export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) {
+  if (typeof window === 'undefined') return
+  
+  const handler = (pathOrUrl: string) => {
+    const sanitized = sanitizeRedirectPath(pathOrUrl)
+    if (sanitized) {
+      console.log('[authRedirect] Global deep link triggered:', sanitized)
+      // Save it first to ensure persistence if the route is protected
+      setPostLoginRedirect(sanitized)
+      // Attempt immediate navigation
+      navigate(sanitized)
+    }
+  }
+  
+  // Expose to window for Native bridge
+  ;(window as any).__PHG_HANDLE_DEEPLINK__ = handler
+  
+  // Monitor post-message events from React Native
+  window.addEventListener('message', (event) => {
+    try {
+      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
+      if (data?.type === 'NAVIGATE' && data?.payload) {
+        handler(data.payload)
+      }
+    } catch {
+      // Ignore non-JSON messages
+    }
+  })
+
+  console.log('[authRedirect] Global deep link handler registered')
+}
+
