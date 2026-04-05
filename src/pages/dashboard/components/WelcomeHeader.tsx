@@ -377,14 +377,14 @@ export function WelcomeHeader({
               </Button>
 
               <div className="flex items-center gap-1 bg-white rounded-full p-1 border border-slate-200 shadow-sm">
-                <Button variant="ghost" size="icon" onClick={onToggleNotifications} className="relative h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800">
+                <Button variant="ghost" size="icon" onClick={onToggleNotifications} className="relative h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.notifications', 'Notifications')}>
                   <Bell className="w-3.5 h-3.5" />
                   {unreadCount > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />}
                 </Button>
-                <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading} className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800">
+                <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading} className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.refresh', 'Refresh')}>
                   <RefreshCw className={cn("w-3.5 h-3.5", isLoading && 'animate-spin')} />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800">
+                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.settings', 'Settings')}>
                   <Settings className="w-3.5 h-3.5" />
                 </Button>
               </div>

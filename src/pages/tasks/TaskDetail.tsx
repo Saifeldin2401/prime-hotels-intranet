@@ -93,7 +93,7 @@ export default function TaskDetail() {
     <div className="container mx-auto py-6 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="icon" onClick={() => navigate('/tasks')}>
+        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="icon" onClick={() => navigate('/tasks')} aria-label={t('accessibility.back', 'Back')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -103,6 +104,7 @@ export function SavedFilterPresets({
   onSavePreset,
   className 
 }: SavedFilterPresetsProps) {
+  const { t } = useTranslation()
   const [presets, setPresets] = useState<FilterPreset[]>(DEFAULT_PRESETS)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [newPresetName, setNewPresetName] = useState('')
@@ -262,6 +264,7 @@ export function SavedFilterPresets({
                             size="icon"
                             className="h-6 w-6"
                             onClick={(e) => handleDeletePreset(preset.id, e)}
+                            aria-label={t('accessibility.delete_preset', 'Delete preset')}
                           >
                             <Trash2 className="h-3 w-3 text-muted-foreground" />
                           </Button>

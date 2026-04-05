@@ -6,7 +6,7 @@
 import type { KnowledgeQuestion, QuestionStatus } from './questions'
 
 export type LearningTargetType = 'user' | 'department' | 'role' | 'property' | 'everyone'
-export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module'
+export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module' | 'microlearning'
 export type LearningAssignmentStatus = 'assigned' | 'in_progress' | 'completed' | 'overdue' | 'excused'
 
 

@@ -24,6 +24,12 @@ import {
 import { useTranslation } from "react-i18next"
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from "@/lib/reviewsScope"
 
+const SUPPORTED_COLLECTOR_PLATFORMS: Array<{ value: GuestReviewPlatform; label: string }> = [
+  { value: "booking", label: "Booking.com" },
+  { value: "google", label: "Google Maps" },
+  { value: "agoda", label: "Agoda" },
+]
+
 // Format time ago
 function formatTimeAgo(dateString: string | null): string {
   if (!dateString) return 'Never'
@@ -70,7 +76,7 @@ export function OTASourceManager() {
     platform: "booking" as GuestReviewPlatform,
     source_name: "",
     source_url: "",
-    poll_frequency_hours: 6
+    poll_frequency_hours: 1
   })
 
   const { data: properties } = useQuery({
@@ -175,7 +181,7 @@ export function OTASourceManager() {
         platform: "booking",
         source_name: "",
         source_url: "",
-        poll_frequency_hours: 6
+        poll_frequency_hours: 1
       })
     },
     onError: (error: any) => {
@@ -473,6 +479,7 @@ export function OTASourceManager() {
                           deleteSourceMutation.mutate(source.id)
                         }
                       }}
+                      aria-label={t('accessibility.disconnect_source', 'Disconnect source')}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -517,14 +524,16 @@ export function OTASourceManager() {
                     <SelectValue placeholder={t('filters.platform')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="booking">Booking.com</SelectItem>
-                    <SelectItem value="tripadvisor">TripAdvisor</SelectItem>
-                    <SelectItem value="google">Google Maps</SelectItem>
-                    <SelectItem value="expedia">Expedia</SelectItem>
-                    <SelectItem value="airbnb">Airbnb</SelectItem>
-                    <SelectItem value="hotels_com">Hotels.com</SelectItem>
+                    {SUPPORTED_COLLECTOR_PLATFORMS.map((platform) => (
+                      <SelectItem key={platform.value} value={platform.value}>
+                        {platform.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Only platforms with a live collector are available here. Unsupported channels remain archived until a collector exists.
+                </p>
               </div>
             </div>
 
@@ -563,9 +572,9 @@ export function OTASourceManager() {
               <Input 
                 type="number"
                 min={1}
-                max={48}
+                max={24}
                 value={newSource.poll_frequency_hours}
-                onChange={(e) => setNewSource(prev => ({ ...prev, poll_frequency_hours: parseInt(e.target.value) || 6 }))}
+                onChange={(e) => setNewSource(prev => ({ ...prev, poll_frequency_hours: parseInt(e.target.value) || 1 }))}
                 className="h-11 font-medium bg-muted/30 border-none focus-visible:ring-primary/20"
               />
             </div>

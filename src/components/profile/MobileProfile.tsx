@@ -129,6 +129,7 @@ export function MobileProfile() {
                         size="icon"
                         className="touch-target"
                         onClick={() => setShowEditSheet(true)}
+                        aria-label={t('accessibility.edit_profile', 'Edit Profile')}
                     >
                         <Edit3 className="h-5 w-5" />
                     </Button>

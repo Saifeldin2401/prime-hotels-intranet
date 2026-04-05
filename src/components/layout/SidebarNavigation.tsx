@@ -467,6 +467,7 @@ export function SidebarNavigation({
                       size="icon"
                       onClick={() => { navigate('/notifications'); onClose(); }}
                       className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
+                      aria-label={t('accessibility.notifications', 'Notifications')}
                     >
                       <Bell className="h-4 w-4" />
                     </Button>
@@ -475,6 +476,7 @@ export function SidebarNavigation({
                       size="icon"
                       onClick={() => { navigate('/settings'); onClose(); }}
                       className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
+                      aria-label={t('accessibility.settings', 'Settings')}
                     >
                       <Settings className="h-4 w-4" />
                     </Button>

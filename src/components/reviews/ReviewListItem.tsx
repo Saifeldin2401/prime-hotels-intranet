@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 import type { GuestReview } from "@/lib/types"
 import { Star, TrendingDown, TrendingUp, Minus, User, MessageCircle, Calendar, Clock, MapPin } from "lucide-react"
 import { useTranslation } from "react-i18next"
+import React from "react"
 
 interface ReviewListItemProps {
   review: GuestReview
@@ -220,7 +221,7 @@ function getDisplayTitle(review: GuestReview, t: (key: string) => string) {
   return t("card.platformFeedback").replace("{{platform}}", platformLabel)
 }
 
-export function ReviewListItem({
+export const ReviewListItem = React.memo(function ReviewListItem({
   review,
   propertyName,
   ownerName,
@@ -375,4 +376,4 @@ export function ReviewListItem({
       </div>
     </Card>
   )
-}
+})

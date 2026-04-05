@@ -314,6 +314,7 @@ export default function Notifications() {
                                                     onClick={(e) => {
                                                         e.stopPropagation()
                                                     }}
+                                                    aria-label={t('accessibility.delete', 'Delete')}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>

@@ -230,6 +230,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setIsTOCOpen(true)}
+                                aria-label={t('accessibility.open_contents', 'Open table of contents')}
                             >
                                 <List className="h-5 w-5" />
                             </Button>
@@ -238,6 +239,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                 size="icon"
                                 className="touch-target"
                                 disabled={isTranslating}
+                                aria-label={t('accessibility.translate', 'Translate')}
                             >
                                 <Languages className="h-5 w-5" />
                             </Button>

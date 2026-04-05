@@ -1397,7 +1397,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t('accessibility.back', 'Go back')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
@@ -1522,6 +1522,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                             size="sm"
                                             className="h-5 w-5 p-0"
                                             onClick={clearSuggestions}
+                                            aria-label={t('accessibility.clear_suggestions', 'Clear suggestions')}
                                         >
                                             <X className="w-3 h-3" />
                                         </Button>
@@ -1559,7 +1560,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 <Label>{t('editor.url_label')}</Label>
                                 <div className="flex gap-2">
                                     <Input value={formData.file_url} onChange={e => updateField('file_url', e.target.value)} placeholder={t('editor.url_placeholder')} className="mt-1" />
-                                    <Button variant="outline" size="icon" className="mt-1"><LinkIcon className="h-4 w-4" /></Button>
+                                    <Button variant="outline" size="icon" className="mt-1" aria-label={t('accessibility.link', 'Add link')}><LinkIcon className="h-4 w-4" /></Button>
                                 </div>
                             </div>
 

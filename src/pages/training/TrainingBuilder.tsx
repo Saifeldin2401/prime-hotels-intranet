@@ -2864,6 +2864,7 @@ export function TrainingBuilder() {
                           size="icon"
                           className="h-7 w-7 text-slate-400 hover:text-red-500"
                           onClick={() => handleRemoveSavedBlock(block.id)}
+                          aria-label={t('accessibility.removeSavedBlock', 'Remove saved block')}
                         >
                           <Trash2 className="h-3 w-3" />
                         </Button>

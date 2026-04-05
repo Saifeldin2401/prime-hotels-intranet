@@ -11,6 +11,7 @@ import { useUserDataLoader } from './auth/useUserDataLoader'
 import { classifyAuthError, getRetryDelay, getErrorMessage, getErrorCode } from '@/lib/authErrorUtils'
 import { isEnabled } from '@/lib/featureFlags'
 import { recordAuthEvent, reportAuthHealth } from '@/lib/authMonitor'
+import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
 
 // ─── Context type ──────────────────────────────────────────────────────────
 export interface AuthContextType {
@@ -304,9 +305,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           } else if (classification.retryable && retryAttempt < CONFIG.maxRetries) {
             // Schedule a retry with exponential backoff
             const delay = getRetryDelay(retryAttempt, CONFIG.baseRetryDelayMs)
-            if (import.meta.env.DEV) {
-              console.log(`[Auth] Retrying session validation in ${delay}ms (attempt ${retryAttempt + 1})`)
-            }
             retryTimeoutRef.current = setTimeout(() => {
               if (mounted && document.visibilityState === 'visible') {
                 void verifySessionOnResume(retryAttempt + 1)
@@ -400,6 +398,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────
   const signIn = async (email: string, password: string) => {
+    // Rate limiting check
+    const rateLimitKey = `auth:signin:${email.toLowerCase()}`
+    if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.auth.maxRequests, rateLimitConfig.auth.windowMs)) {
+      return { error: new Error('Too many sign-in attempts. Please try again later.') }
+    }
+    
     try {
       setLoading(true)
       setRolesLoading(true)

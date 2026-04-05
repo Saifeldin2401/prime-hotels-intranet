@@ -122,7 +122,7 @@ export default function SIEMIntegrations() {
                                                 </CardDescription>
                                             </div>
                                             <div className="flex gap-1">
-                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setSelectedIntegration(integration); setIsEditing(true); }}>
+                                                <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setSelectedIntegration(integration); setIsEditing(true); }} aria-label={t('accessibility.edit_integration', 'Edit Integration')}>
                                                     <Edit2 className="h-3 w-3 text-blue-600" />
                                                 </Button>
                                             </div>
@@ -154,7 +154,7 @@ export default function SIEMIntegrations() {
                                             />
                                             <span className="text-xs font-medium">{integration.is_active ? 'Active' : 'Paused'}</span>
                                         </div>
-                                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-red-600" onClick={() => handleDelete(integration.id)}>
+                                        <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-red-600" onClick={() => handleDelete(integration.id)} aria-label={t('accessibility.delete_integration', 'Delete Integration')}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </CardFooter>

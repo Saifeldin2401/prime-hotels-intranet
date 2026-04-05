@@ -49,6 +49,7 @@ export const MotivationWidget = memo(function MotivationWidget() {
                         onClick={refresh}
                         className="h-8 w-8 rounded-full bg-white/50 backdrop-blur-sm dark:bg-white/10 hover:bg-white dark:hover:bg-white/20"
                         title={t('dashboard.motivation.refresh')}
+                        aria-label={t('accessibility.refresh_quote', 'Refresh quote')}
                     >
                         <RefreshCw className={cn("h-4 w-4 text-primary", isLoading && "animate-spin")} />
                     </Button>

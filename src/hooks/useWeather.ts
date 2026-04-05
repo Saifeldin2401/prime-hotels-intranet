@@ -108,34 +108,68 @@ export function useWeather() {
 
         let locationRequested = false;
 
-        if ("geolocation" in navigator) {
+        const requestWeatherWithLocation = async () => {
+            if (!("geolocation" in navigator)) {
+                if (mounted) fetchWeather(defaultLat, defaultLon)
+                return
+            }
+
+            let permissionDenied = false
+            
+            // Check permission state first to avoid Chrome warnings
+            if ("permissions" in navigator) {
+                try {
+                    const permissionStatus = await navigator.permissions.query({ name: "geolocation" })
+                    permissionDenied = permissionStatus.state === "denied"
+                } catch {
+                    // Permissions API failed, proceed with geolocation
+                }
+            }
+
+            if (permissionDenied) {
+                if (mounted && !locationRequested) {
+                    locationRequested = true
+                    fetchWeather(defaultLat, defaultLon)
+                }
+                return
+            }
+
+            // Try to get location
             const timeoutId = setTimeout(() => {
                 if (!locationRequested && mounted) {
-                    locationRequested = true;
-                    fetchWeather(defaultLat, defaultLon);
+                    locationRequested = true
+                    fetchWeather(defaultLat, defaultLon)
                 }
-            }, 3000);
+            }, 3000)
 
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    clearTimeout(timeoutId);
-                    if (!locationRequested && mounted) {
-                        locationRequested = true;
-                        fetchWeather(position.coords.latitude, position.coords.longitude)
-                    }
-                },
-                () => {
-                    clearTimeout(timeoutId);
-                    if (!locationRequested && mounted) {
-                        locationRequested = true;
-                        fetchWeather(defaultLat, defaultLon)
-                    }
-                },
-                { timeout: 5000 }
-            )
-        } else {
-            if (mounted) fetchWeather(defaultLat, defaultLon)
+            try {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        clearTimeout(timeoutId)
+                        if (!locationRequested && mounted) {
+                            locationRequested = true
+                            fetchWeather(position.coords.latitude, position.coords.longitude)
+                        }
+                    },
+                    () => {
+                        clearTimeout(timeoutId)
+                        if (!locationRequested && mounted) {
+                            locationRequested = true
+                            fetchWeather(defaultLat, defaultLon)
+                        }
+                    },
+                    { timeout: 5000 }
+                )
+            } catch (e) {
+                clearTimeout(timeoutId)
+                if (!locationRequested && mounted) {
+                    locationRequested = true
+                    fetchWeather(defaultLat, defaultLon)
+                }
+            }
         }
+
+        requestWeatherWithLocation()
 
         return () => {
             mounted = false;

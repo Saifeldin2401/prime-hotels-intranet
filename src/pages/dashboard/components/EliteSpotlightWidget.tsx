@@ -480,6 +480,7 @@ export function EliteSpotlightWidget() {
               className="h-6 w-6 text-slate-400 hover:text-white"
               onClick={() => itemCount > 0 && setIndex((prev) => (prev - 1 + itemCount) % itemCount)}
               disabled={itemCount <= 1}
+              aria-label={t('accessibility.previous_spotlight', 'Previous spotlight')}
             >
               <ChevronLeft className="w-4 h-4" />
             </Button>
@@ -489,6 +490,7 @@ export function EliteSpotlightWidget() {
               className="h-6 w-6 text-slate-400 hover:text-white"
               onClick={() => itemCount > 0 && setIndex((prev) => (prev + 1) % itemCount)}
               disabled={itemCount <= 1}
+              aria-label={t('accessibility.next_spotlight', 'Next spotlight')}
             >
               <ChevronRight className="w-4 h-4" />
             </Button>

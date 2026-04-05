@@ -481,13 +481,11 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
             })
 
             await supabase.from('training_content_blocks').insert(contentBlocks)
-            console.log('Content blocks created successfully')
 
             // Create assignment rules if auto-assign is enabled
             if (courseConfig.assignmentType === 'auto_assign') {
                 try {
                     await createAssignmentRules(module.id)
-                    console.log('Assignment rules created successfully')
                 } catch (err: any) {
                     console.error('Assignment rules error:', err.message, err.details, err.hint)
                 }
@@ -497,7 +495,6 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
             if (courseConfig.sendReminders) {
                 try {
                     await createAutomationRules(module.id)
-                    console.log('Automation rules created successfully')
                 } catch (err: any) {
                     console.error('Automation rules error:', err.message, err.details, err.hint)
                 }
@@ -507,7 +504,6 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
             if (courseConfig.issueCertificate) {
                 try {
                     await createCertificateSettings(module.id)
-                    console.log('Certificate settings created successfully')
                 } catch (err: any) {
                     console.error('Certificate settings error:', err.message, err.details, err.hint)
                 }
@@ -606,7 +602,6 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
     const createAssignmentRules = async (moduleId: string) => {
         // For now, skip assignments - requires fetching actual department/role UUIDs
-        console.log('Assignment rules skipped - needs department/role UUIDs')
         return
     }
 

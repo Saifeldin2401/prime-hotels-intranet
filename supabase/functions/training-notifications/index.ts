@@ -53,8 +53,6 @@ Deno.serve(async (req) => {
         );
 
         const now = new Date();
-        const tomorrow = new Date(now);
-        tomorrow.setDate(tomorrow.getDate() + 1);
 
         // 1. Fetch all active module assignments to process reminders
         const { data: upcomingAssignments, error: upcomingError } = await supabase
@@ -63,6 +61,8 @@ Deno.serve(async (req) => {
               id,
               content_id,
               due_date,
+              notify_on_due,
+              reminder_days_before,
               target_type,
               target_id
             `)
@@ -130,14 +130,12 @@ Deno.serve(async (req) => {
             for (const target of targets) {
                 if (completedUsers.has(target.id)) continue;
 
-                const isDueTomorrow = assignment.due_date && 
-                    new Date(assignment.due_date).getTime() >= now.getTime() && 
-                    new Date(assignment.due_date).getTime() <= tomorrow.getTime();
+                const reminderConfig = getAssignmentReminderConfig(assignment);
+                const reminderMatch = resolveReminderWindow(assignment.due_date, now, reminderConfig);
+                if (!reminderMatch) continue;
 
-                const sevenDaysAgo = new Date(now);
-                sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-                const throttleDateStr = isDueTomorrow ? `${todayIso}T00:00:00Z` : sevenDaysAgo.toISOString();
-                const reminderType = isDueTomorrow ? 'due_24h' : 'weekly_reminder';
+                const throttleDateStr = `${todayIso}T00:00:00Z`;
+                const reminderType = reminderMatch.reminderType;
 
                 const { data: existingReminder } = await supabase
                     .from('scheduled_reminders')
@@ -152,19 +150,28 @@ Deno.serve(async (req) => {
                 if (existingReminder) continue;
                 
                 const dueDateDisplay = assignment.due_date ? ` due on ${new Date(assignment.due_date).toLocaleDateString()}` : '';
+                const emailTitle = reminderMatch.daysUntilDue === 0
+                    ? 'Training Due Today'
+                    : reminderMatch.daysUntilDue === 1
+                        ? 'Training Due Tomorrow'
+                        : `Training Due in ${reminderMatch.daysUntilDue} Days`;
+                const notificationMessage = reminderMatch.daysUntilDue === 0
+                    ? `Your training "${moduleTitle}" is due today.${dueDateDisplay}`
+                    : reminderMatch.daysUntilDue === 1
+                        ? `Your training "${moduleTitle}" is due tomorrow.${dueDateDisplay}`
+                        : `Your training "${moduleTitle}" is due in ${reminderMatch.daysUntilDue} days.${dueDateDisplay}`;
 
                 notifications.push({
                     user_id: target.id,
                     type: 'training_deadline',
-                    title: isDueTomorrow ? 'Training Due Soon' : 'Training Reminder',
-                    message: isDueTomorrow 
-                        ? `Your training "${moduleTitle}" is due tomorrow.`
-                        : `Please remember to complete your pending training "${moduleTitle}"${dueDateDisplay}.`,
+                    title: emailTitle,
+                    message: notificationMessage,
                     link: `/learning/my-learning`,
                     metadata: {
                         assignment_id: assignment.id,
                         content_id: assignment.content_id,
-                        reminder_type: reminderType
+                        reminder_type: reminderType,
+                        days_until_due: reminderMatch.daysUntilDue
                     }
                 });
 
@@ -185,11 +192,13 @@ Deno.serve(async (req) => {
                         body: {
                             to: target.email,
                             templateKey: 'learning_deadline_reminder',
-                            title: isDueTomorrow ? 'Training Deadline Tomorrow' : 'Pending Training Reminder',
+                            title: emailTitle,
                             userId: target.id,
                             variables: {
                                 recipient_name: target.full_name || 'Team Member',
-                                module_title: moduleTitle
+                                module_title: moduleTitle,
+                                days_until_due: reminderMatch.daysUntilDue,
+                                due_date: assignment.due_date
                             },
                             actionUrl: '/learning/my-learning',
                             businessDomain: 'learning',
@@ -276,6 +285,83 @@ interface TargetUser {
     id: string;
     email: string;
     full_name: string | null;
+}
+
+type AssignmentReminderConfig = {
+    notifyOnDue: boolean;
+    reminderDaysBefore: number[];
+}
+
+type ReminderWindow = {
+    daysUntilDue: number;
+    reminderType: string;
+}
+
+function startOfUtcDay(value: Date): Date {
+    return new Date(Date.UTC(value.getUTCFullYear(), value.getUTCMonth(), value.getUTCDate()));
+}
+
+function getDaysUntilDue(dueDate: string, now: Date): number | null {
+    const parsedDue = new Date(dueDate);
+    if (Number.isNaN(parsedDue.getTime())) {
+        return null;
+    }
+
+    const dueDay = startOfUtcDay(parsedDue);
+    const today = startOfUtcDay(now);
+    return Math.round((dueDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+}
+
+function normalizeReminderDays(days: unknown): number[] {
+    if (!Array.isArray(days)) {
+        return [7, 3, 1];
+    }
+
+    return Array.from(new Set(
+        days
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value > 0)
+    )).sort((left, right) => right - left);
+}
+
+function getAssignmentReminderConfig(assignment: {
+    notify_on_due?: boolean | null;
+    reminder_days_before?: unknown;
+}): AssignmentReminderConfig {
+    return {
+        notifyOnDue: assignment.notify_on_due ?? true,
+        reminderDaysBefore: normalizeReminderDays(assignment.reminder_days_before)
+    };
+}
+
+function resolveReminderWindow(
+    dueDate: string | null | undefined,
+    now: Date,
+    config: AssignmentReminderConfig
+): ReminderWindow | null {
+    if (!dueDate) {
+        return null;
+    }
+
+    const daysUntilDue = getDaysUntilDue(dueDate, now);
+    if (daysUntilDue === null || daysUntilDue < 0) {
+        return null;
+    }
+
+    if (daysUntilDue === 0) {
+        return config.notifyOnDue
+            ? { daysUntilDue, reminderType: 'due_today' }
+            : null;
+    }
+
+    if (config.reminderDaysBefore.includes(daysUntilDue)) {
+        return {
+            daysUntilDue,
+            reminderType: `due_${daysUntilDue}d`
+        };
+    }
+
+    return null;
 }
 
 async function resolveAssignmentTargets(supabase: ReturnType<typeof createClient>, targetType: string, targetId: string | null): Promise<TargetUser[]> {

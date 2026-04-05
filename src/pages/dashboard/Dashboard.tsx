@@ -58,7 +58,8 @@ const NotificationsPanel = lazy(() => import('./components/NotificationsPanel').
 import { WelcomeHeader } from './components/WelcomeHeader'
 
 import { useTranslation } from "react-i18next"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { getRedirectFromSearch } from '@/lib/authRedirect'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -143,7 +144,19 @@ function RegistryWidgetRenderer({
 export function IntegratedDashboard() {
   const { t, ready } = useTranslation('dashboard');
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, profile, primaryRole, loading, rolesLoading } = useAuth()
+
+  // Handle post-login redirect
+  useEffect(() => {
+    if (!loading && user) {
+      const redirectPath = getRedirectFromSearch(location.search)
+      if (redirectPath) {
+        navigate(redirectPath, { replace: true })
+      }
+    }
+  }, [loading, user, location.search, navigate])
+
   const { data: baseStats, isLoading: baseLoading, refetch: refetchBase } = useDashboardStats()
   const primaryRoleValue = primaryRole as string | undefined
 

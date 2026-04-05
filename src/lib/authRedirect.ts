@@ -85,7 +85,6 @@ export function sanitizeRedirectPath(candidate: string | null | undefined): stri
       return null
     }
     
-    console.log('[authRedirect] Valid redirect path:', safePath)
     return safePath
   } catch (e) {
     console.warn('[authRedirect] Failed to parse redirect:', trimmed, e)

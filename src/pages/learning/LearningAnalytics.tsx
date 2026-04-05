@@ -486,7 +486,7 @@ export default function LearningAnalytics() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/learning/my')}>
+                    <Button variant="ghost" size="icon" aria-label={t('accessibility.go_back', 'Go Back')} onClick={() => navigate('/learning/my')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>

@@ -27,6 +27,7 @@ import {
     Loader2
 } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
 
@@ -49,6 +50,7 @@ interface VideoContentBuilderProps {
 }
 
 export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProps) {
+    const { t } = useTranslation('knowledge')
     const [showPreview, setShowPreview] = useState(true)
     const [isUploading, setIsUploading] = useState(false)
     const [showMediaPicker, setShowMediaPicker] = useState(false)
@@ -128,6 +130,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             size="icon"
                             onClick={() => setShowPreview(!showPreview)}
                             title={showPreview ? 'Hide preview' : 'Show preview'}
+                            aria-label={showPreview ? t('accessibility.hide_preview', 'Hide preview') : t('accessibility.show_preview', 'Show preview')}
                         >
                             {showPreview ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </Button>
@@ -318,6 +321,7 @@ interface ChecklistBuilderProps {
 }
 
 export function ChecklistBuilder({ items, onChange }: ChecklistBuilderProps) {
+    const { t } = useTranslation('knowledge')
     const addItem = () => {
         const newItem: ChecklistItem = {
             id: crypto.randomUUID(),
@@ -392,6 +396,7 @@ export function ChecklistBuilder({ items, onChange }: ChecklistBuilderProps) {
                                     className="h-6 w-6"
                                     onClick={() => moveItem(item.id, 'up')}
                                     disabled={index === 0}
+                                    aria-label={t('accessibility.move_up', 'Move up')}
                                 >
                                     <ChevronUp className="h-4 w-4" />
                                 </Button>
@@ -402,6 +407,7 @@ export function ChecklistBuilder({ items, onChange }: ChecklistBuilderProps) {
                                     className="h-6 w-6"
                                     onClick={() => moveItem(item.id, 'down')}
                                     disabled={index === items.length - 1}
+                                    aria-label={t('accessibility.move_down', 'Move down')}
                                 >
                                     <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -441,6 +447,7 @@ export function ChecklistBuilder({ items, onChange }: ChecklistBuilderProps) {
                                 size="icon"
                                 className="text-red-500 hover:text-red-700 hover:bg-red-50"
                                 onClick={() => removeItem(item.id)}
+                                aria-label={t('accessibility.remove_item', 'Remove item')}
                             >
                                 <Trash2 className="h-4 w-4" />
                             </Button>
@@ -462,6 +469,7 @@ interface FAQBuilderProps {
 }
 
 export function FAQBuilder({ items, onChange }: FAQBuilderProps) {
+    const { t } = useTranslation('knowledge')
     const addItem = () => {
         const newItem: FAQItem = {
             id: crypto.randomUUID(),
@@ -538,6 +546,7 @@ export function FAQBuilder({ items, onChange }: FAQBuilderProps) {
                                         className="h-6 w-6"
                                         onClick={() => moveItem(item.id, 'up')}
                                         disabled={index === 0}
+                                        aria-label={t('accessibility.move_up', 'Move up')}
                                     >
                                         <ChevronUp className="h-4 w-4" />
                                     </Button>
@@ -548,6 +557,7 @@ export function FAQBuilder({ items, onChange }: FAQBuilderProps) {
                                         className="h-6 w-6"
                                         onClick={() => moveItem(item.id, 'down')}
                                         disabled={index === items.length - 1}
+                                        aria-label={t('accessibility.move_down', 'Move down')}
                                     >
                                         <ChevronDown className="h-4 w-4" />
                                     </Button>
@@ -560,6 +570,7 @@ export function FAQBuilder({ items, onChange }: FAQBuilderProps) {
                                     size="icon"
                                     className="h-6 w-6 text-red-500 hover:text-red-700"
                                     onClick={() => removeItem(item.id)}
+                                    aria-label={t('accessibility.remove_item', 'Remove item')}
                                 >
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -608,6 +619,7 @@ interface VisualContentBuilderProps {
 }
 
 export function VisualContentBuilder({ images, onChange }: VisualContentBuilderProps) {
+    const { t } = useTranslation('knowledge')
     const [isUploading, setIsUploading] = useState(false)
     
     // Get user's primary property for media uploads
@@ -753,6 +765,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                                             className="h-7 w-7"
                                             onClick={() => moveImage(image.id, 'up')}
                                             disabled={index === 0}
+                                            aria-label={t('accessibility.move_up', 'Move up')}
                                         >
                                             <ChevronUp className="h-4 w-4" />
                                         </Button>
@@ -763,6 +776,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                                             className="h-7 w-7"
                                             onClick={() => moveImage(image.id, 'down')}
                                             disabled={index === images.length - 1}
+                                            aria-label={t('accessibility.move_down', 'Move down')}
                                         >
                                             <ChevronDown className="h-4 w-4" />
                                         </Button>
@@ -772,6 +786,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                                             variant="destructive"
                                             className="h-7 w-7"
                                             onClick={() => removeImage(image.id)}
+                                            aria-label={t('accessibility.remove_image', 'Remove image')}
                                         >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>

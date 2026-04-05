@@ -662,7 +662,7 @@ Deno.serve(async (req: Request) => {
         actionUrl: `${appBaseUrl.replace(/\/+$/, "")}/reviews?reviewId=${reviewId}`,
         reviewText: review.text,
         authorName: review.author_name,
-        reviewedAt: review.reviewed_at,
+        reviewedAt: review.published_at,
         reviewUrl: review.url,
       },
       analysis.critical,

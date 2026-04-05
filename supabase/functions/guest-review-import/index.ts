@@ -194,14 +194,25 @@ Deno.serve(async (req: Request) => {
           checksum: await sha256(JSON.stringify(row)),
         });
 
-        await fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${serviceRoleKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ review_id: reviewId, force: true }),
-        }).catch(() => null);
+        try {
+          const response = await fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${serviceRoleKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ review_id: reviewId, force: true }),
+          });
+
+          if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            throw new Error(`guest-review-analyzer failed HTTP ${response.status}: ${errorText}`);
+          }
+        } catch (error) {
+          throw new Error(
+            `Analyzer handoff failed for imported review ${reviewId}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
       } catch (error) {
         failed.push({ index: i, error: error instanceof Error ? error.message : String(error) });
       }

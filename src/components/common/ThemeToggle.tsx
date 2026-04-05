@@ -15,21 +15,23 @@ import {
     Sun
 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export function ThemeToggle() {
   const { mode, setMode } = useTheme()
   const [isOpen, setIsOpen] = useState(false)
+  const { t } = useTranslation()
 
   // getIcon function removed - unused
 
   const getLabel = () => {
     switch (mode) {
       case 'light':
-        return 'Light mode'
+        return t('theme.light_mode', 'Light mode')
       case 'dark':
-        return 'Dark mode'
+        return t('theme.dark_mode', 'Dark mode')
       default:
-        return 'System theme'
+        return t('theme.system_theme', 'System theme')
     }
   }
 
@@ -40,7 +42,7 @@ export function ThemeToggle() {
           variant="ghost"
           size="sm"
           className="h-9 w-9 p-0 relative group"
-          aria-label={`Theme: ${getLabel()}`}
+          aria-label={t('accessibility.change_theme', 'Change theme')}
         >
           <div className="relative">
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />

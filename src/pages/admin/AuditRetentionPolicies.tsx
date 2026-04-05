@@ -10,8 +10,10 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuditRetention, type AuditRetentionPolicy } from '@/hooks/admin/useAuditRetention'
 import { AlertTriangle, CheckCircle2, Clock, DatabaseZap, Edit2, FileJson, FileSpreadsheet, FileText, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function AuditRetentionPolicies() {
+    const { t } = useTranslation(['admin', 'common'])
     const { data: policies, isLoading, createPolicy, updatePolicy, deletePolicy } = useAuditRetention()
     const [selectedPolicy, setSelectedPolicy] = useState<Partial<AuditRetentionPolicy> | null>(null)
     const [isEditing, setIsEditing] = useState(false)
@@ -121,7 +123,7 @@ export default function AuditRetentionPolicies() {
                                                 <CardTitle className="text-base font-semibold text-slate-800">{policy.policy_name}</CardTitle>
                                                 <CardDescription className="text-xs line-clamp-2 mt-1">{policy.description}</CardDescription>
                                             </div>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setSelectedPolicy(policy); setIsEditing(true); }}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setSelectedPolicy(policy); setIsEditing(true); }} aria-label={t('accessibility.edit_policy', 'Edit Policy')}>
                                                 <Edit2 className="h-3 w-3 text-indigo-600" />
                                             </Button>
                                         </div>
@@ -149,7 +151,7 @@ export default function AuditRetentionPolicies() {
                                             />
                                             <span>Active</span>
                                         </div>
-                                        <Button size="icon" variant="ghost" className={`h-8 w-8 ${policy.is_default ? 'opacity-20 cursor-not-allowed' : 'hover:text-red-600'}`} disabled={policy.is_default} onClick={() => handleDelete(policy.id, policy.is_default)}>
+                                        <Button size="icon" variant="ghost" className={`h-8 w-8 ${policy.is_default ? 'opacity-20 cursor-not-allowed' : 'hover:text-red-600'}`} disabled={policy.is_default} onClick={() => handleDelete(policy.id, policy.is_default)} aria-label={t('accessibility.delete_policy', 'Delete Policy')}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </CardFooter>

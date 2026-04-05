@@ -504,19 +504,81 @@ export default function DataImport() {
                     })
                     importLogId = importLog.id
 
+                    // Batch records for efficient database operations
+                    const occupancyBatch = []
+                    const revenueBatch = []
+                    
                     for (const record of propertyRecords) {
                         if (extracted.detectedFormat === 'pms_daily') {
-                            await supabase.from('daily_occupancy').upsert({ property_id: pid, business_date: record.business_date, source_import_id: importLogId, rooms_available: parseInt(String(record.rooms_available)) || 105, rooms_sold: parseInt(String(record.rooms_sold)) || 0, rooms_ooo: 0, adults: 0, children: 0, no_shows: 0, cancellations: 0, walk_ins: 0 }, { onConflict: 'property_id,business_date' })
-                            await supabase.from('daily_revenue').upsert({ property_id: pid, business_date: record.business_date, source_import_id: importLogId, room_revenue: parseFloat(String(record.room_revenue)) || 0, fb_revenue: parseFloat(String(record.fb_revenue)) || 0, spa_revenue: 0, other_revenue: 0, rooms_sold: parseInt(String(record.rooms_sold)) || 0, cash_collections: 0, credit_collections: 0, ar_collections: 0 }, { onConflict: 'property_id,business_date' })
+                            occupancyBatch.push({ 
+                                property_id: pid, 
+                                business_date: record.business_date, 
+                                source_import_id: importLogId, 
+                                rooms_available: parseInt(String(record.rooms_available)) || null, 
+                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
+                                rooms_ooo: 0, adults: 0, children: 0, no_shows: 0, cancellations: 0, walk_ins: 0 
+                            })
+                            revenueBatch.push({ 
+                                property_id: pid, 
+                                business_date: record.business_date, 
+                                source_import_id: importLogId, 
+                                room_revenue: parseFloat(String(record.room_revenue)) || 0, 
+                                fb_revenue: parseFloat(String(record.fb_revenue)) || 0, 
+                                spa_revenue: 0, other_revenue: 0, 
+                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
+                                cash_collections: 0, credit_collections: 0, ar_collections: 0 
+                            })
                         } else if (extracted.detectedFormat === 'occupancy') {
-                            await supabase.from('daily_occupancy').upsert({ property_id: pid, business_date: record.business_date, source_import_id: importLogId, rooms_available: parseInt(String(record.rooms_available)) || 105, rooms_sold: parseInt(String(record.rooms_sold)) || 0, rooms_ooo: parseInt(String(record.rooms_ooo)) || 0, adults: parseInt(String(record.adults)) || 0, children: parseInt(String(record.children)) || 0 }, { onConflict: 'property_id,business_date' })
+                            occupancyBatch.push({ 
+                                property_id: pid, 
+                                business_date: record.business_date, 
+                                source_import_id: importLogId, 
+                                rooms_available: parseInt(String(record.rooms_available)) || null, 
+                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
+                                rooms_ooo: parseInt(String(record.rooms_ooo)) || 0, 
+                                adults: parseInt(String(record.adults)) || 0, 
+                                children: parseInt(String(record.children)) || 0 
+                            })
                         } else if (extracted.detectedFormat === 'revenue') {
-                            await supabase.from('daily_revenue').upsert({ property_id: pid, business_date: record.business_date, source_import_id: importLogId, room_revenue: parseFloat(String(record.room_revenue)) || 0, fb_revenue: parseFloat(String(record.fb_revenue)) || 0, spa_revenue: parseFloat(String(record.spa_revenue)) || 0, other_revenue: parseFloat(String(record.other_revenue)) || 0, rooms_sold: parseInt(String(record.rooms_sold)) || 0, cash_collections: parseFloat(String(record.cash_collections)) || 0, credit_collections: parseFloat(String(record.credit_collections)) || 0, ar_collections: parseFloat(String(record.ar_collections)) || 0 }, { onConflict: 'property_id,business_date' })
+                            revenueBatch.push({ 
+                                property_id: pid, 
+                                business_date: record.business_date, 
+                                source_import_id: importLogId, 
+                                room_revenue: parseFloat(String(record.room_revenue)) || 0, 
+                                fb_revenue: parseFloat(String(record.fb_revenue)) || 0, 
+                                spa_revenue: parseFloat(String(record.spa_revenue)) || 0, 
+                                other_revenue: parseFloat(String(record.other_revenue)) || 0, 
+                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
+                                cash_collections: parseFloat(String(record.cash_collections)) || 0, 
+                                credit_collections: parseFloat(String(record.credit_collections)) || 0, 
+                                ar_collections: parseFloat(String(record.ar_collections)) || 0 
+                            })
                         }
                         total++;
-                        if (sessionStats.totalRecords > 0) {
-                            setImportProgress(Math.min(99, Math.round((total / sessionStats.totalRecords) * 100)))
-                        }
+                    }
+                    
+                    // Execute batch operations in parallel
+                    const batchPromises = []
+                    if (occupancyBatch.length > 0) {
+                        batchPromises.push(
+                            supabase.from('daily_occupancy').upsert(occupancyBatch, { onConflict: 'property_id,business_date' })
+                        )
+                    }
+                    if (revenueBatch.length > 0) {
+                        batchPromises.push(
+                            supabase.from('daily_revenue').upsert(revenueBatch, { onConflict: 'property_id,business_date' })
+                        )
+                    }
+                    
+                    const results = await Promise.all(batchPromises)
+                    const batchErrors = results.filter(r => r.error)
+                    if (batchErrors.length > 0) {
+                        throw new Error(`Batch insert failed: ${batchErrors[0].error?.message}`)
+                    }
+                    
+                    // Update progress after batch completes
+                    if (sessionStats.totalRecords > 0) {
+                        setImportProgress(Math.min(99, Math.round((total / sessionStats.totalRecords) * 100)))
                     }
                     const { error: completeError } = await supabase.from('data_import_logs').update({
                         status: 'completed',
@@ -524,7 +586,14 @@ export default function DataImport() {
                         records_processed: propertyRecords.length
                     }).eq('id', importLogId)
 
-                    if (completeError) console.error('Failed to mark import as completed:', completeError)
+                    if (completeError) {
+                        console.error('Failed to mark import as completed:', completeError)
+                        toast({
+                            variant: 'warning',
+                            title: t('data_import.toasts.import_partial', { defaultValue: 'Import Partially Completed' }),
+                            description: t('data_import.toasts.import_partial_desc', { defaultValue: 'Records imported but failed to update status. Please refresh to see updates.' })
+                        })
+                    }
                 } catch (err) {
                     console.error(`Critical import failure for property ${pid}:`, err)
                     if (importLogId) {
@@ -1071,7 +1140,7 @@ export default function DataImport() {
                                                     </TabsTrigger>
                                                 </TabsList>
                                             </Tabs>
-                                            <Button variant="outline" size="icon" onClick={() => setSelectedFileId(null)}>
+                                            <Button variant="outline" size="icon" onClick={() => setSelectedFileId(null)} aria-label={t('accessibility.close_file_view', 'Close file view')}>
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         </div>
@@ -1103,6 +1172,7 @@ export default function DataImport() {
                                                                             size="icon"
                                                                             className="h-6 w-6 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 hover:bg-red-50"
                                                                             onClick={() => deleteRecord(selectedFile.id, idx)}
+                                                                            aria-label={t('accessibility.delete_record', 'Delete record')}
                                                                         >
                                                                             <Trash2 className="h-3 w-3" />
                                                                         </Button>
@@ -1338,6 +1408,7 @@ export default function DataImport() {
                                         e.stopPropagation()
                                         setLogToDelete(log.id)
                                     }}
+                                    aria-label={t('accessibility.delete_import_log', 'Delete import log')}
                                 >
                                     <Trash2 className="h-3 w-3" />
                                 </Button>

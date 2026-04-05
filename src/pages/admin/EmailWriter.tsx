@@ -783,8 +783,6 @@ Return ONLY valid JSON:
       if (error) throw error
 
       const rawText = (data?.response ?? data?.result ?? '') as string
-      // Log for debugging
-      console.log('AI Draft Raw:', rawText)
 
       // Clean up common JSON output errors from small LLMs (literal newlines inside string values break JSON parse)
       const sanitizedText = rawText.replace(/[\n\r\t]+/g, ' ')
@@ -864,7 +862,6 @@ WARNING: Ensure that you do NOT include any raw, unescaped newlines inside the J
 
       if (error) throw error
       const rawText = (data?.response ?? data?.result ?? '') as string
-      console.log('AI HTML Raw:', rawText)
 
       // Clean up common JSON output errors from small LLMs (like unescaped newlines in JSON strings)
       const sanitizedText = rawText
@@ -937,7 +934,6 @@ Return ONLY valid JSON:
       if (error) throw error
 
       const rawText = (data?.response ?? data?.result ?? '') as string
-      console.log('AI Improve Raw:', rawText)
 
       // Replace literal newlines/tabs with spaces to prevent JSON.parse syntax errors inside string values
       const sanitizedText = rawText.replace(/[\n\r\t]+/g, ' ')
@@ -1038,7 +1034,6 @@ Return ONLY valid JSON:
       if (error) throw error
 
       const rawText = (data?.response ?? data?.result ?? '') as string
-      console.log('AI Translate Raw:', rawText)
 
       // Replace literal newlines/tabs with spaces to prevent JSON.parse syntax errors inside string values
       const sanitizedText = rawText.replace(/[\n\r\t]+/g, ' ')

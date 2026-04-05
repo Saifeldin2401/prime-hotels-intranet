@@ -387,6 +387,7 @@ export default function TemplateEditor() {
                                             size="icon"
                                             className="h-4 w-4 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground"
                                             onClick={() => setRequiredTrainingIds(prev => prev.filter(tid => tid !== id))}
+                                            aria-label={t('accessibility.remove', 'Remove')}
                                         >
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
@@ -443,7 +444,7 @@ export default function TemplateEditor() {
                                             placeholder={t('editor.placeholders.task_title')}
                                         />
                                     </div>
-                                    <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => handleRemoveTask(index)}>
+                                    <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => handleRemoveTask(index)} aria-label={t('accessibility.delete', 'Delete')}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>

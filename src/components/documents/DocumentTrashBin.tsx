@@ -45,6 +45,7 @@ import {
     X
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export interface TrashedDocument {
   id: string;
@@ -104,6 +105,7 @@ export function DocumentTrashBin({
   onEmptyTrash,
   className,
 }: DocumentTrashBinProps) {
+  const { t } = useTranslation();
   const [viewMode, setViewMode] = React.useState<"grid" | "list">("list");
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
@@ -253,6 +255,7 @@ export function DocumentTrashBin({
                 size="icon"
                 className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
                 onClick={() => setSearchQuery("")}
+                aria-label={t("accessibility.clear_search", "Clear search")}
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -265,6 +268,7 @@ export function DocumentTrashBin({
               size="icon"
               className="h-8 w-8 rounded-none rounded-l-md"
               onClick={() => setViewMode("list")}
+              aria-label={t("accessibility.list_view", "List view")}
             >
               <List className="w-4 h-4" />
             </Button>
@@ -273,6 +277,7 @@ export function DocumentTrashBin({
               size="icon"
               className="h-8 w-8 rounded-none rounded-r-md"
               onClick={() => setViewMode("grid")}
+              aria-label={t("accessibility.grid_view", "Grid view")}
             >
               <Grid3X3 className="w-4 h-4" />
             </Button>

@@ -288,7 +288,7 @@ export default function JobTitles() {
                     <div className={isRTL ? "text-left" : "text-right"}>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <Button variant="ghost" size="icon" className="h-8 w-8" aria-label={t('accessibility.more_actions', 'More actions')}>
                                     <MoreVertical className="h-4 w-4" />
                                 </Button>
                             </DropdownMenuTrigger>

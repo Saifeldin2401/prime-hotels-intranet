@@ -117,7 +117,7 @@ export default function MotivationalContentEditor() {
                                                     {categorySetting?.icon}
                                                     <span className="capitalize">{quote.category || 'general'}</span>
                                                 </Badge>
-                                                <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleDelete(quote.id); }}>
+                                                <Button size="icon" variant="ghost" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => { e.stopPropagation(); handleDelete(quote.id); }} aria-label={t('common:accessibility.delete', 'Delete')}>
                                                     <Trash2 className="h-3.5 w-3.5 text-red-500" />
                                                 </Button>
                                             </div>

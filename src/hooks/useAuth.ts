@@ -22,7 +22,6 @@ export function useAuth() {
     if (context === undefined) {
         if (import.meta.hot) {
             // During HMR, components may temporarily mount outside the provider tree
-            console.debug('useAuth: AuthProvider not found (HMR), using fallback')
             return hmrFallback
         }
         throw new Error('useAuth must be used within an AuthProvider')

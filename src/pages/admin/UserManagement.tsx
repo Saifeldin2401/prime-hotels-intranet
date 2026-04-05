@@ -690,6 +690,7 @@ export default function UserManagement() {
                           e.stopPropagation()
                           handleEdit(user)
                         }}
+                        aria-label={t('actions.edit', 'Edit user')}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -702,6 +703,7 @@ export default function UserManagement() {
                             size="icon"
                             className="h-8 w-8 text-gray-400 hover:text-gray-600"
                             onClick={(e) => e.stopPropagation()}
+                            aria-label={t('actions.more', 'More actions')}
                           >
                             <MoreVertical className="w-4 h-4" />
                           </Button>

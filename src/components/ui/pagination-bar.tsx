@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import type { PaginationControls } from '@/hooks/usePagination'
 import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 interface PaginationBarProps {
     pagination: PaginationControls
@@ -14,6 +15,7 @@ export function PaginationBar({
     pageSizeOptions = [10, 25, 50, 100],
     showPageSizeSelector = true
 }: PaginationBarProps) {
+    const { t } = useTranslation('common')
     const { page, pageSize, totalCount, totalPages, hasNextPage, hasPreviousPage, setPage, setPageSize, from, to } = pagination
 
     if (totalCount === 0) return null
@@ -52,6 +54,7 @@ export function PaginationBar({
                         className="h-8 w-8"
                         onClick={() => setPage(1)}
                         disabled={!hasPreviousPage}
+                        aria-label={t('accessibility.firstPage', 'First page')}
                     >
                         <ChevronsLeft className="h-4 w-4" />
                     </Button>
@@ -61,6 +64,7 @@ export function PaginationBar({
                         className="h-8 w-8"
                         onClick={() => pagination.previousPage()}
                         disabled={!hasPreviousPage}
+                        aria-label={t('accessibility.previousPage', 'Previous page')}
                     >
                         <ChevronLeft className="h-4 w-4" />
                     </Button>
@@ -75,6 +79,7 @@ export function PaginationBar({
                         className="h-8 w-8"
                         onClick={() => pagination.nextPage()}
                         disabled={!hasNextPage}
+                        aria-label={t('accessibility.nextPage', 'Next page')}
                     >
                         <ChevronRight className="h-4 w-4" />
                     </Button>
@@ -84,6 +89,7 @@ export function PaginationBar({
                         className="h-8 w-8"
                         onClick={() => setPage(totalPages)}
                         disabled={!hasNextPage}
+                        aria-label={t('accessibility.lastPage', 'Last page')}
                     >
                         <ChevronsRight className="h-4 w-4" />
                     </Button>

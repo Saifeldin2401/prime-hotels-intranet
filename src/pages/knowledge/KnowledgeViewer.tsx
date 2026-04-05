@@ -1217,6 +1217,7 @@ export default function KnowledgeViewer() {
                                         "h-9 w-9 p-0 rounded-full transition-colors",
                                         isBookmarked ? "text-indigo-600 bg-indigo-50" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
                                     )}
+                                    aria-label={isBookmarked ? t('accessibility.remove_bookmark', 'Remove bookmark') : t('accessibility.add_bookmark', 'Add bookmark')}
                                 >
                                     {isBookmarked ? <BookmarkCheck className="h-5 w-5" /> : <Bookmark className="h-5 w-5" />}
                                 </Button>
@@ -1225,6 +1226,7 @@ export default function KnowledgeViewer() {
                                     size="sm"
                                     onClick={handleShare}
                                     className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                    aria-label={t('accessibility.share', 'Share article')}
                                 >
                                     <Share2 className="h-5 w-5" />
                                 </Button>
@@ -1233,6 +1235,7 @@ export default function KnowledgeViewer() {
                                     size="sm"
                                     onClick={handlePrint}
                                     className="h-9 w-9 p-0 rounded-full text-slate-500 hover:text-indigo-600 hover:bg-slate-50"
+                                    aria-label={t('accessibility.print', 'Print article')}
                                 >
                                     <Printer className="h-5 w-5" />
                                 </Button>
@@ -1722,6 +1725,7 @@ export default function KnowledgeViewer() {
                                                     className="h-9 w-9 p-0 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                                                     disabled={submitFeedback.isPending}
                                                     onClick={() => submitFeedback.mutate({ documentId: id!, helpful: true })}
+                                                    aria-label={t('accessibility.helpful', 'Mark as helpful')}
                                                 >
                                                     <ThumbsUp className="h-4 w-4" />
                                                 </Button>
@@ -1734,6 +1738,7 @@ export default function KnowledgeViewer() {
                                                         setFeedbackHelpful(false)
                                                         setShowFeedbackInput(true)
                                                     }}
+                                                    aria-label={t('accessibility.not_helpful', 'Mark as not helpful')}
                                                 >
                                                     <ThumbsDown className="h-4 w-4" />
                                                 </Button>
@@ -1756,7 +1761,7 @@ export default function KnowledgeViewer() {
                                         {t('viewer.discussion')}
                                         <span className="text-sm font-normal text-slate-400 ml-1">({comments?.length || 0})</span>
                                     </CardTitle>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowComments(!showComments)}>
+                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowComments(!showComments)} aria-label={showComments ? t('accessibility.collapse_comments', 'Collapse comments') : t('accessibility.expand_comments', 'Expand comments')}>
                                         {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                                     </Button>
                                 </div>
@@ -1940,6 +1945,7 @@ export default function KnowledgeViewer() {
                             isFocusMode ? "text-indigo-600 bg-indigo-50 scale-105" : "text-slate-500 hover:bg-slate-100"
                         )}
                         title={isFocusMode ? "Exit Focus Mode" : "Enter Focus Mode"}
+                        aria-label={isFocusMode ? t('accessibility.exit_focus', 'Exit focus mode') : t('accessibility.enter_focus', 'Enter focus mode')}
                     >
                         {isFocusMode ? <Minimize2 className="h-5 w-5" /> : <Maximize2 className="h-5 w-5" />}
                     </Button>

@@ -53,8 +53,10 @@ export default function MicrolearningViewer() {
                 .select('*')
                 .eq('user_id', user?.id)
                 .eq('content_id', id)
-                .eq('content_type', 'microlearning')
-                .single()
+                .in('content_type', ['microlearning', 'video'])
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
             return data
         },
         enabled: !!id && !!user
@@ -96,7 +98,7 @@ export default function MicrolearningViewer() {
             await learningService.submitQuizProgress({
                 user_id: user.id,
                 content_id: id!,
-                content_type: 'video', // 'video' maps to 'microlearning' in backend/types logic generally or we use specifically 'video'
+                content_type: 'microlearning',
                 status: 'completed',
                 progress_percentage: 100,
                 passed: true,

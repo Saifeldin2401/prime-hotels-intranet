@@ -414,6 +414,7 @@ export function QuestionEditor() {
                                                         type="button"
                                                         variant="ghost"
                                                         size="icon"
+                                                        aria-label={t('accessibility.delete_option', 'Delete Option')}
                                                         className="text-red-500 hover:text-red-600 h-10 w-10"
                                                         onClick={() => remove(index)}
                                                         disabled={fields.length <= 2}

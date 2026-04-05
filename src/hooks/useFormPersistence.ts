@@ -232,7 +232,6 @@ export function useFormPersistence<T extends Record<string, unknown>>(
       const savedAt = new Date(wrapper.meta.savedAt)
       const age = Date.now() - savedAt.getTime()
       if (age > maxAgeMs) {
-        console.log('Draft is stale, ignoring')
         clearDraft()
         return null
       }

@@ -14,6 +14,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { motion, useAnimation } from 'framer-motion'
 import { Bell } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 export function NotificationBell() {
@@ -21,6 +22,7 @@ export function NotificationBell() {
   const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
+  const { t } = useTranslation(['common', 'notifications'])
   const controls = useAnimation()
   const prevUnreadCount = useRef(unreadCount)
 
@@ -54,7 +56,7 @@ export function NotificationBell() {
           whileTap={{ scale: 0.95 }}
           className="inline-block"
         >
-          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50" aria-label="Notifications">
+          <Button variant="ghost" size="icon" className="relative text-gray-500 hover:text-gray-700 hover:bg-gray-100/50" aria-label={t('accessibility.notifications', 'Notifications')}>
             <Bell className="h-5 w-5" />
             {unreadCount > 0 && (
               <Badge

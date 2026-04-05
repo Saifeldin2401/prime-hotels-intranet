@@ -573,6 +573,7 @@ export default function RoutingHealth() {
                       variant="ghost"
                       className="text-destructive h-8 w-8"
                       onClick={() => removeDelegation.mutate(d.id)}
+                      aria-label={t('accessibility.remove_delegation', 'Remove Delegation')}
                     >
                       <UserX className="h-4 w-4" />
                     </Button>

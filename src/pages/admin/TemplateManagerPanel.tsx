@@ -18,6 +18,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Plus, Mail, Copy, Edit, Eye, BarChart2, CheckCircle, Clock, AlertCircle, RefreshCw, Save, X } from 'lucide-react'
 import { toast } from 'sonner'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface EmailTemplate {
   id: string
@@ -410,7 +411,7 @@ export function TemplateManagerPanel() {
             </div>
             <div 
               className="prose prose-sm max-w-none"
-              dangerouslySetInnerHTML={{ __html: activeVersion?.content.body_html || '' }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(activeVersion?.content.body_html || '') }}
             />
           </div>
           <DialogFooter>

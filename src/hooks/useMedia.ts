@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
+import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware';
 import { toast } from 'sonner';
 import type {
   MediaAsset,
@@ -191,6 +192,13 @@ export function useMedia(options: UseMediaOptions = {}) {
     file: File,
     uploadOptions: MediaUploadOptions = {}
   ): Promise<MediaAsset | null> => {
+    // Rate limiting check
+    const rateLimitKey = `upload:media:${file.name}`;
+    if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.upload.maxRequests, rateLimitConfig.upload.windowMs)) {
+      toast.error('Too many upload attempts. Please try again later.');
+      return null;
+    }
+
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();

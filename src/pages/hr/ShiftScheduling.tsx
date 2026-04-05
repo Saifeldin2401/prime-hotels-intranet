@@ -29,7 +29,7 @@ import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
@@ -69,6 +69,34 @@ function toLocalDateTimeInput(value?: string | null) {
     return ''
   }
 }
+
+// Memoized shift row to prevent unnecessary re-renders
+interface ShiftRowProps {
+  shift: Shift & { user?: { full_name?: string; email?: string } }
+  onEdit: (shift: Shift) => void
+  onDelete: (id: string) => void
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  t: any
+}
+
+const ShiftRow = React.memo(function ShiftRow({ shift, onEdit, onDelete, t }: ShiftRowProps) {
+  return (
+    <TableRow>
+      <TableCell>{shift.user?.full_name || shift.user?.email || 'Staff'}</TableCell>
+      <TableCell>{shift.shift_type}</TableCell>
+      <TableCell>{format(new Date(shift.start_time), 'MMM d, HH:mm')}</TableCell>
+      <TableCell>{format(new Date(shift.end_time), 'MMM d, HH:mm')}</TableCell>
+      <TableCell>
+        <Badge variant="outline" className="capitalize">{shift.status?.replace('_', ' ')}</Badge>
+      </TableCell>
+      <TableCell>{shift.location || '—'}</TableCell>
+      <TableCell className="text-right space-x-2">
+        <Button size="sm" variant="outline" onClick={() => onEdit(shift)}>{t('shift_management.actions.edit', 'Edit')}</Button>
+        <Button size="sm" variant="ghost" onClick={() => onDelete(shift.id)}>{t('shift_management.actions.delete', 'Delete')}</Button>
+      </TableCell>
+    </TableRow>
+  )
+})
 
 export default function ShiftScheduling() {
   const { t } = useTranslation('hr')
@@ -499,20 +527,13 @@ export default function ShiftScheduling() {
                     </TableHeader>
                     <TableBody>
                       {shiftsQuery.data.map((shift) => (
-                        <TableRow key={shift.id}>
-                          <TableCell>{shift.user?.full_name || shift.user?.email || 'Staff'}</TableCell>
-                          <TableCell>{shift.shift_type}</TableCell>
-                          <TableCell>{format(new Date(shift.start_time), 'MMM d, HH:mm')}</TableCell>
-                          <TableCell>{format(new Date(shift.end_time), 'MMM d, HH:mm')}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="capitalize">{shift.status?.replace('_', ' ')}</Badge>
-                          </TableCell>
-                          <TableCell>{shift.location || '—'}</TableCell>
-                          <TableCell className="text-right space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => handleEditShift(shift)}>{t('shift_management.actions.edit', 'Edit')}</Button>
-                            <Button size="sm" variant="ghost" onClick={() => handleDeleteShift(shift.id)}>{t('shift_management.actions.delete', 'Delete')}</Button>
-                          </TableCell>
-                        </TableRow>
+                        <ShiftRow
+                          key={shift.id}
+                          shift={shift}
+                          onEdit={handleEditShift}
+                          onDelete={handleDeleteShift}
+                          t={t}
+                        />
                       ))}
                     </TableBody>
                   </Table>

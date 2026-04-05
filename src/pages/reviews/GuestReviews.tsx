@@ -843,6 +843,7 @@ export default function GuestReviews() {
               size="icon" 
               className={cn("h-8 w-8 rounded-lg", viewMode !== 'grid' && "bg-transparent border-muted-foreground/10")} 
               onClick={() => setViewMode('grid')}
+              aria-label={t('accessibility.grid_view', 'Grid view')}
             >
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -851,6 +852,7 @@ export default function GuestReviews() {
               size="icon" 
               className={cn("h-8 w-8 rounded-lg", viewMode !== 'list' && "bg-transparent border-muted-foreground/10")} 
               onClick={() => setViewMode('list')}
+              aria-label={t('accessibility.list_view', 'List view')}
             >
               <List className="h-4 w-4" />
             </Button>

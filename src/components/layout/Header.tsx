@@ -90,7 +90,7 @@ export function Header({
               size="icon"
               onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
               className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white"
-              aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              aria-label={sidebarCollapsed ? t('accessibility.expand_sidebar', 'Expand sidebar') : t('accessibility.collapse_sidebar', 'Collapse sidebar')}
             >
               <Menu className="h-5 w-5" />
             </Button>

@@ -93,7 +93,8 @@ export const sanitizeHtml = (html: string | null | undefined): string => {
         ],
         ALLOWED_ATTR: [
             // Universal
-            'id', 'class', 'dir', 'lang', 'title', 'style',
+            'id', 'class', 'dir', 'lang', 'title',
+            // NOTE: 'style' removed to prevent CSS-based XSS attacks
             // Links, images & videos
             'href', 'src', 'alt', 'name', 'target', 'rel', 'type',
             // Images & videos

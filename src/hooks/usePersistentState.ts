@@ -72,13 +72,6 @@ export function usePersistentState<T>(
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isHydratingRef = useRef(false)
 
-  // Debug logging
-  const log = useCallback((...args: unknown[]) => {
-    if (debug || import.meta.env.DEV) {
-      console.log(`[usePersistentState:${key}]`, ...args)
-    }
-  }, [key, debug])
-
   // Hydrate from storage on mount
   useEffect(() => {
     if (isHydratingRef.current) return
@@ -96,17 +89,14 @@ export function usePersistentState<T>(
       if (valueToRestore !== null) {
         const parsed = safeParse<T>(valueToRestore, initialValue)
         setState(parsed)
-        log('Hydrated from storage', parsed)
-      } else {
-        log('No stored value found, using initial')
       }
-    } catch (error) {
-      log('Error hydrating from storage:', error)
+    } catch {
+      // Silently ignore storage errors
     } finally {
       setIsHydrated(true)
       isHydratingRef.current = false
     }
-  }, [fullKey, fullBackupKey, initialValue, log])
+  }, [fullKey, fullBackupKey, initialValue])
 
   // Save to storage when state changes
   useEffect(() => {
@@ -123,7 +113,6 @@ export function usePersistentState<T>(
       try {
         const serialized = safeStringify(state)
         if (serialized === null) {
-          log('Failed to serialize state')
           return
         }
 
@@ -136,10 +125,7 @@ export function usePersistentState<T>(
         }
         
         setLastSaved(Date.now())
-        log('Saved to storage')
       } catch (error) {
-        log('Error saving to storage:', error)
-        
         // If quota exceeded, try to clear old data
         if (error instanceof DOMException && error.name === 'QuotaExceededError') {
           try {
@@ -159,7 +145,7 @@ export function usePersistentState<T>(
         clearTimeout(saveTimeoutRef.current)
       }
     }
-  }, [state, fullKey, fullBackupKey, debounceMs, isHydrated, log])
+  }, [state, fullKey, fullBackupKey, debounceMs, isHydrated])
 
   // Listen for storage changes from other tabs
   useEffect(() => {
@@ -167,13 +153,12 @@ export function usePersistentState<T>(
       if (e.key === fullKey && e.newValue !== null) {
         const parsed = safeParse<T>(e.newValue, state)
         setState(parsed)
-        log('Updated from other tab')
       }
     }
 
     window.addEventListener('storage', handleStorageChange)
     return () => window.removeEventListener('storage', handleStorageChange)
-  }, [fullKey, state, log])
+  }, [fullKey, state])
 
   // Enhanced setValue that accepts function or value
   const setValue = useCallback((value: T | ((prev: T) => T)) => {
@@ -194,11 +179,9 @@ export function usePersistentState<T>(
       }
       setState(initialValue)
       setLastSaved(null)
-      log('Cleared storage')
-    } catch (error) {
-      log('Error clearing storage:', error)
+    } catch {
     }
-  }, [fullKey, fullBackupKey, initialValue, log])
+  }, [fullKey, fullBackupKey, initialValue])
 
   return {
     value: state,

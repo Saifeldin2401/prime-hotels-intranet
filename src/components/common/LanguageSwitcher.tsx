@@ -24,7 +24,7 @@ interface LanguageSwitcherProps {
 }
 
 export function LanguageSwitcher({ className, variant = "outline", showLabel = true }: LanguageSwitcherProps) {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const currentLang = i18n.language
 
   const handleLanguageChange = (langCode: string) => {
@@ -37,7 +37,12 @@ export function LanguageSwitcher({ className, variant = "outline", showLabel = t
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size="sm" className={className}>
+        <Button 
+          variant={variant} 
+          size="sm" 
+          className={className}
+          aria-label={t('accessibility.change_language', 'Change language')}
+        >
           <Globe className={cn("h-4 w-4", showLabel && "me-2")} />
           {showLabel && (
             <>

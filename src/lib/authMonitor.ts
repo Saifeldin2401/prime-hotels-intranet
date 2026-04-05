@@ -43,6 +43,15 @@ const eventBuffer: AuthEvent[] = []
 const MAX_BUFFER_SIZE = 50
 
 /**
+ * Log event to console in development
+ */
+function logEvent(event: AuthEvent): void {
+  const emoji = event.success ? '✓' : '✗'
+  const details = event.details ? JSON.stringify(event.details) : ''
+  console.log(`[Auth] ${emoji} ${event.type}${event.error ? ` - ${event.error}` : ''} ${details}`)
+}
+
+/**
  * Record an auth event
  */
 export function recordAuthEvent(event: Omit<AuthEvent, 'timestamp'>): void {
@@ -70,12 +79,6 @@ export function recordAuthEvent(event: Omit<AuthEvent, 'timestamp'>): void {
   if (import.meta.env.DEV) {
     logEvent(fullEvent)
   }
-}
-
-function logEvent(event: AuthEvent): void {
-  const emoji = event.success ? '✓' : '✗'
-  const details = event.details ? JSON.stringify(event.details) : ''
-  console.log(`[Auth] ${emoji} ${event.type}${event.error ? ` - ${event.error}` : ''} ${details}`)
 }
 
 /**

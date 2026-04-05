@@ -131,6 +131,28 @@ function toNullableString(value: unknown): string | null {
   return v ? v : null;
 }
 
+function buildReviewFingerprint(review: {
+  review_url?: string | null;
+  reviewer_name?: string | null;
+  review_title?: string | null;
+  review_text?: string | null;
+  review_text_normalized?: string | null;
+  review_language?: string | null;
+  rating_normalized_10?: number | null;
+  published_at?: string | null;
+}): string {
+  return JSON.stringify({
+    review_url: toNullableString(review.review_url),
+    reviewer_name: toNullableString(review.reviewer_name),
+    review_title: toNullableString(review.review_title),
+    review_text: cleanText(review.review_text),
+    review_text_normalized: cleanText(review.review_text_normalized),
+    review_language: toNullableString(review.review_language),
+    rating_normalized_10: review.rating_normalized_10 ?? null,
+    published_at: review.published_at ?? null,
+  });
+}
+
 function normalizeRating(value: unknown): { r5: number | null; r10: number | null } {
   const n = Number(value);
   if (!Number.isFinite(n)) return { r5: null, r10: null };
@@ -667,8 +689,10 @@ Deno.serve(async (req: Request) => {
       .order("updated_at", { ascending: true });
     if (sourceErr) throw sourceErr;
 
+    const bypassNextPoll = runMode === "manual" || runMode === "backfill" || sourceId !== null;
     const allDue = (allSources ?? []).filter((source) => {
       if (sourceId && String(source.id) !== sourceId) return false;
+      if (bypassNextPoll) return true;
       if (!source.next_poll_at) return true;
       return new Date(String(source.next_poll_at)).getTime() <= now.getTime();
     });
@@ -694,6 +718,7 @@ Deno.serve(async (req: Request) => {
         const { method, reviews } = await collectPlatformReviews(source, serperKey, scraperKey, serviceClient);
         collectionMethod = method;
         reviewsCollected = reviews.length;
+        const analysisJobs: Promise<void>[] = [];
 
         if (reviewsCollected === 0) {
           throw new Error("No reviews returned from collection step");
@@ -784,15 +809,40 @@ Deno.serve(async (req: Request) => {
 
           let reviewId: string;
           let changed = true;
+          let previousAnalysisStatus: string | null = null;
+          let previousReviewStatus: string | null = null;
 
           if (existingId) {
             const { data: old } = await serviceClient
               .from("guest_reviews")
-              .select("review_text")
+              .select("review_url, reviewer_name, review_title, review_text, review_text_normalized, review_language, rating_normalized_10, published_at, ai_analysis_status, status")
               .eq("id", existingId)
               .maybeSingle();
-            changed = cleanText(old?.review_text) !== reviewText;
+            previousAnalysisStatus = typeof old?.ai_analysis_status === "string" ? old.ai_analysis_status : null;
+            previousReviewStatus = typeof old?.status === "string" ? old.status : null;
+            changed = buildReviewFingerprint({
+              review_url: old?.review_url,
+              reviewer_name: old?.reviewer_name,
+              review_title: old?.review_title,
+              review_text: old?.review_text,
+              review_text_normalized: old?.review_text_normalized,
+              review_language: old?.review_language,
+              rating_normalized_10: old?.rating_normalized_10,
+              published_at: old?.published_at,
+            }) !== buildReviewFingerprint(reviewPayload);
             const { created_at: _createdAt, ...updatePayload } = reviewPayload;
+
+            if (!changed) {
+              updatePayload.ai_analysis_status = previousAnalysisStatus ?? "completed";
+              updatePayload.status = previousReviewStatus ?? "collected";
+            }
+
+            if (dryRun) {
+              reviewId = existingId;
+              if (changed) reviewsUpdated += 1;
+              continue;
+            }
+
             const { error: updateErr } = await serviceClient
               .from("guest_reviews")
               .update(updatePayload)
@@ -804,6 +854,11 @@ Deno.serve(async (req: Request) => {
             reviewId = existingId;
             if (changed) reviewsUpdated += 1;
           } else {
+            if (dryRun) {
+              reviewsNew += 1;
+              continue;
+            }
+
             const { data, error: insertErr } = await serviceClient
               .from("guest_reviews")
               .insert(reviewPayload)
@@ -836,15 +891,30 @@ Deno.serve(async (req: Request) => {
           });
 
           if (changed && !dryRun) {
-            fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${serviceRoleKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ review_id: reviewId, force: true }),
-            }).catch(() => null);
+            analysisJobs.push((async () => {
+              try {
+                const response = await fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
+                  method: "POST",
+                  headers: {
+                    Authorization: `Bearer ${serviceRoleKey}`,
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ review_id: reviewId, force: true }),
+                });
+
+                if (!response.ok) {
+                  const errorText = await response.text().catch(() => "");
+                  console.error(`analyzer request failed for review ${reviewId}:`, response.status, errorText);
+                }
+              } catch (error) {
+                console.error(`analyzer request error for review ${reviewId}:`, error);
+              }
+            })());
           }
+        }
+
+        if (analysisJobs.length > 0) {
+          await Promise.allSettled(analysisJobs);
         }
 
         const nextPollAt = new Date(now.getTime() + Number(source.poll_frequency_hours ?? 24) * 3_600_000).toISOString();

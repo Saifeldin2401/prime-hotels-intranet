@@ -252,6 +252,7 @@ export function DocumentMetadataForm({
             onClick={handleAutoGenerate}
             disabled={readOnly || autoGenerateNumber}
             title="Generate new number"
+            aria-label={t('accessibility.generate_document_number', 'Generate document number')}
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
@@ -495,6 +496,7 @@ export function DocumentMetadataForm({
                     size="icon"
                     className="h-9 w-9 mt-5"
                     onClick={() => removeCustomField(field.id)}
+                    aria-label={t('accessibility.remove_custom_field', 'Remove custom field')}
                   >
                     <Trash2 className="w-4 h-4 text-destructive" />
                   </Button>

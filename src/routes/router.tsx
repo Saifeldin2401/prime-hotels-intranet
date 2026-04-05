@@ -60,15 +60,6 @@ const RootIndex = () => {
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const redirectPath = getRedirectFromSearch(location.search)
     
-    console.log('[RootIndex] State:', {
-        hasUser: !!user,
-        loading,
-        pathname: location.pathname,
-        search: location.search,
-        pendingAuthFlowPath,
-        redirectPath
-    })
-    
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">

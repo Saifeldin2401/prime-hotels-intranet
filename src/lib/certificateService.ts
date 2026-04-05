@@ -89,6 +89,26 @@ type CertificateRecord = {
     } | null
 }
 
+function resolveCertificateStatus(
+    status: string | null | undefined,
+    expiryDate: string | Date | null | undefined
+): Certificate['status'] {
+    const normalizedStatus = (status || 'active') as Certificate['status']
+    if (normalizedStatus !== 'active' || !expiryDate) {
+        return normalizedStatus
+    }
+
+    const expiryTime = expiryDate instanceof Date
+        ? expiryDate.getTime()
+        : new Date(expiryDate).getTime()
+
+    if (!Number.isFinite(expiryTime)) {
+        return normalizedStatus
+    }
+
+    return expiryTime <= Date.now() ? 'expired' : normalizedStatus
+}
+
 // Brand colors for Prime Hotels
 const _BRAND_COLORS = {
     navy: '#1a365d',
@@ -446,8 +466,9 @@ export async function createCertificate(data: CertificateData): Promise<Certific
                 .eq('status', 'active')
                 .maybeSingle()
 
-            if (!existingCertError && existingCert) {
-                return mapCertificateFromDb(existingCert)
+            const mappedExistingCert = existingCert ? mapCertificateFromDb(existingCert) : null
+            if (!existingCertError && mappedExistingCert?.status === 'active') {
+                return mappedExistingCert
             }
         }
     }
@@ -469,8 +490,9 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             .contains('metadata', { training_path_id: pathCertificateId })
             .maybeSingle()
 
-        if (!existingPathCertError && existingPathCert) {
-            return mapCertificateFromDb(existingPathCert)
+        const mappedExistingPathCert = existingPathCert ? mapCertificateFromDb(existingPathCert) : null
+        if (!existingPathCertError && mappedExistingPathCert?.status === 'active') {
+            return mappedExistingPathCert
         }
     }
 
@@ -520,8 +542,9 @@ export async function createCertificate(data: CertificateData): Promise<Certific
                 .eq('status', 'active')
                 .maybeSingle()
 
-            if (!existingCertError && existingCert) {
-                return mapCertificateFromDb(existingCert)
+            const mappedExistingCert = existingCert ? mapCertificateFromDb(existingCert) : null
+            if (!existingCertError && mappedExistingCert?.status === 'active') {
+                return mappedExistingCert
             }
         }
         console.error('Failed to create certificate:', error)
@@ -630,8 +653,9 @@ export async function verifyCertificate(verificationCode: string): Promise<{
     }
 
     const result = data[0]
+    const resolvedStatus = resolveCertificateStatus(result.status, result.expiry_date)
     return {
-        isValid: result.is_valid,
+        isValid: Boolean(result.is_valid) && resolvedStatus === 'active',
         certificate: {
             certificateNumber: result.certificate_number,
             recipientName: result.recipient_name,
@@ -639,7 +663,7 @@ export async function verifyCertificate(verificationCode: string): Promise<{
             certificateType: result.certificate_type,
             completionDate: new Date(result.completion_date),
             expiryDate: result.expiry_date ? new Date(result.expiry_date) : undefined,
-            status: result.status,
+            status: resolvedStatus,
             createdAt: new Date(result.issued_at)
         }
     }
@@ -721,7 +745,7 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
         departmentName: record.metadata?.departmentName,
         issuedBy: record.issued_by,
         issuedByName: record.metadata?.issuedByName,
-        status: record.status as Certificate['status'],
+        status: resolveCertificateStatus(record.status, record.expiry_date),
         pdfUrl: record.pdf_url,
         createdAt: new Date(record.created_at)
     }

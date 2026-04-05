@@ -36,6 +36,7 @@ import {
     X,
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import type { DocumentTag } from "./DocumentTagManager";
 
 export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
@@ -137,6 +138,7 @@ export function DocumentSearchAdvanced({
   resultCount,
   className,
 }: DocumentSearchAdvancedProps) {
+  const { t } = useTranslation();
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [saveDialogOpen, setSaveDialogOpen] = React.useState(false);
   const [saveName, setSaveName] = React.useState("");
@@ -235,6 +237,7 @@ export function DocumentSearchAdvanced({
                 setQueryInput("");
                 onFiltersChange({ ...filters, query: undefined });
               }}
+              aria-label={t("accessibility.clear_search", "Clear search")}
             >
               <X className="w-4 h-4" />
             </Button>
@@ -289,6 +292,7 @@ export function DocumentSearchAdvanced({
                   e.stopPropagation();
                   onDeleteSavedSearch?.(saved.id);
                 }}
+                aria-label={t("accessibility.delete_saved_search", "Delete saved search")}
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -310,6 +314,7 @@ export function DocumentSearchAdvanced({
                 size="icon"
                 className="h-4 w-4 ml-1 hover:bg-muted"
                 onClick={() => updateFilter("dateFrom", undefined)}
+                aria-label={t("accessibility.remove_date_from_filter", "Remove date from filter")}
               >
                 <X className="w-3 h-3" />
               </Button>
@@ -324,6 +329,7 @@ export function DocumentSearchAdvanced({
                 size="icon"
                 className="h-4 w-4 ml-1 hover:bg-muted"
                 onClick={() => updateFilter("dateTo", undefined)}
+                aria-label={t("accessibility.remove_date_to_filter", "Remove date to filter")}
               >
                 <X className="w-3 h-3" />
               </Button>

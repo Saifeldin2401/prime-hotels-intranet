@@ -862,6 +862,7 @@ export default function OperationsDashboard() {
                                                 size="icon"
                                                 className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
                                                 onClick={() => setLogToDelete(log.id)}
+                                                aria-label={t('accessibility.delete_import_log', 'Delete import log')}
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </Button>

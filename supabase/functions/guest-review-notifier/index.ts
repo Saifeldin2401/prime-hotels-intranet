@@ -286,8 +286,9 @@ Deno.serve(async (req: Request) => {
         results.push({ id: row.id, status: "sent", channel: row.channel });
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
+        const failImmediately = row.channel === "email" && message === "Email notification missing recipients";
         await serviceClient.from("guest_review_notification_queue").update({
-          status: nextAttempt >= Number(row.max_attempts || 5) ? "failed" : "pending",
+          status: failImmediately || nextAttempt >= Number(row.max_attempts || 5) ? "failed" : "pending",
           last_error: message,
         }).eq("id", row.id);
 

@@ -359,7 +359,7 @@ export default function KnowledgeReview() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/knowledge')}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate('/knowledge')} aria-label={t('accessibility.back_to_knowledge', 'Back to Knowledge Base')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>

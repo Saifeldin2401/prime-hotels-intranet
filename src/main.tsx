@@ -214,7 +214,15 @@ if (redirectPath) {
 
 const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
 
-createRoot(document.getElementById('root')!).render(
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+  throw new Error('Root element not found')
+}
+
+// In DEV, React Refresh may re-execute this module. createRoot will warn but still work.
+// We rely on React's own error handling rather than trying to prevent the warning.
+const root = createRoot(rootElement)
+root.render(
   <Wrapper>
     <App />
   </Wrapper>

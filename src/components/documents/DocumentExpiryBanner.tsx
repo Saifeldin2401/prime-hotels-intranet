@@ -26,6 +26,7 @@ import {
     X,
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export type ExpiryWarningLevel = "critical" | "warning" | "notice" | "expired";
 
@@ -158,6 +159,7 @@ export function DocumentExpiryBanner({
     React.useState<DocumentExpiryInfo | null>(null);
   const [newExpiryDate, setNewExpiryDate] = React.useState<Date>();
   const [showAll, setShowAll] = React.useState(false);
+  const { t } = useTranslation();
 
   // Filter out dismissed and sort by urgency
   const activeDocuments = documents
@@ -319,6 +321,7 @@ export function DocumentExpiryBanner({
                   variant="ghost"
                   className="h-8 w-8 opacity-60 hover:opacity-100"
                   onClick={(e) => handleDismiss(e, doc.id)}
+                  aria-label={t('accessibility.dismiss_notification', 'Dismiss notification')}
                 >
                   <X className="w-4 h-4" />
                 </Button>

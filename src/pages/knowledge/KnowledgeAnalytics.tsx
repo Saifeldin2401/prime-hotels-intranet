@@ -168,7 +168,7 @@ export default function KnowledgeAnalytics() {
                             <SelectItem value="365">{t('analytics.last_year')}</SelectItem>
                         </SelectContent>
                     </Select>
-                    <Button variant="outline" size="icon">
+                    <Button variant="outline" size="icon" aria-label={t('accessibility.download_analytics', 'Download Analytics')}>
                         <Download className="h-4 w-4" />
                     </Button>
                 </div>

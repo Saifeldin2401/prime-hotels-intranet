@@ -151,7 +151,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                   <div className="p-2 bg-slate-50 rounded-xl border border-slate-100 shadow-sm">
                     {getTypeIcon(item.type)}
                   </div>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg" aria-label="More options">
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-lg" aria-label={t('accessibility.more_options', 'More options')}>
                     <Icons.MoreHorizontal className="h-5 w-5" />
                   </Button>
                 </div>

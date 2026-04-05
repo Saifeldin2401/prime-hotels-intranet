@@ -11,6 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
     BarChart3,
     Calendar,
@@ -121,6 +122,7 @@ export function DocumentAnalyticsCard({
   onExport,
   className,
 }: DocumentAnalyticsCardProps) {
+  const { t } = useTranslation();
   // Calculate trends (comparing first half vs second half of data)
   const midPoint = Math.floor(analytics.viewsOverTime.length / 2);
   const firstHalf = analytics.viewsOverTime.slice(0, midPoint);
@@ -170,7 +172,12 @@ export function DocumentAnalyticsCard({
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  aria-label={t("accessibility.more_options", "More options")}
+                >
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>

@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, Menu, MoreVertical } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 interface MobileHeaderProps {
@@ -66,6 +67,7 @@ export function MobileHeader({
   bordered = true,
 }: MobileHeaderProps) {
   const navigate = useNavigate()
+  const { t } = useTranslation(['common', 'nav'])
 
   const handleBack = () => {
     if (onBack) {
@@ -114,6 +116,7 @@ export function MobileHeader({
               size="icon"
               className="h-10 w-10 -ml-2 touch-target"
               onClick={handleBack}
+              aria-label={t('accessibility.go_back', 'Go back')}
             >
               <ChevronLeft className="h-6 w-6" />
             </Button>
@@ -123,6 +126,7 @@ export function MobileHeader({
               size="icon"
               className="h-10 w-10 -ml-2 touch-target"
               onClick={onMenuClick}
+              aria-label={t('accessibility.open_menu', 'Open menu')}
             >
               <Menu className="h-6 w-6" />
             </Button>
@@ -188,13 +192,14 @@ export function MobileHeaderMenu({
   children: React.ReactNode
   align?: 'start' | 'center' | 'end'
 }) {
+  const { t } = useTranslation(['common', 'nav'])
   return (
     <div className="relative">
       <Button
         variant="ghost"
         size="icon"
         className="h-10 w-10 touch-target"
-        aria-label="More options"
+        aria-label={t('accessibility.more_options', 'More options')}
       >
         <MoreVertical className="h-5 w-5" />
       </Button>

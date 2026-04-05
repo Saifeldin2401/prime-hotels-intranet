@@ -78,9 +78,6 @@ export function useUserDataLoader(
     try {
       const { data, error } = await supabase.auth.refreshSession()
       if (data?.session?.user && !error) {
-        if (import.meta.env.DEV) {
-          console.log(`[Auth] Token refresh recovered session during ${context}`)
-        }
         return true
       }
     } catch {

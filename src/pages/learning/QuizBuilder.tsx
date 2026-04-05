@@ -404,11 +404,12 @@ export default function QuizBuilder() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" title={t_ext('move_up', 'Move Up')}><ArrowUp className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" title={t_ext('move_down', 'Move Down')}><ArrowDown className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" aria-label={t('accessibility.move_up', 'Move Up')} title={t_ext('move_up', 'Move Up')}><ArrowUp className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" aria-label={t('accessibility.move_down', 'Move Down')} title={t_ext('move_down', 'Move Down')}><ArrowDown className="h-4 w-4" /></Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    aria-label={t('accessibility.remove_question', 'Remove Question')}
                                                     className="text-red-500 hover:text-red-600"
                                                     onClick={() => handleRemoveQuestion(q.question_id)}
                                                 >

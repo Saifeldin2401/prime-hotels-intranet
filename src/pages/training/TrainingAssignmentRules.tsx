@@ -279,6 +279,7 @@ export default function TrainingAssignmentRules() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label={t('accessibility.edit_rule', 'Edit Rule')}
                                         onClick={() => startEdit(rule)}
                                     >
                                         <Pencil className="w-4 h-4" />
@@ -286,6 +287,7 @@ export default function TrainingAssignmentRules() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
+                                        aria-label={t('accessibility.delete_rule', 'Delete Rule')}
                                         className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                         onClick={() => handleDelete(rule.id)}
                                     >

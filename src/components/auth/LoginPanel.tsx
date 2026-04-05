@@ -32,13 +32,6 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
         const pendingAuthFlowPath = getAuthFlowRedirectPath()
         const destination = pendingAuthFlowPath ?? redirectPath ?? '/'
         
-        console.log('[LoginPanel] Captured redirect:', {
-            search: location.search,
-            redirectPath,
-            pendingAuthFlowPath,
-            destination
-        })
-        
         postLoginDestinationRef.current = destination
     }, [location.search])
 

@@ -1,3 +1,13 @@
+/**
+ * ⚠️ DEMO/DVELOPMENT FILE - NOT FOR PRODUCTION USE
+ * 
+ * This file contains simulated/mock implementations of bulk operations.
+ * All mutations use setTimeout simulations instead of actual API calls.
+ * 
+ * For production, use BulkOperationsToolbar.tsx instead.
+ * TODO: Remove this file before production deployment or move to __mocks__ folder.
+ */
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';

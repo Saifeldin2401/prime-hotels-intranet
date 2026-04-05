@@ -338,6 +338,7 @@ ASSISTANT RESPONSE:`
                                         onClick={clearChat}
                                         className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all h-10 w-10"
                                         title="Reset Conversation"
+                                        aria-label={t('accessibility.clear_chat', 'Clear chat')}
                                     >
                                         <RefreshCcw className="h-5 w-5" />
                                     </Button>
@@ -346,6 +347,7 @@ ASSISTANT RESPONSE:`
                                         size="icon"
                                         onClick={onClose}
                                         className="text-white/60 hover:text-white hover:bg-white/10 rounded-xl transition-all h-10 w-10"
+                                        aria-label={t('accessibility.close', 'Close')}
                                     >
                                         <X className="h-6 w-6" />
                                     </Button>

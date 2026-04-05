@@ -315,6 +315,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setShowTOC(true)}
+                                aria-label={t('accessibility.open_table_of_contents', 'Open table of contents')}
                             >
                                 <List className="h-5 w-5" />
                             </Button>
@@ -323,6 +324,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setIsFocusMode(!isFocusMode)}
+                                aria-label={isFocusMode ? t('accessibility.exit_focus_mode', 'Exit focus mode') : t('accessibility.enter_focus_mode', 'Enter focus mode')}
                             >
                                 {isFocusMode ? (
                                     <Minimize2 className="h-5 w-5" />
@@ -335,6 +337,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setShowActions(true)}
+                                aria-label={t('accessibility.more_actions', 'More actions')}
                             >
                                 <MoreVertical className="h-5 w-5" />
                             </Button>

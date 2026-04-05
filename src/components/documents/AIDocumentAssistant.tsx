@@ -25,6 +25,7 @@ import {
     X
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export interface AISuggestedTag {
   name: string;
@@ -114,6 +115,7 @@ export function AIDocumentAssistant({
   isLoading,
   className,
 }: AIDocumentAssistantProps) {
+  const { t } = useTranslation();
   const [expandedSections, setExpandedSections] = React.useState<Set<string>>(
     new Set(["tags", "summary", "duplicates", "similar"])
   );
@@ -225,7 +227,13 @@ export function AIDocumentAssistant({
               {onRefresh && (
                 <Tooltip>
                   <TooltipTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onRefresh}>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8" 
+                      onClick={onRefresh}
+                      aria-label={t("accessibility.refresh_suggestions", "Refresh suggestions")}
+                    >
                       <RefreshCw className="w-4 h-4" />
                     </Button>
                   </TooltipTrigger>
@@ -286,6 +294,7 @@ export function AIDocumentAssistant({
                               size="icon"
                               className="h-7 w-7 hover:bg-green-100 hover:text-green-700"
                               onClick={() => handleAcceptTag(tag.name)}
+                              aria-label={t("accessibility.accept_tag", "Accept tag")}
                             >
                               <Check className="w-4 h-4" />
                             </Button>
@@ -299,6 +308,7 @@ export function AIDocumentAssistant({
                               size="icon"
                               className="h-7 w-7 hover:bg-red-100 hover:text-red-700"
                               onClick={() => handleRejectTag(tag.name)}
+                              aria-label={t("accessibility.reject_tag", "Reject tag")}
                             >
                               <X className="w-4 h-4" />
                             </Button>
@@ -334,6 +344,7 @@ export function AIDocumentAssistant({
                             e.stopPropagation();
                             handleCopySummary();
                           }}
+                          aria-label={copiedSummary ? t("accessibility.copied", "Copied!") : t("accessibility.copy_summary", "Copy summary")}
                         >
                           {copiedSummary ? (
                             <Check className="w-4 h-4 text-green-600" />

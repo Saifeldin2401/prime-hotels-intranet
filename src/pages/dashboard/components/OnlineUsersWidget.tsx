@@ -143,6 +143,7 @@ export function OnlineUsersWidget() {
                   size="icon"
                   className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8 text-slate-400 hover:text-slate-600 rounded-lg"
                   onClick={() => setSearchQuery('')}
+                  aria-label={t('accessibility.clear_search', 'Clear search')}
                 >
                   <X className="w-4 h-4" />
                 </Button>
@@ -212,6 +213,7 @@ export function OnlineUsersWidget() {
                           size="icon"
                           className="h-9 w-9 opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 transition-all rounded-xl border-emerald-100 text-emerald-600 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 bg-white"
                           asChild
+                          aria-label={t('accessibility.message_user', 'Message user')}
                         >
                           <Link to={`/messages?user=${onlineUser.user_id}`}>
                             <MessageSquare className="w-4 h-4 fill-emerald-100/50" />

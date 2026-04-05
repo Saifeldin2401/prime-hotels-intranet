@@ -294,6 +294,7 @@ export default function MessagingDashboard() {
                 size="icon"
                 className="h-9 w-9 rounded-full bg-indigo-100 text-indigo-600 hover:bg-indigo-200 border-0 shadow-none"
                 onClick={() => setIsNewChatOpen(true)}
+                aria-label={t('accessibility.new_chat', 'New Chat')}
               >
                 <Plus className="h-4 w-4" />
               </Button>
@@ -435,6 +436,7 @@ export default function MessagingDashboard() {
                 size="icon"
                 className="h-8 w-8 md:hidden shrink-0"
                 onClick={() => setShowSidebar(true)}
+                aria-label={t('accessibility.back_to_conversations', 'Back to Conversations')}
               >
                 <ArrowLeft className={cn("h-4 w-4", isRTL && "rotate-180")} />
               </Button>

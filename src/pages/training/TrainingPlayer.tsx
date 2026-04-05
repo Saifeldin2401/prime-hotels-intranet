@@ -1788,6 +1788,7 @@ export default function TrainingPlayer() {
                             size="icon"
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="bg-slate-50 hover:bg-slate-100 h-10 w-10 rounded-full"
+                            aria-label={t('accessibility.toggleSidebar', 'Toggle sidebar')}
                         >
                             <Menu className="h-5 w-5 text-hotel-navy" />
                         </Button>
@@ -1861,6 +1862,7 @@ export default function TrainingPlayer() {
                             size="icon"
                             onClick={() => navigate('/learning/my')}
                             className="sm:hidden h-10 w-10 text-hotel-navy"
+                            aria-label={t('accessibility.exitTraining', 'Exit training')}
                         >
                             <X className="h-5 w-5" />
                         </Button>
