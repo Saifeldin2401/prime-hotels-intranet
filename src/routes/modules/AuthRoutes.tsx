@@ -17,9 +17,12 @@ const Unauthorized = lazy(() => import('@/pages/Unauthorized'))
  * Validates authentication tokens before rendering sensitive routes
  * Redirects to login if token is invalid or missing
  * 
- * Note: Supabase auth links may contain tokens in:
- * - Query params: ?code=xxx&token_hash=xxx
- * - Hash fragment: #access_token=xxx&refresh_token=xxx
+ * IMPORTANT: Supabase is configured with detectSessionInUrl: true, which means
+ * it automatically consumes tokens from the URL hash on page load. By the time
+ * this component runs, the hash may already be cleared and the session established.
+ * So we check for both:
+ * 1. Tokens in URL (for manual handling)
+ * 2. Existing session (for auto-consumed tokens)
  */
 const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; type: 'recovery' | 'invite' }) => {
     const [isValidating, setIsValidating] = useState(true)
@@ -33,7 +36,7 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             const tokenHash = queryParams.get('token_hash')
             const code = queryParams.get('code')
             
-            // Check hash fragment (Supabase often puts tokens here)
+            // Check hash fragment (Supabase puts tokens here before auto-consuming them)
             const hashParams = new URLSearchParams(location.hash.substring(1))
             const accessToken = hashParams.get('access_token')
             const refreshToken = hashParams.get('refresh_token')
@@ -42,33 +45,46 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             // Check if this is a valid auth callback for our type
             const isValidType = hashType === type || queryParams.get('type') === type
             
-            // If no token data is present at all, mark as invalid
-            if (!tokenHash && !code && !accessToken) {
-                setIsValid(false)
-                setIsValidating(false)
+            // Check if we have any token data in URL
+            const hasUrlTokens = !!(tokenHash || code || accessToken)
+
+            // If we have URL tokens, validate them
+            if (hasUrlTokens) {
+                try {
+                    if (code) {
+                        // Exchange the code for a session
+                        const { error } = await supabase.auth.exchangeCodeForSession(code)
+                        setIsValid(!error)
+                    } else if (accessToken && refreshToken) {
+                        // Tokens in hash - Supabase may have already auto-consumed them
+                        // Check if we now have a valid session
+                        const { data: { session } } = await supabase.auth.getSession()
+                        setIsValid(!!session)
+                    } else if (tokenHash && isValidType) {
+                        // Token hash present with correct type
+                        setIsValid(true)
+                    } else {
+                        // Some token is present, let component handle it
+                        setIsValid(true)
+                    }
+                } catch {
+                    setIsValid(false)
+                } finally {
+                    setIsValidating(false)
+                }
                 return
             }
 
-            // For recovery/invite flows, we need to verify the session or code
+            // No tokens in URL - but Supabase may have already auto-consumed them
+            // Check if we have an active session (which would indicate successful token consumption)
             try {
-                if (code) {
-                    // Exchange the code for a session
-                    const { error } = await supabase.auth.exchangeCodeForSession(code)
-                    if (!error) {
-                        setIsValid(true)
-                    } else {
-                        setIsValid(false)
-                    }
-                } else if (accessToken && refreshToken) {
-                    // We have tokens in hash - this is likely a valid Supabase auth callback
-                    // The actual session setting will be handled by the child component
-                    setIsValid(true)
-                } else if (tokenHash && isValidType) {
-                    // Token hash present with correct type
+                const { data: { session }, error } = await supabase.auth.getSession()
+                if (session?.user && !error) {
+                    // Supabase has already processed the tokens and established a session
                     setIsValid(true)
                 } else {
-                    // Token is present but we'll let the component handle full validation
-                    setIsValid(true)
+                    // No tokens in URL and no session - this is an invalid access
+                    setIsValid(false)
                 }
             } catch {
                 setIsValid(false)
