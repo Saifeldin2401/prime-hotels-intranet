@@ -230,7 +230,7 @@ window.setTimeout(() => {
   }
 }, 30_000)
 
-// Register Service Worker for PWA
+// Register Service Worker for PWA with aggressive update checking
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     if (!PWA_ENABLED) {
@@ -249,19 +249,24 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
     }
 
     navigator.serviceWorker
-      .register(`/sw.js?v=${encodeURIComponent(SERVICE_WORKER_BUILD_VERSION)}`)
+      .register(`/sw.js?v=${encodeURIComponent(SERVICE_WORKER_BUILD_VERSION)}`, {
+        updateViaCache: 'none' // Always check server for updates
+      })
       .then((registration) => {
+        // Immediate update check on load
         registration.update().catch(() => {})
 
+        // If there's a waiting worker, activate it immediately
+        // This prevents stale chunk errors after deployments
         if (registration.waiting) {
-          devLog('[PWA] Update already waiting; leaving activation to the next full launch.')
-          notifyAppUpdateAvailable()
+          devLog('[PWA] Update waiting - activating immediately')
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' })
         }
 
-        // Check for updates every hour
+        // Check for updates every 5 minutes (not 1 hour) for faster recovery
         setInterval(() => {
           registration.update().catch(() => {})
-        }, 1000 * 60 * 60);
+        }, 1000 * 60 * 5);
 
         registration.onupdatefound = () => {
           const installingWorker = registration.installing;
@@ -269,8 +274,9 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             installingWorker.onstatechange = () => {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
-                  // Do not force activation/reload while the user is active.
-                  devLog('[PWA] New content available; activation deferred until next launch.');
+                  devLog('[PWA] New content available - activating immediately');
+                  // Force activation instead of waiting
+                  installingWorker.postMessage({ type: 'SKIP_WAITING' })
                   notifyAppUpdateAvailable()
                 }
               }
