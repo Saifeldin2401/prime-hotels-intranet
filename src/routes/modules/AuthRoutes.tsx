@@ -25,14 +25,24 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
     const [isValid, setIsValid] = useState(false)
     const location = useLocation()
     const attemptRef = useRef(0)
-    const maxAttempts = 20 // 20 * 250ms = 5 seconds max wait
+    const maxAttempts = 30 // 30 * 200ms = 6 seconds max wait
+    const hasCheckedRef = useRef(false)
 
     useEffect(() => {
-        // Check if there are any auth params in URL (indicates this is an auth callback)
+        // Only run once on mount - don't re-run when hash changes (Supabase modifies it)
+        if (hasCheckedRef.current) return
+        hasCheckedRef.current = true
+
+        // Capture initial URL state (before Supabase modifies it)
+        const initialUrl = new URL(window.location.href)
+        const initialSearch = initialUrl.search
+        const initialHash = initialUrl.hash
+
+        // Check if there are any auth params in URL
         const hasAuthParams = () => {
-            const query = new URLSearchParams(location.search)
-            const hash = new URLSearchParams(location.hash.substring(1))
-            return !!(query.get('code') || query.get('token_hash') || hash.get('access_token') || query.get('type'))
+            const query = new URLSearchParams(initialSearch)
+            const hash = new URLSearchParams(initialHash.substring(1))
+            return !!(query.get('code') || query.get('token_hash') || hash.get('access_token') || query.get('type') || hash.get('type'))
         }
 
         const validateToken = async () => {
@@ -41,19 +51,20 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             console.log('[TokenValidationGuard] Attempt', attemptRef.current, {
                 type,
                 hasAuthParams: hasAuthParams(),
-                search: location.search,
-                hashPreview: location.hash.substring(0, 50),
+                search: initialSearch,
+                hashPreview: initialHash.substring(0, 50),
             })
 
-            // Check query params
-            const queryParams = new URLSearchParams(location.search)
+            // Parse initial URL params (not current - Supabase may have cleared hash)
+            const queryParams = new URLSearchParams(initialSearch)
             const tokenHash = queryParams.get('token_hash')
             const code = queryParams.get('code')
             const queryType = queryParams.get('type')
             
-            // Check hash fragment
-            const hashParams = new URLSearchParams(location.hash.substring(1))
+            // Parse initial hash
+            const hashParams = new URLSearchParams(initialHash.substring(1))
             const accessToken = hashParams.get('access_token')
+            const refreshToken = hashParams.get('refresh_token')
             const hashType = hashParams.get('type')
             
             const isValidType = hashType === type || queryType === type
@@ -63,6 +74,7 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             if (hasUrlTokens) {
                 try {
                     if (code) {
+                        // Exchange the code for a session
                         const { error } = await supabase.auth.exchangeCodeForSession(code)
                         console.log('[TokenValidationGuard] Code exchange:', { success: !error })
                         if (!error) {
@@ -70,11 +82,22 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
                             setIsValidating(false)
                             return
                         }
-                    } else if (accessToken) {
-                        // Tokens present - wait for Supabase to auto-consume them
-                        // Don't mark as invalid yet, keep polling
-                        console.log('[TokenValidationGuard] Tokens in hash, waiting for auto-consumption...')
+                    } else if (accessToken && refreshToken) {
+                        // Set session manually from hash tokens (Supabase detectSessionInUrl may not work reliably)
+                        console.log('[TokenValidationGuard] Setting session from hash tokens...')
+                        const { error } = await supabase.auth.setSession({
+                            access_token: accessToken,
+                            refresh_token: refreshToken,
+                        })
+                        console.log('[TokenValidationGuard] Set session result:', { error: error?.message })
+                        if (!error) {
+                            setIsValid(true)
+                            setIsValidating(false)
+                            return
+                        }
                     } else if (tokenHash && isValidType) {
+                        // Token hash present with correct type
+                        console.log('[TokenValidationGuard] Token hash with valid type')
                         setIsValid(true)
                         setIsValidating(false)
                         return
@@ -84,7 +107,7 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
                 }
             }
 
-            // Check if Supabase has established a session (either auto-consumed or manually set)
+            // Check if Supabase has established a session
             const { data: { session }, error } = await supabase.auth.getSession()
             
             if (session?.user) {
@@ -96,9 +119,8 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
 
             // No session yet - decide whether to keep polling or give up
             if (hasUrlTokens && attemptRef.current < maxAttempts) {
-                // Tokens are in URL but session not established yet - keep polling
                 console.log('[TokenValidationGuard] No session yet, retrying...', attemptRef.current)
-                setTimeout(validateToken, 250)
+                setTimeout(validateToken, 200)
                 return
             }
 
@@ -112,11 +134,6 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             setIsValidating(false)
         }
 
-        // Reset state on mount
-        attemptRef.current = 0
-        setIsValidating(true)
-        setIsValid(false)
-        
         // Start validation
         validateToken()
         
@@ -124,7 +141,8 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
         return () => {
             attemptRef.current = maxAttempts // Stop any pending retries
         }
-    }, [location.search, location.hash, location.pathname, type])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []) // Only run on mount - don't re-run when hash changes
 
     if (isValidating) {
         return (
