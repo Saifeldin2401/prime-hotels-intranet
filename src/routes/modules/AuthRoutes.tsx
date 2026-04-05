@@ -99,6 +99,9 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             // No tokens in URL - but Supabase may have already auto-consumed them
             // Check if we have an active session (which would indicate successful token consumption)
             try {
+                // Wait a bit for Supabase to finish processing tokens (if it just happened)
+                await new Promise(resolve => setTimeout(resolve, 500))
+                
                 const { data: { session }, error } = await supabase.auth.getSession()
                 console.log('[TokenValidationGuard] Session check (no URL tokens):', { 
                     hasSession: !!session, 
