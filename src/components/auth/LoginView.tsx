@@ -46,19 +46,17 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
-  const [emailValid, setEmailValid] = useState<boolean | null>(null);
+  // Compute initial email valid state from localStorage
+  const [emailValid, setEmailValid] = useState<boolean | null>(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('remembered_email');
+    }
+    return null;
+  });
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const passwordStrength = usePasswordStrength(password);
-
-  // Set email valid if we have a remembered email on mount
-  useEffect(() => {
-    const savedEmail = localStorage.getItem('remembered_email');
-    if (savedEmail) {
-      setEmailValid(true);
-    }
-  }, []);
 
   // Detect Caps Lock
   useEffect(() => {
