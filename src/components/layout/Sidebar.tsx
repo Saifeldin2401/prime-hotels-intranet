@@ -19,12 +19,13 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 export function Sidebar() {
   const { t } = useTranslation('nav')
   const { t: t_ext } = useTranslation('extracted')
   const { signOut } = useAuth()
+  const navigate = useNavigate()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { groupedNavigation } = useNavigation()
 
@@ -228,7 +229,7 @@ export function Sidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start"
-          onClick={signOut}
+          onClick={async () => { await signOut(); navigate('/login') }}
         >
           <motion.div
             whileHover={{ x: -2 }}

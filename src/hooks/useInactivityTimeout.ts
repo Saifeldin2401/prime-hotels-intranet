@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface UseInactivityTimeoutOptions {
     timeoutMs?: number
@@ -22,6 +23,7 @@ export function useInactivityTimeout({
     enabled = true
 }: UseInactivityTimeoutOptions = {}) {
     const { user, signOut } = useAuth()
+    const navigate = useNavigate()
     const [showWarning, setShowWarning] = useState(false)
     const [remainingTime, setRemainingTime] = useState(timeoutMs - warningMs)
 
@@ -57,6 +59,7 @@ export function useInactivityTimeout({
             if (error || !data?.user) {
                 // Session truly expired — proceed with logout
                 await signOut()
+                navigate('/login')
             } else {
                 // Session is still valid — try refreshing activity from other tabs
                 const otherTabActivity = localStorage.getItem(STORAGE_KEY)
@@ -70,6 +73,7 @@ export function useInactivityTimeout({
                 }
                 // User genuinely inactive but session valid — still log them out for security
                 await signOut()
+                navigate('/login')
             }
         } catch {
             // Network error — don't logout, user might just have flaky connection
@@ -78,7 +82,7 @@ export function useInactivityTimeout({
                 console.warn('[InactivityTimeout] Network error during session check, deferring logout')
             }
         }
-    }, [clearAllTimers, onTimeout, signOut, timeoutMs])
+    }, [clearAllTimers, onTimeout, signOut, navigate, timeoutMs])
 
     const handleWarning = useCallback(() => {
         const now = Date.now()

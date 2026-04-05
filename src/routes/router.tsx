@@ -1,19 +1,10 @@
 import { RouteErrorBoundary } from '@/components/common'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
-import { getRedirectFromSearch } from '@/lib/authRedirect'
+import { buildLoginUrl, getRedirectFromSearch } from '@/lib/authRedirect'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { lazy, Suspense } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
-
-// Helper component to preserve query params during redirect
-const PreserveQueryNavigate = ({ to }: { to: string }) => {
-  const location = useLocation()
-  // Handle merging query params if 'to' already has some
-  const hasQueryParams = to.includes('?')
-  const preservedSearch = location.search ? (hasQueryParams ? location.search.replace('?', '&') : location.search) : ''
-  return <Navigate to={`${to}${preservedSearch}`} replace />
-}
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes } from './modules/AuthRoutes'
@@ -29,7 +20,6 @@ import { TrainingRoutes } from './modules/TrainingRoutes'
 import { PageTracker } from '@/components/analytics/PageTracker'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 
-const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 
 const RootLayout = () => {
@@ -90,7 +80,36 @@ const RootIndex = () => {
     if (user && pendingAuthFlowPath) {
         return <Navigate to={`${pendingAuthFlowPath}${location.search}`} replace />
     }
-    return user ? <Navigate to={`${redirectPath ?? "/home"}${location.search}`} replace /> : <PublicHome />
+
+    if (user) {
+        return <Navigate to={`${redirectPath ?? "/home"}${location.search}`} replace />
+    }
+
+    // Not authenticated — redirect to login, preserving any ?redirect= param
+    const loginTarget = redirectPath
+        ? `/login?redirect=${encodeURIComponent(redirectPath)}`
+        : '/login'
+    return <Navigate to={loginTarget} replace />
+}
+
+// Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved
+const CatchAllRedirect = () => {
+    const { user, loading } = useAuth()
+    const location = useLocation()
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            </div>
+        )
+    }
+
+    if (user) {
+        return <Navigate to="/dashboard" replace />
+    }
+
+    return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
 }
 
 export const router = createBrowserRouter(
@@ -110,7 +129,7 @@ export const router = createBrowserRouter(
             {DashboardRoutes()}
             {MiscRoutes()}
 
-            <Route path="*" element={<PreserveQueryNavigate to="/" />} />
+            <Route path="*" element={<CatchAllRedirect />} />
         </Route>
     )
 )
