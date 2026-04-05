@@ -1,8 +1,8 @@
 import { useAuth } from '@/hooks/useAuth'
-import { getRedirectFromSearch } from '@/lib/authRedirect'
-import { getAuthFlowRedirectPath, clearAuthFlowState } from '@/lib/authFlowState'
-import { useEffect, useRef } from 'react'
-import { useTranslation } from "react-i18next";
+import { getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
+import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
 
 interface PublicOnlyRouteProps {
@@ -12,45 +12,26 @@ interface PublicOnlyRouteProps {
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const { user, loading } = useAuth()
     const location = useLocation()
-    const { t } = useTranslation('extracted');
-    const hasRedirected = useRef(false)
-    
-    // Get redirect path from query params
+    const { t } = useTranslation('extracted')
+
+    const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const redirectPath = getRedirectFromSearch(location.search)
-    
-    // Compute destination
-    const destination = (() => {
-        if (!user) return null
-        
-        // Priority: 1. Auth flow paths (reset-password, complete-invite)
-        //          2. Redirect from query param (deep link preservation)
-        //          3. Default to /home (which redirects to /dashboard)
-        const pendingAuthFlowPath = getAuthFlowRedirectPath()
-        
-        if (pendingAuthFlowPath) {
-            return pendingAuthFlowPath
-        } else if (redirectPath) {
-            return redirectPath
-        }
-        return '/home'
-    })()
-    
-    // Clear auth flow state and track redirect
+    const storedRedirect = peekPostLoginRedirect()
+    const destination = user
+        ? pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/home'
+        : null
+
     useEffect(() => {
-        const pendingAuthFlowPath = getAuthFlowRedirectPath()
-        if (user && pendingAuthFlowPath && !hasRedirected.current) {
+        if (user && pendingAuthFlowPath) {
             clearAuthFlowState()
         }
-        if (user && destination && !hasRedirected.current) {
-            hasRedirected.current = true
-        }
-    }, [user, destination])
+    }, [user, pendingAuthFlowPath])
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center min-h-screen bg-background">
+            <div className="flex min-h-screen items-center justify-center bg-background">
                 <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
                     <p className="mt-4 text-muted-foreground">{t('loading', 'Loading...')}</p>
                 </div>
             </div>

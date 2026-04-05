@@ -7,89 +7,75 @@
  */
 
 const REDIRECT_PARAM = 'redirect'
-const REDIRECT_PARAM_ALT = '_redirect' // Support Supabase/production underscore variation
+const REDIRECT_PARAM_ALT = '_redirect'
+const SPA_REDIRECT_PARAM = '__redirect'
 const POST_LOGIN_STORAGE_KEY = '__phg_post_login_redirect__'
 const COOKIE_NAME = 'phg_auth_redirect'
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/complete-invite', '/change-password']
 
-function isAuthRoute(path: string): boolean {
-  return AUTH_ROUTES.some((r) => path === r || path.startsWith(`${r}/`))
+interface SanitizeRedirectOptions {
+  allowAuthRoutes?: boolean
 }
 
-/**
- * Cookie utilities for cross-subdomain redirect persistence.
- */
+function isAuthRoute(path: string): boolean {
+  return AUTH_ROUTES.some((route) => path === route || path.startsWith(`${route}/`))
+}
+
 const cookies = {
   set(name: string, value: string, days = 1) {
     if (typeof document === 'undefined') return
+
     const date = new Date()
     date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
-    const expires = "; expires=" + date.toUTCString()
-    
-    // Determine domain for cross-subdomain support
+    const expires = `; expires=${date.toUTCString()}`
+
     const host = window.location.hostname
     let domainAttr = ''
     if (host.includes('phg-connect.com')) {
-      domainAttr = "; domain=.phg-connect.com"
+      domainAttr = '; domain=.phg-connect.com'
     }
-    
-    const cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax; Secure${domainAttr}`
-    document.cookie = cookie
-    if (import.meta.env.DEV) {
-        console.log(`[authRedirect] Set cookie: ${name}`, { domainAttr })
-    }
+
+    document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax; Secure${domainAttr}`
   },
   get(name: string): string | null {
     if (typeof document === 'undefined') return null
-    const nameEQ = name + "="
-    const ca = document.cookie.split(';')
-    for (let i = 0; i < ca.length; i++) {
-      let c = ca[i]
-      while (c.charAt(0) === ' ') c = c.substring(1, c.length)
-      if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length))
+
+    const namePrefix = `${name}=`
+    const cookieParts = document.cookie.split(';')
+    for (const part of cookieParts) {
+      const trimmed = part.trim()
+      if (trimmed.startsWith(namePrefix)) {
+        return decodeURIComponent(trimmed.slice(namePrefix.length))
+      }
     }
+
     return null
   },
   remove(name: string) {
-    this.set(name, "", -1)
-  }
+    this.set(name, '', -1)
+  },
 }
 
-/**
- * Check if two origins match, handling edge cases like:
- * - www vs non-www
- * - trailing ports
- * - HTTP vs HTTPS (in production should always be HTTPS)
- */
 function originsMatch(parsedOrigin: string, windowOrigin: string): boolean {
-  // Direct match
   if (parsedOrigin === windowOrigin) return true
-  
+
   try {
     const parsedUrl = new URL(parsedOrigin)
     const windowUrl = new URL(windowOrigin)
-    
-    // Compare hostname (handle www vs non-www)
+
     let parsedHost = parsedUrl.hostname.toLowerCase()
     let windowHost = windowUrl.hostname.toLowerCase()
-    
-    // Strip www prefix for comparison
+
     if (parsedHost.startsWith('www.')) parsedHost = parsedHost.slice(4)
     if (windowHost.startsWith('www.')) windowHost = windowHost.slice(4)
-    
+
     if (parsedHost !== windowHost) return false
-    
-    // Compare port (default ports for http/https should match)
+
     const parsedPort = parsedUrl.port || (parsedUrl.protocol === 'https:' ? '443' : '80')
     const windowPort = windowUrl.port || (windowUrl.protocol === 'https:' ? '443' : '80')
-    
-    if (parsedPort !== windowPort) return false
-    
-    // Protocol must match in production
-    if (parsedUrl.protocol !== windowUrl.protocol) return false
-    
-    return true
+
+    return parsedPort === windowPort && parsedUrl.protocol === windowUrl.protocol
   } catch {
     return false
   }
@@ -97,10 +83,12 @@ function originsMatch(parsedOrigin: string, windowOrigin: string): boolean {
 
 /**
  * Sanitize a redirect candidate to prevent open-redirect attacks.
- * Only allows relative paths that start with '/' and are not
- * protocol-relative URLs.
+ * Only allows same-origin relative paths that start with `/`.
  */
-export function sanitizeRedirectPath(candidate: string | null | undefined): string | null {
+export function sanitizeRedirectPath(
+  candidate: string | null | undefined,
+  options: SanitizeRedirectOptions = {},
+): string | null {
   if (!candidate) return null
 
   const trimmed = candidate.trim()
@@ -108,152 +96,96 @@ export function sanitizeRedirectPath(candidate: string | null | undefined): stri
   if (trimmed.startsWith('//')) return null
 
   try {
-    // Reject anything that parses as an absolute URL to another origin
     const parsed = new URL(trimmed, window.location.href)
-    
-    // Use robust origin comparison
     if (!originsMatch(parsed.origin, window.location.origin)) {
-      if (import.meta.env.DEV) {
-        console.warn('[authRedirect] Origin mismatch, rejecting redirect:', {
-          parsed: parsed.origin,
-          window: window.location.origin,
-          candidate: trimmed
-        })
-      }
       return null
     }
-    
-    const safePath = `${parsed.pathname}${parsed.search}${parsed.hash}`
-    if (isAuthRoute(parsed.pathname)) {
-      console.warn('[authRedirect] Auth route rejected:', parsed.pathname)
+
+    if (!options.allowAuthRoutes && isAuthRoute(parsed.pathname)) {
       return null
     }
-    
-    return safePath
-  } catch (e) {
-    console.warn('[authRedirect] Failed to parse redirect:', trimmed, e)
+
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`
+  } catch {
     return null
   }
 }
 
-/**
- * Store the redirect path in sessionStorage and Cookie for post-auth recovery.
- * Cookies allow survival across subdomain transitions (www vs root).
- */
-export function setPostLoginRedirect(pathname: string, search = '', hash = '') {
-  if (typeof window === 'undefined') return
-  const target = `${pathname}${search}${hash}`
-  const sanitized = sanitizeRedirectPath(target)
-  
-  if (sanitized) {
-    if (import.meta.env.DEV) {
-      console.log('[authRedirect] Saving redirect destination:', sanitized)
-    }
-    // 1. Session storage (tab-specific, same-origin)
-    window.sessionStorage.setItem(POST_LOGIN_STORAGE_KEY, sanitized)
-    // 2. Cookie (cross-subdomain support)
-    cookies.set(COOKIE_NAME, sanitized)
-  }
-}
-
-/**
- * Read and consume (remove) the stored post-login redirect path.
- */
-export function consumePostLoginRedirect(): string | null {
+function readStoredPostLoginRedirect(): string | null {
   if (typeof window === 'undefined') return null
-  
+
   const sessionRedirect = window.sessionStorage.getItem(POST_LOGIN_STORAGE_KEY)
   const cookieRedirect = cookies.get(COOKIE_NAME)
-  
-  const redirect = sessionRedirect ?? cookieRedirect
-  
-  if (redirect) {
-    if (import.meta.env.DEV) {
-      console.log('[authRedirect] Consuming saved redirect:', redirect, {
-        source: sessionRedirect ? 'session' : 'cookie'
-      })
-    }
-    window.sessionStorage.removeItem(POST_LOGIN_STORAGE_KEY)
-    cookies.remove(COOKIE_NAME)
-    return sanitizeRedirectPath(redirect)
-  }
-  
-  return null
+
+  return sanitizeRedirectPath(sessionRedirect ?? cookieRedirect)
 }
 
-/**
- * Build the login URL with the current location encoded as ?redirect.
- * Also stores it in sessionStorage and cookie for safe-keeping.
- */
+export function setPostLoginRedirect(pathname: string, search = '', hash = '') {
+  if (typeof window === 'undefined') return
+
+  const sanitized = sanitizeRedirectPath(`${pathname}${search}${hash}`)
+  if (!sanitized) return
+
+  window.sessionStorage.setItem(POST_LOGIN_STORAGE_KEY, sanitized)
+  cookies.set(COOKIE_NAME, sanitized)
+}
+
+export function peekPostLoginRedirect(): string | null {
+  return readStoredPostLoginRedirect()
+}
+
+export function consumePostLoginRedirect(): string | null {
+  if (typeof window === 'undefined') return null
+
+  const redirect = readStoredPostLoginRedirect()
+  window.sessionStorage.removeItem(POST_LOGIN_STORAGE_KEY)
+  cookies.remove(COOKIE_NAME)
+
+  return redirect
+}
+
 export function buildLoginUrl(pathname: string, search = '', hash = ''): string {
   setPostLoginRedirect(pathname, search, hash)
-  const target = `${pathname}${search}${hash}`
-  const encoded = encodeURIComponent(target)
+  const encoded = encodeURIComponent(`${pathname}${search}${hash}`)
   return `/login?${REDIRECT_PARAM}=${encoded}`
 }
 
 /**
- * Extract and sanitize the ?redirect query param from a search string.
- * It will prefer checking sessionStorage/cookies if the URL doesn't have it,
- * meaning standard redirects survive router redirects.
+ * Read regular post-login redirect params only.
+ * `__redirect` is reserved for SPA/404 recovery and may legitimately target auth routes.
  */
 export function getRedirectFromSearch(search: string): string | null {
-  // 1. URL parameters (highest priority)
   const params = new URLSearchParams(search)
-  // Check for various common redirect parameter names
-  const raw = params.get(REDIRECT_PARAM) || params.get(REDIRECT_PARAM_ALT) || params.get('__redirect')
-  const urlRedirect = sanitizeRedirectPath(raw)
-  
-  if (urlRedirect) {
-    if (import.meta.env.DEV) {
-      console.log('[authRedirect] Found direct URL redirect:', urlRedirect)
-    }
-    return urlRedirect
-  }
+  const rawRedirect = params.get(REDIRECT_PARAM) || params.get(REDIRECT_PARAM_ALT)
+  return sanitizeRedirectPath(rawRedirect)
+}
 
-  // 2. Persistence check (peek only)
-  if (typeof window !== 'undefined') {
-    const session = window.sessionStorage.getItem(POST_LOGIN_STORAGE_KEY)
-    const cookie = cookies.get(COOKIE_NAME)
-    const stored = sanitizeRedirectPath(session ?? cookie)
-    if (stored) {
-      if (import.meta.env.DEV) {
-        console.log('[authRedirect] Found stored redirect (peek):', stored)
-      }
-      return stored
-    }
-  }
-  
-  return null
+/**
+ * Read the SPA fallback redirect param used when the host rewrites unknown paths to `/`.
+ * This is allowed to target auth routes like `/reset-password`.
+ */
+export function getSpaRedirectFromSearch(search: string): string | null {
+  const params = new URLSearchParams(search)
+  return sanitizeRedirectPath(params.get(SPA_REDIRECT_PARAM), { allowAuthRoutes: true })
 }
 
 /**
  * Global deep link handler for React Native / mobile app integration.
  * This can be called from the native side to trigger a navigation in the web app.
- * 
- * Usage from Native (WebView):
- * window.__PHG_HANDLE_DEEPLINK__('/knowledge/123')
  */
 export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) {
   if (typeof window === 'undefined') return
-  
+
   const handler = (pathOrUrl: string) => {
     const sanitized = sanitizeRedirectPath(pathOrUrl)
-    if (sanitized) {
-      if (import.meta.env.DEV) {
-        console.log('[authRedirect] Global deep link triggered:', sanitized)
-      }
-      // Save it first to ensure persistence if the route is protected
-      setPostLoginRedirect(sanitized)
-      // Attempt immediate navigation
-      navigate(sanitized)
-    }
+    if (!sanitized) return
+
+    setPostLoginRedirect(sanitized)
+    navigate(sanitized)
   }
-  
-  // Expose to window for Native bridge
-  ;(window as any).__PHG_HANDLE_DEEPLINK__ = handler
-  
-  // Monitor post-message events from React Native
+
+  ;(window as Window & { __PHG_HANDLE_DEEPLINK__?: (pathOrUrl: string) => void }).__PHG_HANDLE_DEEPLINK__ = handler
+
   window.addEventListener('message', (event) => {
     try {
       const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data
@@ -261,12 +193,7 @@ export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) 
         handler(data.payload)
       }
     } catch {
-      // Ignore non-JSON messages
+      // Ignore non-JSON messages.
     }
   })
-
-  if (import.meta.env.DEV) {
-    console.log('[authRedirect] Global deep link handler registered')
-  }
 }
-

@@ -1,4 +1,3 @@
-import { isRecoverableModuleLoadError, recoverFromStaleModuleLoad } from '@/main'
 import { securityUtils } from '@/lib/security-config'
 import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { RouteFallbackUI } from './RouteFallbackUI'
@@ -25,13 +24,6 @@ export class RouteErrorBoundary extends Component<Props, State> {
     }
 
     public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-        // Check if this is a recoverable module/chunk load error
-        if (isRecoverableModuleLoadError(error)) {
-            // Trigger recovery flow - this will clear SW cache and reload
-            void recoverFromStaleModuleLoad(error)
-            return
-        }
-
         this.setState({
             error,
             errorInfo

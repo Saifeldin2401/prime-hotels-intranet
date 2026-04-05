@@ -87,63 +87,36 @@
   <div id="root"></div>
   <script>
     (() => {
-      window.__PHG_BOOTSTRAP_PROMISE__ = Promise.resolve()
+      const cleanupKey = '__phg_index_cleanup_done__'
+
+      window.addEventListener('load', () => {
+        window.setTimeout(async () => {
+          try {
+            if (sessionStorage.getItem(cleanupKey) === '1') return
+            sessionStorage.setItem(cleanupKey, '1')
+          } catch {
+            // Continue even if sessionStorage is unavailable.
+          }
+
+          try {
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations()
+              await Promise.allSettled(registrations.map((registration) => registration.unregister()))
+            }
+
+            if ('caches' in window) {
+              const cacheKeys = await caches.keys()
+              const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
+              await Promise.allSettled(staleCacheKeys.map((key) => caches.delete(key)))
+            }
+          } catch {
+            // Passive cleanup only. Ignore failures.
+          }
+        }, 0)
+      }, { once: true })
     })()
   </script>
-  <script type="module">
-    const bootstrapPromise = window.__PHG_BOOTSTRAP_PROMISE__
-    if (bootstrapPromise && typeof bootstrapPromise.then === 'function') {
-      await bootstrapPromise
-    }
-
-    const BOOT_IMPORT_RECOVERY_KEY = '__phg_boot_import_recovery__'
-
-    const isRecoverableImportError = (error) => {
-      const message = typeof error?.message === 'string' ? error.message : String(error || '')
-      return /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed|ERR_ABORTED|CORS/i.test(message)
-    }
-
-    const clearRuntimeArtifacts = async () => {
-      if ('serviceWorker' in navigator) {
-        const registrations = await navigator.serviceWorker.getRegistrations()
-        await Promise.allSettled(registrations.map((registration) => registration.unregister()))
-      }
-
-      if ('caches' in window) {
-        const cacheKeys = await caches.keys()
-        const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
-        await Promise.allSettled(staleCacheKeys.map((key) => caches.delete(key)))
-      }
-    }
-
-    try {
-      await import('/src/main.tsx')
-    } catch (error) {
-      if (!isRecoverableImportError(error)) {
-        throw error
-      }
-
-      const currentUrl = new URL(window.location.href)
-      if (sessionStorage.getItem(BOOT_IMPORT_RECOVERY_KEY) !== '1') {
-        sessionStorage.setItem(BOOT_IMPORT_RECOVERY_KEY, '1')
-        await clearRuntimeArtifacts()
-        currentUrl.searchParams.set('__boot_recover', Date.now().toString())
-        window.location.replace(currentUrl.toString())
-      } else {
-        const root = document.getElementById('root')
-        if (root) {
-          root.innerHTML = `
-            <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;background:#f8f6f1;color:#1f3b5b;font-family:system-ui,sans-serif;padding:1.5rem;">
-              <div style="max-width:34rem;text-align:center;">
-                <h1 style="margin:0 0 0.75rem;font-size:1.35rem;">PHG Connect could not start</h1>
-                <p style="margin:0 0 1.25rem;color:#4f6480;">Please refresh this page. If the issue persists, clear site data for phg-connect.com and www.phg-connect.com, then retry your secure link.</p>
-              </div>
-            </div>
-          `
-        }
-      }
-    }
-  </script>
+  <script type="module" src="/src/main.tsx"></script>
 </body>
 
 </html>

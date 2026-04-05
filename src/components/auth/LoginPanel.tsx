@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { getRedirectFromSearch } from '@/lib/authRedirect'
+import { getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
 import { Eye, EyeOff, Loader2, Lock, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
@@ -30,7 +30,8 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
         // Capture redirect on mount (or when location changes)
         const redirectPath = getRedirectFromSearch(location.search)
         const pendingAuthFlowPath = getAuthFlowRedirectPath()
-        const destination = pendingAuthFlowPath ?? redirectPath ?? '/'
+        const storedRedirect = peekPostLoginRedirect()
+        const destination = pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/'
         
         postLoginDestinationRef.current = destination
     }, [location.search])

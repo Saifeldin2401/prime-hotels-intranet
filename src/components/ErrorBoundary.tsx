@@ -1,4 +1,3 @@
-import { isRecoverableModuleLoadError, recoverFromStaleModuleLoad } from '@/main'
 import type { ErrorInfo, ReactNode } from 'react'
 import { Component } from 'react'
 
@@ -23,12 +22,6 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Check if this is a recoverable module/chunk load error
-    if (isRecoverableModuleLoadError(error)) {
-      // Trigger recovery flow - this will clear SW cache and reload
-      void recoverFromStaleModuleLoad(error)
-      return
-    }
     console.error('ErrorBoundary caught an error:', error, errorInfo)
     
     // Send to Sentry if available
