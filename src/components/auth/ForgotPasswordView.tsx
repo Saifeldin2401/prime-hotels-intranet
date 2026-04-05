@@ -28,7 +28,7 @@ function ForgotPasswordViewComponent({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [_focusedField, setFocusedField] = useState<string | null>(null);
 
   const validateEmail = useCallback((value: string) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

@@ -1,4 +1,4 @@
-import { useAuth } from '@/hooks/useAuth';
+
 import { showSuccessToast } from '@/lib/toastHelpers';
 import { LazyMotion, domAnimation, m } from 'framer-motion';
 import { useState, useCallback } from 'react';
@@ -14,7 +14,7 @@ export function LoginForm() {
   const { t, i18n } = useTranslation('auth');
   const [authView, setAuthView] = useState<AuthView>('login');
   const [success, setSuccess] = useState(false);
-  const [email, setEmail] = useState('');
+  const [email, _setEmail] = useState('');
   const [resetEmail, setResetEmail] = useState('');
 
   const isRTL = i18n.dir() === 'rtl';
@@ -44,10 +44,7 @@ export function LoginForm() {
     setAuthView('forgot');
   }, []);
 
-  // Handle successful login from LoginView
-  const handleLoginSuccess = useCallback(() => {
-    handleSuccess();
-  }, [handleSuccess]);
+
 
   if (success) {
     return <SuccessView />;

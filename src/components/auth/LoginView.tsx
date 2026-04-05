@@ -30,9 +30,19 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   const { t } = useTranslation('auth');
   const { signIn } = useAuth();
 
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('remembered_email') || '';
+    }
+    return '';
+  });
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return !!localStorage.getItem('remembered_email');
+    }
+    return false;
+  });
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
@@ -42,12 +52,10 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
 
   const passwordStrength = usePasswordStrength(password);
 
-  // Load remembered email on mount
+  // Set email valid if we have a remembered email on mount
   useEffect(() => {
     const savedEmail = localStorage.getItem('remembered_email');
     if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
       setEmailValid(true);
     }
   }, []);

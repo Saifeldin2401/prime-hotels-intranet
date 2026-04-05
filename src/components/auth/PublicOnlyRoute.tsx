@@ -18,13 +18,33 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     // Get redirect path from query params
     const redirectPath = getRedirectFromSearch(location.search)
     
-    // Clear auth flow state after we capture it to prevent stale redirects
+    // Compute destination
+    const destination = (() => {
+        if (!user) return null
+        
+        // Priority: 1. Auth flow paths (reset-password, complete-invite)
+        //          2. Redirect from query param (deep link preservation)
+        //          3. Default to /home (which redirects to /dashboard)
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        
+        if (pendingAuthFlowPath) {
+            return pendingAuthFlowPath
+        } else if (redirectPath) {
+            return redirectPath
+        }
+        return '/home'
+    })()
+    
+    // Clear auth flow state and track redirect
     useEffect(() => {
         const pendingAuthFlowPath = getAuthFlowRedirectPath()
         if (user && pendingAuthFlowPath && !hasRedirected.current) {
             clearAuthFlowState()
         }
-    }, [user])
+        if (user && destination && !hasRedirected.current) {
+            hasRedirected.current = true
+        }
+    }, [user, destination])
 
     if (loading) {
         return (
@@ -37,21 +57,7 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
         )
     }
 
-    if (user) {
-        // Priority: 1. Auth flow paths (reset-password, complete-invite)
-        //          2. Redirect from query param (deep link preservation)
-        //          3. Default to /home (which redirects to /dashboard)
-        const pendingAuthFlowPath = getAuthFlowRedirectPath()
-        
-        let destination = '/home'
-        
-        if (pendingAuthFlowPath) {
-            destination = pendingAuthFlowPath
-        } else if (redirectPath) {
-            destination = redirectPath
-        }
-        
-        hasRedirected.current = true
+    if (user && destination) {
         return <Navigate to={destination} replace />
     }
 
