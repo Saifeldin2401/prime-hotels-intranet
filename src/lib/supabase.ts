@@ -67,7 +67,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false, // DISABLED: We handle auth callbacks manually to prevent race conditions
+    detectSessionInUrl: false, // Disabled: manual token handling for auth flows
     // Use localStorage for consistent session persistence across tabs
     storage: createSafeStorage('local'),
   },
