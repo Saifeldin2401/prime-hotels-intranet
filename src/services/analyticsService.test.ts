@@ -53,11 +53,11 @@ describe('AnalyticsService', () => {
 
   describe('Session Management', () => {
     it('should start new session when no stored session exists', async () => {
-      const mockUser = { id: 'user-123', email: 'test@example.com' }
+      const mockUser = { id: 'user-123', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() }
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: { user: mockUser } },
         error: null,
-      })
+      } as any)
 
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnThis(),
@@ -86,9 +86,9 @@ describe('AnalyticsService', () => {
       localStorage.setItem('prime_analytics_session', JSON.stringify(validSession))
 
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
-        data: { session: { user: { id: 'user-123' } } },
+        data: { session: { user: { id: 'user-123', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() } } },
         error: null,
-      })
+      } as any)
 
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnThis(),
@@ -113,11 +113,11 @@ describe('AnalyticsService', () => {
       }
       localStorage.setItem('prime_analytics_session', JSON.stringify(expiredSession))
 
-      const mockUser = { id: 'user-123', email: 'test@example.com' }
+      const mockUser = { id: 'user-123', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() }
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: { user: mockUser } },
         error: null,
-      })
+      } as any)
 
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnThis(),
