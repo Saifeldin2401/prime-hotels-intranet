@@ -99,6 +99,7 @@ function RegistryWidgetRenderer({
   extraProps,
   onRemoveWidget
 }: RegistryWidgetRendererProps) {
+  const { t } = useTranslation('dashboard')
   if (!effectivePermittedWidgets.includes(id) || visibleWidgets[id] === false) return null
   const WidgetComponent = WIDGET_REGISTRY[id].component
 
@@ -130,6 +131,7 @@ function RegistryWidgetRenderer({
           size="icon"
           className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
           onClick={() => onRemoveWidget(id)}
+          aria-label={t('accessibility.remove_widget', 'Remove widget')}
         >
           <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
         </Button>
@@ -421,6 +423,7 @@ export function IntegratedDashboard() {
             size="icon"
             className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/10 hover:bg-white/20 text-white shadow-none border border-white/10 backdrop-blur-sm rounded-full"
             onClick={() => handleRemoveWidget('socialFeed')}
+            aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
             <X className="w-4 h-4 text-white" />
           </Button>
@@ -476,6 +479,7 @@ export function IntegratedDashboard() {
             size="icon"
             className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
             onClick={() => handleRemoveWidget('quickActions')}
+            aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
             <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
           </Button>
