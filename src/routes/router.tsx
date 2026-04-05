@@ -121,16 +121,9 @@ const RouteParamValidator = ({
 }
 
 /**
- * NotFoundWrapper
- * Wraps NotFound component with AppLayout for authenticated users
+ * AuthenticatedNotFound - NotFound page wrapped in AppLayout for authenticated users
  */
-const NotFoundWrapper = () => {
-    const { user } = useAuth()
-    
-    if (!user) {
-        return <NotFound />
-    }
-    
+const AuthenticatedNotFound = () => {
     // Import AppLayout dynamically to avoid circular dependencies
     const [AppLayoutComponent, setAppLayoutComponent] = useState<React.ComponentType<{ children: React.ReactNode }> | null>(null)
     
@@ -153,6 +146,20 @@ const NotFoundWrapper = () => {
             <NotFound />
         </AppLayoutComponent>
     )
+}
+
+/**
+ * NotFoundWrapper
+ * Wraps NotFound component with AppLayout for authenticated users
+ */
+const NotFoundWrapper = () => {
+    const { user } = useAuth()
+    
+    if (!user) {
+        return <NotFound />
+    }
+    
+    return <AuthenticatedNotFound />
 }
 
 // Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved
