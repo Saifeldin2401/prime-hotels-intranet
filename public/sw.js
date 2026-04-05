@@ -5,7 +5,7 @@
  * Implements a "Clean Shell" strategy to resolve navigation redirect errors.
  */
 
-const VERSION = new URL(self.location.href).searchParams.get('v') || 'v8';
+const VERSION = new URL(self.location.href).searchParams.get('v') || 'v9-reset-password-fix';
 const CACHE_NAME = `prime-hotels-${VERSION}`;
 const STATIC_CACHE = `prime-hotels-static-${VERSION}`;
 const DYNAMIC_CACHE = `prime-hotels-dynamic-${VERSION}`;
