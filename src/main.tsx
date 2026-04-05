@@ -18,7 +18,7 @@ const STALE_MODULE_SW_RESET_KEY = '__stale_module_sw_reset_done__'
 const PWA_DISABLED_CLEANUP_KEY = '__pwa_disabled_cleanup_done__'
 const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
 
-function extractErrorMessage(reason: unknown): string {
+export function extractErrorMessage(reason: unknown): string {
   if (typeof reason === 'string') return reason
   if (reason && typeof reason === 'object') {
     const maybeMessage = (reason as { message?: unknown }).message
@@ -27,7 +27,7 @@ function extractErrorMessage(reason: unknown): string {
   return ''
 }
 
-function isRecoverableModuleLoadError(reason: unknown): boolean {
+export function isRecoverableModuleLoadError(reason: unknown): boolean {
   const message = extractErrorMessage(reason)
   if (!message) return false
 
@@ -62,7 +62,7 @@ function navigateForRecovery() {
   window.location.replace(url.toString())
 }
 
-async function recoverFromStaleModuleLoad(reason: unknown): Promise<boolean> {
+export async function recoverFromStaleModuleLoad(reason: unknown): Promise<boolean> {
   if (!isRecoverableModuleLoadError(reason)) return false
 
   const message = extractErrorMessage(reason) || 'Unknown stale module load error'

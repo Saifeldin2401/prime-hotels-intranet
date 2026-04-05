@@ -182,11 +182,43 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // 3. JS/CSS assets - network-first with cache fallback
+    // This prevents white screen when old hashed chunks are requested after deployment
     if (
         request.destination === 'script' ||
         request.destination === 'style' ||
         request.destination === 'worker'
     ) {
+        event.respondWith(
+            (async () => {
+                try {
+                    // Always try network first for fresh builds
+                    const networkResponse = await fetch(request, {
+                        cache: 'no-store',
+                        credentials: 'same-origin',
+                    });
+                    
+                    if (networkResponse.ok) {
+                        // Update cache with fresh version for offline use
+                        const cache = await caches.open(STATIC_CACHE);
+                        await cache.put(request, networkResponse.clone());
+                        return networkResponse;
+                    }
+                } catch (error) {
+                    console.warn(`[SW ${VERSION}] Network fetch failed for ${request.destination}:`, request.url, error);
+                }
+                
+                // Fallback to cached version if network fails
+                const cached = await caches.match(request);
+                if (cached) {
+                    return cached;
+                }
+                
+                // If not in cache and network failed, let browser handle the 404
+                // This will trigger the error recovery in main.tsx
+                return fetch(request);
+            })()
+        );
         return;
     }
 
