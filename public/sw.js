@@ -92,11 +92,71 @@ self.addEventListener('fetch', (event) => {
     if (request.mode === 'navigate') {
         const skipCachedShell = isAuthSensitivePath(url.pathname);
         
+        // PRESERVE HASH: Auth callbacks need the hash (e.g., #access_token=xxx)
+        // The hash is not sent to the server, but we need to ensure the client gets it
+        const originalUrl = new URL(request.url);
+        const hasAuthHash = originalUrl.hash && (
+            originalUrl.hash.includes('access_token=') ||
+            originalUrl.hash.includes('refresh_token=') ||
+            originalUrl.hash.includes('type=')
+        );
+        
         // Log navigation for debugging
-        console.log(`[SW ${VERSION}] Navigation request: ${url.pathname}`);
+        console.log(`[SW ${VERSION}] Navigation request: ${url.pathname}`, {
+            hasHash: !!originalUrl.hash,
+            hasAuthHash,
+            skipCachedShell
+        });
         
         event.respondWith(
             (async () => {
+                // For auth callbacks with hash, ALWAYS go to network first
+                // The hash is critical and must not be served from cache
+                if (hasAuthHash) {
+                    console.log(`[SW ${VERSION}] Auth callback detected, bypassing cache: ${url.pathname}`);
+                    try {
+                        const response = await fetch(request, {
+                            redirect: 'follow',
+                            credentials: 'same-origin',
+                            cache: 'no-store',
+                        });
+                        
+                        const safeNetworkResponse = toSafeResponse(request, response);
+                        if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                            console.log(`[SW ${VERSION}] Serving auth callback from network: ${url.pathname}`);
+                            return safeNetworkResponse;
+                        }
+                    } catch (error) {
+                        console.warn(`[SW ${VERSION}] Network fetch failed for auth callback:`, error);
+                    }
+                    
+                    // If network fails for auth callback, try shell but DON'T cache
+                    try {
+                        const shellUrl = new URL('/index.html', self.location.origin).toString();
+                        const response = await fetch(shellUrl, {
+                            redirect: 'follow',
+                            credentials: 'same-origin',
+                            cache: 'no-store',
+                        });
+
+                        const safeNetworkResponse = toSafeResponse(request, response);
+                        if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                            console.log(`[SW ${VERSION}] Serving shell for auth callback: ${url.pathname}`);
+                            // Return shell but preserve the original URL's hash
+                            // The browser will keep the hash since we're not redirecting
+                            return new Response(safeNetworkResponse.body, {
+                                status: safeNetworkResponse.status,
+                                statusText: safeNetworkResponse.statusText,
+                                headers: safeNetworkResponse.headers,
+                            });
+                        }
+                    } catch (error) {
+                        console.error(`[SW ${VERSION}] Shell fetch failed for auth callback:`, error);
+                    }
+                    
+                    return createOfflineShellResponse();
+                }
+                
                 // Try navigation preload first (if enabled)
                 try {
                     const preloadResponse = await event.preloadResponse;
