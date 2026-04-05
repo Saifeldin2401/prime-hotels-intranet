@@ -31,6 +31,15 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
 
     useEffect(() => {
         const validateToken = async () => {
+            // DEBUG: Log the current URL state
+            console.log('[TokenValidationGuard] Validating:', {
+                type,
+                search: location.search,
+                hash: location.hash,
+                pathname: location.pathname,
+                fullUrl: window.location.href,
+            })
+
             // Check query params
             const queryParams = new URLSearchParams(location.search)
             const tokenHash = queryParams.get('token_hash')
@@ -48,17 +57,28 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             // Check if we have any token data in URL
             const hasUrlTokens = !!(tokenHash || code || accessToken)
 
+            console.log('[TokenValidationGuard] Token check:', {
+                hasUrlTokens,
+                tokenHash: !!tokenHash,
+                code: !!code,
+                accessToken: !!accessToken,
+                refreshToken: !!refreshToken,
+                isValidType,
+            })
+
             // If we have URL tokens, validate them
             if (hasUrlTokens) {
                 try {
                     if (code) {
                         // Exchange the code for a session
                         const { error } = await supabase.auth.exchangeCodeForSession(code)
+                        console.log('[TokenValidationGuard] Code exchange result:', { error: !!error })
                         setIsValid(!error)
                     } else if (accessToken && refreshToken) {
                         // Tokens in hash - Supabase may have already auto-consumed them
                         // Check if we now have a valid session
                         const { data: { session } } = await supabase.auth.getSession()
+                        console.log('[TokenValidationGuard] Session from hash tokens:', { hasSession: !!session })
                         setIsValid(!!session)
                     } else if (tokenHash && isValidType) {
                         // Token hash present with correct type
@@ -67,7 +87,8 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
                         // Some token is present, let component handle it
                         setIsValid(true)
                     }
-                } catch {
+                } catch (err) {
+                    console.error('[TokenValidationGuard] Validation error:', err)
                     setIsValid(false)
                 } finally {
                     setIsValidating(false)
@@ -79,6 +100,11 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
             // Check if we have an active session (which would indicate successful token consumption)
             try {
                 const { data: { session }, error } = await supabase.auth.getSession()
+                console.log('[TokenValidationGuard] Session check (no URL tokens):', { 
+                    hasSession: !!session, 
+                    hasUser: !!session?.user,
+                    error: !!error 
+                })
                 if (session?.user && !error) {
                     // Supabase has already processed the tokens and established a session
                     setIsValid(true)
@@ -86,7 +112,8 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
                     // No tokens in URL and no session - this is an invalid access
                     setIsValid(false)
                 }
-            } catch {
+            } catch (err) {
+                console.error('[TokenValidationGuard] Session check error:', err)
                 setIsValid(false)
             } finally {
                 setIsValidating(false)
