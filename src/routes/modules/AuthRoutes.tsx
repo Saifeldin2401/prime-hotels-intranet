@@ -16,6 +16,10 @@ const Unauthorized = lazy(() => import('@/pages/Unauthorized'))
  * TokenValidationGuard
  * Validates authentication tokens before rendering sensitive routes
  * Redirects to login if token is invalid or missing
+ * 
+ * Note: Supabase auth links may contain tokens in:
+ * - Query params: ?code=xxx&token_hash=xxx
+ * - Hash fragment: #access_token=xxx&refresh_token=xxx
  */
 const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; type: 'recovery' | 'invite' }) => {
     const [isValidating, setIsValidating] = useState(true)
@@ -24,12 +28,22 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
 
     useEffect(() => {
         const validateToken = async () => {
-            const params = new URLSearchParams(location.search)
-            const tokenHash = params.get('token_hash')
-            const code = params.get('code')
+            // Check query params
+            const queryParams = new URLSearchParams(location.search)
+            const tokenHash = queryParams.get('token_hash')
+            const code = queryParams.get('code')
             
-            // If no token or code is present, mark as invalid
-            if (!tokenHash && !code) {
+            // Check hash fragment (Supabase often puts tokens here)
+            const hashParams = new URLSearchParams(location.hash.substring(1))
+            const accessToken = hashParams.get('access_token')
+            const refreshToken = hashParams.get('refresh_token')
+            const hashType = hashParams.get('type')
+            
+            // Check if this is a valid auth callback for our type
+            const isValidType = hashType === type || queryParams.get('type') === type
+            
+            // If no token data is present at all, mark as invalid
+            if (!tokenHash && !code && !accessToken) {
                 setIsValid(false)
                 setIsValidating(false)
                 return
@@ -42,11 +56,20 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
                     const { error } = await supabase.auth.exchangeCodeForSession(code)
                     if (!error) {
                         setIsValid(true)
+                    } else {
+                        setIsValid(false)
                     }
+                } else if (accessToken && refreshToken) {
+                    // We have tokens in hash - this is likely a valid Supabase auth callback
+                    // The actual session setting will be handled by the child component
+                    setIsValid(true)
+                } else if (tokenHash && isValidType) {
+                    // Token hash present with correct type
+                    setIsValid(true)
+                } else {
+                    // Token is present but we'll let the component handle full validation
+                    setIsValid(true)
                 }
-                // Token is present, we'll let the component handle full validation
-                // but we at least confirm the required params exist
-                setIsValid(true)
             } catch {
                 setIsValid(false)
             } finally {
@@ -55,7 +78,7 @@ const TokenValidationGuard = ({ children, type }: { children: React.ReactNode; t
         }
 
         validateToken()
-    }, [location.search])
+    }, [location.search, location.hash, type])
 
     if (isValidating) {
         return (
