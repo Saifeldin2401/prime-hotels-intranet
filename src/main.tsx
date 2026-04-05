@@ -149,6 +149,88 @@ const replaySessionSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_SESSIO
 const replayOnErrorSampleRate = Number(import.meta.env.VITE_SENTRY_REPLAY_ON_ERROR_SAMPLE_RATE ?? 1.0)
 const sendDefaultPii = import.meta.env.VITE_SENTRY_SEND_DEFAULT_PII === 'true'
 
+// ============================================================================
+// AUTOMATED VERSION MISMATCH DETECTION
+// Automatically clears service worker and caches when a new version is detected
+// ============================================================================
+const VERSION_CHECK_KEY = '__phg_app_version__'
+const VERSION_RELOADED_KEY = '__phg_version_reload_done__'
+
+async function checkAndHandleVersionMismatch(): Promise<boolean> {
+  if (typeof window === 'undefined') return false
+  
+  const currentVersion = SERVICE_WORKER_BUILD_VERSION
+  
+  try {
+    const storedVersion = localStorage.getItem(VERSION_CHECK_KEY)
+    const hasReloaded = sessionStorage.getItem(VERSION_RELOADED_KEY) === '1'
+    
+    // First visit - just store the version
+    if (!storedVersion) {
+      localStorage.setItem(VERSION_CHECK_KEY, currentVersion)
+      return false
+    }
+    
+    // Version matches - no action needed
+    if (storedVersion === currentVersion) {
+      return false
+    }
+    
+    // Version mismatch detected!
+    console.log(`[Version Check] Mismatch detected: stored=${storedVersion}, current=${currentVersion}`)
+    
+    // Prevent infinite reload loops
+    if (hasReloaded) {
+      console.warn('[Version Check] Already reloaded once, not reloading again to prevent loop')
+      // Still update the stored version so we don't keep checking
+      localStorage.setItem(VERSION_CHECK_KEY, currentVersion)
+      sessionStorage.removeItem(VERSION_RELOADED_KEY)
+      return false
+    }
+    
+    // Clear service workers and caches
+    console.log('[Version Check] Clearing service workers and caches...')
+    const hadArtifacts = await clearPrimeHotelServiceWorkersAndCaches()
+    
+    if (hadArtifacts) {
+      console.log('[Version Check] Cleared stale artifacts, reloading...')
+      
+      // Mark that we've reloaded to prevent loops
+      sessionStorage.setItem(VERSION_RELOADED_KEY, '1')
+      
+      // Update stored version before reload
+      localStorage.setItem(VERSION_CHECK_KEY, currentVersion)
+      
+      // Report to Sentry if enabled
+      if (sentryEnabled) {
+        Sentry.captureMessage('auto_version_reload', {
+          level: 'info',
+          tags: { scope: 'pwa', auto_recovery: 'true' },
+          extra: {
+            storedVersion,
+            currentVersion,
+            pathname: window.location.pathname,
+          },
+        })
+      }
+      
+      // Force reload to get fresh content
+      window.location.reload()
+      return true
+    } else {
+      // No artifacts to clear, just update the stored version
+      localStorage.setItem(VERSION_CHECK_KEY, currentVersion)
+      return false
+    }
+  } catch (error) {
+    console.error('[Version Check] Error during version check:', error)
+    return false
+  }
+}
+
+// Run version check immediately (before rendering)
+const versionCheckPromise = checkAndHandleVersionMismatch()
+
 if (sentryEnabled) {
   Sentry.init({
     dsn: SENTRY_DSN,
@@ -219,14 +301,35 @@ if (!rootElement) {
   throw new Error('Root element not found')
 }
 
+// ============================================================================
+// MANUAL RECOVERY FUNCTION - Exposed to window for user-triggered recovery
+// Usage: In browser console, run: window.__PHG_FORCE_REFRESH__()
+// ============================================================================
+;(window as Window & { __PHG_FORCE_REFRESH__?: () => Promise<void> }).__PHG_FORCE_REFRESH__ = async () => {
+  console.log('[Manual Recovery] Clearing all caches and reloading...')
+  await clearPrimeHotelServiceWorkersAndCaches()
+  // Clear all version check keys to force fresh start
+  localStorage.removeItem(VERSION_CHECK_KEY)
+  sessionStorage.removeItem(VERSION_RELOADED_KEY)
+  window.location.reload()
+}
+
 // In DEV, React Refresh may re-execute this module. createRoot will warn but still work.
 // We rely on React's own error handling rather than trying to prevent the warning.
-const root = createRoot(rootElement)
-root.render(
-  <Wrapper>
-    <App />
-  </Wrapper>
-)
+// Wait for version check to complete before rendering to avoid conflicts
+versionCheckPromise.then((didReload) => {
+  if (didReload) {
+    // If we triggered a reload, don't render - the page will reload
+    return
+  }
+  
+  const root = createRoot(rootElement)
+  root.render(
+    <Wrapper>
+      <App />
+    </Wrapper>
+  )
+})
 
 // If the app stays up, allow future one-time recoveries in this tab.
 window.setTimeout(() => {

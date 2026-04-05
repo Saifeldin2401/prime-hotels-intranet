@@ -91,19 +91,26 @@ self.addEventListener('fetch', (event) => {
     // Navigation requests (mode: navigate) can fail if the SW returns redirected/opaqueredirect responses.
     if (request.mode === 'navigate') {
         const skipCachedShell = isAuthSensitivePath(url.pathname);
+        
+        // Log navigation for debugging
+        console.log(`[SW ${VERSION}] Navigation request: ${url.pathname}`);
+        
         event.respondWith(
             (async () => {
+                // Try navigation preload first (if enabled)
                 try {
                     const preloadResponse = await event.preloadResponse;
                     const safePreloadResponse = toSafeResponse(request, preloadResponse);
                     if (isSuccessfulHtmlResponse(safePreloadResponse)) {
+                        console.log(`[SW ${VERSION}] Serving from preload: ${url.pathname}`);
                         await cacheAppShell(safePreloadResponse.clone(), url.pathname);
                         return safePreloadResponse;
                     }
                 } catch (error) {
-                    console.warn(`[SW ${VERSION}] Navigation preload failed:`, error);
+                    console.warn(`[SW ${VERSION}] Navigation preload failed for ${url.pathname}:`, error);
                 }
 
+                // Try network fetch
                 try {
                     const response = await fetch(request, {
                         redirect: 'follow',
@@ -113,13 +120,15 @@ self.addEventListener('fetch', (event) => {
 
                     const safeNetworkResponse = toSafeResponse(request, response);
                     if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
+                        console.log(`[SW ${VERSION}] Serving from network: ${url.pathname}`);
                         await cacheAppShell(safeNetworkResponse.clone(), url.pathname);
                         return safeNetworkResponse;
                     }
                 } catch (error) {
-                    console.warn(`[SW ${VERSION}] Deep-link navigation fetch failed:`, error);
+                    console.warn(`[SW ${VERSION}] Network fetch failed for ${url.pathname}:`, error);
                 }
 
+                // Fallback to app shell
                 try {
                     const shellUrl = new URL('/index.html', self.location.origin).toString();
                     const response = await fetch(shellUrl, {
@@ -130,8 +139,7 @@ self.addEventListener('fetch', (event) => {
 
                     const safeNetworkResponse = toSafeResponse(request, response);
                     if (isSuccessfulHtmlResponse(safeNetworkResponse)) {
-                        // Preserve the original request URL by creating a new response
-                        // that returns index.html content but reports the original URL
+                        console.log(`[SW ${VERSION}] Serving app shell for: ${url.pathname}`);
                         const preservedResponse = new Response(safeNetworkResponse.body, {
                             status: safeNetworkResponse.status,
                             statusText: safeNetworkResponse.statusText,
@@ -146,10 +154,11 @@ self.addEventListener('fetch', (event) => {
                     console.warn(`[SW ${VERSION}] Shell fetch failed:`, error);
                 }
 
+                // Last resort: cached shell
                 if (!skipCachedShell) {
                     const cachedShell = await getCachedAppShell(request);
                     if (cachedShell) {
-                        // Create a new response from the cached shell to preserve original URL
+                        console.log(`[SW ${VERSION}] Serving cached shell for: ${url.pathname}`);
                         return new Response(cachedShell.body, {
                             status: cachedShell.status,
                             statusText: cachedShell.statusText,
@@ -158,6 +167,7 @@ self.addEventListener('fetch', (event) => {
                     }
                 }
 
+                console.error(`[SW ${VERSION}] All navigation strategies failed for: ${url.pathname}`);
                 return createOfflineShellResponse();
             })()
         );
@@ -433,4 +443,14 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
         clients.openWindow(event.notification.data.url || '/')
     );
+});
+
+// Handle navigation preload errors gracefully
+self.addEventListener('error', (event) => {
+    console.warn(`[SW ${VERSION}] Error:`, event.message);
+});
+
+self.addEventListener('unhandledrejection', (event) => {
+    console.warn(`[SW ${VERSION}] Unhandled rejection:`, event.reason);
+    event.preventDefault();
 });
