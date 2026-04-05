@@ -101,7 +101,7 @@ function normalizeNamedJoin(value: RawKnowledgeJoin | null | undefined): { id: s
 /**
  * Expand search query with synonyms for hotel jargon
  */
-function expandSearchQuery(query: string): string[] {
+export function expandSearchQuery(query: string): string[] {
     const normalizedQuery = query.toLowerCase().trim()
     const terms = [normalizedQuery]
 
@@ -403,7 +403,7 @@ export async function acknowledgeArticle(documentId: string, userId: string): Pr
             document_id: documentId,
             user_id: userId,
             acknowledged_at: new Date().toISOString()
-        })
+        }, { onConflict: 'document_id,user_id' })
 
     if (error) throw error
 }

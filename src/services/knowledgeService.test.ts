@@ -337,16 +337,14 @@ describe('knowledgeService', () => {
 
   describe('toggleBookmark', () => {
     it('should add bookmark if not exists', async () => {
-      const mockSelect = vi.fn().mockReturnThis()
-      const mockSingle = vi.fn().mockResolvedValue({ data: null })
       const mockInsert = vi.fn().mockResolvedValue({ error: null })
 
       vi.mocked(supabase.from).mockImplementation((table) => {
         if (table === 'document_bookmarks') {
           return {
-            select: mockSelect,
-            eq: mockSelect,
-            single: mockSingle,
+            select: vi.fn().mockReturnThis(),
+            eq: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: null }),
             insert: mockInsert,
             delete: vi.fn().mockReturnThis(),
           } as any
@@ -360,7 +358,10 @@ describe('knowledgeService', () => {
     })
 
     it('should remove bookmark if exists', async () => {
-      const mockDelete = vi.fn().mockResolvedValue({ error: null })
+      const mockDeleteEq = vi.fn().mockResolvedValue({ error: null })
+      const mockDelete = vi.fn().mockReturnValue({
+        eq: mockDeleteEq,
+      })
 
       vi.mocked(supabase.from).mockImplementation((table) => {
         if (table === 'document_bookmarks') {
@@ -527,12 +528,23 @@ describe('knowledgeService', () => {
     })
 
     it('should filter by department_id when provided', async () => {
-      const mockEq = vi.fn().mockReturnThis()
+      // Mock the Supabase query builder chain
+      // getCategories does: from().select().order().eq() then awaits
+      const mockResolveValue = { data: [], error: null }
+      
+      // Create a builder that properly chains and is awaitable
+      const createBuilder = (): any => {
+        const self: any = {}
+        self.order = vi.fn(() => self)
+        self.eq = vi.fn(() => self)
+        self.then = (onfulfilled: any) => Promise.resolve(mockResolveValue).then(onfulfilled)
+        return self
+      }
+      
+      const builder = createBuilder()
 
       vi.mocked(supabase.from).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: mockEq,
-        order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        select: vi.fn(() => builder),
       } as any)
 
       // The getCategories function calls query.eq which should work with the mock
