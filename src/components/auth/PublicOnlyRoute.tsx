@@ -15,16 +15,16 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const { t } = useTranslation('extracted');
     const hasRedirected = useRef(false)
     
-    // Get redirect paths
-    const pendingAuthFlowPath = getAuthFlowRedirectPath()
+    // Get redirect path from query params
     const redirectPath = getRedirectFromSearch(location.search)
     
     // Clear auth flow state after we capture it to prevent stale redirects
     useEffect(() => {
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
         if (user && pendingAuthFlowPath && !hasRedirected.current) {
             clearAuthFlowState()
         }
-    }, [user, pendingAuthFlowPath])
+    }, [user])
 
     if (loading) {
         return (
@@ -41,6 +41,8 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
         // Priority: 1. Auth flow paths (reset-password, complete-invite)
         //          2. Redirect from query param (deep link preservation)
         //          3. Default to /home (which redirects to /dashboard)
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        
         let destination = '/home'
         
         if (pendingAuthFlowPath) {

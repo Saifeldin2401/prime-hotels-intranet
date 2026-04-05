@@ -1,16 +1,8 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
 import { Navigate, Route, useLocation, useParams } from 'react-router-dom'
-
-// Helper component to preserve query params during redirect
-const PreserveQueryNavigate = ({ to }: { to: string }) => {
-  const location = useLocation()
-  // Handle merging query params if 'to' already has some
-  const hasQueryParams = to.includes('?')
-  const preservedSearch = location.search ? (hasQueryParams ? location.search.replace('?', '&') : location.search) : ''
-  return <Navigate to={`${to}${preservedSearch}`} replace />
-}
 
 const KnowledgeHome = lazy(() => import('@/pages/knowledge/KnowledgeHome'))
 const KnowledgeViewer = lazy(() => import('@/pages/knowledge/KnowledgeViewer'))

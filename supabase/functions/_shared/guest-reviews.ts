@@ -1,4 +1,5 @@
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import { fetchWithRetry, generateRequestId, sleep } from './utils.ts'
 
 export type ReviewIssueCategory =
   | 'cleanliness'
@@ -388,30 +389,50 @@ Required JSON shape:
 }`
 }
 
+export interface CallStructuredAiOptions {
+  maxRetries?: number
+  requestId?: string
+}
+
 export async function callStructuredAi(
   context: GuestReviewContext,
   prompt: string,
+  options: CallStructuredAiOptions = {},
 ): Promise<Record<string, unknown> | null> {
-  const response = await fetch(`${context.supabaseUrl}/functions/v1/process-ai-request`, {
+  const { maxRetries = 3, requestId = generateRequestId() } = options
+  const logPrefix = `[${requestId}]`
+  
+  const url = `${context.supabaseUrl}/functions/v1/process-ai-request`
+  const fetchOptions: RequestInit = {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${context.serviceRoleKey}`,
       'Content-Type': 'application/json',
+      'X-Request-ID': requestId,
     },
     body: JSON.stringify({
       task: 'chat',
       prompt,
       temperature: 0.1,
       max_tokens: 1800,
+      request_id: requestId,
     }),
-  })
-
-  const payload = await response.json().catch(() => null)
-  if (!response.ok || !payload?.success) {
-    throw new Error(payload?.error || `AI request failed with HTTP ${response.status}`)
   }
 
-  return extractJsonObject(String(payload.result ?? payload.response ?? ''))
+  try {
+    const response = await fetchWithRetry(url, fetchOptions, maxRetries, requestId)
+    const payload = await response.json().catch(() => null)
+    
+    if (!response.ok || !payload?.success) {
+      throw new Error(payload?.error || `AI request failed with HTTP ${response.status}`)
+    }
+
+    console.log(`${logPrefix} AI request completed successfully`)
+    return extractJsonObject(String(payload.result ?? payload.response ?? ''))
+  } catch (error) {
+    console.error(`${logPrefix} AI request failed after ${maxRetries} retries:`, error)
+    throw error
+  }
 }
 
 function coerceIssueCategory(value: unknown): ReviewIssueCategory {
@@ -735,12 +756,21 @@ export async function enqueueGuestReviewNotifications(
   }
 }
 
+export interface RunGuestReviewAnalysisOptions {
+  force?: boolean
+  actorId?: string | null
+  maxRetries?: number
+  requestId?: string
+}
+
 export async function runGuestReviewAnalysis(
   supabase: SupabaseClient,
   context: GuestReviewContext,
   reviewId: string,
-  options?: { force?: boolean; actorId?: string | null },
+  options: RunGuestReviewAnalysisOptions = {},
 ): Promise<GuestReviewAnalysisResult> {
+  const requestId = options.requestId || generateRequestId()
+  const logPrefix = `[${requestId}]`
   const { data: reviewData, error: reviewError } = await supabase
     .from('guest_reviews')
     .select('id, property_id, platform, review_url, reviewer_name, review_title, review_text, review_language, rating_normalized_10, rating_normalized_5, vip_flag, source_id, summary_en')
@@ -766,10 +796,13 @@ export async function runGuestReviewAnalysis(
 
   try {
     const prompt = buildAiAnalysisPrompt(review, tone, propertyName)
-    const aiPayload = await callStructuredAi(context, prompt)
+    const aiPayload = await callStructuredAi(context, prompt, {
+      maxRetries: options.maxRetries ?? 3,
+      requestId,
+    })
     analysis = normalizeAnalysisPayload(aiPayload, fallback)
   } catch (error) {
-    console.warn('guest-review-analysis fallback triggered:', error instanceof Error ? error.message : String(error))
+    console.warn(`${logPrefix} guest-review-analysis fallback triggered:`, error instanceof Error ? error.message : String(error))
   }
 
   const dueHours = analysis.critical ? 12 : 24

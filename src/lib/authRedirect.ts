@@ -36,7 +36,9 @@ const cookies = {
     
     const cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax; Secure${domainAttr}`
     document.cookie = cookie
-    console.log(`[authRedirect] Set cookie: ${name}`, { domainAttr })
+    if (import.meta.env.DEV) {
+        console.log(`[authRedirect] Set cookie: ${name}`, { domainAttr })
+    }
   },
   get(name: string): string | null {
     if (typeof document === 'undefined') return null
@@ -111,11 +113,13 @@ export function sanitizeRedirectPath(candidate: string | null | undefined): stri
     
     // Use robust origin comparison
     if (!originsMatch(parsed.origin, window.location.origin)) {
-      console.warn('[authRedirect] Origin mismatch, rejecting redirect:', {
-        parsed: parsed.origin,
-        window: window.location.origin,
-        candidate: trimmed
-      })
+      if (import.meta.env.DEV) {
+        console.warn('[authRedirect] Origin mismatch, rejecting redirect:', {
+          parsed: parsed.origin,
+          window: window.location.origin,
+          candidate: trimmed
+        })
+      }
       return null
     }
     
@@ -142,7 +146,9 @@ export function setPostLoginRedirect(pathname: string, search = '', hash = '') {
   const sanitized = sanitizeRedirectPath(target)
   
   if (sanitized) {
-    console.log('[authRedirect] Saving redirect destination:', sanitized)
+    if (import.meta.env.DEV) {
+      console.log('[authRedirect] Saving redirect destination:', sanitized)
+    }
     // 1. Session storage (tab-specific, same-origin)
     window.sessionStorage.setItem(POST_LOGIN_STORAGE_KEY, sanitized)
     // 2. Cookie (cross-subdomain support)
@@ -162,9 +168,11 @@ export function consumePostLoginRedirect(): string | null {
   const redirect = sessionRedirect ?? cookieRedirect
   
   if (redirect) {
-    console.log('[authRedirect] Consuming saved redirect:', redirect, {
-      source: sessionRedirect ? 'session' : 'cookie'
-    })
+    if (import.meta.env.DEV) {
+      console.log('[authRedirect] Consuming saved redirect:', redirect, {
+        source: sessionRedirect ? 'session' : 'cookie'
+      })
+    }
     window.sessionStorage.removeItem(POST_LOGIN_STORAGE_KEY)
     cookies.remove(COOKIE_NAME)
     return sanitizeRedirectPath(redirect)
@@ -197,7 +205,9 @@ export function getRedirectFromSearch(search: string): string | null {
   const urlRedirect = sanitizeRedirectPath(raw)
   
   if (urlRedirect) {
-    console.log('[authRedirect] Found direct URL redirect:', urlRedirect)
+    if (import.meta.env.DEV) {
+      console.log('[authRedirect] Found direct URL redirect:', urlRedirect)
+    }
     return urlRedirect
   }
 
@@ -207,7 +217,9 @@ export function getRedirectFromSearch(search: string): string | null {
     const cookie = cookies.get(COOKIE_NAME)
     const stored = sanitizeRedirectPath(session ?? cookie)
     if (stored) {
-      console.log('[authRedirect] Found stored redirect (peek):', stored)
+      if (import.meta.env.DEV) {
+        console.log('[authRedirect] Found stored redirect (peek):', stored)
+      }
       return stored
     }
   }
@@ -228,7 +240,9 @@ export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) 
   const handler = (pathOrUrl: string) => {
     const sanitized = sanitizeRedirectPath(pathOrUrl)
     if (sanitized) {
-      console.log('[authRedirect] Global deep link triggered:', sanitized)
+      if (import.meta.env.DEV) {
+        console.log('[authRedirect] Global deep link triggered:', sanitized)
+      }
       // Save it first to ensure persistence if the route is protected
       setPostLoginRedirect(sanitized)
       // Attempt immediate navigation
@@ -251,6 +265,8 @@ export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) 
     }
   })
 
-  console.log('[authRedirect] Global deep link handler registered')
+  if (import.meta.env.DEV) {
+    console.log('[authRedirect] Global deep link handler registered')
+  }
 }
 

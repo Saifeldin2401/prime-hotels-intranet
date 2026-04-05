@@ -62,6 +62,22 @@ const CONFIG = {
   loadingTimeoutMs: 5000,
 } as const
 
+// ─── Logger helper (guarded) ───────────────────────────────────────────────
+const log = {
+  warn: (message: string, ...args: unknown[]) => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(message, ...args)
+    }
+  },
+  error: (message: string, ...args: unknown[]) => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.error(message, ...args)
+    }
+  },
+}
+
 // ─── Provider ──────────────────────────────────────────────────────────────
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -135,7 +151,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
-        console.warn('[Auth] Loading is taking unusually long (>10s). Waiting for Supabase to resolve or fail.')
+        log.warn('[Auth] Loading is taking unusually long (>10s). Waiting for Supabase to resolve or fail.')
       }
     }, 10000)
 
@@ -149,7 +165,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(async ({ data: { session }, error }) => {
       if (!mounted) return
       if (error) {
-        console.warn('[Auth] Error getting session:', getErrorMessage(error))
+        log.warn('[Auth] Error getting session:', getErrorMessage(error))
         finishLoading()
         return
       }
@@ -164,13 +180,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setRolesLoading(true)
         finishLoading()
         loadUserData(session.user.id).catch(() => {
-          console.warn('[Auth] Error in loadUserData.')
+          log.warn('[Auth] Error in loadUserData.')
         })
       } else {
         finishLoading()
       }
     }).catch((error) => {
-      console.warn('[Auth] Unexpected error in getSession:', getErrorMessage(error))
+      log.warn('[Auth] Unexpected error in getSession:', getErrorMessage(error))
       if (mounted) finishLoading()
     })
 
@@ -187,12 +203,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         void analytics.identify(session.user.id).catch((error) => {
-          console.warn('[Auth] Failed to initialize analytics identity:', error)
+          log.warn('[Auth] Failed to initialize analytics identity:', error)
         })
         if (_event !== 'TOKEN_REFRESHED' || shouldRefreshUserData(session.user.id)) {
           finishLoading()
           loadUserData(session.user.id).catch(() => {
-            console.warn('[Auth] Error in loadUserData (auth change).')
+            log.warn('[Auth] Error in loadUserData (auth change).')
           })
         } else {
           finishLoading()
@@ -260,9 +276,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           if (classification.shouldLogout) {
             // Access token expired — try refreshing before giving up
-            if (import.meta.env.DEV) {
-              console.warn('[Auth] Session validation failed, attempting token refresh before logout:', errorMsg)
-            }
+            log.warn('[Auth] Session validation failed, attempting token refresh before logout:', errorMsg)
             try {
               const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession()
               if (refreshData?.session?.user && !refreshError) {
@@ -276,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 setUser((current) => (current?.id === refreshData.session!.user.id ? current : refreshData.session!.user))
                 if (shouldRefreshUserData(refreshData.session.user.id)) {
                   loadUserData(refreshData.session.user.id).catch(() => {
-                    console.warn('[Auth] Error in loadUserData (resume recovery).')
+                    log.warn('[Auth] Error in loadUserData (resume recovery).')
                   })
                 }
                 finishLoading()
@@ -308,9 +322,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             }, delay)
           } else if (classification.type === 'network_error') {
             // Don't clear session on network errors - session may still be valid
-            if (import.meta.env.DEV) {
-              console.warn('[Auth] Network error during resume check, keeping session:', errorMsg)
-            }
+            log.warn('[Auth] Network error during resume check, keeping session:', errorMsg)
           }
 
           finishLoading()
@@ -328,12 +340,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
         if (shouldRefreshUserData(verifiedUser.id)) {
           loadUserData(verifiedUser.id).catch(() => {
-            console.warn('[Auth] Error in loadUserData (resume validation).')
+            log.warn('[Auth] Error in loadUserData (resume validation).')
           })
         }
       } catch (unexpectedError) {
         // Unexpected errors - don't auto-logout
-        console.error('[Auth] Unexpected error in resume validation:', unexpectedError)
+        log.error('[Auth] Unexpected error in resume validation:', unexpectedError)
         recordAuthEvent({
           type: 'session_validation',
           success: false,
@@ -393,7 +405,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   ])
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────
-  const signIn = async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string) => {
     // Rate limiting check
     const rateLimitKey = `auth:signin:${email.toLowerCase()}`
     if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.auth.maxRequests, rateLimitConfig.auth.windowMs)) {
@@ -413,7 +425,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(data.user)
         setLoading(false)
         loadUserData(data.user.id).catch(() => {
-          console.warn('[Auth] Error loading user data after sign in.')
+          log.warn('[Auth] Error loading user data after sign in.')
         })
       } else {
         setLoading(false)
@@ -424,9 +436,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setRolesLoading(false)
       return { error: error as Error }
     }
-  }
+  }, [loadUserData])
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     localStorage.removeItem('prime_current_property_id')
     recordAuthEvent({
       type: 'logout',
@@ -434,9 +446,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       details: { reason: 'user_initiated' },
     })
     await clearLocalSession('User signed out', resetLocalAuthState)
-  }
+  }, [clearLocalSession, resetLocalAuthState])
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     try {
       const { data: { session }, error } = await supabase.auth.refreshSession()
       if (error || !session?.user) {
@@ -450,8 +462,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Only logout on actual auth expiration, not network/server errors
         if (classification.shouldLogout) {
           await clearLocalSession('Session refresh failed - token expired', resetLocalAuthState)
-        } else if (import.meta.env.DEV) {
-          console.warn('[Auth] Token refresh failed due to transient error, keeping session:', getErrorMessage(error))
+        } else {
+          log.warn('[Auth] Token refresh failed due to transient error, keeping session:', getErrorMessage(error))
         }
         return
       }
@@ -466,7 +478,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await loadUserData(session.user.id)
     } catch (error) {
       const classification = classifyAuthError(error)
-      console.error('[Auth] Unexpected error in refreshSession:', error)
+      log.error('[Auth] Unexpected error in refreshSession:', error)
       recordAuthEvent({
         type: 'token_refresh',
         success: false,
@@ -478,12 +490,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await clearLocalSession('Session refresh failed - auth error', resetLocalAuthState)
       }
     }
-  }
+  }, [clearLocalSession, loadUserData, resetLocalAuthState])
 
   // ── Derived: primary role ──────────────────────────────────────────────
-  const primaryRole = roles.length > 0
-    ? [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
-    : null
+  const primaryRole = useMemo(() => {
+    if (roles.length === 0) return null
+    return [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
+  }, [roles])
+
+  // ── Memoized context value ─────────────────────────────────────────────
+  const contextValue = useMemo(() => ({
+    user,
+    profile,
+    roles,
+    properties,
+    departments,
+    primaryRole,
+    loading,
+    rolesLoading,
+    signIn,
+    signOut,
+    refreshSession,
+  }), [
+    user,
+    profile,
+    roles,
+    properties,
+    departments,
+    primaryRole,
+    loading,
+    rolesLoading,
+    signIn,
+    signOut,
+    refreshSession,
+  ])
 
   // ── Debug: expose health report to window in development ───────────────
   useEffect(() => {
@@ -494,21 +534,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        profile,
-        roles,
-        properties,
-        departments,
-        primaryRole,
-        loading,
-        rolesLoading,
-        signIn,
-        signOut,
-        refreshSession,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   )

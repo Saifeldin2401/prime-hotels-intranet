@@ -3,8 +3,9 @@ import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
 import { buildLoginUrl, getRedirectFromSearch, consumePostLoginRedirect } from '@/lib/authRedirect'
 import { getAuthFlowRedirectPath, clearAuthFlowState } from '@/lib/authFlowState'
-import { lazy, Suspense, useEffect, useMemo } from 'react'
-import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
+import { ROUTE_PARAM_PATTERNS } from '@/routes/constants'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation, useParams } from 'react-router-dom'
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes } from './modules/AuthRoutes'
@@ -21,6 +22,7 @@ import { PageTracker } from '@/components/analytics/PageTracker'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
+const NotFound = lazy(() => import('@/pages/NotFound'))
 
 const RootLayout = () => {
     const { loading } = useAuth()
@@ -64,16 +66,7 @@ const RootIndex = () => {
         const sessionRedirect = consumePostLoginRedirect()
         
         // Priority: auth flow > URL param > session storage > default
-        const dest = pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home"
-        
-        console.log('[RootIndex] Redirecting authenticated user:', {
-            to: dest,
-            pendingAuthFlowPath,
-            urlRedirect,
-            sessionRedirect
-        })
-        
-        return dest
+        return pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home"
     }, [user, location.search])
     
     // Clear auth flow state after redirect is computed
@@ -101,6 +94,65 @@ const RootIndex = () => {
         ? `/login?redirect=${encodeURIComponent(redirectPath)}`
         : '/login'
     return <Navigate to={loginTarget} replace />
+}
+
+/**
+ * RouteParamValidator
+ * Validates dynamic route parameters against defined patterns
+ * Renders NotFound page if parameters are invalid
+ */
+const RouteParamValidator = ({ 
+    children, 
+    validations 
+}: { 
+    children: React.ReactNode
+    validations: Record<string, keyof typeof ROUTE_PARAM_PATTERNS>
+}) => {
+    const params = useParams()
+    
+    for (const [param, pattern] of Object.entries(validations)) {
+        const value = params[param]
+        if (value && !ROUTE_PARAM_PATTERNS[pattern].test(value)) {
+            return <NotFound />
+        }
+    }
+    
+    return <>{children}</>
+}
+
+/**
+ * NotFoundWrapper
+ * Wraps NotFound component with AppLayout for authenticated users
+ */
+const NotFoundWrapper = () => {
+    const { user } = useAuth()
+    
+    if (!user) {
+        return <NotFound />
+    }
+    
+    // Import AppLayout dynamically to avoid circular dependencies
+    const [AppLayoutComponent, setAppLayoutComponent] = useState<React.ComponentType<{ children: React.ReactNode }> | null>(null)
+    
+    useEffect(() => {
+        import('@/components/layout/AppLayout').then((module) => {
+            setAppLayoutComponent(() => module.AppLayout)
+        })
+    }, [])
+    
+    if (!AppLayoutComponent) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-background">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            </div>
+        )
+    }
+    
+    return (
+        <AppLayoutComponent>
+            <NotFound />
+        </AppLayoutComponent>
+    )
 }
 
 // Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved
@@ -140,6 +192,10 @@ export const router = createBrowserRouter(
             {DashboardRoutes()}
             {MiscRoutes()}
 
+            {/* 404 Not Found - Authenticated users see styled page, unauthenticated get redirected */}
+            <Route path="/not-found" element={<NotFoundWrapper />} />
+            
+            {/* Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved */}
             <Route path="*" element={<CatchAllRedirect />} />
         </Route>
     )
@@ -150,5 +206,9 @@ export const router = createBrowserRouter(
 if (typeof window !== 'undefined') {
     import('@/lib/authRedirect').then(({ registerGlobalDeeplinkHandler }) => {
         registerGlobalDeeplinkHandler((path) => router.navigate(path))
+    }).catch((err) => {
+        if (import.meta.env.DEV) {
+            console.error('[Router] Failed to load deep link handler:', err)
+        }
     })
 }

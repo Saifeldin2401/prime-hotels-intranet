@@ -19,8 +19,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/lib/supabase"
 import { OTASourceManager } from "@/components/reviews/OTASourceManager"
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from "@/lib/reviewsScope"
-import { Plus, Pencil, Trash2, Mail, Bell, User } from "lucide-react"
-import { useState } from "react"
+import { Plus, Pencil, Trash2, Mail, Bell, User, Loader2 } from "lucide-react"
+import { useState, useMemo } from "react"
 
 type PropertyLite = { id: string; name: string }
 
@@ -39,12 +39,25 @@ type ProfileLite = {
   email: string | null
 }
 
+// TypeScript enum types
+type GuestReviewEndpointScope = 'global' | 'property' | 'department' | 'executive'
+type GuestReviewEndpointChannel = 'email' | 'slack' | 'whatsapp' | 'sms'
+type GuestReviewResponsibilityCode = 
+  | 'general_manager' 
+  | 'area_general_manager' 
+  | 'corporate_reputation_owner'
+  | 'rooms_manager'
+  | 'housekeeping_manager'
+  | 'fnb_manager'
+  | 'maintenance_manager'
+  | 'it_manager'
+
 type EndpointRow = {
   id: string
   property_id: string | null
-  responsibility_code: string | null
-  scope: string
-  channel: string
+  responsibility_code: GuestReviewResponsibilityCode | null
+  scope: GuestReviewEndpointScope
+  channel: GuestReviewEndpointChannel
   label: string
   recipients: string[] | null
   secret_name: string | null
@@ -153,7 +166,7 @@ export default function GuestReviewSettings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("guest_review_notification_endpoints")
-        .select("id, property_id, responsibility_code, scope, channel, label, is_active")
+        .select("id, property_id, responsibility_code, scope, channel, label, recipients, secret_name, is_active")
         .order("created_at", { ascending: false })
       if (error) throw error
       return (data ?? []) as EndpointRow[]
@@ -202,9 +215,37 @@ export default function GuestReviewSettings() {
     },
   })
 
+  // Form validation functions
+  const validateOwnershipForm = (data: typeof ownershipForm): string | null => {
+    if (!data.property_id) return "Property is required"
+    if (!data.responsibility_code) return "Responsibility code is required"
+    return null
+  }
+
+  const validateNotificationForm = (data: typeof notificationForm): string | null => {
+    if (!data.label.trim()) return "Label is required"
+    if (!data.recipients.trim()) return "Recipients are required"
+    if (data.channel === 'email') {
+      const emails = data.recipients.split(',').map(r => r.trim()).filter(Boolean)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      const invalidEmails = emails.filter(e => !emailRegex.test(e))
+      if (invalidEmails.length > 0) {
+        return `Invalid email addresses: ${invalidEmails.join(', ')}`
+      }
+    }
+    return null
+  }
+
+  // Shared error handler
+  const handleMutationError = (error: unknown) => {
+    toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
+  }
+
   // Ownership CRUD mutations
   const addOwnershipMutation = useMutation({
     mutationFn: async (data: typeof ownershipForm) => {
+      const validationError = validateOwnershipForm(data)
+      if (validationError) throw new Error(validationError)
       const { error } = await supabase.from("property_review_owner_mappings").insert({
         property_id: data.property_id,
         responsibility_code: data.responsibility_code,
@@ -220,13 +261,13 @@ export default function GuestReviewSettings() {
       setOwnershipDialog({ open: false, mode: 'add' })
       resetOwnershipForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const updateOwnershipMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof ownershipForm }) => {
+      const validationError = validateOwnershipForm(data)
+      if (validationError) throw new Error(validationError)
       const { error } = await supabase.from("property_review_owner_mappings").update({
         property_id: data.property_id,
         responsibility_code: data.responsibility_code,
@@ -243,9 +284,7 @@ export default function GuestReviewSettings() {
       setOwnershipDialog({ open: false, mode: 'add' })
       resetOwnershipForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const deleteOwnershipMutation = useMutation({
@@ -258,14 +297,14 @@ export default function GuestReviewSettings() {
       toast({ title: "Deleted", description: "Owner mapping removed." })
       setDeleteConfirmDialog({ open: false, type: 'ownership', id: '' })
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   // Notification CRUD mutations
   const addNotificationMutation = useMutation({
     mutationFn: async (data: typeof notificationForm) => {
+      const validationError = validateNotificationForm(data)
+      if (validationError) throw new Error(validationError)
       const { error } = await supabase.from("guest_review_notification_endpoints").insert({
         property_id: data.property_id || null,
         responsibility_code: data.responsibility_code || null,
@@ -284,13 +323,13 @@ export default function GuestReviewSettings() {
       setNotificationDialog({ open: false, mode: 'add' })
       resetNotificationForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const updateNotificationMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: typeof notificationForm }) => {
+      const validationError = validateNotificationForm(data)
+      if (validationError) throw new Error(validationError)
       const { error } = await supabase.from("guest_review_notification_endpoints").update({
         property_id: data.property_id || null,
         responsibility_code: data.responsibility_code || null,
@@ -310,9 +349,7 @@ export default function GuestReviewSettings() {
       setNotificationDialog({ open: false, mode: 'add' })
       resetNotificationForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const deleteNotificationMutation = useMutation({
@@ -325,9 +362,7 @@ export default function GuestReviewSettings() {
       toast({ title: "Deleted", description: "Notification endpoint removed." })
       setDeleteConfirmDialog({ open: false, type: 'notification', id: '' })
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   // Report recipient CRUD mutations
@@ -350,9 +385,7 @@ export default function GuestReviewSettings() {
       setReportDialog({ open: false, mode: 'add' })
       resetReportForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const updateReportMutation = useMutation({
@@ -375,9 +408,7 @@ export default function GuestReviewSettings() {
       setReportDialog({ open: false, mode: 'add' })
       resetReportForm()
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   const deleteReportMutation = useMutation({
@@ -390,9 +421,7 @@ export default function GuestReviewSettings() {
       toast({ title: "Deleted", description: "Report recipient removed." })
       setDeleteConfirmDialog({ open: false, type: 'report', id: '' })
     },
-    onError: (error) => {
-      toast({ title: "Error", description: error instanceof Error ? error.message : String(error), variant: "destructive" })
-    },
+    onError: handleMutationError,
   })
 
   // Helper functions
@@ -469,8 +498,14 @@ export default function GuestReviewSettings() {
     setReportDialog({ open: true, mode: 'edit', data: row })
   }
 
-  const propertyNameById = new Map((propertiesQuery.data ?? []).map((row) => [row.id, row.name]))
-  const profileById = new Map((profilesQuery.data ?? []).map((row) => [row.id, row]))
+  const propertyNameById = useMemo(() => 
+    new Map((propertiesQuery.data ?? []).map((row) => [row.id, row.name])), 
+    [propertiesQuery.data]
+  )
+  const profileById = useMemo(() => 
+    new Map((profilesQuery.data ?? []).map((row) => [row.id, row])), 
+    [profilesQuery.data]
+  )
 
   return (
     <div className="space-y-6">
@@ -676,7 +711,21 @@ export default function GuestReviewSettings() {
             </div>
             <div className="space-y-2">
               <Label>Responsibility Code</Label>
-              <Input value={ownershipForm.responsibility_code} onChange={(e) => setOwnershipForm(prev => ({ ...prev, responsibility_code: e.target.value }))} placeholder="e.g., general_manager" />
+              <Select value={ownershipForm.responsibility_code} onValueChange={(val) => setOwnershipForm(prev => ({ ...prev, responsibility_code: val }))}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select responsibility code" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general_manager">General Manager</SelectItem>
+                  <SelectItem value="area_general_manager">Area General Manager</SelectItem>
+                  <SelectItem value="corporate_reputation_owner">Corporate Reputation Owner</SelectItem>
+                  <SelectItem value="rooms_manager">Rooms Manager</SelectItem>
+                  <SelectItem value="housekeeping_manager">Housekeeping Manager</SelectItem>
+                  <SelectItem value="fnb_manager">F&B Manager</SelectItem>
+                  <SelectItem value="maintenance_manager">Maintenance Manager</SelectItem>
+                  <SelectItem value="it_manager">IT Manager</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>Primary Owner</Label>
@@ -713,13 +762,17 @@ export default function GuestReviewSettings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOwnershipDialog({ open: false, mode: 'add' })}>Cancel</Button>
-            <Button onClick={() => {
-              if (ownershipDialog.mode === 'add') {
-                addOwnershipMutation.mutate(ownershipForm)
-              } else if (ownershipDialog.data) {
-                updateOwnershipMutation.mutate({ id: ownershipDialog.data.id, data: ownershipForm })
-              }
-            }} disabled={!ownershipForm.property_id || !ownershipForm.responsibility_code}>
+            <Button 
+              onClick={() => {
+                if (ownershipDialog.mode === 'add') {
+                  addOwnershipMutation.mutate(ownershipForm)
+                } else if (ownershipDialog.data) {
+                  updateOwnershipMutation.mutate({ id: ownershipDialog.data.id, data: ownershipForm })
+                }
+              }} 
+              disabled={!ownershipForm.property_id || !ownershipForm.responsibility_code || addOwnershipMutation.isPending || updateOwnershipMutation.isPending}
+            >
+              {(addOwnershipMutation.isPending || updateOwnershipMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {ownershipDialog.mode === 'add' ? 'Add' : 'Save'}
             </Button>
           </DialogFooter>
@@ -833,13 +886,17 @@ export default function GuestReviewSettings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotificationDialog({ open: false, mode: 'add' })}>Cancel</Button>
-            <Button onClick={() => {
-              if (notificationDialog.mode === 'add') {
-                addNotificationMutation.mutate(notificationForm)
-              } else if (notificationDialog.data) {
-                updateNotificationMutation.mutate({ id: notificationDialog.data.id, data: notificationForm })
-              }
-            }} disabled={!notificationForm.label || !notificationForm.recipients}>
+            <Button 
+              onClick={() => {
+                if (notificationDialog.mode === 'add') {
+                  addNotificationMutation.mutate(notificationForm)
+                } else if (notificationDialog.data) {
+                  updateNotificationMutation.mutate({ id: notificationDialog.data.id, data: notificationForm })
+                }
+              }} 
+              disabled={!notificationForm.label || !notificationForm.recipients || addNotificationMutation.isPending || updateNotificationMutation.isPending}
+            >
+              {(addNotificationMutation.isPending || updateNotificationMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {notificationDialog.mode === 'add' ? 'Add' : 'Save'}
             </Button>
           </DialogFooter>
@@ -931,13 +988,17 @@ export default function GuestReviewSettings() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReportDialog({ open: false, mode: 'add' })}>Cancel</Button>
-            <Button onClick={() => {
-              if (reportDialog.mode === 'add') {
-                addReportMutation.mutate(reportForm)
-              } else if (reportDialog.data) {
-                updateReportMutation.mutate({ id: reportDialog.data.id, data: reportForm })
-              }
-            }} disabled={!reportForm.email && !reportForm.profile_id}>
+            <Button 
+              onClick={() => {
+                if (reportDialog.mode === 'add') {
+                  addReportMutation.mutate(reportForm)
+                } else if (reportDialog.data) {
+                  updateReportMutation.mutate({ id: reportDialog.data.id, data: reportForm })
+                }
+              }} 
+              disabled={(!reportForm.email && !reportForm.profile_id) || addReportMutation.isPending || updateReportMutation.isPending}
+            >
+              {(addReportMutation.isPending || updateReportMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {reportDialog.mode === 'add' ? 'Add' : 'Save'}
             </Button>
           </DialogFooter>
@@ -953,15 +1014,20 @@ export default function GuestReviewSettings() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteConfirmDialog({ open: false, type: 'ownership', id: '' })}>Cancel</Button>
-            <Button variant="destructive" onClick={() => {
-              if (deleteConfirmDialog.type === 'ownership') {
-                deleteOwnershipMutation.mutate(deleteConfirmDialog.id)
-              } else if (deleteConfirmDialog.type === 'notification') {
-                deleteNotificationMutation.mutate(deleteConfirmDialog.id)
-              } else {
-                deleteReportMutation.mutate(deleteConfirmDialog.id)
-              }
-            }}>
+            <Button 
+              variant="destructive" 
+              onClick={() => {
+                if (deleteConfirmDialog.type === 'ownership') {
+                  deleteOwnershipMutation.mutate(deleteConfirmDialog.id)
+                } else if (deleteConfirmDialog.type === 'notification') {
+                  deleteNotificationMutation.mutate(deleteConfirmDialog.id)
+                } else {
+                  deleteReportMutation.mutate(deleteConfirmDialog.id)
+                }
+              }}
+              disabled={deleteOwnershipMutation.isPending || deleteNotificationMutation.isPending || deleteReportMutation.isPending}
+            >
+              {(deleteOwnershipMutation.isPending || deleteNotificationMutation.isPending || deleteReportMutation.isPending) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
             </Button>
           </DialogFooter>

@@ -41,7 +41,7 @@ export function ProtectedRoute({
     if (!user && !loading) {
       setPostLoginRedirect(location.pathname, location.search, location.hash)
     }
-  }, [user, loading, location])
+  }, [user, loading, location.pathname, location.search, location.hash])
 
   if (loading) {
     return (

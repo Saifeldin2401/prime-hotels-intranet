@@ -1,5 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
+import { isValidUuid, generateRequestId, fetchWithRetry } from "../_shared/utils.ts";
 
 type ResponsibilityCode =
   | "general_manager"
@@ -38,6 +41,14 @@ const MANUAL_ALLOWED_ROLES = new Set([
   "property_hr",
 ]);
 
+// Zod schema for request body validation
+const analyzeRequestSchema = z.object({
+  review_id: z.string().min(1, "review_id is required"),
+  force: z.boolean().optional().default(false),
+});
+
+type AnalyzeRequestBody = z.infer<typeof analyzeRequestSchema>;
+
 const CATEGORY_KEYWORDS: Record<IssueCategory, string[]> = {
   cleanliness: ["clean", "dirty", "smell", "bathroom", "linen", "housekeeping"],
   staff_behavior: ["staff", "service", "rude", "friendly", "attitude", "behavior"],
@@ -71,16 +82,6 @@ const CATEGORY_RESPONSIBILITY: Record<IssueCategory, ResponsibilityCode[]> = {
   value: ["general_manager"],
   other: ["general_manager"],
 };
-
-function buildCorsHeaders(req: Request): Record<string, string> {
-  const origin = req.headers.get("origin") || "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Vary": "Origin",
-  };
-}
 
 function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
   if (!authHeader || !secret) return false;
@@ -290,35 +291,38 @@ async function resolveOwner(
 
   if (!fallbackRole) return { profileId: null, backupProfileId: null };
 
-  const roleQuery = supabase
+  const { data: roleRows } = await supabase
     .from("user_roles")
     .select("user_id")
-    .eq("role", fallbackRole)
-    .limit(1);
-
-  const { data: roleRows } = fallbackRole === "property_manager"
-    ? await roleQuery
-    : await roleQuery;
+    .eq("role", fallbackRole);
 
   let profileId: string | null = null;
-  for (const row of roleRows ?? []) {
+  
+  // Batch fetch all potential user properties and profiles to avoid N+1 queries
+  if (roleRows && roleRows.length > 0) {
+    const userIds = roleRows.map((r) => r.user_id);
+    
+    // If property_manager, filter by property
+    let filteredUserIds = userIds;
     if (fallbackRole === "property_manager") {
       const { data: propRows } = await supabase
         .from("user_properties")
-        .select("property_id")
-        .eq("user_id", row.user_id)
+        .select("user_id")
         .eq("property_id", propertyId)
-        .limit(1);
-      if (!propRows || propRows.length === 0) continue;
+        .in("user_id", userIds);
+      filteredUserIds = propRows?.map((r) => r.user_id) || [];
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", row.user_id)
-      .maybeSingle();
-    if (profile?.id) {
-      profileId = String(profile.id);
-      break;
+    
+    if (filteredUserIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, user_id")
+        .in("user_id", filteredUserIds)
+        .limit(1);
+      
+      if (profiles && profiles.length > 0) {
+        profileId = String(profiles[0].id);
+      }
     }
   }
 
@@ -332,7 +336,10 @@ async function enqueueNotifications(
   assignmentRows: Array<{ id: string; responsibility: ResponsibilityCode; assigneeProfileId: string | null }>,
   payloadBase: Record<string, unknown>,
   critical: boolean,
+  requestId?: string,
 ) {
+  const logPrefix = requestId ? `[${requestId}]` : "";
+  
   const { data: endpoints } = await supabase
     .from("guest_review_notification_endpoints")
     .select("*")
@@ -340,16 +347,30 @@ async function enqueueNotifications(
 
   const queues: Array<Record<string, unknown>> = [];
 
+  // Batch fetch all profiles at once to avoid N+1 queries
+  const profileIds = assignmentRows
+    .map((a) => a.assigneeProfileId)
+    .filter((id): id is string => Boolean(id));
+  
+  let profileMap = new Map<string, { email: string | null; full_name: string | null }>();
+  
+  if (profileIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, email, full_name")
+      .in("id", profileIds);
+    
+    profileMap = new Map(
+      profiles?.map((p) => [String(p.id), { email: p.email, full_name: p.full_name }]) || []
+    );
+  }
+
   for (const assignment of assignmentRows) {
     let assigneeEmail: string | null = null;
     if (assignment.assigneeProfileId) {
-      const { data: p } = await supabase
-        .from("profiles")
-        .select("email, full_name")
-        .eq("id", assignment.assigneeProfileId)
-        .maybeSingle();
-      assigneeEmail = typeof p?.email === "string" ? p.email : null;
-      payloadBase.assigneeName = p?.full_name ?? assignment.responsibility;
+      const profile = profileMap.get(assignment.assigneeProfileId);
+      assigneeEmail = profile?.email ?? null;
+      payloadBase.assigneeName = profile?.full_name ?? assignment.responsibility;
     }
 
     if (assigneeEmail) {
@@ -391,17 +412,19 @@ async function enqueueNotifications(
   if (queues.length > 0) {
     const { error: queueError } = await supabase.from("guest_review_notification_queue").insert(queues);
     if (queueError) {
-      console.error("Failed to insert notifications to queue:", queueError.message, queueError.code);
+      console.error(`${logPrefix} Failed to insert notifications to queue:`, queueError.message, queueError.code);
       throw new Error(`Notification queue insert failed: ${queueError.message}`);
     }
-    console.log(`Successfully queued ${queues.length} notifications for review ${reviewId}`);
+    console.log(`${logPrefix} Successfully queued ${queues.length} notifications for review ${reviewId}`);
   } else {
-    console.log(`No notifications to queue for review ${reviewId}`);
+    console.log(`${logPrefix} No notifications to queue for review ${reviewId}`);
   }
 }
 
 Deno.serve(async (req: Request) => {
+  const requestId = generateRequestId();
   const corsHeaders = buildCorsHeaders(req);
+  
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
@@ -413,13 +436,30 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = req.method === "POST"
-      ? await req.json().catch(() => ({} as Record<string, unknown>))
-      : ({} as Record<string, unknown>);
-    const reviewId = typeof body.review_id === "string" ? body.review_id : "";
-    const force = body.force === true;
-    if (!reviewId) {
-      return new Response(JSON.stringify({ error: "review_id is required" }), {
+    // Parse and validate request body using Zod
+    let body: AnalyzeRequestBody;
+    if (req.method === "POST") {
+      const rawBody = await req.json().catch(() => ({}));
+      const parseResult = analyzeRequestSchema.safeParse(rawBody);
+      if (!parseResult.success) {
+        return new Response(JSON.stringify({ 
+          error: "Invalid request body", 
+          details: parseResult.error.errors 
+        }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      body = parseResult.data;
+    } else {
+      body = { review_id: "", force: false };
+    }
+    
+    const { review_id: reviewId, force } = body;
+
+    // Validate UUID format
+    if (!isValidUuid(reviewId)) {
+      return new Response(JSON.stringify({ error: "Invalid review_id format. Expected UUID." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -430,9 +470,15 @@ Deno.serve(async (req: Request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
 
+    if (!supabaseUrl || !serviceRoleKey) {
+      throw new Error("Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+    }
+
+    // Create ONE Supabase client at the start and reuse throughout
     const rootServiceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
+    
     const vaultServiceRoleKey = await getVaultServiceRoleSecret(rootServiceClient);
     const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
     const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
@@ -446,9 +492,12 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const supabase = createClient(supabaseUrl, isServiceRole ? serviceRoleKey : serviceToken, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    // Reuse the single client (or create a new one with the appropriate token if needed)
+    const supabase = isServiceRole 
+      ? rootServiceClient 
+      : createClient(supabaseUrl, serviceToken, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        });
 
     const manualContext = !isInternalService
       ? await getManualCallerContext(supabaseUrl, anonKey, authHeader, rootServiceClient)
@@ -460,7 +509,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: review, error: reviewError } = await createClient(supabaseUrl, serviceRoleKey)
+    // Reuse the single client instead of creating new ones
+    const { data: review, error: reviewError } = await supabase
       .from("guest_reviews")
       .select("*")
       .eq("id", reviewId)
@@ -485,13 +535,16 @@ Deno.serve(async (req: Request) => {
     const dueHours = analysis.critical ? 12 : 24;
     const dueAt = new Date(Date.now() + dueHours * 60 * 60 * 1000).toISOString();
 
-    const { data: property } = await createClient(supabaseUrl, serviceRoleKey)
+    // Reuse the single client
+    const { data: property } = await supabase
       .from("properties")
       .select("name")
       .eq("id", review.property_id)
       .maybeSingle();
 
-    await createClient(supabaseUrl, serviceRoleKey).from("guest_review_issues").delete().eq("review_id", reviewId);
+    // Delete existing issues
+    await supabase.from("guest_review_issues").delete().eq("review_id", reviewId);
+    
     const issueRows = analysis.categories.map((category) => ({
       review_id: reviewId,
       category,
@@ -504,10 +557,11 @@ Deno.serve(async (req: Request) => {
       issue_summary_ar: "تم تحديد ملاحظة تحتاج متابعة",
     }));
     if (issueRows.length > 0) {
-      await createClient(supabaseUrl, serviceRoleKey).from("guest_review_issues").insert(issueRows);
+      await supabase.from("guest_review_issues").insert(issueRows);
     }
 
-    await createClient(supabaseUrl, serviceRoleKey)
+    // Delete existing non-closed assignments
+    await supabase
       .from("guest_review_assignments")
       .delete()
       .eq("review_id", reviewId)
@@ -524,7 +578,7 @@ Deno.serve(async (req: Request) => {
     const assignmentInserts: Array<Record<string, unknown>> = [];
     const assignmentMeta: Array<{ responsibility: ResponsibilityCode; assigneeProfileId: string | null }> = [];
     for (const responsibility of responsibilities) {
-      const owner = await resolveOwner(createClient(supabaseUrl, serviceRoleKey), String(review.property_id), responsibility);
+      const owner = await resolveOwner(supabase, String(review.property_id), responsibility);
       assignmentInserts.push({
         review_id: reviewId,
         property_id: review.property_id,
@@ -541,7 +595,7 @@ Deno.serve(async (req: Request) => {
       assignmentMeta.push({ responsibility, assigneeProfileId: owner.profileId });
     }
 
-    const { data: assignments, error: assignmentError } = await createClient(supabaseUrl, serviceRoleKey)
+    const { data: assignments, error: assignmentError } = await supabase
       .from("guest_review_assignments")
       .insert(assignmentInserts)
       .select("id,responsibility_code,assignee_profile_id");
@@ -554,21 +608,23 @@ Deno.serve(async (req: Request) => {
       draft_response_ar: analysis.draftResponseAr,
       metadata: { auto_generated: true },
     };
-    const { data: existingResp } = await createClient(supabaseUrl, serviceRoleKey)
+    
+    const { data: existingResp } = await supabase
       .from("guest_review_responses")
       .select("id")
       .eq("review_id", reviewId)
       .maybeSingle();
     if (existingResp?.id) {
-      await createClient(supabaseUrl, serviceRoleKey)
+      await supabase
         .from("guest_review_responses")
         .update(responsePayload)
         .eq("id", existingResp.id);
     } else {
-      await createClient(supabaseUrl, serviceRoleKey).from("guest_review_responses").insert(responsePayload);
+      await supabase.from("guest_review_responses").insert(responsePayload);
     }
 
-    await createClient(supabaseUrl, serviceRoleKey)
+    // Update review status
+    await supabase
       .from("guest_reviews")
       .update({
         sentiment: analysis.sentiment,
@@ -589,7 +645,8 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", reviewId);
 
-    await createClient(supabaseUrl, serviceRoleKey).from("guest_review_audit_events").insert({
+    // Insert audit event
+    await supabase.from("guest_review_audit_events").insert({
       property_id: review.property_id,
       review_id: reviewId,
       actor_id: manualContext?.userId ?? null,
@@ -621,7 +678,7 @@ Deno.serve(async (req: Request) => {
         ? `URGENT: Guest review requires immediate attention – ${property?.name ?? 'Property'}`
         : `Guest review follow-up required – ${property?.name ?? 'Property'} (${review.platform ?? 'platform'})`;
 
-      await createClient(supabaseUrl, serviceRoleKey).from('tasks').insert({
+      await supabase.from('tasks').insert({
         title: taskTitle,
         description: [
           analysis.summaryEn,
@@ -644,7 +701,7 @@ Deno.serve(async (req: Request) => {
     // ────────────────────────────────────────────────────────────────────────
 
     await enqueueNotifications(
-      createClient(supabaseUrl, serviceRoleKey),
+      supabase,
       reviewId,
       String(review.property_id),
       (assignments ?? []).map((a) => ({
@@ -666,6 +723,7 @@ Deno.serve(async (req: Request) => {
         reviewUrl: review.url,
       },
       analysis.critical,
+      requestId,
     );
 
     return new Response(JSON.stringify({
@@ -680,7 +738,7 @@ Deno.serve(async (req: Request) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error("guest-review-analyzer failed:", error);
+    console.error(`[${requestId}] guest-review-analyzer failed:`, error);
     return new Response(JSON.stringify({
       success: false,
       error: error instanceof Error ? error.message : String(error),

@@ -24,7 +24,7 @@ export function RoleBasedRedirect() {
         
         // Priority: auth flow > URL param > session storage > default
         return pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/dashboard"
-    }, [location.search])
+    }, [location.search, user])
 
     // Clear auth flow state after computing destination
     useEffect(() => {
