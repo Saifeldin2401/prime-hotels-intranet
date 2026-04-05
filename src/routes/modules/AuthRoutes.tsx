@@ -42,23 +42,6 @@ const TokenValidationGuard = ({ children, type: _type }: { children: React.React
     }
 
     return <>{children}</>
-
-    if (isValidating) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-background">
-                <div className="text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-                    <p className="mt-4 text-muted-foreground">Validating...</p>
-                </div>
-            </div>
-        )
-    }
-
-    if (!isValid) {
-        return <Navigate to="/login?error=invalid_token" replace />
-    }
-
-    return <>{children}</>
 }
 
 export const AuthRoutes = () => {
