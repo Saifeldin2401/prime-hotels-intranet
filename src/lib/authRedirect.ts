@@ -7,11 +7,50 @@
  */
 
 const REDIRECT_PARAM = 'redirect'
+const POST_LOGIN_STORAGE_KEY = '__phg_post_login_redirect__'
+const COOKIE_NAME = 'phg_auth_redirect'
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/complete-invite', '/change-password']
 
 function isAuthRoute(path: string): boolean {
   return AUTH_ROUTES.some((r) => path === r || path.startsWith(`${r}/`))
+}
+
+/**
+ * Cookie utilities for cross-subdomain redirect persistence.
+ */
+const cookies = {
+  set(name: string, value: string, days = 1) {
+    if (typeof document === 'undefined') return
+    const date = new Date()
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000))
+    const expires = "; expires=" + date.toUTCString()
+    
+    // Determine domain for cross-subdomain support
+    const host = window.location.hostname
+    let domainAttr = ''
+    if (host.includes('phg-connect.com')) {
+      domainAttr = "; domain=.phg-connect.com"
+    }
+    
+    const cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax; Secure${domainAttr}`
+    document.cookie = cookie
+    console.log(`[authRedirect] Set cookie: ${name}`, { domainAttr })
+  },
+  get(name: string): string | null {
+    if (typeof document === 'undefined') return null
+    const nameEQ = name + "="
+    const ca = document.cookie.split(';')
+    for (let i = 0; i < ca.length; i++) {
+      let c = ca[i]
+      while (c.charAt(0) === ' ') c = c.substring(1, c.length)
+      if (c.indexOf(nameEQ) === 0) return decodeURIComponent(c.substring(nameEQ.length, c.length))
+    }
+    return null
+  },
+  remove(name: string) {
+    this.set(name, "", -1)
+  }
 }
 
 /**
@@ -93,9 +132,52 @@ export function sanitizeRedirectPath(candidate: string | null | undefined): stri
 }
 
 /**
+ * Store the redirect path in sessionStorage and Cookie for post-auth recovery.
+ * Cookies allow survival across subdomain transitions (www vs root).
+ */
+export function setPostLoginRedirect(pathname: string, search = '', hash = '') {
+  if (typeof window === 'undefined') return
+  const target = `${pathname}${search}${hash}`
+  const sanitized = sanitizeRedirectPath(target)
+  
+  if (sanitized) {
+    console.log('[authRedirect] Saving redirect destination:', sanitized)
+    // 1. Session storage (tab-specific, same-origin)
+    window.sessionStorage.setItem(POST_LOGIN_STORAGE_KEY, sanitized)
+    // 2. Cookie (cross-subdomain support)
+    cookies.set(COOKIE_NAME, sanitized)
+  }
+}
+
+/**
+ * Read and consume (remove) the stored post-login redirect path.
+ */
+export function consumePostLoginRedirect(): string | null {
+  if (typeof window === 'undefined') return null
+  
+  const sessionRedirect = window.sessionStorage.getItem(POST_LOGIN_STORAGE_KEY)
+  const cookieRedirect = cookies.get(COOKIE_NAME)
+  
+  const redirect = sessionRedirect ?? cookieRedirect
+  
+  if (redirect) {
+    console.log('[authRedirect] Consuming saved redirect:', redirect, {
+      source: sessionRedirect ? 'session' : 'cookie'
+    })
+    window.sessionStorage.removeItem(POST_LOGIN_STORAGE_KEY)
+    cookies.remove(COOKIE_NAME)
+    return sanitizeRedirectPath(redirect)
+  }
+  
+  return null
+}
+
+/**
  * Build the login URL with the current location encoded as ?redirect.
+ * Also stores it in sessionStorage and cookie for safe-keeping.
  */
 export function buildLoginUrl(pathname: string, search = '', hash = ''): string {
+  setPostLoginRedirect(pathname, search, hash)
   const target = `${pathname}${search}${hash}`
   const encoded = encodeURIComponent(target)
   return `/login?${REDIRECT_PARAM}=${encoded}`
@@ -103,9 +185,27 @@ export function buildLoginUrl(pathname: string, search = '', hash = ''): string 
 
 /**
  * Extract and sanitize the ?redirect query param from a search string.
+ * It will prefer checking sessionStorage/cookies if the URL doesn't have it,
+ * meaning standard redirects survive router redirects.
  */
 export function getRedirectFromSearch(search: string): string | null {
+  // 1. URL parameter (highest priority)
   const params = new URLSearchParams(search)
   const raw = params.get(REDIRECT_PARAM)
-  return sanitizeRedirectPath(raw)
+  const urlRedirect = sanitizeRedirectPath(raw)
+  
+  if (urlRedirect) return urlRedirect
+
+  // 2. Persistence check (peek only)
+  if (typeof window !== 'undefined') {
+    const session = window.sessionStorage.getItem(POST_LOGIN_STORAGE_KEY)
+    const cookie = cookies.get(COOKIE_NAME)
+    const stored = sanitizeRedirectPath(session ?? cookie)
+    if (stored) {
+      console.log('[authRedirect] Found stored redirect (peek):', stored)
+      return stored
+    }
+  }
+  
+  return null
 }

@@ -135,11 +135,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const timeoutId = setTimeout(() => {
       if (mounted && loadingState) {
-        console.warn('[Auth] Loading timeout - forcing loading to false after 5 seconds')
-        setLoading(false)
-        loadingState = false
+        console.warn('[Auth] Loading is taking unusually long (>10s). Waiting for Supabase to resolve or fail.')
       }
-    }, CONFIG.loadingTimeoutMs)
+    }, 10000)
 
     const finishLoading = () => {
       loadingState = false
@@ -157,7 +155,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (session?.user) {
         if (shouldDeferAuthenticatedAppState()) {
-          resetLocalAuthState()
           finishLoading()
           return
         }
@@ -182,7 +179,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
 
       if (session?.user && shouldDeferAuthenticatedAppState()) {
-        resetLocalAuthState()
         finishLoading()
         return
       }

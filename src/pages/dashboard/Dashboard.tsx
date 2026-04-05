@@ -150,10 +150,15 @@ export function IntegratedDashboard() {
   // Handle post-login redirect
   useEffect(() => {
     if (!loading && user) {
-      const redirectPath = getRedirectFromSearch(location.search)
-      if (redirectPath) {
-        navigate(redirectPath, { replace: true })
-      }
+      import('@/lib/authRedirect').then(({ consumePostLoginRedirect, getRedirectFromSearch }) => {
+        const urlRedirect = getRedirectFromSearch(location.search)
+        const sessionRedirect = consumePostLoginRedirect()
+        const redirectPath = urlRedirect ?? sessionRedirect
+        
+        if (redirectPath) {
+          navigate(redirectPath, { replace: true })
+        }
+      })
     }
   }, [loading, user, location.search, navigate])
 

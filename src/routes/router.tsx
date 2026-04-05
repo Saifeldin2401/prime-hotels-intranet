@@ -3,7 +3,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
 import { buildLoginUrl, getRedirectFromSearch } from '@/lib/authRedirect'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { createBrowserRouter, createRoutesFromElements, Navigate, Outlet, Route, useLocation } from 'react-router-dom'
 
 import { AdminRoutes } from './modules/AdminRoutes'
@@ -57,9 +57,19 @@ const RootLayout = () => {
 const RootIndex = () => {
     const { user, loading } = useAuth()
     const location = useLocation()
-    const pendingAuthFlowPath = getAuthFlowRedirectPath()
-    const redirectPath = getRedirectFromSearch(location.search)
+    const [destination, setDestination] = useState<string | null>(null)
     
+    useEffect(() => {
+        if (user && !destination) {
+            import('@/lib/authRedirect').then(({ consumePostLoginRedirect, getRedirectFromSearch }) => {
+                const pendingAuthFlowPath = getAuthFlowRedirectPath()
+                const urlRedirect = getRedirectFromSearch(location.search)
+                const sessionRedirect = consumePostLoginRedirect()
+                setDestination(pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/home")
+            })
+        }
+    }, [user, destination, location.search])
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -67,16 +77,19 @@ const RootIndex = () => {
             </div>
         )
     }
-    
-    if (user && pendingAuthFlowPath) {
-        return <Navigate to={`${pendingAuthFlowPath}${location.search}`} replace />
-    }
 
-    if (user) {
-        return <Navigate to={`${redirectPath ?? "/home"}${location.search}`} replace />
+    if (user && destination) {
+        return <Navigate to={`${destination}${location.search}`} replace />
+    } else if (user) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+            </div>
+        )
     }
 
     // Not authenticated — redirect to login, preserving any ?redirect= param
+    const redirectPath = getRedirectFromSearch(location.search)
     const loginTarget = redirectPath
         ? `/login?redirect=${encodeURIComponent(redirectPath)}`
         : '/login'
