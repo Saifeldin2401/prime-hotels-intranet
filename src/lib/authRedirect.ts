@@ -7,6 +7,7 @@
  */
 
 const REDIRECT_PARAM = 'redirect'
+const REDIRECT_PARAM_ALT = '_redirect' // Support Supabase/production underscore variation
 const POST_LOGIN_STORAGE_KEY = '__phg_post_login_redirect__'
 const COOKIE_NAME = 'phg_auth_redirect'
 
@@ -189,12 +190,15 @@ export function buildLoginUrl(pathname: string, search = '', hash = ''): string 
  * meaning standard redirects survive router redirects.
  */
 export function getRedirectFromSearch(search: string): string | null {
-  // 1. URL parameter (highest priority)
+  // 1. URL parameters (highest priority)
   const params = new URLSearchParams(search)
-  const raw = params.get(REDIRECT_PARAM)
+  const raw = params.get(REDIRECT_PARAM) || params.get(REDIRECT_PARAM_ALT)
   const urlRedirect = sanitizeRedirectPath(raw)
   
-  if (urlRedirect) return urlRedirect
+  if (urlRedirect) {
+    console.log('[authRedirect] Found direct URL redirect:', urlRedirect)
+    return urlRedirect
+  }
 
   // 2. Persistence check (peek only)
   if (typeof window !== 'undefined') {
