@@ -27,10 +27,13 @@ export function resolveCorsOrigin(req: Request): string {
 
   const cleanOrigin = origin.trim().replace(/\/$/, "");
 
-  const isLocalDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{2,5})?$/.test(cleanOrigin);
+  const isLocalDevOrigin =
+    /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{2,5})?$/.test(
+      cleanOrigin,
+    );
   if (isLocalDevOrigin) return origin;
 
-  const isAllowed = allowedOrigins.some(ao => {
+  const isAllowed = allowedOrigins.some((ao) => {
     const cleanAo = ao.trim().replace(/\/$/, "");
     return cleanAo === cleanOrigin;
   });
@@ -41,10 +44,9 @@ export function resolveCorsOrigin(req: Request): string {
 export function buildCorsHeaders(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": resolveCorsOrigin(req),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
-
-

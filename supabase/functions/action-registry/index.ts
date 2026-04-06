@@ -24,7 +24,8 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 // CORS headers
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 // Initialize Supabase client
@@ -78,7 +79,7 @@ Deno.serve(async (req) => {
     console.error("Action Registry Error:", error);
     return jsonResponse(
       { error: error.message || "Internal server error" },
-      500
+      500,
     );
   }
 });
@@ -139,7 +140,7 @@ async function getAction(supabase: any, params: any) {
       p_action_type: action_type,
       p_scope_type: scope_type,
       p_scope_id: scope_id,
-    }
+    },
   );
 
   // Get enablement status
@@ -149,7 +150,7 @@ async function getAction(supabase: any, params: any) {
       p_action_type: action_type,
       p_scope_type: scope_type,
       p_scope_id: scope_id,
-    }
+    },
   );
 
   // Get all scope enablements for this action
@@ -178,7 +179,9 @@ async function enableAction(supabase: any, params: any) {
   } = params;
 
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
   // Check admin permission
@@ -208,7 +211,7 @@ async function enableAction(supabase: any, params: any) {
         expires_at,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "action_type,scope_type,scope_id" }
+      { onConflict: "action_type,scope_type,scope_id" },
     )
     .select()
     .single();
@@ -244,7 +247,9 @@ async function disableAction(supabase: any, params: any) {
   } = params;
 
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
   // Check admin permission
@@ -272,7 +277,7 @@ async function disableAction(supabase: any, params: any) {
         reason,
         updated_at: new Date().toISOString(),
       },
-      { onConflict: "action_type,scope_type,scope_id" }
+      { onConflict: "action_type,scope_type,scope_id" },
     )
     .select()
     .single();
@@ -308,7 +313,9 @@ async function executeAction(supabase: any, params: any) {
   } = params;
 
   // Get current user
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
 
   // Check if action is enabled
@@ -318,13 +325,13 @@ async function executeAction(supabase: any, params: any) {
       p_action_type: action_type,
       p_scope_type: target_type || "global",
       p_scope_id: target_id,
-    }
+    },
   );
 
   if (!isEnabled) {
     return jsonResponse(
       { error: `Action ${action_type} is disabled for this scope` },
-      403
+      403,
     );
   }
 
@@ -369,7 +376,7 @@ async function executeAction(supabase: any, params: any) {
         supabase,
         action_type,
         mergedConfig,
-        executionId
+        executionId,
       );
 
       // Update execution record
@@ -415,7 +422,7 @@ async function executeActionHandler(
   supabase: any,
   actionType: string,
   config: any,
-  executionId: string
+  executionId: string,
 ) {
   // Route to specific action handlers
   switch (actionType) {
@@ -436,7 +443,11 @@ async function executeActionHandler(
   }
 }
 
-async function handleSendEmail(supabase: any, config: any, executionId: string) {
+async function handleSendEmail(
+  supabase: any,
+  config: any,
+  executionId: string,
+) {
   const { to, template, subject, body, variables } = config;
 
   // Validate required fields
@@ -476,14 +487,22 @@ async function handleSendEmail(supabase: any, config: any, executionId: string) 
   };
 }
 
-async function handleSendSlack(supabase: any, config: any, executionId: string) {
+async function handleSendSlack(
+  supabase: any,
+  config: any,
+  executionId: string,
+) {
   // Implementation for Slack integration
   // This would call a slack-webhook edge function or similar
   console.log("Slack send would be implemented here", config);
   return { channel: "slack", status: "not_implemented" };
 }
 
-async function handleSendInApp(supabase: any, config: any, executionId: string) {
+async function handleSendInApp(
+  supabase: any,
+  config: any,
+  executionId: string,
+) {
   const { user_id, title, message, link, type = "system" } = config;
 
   if (!user_id) throw new Error("user_id is required for in-app notification");
@@ -505,7 +524,11 @@ async function handleSendInApp(supabase: any, config: any, executionId: string) 
   return { channel: "in_app", notification_id: data?.[0]?.id };
 }
 
-async function handleCreateTask(supabase: any, config: any, executionId: string) {
+async function handleCreateTask(
+  supabase: any,
+  config: any,
+  executionId: string,
+) {
   const {
     title,
     description,
@@ -539,7 +562,11 @@ async function handleCreateTask(supabase: any, config: any, executionId: string)
   return { task_id: data.id, status: "created" };
 }
 
-async function handleRequestApproval(supabase: any, config: any, executionId: string) {
+async function handleRequestApproval(
+  supabase: any,
+  config: any,
+  executionId: string,
+) {
   const {
     entity_type,
     entity_id,

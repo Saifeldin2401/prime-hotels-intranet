@@ -1,18 +1,28 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.48.1";
+import {
+  buildReviewWindow,
+  filterReviewsInWindow,
+  getReviewEventDate,
+  getReviewEventTimestamp,
+} from "../_shared/review-dates.ts";
 
 // CORS headers helper
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "*";
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
 // Timing-safe comparison for auth
-function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
+function timingSafeBearerMatch(
+  authHeader: string | null,
+  secret: string,
+): boolean {
   if (!authHeader || !secret) return false;
   const expected = `Bearer ${secret}`;
   if (authHeader.length !== expected.length) return false;
@@ -23,122 +33,179 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
-// Build date window for report
-function buildWindow(reportDate?: string) {
-  if (reportDate) {
-    const end = new Date(`${reportDate}T04:00:00.000Z`);
-    const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-    return { start, end };
+function isServiceRoleJwt(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return payload.role === "service_role";
+  } catch {
+    return false;
   }
-  const end = new Date();
-  const start = new Date(end.getTime() - 24 * 60 * 60 * 1000);
-  return { start, end };
 }
 
 // Trend indicator with arrow
-function getTrendIndicator(current: number, previous?: number): { arrow: string; text: string; class: string } {
-  if (previous == null || previous === 0) return { arrow: "→", text: "Stable", class: "stable" };
+function getTrendIndicator(
+  current: number,
+  previous?: number,
+): { arrow: string; text: string; class: string } {
+  if (previous == null || previous === 0)
+    return { arrow: "→", text: "Stable", class: "stable" };
   const diff = current - previous;
   if (diff >= 0.5) return { arrow: "↑", text: "Improving", class: "improving" };
-  if (diff <= -0.5) return { arrow: "↓", text: "Declining", class: "declining" };
+  if (diff <= -0.5)
+    return { arrow: "↓", text: "Declining", class: "declining" };
   return { arrow: "→", text: "Stable", class: "stable" };
 }
 
 // Generate AI recommendations based on hotel data
-function generateRecommendations(hotel: HotelMetrics): Array<{ priority: string; action: string; rationale: string; dept: string }> {
-  const recs: Array<{ priority: string; action: string; rationale: string; dept: string }> = [];
-  
+function generateRecommendations(
+  hotel: HotelMetrics,
+): Array<{
+  priority: string;
+  action: string;
+  rationale: string;
+  dept: string;
+}> {
+  const recs: Array<{
+    priority: string;
+    action: string;
+    rationale: string;
+    dept: string;
+  }> = [];
+
   // Critical alerts = HIGH priority
   if (hotel.criticalCount > 0) {
     recs.push({
       priority: "HIGH",
       action: `Address ${hotel.criticalCount} critical review(s) immediately`,
-      rationale: "Guest satisfaction scores below 5/10 require immediate attention to prevent reputation damage",
-      dept: "Operations"
+      rationale:
+        "Guest satisfaction scores below 5/10 require immediate attention to prevent reputation damage",
+      dept: "Operations",
     });
   }
-  
+
   // Negative trends
   if (hotel.negativeRate > 20) {
     recs.push({
       priority: "HIGH",
       action: "Review service standards and staff training",
       rationale: `High negative rate (${hotel.negativeRate}%) indicates systemic service issues`,
-      dept: "HR/Training"
+      dept: "HR/Training",
     });
   }
-  
+
   // Low rating
   if (hotel.avgRating < 7) {
     recs.push({
       priority: "MEDIUM",
       action: "Implement guest satisfaction recovery protocol",
       rationale: `Average rating ${hotel.avgRating}/10 is below target of 8/10`,
-      dept: "Guest Relations"
+      dept: "Guest Relations",
     });
   }
-  
+
   // Platform gaps
-  const lowPlatforms = Object.entries(hotel.platformRatings).filter(([_, r]) => r < 7);
+  const lowPlatforms = Object.entries(hotel.platformRatings).filter(
+    ([_, r]) => r < 7,
+  );
   if (lowPlatforms.length > 0) {
     recs.push({
       priority: "MEDIUM",
       action: `Focus on ${lowPlatforms.map(([p, _]) => p).join(", ")} platform improvements`,
       rationale: "Platform-specific issues affecting visibility and bookings",
-      dept: "Marketing/Revenue"
+      dept: "Marketing/Revenue",
     });
   }
-  
+
   // Positive momentum
   if (hotel.positiveTrends.length > 0) {
     recs.push({
       priority: "LOW",
       action: "Leverage positive feedback in marketing",
       rationale: `Strong guest praise: ${hotel.positiveTrends.slice(0, 2).join("; ")}`,
-      dept: "Marketing"
+      dept: "Marketing",
     });
   }
-  
+
   // Default if empty
   if (recs.length === 0) {
     recs.push({
       priority: "LOW",
       action: "Continue monitoring guest feedback trends",
       rationale: "Performance stable, maintain current standards",
-      dept: "Operations"
+      dept: "Operations",
     });
   }
-  
+
   return recs;
 }
 
 // Extract themes from reviews
-function extractThemes(reviews: any[]): { positive: string[]; negative: string[] } {
+function extractThemes(reviews: any[]): {
+  positive: string[];
+  negative: string[];
+} {
   const positive: string[] = [];
   const negative: string[] = [];
-  
-  const positiveKeywords = ["excellent", "great", "amazing", "perfect", "wonderful", "friendly", "clean", "comfortable", "helpful", "professional", "outstanding", "best", "love", "recommend"];
-  const negativeKeywords = ["poor", "bad", "terrible", "awful", "dirty", "rude", "unprofessional", "disappointing", "worst", "noise", "slow", "broken", "issue", "problem", "complaint"];
-  
+
+  const positiveKeywords = [
+    "excellent",
+    "great",
+    "amazing",
+    "perfect",
+    "wonderful",
+    "friendly",
+    "clean",
+    "comfortable",
+    "helpful",
+    "professional",
+    "outstanding",
+    "best",
+    "love",
+    "recommend",
+  ];
+  const negativeKeywords = [
+    "poor",
+    "bad",
+    "terrible",
+    "awful",
+    "dirty",
+    "rude",
+    "unprofessional",
+    "disappointing",
+    "worst",
+    "noise",
+    "slow",
+    "broken",
+    "issue",
+    "problem",
+    "complaint",
+  ];
+
   for (const r of reviews) {
     const text = (r.review_text || r.summary_en || "").toLowerCase();
-    
+
     for (const kw of positiveKeywords) {
-      if (text.includes(kw) && !positive.some(p => text.includes(p))) {
+      if (text.includes(kw) && !positive.some((p) => text.includes(p))) {
         positive.push(kw);
       }
     }
-    
+
     for (const kw of negativeKeywords) {
-      if (text.includes(kw) && !negative.some(n => text.includes(n))) {
+      if (text.includes(kw) && !negative.some((n) => text.includes(n))) {
         negative.push(kw);
       }
     }
   }
-  
+
   return {
     positive: positive.slice(0, 5),
-    negative: negative.slice(0, 5)
+    negative: negative.slice(0, 5),
   };
 }
 
@@ -161,7 +228,8 @@ interface HotelMetrics {
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -179,10 +247,17 @@ Deno.serve(async (req: Request) => {
       .limit(1)
       .maybeSingle();
 
-    const isInternal = timingSafeBearerMatch(authHeader, serviceRoleKey)
-      || (typeof vaultServiceSecret?.decrypted_secret === "string" &&
-        timingSafeBearerMatch(authHeader, vaultServiceSecret.decrypted_secret))
-      || (authHeader && serviceRoleKey && authHeader.includes(serviceRoleKey.substring(0, 10)));
+    const isInternal =
+      timingSafeBearerMatch(authHeader, serviceRoleKey) ||
+      isServiceRoleJwt(authHeader) ||
+      (typeof vaultServiceSecret?.decrypted_secret === "string" &&
+        timingSafeBearerMatch(
+          authHeader,
+          vaultServiceSecret.decrypted_secret,
+        )) ||
+      (authHeader &&
+        serviceRoleKey &&
+        authHeader.includes(serviceRoleKey.substring(0, 10)));
 
     if (!isInternal) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -191,49 +266,79 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = req.method === "POST"
-      ? await req.json().catch(() => ({} as Record<string, unknown>))
-      : ({} as Record<string, unknown>);
-    const reportDate = typeof body.report_date === "string" ? body.report_date : undefined;
-    const specificHotelId = typeof body.hotel_id === "string" ? body.hotel_id : undefined;
+    const body =
+      req.method === "POST"
+        ? await req.json().catch(() => ({}) as Record<string, unknown>)
+        : ({} as Record<string, unknown>);
+    const reportDate =
+      typeof body.report_date === "string" ? body.report_date : undefined;
+    const specificHotelId =
+      typeof body.hotel_id === "string" ? body.hotel_id : undefined;
 
-    const { start, end } = buildWindow(reportDate);
+    const window = buildReviewWindow(reportDate);
+    const { start, end } = window;
     const reportDateValue = reportDate || end.toISOString().slice(0, 10);
-    const generatedTime = new Date().toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZone: "Africa/Cairo" });
+    const generatedTime = new Date().toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Africa/Cairo",
+    });
 
     // Get all active properties or specific hotel
-    let propertyQuery = supabase.from("properties").select("id,name,city,country").eq("is_active", true);
+    let propertyQuery = supabase
+      .from("properties")
+      .select("id,name,city,country")
+      .eq("is_active", true);
     if (specificHotelId) {
       propertyQuery = propertyQuery.eq("id", specificHotelId);
     }
     const { data: properties } = await propertyQuery;
-    
+
     if (!properties || properties.length === 0) {
-      return new Response(JSON.stringify({ success: true, message: "No hotels found." }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ success: true, message: "No hotels found." }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Fetch reviews for all hotels
-    const propertyIds = properties.map(p => p.id);
+    const propertyIds = properties.map((p) => p.id);
     const { data: reviews } = await supabase
       .from("guest_reviews")
-      .select("id,property_id,platform,sentiment,rating_normalized_10,summary_en,review_text,review_title,reviewer_name,reviewer_location,critical_flag,created_at")
+      .select(
+        "id,property_id,platform,sentiment,rating_normalized_10,summary_en,review_text,review_title,reviewer_name,reviewer_location,critical_flag,created_at,collected_at,published_at",
+      )
       .in("property_id", propertyIds)
-      .gte("created_at", start.toISOString())
-      .lt("created_at", end.toISOString())
+      .or(
+        `published_at.gte.${start.toISOString()},and(published_at.is.null,collected_at.gte.${start.toISOString()}),and(published_at.is.null,collected_at.is.null,created_at.gte.${start.toISOString()})`,
+      )
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("collected_at", { ascending: false })
       .order("created_at", { ascending: false });
+    const currentReviews = filterReviewsInWindow(reviews ?? [], window).sort(
+      (a, b) => getReviewEventTimestamp(b) - getReviewEventTimestamp(a),
+    );
 
     // Fetch previous period for trend comparison (7 days prior)
     const prevStart = new Date(start.getTime() - 7 * 24 * 60 * 60 * 1000);
     const prevEnd = new Date(end.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const previousWindow = { start: prevStart, end: prevEnd };
     const { data: prevReviews } = await supabase
       .from("guest_reviews")
-      .select("property_id,rating_normalized_10")
+      .select(
+        "property_id,rating_normalized_10,published_at,collected_at,created_at",
+      )
       .in("property_id", propertyIds)
-      .gte("created_at", prevStart.toISOString())
-      .lt("created_at", prevEnd.toISOString());
+      .or(
+        `published_at.gte.${prevStart.toISOString()},and(published_at.is.null,collected_at.gte.${prevStart.toISOString()}),and(published_at.is.null,collected_at.is.null,created_at.gte.${prevStart.toISOString()})`,
+      );
+    const previousReviews = filterReviewsInWindow(
+      prevReviews ?? [],
+      previousWindow,
+    );
 
     // Get Resend API key
     const { data: resendKeyData } = await supabase
@@ -242,36 +347,67 @@ Deno.serve(async (req: Request) => {
       .eq("name", "RESEND_API_KEY")
       .limit(1)
       .maybeSingle();
-    const resendApiKey = resendKeyData?.decrypted_secret || Deno.env.get("RESEND_API_KEY");
+    const resendApiKey =
+      resendKeyData?.decrypted_secret || Deno.env.get("RESEND_API_KEY");
 
     if (!resendApiKey) {
       throw new Error("RESEND_API_KEY not found");
     }
 
-    // FIXED: Send ONLY to Islam Mahrous (GM)
-    const recipients = ["gm@primehotelsgroup.com"];
-
     // Calculate metrics per hotel
     const hotelMetrics: HotelMetrics[] = [];
-    
+
     for (const prop of properties) {
-      const hotelReviews = (reviews ?? []).filter((r: any) => r.property_id === prop.id);
-      const rated = hotelReviews.filter((r: any) => r.rating_normalized_10 != null);
-      const critical = hotelReviews.filter((r: any) => r.rating_normalized_10 != null && r.rating_normalized_10 <= 5);
-      const negative = hotelReviews.filter((r: any) => r.sentiment === "negative" || (r.rating_normalized_10 ?? 10) <= 6);
-      
-      const avgRating = rated.length > 0
-        ? Number((rated.reduce((sum: number, r: any) => sum + Number(r.rating_normalized_10 ?? 0), 0) / rated.length).toFixed(1))
-        : 0;
+      const hotelReviews = currentReviews.filter(
+        (r: any) => r.property_id === prop.id,
+      );
+      const rated = hotelReviews.filter(
+        (r: any) => r.rating_normalized_10 != null,
+      );
+      const critical = hotelReviews.filter(
+        (r: any) =>
+          r.rating_normalized_10 != null && r.rating_normalized_10 <= 5,
+      );
+      const negative = hotelReviews.filter(
+        (r: any) =>
+          r.sentiment === "negative" || (r.rating_normalized_10 ?? 10) <= 6,
+      );
+
+      const avgRating =
+        rated.length > 0
+          ? Number(
+              (
+                rated.reduce(
+                  (sum: number, r: any) =>
+                    sum + Number(r.rating_normalized_10 ?? 0),
+                  0,
+                ) / rated.length
+              ).toFixed(1),
+            )
+          : 0;
 
       // Previous period rating
-      const hotelPrev = (prevReviews ?? []).filter((r: any) => r.property_id === prop.id && r.rating_normalized_10 != null);
-      const prevAvg = hotelPrev.length > 0
-        ? Number((hotelPrev.reduce((sum: number, r: any) => sum + Number(r.rating_normalized_10 ?? 0), 0) / hotelPrev.length).toFixed(1))
-        : undefined;
+      const hotelPrev = previousReviews.filter(
+        (r: any) => r.property_id === prop.id && r.rating_normalized_10 != null,
+      );
+      const prevAvg =
+        hotelPrev.length > 0
+          ? Number(
+              (
+                hotelPrev.reduce(
+                  (sum: number, r: any) =>
+                    sum + Number(r.rating_normalized_10 ?? 0),
+                  0,
+                ) / hotelPrev.length
+              ).toFixed(1),
+            )
+          : undefined;
 
       // Platform breakdown
-      const platformBreakdown: Record<string, { count: number; total: number; avg: number }> = {};
+      const platformBreakdown: Record<
+        string,
+        { count: number; total: number; avg: number }
+      > = {};
       for (const r of rated) {
         const platform = r.platform || "Unknown";
         if (!platformBreakdown[platform]) {
@@ -280,10 +416,11 @@ Deno.serve(async (req: Request) => {
         platformBreakdown[platform].count++;
         platformBreakdown[platform].total += Number(r.rating_normalized_10);
       }
-      
+
       const platformRatings: Record<string, number> = {};
       for (const [plat, data] of Object.entries(platformBreakdown)) {
-        platformRatings[plat] = data.count > 0 ? Number((data.total / data.count).toFixed(1)) : 0;
+        platformRatings[plat] =
+          data.count > 0 ? Number((data.total / data.count).toFixed(1)) : 0;
       }
 
       const themes = extractThemes(hotelReviews);
@@ -296,9 +433,17 @@ Deno.serve(async (req: Request) => {
         avgRating,
         previousAvgRating: prevAvg,
         negativeCount: negative.length,
-        negativeRate: hotelReviews.length > 0 ? Number(((negative.length / hotelReviews.length) * 100).toFixed(1)) : 0,
+        negativeRate:
+          hotelReviews.length > 0
+            ? Number(((negative.length / hotelReviews.length) * 100).toFixed(1))
+            : 0,
         criticalCount: critical.length,
-        platformBreakdown: Object.fromEntries(Object.entries(platformBreakdown).map(([k, v]) => [k, { count: v.count, avg: platformRatings[k] }])),
+        platformBreakdown: Object.fromEntries(
+          Object.entries(platformBreakdown).map(([k, v]) => [
+            k,
+            { count: v.count, avg: platformRatings[k] },
+          ]),
+        ),
         platformRatings,
         reviews: hotelReviews,
         positiveTrends: themes.positive,
@@ -307,8 +452,9 @@ Deno.serve(async (req: Request) => {
     }
 
     // Send email for each hotel
-    const results: Array<{ hotel: string; status: string; error?: string }> = [];
-    
+    const results: Array<{ hotel: string; status: string; error?: string }> =
+      [];
+
     for (const hotel of hotelMetrics) {
       if (hotel.count === 0) {
         results.push({ hotel: hotel.name, status: "skipped (no reviews)" });
@@ -321,78 +467,142 @@ Deno.serve(async (req: Request) => {
       // Generate HTML email
       const trend = getTrendIndicator(hotel.avgRating, hotel.previousAvgRating);
       const recommendations = generateRecommendations(hotel);
-      
+
       // Recent reviews table
-      const recentReviewsHtml = hotel.reviews.slice(0, 8).map((r: any) => {
-        const date = new Date(r.created_at).toISOString().split("T")[0];
-        const score = r.rating_normalized_10?.toFixed(1) || "N/A";
-        const excerpt = (r.summary_en || r.review_text || "No content").substring(0, 100);
-        return `<tr>
+      const recentReviewsHtml = hotel.reviews
+        .slice(0, 8)
+        .map((r: any) => {
+          const date = (getReviewEventDate(r) ?? new Date(r.created_at))
+            .toISOString()
+            .split("T")[0];
+          const score = r.rating_normalized_10?.toFixed(1) || "N/A";
+          const excerpt = (
+            r.summary_en ||
+            r.review_text ||
+            "No content"
+          ).substring(0, 100);
+          return `<tr>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${date}</td>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${r.platform || "Unknown"}</td>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${r.reviewer_name || "Guest"}</td>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:bold;color:${Number(score) >= 8 ? "#38a169" : Number(score) <= 5 ? "#e53e3e" : "#d69e2e"}">${score}/10</td>
           <td style="padding:8px;border-bottom:1px solid #e2e8f0;font-size:12px;">${excerpt}${excerpt.length >= 100 ? "..." : ""}</td>
         </tr>`;
-      }).join("");
+        })
+        .join("");
 
       // Critical alerts table
-      const criticalReviews = hotel.reviews.filter((r: any) => r.rating_normalized_10 != null && r.rating_normalized_10 <= 5);
-      const criticalAlertsHtml = criticalReviews.length > 0 
-        ? criticalReviews.slice(0, 5).map((r: any) => {
-            const excerpt = (r.summary_en || r.review_text || "No content").substring(0, 150);
-            const isUrgent = excerpt.toLowerCase().includes("safety") || excerpt.toLowerCase().includes("health") || excerpt.toLowerCase().includes("theft") || excerpt.toLowerCase().includes("fraud");
-            return `<tr style="background:${isUrgent ? "#fff5f5" : "transparent"}">
+      const criticalReviews = hotel.reviews.filter(
+        (r: any) =>
+          r.rating_normalized_10 != null && r.rating_normalized_10 <= 5,
+      );
+      const criticalAlertsHtml =
+        criticalReviews.length > 0
+          ? criticalReviews
+              .slice(0, 5)
+              .map((r: any) => {
+                const excerpt = (
+                  r.summary_en ||
+                  r.review_text ||
+                  "No content"
+                ).substring(0, 150);
+                const isUrgent =
+                  excerpt.toLowerCase().includes("safety") ||
+                  excerpt.toLowerCase().includes("health") ||
+                  excerpt.toLowerCase().includes("theft") ||
+                  excerpt.toLowerCase().includes("fraud");
+                return `<tr style="background:${isUrgent ? "#fff5f5" : "transparent"}">
               <td style="padding:10px;border-bottom:1px solid #fed7d7;font-size:12px;">${r.reviewer_name || "Guest"}</td>
               <td style="padding:10px;border-bottom:1px solid #fed7d7;font-size:12px;">${r.platform || "Unknown"}</td>
               <td style="padding:10px;border-bottom:1px solid #fed7d7;font-size:12px;color:#e53e3e;font-weight:bold;">${r.rating_normalized_10}/10</td>
               <td style="padding:10px;border-bottom:1px solid #fed7d7;font-size:12px;">${excerpt}${excerpt.length >= 150 ? "..." : ""}${isUrgent ? " <span style='color:#e53e3e;font-weight:bold'>[URGENT]</span>" : ""}</td>
             </tr>`;
-          }).join("")
-        : `<tr><td colspan="4" style="padding:15px;text-align:center;color:#718096;font-size:12px;">✅ No critical alerts for this period</td></tr>`;
+              })
+              .join("")
+          : `<tr><td colspan="4" style="padding:15px;text-align:center;color:#718096;font-size:12px;">✅ No critical alerts for this period</td></tr>`;
 
       // Platform scorecard
-      const platformScorecardHtml = Object.entries(hotel.platformBreakdown).map(([platform, data]: [string, any]) => {
-        const rating = data.avg?.toFixed(1) || "N/A";
-        return `<div style="display:inline-block;margin:5px;padding:10px 15px;background:#f7fafc;border-radius:6px;border-left:3px solid ${data.avg >= 8 ? "#38a169" : data.avg >= 6 ? "#d69e2e" : "#e53e3e"}">
+      const platformScorecardHtml = Object.entries(hotel.platformBreakdown)
+        .map(([platform, data]: [string, any]) => {
+          const rating = data.avg?.toFixed(1) || "N/A";
+          return `<div style="display:inline-block;margin:5px;padding:10px 15px;background:#f7fafc;border-radius:6px;border-left:3px solid ${data.avg >= 8 ? "#38a169" : data.avg >= 6 ? "#d69e2e" : "#e53e3e"}">
           <div style="font-size:11px;color:#718096;text-transform:uppercase;">${platform}</div>
           <div style="font-size:18px;font-weight:bold;color:#1a365d;">${rating}</div>
           <div style="font-size:10px;color:#718096;">${data.count} reviews</div>
         </div>`;
-      }).join("");
+        })
+        .join("");
 
       // Recommendations HTML
-      const recommendationsHtml = recommendations.map(rec => {
-        const priorityColor = rec.priority === "HIGH" ? "#e53e3e" : rec.priority === "MEDIUM" ? "#d69e2e" : "#38a169";
-        return `<div style="background:#f7fafc;border-left:4px solid ${priorityColor};padding:12px 15px;margin-bottom:10px;border-radius:0 6px 6px 0;">
+      const recommendationsHtml = recommendations
+        .map((rec) => {
+          const priorityColor =
+            rec.priority === "HIGH"
+              ? "#e53e3e"
+              : rec.priority === "MEDIUM"
+                ? "#d69e2e"
+                : "#38a169";
+          return `<div style="background:#f7fafc;border-left:4px solid ${priorityColor};padding:12px 15px;margin-bottom:10px;border-radius:0 6px 6px 0;">
           <div style="font-size:11px;color:${priorityColor};font-weight:bold;margin-bottom:4px;">⚠️ ${rec.priority} | ${rec.dept}</div>
           <div style="font-size:13px;color:#2d3748;font-weight:600;margin-bottom:4px;">${rec.action}</div>
           <div style="font-size:11px;color:#718096;">${rec.rationale}</div>
         </div>`;
-      }).join("");
+        })
+        .join("");
 
       // Operational priorities
-      const priorities: Array<{ title: string; trend: string; trendClass: string }> = [];
+      const priorities: Array<{
+        title: string;
+        trend: string;
+        trendClass: string;
+      }> = [];
       if (hotel.criticalCount > 0) {
-        priorities.push({ title: "Address critical guest feedback", trend: "Urgent", trendClass: "declining" });
+        priorities.push({
+          title: "Address critical guest feedback",
+          trend: "Urgent",
+          trendClass: "declining",
+        });
       }
       if (hotel.negativeRate > 15) {
-        priorities.push({ title: "Improve service consistency", trend: "Declining", trendClass: "declining" });
+        priorities.push({
+          title: "Improve service consistency",
+          trend: "Declining",
+          trendClass: "declining",
+        });
       } else if (hotel.negativeRate > 5) {
-        priorities.push({ title: "Monitor service trends", trend: "Stable", trendClass: "stable" });
+        priorities.push({
+          title: "Monitor service trends",
+          trend: "Stable",
+          trendClass: "stable",
+        });
       }
       if (hotel.avgRating < 7.5) {
-        priorities.push({ title: "Enhance guest satisfaction initiatives", trend: "Declining", trendClass: "declining" });
+        priorities.push({
+          title: "Enhance guest satisfaction initiatives",
+          trend: "Declining",
+          trendClass: "declining",
+        });
       } else if (hotel.avgRating >= 8.5) {
-        priorities.push({ title: "Maintain excellence standards", trend: "Improving", trendClass: "improving" });
+        priorities.push({
+          title: "Maintain excellence standards",
+          trend: "Improving",
+          trendClass: "improving",
+        });
       }
-      
-      const prioritiesHtml = priorities.length > 0 
-        ? priorities.map(p => `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#f7fafc;border-radius:6px;margin-bottom:8px;">
+
+      const prioritiesHtml =
+        priorities.length > 0
+          ? priorities
+              .map(
+                (
+                  p,
+                ) => `<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#f7fafc;border-radius:6px;margin-bottom:8px;">
             <span style="font-size:12px;color:#2d3748;">${p.title}</span>
             <span style="font-size:11px;padding:3px 8px;border-radius:12px;background:${p.trend === "Improving" ? "#c6f6d5" : p.trend === "Declining" || p.trend === "Urgent" ? "#fed7d7" : "#e2e8f0"};color:${p.trend === "Improving" ? "#22543d" : p.trend === "Declining" || p.trend === "Urgent" ? "#742a2a" : "#4a5568"};font-weight:600;">${p.trend}</span>
-          </div>`).join("")
-        : `<div style="padding:10px 15px;background:#f7fafc;border-radius:6px;font-size:12px;color:#718096;text-align:center;">No specific priorities identified</div>`;
+          </div>`,
+              )
+              .join("")
+          : `<div style="padding:10px 15px;background:#f7fafc;border-radius:6px;font-size:12px;color:#718096;text-align:center;">No specific priorities identified</div>`;
 
       // Build full email HTML
       const emailHtml = `<!DOCTYPE html>
@@ -474,25 +684,37 @@ Deno.serve(async (req: Request) => {
           </div>
         </div>
         
-        ${platformScorecardHtml ? `<div style="margin-top:15px;padding-top:15px;border-top:1px solid #e2e8f0;">
+        ${
+          platformScorecardHtml
+            ? `<div style="margin-top:15px;padding-top:15px;border-top:1px solid #e2e8f0;">
           <div style="font-size:11px;color:#718096;margin-bottom:10px;text-transform:uppercase;">Platform Breakdown</div>
           ${platformScorecardHtml}
-        </div>` : ""}
+        </div>`
+            : ""
+        }
       </div>
       
-      ${hotel.positiveTrends.length > 0 ? `<div style="margin-bottom:15px;">
+      ${
+        hotel.positiveTrends.length > 0
+          ? `<div style="margin-bottom:15px;">
         <div style="font-size:12px;color:#38a169;font-weight:bold;margin-bottom:8px;">✅ Positive Trends</div>
         <div style="font-size:12px;color:#4a5568;line-height:1.6;">
           Guest praise: ${hotel.positiveTrends.join(", ")}
         </div>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
       
-      ${hotel.negativeTrends.length > 0 ? `<div>
+      ${
+        hotel.negativeTrends.length > 0
+          ? `<div>
         <div style="font-size:12px;color:#e53e3e;font-weight:bold;margin-bottom:8px;">⚠️ Areas for Attention</div>
         <div style="font-size:12px;color:#4a5568;line-height:1.6;">
           Concerns: ${hotel.negativeTrends.join(", ")}
         </div>
-      </div>` : ""}
+      </div>`
+          : ""
+      }
     </div>
     
     <!-- Recent Reviews -->
@@ -579,38 +801,51 @@ Deno.serve(async (req: Request) => {
           console.log(`Email sent for ${hotel.name} to:`, recipients);
         } else {
           const errorText = await resendResponse.text();
-          results.push({ hotel: hotel.name, status: "failed", error: errorText });
+          results.push({
+            hotel: hotel.name,
+            status: "failed",
+            error: errorText,
+          });
           console.error(`Failed to send email for ${hotel.name}:`, errorText);
         }
       } catch (err) {
-        results.push({ hotel: hotel.name, status: "error", error: String(err) });
+        results.push({
+          hotel: hotel.name,
+          status: "error",
+          error: String(err),
+        });
         console.error(`Error sending email for ${hotel.name}:`, err);
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      report_date: reportDateValue,
-      hotels_processed: results.length,
-      results,
-      summary: {
-        total_hotels: properties.length,
-        hotels_with_reviews: hotelMetrics.filter(h => h.count > 0).length,
-        emails_sent: results.filter(r => r.status === "sent").length,
-      }
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        report_date: reportDateValue,
+        hotels_processed: results.length,
+        results,
+        summary: {
+          total_hotels: properties.length,
+          hotels_with_reviews: hotelMetrics.filter((h) => h.count > 0).length,
+          emails_sent: results.filter((r) => r.status === "sent").length,
+        },
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("guest-review-hotel-daily-report failed:", error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

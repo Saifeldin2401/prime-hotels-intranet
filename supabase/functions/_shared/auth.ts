@@ -2,25 +2,28 @@
  * Timing-safe authorization check for internal cron/service-role calls.
  * Prevents timing attacks on service role key comparison.
  */
-export function isAuthorizedServiceRole(authHeader: string | null, serviceRoleKey: string): boolean {
-  const expected = `Bearer ${serviceRoleKey}`
-  const actual = authHeader ?? ''
+export function isAuthorizedServiceRole(
+  authHeader: string | null,
+  serviceRoleKey: string,
+): boolean {
+  const expected = `Bearer ${serviceRoleKey}`;
+  const actual = authHeader ?? "";
 
   if (actual.length !== expected.length) {
-    return false
+    return false;
   }
 
-  const encoder = new TextEncoder()
-  const a = encoder.encode(actual)
-  const b = encoder.encode(expected)
+  const encoder = new TextEncoder();
+  const a = encoder.encode(actual);
+  const b = encoder.encode(expected);
 
   // Use constant-time comparison
-  let result = 0
+  let result = 0;
   for (let i = 0; i < a.length; i++) {
-    result |= a[i] ^ b[i]
+    result |= a[i] ^ b[i];
   }
 
-  return result === 0
+  return result === 0;
 }
 
 /**
@@ -28,48 +31,60 @@ export function isAuthorizedServiceRole(authHeader: string | null, serviceRoleKe
  * 1) Exact service-role key match, or
  * 2) (legacy) no longer supported via payload-only inspection.
  */
-export function isAuthorizedServiceRoleRequest(authHeader: string | null, serviceRoleKey: string): boolean {
-  return Boolean(serviceRoleKey) && isAuthorizedServiceRole(authHeader, serviceRoleKey)
+export function isAuthorizedServiceRoleRequest(
+  authHeader: string | null,
+  serviceRoleKey: string,
+): boolean {
+  return (
+    Boolean(serviceRoleKey) &&
+    isAuthorizedServiceRole(authHeader, serviceRoleKey)
+  );
 }
 
 /**
  * Accept either service role key or a shared internal secret.
  * The shared secret should be provided via AI_CRON_SECRET env var.
  */
-export function isAuthorizedInternal(authHeader: string | null, serviceRoleKey: string, internalSecret?: string | null): boolean {
-  const actual = authHeader ?? ''
-  const candidates = [serviceRoleKey, internalSecret].filter(Boolean) as string[]
-  if (candidates.length === 0) return false
+export function isAuthorizedInternal(
+  authHeader: string | null,
+  serviceRoleKey: string,
+  internalSecret?: string | null,
+): boolean {
+  const actual = authHeader ?? "";
+  const candidates = [serviceRoleKey, internalSecret].filter(
+    Boolean,
+  ) as string[];
+  if (candidates.length === 0) return false;
 
   for (const candidate of candidates) {
-    const expected = `Bearer ${candidate}`
+    const expected = `Bearer ${candidate}`;
     if (actual.length !== expected.length) {
-      continue
+      continue;
     }
 
-    const encoder = new TextEncoder()
-    const a = encoder.encode(actual)
-    const b = encoder.encode(expected)
+    const encoder = new TextEncoder();
+    const a = encoder.encode(actual);
+    const b = encoder.encode(expected);
 
-    let result = 0
+    let result = 0;
     for (let i = 0; i < a.length; i++) {
-      result |= a[i] ^ b[i]
+      result |= a[i] ^ b[i];
     }
 
-    if (result === 0) return true
+    if (result === 0) return true;
   }
 
-  return false
+  return false;
 }
 
 export function getServiceRoleToken(authHeader: string | null): string | null {
-  if (!authHeader) return null
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-  if (!serviceRoleKey) return null
+  if (!authHeader) return null;
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!serviceRoleKey) return null;
 
-  const token = authHeader.startsWith('Bearer ')
-    ? authHeader.slice('Bearer '.length).trim()
-    : authHeader.trim()
+  const token = authHeader.startsWith("Bearer ")
+    ? authHeader.slice("Bearer ".length).trim()
+    : authHeader.trim();
 
-  return token === serviceRoleKey ? token : null
+  return token === serviceRoleKey ? token : null;
 }

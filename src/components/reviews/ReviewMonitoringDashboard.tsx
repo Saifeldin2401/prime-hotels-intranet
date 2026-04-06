@@ -135,13 +135,10 @@ export function ReviewMonitoringDashboard() {
   // Trigger manual collection
   const triggerCollectionMutation = useMutation({
     mutationFn: async () => {
-      // Reset poll schedule so all sources become immediately due
-      const { error } = await supabase.rpc('trigger_review_collector')
-      if (error) throw error
-      // Fire the edge function to actually collect reviews
-      await supabase.functions.invoke('guest-review-collector', {
+      const { error } = await supabase.functions.invoke('guest-review-collector', {
         body: { run_mode: 'manual' },
       })
+      if (error) throw error
     },
     onSuccess: () => {
       toast({ title: 'Collection triggered', description: 'Review collection has been started' })

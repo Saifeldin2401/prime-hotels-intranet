@@ -49,6 +49,13 @@ type ReviewWithIssues = GuestReview & {
 import { ReviewPreviewTooltip } from '@/components/reviews/ReviewPreviewTooltip'
 import { useReviewShortcuts, useFilterShortcuts } from '@/hooks/useKeyboardShortcuts'
 import type { GuestReview } from '@/lib/types'
+import {
+  DEFAULT_REVIEW_MONITOR_DAYS,
+  buildReviewDateRange,
+  filterReviewsByDateRange,
+  getReviewEventDate,
+  getReviewEventTimestamp,
+} from '@/lib/reviewDates'
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from '@/lib/reviewsScope'
 import { useNavigate } from 'react-router-dom'
 
@@ -120,6 +127,14 @@ const severityBadgeClass = (severity?: string | null) => {
   }
 }
 
+function createDefaultDateRange() {
+  const { from, to } = buildReviewDateRange({ daysBack: DEFAULT_REVIEW_MONITOR_DAYS })
+  return {
+    from,
+    to,
+  }
+}
+
 export default function GuestReviews() {
   const { t } = useTranslation('reviews')
   const { toast } = useToast()
@@ -143,10 +158,9 @@ export default function GuestReviews() {
     sort: 'newest',
   })
 
-  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>({
-    from: undefined,
-    to: undefined,
-  })
+  const [dateRange, setDateRange] = useState<{ from: Date | undefined; to: Date | undefined }>(
+    () => createDefaultDateRange(),
+  )
 
   // Monitoring system states
   const [isMonitoring, setIsMonitoring] = useState(true)
@@ -157,25 +171,62 @@ export default function GuestReviews() {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const monitoringIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
+  const applyDateRange = (range: { from: Date | undefined; to: Date | undefined }) => {
+    if (!range.from && !range.to) {
+      setDateRange(createDefaultDateRange())
+      return
+    }
+
+    setDateRange(range)
+  }
+
+  const resetFilters = () => {
+    setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '', sort: 'newest' })
+    setDateRange(createDefaultDateRange())
+  }
+
   // Monitoring system: Check for new reviews every 30 seconds
   const checkForNewReviews = useCallback(async () => {
     if (!isMonitoring) return
     
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('guest_reviews')
-        .select('id, reviewer_name, platform, severity, critical_flag, collected_at')
-        .gt('collected_at', lastCheckedAt.toISOString())
-        .order('collected_at', { ascending: false })
+        .select('id, property_id, reviewer_name, review_title, review_text, platform, status, sentiment, severity, critical_flag, published_at, collected_at, created_at')
+        .neq('property_id', GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID)
+        .gt('created_at', lastCheckedAt.toISOString())
+        .order('created_at', { ascending: false })
         .limit(10)
+
+      if (filters.propertyId !== 'all') {
+        query = query.eq('property_id', filters.propertyId)
+      }
+
+      const { data, error } = await query
       
       if (error) throw error
+
+      const freshReviews = filterReviewsByDateRange((data ?? []) as GuestReview[], {
+        range: dateRange,
+        daysBack: DEFAULT_REVIEW_MONITOR_DAYS,
+      }).filter((review) => {
+        if (filters.platform !== 'all' && review.platform !== filters.platform) return false
+        if (filters.status !== 'all' && review.status !== filters.status) return false
+        if (filters.severity !== 'all' && review.severity !== filters.severity) return false
+        if (filters.sentiment !== 'all' && review.sentiment !== filters.sentiment) return false
+        if (!filters.query.trim()) return true
+
+        const searchTerm = filters.query.trim().toLowerCase()
+        return [review.review_text, review.review_title, review.reviewer_name]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchTerm))
+      })
       
-      if (data && data.length > 0) {
+      if (freshReviews.length > 0) {
         const newIds = new Set(recentReviews)
         let criticalCount = 0
         
-        data.forEach((review) => {
+        freshReviews.forEach((review) => {
           if (!newIds.has(review.id)) {
             newIds.add(review.id)
             if (review.critical_flag || review.severity === 'critical') {
@@ -212,7 +263,7 @@ export default function GuestReviews() {
     } catch (err) {
       console.error('Error checking for new reviews:', err)
     }
-  }, [isMonitoring, lastCheckedAt, recentReviews, soundEnabled, toast, queryClient])
+  }, [dateRange, filters.platform, filters.propertyId, filters.query, filters.sentiment, filters.severity, filters.status, isMonitoring, lastCheckedAt, queryClient, recentReviews, soundEnabled, toast])
 
   // Set up monitoring interval
   useEffect(() => {
@@ -257,59 +308,66 @@ export default function GuestReviews() {
   })
 
   const reviewsQuery = useQuery({
-    queryKey: ['guest-reviews', filters],
+    queryKey: ['guest-reviews', filters, dateRange.from?.toISOString() ?? null, dateRange.to?.toISOString() ?? null],
     queryFn: async () => {
+      const reviewWindow = buildReviewDateRange({
+        range: dateRange,
+        daysBack: DEFAULT_REVIEW_MONITOR_DAYS,
+      })
+
       let query = supabase
         .from('guest_reviews')
         .select('*')
         .neq('property_id', GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID)
 
-      // FIXED: Filter out reviews older than 90 days based on published_at (original review date)
-      // This prevents old reviews from appearing when they're newly collected
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
-      query = query.or(`published_at.gte.${ninetyDaysAgo},and(published_at.is.null,collected_at.gte.${ninetyDaysAgo})`)
+      if (reviewWindow.fromIso) {
+        query = query.or(
+          `published_at.gte.${reviewWindow.fromIso},and(published_at.is.null,collected_at.gte.${reviewWindow.fromIso}),and(published_at.is.null,collected_at.is.null,created_at.gte.${reviewWindow.fromIso})`,
+        )
+      }
 
       // Apply sorting based on filter selection
-      // FIXED: Use collected_at consistently as the system-of-record timestamp
       switch (filters.sort) {
         case 'newest':
-          // Sort by published_at (newest first)
           query = query
             .order('published_at', { ascending: false, nullsFirst: false })
             .order('collected_at', { ascending: false })
+            .order('created_at', { ascending: false })
           break
         case 'oldest':
-          // Sort by published_at (oldest first)
           query = query
             .order('published_at', { ascending: true, nullsFirst: false })
             .order('collected_at', { ascending: true })
+            .order('created_at', { ascending: true })
           break
         case 'critical':
-          // Sort by severity (critical first), then by published_at
           query = query
             .order('severity', { ascending: false })
             .order('critical_flag', { ascending: false })
             .order('published_at', { ascending: false, nullsFirst: false })
+            .order('collected_at', { ascending: false })
+            .order('created_at', { ascending: false })
           break
         case 'highest_rating':
-          // Sort by rating (highest first), then by published_at
           query = query
             .order('rating_normalized_5', { ascending: false })
             .order('published_at', { ascending: false, nullsFirst: false })
+            .order('collected_at', { ascending: false })
+            .order('created_at', { ascending: false })
           break
         case 'lowest_rating':
-          // Sort by rating (lowest first), then by published_at
           query = query
             .order('rating_normalized_5', { ascending: true })
             .order('published_at', { ascending: false, nullsFirst: false })
+            .order('collected_at', { ascending: false })
+            .order('created_at', { ascending: false })
           break
         default:
-          // Default to newest first
           query = query
             .order('published_at', { ascending: false, nullsFirst: false })
+            .order('collected_at', { ascending: false })
+            .order('created_at', { ascending: false })
       }
-
-      query = query.limit(200)
 
       if (filters.propertyId !== 'all') query = query.eq('property_id', filters.propertyId)
       if (filters.platform !== 'all') query = query.eq('platform', filters.platform)
@@ -317,13 +375,24 @@ export default function GuestReviews() {
       if (filters.severity !== 'all') query = query.eq('severity', filters.severity)
       if (filters.sentiment !== 'all') query = query.eq('sentiment', filters.sentiment)
 
-      if (filters.query.trim()) {
-        query = query.or(`review_text.ilike.%${filters.query.trim()}%,review_title.ilike.%${filters.query.trim()}%,reviewer_name.ilike.%${filters.query.trim()}%`)
-      }
-
       const { data, error } = await query
       if (error) throw error
-      return (data ?? []) as GuestReview[]
+
+      const reviewList = filterReviewsByDateRange((data ?? []) as GuestReview[], {
+        range: dateRange,
+        daysBack: DEFAULT_REVIEW_MONITOR_DAYS,
+      })
+
+      if (!filters.query.trim()) {
+        return reviewList
+      }
+
+      const searchTerm = filters.query.trim().toLowerCase()
+      return reviewList.filter((review) =>
+        [review.review_text, review.review_title, review.reviewer_name]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(searchTerm)),
+      )
     },
     staleTime: 15_000,
   })
@@ -573,50 +642,35 @@ export default function GuestReviews() {
   const reviews = reviewsQuery.data ?? []
   
   // Sort reviews based on selected sort option
-  // FIXED: Consistently use collected_at as system-of-record timestamp
   const sortedReviews = useMemo(() => {
     const severityOrder = { critical: 4, high: 3, medium: 2, low: 1, null: 0 }
     const sorted = [...reviews]
     
     switch (filters.sort) {
       case 'newest':
-        return sorted.sort((a, b) => {
-          const dateA = a.published_at ? new Date(a.published_at).getTime() : new Date(a.collected_at).getTime()
-          const dateB = b.published_at ? new Date(b.published_at).getTime() : new Date(b.collected_at).getTime()
-          return dateB - dateA
-        })
+        return sorted.sort((a, b) => getReviewEventTimestamp(b) - getReviewEventTimestamp(a))
       case 'oldest':
-        return sorted.sort((a, b) => {
-          const dateA = a.published_at ? new Date(a.published_at).getTime() : new Date(a.collected_at).getTime()
-          const dateB = b.published_at ? new Date(b.published_at).getTime() : new Date(b.collected_at).getTime()
-          return dateA - dateB
-        })
+        return sorted.sort((a, b) => getReviewEventTimestamp(a) - getReviewEventTimestamp(b))
       case 'critical':
         return sorted.sort((a, b) => {
           const sevA = severityOrder[a.severity as keyof typeof severityOrder] || 0
           const sevB = severityOrder[b.severity as keyof typeof severityOrder] || 0
           if (sevA !== sevB) return sevB - sevA
-          const dateA = a.published_at ? new Date(a.published_at).getTime() : new Date(a.collected_at).getTime()
-          const dateB = b.published_at ? new Date(b.published_at).getTime() : new Date(b.collected_at).getTime()
-          return dateB - dateA
+          return getReviewEventTimestamp(b) - getReviewEventTimestamp(a)
         })
       case 'highest_rating':
         return sorted.sort((a, b) => {
           const rateA = a.rating_normalized_5 || 0
           const rateB = b.rating_normalized_5 || 0
           if (rateA !== rateB) return rateB - rateA
-          const dateA = a.published_at ? new Date(a.published_at).getTime() : new Date(a.collected_at).getTime()
-          const dateB = b.published_at ? new Date(b.published_at).getTime() : new Date(b.collected_at).getTime()
-          return dateB - dateA
+          return getReviewEventTimestamp(b) - getReviewEventTimestamp(a)
         })
       case 'lowest_rating':
         return sorted.sort((a, b) => {
           const rateA = a.rating_normalized_5 || 0
           const rateB = b.rating_normalized_5 || 0
           if (rateA !== rateB) return rateA - rateB
-          const dateA = a.published_at ? new Date(a.published_at).getTime() : new Date(a.collected_at).getTime()
-          const dateB = b.published_at ? new Date(b.published_at).getTime() : new Date(b.collected_at).getTime()
-          return dateB - dateA
+          return getReviewEventTimestamp(b) - getReviewEventTimestamp(a)
         })
       default:
         return sorted
@@ -678,7 +732,7 @@ export default function GuestReviews() {
 
   useFilterShortcuts({
     onFocusSearch: () => (document.querySelector('input[type="text"]') as HTMLInputElement)?.focus(),
-    onClearFilters: () => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '', sort: 'newest' }),
+    onClearFilters: resetFilters,
     enabled: !sheetOpen,
   })
 
@@ -711,7 +765,7 @@ export default function GuestReviews() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1)
-  }, [filters])
+  }, [filters, dateRange])
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -883,6 +937,23 @@ export default function GuestReviews() {
             statuses={statuses}
           />
 
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/70 bg-white/70 p-3 shadow-sm dark:border-slate-700/60 dark:bg-slate-900/70">
+            <div className="flex items-center gap-3">
+              <DateRangePicker value={dateRange} onChange={applyDateRange} />
+              <p className="text-[11px] font-medium text-muted-foreground">
+                Daily monitoring uses the original review date.
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="h-8 px-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
+            >
+              {t('actions.resetParameters')}
+            </Button>
+          </div>
+
           {reviewsQuery.isLoading ? (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {Array.from({ length: 8 }, (_, i) => (
@@ -925,7 +996,7 @@ export default function GuestReviews() {
                 <Button 
                   variant="outline" 
                   className="mt-6 rounded-xl px-6 h-10 font-semibold text-xs border-slate-300 dark:border-slate-600"
-                  onClick={() => setFilters({ propertyId: 'all', platform: 'all', status: 'all', severity: 'all', sentiment: 'all', query: '', sort: 'newest' })}
+                  onClick={resetFilters}
                 >
                   {t('actions.resetParameters')}
                 </Button>
@@ -1219,10 +1290,10 @@ export default function GuestReviews() {
                         <MessageSquare className="h-3.5 w-3.5" />
                         {t('rawIntelligence.platformVerbatim')}
                       </h3>
-                      {selectedReview.collected_at && (
+                      {getReviewEventDate(selectedReview) && (
                          <span className="text-[10px] font-medium text-muted-foreground flex items-center gap-1.5">
                           <Clock className="h-3 w-3" />
-                          {new Date(selectedReview.collected_at).toLocaleDateString()}
+                          {getReviewEventDate(selectedReview)?.toLocaleDateString()}
                         </span>
                       )}
                     </div>

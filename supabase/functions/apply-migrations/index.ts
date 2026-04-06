@@ -2,17 +2,19 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 Deno.serve(async (req) => {
-  const authHeader = req.headers.get('Authorization');
-  const expectedKey = Deno.env.get('SERVICE_ROLE_KEY');
-  
+  const authHeader = req.headers.get("Authorization");
+  const expectedKey = Deno.env.get("SERVICE_ROLE_KEY");
+
   if (authHeader !== `Bearer ${expectedKey}`) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 401 });
+    return new Response(JSON.stringify({ error: "Unauthorized" }), {
+      status: 401,
+    });
   }
 
   const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SERVICE_ROLE_KEY')!,
-    { auth: { persistSession: false } }
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
   );
 
   try {
@@ -68,20 +70,22 @@ Deno.serve(async (req) => {
       EXECUTE FUNCTION public.preserve_guest_review_analysis_state_on_refresh();
     `;
 
-    const { error: error1 } = await supabase.rpc('pg_execute', { command: migration1 });
-    
+    const { error: error1 } = await supabase.rpc("pg_execute", {
+      command: migration1,
+    });
+
     // If pg_execute doesn't exist, use a workaround through pg_net or direct query
-    if (error1 && error1.message.includes('pg_execute')) {
+    if (error1 && error1.message.includes("pg_execute")) {
       // Try using the SQL API directly
-      const response = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/`, {
-        method: 'POST',
+      const response = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/`, {
+        method: "POST",
         headers: {
-          'Authorization': `Bearer ${Deno.env.get('SERVICE_ROLE_KEY')}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${Deno.env.get("SERVICE_ROLE_KEY")}`,
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ query: migration1 })
+        body: JSON.stringify({ query: migration1 }),
       });
-      
+
       if (!response.ok) {
         throw new Error(`Migration 1 failed: ${await response.text()}`);
       }
@@ -109,7 +113,7 @@ Deno.serve(async (req) => {
         '*/10 * * * *',
         \$cmd\$
         select net.http_post(
-          url:='${Deno.env.get('SUPABASE_URL')}/functions/v1/guest-review-notifier',
+          url:='${Deno.env.get("SUPABASE_URL")}/functions/v1/guest-review-notifier',
           headers:=jsonb_build_object(
             'Content-Type','application/json',
             'Authorization','Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name='service_role_key' limit 1)
@@ -122,33 +126,38 @@ Deno.serve(async (req) => {
     `;
 
     // Execute migration 2 using direct SQL
-    const response2 = await fetch(`${Deno.env.get('SUPABASE_URL')}/rest/v1/`, {
-      method: 'POST',
+    const response2 = await fetch(`${Deno.env.get("SUPABASE_URL")}/rest/v1/`, {
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${Deno.env.get('SERVICE_ROLE_KEY')}`,
-        'Content-Type': 'application/json'
+        Authorization: `Bearer ${Deno.env.get("SERVICE_ROLE_KEY")}`,
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query: migration2 })
+      body: JSON.stringify({ query: migration2 }),
     });
 
     if (!response2.ok) {
       throw new Error(`Migration 2 failed: ${await response2.text()}`);
     }
 
-    return new Response(JSON.stringify({ 
-      success: true, 
-      message: 'Migrations applied successfully' 
-    }), {
-      headers: { 'Content-Type': 'application/json' }
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        message: "Migrations applied successfully",
+      }),
+      {
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({ 
-      success: false, 
-      error: error.message 
-    }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+      {
+        status: 500,
+        headers: { "Content-Type": "application/json" },
+      },
+    );
   }
 });

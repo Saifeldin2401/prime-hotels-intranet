@@ -2,7 +2,11 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
-import { isValidUuid, generateRequestId, fetchWithRetry } from "../_shared/utils.ts";
+import {
+  isValidUuid,
+  generateRequestId,
+  fetchWithRetry,
+} from "../_shared/utils.ts";
 
 type ResponsibilityCode =
   | "general_manager"
@@ -51,15 +55,58 @@ type AnalyzeRequestBody = z.infer<typeof analyzeRequestSchema>;
 
 const CATEGORY_KEYWORDS: Record<IssueCategory, string[]> = {
   cleanliness: ["clean", "dirty", "smell", "bathroom", "linen", "housekeeping"],
-  staff_behavior: ["staff", "service", "rude", "friendly", "attitude", "behavior"],
+  staff_behavior: [
+    "staff",
+    "service",
+    "rude",
+    "friendly",
+    "attitude",
+    "behavior",
+  ],
   room_issues: ["room", "bed", "check in", "check-in", "check out", "checkout"],
-  maintenance: ["ac", "air conditioning", "broken", "repair", "leak", "elevator", "hot water"],
-  food_beverage: ["food", "breakfast", "restaurant", "buffet", "coffee", "dinner"],
+  maintenance: [
+    "ac",
+    "air conditioning",
+    "broken",
+    "repair",
+    "leak",
+    "elevator",
+    "hot water",
+  ],
+  food_beverage: [
+    "food",
+    "breakfast",
+    "restaurant",
+    "buffet",
+    "coffee",
+    "dinner",
+  ],
   internet_tech: ["wifi", "wi-fi", "internet", "network", "tv", "key card"],
-  check_in_out: ["check in", "check-in", "check out", "check-out", "arrival", "departure"],
-  reservation_billing: ["reservation", "booking", "billing", "charge", "refund", "invoice"],
+  check_in_out: [
+    "check in",
+    "check-in",
+    "check out",
+    "check-out",
+    "arrival",
+    "departure",
+  ],
+  reservation_billing: [
+    "reservation",
+    "booking",
+    "billing",
+    "charge",
+    "refund",
+    "invoice",
+  ],
   noise: ["noise", "noisy", "loud", "disturbance"],
-  safety_security: ["unsafe", "security", "danger", "harassment", "abuse", "discrimination"],
+  safety_security: [
+    "unsafe",
+    "security",
+    "danger",
+    "harassment",
+    "abuse",
+    "discrimination",
+  ],
   amenities: ["pool", "gym", "spa", "parking", "amenities"],
   location: ["location", "distance", "area", "access"],
   value: ["value", "price", "expensive", "worth"],
@@ -83,7 +130,10 @@ const CATEGORY_RESPONSIBILITY: Record<IssueCategory, ResponsibilityCode[]> = {
   other: ["general_manager"],
 };
 
-function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
+function timingSafeBearerMatch(
+  authHeader: string | null,
+  secret: string,
+): boolean {
   if (!authHeader || !secret) return false;
   const expected = `Bearer ${secret}`;
   if (authHeader.length !== expected.length) return false;
@@ -100,7 +150,9 @@ function isServiceRoleJwt(authHeader: string | null): boolean {
   try {
     const parts = token.split(".");
     if (parts.length !== 3) return false;
-    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
     return payload.role === "service_role";
   } catch {
     return false;
@@ -136,7 +188,9 @@ function normalizeRating10(value: unknown): number | null {
 function detectCategories(text: string): IssueCategory[] {
   const lower = text.toLowerCase();
   const categories: IssueCategory[] = [];
-  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as Array<[IssueCategory, string[]]>) {
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS) as Array<
+    [IssueCategory, string[]]
+  >) {
     if (category === "other") continue;
     if (keywords.some((k) => lower.includes(k))) categories.push(category);
   }
@@ -144,40 +198,62 @@ function detectCategories(text: string): IssueCategory[] {
 }
 
 function buildAnalysis(review: Record<string, unknown>) {
-  const rating10 = normalizeRating10(review.rating_normalized_10 ?? review.original_rating);
-  const text = cleanText(`${review.review_title ?? ""} ${review.review_text ?? ""}`);
+  const rating10 = normalizeRating10(
+    review.rating_normalized_10 ?? review.original_rating,
+  );
+  const text = cleanText(
+    `${review.review_title ?? ""} ${review.review_text ?? ""}`,
+  );
   const lower = text.toLowerCase();
   const categories = detectCategories(text);
-  const negativeHits = ["dirty", "rude", "bad", "poor", "broken", "problem", "issue", "complaint"].filter((w) =>
-    lower.includes(w)
-  ).length;
-  const positiveHits = ["great", "excellent", "amazing", "friendly", "clean", "helpful", "perfect"].filter((w) =>
-    lower.includes(w)
-  ).length;
+  const negativeHits = [
+    "dirty",
+    "rude",
+    "bad",
+    "poor",
+    "broken",
+    "problem",
+    "issue",
+    "complaint",
+  ].filter((w) => lower.includes(w)).length;
+  const positiveHits = [
+    "great",
+    "excellent",
+    "amazing",
+    "friendly",
+    "clean",
+    "helpful",
+    "perfect",
+  ].filter((w) => lower.includes(w)).length;
 
   let sentiment: Sentiment = "neutral";
-  if ((rating10 ?? 7) <= 6 || negativeHits > positiveHits) sentiment = "negative";
-  if ((rating10 ?? 7) >= 8.5 && positiveHits >= negativeHits) sentiment = "positive";
+  if ((rating10 ?? 7) <= 6 || negativeHits > positiveHits)
+    sentiment = "negative";
+  if ((rating10 ?? 7) >= 8.5 && positiveHits >= negativeHits)
+    sentiment = "positive";
   if (negativeHits > 0 && positiveHits > 0) sentiment = "mixed";
 
   let severity: Severity = "medium";
-  if ((rating10 ?? 7) <= 4 || categories.includes("safety_security")) severity = "critical";
+  if ((rating10 ?? 7) <= 4 || categories.includes("safety_security"))
+    severity = "critical";
   else if ((rating10 ?? 7) <= 6 || categories.length > 1) severity = "high";
   else if ((rating10 ?? 7) >= 8.5) severity = "low";
 
   const critical = Boolean(
     severity === "critical" ||
-      review.vip_flag === true ||
-      categories.includes("safety_security") ||
-      /harassment|abuse|discrimination/.test(lower),
+    review.vip_flag === true ||
+    categories.includes("safety_security") ||
+    /harassment|abuse|discrimination/.test(lower),
   );
 
-  const summaryEn = sentiment === "positive"
-    ? `Guest feedback is largely positive. ${summarize(text)}`
-    : `Guest feedback highlights service concerns. ${summarize(text)}`;
-  const summaryAr = sentiment === "positive"
-    ? "التقييم إيجابي بشكل عام مع إشادة بتجربة الضيف."
-    : "يتضمن التقييم ملاحظات تشغيلية تحتاج إلى متابعة سريعة.";
+  const summaryEn =
+    sentiment === "positive"
+      ? `Guest feedback is largely positive. ${summarize(text)}`
+      : `Guest feedback highlights service concerns. ${summarize(text)}`;
+  const summaryAr =
+    sentiment === "positive"
+      ? "التقييم إيجابي بشكل عام مع إشادة بتجربة الضيف."
+      : "يتضمن التقييم ملاحظات تشغيلية تحتاج إلى متابعة سريعة.";
 
   const managerBriefEn = critical
     ? "Critical review detected. Immediate manager follow-up required."
@@ -186,12 +262,14 @@ function buildAnalysis(review: Record<string, unknown>) {
     ? "تم رصد تقييم حرج ويتطلب متابعة إدارية فورية."
     : "تم تصنيف التقييم وتوجيهه للجهة المسؤولة للمتابعة.";
 
-  const draftResponseEn = sentiment === "positive"
-    ? "Thank you for sharing your positive feedback. We are delighted your stay met expectations and look forward to welcoming you again."
-    : "Thank you for sharing your feedback. We are sorry some aspects did not meet expectations, and the responsible team is already following up.";
-  const draftResponseAr = sentiment === "positive"
-    ? "شكرًا لمشاركتكم هذا التقييم الإيجابي، ويسعدنا أن إقامتكم كانت موفقة. نتطلع لاستقبالكم مجددًا."
-    : "شكرًا لملاحظاتكم، ونعتذر عن الجوانب التي لم ترتقِ لتوقعاتكم. قام الفريق المعني بالمتابعة الفورية.";
+  const draftResponseEn =
+    sentiment === "positive"
+      ? "Thank you for sharing your positive feedback. We are delighted your stay met expectations and look forward to welcoming you again."
+      : "Thank you for sharing your feedback. We are sorry some aspects did not meet expectations, and the responsible team is already following up.";
+  const draftResponseAr =
+    sentiment === "positive"
+      ? "شكرًا لمشاركتكم هذا التقييم الإيجابي، ويسعدنا أن إقامتكم كانت موفقة. نتطلع لاستقبالكم مجددًا."
+      : "شكرًا لملاحظاتكم، ونعتذر عن الجوانب التي لم ترتقِ لتوقعاتكم. قام الفريق المعني بالمتابعة الفورية.";
 
   return {
     sentiment,
@@ -204,7 +282,9 @@ function buildAnalysis(review: Record<string, unknown>) {
     managerBriefAr,
     draftResponseEn,
     draftResponseAr,
-    recommendedActions: categories.map((c) => `Follow up on ${c.replace(/_/g, " ")} issue`),
+    recommendedActions: categories.map(
+      (c) => `Follow up on ${c.replace(/_/g, " ")} issue`,
+    ),
   };
 }
 
@@ -223,7 +303,10 @@ async function getManualCallerContext(
 
   const [{ data: roles }, { data: props }] = await Promise.all([
     serviceClient.from("user_roles").select("role").eq("user_id", userId),
-    serviceClient.from("user_properties").select("property_id").eq("user_id", userId),
+    serviceClient
+      .from("user_properties")
+      .select("property_id")
+      .eq("user_id", userId),
   ]);
 
   const roleValues = (roles ?? []).map((r) => r.role);
@@ -236,11 +319,15 @@ async function getManualCallerContext(
   };
 }
 
-async function getVaultServiceRoleSecret(serviceClient: ReturnType<typeof createClient>): Promise<string | null> {
+async function getVaultServiceRoleSecret(
+  serviceClient: ReturnType<typeof createClient>,
+): Promise<string | null> {
   // Check env first
-  const envKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY");
+  const envKey =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ??
+    Deno.env.get("SERVICE_ROLE_KEY");
   if (envKey && envKey.trim()) return envKey.trim();
-  
+
   // Check vault for both naming conventions
   const { data: data1 } = await serviceClient
     .from("vault.decrypted_secrets")
@@ -248,17 +335,19 @@ async function getVaultServiceRoleSecret(serviceClient: ReturnType<typeof create
     .filter("name", "eq", "service_role_key")
     .limit(1)
     .maybeSingle();
-  
+
   if (data1?.decrypted_secret) return String(data1.decrypted_secret);
-  
+
   const { data: data2 } = await serviceClient
     .from("vault.decrypted_secrets")
     .select("decrypted_secret")
     .filter("name", "eq", "SERVICE_ROLE_KEY")
     .limit(1)
     .maybeSingle();
-  
-  return typeof data2?.decrypted_secret === "string" ? data2.decrypted_secret : null;
+
+  return typeof data2?.decrypted_secret === "string"
+    ? data2.decrypted_secret
+    : null;
 }
 
 async function resolveOwner(
@@ -277,17 +366,20 @@ async function resolveOwner(
   if (mapRow?.primary_profile_id) {
     return {
       profileId: String(mapRow.primary_profile_id),
-      backupProfileId: mapRow.backup_profile_id ? String(mapRow.backup_profile_id) : null,
+      backupProfileId: mapRow.backup_profile_id
+        ? String(mapRow.backup_profile_id)
+        : null,
     };
   }
 
-  const fallbackRole = responsibilityCode === "general_manager"
-    ? "property_manager"
-    : responsibilityCode === "area_general_manager"
-    ? "regional_admin"
-    : responsibilityCode === "corporate_reputation_owner"
-    ? "corporate_admin"
-    : null;
+  const fallbackRole =
+    responsibilityCode === "general_manager"
+      ? "property_manager"
+      : responsibilityCode === "area_general_manager"
+        ? "regional_admin"
+        : responsibilityCode === "corporate_reputation_owner"
+          ? "corporate_admin"
+          : null;
 
   if (!fallbackRole) return { profileId: null, backupProfileId: null };
 
@@ -297,11 +389,11 @@ async function resolveOwner(
     .eq("role", fallbackRole);
 
   let profileId: string | null = null;
-  
+
   // Batch fetch all potential user properties and profiles to avoid N+1 queries
   if (roleRows && roleRows.length > 0) {
     const userIds = roleRows.map((r) => r.user_id);
-    
+
     // If property_manager, filter by property
     let filteredUserIds = userIds;
     if (fallbackRole === "property_manager") {
@@ -312,14 +404,14 @@ async function resolveOwner(
         .in("user_id", userIds);
       filteredUserIds = propRows?.map((r) => r.user_id) || [];
     }
-    
+
     if (filteredUserIds.length > 0) {
       const { data: profiles } = await supabase
         .from("profiles")
         .select("id, user_id")
         .in("user_id", filteredUserIds)
         .limit(1);
-      
+
       if (profiles && profiles.length > 0) {
         profileId = String(profiles[0].id);
       }
@@ -333,13 +425,17 @@ async function enqueueNotifications(
   supabase: ReturnType<typeof createClient>,
   reviewId: string,
   propertyId: string,
-  assignmentRows: Array<{ id: string; responsibility: ResponsibilityCode; assigneeProfileId: string | null }>,
+  assignmentRows: Array<{
+    id: string;
+    responsibility: ResponsibilityCode;
+    assigneeProfileId: string | null;
+  }>,
   payloadBase: Record<string, unknown>,
   critical: boolean,
   requestId?: string,
 ) {
   const logPrefix = requestId ? `[${requestId}]` : "";
-  
+
   const { data: endpoints } = await supabase
     .from("guest_review_notification_endpoints")
     .select("*")
@@ -351,17 +447,23 @@ async function enqueueNotifications(
   const profileIds = assignmentRows
     .map((a) => a.assigneeProfileId)
     .filter((id): id is string => Boolean(id));
-  
-  let profileMap = new Map<string, { email: string | null; full_name: string | null }>();
-  
+
+  let profileMap = new Map<
+    string,
+    { email: string | null; full_name: string | null }
+  >();
+
   if (profileIds.length > 0) {
     const { data: profiles } = await supabase
       .from("profiles")
       .select("id, email, full_name")
       .in("id", profileIds);
-    
+
     profileMap = new Map(
-      profiles?.map((p) => [String(p.id), { email: p.email, full_name: p.full_name }]) || []
+      profiles?.map((p) => [
+        String(p.id),
+        { email: p.email, full_name: p.full_name },
+      ]) || [],
     );
   }
 
@@ -370,7 +472,8 @@ async function enqueueNotifications(
     if (assignment.assigneeProfileId) {
       const profile = profileMap.get(assignment.assigneeProfileId);
       assigneeEmail = profile?.email ?? null;
-      payloadBase.assigneeName = profile?.full_name ?? assignment.responsibility;
+      payloadBase.assigneeName =
+        profile?.full_name ?? assignment.responsibility;
     }
 
     if (assigneeEmail) {
@@ -383,14 +486,19 @@ async function enqueueNotifications(
         payload: {
           ...payloadBase,
           recipientEmails: [assigneeEmail],
-          templateKey: critical ? "review_critical_vip_alert" : "review_negative_alert",
+          templateKey: critical
+            ? "review_critical_vip_alert"
+            : "review_negative_alert",
         },
       });
     }
 
     for (const ep of endpoints ?? []) {
-      const propertyMatch = ep.property_id == null || String(ep.property_id) === propertyId;
-      const responsibilityMatch = ep.responsibility_code == null || String(ep.responsibility_code) === assignment.responsibility;
+      const propertyMatch =
+        ep.property_id == null || String(ep.property_id) === propertyId;
+      const responsibilityMatch =
+        ep.responsibility_code == null ||
+        String(ep.responsibility_code) === assignment.responsibility;
       if (!propertyMatch || !responsibilityMatch) continue;
       queues.push({
         review_id: reviewId,
@@ -403,37 +511,55 @@ async function enqueueNotifications(
           ...payloadBase,
           secretName: ep.secret_name,
           recipientEmails: Array.isArray(ep.recipients) ? ep.recipients : [],
-          templateKey: critical ? "review_critical_vip_alert" : "review_negative_alert",
+          templateKey: critical
+            ? "review_critical_vip_alert"
+            : "review_negative_alert",
         },
       });
     }
   }
 
   if (queues.length > 0) {
-    const { error: queueError } = await supabase.from("guest_review_notification_queue").insert(queues);
+    const { error: queueError } = await supabase
+      .from("guest_review_notification_queue")
+      .insert(queues);
     if (queueError) {
-      console.error(`${logPrefix} Failed to insert notifications to queue:`, queueError.message, queueError.code);
-      throw new Error(`Notification queue insert failed: ${queueError.message}`);
+      console.error(
+        `${logPrefix} Failed to insert notifications to queue:`,
+        queueError.message,
+        queueError.code,
+      );
+      throw new Error(
+        `Notification queue insert failed: ${queueError.message}`,
+      );
     }
-    console.log(`${logPrefix} Successfully queued ${queues.length} notifications for review ${reviewId}`);
+    console.log(
+      `${logPrefix} Successfully queued ${queues.length} notifications for review ${reviewId}`,
+    );
   } else {
-    console.log(`${logPrefix} No notifications to queue for review ${reviewId}`);
+    console.log(
+      `${logPrefix} No notifications to queue for review ${reviewId}`,
+    );
   }
 }
 
 Deno.serve(async (req: Request) => {
   const requestId = generateRequestId();
   const corsHeaders = buildCorsHeaders(req);
-  
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     // Parse and validate request body using Zod
@@ -442,50 +568,65 @@ Deno.serve(async (req: Request) => {
       const rawBody = await req.json().catch(() => ({}));
       const parseResult = analyzeRequestSchema.safeParse(rawBody);
       if (!parseResult.success) {
-        return new Response(JSON.stringify({ 
-          error: "Invalid request body", 
-          details: parseResult.error.errors 
-        }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "Invalid request body",
+            details: parseResult.error.errors,
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
       body = parseResult.data;
     } else {
       body = { review_id: "", force: false };
     }
-    
+
     const { review_id: reviewId, force } = body;
 
     // Validate UUID format
     if (!isValidUuid(reviewId)) {
-      return new Response(JSON.stringify({ error: "Invalid review_id format. Expected UUID." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Invalid review_id format. Expected UUID." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
+    const appBaseUrl =
+      Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
 
     if (!supabaseUrl || !serviceRoleKey) {
-      throw new Error("Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY");
+      throw new Error(
+        "Missing required environment variables: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY",
+      );
     }
 
     // Create ONE Supabase client at the start and reuse throughout
     const rootServiceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    
-    const vaultServiceRoleKey = await getVaultServiceRoleSecret(rootServiceClient);
-    const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
-    const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
-    const hasServiceRoleJwt = isServiceRoleJwt(authHeader);
-    const isInternalService = isServiceRole || isVaultServiceRole || hasServiceRoleJwt;
 
-    const serviceToken = isInternalService ? serviceRoleKey : extractBearerToken(authHeader);
+    const vaultServiceRoleKey =
+      await getVaultServiceRoleSecret(rootServiceClient);
+    const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
+    const isVaultServiceRole = vaultServiceRoleKey
+      ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey)
+      : false;
+    const hasServiceRoleJwt = isServiceRoleJwt(authHeader);
+    const isInternalService =
+      isServiceRole || isVaultServiceRole || hasServiceRoleJwt;
+
+    const serviceToken = isInternalService
+      ? serviceRoleKey
+      : extractBearerToken(authHeader);
     if (!serviceToken) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -501,7 +642,12 @@ Deno.serve(async (req: Request) => {
         });
 
     const manualContext = !isInternalService
-      ? await getManualCallerContext(supabaseUrl, anonKey, authHeader, rootServiceClient)
+      ? await getManualCallerContext(
+          supabaseUrl,
+          anonKey,
+          authHeader,
+          rootServiceClient,
+        )
       : null;
     if (!isInternalService && !manualContext) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -516,25 +662,41 @@ Deno.serve(async (req: Request) => {
       .select("*")
       .eq("id", reviewId)
       .single();
-    if (reviewError || !review) throw reviewError ?? new Error("Review not found");
+    if (reviewError || !review)
+      throw reviewError ?? new Error("Review not found");
 
-    if (!isInternalService && !manualContext!.propertyIds.includes(String(review.property_id))) {
-      return new Response(JSON.stringify({ error: "Forbidden for this property" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    if (
+      !isInternalService &&
+      !manualContext!.propertyIds.includes(String(review.property_id))
+    ) {
+      return new Response(
+        JSON.stringify({ error: "Forbidden for this property" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (!force && review.ai_analysis_status === "completed") {
-      return new Response(JSON.stringify({ success: true, skipped: true, reason: "already_completed" }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: true,
+          skipped: true,
+          reason: "already_completed",
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const analysis = buildAnalysis(review as Record<string, unknown>);
     const dueHours = analysis.critical ? 12 : 24;
-    const dueAt = new Date(Date.now() + dueHours * 60 * 60 * 1000).toISOString();
+    const dueAt = new Date(
+      Date.now() + dueHours * 60 * 60 * 1000,
+    ).toISOString();
 
     // Reuse the single client
     const { data: property } = await supabase
@@ -544,8 +706,11 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     // Delete existing issues
-    await supabase.from("guest_review_issues").delete().eq("review_id", reviewId);
-    
+    await supabase
+      .from("guest_review_issues")
+      .delete()
+      .eq("review_id", reviewId);
+
     const issueRows = analysis.categories.map((category) => ({
       review_id: reviewId,
       category,
@@ -570,16 +735,28 @@ Deno.serve(async (req: Request) => {
 
     const responsibilities = new Set<ResponsibilityCode>();
     for (const category of analysis.categories) {
-      (CATEGORY_RESPONSIBILITY[category] ?? ["general_manager"]).forEach((r) => responsibilities.add(r));
+      (CATEGORY_RESPONSIBILITY[category] ?? ["general_manager"]).forEach((r) =>
+        responsibilities.add(r),
+      );
     }
-    if (analysis.sentiment === "negative" || (normalizeRating10(review.rating_normalized_10) ?? 10) <= 6) {
+    if (
+      analysis.sentiment === "negative" ||
+      (normalizeRating10(review.rating_normalized_10) ?? 10) <= 6
+    ) {
       responsibilities.add("general_manager");
     }
 
     const assignmentInserts: Array<Record<string, unknown>> = [];
-    const assignmentMeta: Array<{ responsibility: ResponsibilityCode; assigneeProfileId: string | null }> = [];
+    const assignmentMeta: Array<{
+      responsibility: ResponsibilityCode;
+      assigneeProfileId: string | null;
+    }> = [];
     for (const responsibility of responsibilities) {
-      const owner = await resolveOwner(supabase, String(review.property_id), responsibility);
+      const owner = await resolveOwner(
+        supabase,
+        String(review.property_id),
+        responsibility,
+      );
       assignmentInserts.push({
         review_id: reviewId,
         property_id: review.property_id,
@@ -588,12 +765,17 @@ Deno.serve(async (req: Request) => {
         backup_profile_id: owner.backupProfileId,
         issue_categories: analysis.categories,
         status: "pending_ack",
-        is_secondary: responsibility === "general_manager" && analysis.sentiment === "negative",
+        is_secondary:
+          responsibility === "general_manager" &&
+          analysis.sentiment === "negative",
         routing_reason: "ai_category_detection",
         escalation_level: 0,
         due_at: dueAt,
       });
-      assignmentMeta.push({ responsibility, assigneeProfileId: owner.profileId });
+      assignmentMeta.push({
+        responsibility,
+        assigneeProfileId: owner.profileId,
+      });
     }
 
     const { data: assignments, error: assignmentError } = await supabase
@@ -609,7 +791,7 @@ Deno.serve(async (req: Request) => {
       draft_response_ar: analysis.draftResponseAr,
       metadata: { auto_generated: true },
     };
-    
+
     const { data: existingResp } = await supabase
       .from("guest_review_responses")
       .select("id")
@@ -660,34 +842,41 @@ Deno.serve(async (req: Request) => {
     });
 
     // ── Auto-create a task for negative / critical reviews ──────────────────
-    if (analysis.sentiment === 'negative' || analysis.critical) {
+    if (analysis.sentiment === "negative" || analysis.critical) {
       const severityToPriority: Record<string, string> = {
-        critical: 'urgent',
-        high: 'high',
-        medium: 'medium',
-        low: 'low',
+        critical: "urgent",
+        high: "high",
+        medium: "medium",
+        low: "low",
       };
-      const taskPriority = severityToPriority[analysis.severity] ?? 'medium';
+      const taskPriority = severityToPriority[analysis.severity] ?? "medium";
       const dueHoursTask = analysis.critical ? 12 : 24;
-      const taskDueDate = new Date(Date.now() + dueHoursTask * 60 * 60 * 1000).toISOString();
+      const taskDueDate = new Date(
+        Date.now() + dueHoursTask * 60 * 60 * 1000,
+      ).toISOString();
 
       // Use the general_manager assignee as the task owner, fallback to first assignee
-      const gmMeta = assignmentMeta.find((m) => m.responsibility === 'general_manager');
-      const taskAssigneeId = gmMeta?.assigneeProfileId ?? assignmentMeta[0]?.assigneeProfileId ?? null;
+      const gmMeta = assignmentMeta.find(
+        (m) => m.responsibility === "general_manager",
+      );
+      const taskAssigneeId =
+        gmMeta?.assigneeProfileId ??
+        assignmentMeta[0]?.assigneeProfileId ??
+        null;
 
       const taskTitle = analysis.critical
-        ? `URGENT: Guest review requires immediate attention – ${property?.name ?? 'Property'}`
-        : `Guest review follow-up required – ${property?.name ?? 'Property'} (${review.platform ?? 'platform'})`;
+        ? `URGENT: Guest review requires immediate attention – ${property?.name ?? "Property"}`
+        : `Guest review follow-up required – ${property?.name ?? "Property"} (${review.platform ?? "platform"})`;
 
-      await supabase.from('tasks').insert({
+      await supabase.from("tasks").insert({
         title: taskTitle,
         description: [
           analysis.summaryEn,
-          `Categories: ${analysis.categories.join(', ')}`,
-          `Recommended actions: ${analysis.recommendedActions.join('; ')}`,
+          `Categories: ${analysis.categories.join(", ")}`,
+          `Recommended actions: ${analysis.recommendedActions.join("; ")}`,
           `Review ID: ${reviewId}`,
-        ].join('\n\n'),
-        status: 'todo',
+        ].join("\n\n"),
+        status: "todo",
         priority: taskPriority,
         assigned_to_id: taskAssigneeId,
         assigned_to: taskAssigneeId,
@@ -708,12 +897,16 @@ Deno.serve(async (req: Request) => {
       (assignments ?? []).map((a) => ({
         id: String(a.id),
         responsibility: String(a.responsibility_code) as ResponsibilityCode,
-        assigneeProfileId: a.assignee_profile_id ? String(a.assignee_profile_id) : null,
+        assigneeProfileId: a.assignee_profile_id
+          ? String(a.assignee_profile_id)
+          : null,
       })),
       {
         propertyName: property?.name ?? "PHG Property",
         platform: review.platform,
-        ratingDisplay: review.rating_normalized_10 ? `${Number(review.rating_normalized_10).toFixed(1)}/10` : "Unrated",
+        ratingDisplay: review.rating_normalized_10
+          ? `${Number(review.rating_normalized_10).toFixed(1)}/10`
+          : "Unrated",
         summaryEn: analysis.summaryEn,
         managerBriefEn: analysis.managerBriefEn,
         issueCategories: analysis.categories.join(", "),
@@ -727,25 +920,31 @@ Deno.serve(async (req: Request) => {
       requestId,
     );
 
-    return new Response(JSON.stringify({
-      success: true,
-      review_id: reviewId,
-      sentiment: analysis.sentiment,
-      severity: analysis.severity,
-      critical: analysis.critical,
-      assignments_created: assignmentInserts.length,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        review_id: reviewId,
+        sentiment: analysis.sentiment,
+        severity: analysis.severity,
+        critical: analysis.critical,
+        assignments_created: assignmentInserts.length,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error(`[${requestId}] guest-review-analyzer failed:`, error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

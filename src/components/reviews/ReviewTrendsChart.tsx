@@ -16,11 +16,24 @@ import { Button } from '@/components/ui/button'
 import { format, subDays, parseISO } from 'date-fns'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import type { GuestReview } from '@/lib/types'
+import { getReviewEventDate } from '@/lib/reviewDates'
 import { useTranslation } from 'react-i18next'
 
 interface ReviewTrendsChartProps {
   reviews: GuestReview[]
   days?: number
+}
+
+function TrendIcon({ direction }: { direction: 'up' | 'down' | 'stable' }) {
+  if (direction === 'up') {
+    return <TrendingUp className="h-3.5 w-3.5 text-green-500" />
+  }
+
+  if (direction === 'down') {
+    return <TrendingDown className="h-3.5 w-3.5 text-red-500" />
+  }
+
+  return <Minus className="h-3.5 w-3.5 text-muted-foreground" />
 }
 
 export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTrendsChartProps) {
@@ -67,13 +80,10 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
     }
 
     reviews.forEach((review) => {
-      if (!review.collected_at) return
-      let reviewDate: string
-      try {
-        reviewDate = format(parseISO(review.collected_at), 'yyyy-MM-dd')
-      } catch {
-        return
-      }
+      const eventDate = getReviewEventDate(review)
+      if (!eventDate) return
+
+      const reviewDate = format(eventDate, 'yyyy-MM-dd')
       if (!dateBuckets[reviewDate]) return
 
       dateBuckets[reviewDate].count++
@@ -110,13 +120,8 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
 
   const stats = useMemo(() => {
     const inWindow = reviews.filter((r) => {
-      if (!r.collected_at) return false
-      try {
-        const d = parseISO(r.collected_at)
-        return d >= subDays(new Date(), days)
-      } catch {
-        return false
-      }
+      const eventDate = getReviewEventDate(r)
+      return eventDate ? eventDate >= subDays(new Date(), days) : false
     })
 
     const total = inWindow.length
@@ -173,14 +178,6 @@ export function ReviewTrendsChart({ reviews, days: defaultDays = 30 }: ReviewTre
       ratingTrend,
     }
   }, [reviews, days, data])
-
-  const TrendIcon = ({ direction }: { direction: 'up' | 'down' | 'stable' }) => {
-    if (direction === 'up')
-      return <TrendingUp className="h-3.5 w-3.5 text-green-500" />
-    if (direction === 'down')
-      return <TrendingDown className="h-3.5 w-3.5 text-red-500" />
-    return <Minus className="h-3.5 w-3.5 text-muted-foreground" />
-  }
 
   const avgRatingNum = parseFloat(String(stats.avgRating))
 

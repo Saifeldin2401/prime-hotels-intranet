@@ -1,6 +1,9 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from "../_shared/auth.ts";
+import {
+  getServiceRoleToken,
+  isAuthorizedServiceRoleRequest,
+} from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 type ReportDefinition = {
@@ -25,7 +28,7 @@ const toCsv = (rows: Record<string, unknown>[]): string => {
   if (!rows || rows.length === 0) return "";
   const headers = Object.keys(rows[0]);
   const body = rows.map((row) =>
-    headers.map((h) => JSON.stringify(row[h] ?? "")).join(",")
+    headers.map((h) => JSON.stringify(row[h] ?? "")).join(","),
   );
   return [headers.join(","), ...body].join("\n");
 };
@@ -56,20 +59,28 @@ const fetchReportData = async (
   reportType: string,
   filters?: Record<string, unknown> | null,
 ): Promise<ReportDataMap> => {
-  const dateFrom = typeof filters?.date_from === "string" ? filters.date_from : undefined;
-  const dateTo = typeof filters?.date_to === "string" ? filters.date_to : undefined;
+  const dateFrom =
+    typeof filters?.date_from === "string" ? filters.date_from : undefined;
+  const dateTo =
+    typeof filters?.date_to === "string" ? filters.date_to : undefined;
 
   switch (reportType) {
     case "operations": {
       const [tasks, maintenance] = await Promise.all([
         applyDateRange(
-          supabaseClient.from("tasks").select("id,title,status,priority,created_at").limit(500),
+          supabaseClient
+            .from("tasks")
+            .select("id,title,status,priority,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
         ),
         applyDateRange(
-          supabaseClient.from("maintenance_tickets").select("id,title,status,priority,created_at").limit(500),
+          supabaseClient
+            .from("maintenance_tickets")
+            .select("id,title,status,priority,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
@@ -83,13 +94,19 @@ const fetchReportData = async (
     case "hr": {
       const [profiles, leaves] = await Promise.all([
         applyDateRange(
-          supabaseClient.from("profiles").select("id,full_name,job_title,is_active,created_at").limit(500),
+          supabaseClient
+            .from("profiles")
+            .select("id,full_name,job_title,is_active,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
         ),
         applyDateRange(
-          supabaseClient.from("leave_requests").select("id,type,status,start_date,end_date,created_at").limit(500),
+          supabaseClient
+            .from("leave_requests")
+            .select("id,type,status,start_date,end_date,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
@@ -103,13 +120,19 @@ const fetchReportData = async (
     case "training": {
       const [assignments, progress] = await Promise.all([
         applyDateRange(
-          supabaseClient.from("learning_assignments").select("id,status,due_date,created_at").limit(500),
+          supabaseClient
+            .from("learning_assignments")
+            .select("id,status,due_date,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
         ),
         applyDateRange(
-          supabaseClient.from("learning_progress").select("id,status,completion_percentage,updated_at").limit(500),
+          supabaseClient
+            .from("learning_progress")
+            .select("id,status,completion_percentage,updated_at")
+            .limit(500),
           "updated_at",
           dateFrom,
           dateTo,
@@ -123,13 +146,19 @@ const fetchReportData = async (
     case "audits": {
       const [runs, findings] = await Promise.all([
         applyDateRange(
-          supabaseClient.from("audit_runs").select("id,status,created_at").limit(500),
+          supabaseClient
+            .from("audit_runs")
+            .select("id,status,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
         ),
         applyDateRange(
-          supabaseClient.from("audit_findings").select("id,status,notes,created_at").limit(500),
+          supabaseClient
+            .from("audit_findings")
+            .select("id,status,notes,created_at")
+            .limit(500),
           "created_at",
           dateFrom,
           dateTo,
@@ -149,7 +178,12 @@ const processRun = async (
   supabaseClient: any,
   run: ReportRun,
   definition: ReportDefinition,
-): Promise<{ success: boolean; error?: string; rowCount?: number; outputPath?: string }> => {
+): Promise<{
+  success: boolean;
+  error?: string;
+  rowCount?: number;
+  outputPath?: string;
+}> => {
   const startedAt = new Date().toISOString();
   const outputPath = `${definition.id}/${run.id}.csv`;
 
@@ -169,12 +203,18 @@ const processRun = async (
   }
 
   try {
-    const dataMap = await fetchReportData(supabaseClient, definition.report_type, definition.filters);
-    const rowCount = Object.values(dataMap).reduce((sum, rows) => sum + rows.length, 0);
+    const dataMap = await fetchReportData(
+      supabaseClient,
+      definition.report_type,
+      definition.filters,
+    );
+    const rowCount = Object.values(dataMap).reduce(
+      (sum, rows) => sum + rows.length,
+      0,
+    );
     const csvContent = buildCsvExport(dataMap);
 
-    const uploadResult = await supabaseClient
-      .storage
+    const uploadResult = await supabaseClient.storage
       .from("reports-exports")
       .upload(outputPath, new Blob([csvContent], { type: "text/csv" }), {
         upsert: true,
@@ -202,20 +242,18 @@ const processRun = async (
     if (completeError) throw completeError;
 
     if (definition.created_by) {
-      await supabaseClient
-        .from("notifications")
-        .insert({
-          user_id: definition.created_by,
-          type: "system",
-          title: `Report Ready: ${definition.name}`,
-          message: `Your scheduled report "${definition.name}" completed successfully.`,
-          metadata: {
-            report_id: definition.id,
-            report_run_id: run.id,
-            row_count: rowCount,
-            link: "/reports",
-          },
-        });
+      await supabaseClient.from("notifications").insert({
+        user_id: definition.created_by,
+        type: "system",
+        title: `Report Ready: ${definition.name}`,
+        message: `Your scheduled report "${definition.name}" completed successfully.`,
+        metadata: {
+          report_id: definition.id,
+          report_run_id: run.id,
+          row_count: rowCount,
+          link: "/reports",
+        },
+      });
     }
 
     return { success: true, rowCount, outputPath };
@@ -266,14 +304,13 @@ Deno.serve(async (req: Request) => {
       },
     );
 
-    const body = req.method === "POST"
-      ? (await req.json().catch(() => ({})) as Record<string, unknown>)
-      : {};
-    const requestedReportId = typeof body.report_id === "string" ? body.report_id : null;
-    const maxRuns = Math.min(
-      20,
-      Math.max(1, Number(body.max_runs || 10)),
-    );
+    const body =
+      req.method === "POST"
+        ? ((await req.json().catch(() => ({}))) as Record<string, unknown>)
+        : {};
+    const requestedReportId =
+      typeof body.report_id === "string" ? body.report_id : null;
+    const maxRuns = Math.min(20, Math.max(1, Number(body.max_runs || 10)));
     const enqueueDue = requestedReportId === null || body.enqueue_due !== false;
 
     if (requestedReportId) {
@@ -284,33 +321,37 @@ Deno.serve(async (req: Request) => {
         .single();
 
       if (definitionError || !definition) {
-        return new Response(JSON.stringify({ error: "Report definition not found" }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Report definition not found" }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (!definition.is_active) {
-        return new Response(JSON.stringify({ error: "Report definition is inactive" }), {
-          status: 409,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Report definition is inactive" }),
+          {
+            status: 409,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
-      await supabaseClient
-        .from("report_runs")
-        .insert({
-          report_id: requestedReportId,
-          status: "queued",
-          triggered_by: definition.created_by,
-          triggered_via: "manual-edge-trigger",
-        });
+      await supabaseClient.from("report_runs").insert({
+        report_id: requestedReportId,
+        status: "queued",
+        triggered_by: definition.created_by,
+        triggered_via: "manual-edge-trigger",
+      });
     }
 
     let enqueued = 0;
     if (enqueueDue) {
-      const { data: enqueueData, error: enqueueError } = await supabaseClient
-        .rpc("enqueue_due_reports");
+      const { data: enqueueData, error: enqueueError } =
+        await supabaseClient.rpc("enqueue_due_reports");
       if (enqueueError) {
         console.error("enqueue_due_reports failed:", enqueueError.message);
       } else {
@@ -332,7 +373,9 @@ Deno.serve(async (req: Request) => {
     for (const run of (queuedRuns || []) as ReportRun[]) {
       const { data: definition, error: definitionError } = await supabaseClient
         .from("report_definitions")
-        .select("id, name, report_type, filters, schedule_frequency, is_active, created_by")
+        .select(
+          "id, name, report_type, filters, schedule_frequency, is_active, created_by",
+        )
         .eq("id", run.report_id)
         .maybeSingle();
 
@@ -363,7 +406,11 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const runResult = await processRun(supabaseClient, run, definition as ReportDefinition);
+      const runResult = await processRun(
+        supabaseClient,
+        run,
+        definition as ReportDefinition,
+      );
       results.push({
         run_id: run.id,
         report_id: run.report_id,
@@ -402,6 +449,3 @@ Deno.serve(async (req: Request) => {
     );
   }
 });
-
-
-

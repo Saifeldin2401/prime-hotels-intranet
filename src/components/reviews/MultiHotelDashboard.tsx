@@ -18,6 +18,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import { useMemo, useState } from 'react';
 import type { GuestReview } from '@/lib/types';
+import { getReviewEventTimestamp } from '@/lib/reviewDates';
 
 type ReviewWithIssues = GuestReview & {
   issues?: Array<{
@@ -380,7 +381,7 @@ export function MultiHotelDashboard({
 
       // Latest 5 reviews
       const recentReviews = [...pReviews]
-        .sort((a, b) => new Date(b.collected_at).getTime() - new Date(a.collected_at).getTime())
+        .sort((a, b) => getReviewEventTimestamp(b) - getReviewEventTimestamp(a))
         .slice(0, 5);
 
       return {

@@ -1,122 +1,135 @@
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { isAuthorizedServiceRole } from '../_shared/auth.ts'
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAuthorizedServiceRole } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
 /**
  * Scheduled Edge Function to refresh all related article relationships
  * Run this nightly via Supabase Cron or external scheduler
  */
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
-    if (req.method === 'OPTIONS') {
-        return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  try {
+    if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "Missing Supabase environment variables",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 500,
+        },
+      );
     }
 
-    try {
-        if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-            return new Response(
-                JSON.stringify({ success: false, error: 'Missing Supabase environment variables' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
-            )
-        }
-
-        // Verify this is called from a trusted source (cron job or admin)
-        const authHeader = req.headers.get('Authorization')
-        if (!isAuthorizedServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY ?? '')) {
-            return new Response(
-                JSON.stringify({ success: false, error: 'Unauthorized' }),
-                { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 401 }
-            )
-        }
-
-        const supabaseClient = createClient(
-            SUPABASE_URL,
-            SUPABASE_SERVICE_ROLE_KEY
-        )
-
-        console.log('Starting nightly related articles refresh...')
-
-        // Get all published documents
-        const { data: documents, error: fetchError } = await supabaseClient
-            .from('documents')
-            .select('id')
-            .eq('is_deleted', false)
-            .eq('status', 'published')
-
-        if (fetchError) {
-            throw fetchError
-        }
-
-        console.log(`Found ${documents?.length || 0} documents to process`)
-
-        let successCount = 0
-        let errorCount = 0
-        const errors: any[] = []
-
-        // Process in batches of 10 to avoid overwhelming the database
-        const batchSize = 10
-        for (let i = 0; i < (documents?.length || 0); i += batchSize) {
-            const batch = documents!.slice(i, i + batchSize)
-
-            await Promise.all(
-                batch.map(async (doc) => {
-                    try {
-                        const { data, error } = await supabaseClient.rpc('refresh_related_articles', {
-                            target_doc_id: doc.id
-                        })
-
-                        if (error) {
-                            throw error
-                        }
-
-                        successCount++
-                        console.log(`âœ“ Refreshed ${data} relationships for document ${doc.id}`)
-                    } catch (error) {
-                        errorCount++
-                        errors.push({ documentId: doc.id, error: error.message })
-                        console.error(`âœ— Failed to refresh document ${doc.id}:`, error)
-                    }
-                })
-            )
-
-            // Small delay between batches
-            await new Promise(resolve => setTimeout(resolve, 100))
-        }
-
-        console.log(`Refresh complete: ${successCount} success, ${errorCount} errors`)
-
-        return new Response(
-            JSON.stringify({
-                success: true,
-                totalDocuments: documents?.length || 0,
-                successCount,
-                errorCount,
-                errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
-                message: `Refreshed relationships for ${successCount}/${documents?.length || 0} documents`
-            }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 200,
-            }
-        )
-    } catch (error) {
-        console.error('Edge function error:', error)
-        return new Response(
-            JSON.stringify({
-                success: false,
-                error: error.message
-            }),
-            {
-                headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-                status: 500,
-            }
-        )
+    // Verify this is called from a trusted source (cron job or admin)
+    const authHeader = req.headers.get("Authorization");
+    if (!isAuthorizedServiceRole(authHeader, SUPABASE_SERVICE_ROLE_KEY ?? "")) {
+      return new Response(
+        JSON.stringify({ success: false, error: "Unauthorized" }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 401,
+        },
+      );
     }
-})
 
+    const supabaseClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+    );
 
+    console.log("Starting nightly related articles refresh...");
 
+    // Get all published documents
+    const { data: documents, error: fetchError } = await supabaseClient
+      .from("documents")
+      .select("id")
+      .eq("is_deleted", false)
+      .eq("status", "published");
+
+    if (fetchError) {
+      throw fetchError;
+    }
+
+    console.log(`Found ${documents?.length || 0} documents to process`);
+
+    let successCount = 0;
+    let errorCount = 0;
+    const errors: any[] = [];
+
+    // Process in batches of 10 to avoid overwhelming the database
+    const batchSize = 10;
+    for (let i = 0; i < (documents?.length || 0); i += batchSize) {
+      const batch = documents!.slice(i, i + batchSize);
+
+      await Promise.all(
+        batch.map(async (doc) => {
+          try {
+            const { data, error } = await supabaseClient.rpc(
+              "refresh_related_articles",
+              {
+                target_doc_id: doc.id,
+              },
+            );
+
+            if (error) {
+              throw error;
+            }
+
+            successCount++;
+            console.log(
+              `âœ“ Refreshed ${data} relationships for document ${doc.id}`,
+            );
+          } catch (error) {
+            errorCount++;
+            errors.push({ documentId: doc.id, error: error.message });
+            console.error(`âœ— Failed to refresh document ${doc.id}:`, error);
+          }
+        }),
+      );
+
+      // Small delay between batches
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    console.log(
+      `Refresh complete: ${successCount} success, ${errorCount} errors`,
+    );
+
+    return new Response(
+      JSON.stringify({
+        success: true,
+        totalDocuments: documents?.length || 0,
+        successCount,
+        errorCount,
+        errors: errors.length > 0 ? errors.slice(0, 10) : undefined, // Return first 10 errors
+        message: `Refreshed relationships for ${successCount}/${documents?.length || 0} documents`,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
+  } catch (error) {
+    console.error("Edge function error:", error);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      },
+    );
+  }
+});

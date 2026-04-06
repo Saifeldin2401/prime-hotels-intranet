@@ -15,13 +15,17 @@ function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "*";
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
-function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
+function timingSafeBearerMatch(
+  authHeader: string | null,
+  secret: string,
+): boolean {
   if (!authHeader || !secret) return false;
   const expected = `Bearer ${secret}`;
   if (authHeader.length !== expected.length) return false;
@@ -53,16 +57,21 @@ async function resolveOwner(
     .maybeSingle();
   if (mapRow?.primary_profile_id) return String(mapRow.primary_profile_id);
 
-  const fallbackRole = responsibilityCode === "general_manager"
-    ? "property_manager"
-    : responsibilityCode === "area_general_manager"
-    ? "regional_admin"
-    : responsibilityCode === "corporate_reputation_owner"
-    ? "corporate_admin"
-    : null;
+  const fallbackRole =
+    responsibilityCode === "general_manager"
+      ? "property_manager"
+      : responsibilityCode === "area_general_manager"
+        ? "regional_admin"
+        : responsibilityCode === "corporate_reputation_owner"
+          ? "corporate_admin"
+          : null;
   if (!fallbackRole) return null;
 
-  const { data: roleRows } = await supabase.from("user_roles").select("user_id").eq("role", fallbackRole).limit(20);
+  const { data: roleRows } = await supabase
+    .from("user_roles")
+    .select("user_id")
+    .eq("role", fallbackRole)
+    .limit(20);
   for (const rr of roleRows ?? []) {
     if (fallbackRole === "property_manager") {
       const { data: propRows } = await supabase
@@ -73,7 +82,11 @@ async function resolveOwner(
         .limit(1);
       if (!propRows || propRows.length === 0) continue;
     }
-    const { data: profile } = await supabase.from("profiles").select("id").eq("user_id", rr.user_id).maybeSingle();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", rr.user_id)
+      .maybeSingle();
     if (profile?.id) return String(profile.id);
   }
   return null;
@@ -81,7 +94,8 @@ async function resolveOwner(
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
@@ -96,8 +110,9 @@ Deno.serve(async (req: Request) => {
       .filter("name", "eq", "service_role_key")
       .limit(1)
       .maybeSingle();
-    const isInternal = timingSafeBearerMatch(authHeader, serviceRoleKey)
-      || (typeof vaultServiceSecret?.decrypted_secret === "string" &&
+    const isInternal =
+      timingSafeBearerMatch(authHeader, serviceRoleKey) ||
+      (typeof vaultServiceSecret?.decrypted_secret === "string" &&
         timingSafeBearerMatch(authHeader, vaultServiceSecret.decrypted_secret));
     if (!isInternal) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -106,12 +121,15 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
+    const appBaseUrl =
+      Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
 
     const nowIso = new Date().toISOString();
     const { data: overdueAssignments, error: fetchErr } = await supabase
       .from("guest_review_assignments")
-      .select("id, review_id, property_id, responsibility_code, assignee_profile_id, due_at, escalation_level, guest_reviews!inner(id,platform,review_url,summary_en,rating_normalized_10)")
+      .select(
+        "id, review_id, property_id, responsibility_code, assignee_profile_id, due_at, escalation_level, guest_reviews!inner(id,platform,review_url,summary_en,rating_normalized_10)",
+      )
       .in("status", ["pending_ack", "acknowledged", "action_in_progress"])
       .lte("due_at", nowIso)
       .order("due_at", { ascending: true });
@@ -119,14 +137,19 @@ Deno.serve(async (req: Request) => {
 
     const escalations: Array<Record<string, unknown>> = [];
     for (const assignment of overdueAssignments ?? []) {
-      const currentCode = String(assignment.responsibility_code) as ResponsibilityCode;
+      const currentCode = String(
+        assignment.responsibility_code,
+      ) as ResponsibilityCode;
       const nextCode = nextEscalation(currentCode);
 
-      await supabase.from("guest_review_assignments").update({
-        status: "escalated",
-        escalated_at: nowIso,
-        updated_at: nowIso,
-      }).eq("id", assignment.id);
+      await supabase
+        .from("guest_review_assignments")
+        .update({
+          status: "escalated",
+          escalated_at: nowIso,
+          updated_at: nowIso,
+        })
+        .eq("id", assignment.id);
 
       if (!nextCode) {
         escalations.push({
@@ -137,8 +160,14 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      const nextOwnerProfileId = await resolveOwner(supabase, String(assignment.property_id), nextCode);
-      const nextDueAt = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+      const nextOwnerProfileId = await resolveOwner(
+        supabase,
+        String(assignment.property_id),
+        nextCode,
+      );
+      const nextDueAt = new Date(
+        Date.now() + 12 * 60 * 60 * 1000,
+      ).toISOString();
       const { data: createdEscalation, error: createErr } = await supabase
         .from("guest_review_assignments")
         .insert({
@@ -193,22 +222,28 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      processed: (overdueAssignments ?? []).length,
-      escalations,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        processed: (overdueAssignments ?? []).length,
+        escalations,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("guest-review-sla-monitor failed:", error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

@@ -3,11 +3,15 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
+function timingSafeBearerMatch(
+  authHeader: string | null,
+  secret: string,
+): boolean {
   if (!authHeader || !secret) return false;
   const expected = `Bearer ${secret}`;
   if (authHeader.length !== expected.length) return false;
@@ -21,7 +25,9 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req: Request) => {
@@ -38,14 +44,17 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const body = await req.json().catch(() => ({}) as Record<string, unknown>);
     const sourceId = typeof body.source_id === "string" ? body.source_id : null;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    
+
     // Verify service role
-    const isServiceRole = timingSafeBearerMatch(authHeader, `Bearer ${serviceRoleKey}`);
+    const isServiceRole = timingSafeBearerMatch(
+      authHeader,
+      `Bearer ${serviceRoleKey}`,
+    );
     if (!isServiceRole) {
       return new Response(JSON.stringify({ error: "Invalid auth" }), {
         status: 403,
@@ -85,7 +94,7 @@ Deno.serve(async (req: Request) => {
     // Fetch from Serper API
     const serperKey = "88c094dee3b3009f6874a0396d85efaea7b25671";
     const cid = "6082352680985290046";
-    
+
     const serperRes = await fetch("https://google.serper.dev/reviews", {
       method: "POST",
       headers: {
@@ -111,7 +120,9 @@ Deno.serve(async (req: Request) => {
         if (!reviewText || reviewText.length < 3) continue;
 
         const sourceReviewId = r.reviewId || r.id;
-        const dedupeHash = await sha256(`${source.property_id}|google|${sourceReviewId}`);
+        const dedupeHash = await sha256(
+          `${source.property_id}|google|${sourceReviewId}`,
+        );
 
         // Check for existing
         const { data: existing } = await serviceClient
@@ -193,24 +204,29 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", sourceId);
 
-    return new Response(JSON.stringify({
-      success: true,
-      source_id: sourceId,
-      reviews_found: reviews.length,
-      reviews_inserted: inserted,
-      errors: errors.length > 0 ? errors : undefined,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        source_id: sourceId,
+        reviews_found: reviews.length,
+        reviews_inserted: inserted,
+        errors: errors.length > 0 ? errors : undefined,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

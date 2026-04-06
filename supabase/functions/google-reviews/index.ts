@@ -3,17 +3,21 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
 };
 
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 Deno.serve(async (req: Request) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -57,14 +61,17 @@ Deno.serve(async (req: Request) => {
 
         if (existing) {
           // Update
-          await client.from("guest_reviews").update({
-            review_text: text,
-            reviewer_name: r.user?.name || r.reviewerName || "Guest",
-            original_rating: r.rating,
-            rating_normalized_5: r.rating,
-            rating_normalized_10: r.rating ? r.rating * 2 : null,
-            updated_at: new Date().toISOString(),
-          }).eq("id", existing.id);
+          await client
+            .from("guest_reviews")
+            .update({
+              review_text: text,
+              reviewer_name: r.user?.name || r.reviewerName || "Guest",
+              original_rating: r.rating,
+              rating_normalized_5: r.rating,
+              rating_normalized_10: r.rating ? r.rating * 2 : null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", existing.id);
         } else {
           // Insert with explicit error handling
           const payload = {
@@ -88,8 +95,11 @@ Deno.serve(async (req: Request) => {
             updated_at: new Date().toISOString(),
           };
 
-          const result = await client.from("guest_reviews").insert(payload).select();
-          
+          const result = await client
+            .from("guest_reviews")
+            .insert(payload)
+            .select();
+
           if (result.error) {
             errors.push(`Insert error: ${result.error.message}`);
             continue;
@@ -105,17 +115,25 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      total_reviews: reviews.length,
-      inserted,
-      errors: errors.length > 0 ? errors : undefined,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
+    return new Response(
+      JSON.stringify({
+        success: true,
+        total_reviews: reviews.length,
+        inserted,
+        errors: errors.length > 0 ? errors : undefined,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (error) {
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

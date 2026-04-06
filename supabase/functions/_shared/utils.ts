@@ -3,7 +3,8 @@
 import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 // UUID validation regex
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const UUID_REGEX =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 /**
  * Validates if a string is a valid UUID
@@ -41,21 +42,21 @@ export async function fetchWithRetry(
   requestId?: string,
 ): Promise<Response> {
   const logPrefix = requestId ? `[${requestId}]` : "";
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       const response = await fetch(url, options);
-      
+
       // Success case
       if (response.ok) {
         return response;
       }
-      
+
       // Server errors (5xx) should be retried
       if (response.status >= 500) {
         throw new Error(`Server error: ${response.status}`);
       }
-      
+
       // Client errors (4xx) should not be retried (except 429 rate limit)
       if (response.status === 429) {
         const delay = 1000 * Math.pow(2, i);
@@ -63,25 +64,30 @@ export async function fetchWithRetry(
         await sleep(delay);
         continue;
       }
-      
+
       // Other 4xx errors - return without retry
       return response;
-      
     } catch (err) {
       const isLastAttempt = i === maxRetries - 1;
-      
+
       if (isLastAttempt) {
-        console.error(`${logPrefix} Fetch failed after ${maxRetries} retries:`, err);
+        console.error(
+          `${logPrefix} Fetch failed after ${maxRetries} retries:`,
+          err,
+        );
         throw err;
       }
-      
+
       // Exponential backoff: 1s, 2s, 4s
       const delay = 1000 * Math.pow(2, i);
-      console.warn(`${logPrefix} Fetch attempt ${i + 1} failed, retrying after ${delay}ms:`, err);
+      console.warn(
+        `${logPrefix} Fetch attempt ${i + 1} failed, retrying after ${delay}ms:`,
+        err,
+      );
       await sleep(delay);
     }
   }
-  
+
   // This should never be reached, but TypeScript needs it
   throw new Error("Unexpected end of retry loop");
 }
@@ -107,29 +113,32 @@ export class SimpleRateLimiter {
   check(key: string): { allowed: boolean; remaining: number; resetAt: number } {
     const now = Date.now();
     const windowStart = now - this.windowMs;
-    
+
     // Get existing timestamps for this key
     let timestamps = this.requests.get(key) || [];
-    
+
     // Filter to only include timestamps within the window
     timestamps = timestamps.filter((ts) => ts > windowStart);
-    
+
     // Clean up old entries periodically
     if (timestamps.length === 0) {
       this.requests.delete(key);
     } else {
       this.requests.set(key, timestamps);
     }
-    
+
     const allowed = timestamps.length < this.maxRequests;
     const remaining = Math.max(0, this.maxRequests - timestamps.length - 1);
-    const resetAt = timestamps.length > 0 ? timestamps[0] + this.windowMs : now + this.windowMs;
-    
+    const resetAt =
+      timestamps.length > 0
+        ? timestamps[0] + this.windowMs
+        : now + this.windowMs;
+
     if (allowed) {
       timestamps.push(now);
       this.requests.set(key, timestamps);
     }
-    
+
     return { allowed, remaining, resetAt };
   }
 

@@ -6,9 +6,12 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
+const ENV_APP_BASE_URL = (
+  Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com"
+).replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
-const ENV_DEFAULT_FROM_EMAIL = Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
+const ENV_DEFAULT_FROM_EMAIL =
+  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
 const RESEND_MAX_RETRIES = 3;
 const RESEND_RETRY_BASE_MS = 750;
 const RESEND_MIN_INTERVAL_MS = 550;
@@ -59,24 +62,39 @@ serve(async (req) => {
 
   try {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Missing Supabase environment variables" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Supabase environment variables" },
+        500,
+        corsHeaders,
+      );
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing Authorization header" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Authorization header" },
+        401,
+        corsHeaders,
+      );
     }
 
     const body = (await req.json()) as SendEmailBody;
     const recipients = Array.isArray(body.to) ? body.to : [body.to];
-    const cleanedRecipients = recipients.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
+    const cleanedRecipients = recipients
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value));
 
     if (cleanedRecipients.length === 0) {
-      return jsonResponse({ error: "Missing required field: to" }, 400, corsHeaders);
+      return jsonResponse(
+        { error: "Missing required field: to" },
+        400,
+        corsHeaders,
+      );
     }
 
-    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
-      || req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
+    const isServiceRoleCall =
+      authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` ||
+      req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
 
     let user: { id: string; email?: string | null } | null = null;
     if (!isServiceRoleCall) {
@@ -90,21 +108,39 @@ serve(async (req) => {
 
       if (userError || !authUser) {
         console.error("SEND-EMAIL DEBUG: userError", userError?.message);
-        return jsonResponse({ error: "Unauthorized", details: userError?.message }, 401, corsHeaders);
+        return jsonResponse(
+          { error: "Unauthorized", details: userError?.message },
+          401,
+          corsHeaders,
+        );
       }
       user = authUser;
     }
 
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const serviceClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
     const runtimeConfig = await loadRuntimeConfig(serviceClient);
     if (!runtimeConfig.resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing RESEND_API_KEY" },
+        500,
+        corsHeaders,
+      );
     }
 
     if (!isServiceRoleCall && user) {
-      const adminRoles = ["corporate_admin", "regional_admin", "regional_hr", "property_manager", "property_hr"];
+      const adminRoles = [
+        "corporate_admin",
+        "regional_admin",
+        "regional_hr",
+        "property_manager",
+        "property_hr",
+      ];
       const { data: roleRows, error: roleError } = await serviceClient
         .from("user_roles")
         .select("role")
@@ -112,7 +148,11 @@ serve(async (req) => {
         .in("role", adminRoles);
 
       if (roleError) {
-        return jsonResponse({ error: "Failed to validate permissions" }, 500, corsHeaders);
+        return jsonResponse(
+          { error: "Failed to validate permissions" },
+          500,
+          corsHeaders,
+        );
       }
 
       const isAdmin = Boolean(roleRows && roleRows.length > 0);
@@ -120,7 +160,9 @@ serve(async (req) => {
       const isSelfCertificateEmail =
         body.templateKey === "certificate_earned" &&
         normalizedUserEmail.length > 0 &&
-        cleanedRecipients.every((recipient) => recipient.toLowerCase() === normalizedUserEmail) &&
+        cleanedRecipients.every(
+          (recipient) => recipient.toLowerCase() === normalizedUserEmail,
+        ) &&
         (!body.userId || body.userId === user.id);
 
       if (!isAdmin && !isSelfCertificateEmail) {
@@ -129,7 +171,10 @@ serve(async (req) => {
     }
 
     // Fetch profile for more context
-    let profileData: { full_name?: string | null; language?: string | null } | null = null;
+    let profileData: {
+      full_name?: string | null;
+      language?: string | null;
+    } | null = null;
     const targetUserId = body.userId || (isServiceRoleCall ? null : user?.id);
 
     if (targetUserId) {
@@ -144,22 +189,45 @@ serve(async (req) => {
     const template = await resolveTemplate(serviceClient, body.templateKey);
     const sanitizedTemplate = template
       ? {
-        ...template,
-        html_template: sanitizeHtmlTemplate(template.html_template),
-      }
+          ...template,
+          html_template: sanitizeHtmlTemplate(template.html_template),
+        }
       : null;
     const context = buildContext(
       body,
-      profileData?.full_name ?? user?.email ?? cleanedRecipients[0] ?? "team@phg-connect.com",
+      profileData?.full_name ??
+        user?.email ??
+        cleanedRecipients[0] ??
+        "team@phg-connect.com",
       runtimeConfig.appBaseUrl,
-      profileData?.language || "en"
+      profileData?.language || "en",
     );
 
-    const subject = body.subject || renderTemplate(sanitizedTemplate?.subject_template || "PHG Connect Notification - {{title}}", context);
-    const html = body.html || renderTemplate(sanitizedTemplate?.html_template || defaultHtmlTemplate(), context);
-    const text = body.text || renderTemplate(sanitizedTemplate?.text_template || defaultTextTemplate(), context);
-    const fromName = body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
-    const fromEmail = body.fromEmail || sanitizedTemplate?.from_email || runtimeConfig.fromEmail;
+    const subject =
+      body.subject ||
+      renderTemplate(
+        sanitizedTemplate?.subject_template ||
+          "PHG Connect Notification - {{title}}",
+        context,
+      );
+    const html =
+      body.html ||
+      renderTemplate(
+        sanitizedTemplate?.html_template || defaultHtmlTemplate(),
+        context,
+      );
+    const text =
+      body.text ||
+      renderTemplate(
+        sanitizedTemplate?.text_template || defaultTextTemplate(),
+        context,
+      );
+    const fromName =
+      body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
+    const fromEmail =
+      body.fromEmail ||
+      sanitizedTemplate?.from_email ||
+      runtimeConfig.fromEmail;
 
     const resendResult = await sendWithResendWithRetry({
       apiKey: runtimeConfig.resendApiKey,
@@ -172,27 +240,43 @@ serve(async (req) => {
       attachments: body.attachments,
       tags: [
         { name: "domain", value: normalizeDomain(body.businessDomain) },
-        { name: "type", value: (body.notificationType || "system").toLowerCase() },
+        {
+          name: "type",
+          value: (body.notificationType || "system").toLowerCase(),
+        },
         { name: "source", value: "send-email-function" },
       ],
     });
 
     if (!resendResult.ok) {
-      return jsonResponse({ error: "Failed to send email via Resend", details: resendResult.payload }, 500, corsHeaders);
+      return jsonResponse(
+        {
+          error: "Failed to send email via Resend",
+          details: resendResult.payload,
+        },
+        500,
+        corsHeaders,
+      );
     }
 
     const data = resendResult.payload;
 
     try {
       await trackDelivery(serviceClient, {
-        userId: body.userId || (isServiceRoleCall ? null : user?.id) || undefined,
+        userId:
+          body.userId || (isServiceRoleCall ? null : user?.id) || undefined,
         recipientEmail: cleanedRecipients[0],
-        templateKey: body.templateKey || template?.template_key || "system_generic_alert",
+        templateKey:
+          body.templateKey || template?.template_key || "system_generic_alert",
         businessDomain: normalizeDomain(body.businessDomain),
         notificationType: (body.notificationType || "system").toLowerCase(),
         queueId: body.queueId,
         batchId: body.batchId,
-        requestPayload: { subject, templateKey: body.templateKey, variables: body.variables ?? {} },
+        requestPayload: {
+          subject,
+          templateKey: body.templateKey,
+          variables: body.variables ?? {},
+        },
         responsePayload: data as Record<string, unknown>,
       });
     } catch (trackError) {
@@ -213,7 +297,9 @@ async function resolveTemplate(
   if (!templateKey) return null;
   const { data, error } = await serviceClient
     .from("notification_email_templates")
-    .select("template_key, subject_template, html_template, text_template, from_name, from_email")
+    .select(
+      "template_key, subject_template, html_template, text_template, from_name, from_email",
+    )
     .eq("template_key", templateKey)
     .eq("is_active", true)
     .maybeSingle();
@@ -225,10 +311,13 @@ function buildContext(
   body: SendEmailBody,
   fallbackRecipient: string,
   appBaseUrl: string,
-  language = "en"
+  language = "en",
 ): Record<string, string> {
   const isAr = language === "ar";
-  const actionUrl = resolveAbsoluteUrl(body.actionUrl || "/notifications", appBaseUrl);
+  const actionUrl = resolveAbsoluteUrl(
+    body.actionUrl || "/notifications",
+    appBaseUrl,
+  );
   const domain = normalizeDomain(body.businessDomain);
 
   // Resolution Logic for Premium Branding
@@ -236,9 +325,19 @@ function buildContext(
 
   const baseContext: Record<string, string> = {
     title: asText(body.title, body.subject || "Notification"),
-    message: asText(body.message, isAr ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A PHG Connect." : "You have a new update in PHG Connect."),
+    message: asText(
+      body.message,
+      isAr
+        ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A PHG Connect."
+        : "You have a new update in PHG Connect.",
+    ),
     action_url: actionUrl,
-    action_label: asText(body.actionLabel, isAr ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629" : "Open PHG Connect"),
+    action_label: asText(
+      body.actionLabel,
+      isAr
+        ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629"
+        : "Open PHG Connect",
+    ),
     app_url: appBaseUrl,
     logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Standard premium logo
     recipient_name: fallbackRecipient,
@@ -256,10 +355,18 @@ function buildContext(
     has_data_box: body.variables?.data_box ? "true" : "false",
     data_box_content: asText(body.variables?.data_box, ""),
     greeting_hello: isAr ? "\u0645\u0631\u062D\u0628\u0627\u064B " : "Hello ",
-    trouble_clicking: isAr ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643:" : "If you're having trouble clicking the button, copy and paste the URL below into your web browser:",
-    dashboard_link_text: isAr ? "\u0644\u0648\u062D\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629" : "Dashboard",
-    help_link_text: isAr ? "\u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629" : "Help Center",
-    rights_reserved: isAr ? "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629." : "All rights reserved.",
+    trouble_clicking: isAr
+      ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643:"
+      : "If you're having trouble clicking the button, copy and paste the URL below into your web browser:",
+    dashboard_link_text: isAr
+      ? "\u0644\u0648\u062D\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629"
+      : "Dashboard",
+    help_link_text: isAr
+      ? "\u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
+      : "Help Center",
+    rights_reserved: isAr
+      ? "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629."
+      : "All rights reserved.",
   };
 
   for (const [key, value] of Object.entries(body.variables || {})) {
@@ -272,70 +379,93 @@ function buildContext(
 }
 
 function resolveBranding(domain: string) {
-  const map: Record<string, { color: string; gradient: string; labelEn: string; labelAr: string }> = {
+  const map: Record<
+    string,
+    { color: string; gradient: string; labelEn: string; labelAr: string }
+  > = {
     user_management: {
       color: "#0B1C3E",
       gradient: "linear-gradient(135deg, #0B1C3E 0%, #1E40AF 100%)",
       labelEn: "User Management",
-      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
+      labelAr:
+        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
     },
     hr: {
       color: "#0D9488",
       gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
       labelEn: "HR & Workplace Excellence",
-      labelAr: "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
+      labelAr:
+        "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
     },
     learning: {
       color: "#D97706",
       gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
       labelEn: "Learning & Academy",
-      labelAr: "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
+      labelAr:
+        "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
     },
     finance: {
       color: "#2563EB",
       gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
       labelEn: "Finance & Approvals",
-      labelAr: "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
+      labelAr:
+        "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
     },
     operations: {
       color: "#DC2626",
       gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
       labelEn: "Operations & Safety",
-      labelAr: "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
+      labelAr:
+        "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
     },
     management: {
       color: "#1E293B",
       gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
       labelEn: "Corporate Management",
-      labelAr: "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
+      labelAr:
+        "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
     },
     sales: {
       color: "#4F46E5",
       gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
       labelEn: "Sales & Pipelines",
-      labelAr: "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
+      labelAr:
+        "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
     },
     system: {
       color: "#0F172A",
       gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
       labelEn: "System Administration",
-      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
+      labelAr:
+        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
     },
   };
 
   return map[domain] || map.system;
 }
 
-function renderTemplate(template: string, context: Record<string, string>): string {
-  let rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
-    const key = rawKey.trim();
-    return context[key] ?? "";
-  });
+function renderTemplate(
+  template: string,
+  context: Record<string, string>,
+): string {
+  let rendered = template.replace(
+    /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+    (_match, rawKey: string) => {
+      const key = rawKey.trim();
+      return context[key] ?? "";
+    },
+  );
 
   if (context.has_data_box === "true") {
-    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+    rendered = rendered.replace(
+      /\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g,
+      "$1",
+    );
   } else {
-    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "");
+    rendered = rendered.replace(
+      /\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g,
+      "",
+    );
   }
 
   return rendered;
@@ -549,13 +679,23 @@ function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {
 
 function normalizeDomain(domain?: string): string {
   const value = (domain || "system").toLowerCase();
-  const allowed = ["system", "user_management", "operations", "hr", "learning", "finance", "sales", "management"];
+  const allowed = [
+    "system",
+    "user_management",
+    "operations",
+    "hr",
+    "learning",
+    "finance",
+    "sales",
+    "management",
+  ];
   return allowed.includes(value) ? value : "system";
 }
 
 function asText(value: unknown, fallback: string): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   return fallback;
 }
 
@@ -575,7 +715,10 @@ async function trackDelivery(
 ): Promise<void> {
   if (!payload.userId) return;
 
-  const providerMessageId = typeof payload.responsePayload?.id === "string" ? payload.responsePayload.id : null;
+  const providerMessageId =
+    typeof payload.responsePayload?.id === "string"
+      ? payload.responsePayload.id
+      : null;
 
   await serviceClient.from("notification_delivery_events").insert({
     user_id: payload.userId,
@@ -595,9 +738,12 @@ async function trackDelivery(
   });
 }
 
-async function loadRuntimeConfig(serviceClient: ReturnType<typeof createClient>): Promise<RuntimeConfig> {
+async function loadRuntimeConfig(
+  serviceClient: ReturnType<typeof createClient>,
+): Promise<RuntimeConfig> {
   const { data } = await serviceClient.rpc("get_email_runtime_config");
-  const config = (data && typeof data === "object") ? (data as Record<string, unknown>) : {};
+  const config =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   const rpcResend = readSecretString(config.resend_api_key);
   const rpcBaseUrl = readSecretString(config.app_base_url);
   const rpcFromName = readSecretString(config.email_from_name);
@@ -648,7 +794,10 @@ async function sendWithResendWithRetry(params: {
       });
 
       resendLastRequestAt = Date.now();
-      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const payload = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
       if (response.ok) {
         return { ok: true, payload };
       }
@@ -659,10 +808,15 @@ async function sendWithResendWithRetry(params: {
         return { ok: false, payload };
       }
 
-      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after"),
+      );
       await sleep(retryAfterMs ?? RESEND_RETRY_BASE_MS * attempt);
     } catch (error) {
-      lastPayload = { message: error instanceof Error ? error.message : "Resend request failed" };
+      lastPayload = {
+        message:
+          error instanceof Error ? error.message : "Resend request failed",
+      };
       if (attempt === RESEND_MAX_RETRIES) {
         return { ok: false, payload: lastPayload };
       }
@@ -693,12 +847,13 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, clamped));
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: HeadersInit = {}): Response {
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status = 200,
+  corsHeaders: HeadersInit = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
-
-
-

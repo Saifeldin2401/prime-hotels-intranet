@@ -9,8 +9,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { GuestReview } from '@/lib/types'
+import { buildReviewDateRange, filterReviewsByDateRange, getReviewEventTimestamp } from '@/lib/reviewDates'
 import { useQuery } from '@tanstack/react-query'
-import { useMemo } from 'react'
 
 interface GuestReviewStats {
   totalReviews: number
@@ -49,21 +49,20 @@ export function useGuestReviews(options?: {
         }
       }
 
-      // Calculate date range
-      const sinceDate = new Date()
-      sinceDate.setDate(sinceDate.getDate() - daysBack)
-      const sinceISO = sinceDate.toISOString()
+      const reviewWindow = buildReviewDateRange({ daysBack })
 
-      // Build query - filter by property if available
-      // FIXED: Use published_at consistently as the canonical review date
-      // FIXED: Add 90-day filter to prevent old reviews from appearing
-      const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString()
       let query = supabase
         .from('guest_reviews')
-        .select('*')
-        .or(`published_at.gte.${ninetyDaysAgo},and(published_at.is.null,collected_at.gte.${ninetyDaysAgo})`)
+        .select('id, property_id, platform, reviewer_name, review_title, review_text, rating_normalized_5, status, critical_flag, severity, published_at, collected_at, created_at')
         .order('published_at', { ascending: false, nullsFirst: false })
         .order('collected_at', { ascending: false })
+        .order('created_at', { ascending: false })
+
+      if (reviewWindow.fromIso) {
+        query = query.or(
+          `published_at.gte.${reviewWindow.fromIso},and(published_at.is.null,collected_at.gte.${reviewWindow.fromIso}),and(published_at.is.null,collected_at.is.null,created_at.gte.${reviewWindow.fromIso})`,
+        )
+      }
 
       // Filter by property if specified (for head office users or specific property views)
       if (effectivePropertyId && effectivePropertyId !== 'all') {
@@ -74,14 +73,16 @@ export function useGuestReviews(options?: {
       // This could be based on review tags, mentioned departments, etc.
       // For now, we'll show all reviews for the property
 
-      const { data: reviews, error } = await query.limit(limit * 2)
+      const { data: reviews, error } = await query
 
       if (error) {
         console.error('Error fetching guest reviews:', error)
         throw error
       }
 
-      const reviewList = (reviews || []) as GuestReview[]
+      const reviewList = filterReviewsByDateRange((reviews || []) as GuestReview[], {
+        daysBack,
+      })
 
       // Calculate stats
       const totalReviews = reviewList.length
@@ -111,18 +112,14 @@ export function useGuestReviews(options?: {
       ).length
 
       // Get most recent reviews with high priority first
-      // FIXED: Use published_at consistently for date sorting
       const recentReviews = reviewList
         .sort((a, b) => {
           // Prioritize critical reviews
           const aCritical = a.critical_flag || a.severity === 'critical' ? 2 : a.severity === 'high' ? 1 : 0
           const bCritical = b.critical_flag || b.severity === 'critical' ? 2 : b.severity === 'high' ? 1 : 0
           if (bCritical !== aCritical) return bCritical - aCritical
-          
-          // Then by published_at (canonical review date), fallback to collected_at
-          const aDate = new Date(a.published_at || a.collected_at || a.created_at).getTime()
-          const bDate = new Date(b.published_at || b.collected_at || b.created_at).getTime()
-          return bDate - aDate
+
+          return getReviewEventTimestamp(b) - getReviewEventTimestamp(a)
         })
         .slice(0, limit)
 

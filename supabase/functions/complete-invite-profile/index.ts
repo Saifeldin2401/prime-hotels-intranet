@@ -22,7 +22,10 @@ const DEFAULT_ALLOWED_ORIGINS = [
 function getAllowedOrigins(): string[] {
   const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
   if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
-  const parsed = raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+  const parsed = raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
 }
 
@@ -36,14 +39,17 @@ function resolveCorsOrigin(req: Request): string {
 function buildCorsHeaders(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": resolveCorsOrigin(req),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
 function isUuid(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function isISODate(value: string): boolean {
@@ -76,22 +82,31 @@ Deno.serve(async (req: Request) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Missing Authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const userClient = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    const {
+      data: { user },
+      error: userError,
+    } = await userClient.auth.getUser();
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized: Invalid token" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid token" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     let body: Record<string, unknown> = {};
@@ -101,12 +116,19 @@ Deno.serve(async (req: Request) => {
       body = {};
     }
 
-    const action = typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
-    const fullName = typeof body?.fullName === "string" ? body.fullName.trim() : "";
-    const dateOfBirth = typeof body?.dateOfBirth === "string" ? normalizeDateOfBirth(body.dateOfBirth) : "";
+    const action =
+      typeof body?.action === "string" ? body.action.trim().toLowerCase() : "";
+    const fullName =
+      typeof body?.fullName === "string" ? body.fullName.trim() : "";
+    const dateOfBirth =
+      typeof body?.dateOfBirth === "string"
+        ? normalizeDateOfBirth(body.dateOfBirth)
+        : "";
     const phone = typeof body?.phone === "string" ? body.phone.trim() : "";
-    const jobTitleInput = typeof body?.jobTitle === "string" ? body.jobTitle.trim() : "";
-    const propertyId = typeof body?.propertyId === "string" ? body.propertyId.trim() : "";
+    const jobTitleInput =
+      typeof body?.jobTitle === "string" ? body.jobTitle.trim() : "";
+    const propertyId =
+      typeof body?.propertyId === "string" ? body.propertyId.trim() : "";
 
     if (action === "options") {
       const { data: profileRow, error: profileReadError } = await adminClient
@@ -116,70 +138,114 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (profileReadError) {
-        return new Response(JSON.stringify({ error: `Failed to load profile: ${profileReadError.message}` }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to load profile: ${profileReadError.message}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (!profileRow) {
-        return new Response(JSON.stringify({ error: "Profile record not found." }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Profile record not found." }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
-      const canCompleteInvite = profileRow.force_password_reset === true || profileRow.password_initialized === false;
+      const canCompleteInvite =
+        profileRow.force_password_reset === true ||
+        profileRow.password_initialized === false;
       if (!canCompleteInvite) {
-        return new Response(JSON.stringify({ error: "Invite completion is no longer allowed for this account." }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "Invite completion is no longer allowed for this account.",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
-      const [{ data: jobTitleRows, error: jobTitleError }, { data: propertyRows, error: propertyError }] =
-        await Promise.all([
-          adminClient.from("job_titles").select("title").order("title", { ascending: true }),
-          adminClient.from("properties").select("id, name").eq("is_active", true).order("name", { ascending: true }),
-        ]);
+      const [
+        { data: jobTitleRows, error: jobTitleError },
+        { data: propertyRows, error: propertyError },
+      ] = await Promise.all([
+        adminClient
+          .from("job_titles")
+          .select("title")
+          .order("title", { ascending: true }),
+        adminClient
+          .from("properties")
+          .select("id, name")
+          .eq("is_active", true)
+          .order("name", { ascending: true }),
+      ]);
 
       if (jobTitleError) {
-        return new Response(JSON.stringify({ error: `Failed to load job titles: ${jobTitleError.message}` }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to load job titles: ${jobTitleError.message}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (propertyError) {
-        return new Response(JSON.stringify({ error: `Failed to load properties: ${propertyError.message}` }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to load properties: ${propertyError.message}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       const normalizedJobTitles = (jobTitleRows || [])
         .map((row) => row.title)
-        .filter((title): title is string => typeof title === "string" && title.trim().length > 0);
+        .filter(
+          (title): title is string =>
+            typeof title === "string" && title.trim().length > 0,
+        );
 
       const allPropertyOptions = (propertyRows || [])
         .map((row) => ({ id: row.id, name: row.name }))
-        .filter((property): property is { id: string; name: string } =>
-          typeof property.id === "string" &&
-          property.id.length > 0 &&
-          typeof property.name === "string" &&
-          property.name.length > 0
+        .filter(
+          (property): property is { id: string; name: string } =>
+            typeof property.id === "string" &&
+            property.id.length > 0 &&
+            typeof property.name === "string" &&
+            property.name.length > 0,
         );
 
-      const { data: assignedProperties, error: assignedPropertiesError } = await adminClient
-        .from("user_properties")
-        .select("property_id, properties(id, name)")
-        .eq("user_id", user.id);
+      const { data: assignedProperties, error: assignedPropertiesError } =
+        await adminClient
+          .from("user_properties")
+          .select("property_id, properties(id, name)")
+          .eq("user_id", user.id);
 
       if (assignedPropertiesError) {
-        return new Response(JSON.stringify({ error: `Failed to load assigned properties: ${assignedPropertiesError.message}` }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: `Failed to load assigned properties: ${assignedPropertiesError.message}`,
+          }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       const assignedPropertyOptions = (assignedProperties || [])
@@ -188,28 +254,40 @@ Deno.serve(async (req: Request) => {
             | { id?: string; name?: string }
             | { id?: string; name?: string }[]
             | null;
-          const normalizedProperty = Array.isArray(relatedProperty) ? relatedProperty[0] : relatedProperty;
+          const normalizedProperty = Array.isArray(relatedProperty)
+            ? relatedProperty[0]
+            : relatedProperty;
           if (!normalizedProperty?.id || !normalizedProperty?.name) return null;
           return { id: normalizedProperty.id, name: normalizedProperty.name };
         })
-        .filter((property): property is { id: string; name: string } => !!property);
+        .filter(
+          (property): property is { id: string; name: string } => !!property,
+        );
 
-      const availableProperties = assignedPropertyOptions.length > 0
-        ? assignedPropertyOptions
-        : allPropertyOptions;
+      const availableProperties =
+        assignedPropertyOptions.length > 0
+          ? assignedPropertyOptions
+          : allPropertyOptions;
 
       const assignedPropertyIds = (assignedProperties || [])
         .map((row) => row.property_id)
         .filter((value): value is string => typeof value === "string");
 
-      return new Response(JSON.stringify({
-        jobTitles: Array.from(new Set(normalizedJobTitles)),
-        properties: Array.from(new Map(availableProperties.map((property) => [property.id, property])).values()),
-        assignedPropertyIds: Array.from(new Set(assignedPropertyIds)),
-      }), {
-        status: 200,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          jobTitles: Array.from(new Set(normalizedJobTitles)),
+          properties: Array.from(
+            new Map(
+              availableProperties.map((property) => [property.id, property]),
+            ).values(),
+          ),
+          assignedPropertyIds: Array.from(new Set(assignedPropertyIds)),
+        }),
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (!fullName) {
@@ -220,27 +298,38 @@ Deno.serve(async (req: Request) => {
     }
 
     if (!dateOfBirth || !isISODate(dateOfBirth)) {
-      return new Response(JSON.stringify({ error: "Date of birth must be in YYYY-MM-DD format." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Date of birth must be in YYYY-MM-DD format.",
+        }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const dobDate = new Date(dateOfBirth);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     if (Number.isNaN(dobDate.getTime()) || dobDate > today) {
-      return new Response(JSON.stringify({ error: "Date of birth is invalid." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Date of birth is invalid." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (!propertyId || !isUuid(propertyId)) {
-      return new Response(JSON.stringify({ error: "A valid property is required." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "A valid property is required." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const { data: profileRow, error: profileReadError } = await adminClient
@@ -250,25 +339,40 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (profileReadError) {
-      return new Response(JSON.stringify({ error: `Failed to load profile: ${profileReadError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: `Failed to load profile: ${profileReadError.message}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (!profileRow) {
-      return new Response(JSON.stringify({ error: "Profile record not found." }), {
-        status: 404,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Profile record not found." }),
+        {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const canCompleteInvite = profileRow.force_password_reset === true || profileRow.password_initialized === false;
+    const canCompleteInvite =
+      profileRow.force_password_reset === true ||
+      profileRow.password_initialized === false;
     if (!canCompleteInvite) {
-      return new Response(JSON.stringify({ error: "Invite completion is no longer allowed for this account." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: "Invite completion is no longer allowed for this account.",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const { data: propertyRow, error: propertyLookupError } = await adminClient
@@ -279,10 +383,13 @@ Deno.serve(async (req: Request) => {
       .maybeSingle();
 
     if (propertyLookupError || !propertyRow) {
-      return new Response(JSON.stringify({ error: "Selected property is not valid." }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Selected property is not valid." }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     let normalizedJobTitle: string | null = null;
@@ -295,33 +402,53 @@ Deno.serve(async (req: Request) => {
         .maybeSingle();
 
       if (jobTitleError || !jobTitleRow?.title) {
-        return new Response(JSON.stringify({ error: "Selected job title is not valid." }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Selected job title is not valid." }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       normalizedJobTitle = jobTitleRow.title;
     }
 
-    const { data: existingProperties, error: existingPropertiesError } = await adminClient
-      .from("user_properties")
-      .select("property_id")
-      .eq("user_id", user.id);
+    const { data: existingProperties, error: existingPropertiesError } =
+      await adminClient
+        .from("user_properties")
+        .select("property_id")
+        .eq("user_id", user.id);
 
     if (existingPropertiesError) {
-      return new Response(JSON.stringify({ error: `Failed to check property assignment: ${existingPropertiesError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: `Failed to check property assignment: ${existingPropertiesError.message}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const existingPropertyIds = (existingProperties || []).map((row) => row.property_id);
-    if (existingPropertyIds.length > 0 && !existingPropertyIds.includes(propertyId)) {
-      return new Response(JSON.stringify({ error: "Property assignment is already set by admin and cannot be changed here." }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const existingPropertyIds = (existingProperties || []).map(
+      (row) => row.property_id,
+    );
+    if (
+      existingPropertyIds.length > 0 &&
+      !existingPropertyIds.includes(propertyId)
+    ) {
+      return new Response(
+        JSON.stringify({
+          error:
+            "Property assignment is already set by admin and cannot be changed here.",
+        }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const { error: profileUpdateError } = await adminClient
@@ -336,10 +463,15 @@ Deno.serve(async (req: Request) => {
       .eq("id", user.id);
 
     if (profileUpdateError) {
-      return new Response(JSON.stringify({ error: `Failed to update profile: ${profileUpdateError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: `Failed to update profile: ${profileUpdateError.message}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const { error: propertyAssignError } = await adminClient
@@ -350,29 +482,38 @@ Deno.serve(async (req: Request) => {
       );
 
     if (propertyAssignError) {
-      return new Response(JSON.stringify({ error: `Failed to assign property: ${propertyAssignError.message}` }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          error: `Failed to assign property: ${propertyAssignError.message}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    return new Response(JSON.stringify({
-      success: true,
-      userId: user.id,
-      jobTitle: normalizedJobTitle,
-      propertyId,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        userId: user.id,
+        jobTitle: normalizedJobTitle,
+        propertyId,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (err: any) {
-    return new Response(JSON.stringify({
-      error: "Unexpected error: " + (err?.message || String(err)),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        error: "Unexpected error: " + (err?.message || String(err)),
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
-
-
