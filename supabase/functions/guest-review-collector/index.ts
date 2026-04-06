@@ -679,6 +679,7 @@ Deno.serve(async (req: Request) => {
 
     const serperKey = await getVaultSecret(serviceClient, "SERPER_API_KEY");
     const scraperKey = await getVaultSecret(serviceClient, "SCRAPER_API_KEY");
+    const downstreamServiceRoleKey = await getVaultSecret(serviceClient, "service_role_key") ?? serviceRoleKey;
 
     const now = new Date();
     const { data: allSources, error: sourceErr } = await serviceClient
@@ -896,7 +897,7 @@ Deno.serve(async (req: Request) => {
                 const response = await fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
                   method: "POST",
                   headers: {
-                    Authorization: `Bearer ${serviceRoleKey}`,
+                    Authorization: `Bearer ${downstreamServiceRoleKey}`,
                     "Content-Type": "application/json",
                   },
                   body: JSON.stringify({ review_id: reviewId, force: true }),

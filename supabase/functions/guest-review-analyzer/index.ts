@@ -482,7 +482,8 @@ Deno.serve(async (req: Request) => {
     const vaultServiceRoleKey = await getVaultServiceRoleSecret(rootServiceClient);
     const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
     const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
-    const isInternalService = isServiceRole || isVaultServiceRole;
+    const hasServiceRoleJwt = isServiceRoleJwt(authHeader);
+    const isInternalService = isServiceRole || isVaultServiceRole || hasServiceRoleJwt;
 
     const serviceToken = isInternalService ? serviceRoleKey : extractBearerToken(authHeader);
     if (!serviceToken) {
@@ -493,8 +494,8 @@ Deno.serve(async (req: Request) => {
     }
 
     // Reuse the single client (or create a new one with the appropriate token if needed)
-    const supabase = isServiceRole 
-      ? rootServiceClient 
+    const supabase = isInternalService
+      ? rootServiceClient
       : createClient(supabaseUrl, serviceToken, {
           auth: { autoRefreshToken: false, persistSession: false },
         });

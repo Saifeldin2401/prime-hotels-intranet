@@ -30,6 +30,19 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
+function isServiceRoleJwt(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function asStringArray(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.map((item) => String(item || "").trim()).filter(Boolean);
@@ -159,7 +172,7 @@ Deno.serve(async (req: Request) => {
     const vaultServiceRoleKey = await getVaultSecret(serviceClient, "service_role_key");
     const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
     const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
-    const isInternalService = isServiceRole || isVaultServiceRole;
+    const isInternalService = isServiceRole || isVaultServiceRole || isServiceRoleJwt(authHeader);
 
     if (!isInternalService && !isTestMode) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });

@@ -97,12 +97,13 @@ export function OTASourceManager() {
       let query = supabase
         .from("guest_review_sources")
         .select("*")
-        .eq("is_active", true)
         .neq("property_id", GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID)
       if (selectedPropertyId !== "all") {
         query = query.eq("property_id", selectedPropertyId)
       }
-      const { data, error } = await query.order("created_at", { ascending: false })
+      const { data, error } = await query
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false })
       if (error) throw error
       return data as GuestReviewSource[]
     }
@@ -197,7 +198,12 @@ export function OTASourceManager() {
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
       const { error } = await supabase
         .from("guest_review_sources")
-        .update({ polling_enabled: enabled, updated_at: new Date().toISOString() })
+        .update({
+          is_active: enabled,
+          polling_enabled: enabled,
+          health_status: enabled ? 'healthy' : 'disabled',
+          updated_at: new Date().toISOString()
+        })
         .eq("id", id)
       if (error) throw error
     },
@@ -388,7 +394,7 @@ export function OTASourceManager() {
                       </div>
                     </div>
                     <Switch 
-                      checked={source.polling_enabled} 
+                      checked={source.is_active && source.polling_enabled}
                       className="data-[state=checked]:bg-primary scale-90"
                       onCheckedChange={(checked) => togglePollingMutation.mutate({ id: source.id, enabled: checked })}
                     />
@@ -447,7 +453,11 @@ export function OTASourceManager() {
                     variant="default"
                     size="sm"
                     onClick={() => collectNowMutation.mutate(source.id)}
-                    disabled={collectNowMutation.isPending && collectNowMutation.variables === source.id}
+                    disabled={
+                      !source.is_active ||
+                      !source.polling_enabled ||
+                      (collectNowMutation.isPending && collectNowMutation.variables === source.id)
+                    }
                     className="w-full h-10 font-bold text-[10px] uppercase tracking-widest bg-hotel-navy hover:bg-hotel-navy/90 text-white"
                   >
                     {collectNowMutation.isPending && collectNowMutation.variables === source.id ? (
