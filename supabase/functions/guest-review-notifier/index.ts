@@ -73,6 +73,20 @@ async function getVaultSecret(
     : null;
 }
 
+async function getSystemSetting(
+  supabase: ReturnType<typeof createClient>,
+  key: string,
+): Promise<boolean> {
+  const { data, error } = await supabase
+    .from("system_settings")
+    .select("value")
+    .eq("key", key)
+    .limit(1)
+    .maybeSingle();
+  if (error || !data) return false;
+  return data.value === true || data.value === "true";
+}
+
 function buildSlackBlocks(payload: Record<string, unknown>) {
   const propertyName = payload.propertyName || "PHG Property";
   const platform = payload.platform || "Unknown";
@@ -365,6 +379,15 @@ Deno.serve(async (req: Request) => {
             blocks: buildSlackBlocks(payload),
           });
         } else if (row.channel === "email") {
+          const isEmailEnabled = await getSystemSetting(
+            serviceClient,
+            "guest_review_email_alerts_enabled",
+          );
+          if (!isEmailEnabled) {
+            console.log(`Email notification skipped for review ${row.review_id} (Disabled via system_settings)`);
+            results.push({ id: row.id, status: "skipped", channel: "email", reason: "Disabled via system_settings" });
+            continue; 
+          }
           const recipients = asStringArray(payload.recipientEmails);
           if (recipients.length === 0)
             throw new Error("Email notification missing recipients");
