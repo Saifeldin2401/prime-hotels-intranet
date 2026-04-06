@@ -85,5 +85,42 @@ research_and_sources.json
 .vibe/
 .windsurf/
 .zencoder/
+.agents/
+.codex/
+.cursor/
+.jules/
+.orchids/
 /skills/
 /skills-lock.json
+
+# Translation/temp data files
+arabic_translations.json
+broken_arabic.txt
+english_to_translate.json
+
+# Patch/diff files
+*.diff
+*.patch
+pr_*.txt
+prs.json
+
+# MCP config
+.mcp-supabase.json
+
+# Temporary directories
+tmp/
+
+# Development helper scripts
+apply_patch.cjs
+verify_breadcrumbs_smoke.tsx
+check-*.cjs
+check-*.js
+dump-*.cjs
+extract_*.cjs
+fix-*.js
+fix-*.mjs
+generate_*.py
+test-pii-*.js
+resend_reminders.*
+capture.py
+find_dupes.py

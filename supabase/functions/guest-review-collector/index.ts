@@ -499,9 +499,19 @@ async function findGoogleCidBySearch(
   const data = (await searchRes.json()) as Record<string, unknown>;
   for (const result of (data.organic as Array<Record<string, unknown>>) ?? []) {
     const link = String(result.link ?? "");
-    if (link.includes("google.com/maps") || link.includes("maps.google.com")) {
-      const fid = extractFidFromGoogleUrl(link);
-      if (fid) return fid;
+    // Secure URL host checking to prevent incomplete URL substring sanitization
+    try {
+      const url = new URL(link);
+      const isGoogleMaps = (
+        (url.hostname === "google.com" || url.hostname.endsWith(".google.com")) &&
+        url.pathname.startsWith("/maps")
+      ) || url.hostname === "maps.google.com";
+      if (isGoogleMaps) {
+        const fid = extractFidFromGoogleUrl(link);
+        if (fid) return fid;
+      }
+    } catch {
+      // Invalid URL, skip
     }
   }
   return null;

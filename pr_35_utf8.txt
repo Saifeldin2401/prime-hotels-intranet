@@ -1,9 +1,0 @@
-diff --git a/src/pages/admin/GovernanceAssignments.tsx b/src/pages/admin/GovernanceAssignments.tsx
-index 5940b5e..0a560ae 100644
---- a/src/pages/admin/GovernanceAssignments.tsx
-+++ b/src/pages/admin/GovernanceAssignments.tsx
-@@ -826,4 +826,3 @@ export default function GovernanceAssignments() {
-     </div>
-   )
- }
--        </TabsContent>

@@ -32,7 +32,8 @@ const cookies = {
 
     const host = window.location.hostname
     let domainAttr = ''
-    if (host.includes('phg-connect.com')) {
+    // Use proper domain check to prevent subdomain bypass attacks
+    if (host === 'phg-connect.com' || host.endsWith('.phg-connect.com')) {
       domainAttr = '; domain=.phg-connect.com'
     }
 

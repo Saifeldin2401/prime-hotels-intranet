@@ -95,8 +95,27 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
         return match ? match[1] : null
     }
 
-    const isYouTube = value.includes('youtube.com') || value.includes('youtu.be')
-    const isVimeo = value.includes('vimeo.com')
+    // Secure URL host checking to prevent incomplete URL substring sanitization
+    const isYouTube = (() => {
+        try {
+            const url = new URL(value)
+            return url.hostname === 'youtube.com' ||
+                   url.hostname === 'www.youtube.com' ||
+                   url.hostname === 'youtu.be' ||
+                   url.hostname === 'www.youtu.be'
+        } catch {
+            return false
+        }
+    })()
+    const isVimeo = (() => {
+        try {
+            const url = new URL(value)
+            return url.hostname === 'vimeo.com' ||
+                   url.hostname === 'www.vimeo.com'
+        } catch {
+            return false
+        }
+    })()
     const isDirectVideo = value.match(/\.(mp4|webm|ogg)$/i)
     const youtubeId = getYouTubeId(value)
     const vimeoId = getVimeoId(value)

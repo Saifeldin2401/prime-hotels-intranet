@@ -43,8 +43,27 @@ interface VideoPlayerProps {
 }
 
 export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
-    const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')
-    const isVimeo = videoUrl.includes('vimeo.com')
+    // Secure URL host checking to prevent incomplete URL substring sanitization
+    const isYouTube = (() => {
+        try {
+            const url = new URL(videoUrl)
+            return url.hostname === 'youtube.com' ||
+                   url.hostname === 'www.youtube.com' ||
+                   url.hostname === 'youtu.be' ||
+                   url.hostname === 'www.youtu.be'
+        } catch {
+            return false
+        }
+    })()
+    const isVimeo = (() => {
+        try {
+            const url = new URL(videoUrl)
+            return url.hostname === 'vimeo.com' ||
+                   url.hostname === 'www.vimeo.com'
+        } catch {
+            return false
+        }
+    })()
 
     const getEmbedUrl = (url: string) => {
         if (!url) return ''
