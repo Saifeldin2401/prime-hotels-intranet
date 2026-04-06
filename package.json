@@ -1,7 +1,8 @@
 {
   "name": "prime-hotels",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "PHG Connect Intranet Platform - A comprehensive multi-property hotel intranet system with bilingual support (English/Arabic)",
   "type": "module",
   "scripts": {
     "dev": "vite",
