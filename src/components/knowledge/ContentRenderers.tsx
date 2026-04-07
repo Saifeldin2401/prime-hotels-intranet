@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/hooks/useAuth'
 import { useTrackRelatedClick, useTrackRelatedImpressions } from '@/hooks/useKnowledge'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem, RelatedArticle } from '@/types/knowledge'
 import type { TFunction } from 'i18next'
@@ -27,9 +28,11 @@ import {
     Circle,
     ExternalLink,
     HelpCircle,
-    Maximize
+    Loader2,
+    Maximize,
+    Video as VideoIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -160,14 +163,308 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
         )
     }
 
-    // Direct video file
+    // Direct video file with signed URL refresh support
+    const [videoError, setVideoError] = useState<string | null>(null)
+    const [videoLoading, setVideoLoading] = useState(true)
+    const [refreshingUrl, setRefreshingUrl] = useState(false)
+    const [currentSrc, setCurrentSrc] = useState(videoUrl)
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const hasAttemptedRefresh = useRef(false)
+
+    // Detect if URL is a Supabase storage URL that needs refreshing
+    const isSupabaseStorageUrl = useCallback((url: string): boolean => {
+        if (!url) return false
+        // Check for common Supabase storage patterns
+        return url.includes('.supabase.co') || 
+               url.includes('/storage/v1/') ||
+               url.includes('x-amz-date') || // Signed URL query param
+               url.includes('X-Amz-Signature') || // S3 signed URL
+               url.includes('.mp4') || // Direct video file
+               url.includes('.webm') ||
+               url.includes('.mov')
+    }, [])
+
+    // Check if URL is just a filename (no protocol, no hostname)
+    const isPlainFilename = useCallback((url: string): boolean => {
+        if (!url) return false
+        // If no protocol and no slashes at start, likely just a filename
+        return !url.includes('://') && !url.startsWith('/') && !url.startsWith('http')
+    }, [])
+
+    // Refresh signed URL for Supabase storage
+    const refreshSignedUrl = useCallback(async (originalUrl: string): Promise<string | null> => {
+        try {
+            // Pattern 0: Plain filename - look up in media_assets
+            if (isPlainFilename(originalUrl)) {
+                const { data: mediaAsset } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path, filename')
+                    .or(`filename.eq.${originalUrl},original_filename.eq.${originalUrl}`)
+                    .maybeSingle()
+                
+                if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                    const { data, error } = await supabase.storage
+                        .from(mediaAsset.storage_bucket)
+                        .createSignedUrl(mediaAsset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+                
+                // Try searching for files containing this name
+                const { data: mediaAssets } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path, filename')
+                    .ilike('filename', `%${originalUrl}%`)
+                    .limit(5)
+                
+                if (mediaAssets && mediaAssets.length > 0) {
+                    const asset = mediaAssets[0]
+                    const { data, error } = await supabase.storage
+                        .from(asset.storage_bucket)
+                        .createSignedUrl(asset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+                
+                return null
+            }
+
+            const url = new URL(originalUrl)
+            
+            // Pattern 1: Standard Supabase storage signed URL
+            const signedMatch = url.pathname.match(/\/storage\/v1\/object\/signed\/([^/]+)\/(.+)/)
+            if (signedMatch) {
+                const bucket = signedMatch[1]
+                const path = decodeURIComponent(signedMatch[2])
+
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+
+            // Pattern 2: Public URL
+            const publicMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
+            if (publicMatch) {
+                const bucket = publicMatch[1]
+                const path = decodeURIComponent(publicMatch[2])
+
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+            
+            // Pattern 3: S3-style URL
+            const s3Match = url.pathname.match(/\/storage\/v1\/s3\/(.+)/)
+            if (s3Match) {
+                const bucket = 'media'
+                const path = s3Match[1]
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+                
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+
+            // Pattern 4: Any Supabase URL with query params
+            if (url.hostname.includes('.supabase.co') && url.search) {
+                const pathParts = url.pathname.split('/').filter(Boolean)
+                if (pathParts.length >= 2) {
+                    let bucketIndex = 0
+                    let pathIndex = 1
+                    
+                    if (pathParts[0] === 'storage' && pathParts[1] === 'v1') {
+                        const objectIndex = pathParts.indexOf('object')
+                        if (objectIndex >= 0 && pathParts[objectIndex + 1]) {
+                            bucketIndex = objectIndex + 1
+                            pathIndex = objectIndex + 2
+                        }
+                    }
+                    
+                    if (pathParts[bucketIndex] && pathParts[pathIndex]) {
+                        const bucket = pathParts[bucketIndex]
+                        const path = pathParts.slice(pathIndex).join('/')
+                        
+                        const { data, error } = await supabase.storage
+                            .from(bucket)
+                            .createSignedUrl(path, 3600)
+                        
+                        if (!error) return data?.signedUrl || null
+                    }
+                }
+            }
+
+            // Pattern 5: Relative path
+            if (!url.hostname || url.hostname === window.location.hostname) {
+                const filename = url.pathname.split('/').pop() || originalUrl
+                const { data: mediaAsset } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path')
+                    .eq('filename', filename)
+                    .maybeSingle()
+                
+                if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                    const { data, error } = await supabase.storage
+                        .from(mediaAsset.storage_bucket)
+                        .createSignedUrl(mediaAsset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+            }
+
+            // Last resort: try to find media asset by matching the URL
+            const { data: mediaAsset } = await supabase
+                .from('media_assets')
+                .select('storage_bucket, storage_path')
+                .eq('public_url', originalUrl)
+                .maybeSingle()
+            
+            if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                const { data, error } = await supabase.storage
+                    .from(mediaAsset.storage_bucket)
+                    .createSignedUrl(mediaAsset.storage_path, 3600)
+                
+                if (!error) return data?.signedUrl || null
+            }
+
+            return null
+        } catch (err) {
+            console.error('Failed to refresh signed URL:', err)
+            return null
+        }
+    }, [isPlainFilename])
+
+    const handleVideoError = useCallback(async () => {
+        if (isSupabaseStorageUrl(currentSrc) && !hasAttemptedRefresh.current) {
+            hasAttemptedRefresh.current = true
+            setRefreshingUrl(true)
+            const freshUrl = await refreshSignedUrl(currentSrc)
+            
+            if (freshUrl) {
+                setCurrentSrc(freshUrl)
+                setVideoLoading(true)
+                setVideoError(null)
+                setTimeout(() => {
+                    videoRef.current?.load()
+                }, 50)
+            } else {
+                setVideoLoading(false)
+                setVideoError('Unable to load video. The file may be missing or access has expired.')
+            }
+            setRefreshingUrl(false)
+        } else {
+            setVideoLoading(false)
+            setVideoError('Unable to load video. The file may be missing or unsupported.')
+        }
+    }, [currentSrc, isSupabaseStorageUrl, refreshSignedUrl])
+
+    // Proactive refresh on mount if URL looks like it needs refreshing
+    useEffect(() => {
+        if (isPlainFilename(videoUrl)) {
+            hasAttemptedRefresh.current = true
+            setRefreshingUrl(true)
+            refreshSignedUrl(videoUrl).then(freshUrl => {
+                if (freshUrl) {
+                    setCurrentSrc(freshUrl)
+                } else {
+                    setVideoError('Video file not found in media library')
+                    setVideoLoading(false)
+                }
+                setRefreshingUrl(false)
+            }).catch(() => {
+                setVideoError('Failed to load video')
+                setVideoLoading(false)
+                setRefreshingUrl(false)
+            })
+        }
+    }, [videoUrl, isPlainFilename, refreshSignedUrl])
+
+    // Force video reload when src changes
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.load()
+        }
+    }, [currentSrc])
+    useEffect(() => {
+        if (!videoLoading || !currentSrc) return
+        
+        const checkInterval = setInterval(() => {
+            const video = videoRef.current
+            if (!video) return
+            
+            if ((video.networkState === 0 || video.networkState === 1) && 
+                video.readyState === 0 && 
+                !hasAttemptedRefresh.current) {
+                void handleVideoError()
+            }
+        }, 2000)
+
+        const timeout = setTimeout(() => {
+            const video = videoRef.current
+            if (video && video.readyState === 0 && !hasAttemptedRefresh.current) {
+                void handleVideoError()
+            }
+        }, 8000)
+
+        return () => {
+            clearInterval(checkInterval)
+            clearTimeout(timeout)
+        }
+    }, [videoLoading, currentSrc, handleVideoError])
+
     return (
-        <div className="aspect-video rounded-lg overflow-hidden bg-black">
+        <div className="aspect-video rounded-lg overflow-hidden bg-black relative">
+            {(videoLoading || refreshingUrl) && !videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10">
+                    {refreshingUrl ? (
+                        <>
+                            <Loader2 className="h-10 w-10 animate-spin mb-3" />
+                            <span className="text-sm">Refreshing access...</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="animate-spin h-10 w-10 border-4 border-white/30 border-t-white rounded-full mb-3"></div>
+                            <span className="text-sm">Loading video...</span>
+                        </>
+                    )}
+                </div>
+            )}
+            {videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center">
+                    <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
+                    <span className="text-sm mb-2">{videoError}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setVideoError(null)
+                            setVideoLoading(true)
+                            if (isSupabaseStorageUrl(currentSrc)) {
+                                void handleVideoError()
+                            } else {
+                                videoRef.current?.load()
+                            }
+                        }}
+                        className="mt-2 border-white/30 text-white hover:bg-white/10"
+                    >
+                        Retry
+                    </Button>
+                </div>
+            )}
             <video
-                src={videoUrl}
+                ref={videoRef}
+                src={currentSrc}
                 controls
-                className="w-full h-full"
+                className={cn("w-full h-full", (videoError || refreshingUrl) && "opacity-0")}
                 poster={undefined}
+                onLoadedData={() => setVideoLoading(false)}
+                onError={handleVideoError}
             >
                 Your browser does not support the video tag.
             </video>
@@ -546,3 +843,7 @@ export function ImageGalleryRenderer({ images, cacheVersion }: ImageGalleryRende
         </>
     )
 }
+
+// Re-export ArticleContent from separate file
+export { ArticleContent } from './ArticleContent'
+export { default as ArticleContentDefault } from './ArticleContent'

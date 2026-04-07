@@ -14,7 +14,8 @@ import {
     ChecklistRenderer,
     FAQAccordion,
     ImageGalleryRenderer,
-    VideoPlayer
+    VideoPlayer,
+    ArticleContent
 } from '@/components/knowledge/ContentRenderers'
 import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
@@ -1580,8 +1581,8 @@ export default function KnowledgeViewer() {
                                 ) : article.content ? (
                                     <div ref={mermaidRef}>
                                         <InlineErrorBoundary>
-                                            <div
-                                                ref={contentRef}
+                                            <ArticleContent
+                                                content={article.content || ''}
                                                 className={cn(
                                                     "prose md:prose-lg max-w-none text-slate-800 kb-prose transition-all duration-300",
                                                     fontFamily === 'serif' && "kb-prose-serif",
@@ -1590,7 +1591,7 @@ export default function KnowledgeViewer() {
                                                     fontSize === 'lg' && "text-kb-lg",
                                                     fontSize === 'xl' && "text-kb-xl",
                                                 )}
-                                                dangerouslySetInnerHTML={htmlContentSanitized}
+                                                cacheVersion={article.updated_at}
                                             />
                                         </InlineErrorBoundary>
                                     </div>
