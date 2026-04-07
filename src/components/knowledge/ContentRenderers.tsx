@@ -45,125 +45,118 @@ interface VideoPlayerProps {
     title?: string
 }
 
-export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
-    // Secure URL host checking to prevent incomplete URL substring sanitization
-    const isYouTube = (() => {
+// Helper to check if URL is YouTube
+function getIsYouTube(videoUrl: string): boolean {
+    try {
+        const url = new URL(videoUrl)
+        return url.hostname === 'youtube.com' ||
+               url.hostname === 'www.youtube.com' ||
+               url.hostname === 'youtu.be' ||
+               url.hostname === 'www.youtu.be'
+    } catch {
+        return false
+    }
+}
+
+// Helper to check if URL is Vimeo
+function getIsVimeo(videoUrl: string): boolean {
+    try {
+        const url = new URL(videoUrl)
+        return url.hostname === 'vimeo.com' ||
+               url.hostname === 'www.vimeo.com'
+    } catch {
+        return false
+    }
+}
+
+// Helper to get embed URL for YouTube/Vimeo
+function getEmbedUrl(videoUrl: string, isYouTube: boolean, isVimeo: boolean): string {
+    if (!videoUrl) return ''
+
+    if (isYouTube) {
         try {
-            const url = new URL(videoUrl)
-            return url.hostname === 'youtube.com' ||
-                   url.hostname === 'www.youtube.com' ||
-                   url.hostname === 'youtu.be' ||
-                   url.hostname === 'www.youtu.be'
-        } catch {
-            return false
-        }
-    })()
-    const isVimeo = (() => {
-        try {
-            const url = new URL(videoUrl)
-            return url.hostname === 'vimeo.com' ||
-                   url.hostname === 'www.vimeo.com'
-        } catch {
-            return false
-        }
-    })()
+            const parsed = new URL(videoUrl)
+            let videoId: string | null = null
 
-    const getEmbedUrl = (url: string) => {
-        if (!url) return ''
-
-        if (isYouTube) {
-            try {
-                const parsed = new URL(url)
-
-                // Common formats:
-                // - https://www.youtube.com/watch?v=VIDEOID
-                // - https://youtu.be/VIDEOID
-                // - https://www.youtube.com/shorts/VIDEOID
-                // - https://www.youtube.com/embed/VIDEOID
-                // - https://www.youtube.com/live/VIDEOID
-                let videoId: string | null = null
-
-                if (parsed.hostname === 'youtu.be') {
-                    videoId = parsed.pathname.replace('/', '').trim() || null
-                } else if (parsed.pathname.startsWith('/watch')) {
-                    videoId = parsed.searchParams.get('v')
-                } else if (parsed.pathname.startsWith('/shorts/')) {
-                    videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
-                } else if (parsed.pathname.startsWith('/embed/')) {
-                    videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
-                } else if (parsed.pathname.startsWith('/live/')) {
-                    videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
-                }
-
-                // Fallback: regex extraction for odd formats
-                if (!videoId) {
-                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
-                    const match = url.match(regExp)
-                    videoId = match?.[2] || null
-                }
-
-                if (!videoId || videoId.length < 8) return ''
-
-                const params = new URLSearchParams({
-                    rel: '0',
-                    modestbranding: '1',
-                    playsinline: '1',
-                })
-
-                return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
-            } catch {
-                return ''
+            if (parsed.hostname === 'youtu.be') {
+                videoId = parsed.pathname.replace('/', '').trim() || null
+            } else if (parsed.pathname.startsWith('/watch')) {
+                videoId = parsed.searchParams.get('v')
+            } else if (parsed.pathname.startsWith('/shorts/')) {
+                videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/embed/')) {
+                videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/live/')) {
+                videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
             }
-        }
 
-        if (isVimeo) {
-            try {
-                const parsed = new URL(url)
-                // Formats:
-                // - https://vimeo.com/123456
-                // - https://player.vimeo.com/video/123456
-                const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
-                const id = match?.[2]
-                if (id) return `https://player.vimeo.com/video/${id}`
-            } catch {
-                // ignore
+            if (!videoId) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
+                const match = videoUrl.match(regExp)
+                videoId = match?.[2] || null
             }
-        }
 
-        return url
+            if (!videoId || videoId.length < 8) return ''
+
+            const params = new URLSearchParams({
+                rel: '0',
+                modestbranding: '1',
+                playsinline: '1',
+            })
+
+            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+        } catch {
+            return ''
+        }
     }
 
-    if (isYouTube || isVimeo) {
-        const embedUrl = getEmbedUrl(videoUrl)
-        return (
-            <div className="space-y-4">
-                <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe
-                        src={embedUrl}
-                        title={title ? `Knowledge video: ${title}` : "Knowledge video player"}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        loading="lazy"
-                    />
-                </div>
-                <div className="flex justify-center">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-gray-500 hover:text-hotel-navy"
-                        onClick={() => window.open(videoUrl, '_blank')}
-                    >
-                        <ExternalLink className="h-3 w-3 mr-2" />
-                        Having trouble? Watch directly on YouTube
-                    </Button>
-                </div>
+    if (isVimeo) {
+        try {
+            const parsed = new URL(videoUrl)
+            const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
+            const id = match?.[2]
+            if (id) return `https://player.vimeo.com/video/${id}`
+        } catch {
+            // ignore
+        }
+    }
+
+    return videoUrl
+}
+
+// Embedded video player for YouTube/Vimeo
+function EmbeddedVideoPlayer({ videoUrl, title, isYouTube, isVimeo }: VideoPlayerProps & { isYouTube: boolean; isVimeo: boolean }) {
+    const embedUrl = getEmbedUrl(videoUrl, isYouTube, isVimeo)
+    return (
+        <div className="space-y-4">
+            <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                <iframe
+                    src={embedUrl}
+                    title={title ? `Knowledge video: ${title}` : "Knowledge video player"}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    loading="lazy"
+                />
             </div>
-        )
-    }
+            <div className="flex justify-center">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-gray-500 hover:text-hotel-navy"
+                    onClick={() => window.open(videoUrl, '_blank')}
+                >
+                    <ExternalLink className="h-3 w-3 mr-2" />
+                    Having trouble? Watch directly on YouTube
+                </Button>
+            </div>
+        </div>
+    )
+}
 
-    // Direct video file with signed URL refresh support
+// Direct video file player with signed URL refresh support
+function DirectVideoPlayer({ videoUrl, title }: VideoPlayerProps) {
     const [videoError, setVideoError] = useState<string | null>(null)
     const [videoLoading, setVideoLoading] = useState(true)
     const [refreshingUrl, setRefreshingUrl] = useState(false)
@@ -470,6 +463,18 @@ export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
             </video>
         </div>
     )
+}
+
+// Main VideoPlayer component that delegates to the appropriate player
+export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
+    const isYouTube = getIsYouTube(videoUrl)
+    const isVimeo = getIsVimeo(videoUrl)
+
+    if (isYouTube || isVimeo) {
+        return <EmbeddedVideoPlayer videoUrl={videoUrl} title={title} isYouTube={isYouTube} isVimeo={isVimeo} />
+    }
+
+    return <DirectVideoPlayer videoUrl={videoUrl} title={title} />
 }
 
 // ============================================================================
