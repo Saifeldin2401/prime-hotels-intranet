@@ -101,7 +101,7 @@ export function MFASetup({ userId, isOpen, onClose, onComplete, isRequired = fal
   }, []);
   
   const handleDownloadBackupCodes = useCallback(() => {
-    if (!mfaSecret?.backupCodes) return;
+    if (!mfaSecret?.backupCodes.length) return;
     
     const content = `
 ${t('mfa.backup_codes_title', { defaultValue: 'MFA Backup Codes' })}
@@ -310,44 +310,52 @@ Generated: ${new Date().toLocaleString()}
                       <Key className="h-4 w-4" />
                       {t('mfa.backup_codes_title', { defaultValue: 'Backup Codes' })}
                     </Label>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleDownloadBackupCodes}
-                    >
-                      <Download className="h-4 w-4 mr-1" />
-                      {t('mfa.download', { defaultValue: 'Download' })}
-                    </Button>
+                    {mfaSecret.backupCodes.length > 0 ? (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDownloadBackupCodes}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        {t('mfa.download', { defaultValue: 'Download' })}
+                      </Button>
+                    ) : null}
                   </div>
                   
                   <p className="text-sm text-gray-600">
-                    {t('mfa.backup_codes_description', {
-                      defaultValue: 'Save these codes in a secure location. Each code can be used once if you lose access to your authenticator app.',
-                    })}
+                    {mfaSecret.backupCodes.length > 0
+                      ? t('mfa.backup_codes_description', {
+                          defaultValue: 'Save these codes in a secure location. Each code can be used once if you lose access to your authenticator app.',
+                        })
+                      : t('mfa.backup_codes_unavailable', {
+                          defaultValue: 'Backup codes are not available in this Supabase MFA flow. Keep access to your authenticator app before leaving this screen.',
+                        })}
                   </p>
                   
-                  <div className="grid grid-cols-2 gap-2">
-                    {mfaSecret.backupCodes.map((code, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center gap-1 p-2 bg-gray-100 rounded font-mono text-sm"
-                      >
-                        <code className="flex-1">{code}</code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => handleCopyBackupCode(code, index)}
+                  {mfaSecret.backupCodes.length > 0 ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      {mfaSecret.backupCodes.map((code, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-1 p-2 bg-gray-100 rounded font-mono text-sm"
                         >
-                          {copiedBackupCodes.includes(index) ? (
-                            <Check className="h-3 w-3 text-green-500" />
-                          ) : (
-                            <Copy className="h-3 w-3" />
-                          )}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
+                          <code className="flex-1">{code}</code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => handleCopyBackupCode(code, index)}
+                          >
+                            {copiedBackupCodes.includes(index) ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
+                            )}
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </motion.div>

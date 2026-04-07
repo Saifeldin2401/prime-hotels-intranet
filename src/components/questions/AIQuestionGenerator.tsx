@@ -290,7 +290,13 @@ export function AIQuestionGenerator({
             contentToUse = manualContent
         } else if (sourceType === 'sop') {
             // Use the fully fetched article content
-            const cleanedContent = selectedArticle?.content?.replace(/<[^>]*>/g, '') || ''
+                        // Use recursive sanitization to prevent bypass attempts with nested tags
+            let previous: string;
+            let cleanedContent = selectedArticle?.content || '';
+            do {
+              previous = cleanedContent;
+              cleanedContent = previous.replace(/<[^>]*>/g, '');
+            } while (cleanedContent !== previous);
             contentToUse = cleanedContent
             currentSopTitle = selectedArticle?.title
         } else if (sourceType === 'file') {

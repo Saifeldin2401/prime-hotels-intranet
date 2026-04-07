@@ -884,9 +884,8 @@ Deno.serve(async (req) => {
       },
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`[${requestId}] Trigger error:`, error);
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: {
         ...corsHeaders,

@@ -920,7 +920,14 @@ async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Pr
 
 function computeReadMinutes(content?: string | null): number | undefined {
     if (!content) return undefined
-    const stripped = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let stripped = content;
+    do {
+      previous = stripped;
+      stripped = previous.replace(/<[^>]*>/g, ' ');
+    } while (stripped !== previous);
+    stripped = stripped.replace(/\s+/g, ' ').trim()
     if (!stripped) return undefined
     return Math.max(1, Math.round(stripped.split(' ').length / 200))
 }

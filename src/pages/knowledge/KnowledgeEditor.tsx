@@ -139,7 +139,14 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
 })
 
 const hasDraftableArticleContent = (formData: ArticleFormData) => {
-    const richTextContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let richTextContent = formData.content;
+    do {
+      previous = richTextContent;
+      richTextContent = previous.replace(/<[^>]*>/g, ' ');
+    } while (richTextContent !== previous);
+    richTextContent = richTextContent.replace(/\s+/g, ' ').trim()
 
     return Boolean(
         formData.title.trim() ||
@@ -728,7 +735,7 @@ export default function KnowledgeEditor() {
             ].filter(Boolean)
 
             if (labels.length > 1) {
-                const normalizeMermaidLabel = (value: string) => value.replace(/"/g, '\\"')
+                const normalizeMermaidLabel = (value: string) => value.replace(/[\\"]/g, '\\$&')
                 const nodeId = (index: number) => `N${index + 1}`
                 const lines = ['flowchart TD']
 
@@ -1069,7 +1076,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
     const calculateEstimatedReadTime = useCallback((value: string): number | null => {
         if (!value) return null
-        const plainText = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        // Use recursive sanitization to prevent bypass attempts with nested tags
+        let previous: string;
+        let plainText = value;
+        do {
+          previous = plainText;
+          plainText = previous.replace(/<[^>]*>/g, ' ');
+        } while (plainText !== previous);
+        plainText = plainText.replace(/\s+/g, ' ').trim()
         if (!plainText) return null
         return Math.max(1, Math.round(plainText.split(' ').length / 200))
     }, [])
@@ -1108,7 +1122,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             if (needsSummary || needsDescription) {
                 toast.info('🤖 Auto-generating summary...', { duration: 2000 })
                 try {
-                    const cleanContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+                    // Use recursive sanitization to prevent bypass attempts with nested tags
+                    let previous: string;
+                    let cleanContent = formData.content;
+                    do {
+                      previous = cleanContent;
+                      cleanContent = previous.replace(/<[^>]*>/g, ' ');
+                    } while (cleanContent !== previous);
+                    cleanContent = cleanContent.replace(/\s+/g, ' ').trim()
                     if (needsSummary) {
                         const summaryResult = await aiService.improveContent(
                             `Write a 2-3 sentence professional summary of this hotel document.\n\nDOCUMENT:\n${cleanContent.substring(0, 3000)}\n\nWrite ONLY the summary in English.`,

@@ -1,10 +1,13 @@
 import { useTranslation } from 'react-i18next'
 import { Toaster as SonnerToaster } from 'sonner'
+import { useMediaQuery } from '@/hooks/useMediaQuery'
 
 /**
  * Enhanced Sonner-powered Toaster with premium mobile-first design.
  * 
  * Mobile Enhancements:
+ * - Uses top-center on mobile to avoid covering mobile navigation
+ * - Uses bottom-center on desktop for better UX
  * - Full-width toasts on mobile for better readability
  * - Larger touch targets for close buttons
  * - Enhanced swipe gestures
@@ -15,10 +18,15 @@ import { Toaster as SonnerToaster } from 'sonner'
 export function Toaster() {
     const { i18n } = useTranslation()
     const isRTL = i18n.dir() === 'rtl'
+    const isMobile = useMediaQuery('(max-width: 640px)')
+
+    // Use top-center on mobile to avoid covering bottom nav
+    // Use bottom-center on desktop for better UX
+    const position = isMobile ? 'top-center' : 'bottom-center'
 
     return (
         <SonnerToaster
-            position={isRTL ? 'bottom-center' : 'bottom-center'}
+            position={position}
             dir={isRTL ? 'rtl' : 'ltr'}
             expand={false}
             richColors

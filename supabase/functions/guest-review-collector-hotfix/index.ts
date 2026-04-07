@@ -917,10 +917,11 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (error) {
+    console.error("guest-review-collector-hotfix error:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       }),
       {
         status: 500,

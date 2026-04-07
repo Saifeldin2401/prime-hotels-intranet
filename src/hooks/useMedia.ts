@@ -11,6 +11,53 @@ import {
   ALLOWED_FILE_TYPES,
 } from '@/lib/file-security';
 import { toast } from 'sonner';
+
+/**
+ * SECURITY: Check if user has access to a media asset
+ * Used by getSecureDownloadUrl to prevent IDOR attacks
+ */
+async function checkMediaAccess(assetId: string, userId: string): Promise<boolean> {
+  try {
+    // Check if user has any roles that grant media access (admin, property manager, etc.)
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+    
+    const adminRoles = ['corporate_admin', 'regional_admin', 'regional_hr'];
+    const isAdmin = roles?.some(r => adminRoles.includes(r.role)) ?? false;
+    
+    if (isAdmin) return true;
+    
+    // Check property access for non-admins
+    const { data: asset } = await supabase
+      .from('media_assets')
+      .select('property_id, is_public')
+      .eq('id', assetId)
+      .single();
+    
+    if (!asset) return false;
+    
+    // Public assets are accessible
+    if (asset.is_public) return true;
+    
+    // Check if user has role for this property
+    if (asset.property_id) {
+      const { data: propertyRole } = await supabase
+        .from('user_roles')
+        .select('id')
+        .eq('user_id', userId)
+        .eq('property_id', asset.property_id)
+        .maybeSingle();
+      
+      if (propertyRole) return true;
+    }
+    
+    return false;
+  } catch {
+    return false;
+  }
+}
 import type {
   MediaAsset,
   MediaAssetWithUsage,
@@ -482,15 +529,33 @@ export function useMedia(options: UseMediaOptions = {}) {
   const getSecureDownloadUrl = useCallback(
     async (assetId: string): Promise<string | null> => {
       try {
-        // Get asset details
+        // Get current user for authorization check
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+        if (!currentUser) {
+          toast.error('Authentication required');
+          return null;
+        }
+
+        // Get asset details with ownership verification
         const { data: asset, error: fetchError } = await supabase
           .from('media_assets')
-          .select('storage_path, storage_bucket, mime_type, filename')
+          .select('storage_path, storage_bucket, mime_type, filename, uploaded_by')
           .eq('id', assetId)
           .single();
 
         if (fetchError || !asset) {
           toast.error('File not found');
+          return null;
+        }
+
+        // SECURITY: Verify user has access to this file (owner or has property access)
+        const hasAccess = asset.uploaded_by === currentUser.id || 
+          await checkMediaAccess(assetId, currentUser.id);
+        
+        if (!hasAccess) {
+          toast.error('Access denied');
+          // Log unauthorized access attempt
+          console.warn(`[Security] Unauthorized download attempt: User ${currentUser.id} tried to access asset ${assetId}`);
           return null;
         }
 

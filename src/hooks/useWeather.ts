@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabase';
 
 export interface WeatherData {
     temp: number;
@@ -67,13 +68,16 @@ export function useWeather() {
             const timeoutId = setTimeout(() => controller.abort(), 5000)
 
             try {
-                const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&timezone=auto`
-                const res = await fetch(url, { signal: controller.signal })
-                if (!res.ok) {
-                    throw new Error(`Weather request failed with ${res.status}`)
+                // Use edge function proxy to avoid CORS issues
+                const { data: weatherData, error } = await supabase.functions.invoke('weather-proxy', {
+                    body: { lat, lon },
+                })
+                
+                if (error) {
+                    throw new Error(`Weather request failed: ${error.message}`)
                 }
 
-                const json = await res.json()
+                const json = weatherData
                 if (!json?.current) {
                     throw new Error('Weather response did not include current conditions')
                 }
@@ -94,6 +98,10 @@ export function useWeather() {
                 }
             } catch (error) {
                 console.error("Failed to fetch weather:", error)
+                // Don't log CORS errors as they're expected in dev without the proxy
+                if (error instanceof Error && error.message.includes('CORS')) {
+                    console.log('Weather fetch blocked by CORS - using cached data or defaults')
+                }
                 if (mounted) {
                     const fallbackWeather = cachedWeather ?? readCachedWeather()
                     if (fallbackWeather) {

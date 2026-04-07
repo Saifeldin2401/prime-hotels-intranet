@@ -140,7 +140,12 @@ Return ONLY valid JSON.`
                 let rawContent = aiResult?.response || ''
 
                 // Clean up Markdown code blocks if present
-                rawContent = rawContent.replace(/```json/g, '').replace(/```/g, '')
+                // Use recursive sanitization to prevent bypass attempts with nested patterns
+                let previous: string;
+                do {
+                  previous = rawContent;
+                  rawContent = previous.replace(/```json/g, '').replace(/```/g, '');
+                } while (rawContent !== previous)
 
                 // Extract JSON object
                 const jsonMatch = rawContent.match(/\{[\s\S]*\}/)

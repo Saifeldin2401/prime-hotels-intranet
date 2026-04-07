@@ -10,6 +10,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 
 interface UsePersistentStateOptions {
   /** Storage key prefix */
@@ -79,10 +80,10 @@ export function usePersistentState<T>(
 
     try {
       // Try localStorage first
-      const stored = localStorage.getItem(fullKey)
+      const stored = safeLocalStorage.getItem(fullKey)
       
       // If not in localStorage, try sessionStorage backup
-      const backupStored = fullBackupKey ? sessionStorage.getItem(fullBackupKey) : null
+      const backupStored = fullBackupKey ? safeSessionStorage.getItem(fullBackupKey) : null
       
       const valueToRestore = stored ?? backupStored
       
@@ -117,11 +118,11 @@ export function usePersistentState<T>(
         }
 
         // Save to localStorage
-        localStorage.setItem(fullKey, serialized)
+        safeLocalStorage.setItem(fullKey, serialized)
         
         // Save to sessionStorage backup if configured
         if (fullBackupKey) {
-          sessionStorage.setItem(fullBackupKey, serialized)
+          safeSessionStorage.setItem(fullBackupKey, serialized)
         }
         
         setLastSaved(Date.now())
@@ -173,9 +174,9 @@ export function usePersistentState<T>(
   // Clear stored value
   const clearValue = useCallback(() => {
     try {
-      localStorage.removeItem(fullKey)
+      safeLocalStorage.removeItem(fullKey)
       if (fullBackupKey) {
-        sessionStorage.removeItem(fullBackupKey)
+        safeSessionStorage.removeItem(fullBackupKey)
       }
       setState(initialValue)
       setLastSaved(null)

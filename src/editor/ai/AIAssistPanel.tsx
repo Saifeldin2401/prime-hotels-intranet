@@ -9,6 +9,7 @@ import { resolveCommands } from '@/editor/ai/commands'
 import type { AIAssistCommand, AIConfig, TextDirection } from '@/editor/types'
 import { getSelectedContent } from '@/editor/utils/selection'
 import { containsDangerousContent, sanitizeHtml } from '@/lib/sanitize'
+import DOMPurify from 'dompurify'
 import type { Editor } from '@tiptap/react'
 import { Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
@@ -223,7 +224,7 @@ export function AIAssistPanel({
                 {/* SECURITY: Content was pre-sanitized in validateAiResponse() */}
                 <div
                   className="max-h-64 overflow-auto rounded-lg border bg-muted/30 p-3 text-sm prose prose-sm max-w-none shadow-inner"
-                  dangerouslySetInnerHTML={{ __html: replacement.originalHtml }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(replacement.originalHtml || '') }}
                 />
               </InlineErrorBoundary>
             </div>
@@ -233,7 +234,7 @@ export function AIAssistPanel({
                 {/* SECURITY: Content was pre-sanitized in validateAiResponse() */}
                 <div
                   className="max-h-64 overflow-auto rounded-lg border-emerald-500/30 bg-emerald-500/5 p-3 text-sm prose prose-sm max-w-none shadow-inner ring-1 ring-emerald-500/20"
-                  dangerouslySetInnerHTML={{ __html: replacement.suggestedHtml }}
+                  dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(replacement.suggestedHtml || '') }}
                 />
               </InlineErrorBoundary>
             </div>

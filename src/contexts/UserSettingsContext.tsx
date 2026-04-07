@@ -7,7 +7,6 @@ interface UserSettings {
     high_contrast: boolean
     large_text: boolean
     keyboard_shortcuts: boolean
-    timezone: string
     theme: string
 }
 
@@ -27,7 +26,6 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
         high_contrast: false,
         large_text: false,
         keyboard_shortcuts: true,
-        timezone: 'Asia/Riyadh',
         theme: 'light'
     })
 
@@ -55,7 +53,7 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
 
             const { data, error } = await supabase
                 .from('user_settings')
-                .select('reduced_motion, high_contrast, large_text, keyboard_shortcuts, timezone, theme')
+                .select('reduced_motion, high_contrast, large_text, keyboard_shortcuts, theme')
                 .eq('user_id', user.id)
                 .limit(1)
 
@@ -74,7 +72,6 @@ export function UserSettingsProvider({ children }: { children: React.ReactNode }
                     high_contrast: false,
                     large_text: false,
                     keyboard_shortcuts: true,
-                    timezone: 'Asia/Riyadh',
                     theme: 'light'
                 }
                 const { error: insertError } = await supabase

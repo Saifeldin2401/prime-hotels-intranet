@@ -1,7 +1,7 @@
 // Offline service for handling form submissions when network is unavailable
 // This runs in the main thread, not in the service worker
 
-interface PendingSubmission {
+export interface PendingSubmission {
   id: string
   url: string
   method: string
@@ -125,16 +125,53 @@ export async function offlineFetch(
         body: options.body as string || '',
       })
 
-      // Return a mock success response
+      // Return a 503 Service Unavailable with queue information
+      // This clearly indicates the request is pending, NOT successful
       return new Response(
         JSON.stringify({
-          success: true,
+          success: false,
           queued: true,
-          message: offlineMessage || 'Request queued for offline processing',
+          pendingSync: true,
+          message: offlineMessage || 'You are offline. Your changes will be saved when you reconnect.',
+          syncRequired: true,
         }),
-        { status: 202, headers: { 'Content-Type': 'application/json' } }
+        { 
+          status: 503, 
+          statusText: 'Service Unavailable - Pending Sync',
+          headers: { 'Content-Type': 'application/json' } 
+        }
       )
     }
     throw error
+  }
+}
+
+// Check if a response indicates a pending offline operation
+export function isPendingSyncResponse(response: Response): boolean {
+  return response.status === 503 && response.headers.get('Content-Type')?.includes('application/json') === true;
+}
+
+// Parse pending sync response to get details
+export async function parsePendingSyncResponse(response: Response): Promise<{
+  success: boolean;
+  queued: boolean;
+  pendingSync: boolean;
+  message: string;
+  syncRequired: boolean;
+} | null> {
+  try {
+    const data = await response.json();
+    if (data.pendingSync) {
+      return {
+        success: false,
+        queued: data.queued ?? true,
+        pendingSync: true,
+        message: data.message || 'Changes pending sync',
+        syncRequired: data.syncRequired ?? true,
+      };
+    }
+    return null;
+  } catch {
+    return null;
   }
 }

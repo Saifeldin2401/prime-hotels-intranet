@@ -176,8 +176,7 @@ Deno.serve(async (req) => {
     console.error("Error:", error);
     return new Response(
       JSON.stringify({
-        error: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        error: "Internal server error",
       }),
       {
         status: 500,

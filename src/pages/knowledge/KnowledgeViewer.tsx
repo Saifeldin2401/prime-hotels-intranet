@@ -633,7 +633,14 @@ export default function KnowledgeViewer() {
     // Estimated Reading Time
     const readingTime = useMemo(() => {
         if (!article?.content) return 1
-        const words = article.content.replace(/<[^>]*>/g, '').split(/\s+/).length
+        // Use recursive sanitization to prevent bypass attempts with nested tags
+        let previous: string;
+        let sanitized = article.content;
+        do {
+          previous = sanitized;
+          sanitized = previous.replace(/<[^>]*>/g, '');
+        } while (sanitized !== previous);
+        const words = sanitized.split(/\s+/).length
         return Math.max(1, Math.ceil(words / 200)) // 200 wpm
     }, [article?.content])
 

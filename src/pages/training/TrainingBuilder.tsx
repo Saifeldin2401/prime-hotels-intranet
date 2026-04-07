@@ -235,7 +235,14 @@ const normalizeEstimatedDuration = (value?: number | null) => {
 const estimateBlockDurationMinutes = (block: ContentBlockForm) => {
   if (block.duration && block.duration > 0) return block.duration
   if (block.type === 'text') {
-    const text = (block.content || '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let text = block.content || '';
+    do {
+      previous = text;
+      text = previous.replace(/<[^>]*>/g, ' ');
+    } while (text !== previous);
+    text = text.replace(/\s+/g, ' ').trim()
     const words = text ? text.split(' ').length : 0
     if (!words) return 0
     return Math.max(1, Math.round(words / 180))
@@ -277,12 +284,18 @@ const deriveTitleFromUrl = (value: string) => {
 }
 
 const stripHtml = (value: string) => {
-  return value
-    .replace(/<[^>]*>/g, ' ')
+  // Use recursive sanitization to prevent bypass attempts with nested tags
+  let previous: string;
+  let result = value;
+  do {
+    previous = result;
+    result = previous.replace(/<[^>]*>/g, ' ');
+  } while (result !== previous);
+  return result
     .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&')
     .replace(/\s+/g, ' ')
     .trim()
 }

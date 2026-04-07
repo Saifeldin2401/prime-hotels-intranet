@@ -1,5 +1,6 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { RouteErrorBoundary } from '@/components/common'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
@@ -30,10 +31,12 @@ export const TrainingRoutes = () => (
         <Route
             path="/training"
             element={<PreserveQueryNavigate to="/training/hub" />}
+            errorElement={<RouteErrorBoundary section="Training" />}
         />
         <Route
             path="/training/modules"
             element={<PreserveQueryNavigate to="/training/hub?view=list" />}
+            errorElement={<RouteErrorBoundary section="Training" />}
         />
         <Route
             path="/training/hub"
@@ -46,6 +49,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Hub" />}
         />
         <Route
             path="/training/hub/:id"
@@ -56,10 +60,12 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Hub" />}
         />
         <Route
             path="/training/my"
             element={<PreserveQueryNavigate to="/learning/my" />}
+            errorElement={<RouteErrorBoundary section="Training" />}
         />
         <Route
             path="/training/certificates"
@@ -70,10 +76,12 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Certificates" />}
         />
         <Route
             path="/training/builder"
             element={<PreserveQueryNavigate to="/training/hub?view=builder" />}
+            errorElement={<RouteErrorBoundary section="Training Builder" />}
         />
         <Route
             path="/training/builder/:id"
@@ -82,10 +90,12 @@ export const TrainingRoutes = () => (
                     <TrainingBuilderRedirect />
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Builder" />}
         />
         <Route
             path="/training/assignments"
             element={<PreserveQueryNavigate to="/training/hub?view=assignments" />}
+            errorElement={<RouteErrorBoundary section="Training Assignments" />}
         />
         <Route
             path="/training/assignments/rules"
@@ -96,6 +106,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Rules" />}
         />
         <Route
             path="/training/paths"
@@ -106,6 +117,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Paths" />}
         />
         <Route
             path="/learning/quizzes"
@@ -116,6 +128,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Quizzes" />}
         />
         <Route
             path="/learning/quizzes/new"
@@ -126,6 +139,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Quiz Builder" />}
         />
         <Route
             path="/learning/quizzes/:id"
@@ -136,6 +150,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Quiz Builder" />}
         />
         <Route
             path="/learning/quizzes/:id/take"
@@ -146,6 +161,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Quiz Player" />}
         />
         <Route
             path="/learning/assignments"
@@ -156,6 +172,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Learning Assignments" />}
         />
         <Route
             path="/learning/my"
@@ -166,10 +183,12 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="My Learning" />}
         />
         <Route
             path="/learning"
             element={<PreserveQueryNavigate to="/learning/my" />}
+            errorElement={<RouteErrorBoundary section="Learning" />}
         />
         <Route
             path="/learning/microlearning/:id"
@@ -180,6 +199,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Microlearning" />}
         />
         <Route
             path="/learning/training/:id"
@@ -190,6 +210,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Training Player" />}
         />
         <Route
             path="/learning/analytics"
@@ -200,6 +221,7 @@ export const TrainingRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+            errorElement={<RouteErrorBoundary section="Learning Analytics" />}
         />
     </>
 )

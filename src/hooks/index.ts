@@ -32,6 +32,7 @@ export * from './useDashboardPreferences';
 export * from './useMedia';
 export * from './useMediaQuery';
 export * from './useNotifications';
+export * from './useOfflineSync';
 export * from './usePins';
 export * from './useProperties';
 export * from './useQuickActions';

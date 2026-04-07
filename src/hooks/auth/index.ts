@@ -6,3 +6,6 @@ export { useAccountActions } from '../useAccountActions'
 export { useAuth } from '../useAuth'
 export { useInactivityTimeout } from '../useInactivityTimeout'
 export { usePermissions } from '../usePermissions'
+
+// New focused auth hooks (recommended for performance)
+export { useAuthIdentity, useAuthSecurity, useUserData, useAuthActions } from '@/contexts/auth'

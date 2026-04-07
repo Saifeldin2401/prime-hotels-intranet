@@ -18,8 +18,106 @@ import type { QuestionStatus } from '@/types/questions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
 
+// Default pagination limit for training modules
+const DEFAULT_MODULES_LIMIT = 50
 
-// Training Modules
+// Training Modules with Pagination (RECOMMENDED)
+export interface UseTrainingModulesPaginatedOptions {
+  created_by?: string
+  search?: string
+  cursor?: string | null // For cursor-based pagination
+  limit?: number
+}
+
+export interface TrainingModulesPaginatedResult {
+  modules: (TrainingModule & {
+    profiles?: { full_name: string; email: string }
+    training_content_blocks?: TrainingContentBlock[]
+    training_quizzes?: TrainingQuiz[]
+  })[]
+  nextCursor: string | null
+  hasMore: boolean
+}
+
+export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginatedOptions) {
+  const limit = options?.limit || DEFAULT_MODULES_LIMIT
+  
+  return useQuery({
+    queryKey: ['training-modules-paginated', options],
+    queryFn: async (): Promise<TrainingModulesPaginatedResult> => {
+      let query = supabase
+        .from('training_modules')
+        .select(`
+          id,
+          title,
+          description,
+          estimated_duration_minutes,
+          difficulty_level,
+          status,
+          created_by,
+          created_at,
+          updated_at,
+          is_deleted,
+          certificate_enabled,
+          profiles!training_modules_created_by_fkey(
+            full_name,
+            email
+          ),
+          training_content_blocks(
+            id,
+            type,
+            order,
+            is_mandatory
+          ),
+          training_quizzes(
+            id,
+            type,
+            order
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .eq('is_deleted', false)
+        .limit(limit)
+
+      // Apply cursor-based pagination
+      if (options?.cursor) {
+        query = query.lt('created_at', options.cursor)
+      }
+
+      if (options?.created_by) {
+        query = query.eq('created_by', options.created_by)
+      }
+      if (options?.search) {
+        const escaped = escapeSearchQuery(options.search)
+        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+      }
+
+      const { data, error } = await query
+      if (error) throw error
+
+      const modules = data as unknown as (TrainingModule & {
+        profiles?: { full_name: string; email: string }
+        training_content_blocks?: TrainingContentBlock[]
+        training_quizzes?: TrainingQuiz[]
+      })[]
+
+      // Determine if there are more results
+      const hasMore = modules.length === limit
+      const nextCursor = hasMore && modules.length > 0 
+        ? modules[modules.length - 1].created_at 
+        : null
+
+      return {
+        modules,
+        nextCursor,
+        hasMore
+      }
+    },
+  })
+}
+
+// Training Modules (Legacy - kept for backward compatibility)
+// WARNING: This fetches ALL modules. Use useTrainingModulesPaginated for better performance.
 export function useTrainingModules(filters?: {
   created_by?: string
   search?: string
@@ -30,7 +128,17 @@ export function useTrainingModules(filters?: {
       let query = supabase
         .from('training_modules')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          estimated_duration_minutes,
+          difficulty_level,
+          status,
+          created_by,
+          created_at,
+          updated_at,
+          is_deleted,
+          certificate_enabled,
           profiles!training_modules_created_by_fkey(
             full_name,
             email
@@ -61,7 +169,7 @@ export function useTrainingModules(filters?: {
       const { data, error } = await query
       if (error) throw error
 
-      return data as (TrainingModule & {
+      return data as unknown as (TrainingModule & {
         profiles?: { full_name: string; email: string }
         training_content_blocks?: TrainingContentBlock[]
         training_quizzes?: TrainingQuiz[]
@@ -279,6 +387,7 @@ export function useUpdateQuiz() {
 }
 
 // Training Assignments
+// PERFORMANCE FIX: Uses single query with proper join instead of N+1
 export function useTrainingAssignments(filters?: {
   assigned_to_user_id?: string
   assigned_to_department_id?: string
@@ -288,13 +397,32 @@ export function useTrainingAssignments(filters?: {
   return useQuery({
     queryKey: ['training-assignments', filters],
     queryFn: async () => {
+      // Use a single query with proper joins to avoid N+1
       let query = supabase
         .from('learning_assignments')
         .select(`
-          *,
+          id,
+          content_type,
+          content_id,
+          target_type,
+          target_id,
+          assigned_by,
+          assigned_at,
+          due_date,
+          priority,
+          status,
+          completed_at,
+          created_at,
+          updated_at,
           profiles!learning_assignments_assigned_by_fkey(
             full_name,
             email
+          ),
+          training_modules!learning_assignments_content_id_fkey(
+            id,
+            title,
+            description,
+            estimated_duration_minutes
           )
         `)
         .order('created_at', { ascending: false })
@@ -312,35 +440,14 @@ export function useTrainingAssignments(filters?: {
         query = query.eq('content_type', 'module').eq('content_id', filters.training_module_id)
       }
 
-      const { data: assignments, error } = await query
+      const { data, error } = await query
       if (error) throw error
 
-      // Manual join for modules
-      if (assignments && assignments.length > 0) {
-        const moduleIds = assignments
-          .filter((a: LearningAssignment) => a.content_type === 'module')
-          .map((a: LearningAssignment) => a.content_id)
-
-        if (moduleIds.length > 0) {
-          const { data: modules } = await supabase
-            .from('training_modules')
-            .select('id, title, description, estimated_duration_minutes')
-            .in('id', moduleIds)
-
-          if (modules) {
-            const moduleMap = new Map(modules.map(m => [m.id, m]))
-            return assignments.map((a: LearningAssignment) => ({
-              ...a,
-              training_modules: a.content_type === 'module' ? moduleMap.get(a.content_id) : null
-            })) as (LearningAssignment & {
-              training_modules?: TrainingModule
-              profiles?: { full_name: string; email: string }
-            })[]
-          }
-        }
-      }
-
-      return assignments as (LearningAssignment & {
+      return (data as any[]).map(assignment => ({
+        ...assignment,
+        training_modules: Array.isArray(assignment.training_modules) ? assignment.training_modules[0] : assignment.training_modules,
+        profiles: Array.isArray(assignment.profiles) ? assignment.profiles[0] : assignment.profiles
+      })) as unknown as (LearningAssignment & {
         training_modules?: TrainingModule
         profiles?: { full_name: string; email: string }
       })[]
@@ -383,9 +490,19 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
     queryKey: ['training-progress', userId, trainingId],
     queryFn: async () => {
       let query = supabase
-        .from('training_progress')
+        .from('learning_progress')
         .select(`
-          *,
+          id,
+          user_id,
+          training_id:training_module_id,
+          assignment_id,
+          status,
+          completed_at,
+          progress_percentage,
+          score_percentage,
+          is_deleted,
+          created_at,
+          updated_at,
           training_modules(
             id,
             title,
@@ -410,7 +527,11 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
       const { data, error } = await query
       if (error) throw error
 
-      return data as (TrainingProgress & {
+      return (data as any[]).map(progress => ({
+        ...progress,
+        training_modules: Array.isArray(progress.training_modules) ? progress.training_modules[0] : progress.training_modules,
+        learning_assignments: Array.isArray(progress.learning_assignments) ? progress.learning_assignments[0] : progress.learning_assignments
+      })) as unknown as (TrainingProgress & {
         training_modules?: TrainingModule
         learning_assignments?: LearningAssignment
       })[]

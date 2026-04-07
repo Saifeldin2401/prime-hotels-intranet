@@ -916,7 +916,7 @@ Use ONLY real data from the reviews provided. Do not invent information.`,
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       }),
       {
         status: 500,

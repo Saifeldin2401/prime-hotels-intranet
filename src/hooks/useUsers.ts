@@ -43,7 +43,19 @@ export function useProfiles(filters?: {
             let query = supabase
                 .from('profiles')
                 .select(`
-                    *,
+                    id,
+                    full_name,
+                    email,
+                    phone,
+                    job_title,
+                    staff_id,
+                    avatar_url,
+                    language,
+                    date_of_birth,
+                    is_active,
+                    created_at,
+                    updated_at,
+                    reporting_to,
                     user_roles(role),
                     user_properties(property:properties(id, name)),
                     user_departments(department:departments(id, name)),

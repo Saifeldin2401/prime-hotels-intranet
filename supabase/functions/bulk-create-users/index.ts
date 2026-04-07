@@ -832,9 +832,10 @@ Deno.serve(async (req: Request) => {
       },
     );
   } catch (err) {
+    console.error("bulk-create-users error:", err);
     return new Response(
       JSON.stringify({
-        error: err instanceof Error ? err.message : String(err),
+        error: "Internal server error",
       }),
       {
         status: 500,

@@ -151,3 +151,35 @@ root.render(
 )
 
 void cleanupLegacyPwaArtifacts()
+
+// Register service worker for push notifications and offline support
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[SW] Service Worker registered:', registration.scope)
+        }
+        
+        // Handle updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available
+                window.dispatchEvent(new CustomEvent('phg:update-available'))
+              }
+            })
+          }
+        })
+      })
+      .catch((error) => {
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('[SW] Service Worker registration failed:', error)
+        }
+      })
+  })
+}

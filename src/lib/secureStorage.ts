@@ -152,17 +152,11 @@ const decryptPayload = async <T>(value: string): Promise<T | null> => {
 // =============================================================================
 
 export const setEncryptedLocalStorage = async (key: string, value: unknown): Promise<void> => {
-  try {
-    const encrypted = await encryptPayload(value)
-    if (encrypted) {
-      localStorage.setItem(key, encrypted)
-      return
-    }
-  } catch {
-    // Fall through to plaintext storage
+  const encrypted = await encryptPayload(value)
+  if (!encrypted) {
+    throw new Error(`Failed to encrypt data for key: ${key}`)
   }
-
-  localStorage.setItem(key, JSON.stringify(value))
+  localStorage.setItem(key, encrypted)
 }
 
 export const getEncryptedLocalStorage = async <T>(key: string): Promise<T | null> => {
@@ -188,17 +182,11 @@ export const removeEncryptedLocalStorage = (key: string): void => {
 // =============================================================================
 
 export const setEncryptedSessionStorage = async (key: string, value: unknown): Promise<void> => {
-  try {
-    const encrypted = await encryptPayload(value)
-    if (encrypted) {
-      sessionStorage.setItem(key, encrypted)
-      return
-    }
-  } catch {
-    // Fall through to plaintext storage
+  const encrypted = await encryptPayload(value)
+  if (!encrypted) {
+    throw new Error(`Failed to encrypt data for key: ${key}`)
   }
-
-  sessionStorage.setItem(key, JSON.stringify(value))
+  sessionStorage.setItem(key, encrypted)
 }
 
 export const getEncryptedSessionStorage = async <T>(key: string): Promise<T | null> => {
@@ -341,7 +329,9 @@ export const validateStorageIntegrity = async (): Promise<boolean> => {
   const testValue = { timestamp: Date.now(), nonce: Math.random() }
   
   try {
-    await setEncryptedSessionStorage(testKey, testValue)
+    const encrypted = await encryptPayload(testValue)
+    if (!encrypted) return false
+    sessionStorage.setItem(testKey, encrypted)
     const retrieved = await getEncryptedSessionStorage<typeof testValue>(testKey)
     removeEncryptedSessionStorage(testKey)
     

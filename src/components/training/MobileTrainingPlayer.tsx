@@ -45,6 +45,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 import { useNavigate, useParams } from 'react-router-dom'
 
 interface MobileTrainingPlayerProps {
@@ -422,7 +423,7 @@ function MobileBlockRenderer({ block, onComplete }: MobileBlockRendererProps) {
             return (
                 <Card className="overflow-hidden">
                     <CardContent className="p-4 prose prose-sm max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: block.content || '' }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content || '') }} />
                     </CardContent>
                 </Card>
             )

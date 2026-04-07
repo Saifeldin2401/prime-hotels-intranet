@@ -167,7 +167,16 @@ export function AnnouncementsWidget() {
                               </div>
 
                               <p className="text-sm font-medium text-slate-500 line-clamp-1 mb-3">
-                                {announcement.content?.replace(/<[^>]*>?/gm, '') || "Click to view full details..."}
+                                {(() => {
+                              // Use recursive sanitization to prevent bypass attempts with nested tags
+                              let previous: string;
+                              let sanitized = announcement.content || '';
+                              do {
+                                previous = sanitized;
+                                sanitized = previous.replace(/<[^>]*>?/gm, '');
+                              } while (sanitized !== previous);
+                              return sanitized || "Click to view full details...";
+                            })()}
                               </p>
                             </Link>
 

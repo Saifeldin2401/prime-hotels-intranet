@@ -535,11 +535,11 @@ function drawContentSection(
 function decodeBasicEntities(input: string): string {
     return input
         .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
         .replace(/&quot;/g, '"')
         .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, '&')
 }
 
 function normalizeToMarkup(input: string): string {
@@ -550,26 +550,29 @@ function normalizeToMarkup(input: string): string {
     // Normalize HTML to simple markup + line breaks
     const looksHtml = /<\s*\w+[^>]*>/.test(s)
     if (looksHtml) {
-        s = s.replace(/<\s*br\s*\/?>/gi, '\n')
-        s = s.replace(/<\s*\/\s*p\s*>/gi, '\n\n')
-        s = s.replace(/<\s*p\b[^>]*>/gi, '')
-
-        // Lists
-        s = s.replace(/<\s*\/\s*ul\s*>/gi, '\n')
-        s = s.replace(/<\s*ul\b[^>]*>/gi, '\n')
-        s = s.replace(/<\s*\/\s*ol\s*>/gi, '\n')
-        s = s.replace(/<\s*ol\b[^>]*>/gi, '\n')
-        s = s.replace(/<\s*li\b[^>]*>/gi, '- ')
-        s = s.replace(/<\s*\/\s*li\s*>/gi, '\n')
-
-        // Inline emphasis -> markdown-like markers
-        s = s.replace(/<\s*(strong|b)\b[^>]*>/gi, '**')
-        s = s.replace(/<\s*\/\s*(strong|b)\s*>/gi, '**')
-        s = s.replace(/<\s*(em|i)\b[^>]*>/gi, '*')
-        s = s.replace(/<\s*\/\s*(em|i)\s*>/gi, '*')
-
-        // Remove remaining tags
-        s = s.replace(/<[^>]*>/g, '')
+        // Use recursive sanitization to prevent bypass attempts with nested tags
+        let previous: string;
+        do {
+            previous = s;
+            s = previous
+                .replace(/<\s*br\s*\/?>/gi, '\n')
+                .replace(/<\s*\/\s*p\s*>/gi, '\n\n')
+                .replace(/<\s*p\b[^>]*>/gi, '')
+                // Lists
+                .replace(/<\s*\/\s*ul\s*>/gi, '\n')
+                .replace(/<\s*ul\b[^>]*>/gi, '\n')
+                .replace(/<\s*\/\s*ol\s*>/gi, '\n')
+                .replace(/<\s*ol\b[^>]*>/gi, '\n')
+                .replace(/<\s*li\b[^>]*>/gi, '- ')
+                .replace(/<\s*\/\s*li\s*>/gi, '\n')
+                // Inline emphasis -> markdown-like markers
+                .replace(/<\s*(strong|b)\b[^>]*>/gi, '**')
+                .replace(/<\s*\/\s*(strong|b)\s*>/gi, '**')
+                .replace(/<\s*(em|i)\b[^>]*>/gi, '*')
+                .replace(/<\s*\/\s*(em|i)\s*>/gi, '*')
+                // Remove remaining tags
+                .replace(/<[^>]*>/g, '');
+        } while (s !== previous);
         s = decodeBasicEntities(s)
     }
 

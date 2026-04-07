@@ -73,7 +73,7 @@ export interface LearningAssignment {
 
     // Rules
     due_date?: string
-    valid_from: string
+    valid_from?: string
     expires_at?: string
 
     // Meta

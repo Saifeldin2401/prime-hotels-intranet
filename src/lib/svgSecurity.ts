@@ -4,13 +4,14 @@
  */
 
 const DANGEROUS_SVG_PATTERNS = [
-  /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+  // Simplified script tag detection - just checks for opening script tag pattern
+  /<\s*script\b/i,
   /javascript:/gi,
   /on\w+\s*=/gi, // onclick, onload, etc.
   /data:text\/html/gi,
-  /<iframe\b/gi,
-  /<object\b/gi,
-  /<embed\b/gi,
+  /<\s*iframe\b/gi,
+  /<\s*object\b/gi,
+  /<\s*embed\b/gi,
 ];
 
 const ALLOWED_SVG_ELEMENTS = new Set([

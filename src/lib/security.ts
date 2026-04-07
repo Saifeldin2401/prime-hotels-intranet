@@ -585,10 +585,13 @@ export const validateLength = (
 
 /**
  * Validate that input doesn't contain HTML/script tags
+ * Uses simple pattern detection - DOMPurify is used for actual sanitization when needed
  */
 export const validateNoHtml = (value: string, fieldName = 'Field'): ValidationResult<string> => {
-  const htmlPattern = /<[^>]*>/;
-  const scriptPattern = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi;
+  // Simple pattern to detect potential HTML tags
+  const htmlPattern = /<[^>]+>/;
+  // Check for script tag patterns (case-insensitive, various forms)
+  const scriptPattern = /<\s*script\b/i;
   
   if (scriptPattern.test(value)) {
     return {
@@ -601,7 +604,15 @@ export const validateNoHtml = (value: string, fieldName = 'Field'): ValidationRe
   if (htmlPattern.test(value)) {
     // Allow if it's just for formatting, but warn
     const sanitized = sanitizePlainText(value);
-    if (sanitized !== value.replace(/<[^>]*>/g, '')) {
+    // Use recursive sanitization to prevent bypass attempts
+    let previous;
+    let stripped = value;
+    do {
+      previous = stripped;
+      stripped = previous.replace(/<[^>]*>/g, '');
+    } while (stripped !== previous);
+    
+    if (sanitized !== stripped) {
       return {
         success: false,
         error: `${fieldName} contains invalid characters`,

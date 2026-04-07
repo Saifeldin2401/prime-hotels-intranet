@@ -1,5 +1,6 @@
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { GlobalSearch } from '@/components/search/GlobalSearch'
+import { SyncStatus } from '@/components/common/SyncStatus'
 import {
     AlertDialogAction,
     AlertDialogCancel,
@@ -285,6 +286,9 @@ export function Header({
                 </Select>
               </div>
             )}
+
+            {/* Sync Status */}
+            <SyncStatus className="hidden md:flex" />
 
             {/* Notification Bell - Light Variant for Navy Header */}
             <div id="notifications-button" className="text-white">

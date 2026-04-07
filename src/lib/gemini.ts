@@ -407,7 +407,14 @@ export const aiService = {
 
   }): Promise<QuizQuestion[]> {
 
-    const context = request.sopContent.replace(/<[^>]*>/g, '').substring(0, 3000)
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let sanitized = request.sopContent;
+    do {
+      previous = sanitized;
+      sanitized = previous.replace(/<[^>]*>/g, '');
+    } while (sanitized !== previous);
+    const context = sanitized.substring(0, 3000)
 
     const count = request.count || 5
 
@@ -547,9 +554,14 @@ export const aiService = {
     }
 
     const serializedQuestions = JSON.stringify(questions, null, 2)
-    const moduleContext = (request.moduleContext || '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let moduleContext = request.moduleContext || '';
+    do {
+      previous = moduleContext;
+      moduleContext = previous.replace(/<[^>]*>/g, ' ');
+    } while (moduleContext !== previous);
+    moduleContext = moduleContext.replace(/\s+/g, ' ')
       .trim()
       .slice(0, 4000)
 

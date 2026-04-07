@@ -3,10 +3,14 @@
  * 
  * Provides comprehensive security features:
  * - Session binding to IP/User-Agent
- * - Brute force protection with progressive delays
  * - MFA (TOTP) support
  * - Password breach checking
  * - Secure audit logging
+ * 
+ * SECURITY NOTE: Brute force protection is handled SERVER-SIDE only.
+ * Client-side rate limiting (sessionStorage) has been removed because
+ * it can be bypassed by clearing sessionStorage. Server-side protection
+ * via Supabase Auth and database functions provides effective protection.
  */
 
 import { supabase } from './supabase';
@@ -34,6 +38,7 @@ export interface LoginAttempt {
 }
 
 export interface MFASecret {
+  factorId: string;
   secret: string;
   qrCodeUrl: string;
   backupCodes: string[];
@@ -59,6 +64,12 @@ export interface PasswordValidationResult {
 
 const SESSION_KEY = 'auth_session_fingerprint';
 const MAX_SESSION_AGE = 24 * 60 * 60 * 1000; // 24 hours
+const MFA_ENROLL_STORAGE_KEY = 'phg_mfa_enrollment';
+
+interface PendingMFAEnrollment {
+  userId: string;
+  factorId: string;
+}
 
 /**
  * Generate a hash of the current session context (IP + User-Agent)
@@ -167,61 +178,25 @@ export function clearSessionFingerprint(): void {
 // =============================================================================
 // BRUTE FORCE PROTECTION
 // =============================================================================
+// SECURITY FIX: Client-side brute force protection via sessionStorage has been
+// removed because it can be bypassed by simply clearing sessionStorage.
+// 
+// The application relies SOLELY on server-side brute force protection:
+// - Supabase Auth built-in rate limiting
+// - Database-level account lockout (profiles.locked_until, profiles.failed_login_attempts)
+// - CAPTCHA requirements enforced server-side
+//
+// The following functions remain for backward compatibility but delegate
+// all protection decisions to the server:
 
-const LOGIN_ATTEMPTS_KEY = 'auth_login_attempts';
+// Constants for server-side brute force protection (used in server-side functions)
 const MAX_ATTEMPTS_BEFORE_CAPTCHA = 3;
 const MAX_ATTEMPTS_BEFORE_LOCKOUT = 5;
 const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
-interface BruteForceRecord {
-  email: string;
-  attempts: number;
-  firstAttemptAt: number;
-  lastAttemptAt: number;
-  lockedUntil: number | null;
-  captchaRequired: boolean;
-}
-
-/**
- * Get brute force record for an email
- */
-function getBruteForceRecord(email: string): BruteForceRecord | null {
-  try {
-    const stored = sessionStorage.getItem(`${LOGIN_ATTEMPTS_KEY}_${email.toLowerCase()}`);
-    if (!stored) return null;
-    return JSON.parse(stored) as BruteForceRecord;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Store brute force record
- */
-function storeBruteForceRecord(record: BruteForceRecord): void {
-  try {
-    sessionStorage.setItem(
-      `${LOGIN_ATTEMPTS_KEY}_${record.email.toLowerCase()}`,
-      JSON.stringify(record)
-    );
-  } catch {
-    // Ignore
-  }
-}
-
-/**
- * Clear brute force record
- */
-function clearBruteForceRecord(email: string): void {
-  try {
-    sessionStorage.removeItem(`${LOGIN_ATTEMPTS_KEY}_${email.toLowerCase()}`);
-  } catch {
-    // Ignore
-  }
-}
-
 /**
  * Record a login attempt and check for brute force
+ * SECURITY: All decisions are based on SERVER-SIDE state only
  */
 export async function recordLoginAttempt(
   email: string,
@@ -230,7 +205,7 @@ export async function recordLoginAttempt(
   const normalizedEmail = email.toLowerCase().trim();
   const now = Date.now();
   
-  // Check server-side lockout first
+  // SECURITY: Check server-side lockout first (the only reliable protection)
   const serverLockout = await checkServerSideLockout(normalizedEmail);
   if (serverLockout.isLocked) {
     const remainingMinutes = Math.ceil((serverLockout.lockedUntil!.getTime() - now) / 60000);
@@ -243,83 +218,67 @@ export async function recordLoginAttempt(
   }
   
   if (success) {
-    clearBruteForceRecord(normalizedEmail);
+    // Clear server-side failed attempts on success
     await clearServerSideFailedAttempts(normalizedEmail);
     return { allowed: true, captchaRequired: false };
   }
   
-  // Record failed attempt
-  let record = getBruteForceRecord(normalizedEmail);
-  if (!record) {
-    record = {
-      email: normalizedEmail,
-      attempts: 0,
-      firstAttemptAt: now,
-      lastAttemptAt: now,
-      lockedUntil: null,
-      captchaRequired: false,
-    };
-  }
+  // Record failed attempt server-side only
+  await updateServerSideFailedAttempts(normalizedEmail);
   
-  record.attempts++;
-  record.lastAttemptAt = now;
-  
-  // Check if we should require CAPTCHA
-  if (record.attempts >= MAX_ATTEMPTS_BEFORE_CAPTCHA) {
-    record.captchaRequired = true;
-  }
-  
-  // Check if we should lock out
-  if (record.attempts >= MAX_ATTEMPTS_BEFORE_LOCKOUT) {
-    record.lockedUntil = now + LOCKOUT_DURATION_MS;
-    
-    // Also update server-side
-    await updateServerSideLockout(normalizedEmail, record.attempts);
+  // Re-check server-side state after recording the attempt
+  const updatedLockout = await checkServerSideLockout(normalizedEmail);
+  if (updatedLockout.isLocked) {
+    const remainingMinutes = Math.ceil((updatedLockout.lockedUntil!.getTime() - now) / 60000);
     
     // Log security event
     await logSecurityEvent('account.lockout_triggered', {
       email: normalizedEmail,
-      attempts: record.attempts,
-      lockedUntil: new Date(record.lockedUntil).toISOString(),
+      attempts: updatedLockout.failedAttempts,
+      lockedUntil: updatedLockout.lockedUntil!.toISOString(),
     });
-    
-    storeBruteForceRecord(record);
     
     return {
       allowed: false,
       captchaRequired: true,
-      lockoutMinutes: 30,
-      message: `Too many failed attempts. Account locked for 30 minutes.`,
+      lockoutMinutes: remainingMinutes,
+      message: `Too many failed attempts. Account locked for ${remainingMinutes} minutes.`,
     };
   }
   
-  // Update server-side failed attempts counter
-  await updateServerSideFailedAttempts(normalizedEmail);
-  
-  storeBruteForceRecord(record);
+  // Determine CAPTCHA requirement based on server-side failed attempts
+  const captchaRequired = updatedLockout.failedAttempts >= 3;
   
   return {
-    allowed: !record.captchaRequired,
-    captchaRequired: record.captchaRequired,
-    message: record.captchaRequired ? 'Please complete the CAPTCHA to continue.' : undefined,
+    allowed: !captchaRequired,
+    captchaRequired,
+    message: captchaRequired ? 'Please complete the CAPTCHA to continue.' : undefined,
   };
 }
 
 /**
  * Check if CAPTCHA is required for login
+ * SECURITY: Checks server-side failed attempts only
  */
-export function isCaptchaRequired(email: string): boolean {
-  const record = getBruteForceRecord(email.toLowerCase().trim());
-  return record?.captchaRequired ?? false;
+export async function isCaptchaRequired(email: string): Promise<boolean> {
+  const lockoutStatus = await checkServerSideLockout(email.toLowerCase().trim());
+  return lockoutStatus.failedAttempts >= 3;
+}
+
+/**
+ * Get the current server-side lockout state for an email address.
+ */
+export async function getAccountLockoutStatus(email: string): Promise<AccountLockoutStatus> {
+  return checkServerSideLockout(email.toLowerCase().trim());
 }
 
 /**
  * Get remaining attempts before lockout
+ * SECURITY: Checks server-side failed attempts only
  */
-export function getRemainingAttempts(email: string): number {
-  const record = getBruteForceRecord(email.toLowerCase().trim());
-  if (!record) return MAX_ATTEMPTS_BEFORE_LOCKOUT;
-  return Math.max(0, MAX_ATTEMPTS_BEFORE_LOCKOUT - record.attempts);
+export async function getRemainingAttempts(email: string): Promise<number> {
+  const lockoutStatus = await checkServerSideLockout(email.toLowerCase().trim());
+  return Math.max(0, MAX_ATTEMPTS_BEFORE_LOCKOUT - lockoutStatus.failedAttempts);
 }
 
 // =============================================================================
@@ -432,10 +391,47 @@ async function clearServerSideFailedAttempts(email: string): Promise<void> {
  */
 export async function generateMFASecret(userId: string): Promise<MFASecret | null> {
   try {
-    const { data, error } = await supabase.rpc('generate_mfa_secret', { p_user_id: userId });
-    if (error || !data) return null;
-    return data as MFASecret;
-  } catch {
+    const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
+    if (listError) {
+      if (import.meta.env.DEV) {
+        console.warn('[MFA] Failed to list factors before enrollment:', listError);
+      }
+      return null;
+    }
+
+    const unverifiedTotpFactors = (factorList?.all ?? []).filter(
+      (factor) => factor.factor_type === 'totp' && factor.status === 'unverified',
+    );
+
+    for (const factor of unverifiedTotpFactors) {
+      await supabase.auth.mfa.unenroll({ factorId: factor.id });
+    }
+
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: 'totp',
+      friendlyName: 'PHG Connect',
+      issuer: 'PHG Connect',
+    });
+
+    if (error || !data?.id || !data.totp?.secret) {
+      if (import.meta.env.DEV) {
+        console.warn('[MFA] Failed to enroll TOTP factor:', error);
+      }
+      return null;
+    }
+
+    storePendingMFAEnrollment({ userId, factorId: data.id });
+
+    return {
+      factorId: data.id,
+      secret: data.totp.secret,
+      backupCodes: [],
+      qrCodeUrl: buildSupabaseQrCodeUrl(data.totp.qr_code, data.totp.uri, userId, data.totp.secret),
+    };
+  } catch (error) {
+    if (import.meta.env.DEV) {
+      console.warn('[MFA] Unexpected error during enrollment:', error);
+    }
     return null;
   }
 }
@@ -445,14 +441,20 @@ export async function generateMFASecret(userId: string): Promise<MFASecret | nul
  */
 export async function enableMFA(userId: string, code: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('enable_mfa', {
-      p_user_id: userId,
-      p_verification_code: code,
+    const enrollment = getPendingMFAEnrollment();
+    if (!enrollment || enrollment.userId !== userId) {
+      return false;
+    }
+
+    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId: enrollment.factorId,
+      code,
     });
-    if (error) return false;
-    
+    if (error || !data) return false;
+
+    clearPendingMFAEnrollment();
     await logSecurityEvent('mfa.enabled', { userId });
-    return data as boolean;
+    return true;
   } catch {
     return false;
   }
@@ -463,14 +465,33 @@ export async function enableMFA(userId: string, code: string): Promise<boolean> 
  */
 export async function disableMFA(userId: string, password: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('disable_mfa', {
-      p_user_id: userId,
-      p_password: password,
+    const { data: userResult } = await supabase.auth.getUser();
+    const currentUser = userResult.user;
+    if (!currentUser?.email || currentUser.id !== userId) return false;
+
+    const { data: passwordCheck, error: passwordError } = await supabase.auth.signInWithPassword({
+      email: currentUser.email,
+      password,
     });
-    if (error) return false;
-    
+
+    if (passwordError || !passwordCheck.user || passwordCheck.user.id !== userId) {
+      return false;
+    }
+
+    const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
+    if (listError) return false;
+
+    const verifiedTotpFactors = (factorList?.totp ?? []).filter((factor) => factor.status === 'verified');
+    if (verifiedTotpFactors.length === 0) return false;
+
+    const unenrollResults = await Promise.all(
+      verifiedTotpFactors.map((factor) => supabase.auth.mfa.unenroll({ factorId: factor.id })),
+    );
+
+    if (unenrollResults.some((result) => result.error)) return false;
+
     await logSecurityEvent('mfa.disabled', { userId });
-    return data as boolean;
+    return true;
   } catch {
     return false;
   }
@@ -481,11 +502,16 @@ export async function disableMFA(userId: string, password: string): Promise<bool
  */
 export async function verifyMFACode(userId: string, code: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('verify_mfa_code', {
-      p_user_id: userId,
-      p_code: code,
+    const factorId = await getPrimaryVerifiedTotpFactorId();
+    if (!factorId) {
+      return false;
+    }
+
+    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId,
+      code,
     });
-    if (error) return false;
+    if (error || !data?.user || data.user.id !== userId) return false;
     
     if (data) {
       await logSecurityEvent('mfa.verified', { userId });
@@ -493,7 +519,7 @@ export async function verifyMFACode(userId: string, code: string): Promise<boole
       await logSecurityEvent('mfa.verification_failed', { userId });
     }
     
-    return data as boolean;
+    return true;
   } catch {
     return false;
   }
@@ -504,15 +530,13 @@ export async function verifyMFACode(userId: string, code: string): Promise<boole
  */
 export async function isMFAEnabled(userId: string): Promise<boolean> {
   try {
-    const { data, error } = await supabase.rpc('is_mfa_enabled', { p_user_id: userId });
-    if (error) {
-      // Function may not exist yet (migration not applied)
-      if (error.message?.includes('function') && error.message?.includes('does not exist')) {
-        return false;
-      }
-      return false;
-    }
-    return data as boolean;
+    const { data: userResult } = await supabase.auth.getUser();
+    if (!userResult.user || userResult.user.id !== userId) return false;
+
+    const { data, error } = await supabase.auth.mfa.listFactors();
+    if (error) return false;
+
+    return (data?.totp ?? []).some((factor) => factor.status === 'verified');
   } catch {
     return false;
   }
@@ -863,12 +887,107 @@ async function hashString(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
+function buildSupabaseQrCodeUrl(
+  qrCodeSvg: string | undefined,
+  uri: string | undefined,
+  accountId: string,
+  secret: string,
+): string {
+  if (uri) {
+    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
+  }
+
+  if (qrCodeSvg) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrCodeSvg)}`;
+  }
+
+  return buildMfaQrCodeUrl(accountId, secret);
+}
+
+function buildMfaQrCodeUrl(accountId: string, secret: string): string {
+  const otpauth = `otpauth://totp/PHG:${accountId}?secret=${secret}&issuer=PHG%20Connect`;
+  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauth)}`;
+}
+
+function storePendingMFAEnrollment(enrollment: PendingMFAEnrollment): void {
+  try {
+    sessionStorage.setItem(MFA_ENROLL_STORAGE_KEY, JSON.stringify(enrollment));
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+function getPendingMFAEnrollment(): PendingMFAEnrollment | null {
+  try {
+    const stored = sessionStorage.getItem(MFA_ENROLL_STORAGE_KEY);
+    if (!stored) return null;
+    return JSON.parse(stored) as PendingMFAEnrollment;
+  } catch {
+    return null;
+  }
+}
+
+function clearPendingMFAEnrollment(): void {
+  try {
+    sessionStorage.removeItem(MFA_ENROLL_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
+async function getPrimaryVerifiedTotpFactorId(): Promise<string | null> {
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  if (error) return null;
+
+  const factor = (data?.totp ?? []).find((candidate) => candidate.status === 'verified');
+  return factor?.id ?? null;
+}
+
+async function getSecurityRequirementsFallback(
+  userId: string,
+  error: unknown,
+): Promise<{
+  mfaRequired: boolean;
+  mfaEnabled: boolean;
+  passwordRotationRequired: boolean;
+  passwordRotationDays?: number;
+  setupComplete: boolean;
+}> {
+  if (import.meta.env.DEV) {
+    console.warn('[Security] Could not fetch security summary, using fallback:', error);
+  }
+
+  try {
+    const [mfaRequired, mfaEnabled] = await Promise.all([
+      isMFARequired(userId),
+      isMFAEnabled(userId),
+    ]);
+
+    return {
+      mfaRequired,
+      mfaEnabled,
+      passwordRotationRequired: false,
+      setupComplete: !mfaRequired || mfaEnabled,
+    };
+  } catch (fallbackError) {
+    if (import.meta.env.DEV) {
+      console.error('[Security] Fallback security requirements check failed:', fallbackError);
+    }
+
+    return {
+      mfaRequired: false,
+      mfaEnabled: false,
+      passwordRotationRequired: false,
+      setupComplete: true,
+    };
+  }
+}
+
 /**
  * Check if user needs to complete security setup (MFA for admins)
  */
 /**
  * Check if user needs to complete security setup (MFA for admins)
- * Uses high-performance single-roundtrip RPC
  */
 export async function checkSecurityRequirements(userId: string): Promise<{
   mfaRequired: boolean;
@@ -878,34 +997,21 @@ export async function checkSecurityRequirements(userId: string): Promise<{
   setupComplete: boolean;
 }> {
   try {
-    const { data, error } = await supabase.rpc('get_security_summary', { p_user_id: userId });
-    
-    if (error) {
-      // Fallback in case of slow DB or missing function during migration
-      console.warn('[Security] Could not fetch security summary:', error);
-      return { 
-        mfaRequired: false, 
-        mfaEnabled: true, 
-        passwordRotationRequired: false, 
-        setupComplete: true 
-      };
-    }
-    
-    return data as {
-      mfaRequired: boolean;
-      mfaEnabled: boolean;
-      passwordRotationRequired: boolean;
-      passwordRotationDays?: number;
-      setupComplete: boolean;
+    const [mfaRequired, mfaEnabled, passwordRotation] = await Promise.all([
+      isMFARequired(userId),
+      isMFAEnabled(userId),
+      isPasswordRotationRequired(userId),
+    ]);
+
+    return {
+      mfaRequired,
+      mfaEnabled,
+      passwordRotationRequired: passwordRotation.required,
+      passwordRotationDays: passwordRotation.daysRemaining,
+      setupComplete: (!mfaRequired || mfaEnabled) && !passwordRotation.required,
     };
   } catch (err) {
-    console.error('[Security] Unexpected error checking security requirements:', err);
-    return { 
-      mfaRequired: false, 
-      mfaEnabled: true, 
-      passwordRotationRequired: false, 
-      setupComplete: true 
-    };
+    return getSecurityRequirementsFallback(userId, err);
   }
 }
 

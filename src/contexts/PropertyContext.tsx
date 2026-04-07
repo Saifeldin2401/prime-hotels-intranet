@@ -6,7 +6,8 @@ import {
 } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import type { Property } from '@/lib/types'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import { safeLocalStorage } from '@/lib/storage'
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 
 interface PropertyContextType {
     currentProperty: Property | null
@@ -115,7 +116,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
             // Determine current property
             if (props.length > 0) {
                 // 1. Try to restore from local storage
-                const savedId = localStorage.getItem('prime_current_property_id')
+                const savedId = safeLocalStorage.getItem('prime_current_property_id')
                 const savedProp = props.find(p => p.id === savedId)
 
                 if (savedProp) {
@@ -123,7 +124,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     // 2. Default to the first available
                     setCurrentProperty(props[0])
-                    localStorage.setItem('prime_current_property_id', props[0].id)
+                    safeLocalStorage.setItem('prime_current_property_id', props[0].id)
                 }
             } else {
                 setCurrentProperty(null)
@@ -140,28 +141,52 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         fetchProperties()
     }, [user, primaryRole])
 
-    const switchProperty = (propertyId: string) => {
-        const prop = availableProperties.find(p => p.id === propertyId)
-        if (prop) {
-            setCurrentProperty(prop)
-            localStorage.setItem('prime_current_property_id', propertyId)
-        }
-    }
+    // Memoize callbacks to prevent unnecessary re-renders
+    const switchProperty = useCallback((propertyId: string) => {
+        setCurrentProperty(prev => {
+            const prop = availableProperties.find(p => p.id === propertyId)
+            if (prop) {
+                safeLocalStorage.setItem('prime_current_property_id', propertyId)
+                return prop
+            }
+            return prev
+        })
+    }, [availableProperties])
+
+    const refreshProperties = useCallback(() => fetchProperties(), [])
 
     // Real property IDs (excludes the consolidated pseudo-property).
-    const propertyIds = availableProperties
-        .filter((property) => isRealPropertyId(property.id))
-        .map(p => p.id)
+    const propertyIds = useMemo(() => 
+        availableProperties
+            .filter((property) => isRealPropertyId(property.id))
+            .map(p => p.id),
+        [availableProperties]
+    )
 
-    const value = {
+    // Memoize derived values
+    const isMultiPropertyUser = useMemo(() => 
+        propertyIds.length > 1 || isCorporateRole,
+        [propertyIds.length, isCorporateRole]
+    )
+
+    // Memoize context value to prevent re-renders of consumers
+    const value = useMemo(() => ({
         currentProperty,
         availableProperties,
         isLoading,
-        isMultiPropertyUser: propertyIds.length > 1 || isCorporateRole,
+        isMultiPropertyUser,
         propertyIds,
         switchProperty,
-        refreshProperties: fetchProperties
-    }
+        refreshProperties
+    }), [
+        currentProperty,
+        availableProperties,
+        isLoading,
+        isMultiPropertyUser,
+        propertyIds,
+        switchProperty,
+        refreshProperties
+    ])
 
     return (
         <PropertyContext.Provider value={value}>

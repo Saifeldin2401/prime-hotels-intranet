@@ -1211,16 +1211,14 @@ serve(async (req: Request) => {
     );
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
-    const stack = error instanceof Error ? error.stack : undefined;
-    console.error("Edge Function Error:", message);
+    console.error("Edge Function Error:", error);
     return new Response(
       JSON.stringify({
-        error: message,
+        error: "Internal server error",
         success: false,
-        details: stack,
       }),
       {
-        status: 400,
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       },
     );

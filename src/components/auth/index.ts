@@ -18,3 +18,6 @@ export type { ForgotPasswordSuccessViewProps } from './ForgotPasswordSuccessView
 
 export { SuccessView } from './SuccessView';
 export type { SuccessViewProps } from './SuccessView';
+
+export { PasswordRequirements } from './PasswordRequirements';
+export type { PasswordRequirementsProps, PasswordRequirement } from './PasswordRequirements';

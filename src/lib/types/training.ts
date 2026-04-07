@@ -8,14 +8,14 @@ export interface TrainingModule {
   created_by: string
   created_at: string
   updated_at: string
-  category: string | null
-  status: string
+  category?: string | null
+  status?: string
   difficulty_level: string | null
-  estimated_duration: string | null
-  is_active: boolean
-  views_count: number
+  estimated_duration?: string | null
+  is_active?: boolean
+  views_count?: number
   property_id: string | null
-  updated_by: string | null
+  updated_by?: string | null
   validity_period_days: number | null
   certificate_enabled: boolean
   passing_score_percentage: number | null
@@ -84,10 +84,11 @@ export interface TrainingProgress {
   assignment_id: string | null
   status: TrainingProgressStatus
   progress_percentage?: number | null
-  started_at: string | null
+  score_percentage?: number | null
+  started_at?: string | null
   completed_at: string | null
-  quiz_score: number | null
-  certificate_url: string | null
+  quiz_score?: number | null
+  certificate_url?: string | null
   created_at: string
   updated_at: string
 }

@@ -309,7 +309,7 @@ Deno.serve(async (req: Request) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: error instanceof Error ? error.message : String(error),
+        error: "Internal server error",
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

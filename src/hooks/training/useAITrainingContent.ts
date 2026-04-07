@@ -1398,12 +1398,18 @@ function getCategoryContext(category: string): string {
 }
 
 function stripHtml(html: string): string {
-    return html
-        .replace(/<[^>]*>/g, ' ')
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let result = html;
+    do {
+      previous = result;
+      result = previous.replace(/<[^>]*>/g, ' ');
+    } while (result !== previous);
+    return result
         .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
         .replace(/&lt;/g, '<')
         .replace(/&gt;/g, '>')
+        .replace(/&amp;/g, '&')
         .replace(/\s+/g, ' ')
         .trim()
 }

@@ -12,6 +12,136 @@ interface RateLimitStore {
 // Simple in-memory rate limiting (for development)
 const rateLimitStore: RateLimitStore = {}
 
+// ============================================================================
+// DANGEROUS URL SCHEMES - SECURITY CRITICAL
+// ============================================================================
+
+/**
+ * Dangerous URL schemes that can execute code or access sensitive resources.
+ * These are blocked in SVG sanitization and validation.
+ */
+const DANGEROUS_URL_SCHEMES = [
+  'javascript:',      // JavaScript execution
+  'vbscript:',        // VBScript execution (IE)
+  'data:',            // Data URIs (can contain HTML/JS)
+  'file:',            // Local file access
+  'about:',           // Browser internal pages
+  'chrome:',          // Chrome internal pages
+  'chrome-extension:',// Chrome extension access
+  'firefox:',         // Firefox internal pages
+  'moz-extension:',   // Firefox extension access
+  'safari-extension:',// Safari extension access
+  'ms-appx:',         // Windows app access
+  'ms-windows-store:',// Windows store
+  'blob:',            // Blob URLs (potential XSS vector)
+  'filesystem:',      // FileSystem API access
+]
+
+/**
+ * Allowed safe data: URI MIME types for images only.
+ * All other data: URIs are considered dangerous.
+ */
+const ALLOWED_DATA_URI_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/tiff',
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+]
+
+/**
+ * Regex to match any dangerous URL scheme at the start of a string or after whitespace/punctuation.
+ * Matches schemes like javascript:, data:, vbscript:, etc.
+ */
+const DANGEROUS_SCHEME_REGEX = new RegExp(
+  '(?:^|[\\s"\'\(=]+)(' +
+    DANGEROUS_URL_SCHEMES.map(s => s.replace(':', '\\:')).join('|') +
+  ')',
+  'gi'
+)
+
+/**
+ * Regex to match data: URIs that are NOT in the allowed safe list.
+ * This blocks data:text/html, data:application/javascript, etc.
+ */
+const DANGEROUS_DATA_URI_REGEX = new RegExp(
+  'data:(?!(' + ALLOWED_DATA_URI_TYPES.join('|') + ')[;\\s])',
+  'gi'
+)
+
+/**
+ * Check if a URL string contains any dangerous scheme.
+ * Uses a whitelist approach - only http:, https:, and safe data: URIs are allowed.
+ */
+function containsDangerousScheme(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  
+  const trimmed = url.trim().toLowerCase()
+  
+  // Check for dangerous schemes
+  for (const scheme of DANGEROUS_URL_SCHEMES) {
+    if (trimmed.startsWith(scheme)) {
+      // Special case: data: URIs need additional checking
+      if (scheme === 'data:') {
+        // Check if it's a safe image data URI
+        for (const safeType of ALLOWED_DATA_URI_TYPES) {
+          if (trimmed.startsWith(`data:${safeType}`)) {
+            return false // Safe data URI
+          }
+        }
+        return true // Dangerous data URI
+      }
+      return true // Other dangerous scheme
+    }
+  }
+  
+  return false
+}
+
+/**
+ * Sanitize a URL attribute value by removing dangerous schemes.
+ * Returns empty string if dangerous scheme detected.
+ */
+function sanitizeUrlValue(url: string): string {
+  if (!url || typeof url !== 'string') return ''
+  
+  // Check for dangerous schemes
+  if (containsDangerousScheme(url)) {
+    return ''
+  }
+  
+  // Additional check: ensure URL starts with safe scheme or is relative
+  const trimmed = url.trim()
+  const lowerTrimmed = trimmed.toLowerCase()
+  
+  // Allow http:, https:, and relative URLs
+  if (
+    lowerTrimmed.startsWith('http://') ||
+    lowerTrimmed.startsWith('https://') ||
+    lowerTrimmed.startsWith('/') ||
+    lowerTrimmed.startsWith('#') ||
+    lowerTrimmed.startsWith('./') ||
+    lowerTrimmed.startsWith('../') ||
+    (!lowerTrimmed.includes(':')) // No scheme = relative
+  ) {
+    return trimmed
+  }
+  
+  // Check for safe data: URIs
+  for (const safeType of ALLOWED_DATA_URI_TYPES) {
+    if (lowerTrimmed.startsWith(`data:${safeType}`)) {
+      return trimmed
+    }
+  }
+  
+  // Unknown scheme - block for safety
+  return ''
+}
+
 // Blocked file extensions (executable files)
 const BLOCKED_EXTENSIONS = new Set([
   'exe', 'dll', 'bat', 'cmd', 'msi', 'ps1', 'vbs', 'js', 'jar', 'scr',
@@ -422,25 +552,67 @@ export class SecurityMiddleware {
 
   /**
    * Sanitize SVG content to prevent XSS
+   * Uses DOMParser for robust parsing with comprehensive URL scheme validation
    */
   static sanitizeSvg(svgContent: string): string {
-    // Remove script tags
-    let sanitized = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Use DOMParser to properly parse and sanitize SVG
+    const parser = new DOMParser()
+    const doc = parser.parseFromString(svgContent, 'image/svg+xml')
     
-    // Remove event handlers
-    sanitized = sanitized.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+    // Remove dangerous elements
+    const dangerousElements = doc.querySelectorAll('script, foreignObject, embed, iframe, object')
+    dangerousElements.forEach(el => el.remove())
     
-    // Remove javascript: URLs
-    sanitized = sanitized.replace(/javascript:/gi, '')
+    // URL attributes that need validation
+    const urlAttributes = ['href', 'src', 'action', 'formaction', 'poster', 'cite', 'xlink:href']
     
-    // Remove data URIs with scripts
-    sanitized = sanitized.replace(/data:text\/html[^;]*/gi, '')
+    // Remove event handlers and validate URL attributes from all elements
+    const allElements = doc.querySelectorAll('*')
+    allElements.forEach(el => {
+      const element = el as Element
+      Array.from(element.attributes).forEach(attr => {
+        const attrName = attr.name.toLowerCase()
+        
+        // Remove event handlers
+        if (attrName.startsWith('on')) {
+          element.removeAttribute(attr.name)
+          return
+        }
+        
+        // Validate URL attributes
+        if (urlAttributes.includes(attrName) || urlAttributes.some(ua => attrName.endsWith(':' + ua) || attrName === ua)) {
+          const urlValue = attr.value
+          if (containsDangerousScheme(urlValue)) {
+            // Remove dangerous URL attribute
+            element.removeAttribute(attr.name)
+          }
+        }
+      })
+    })
+    
+    // Serialize back to string
+    const serializer = new XMLSerializer()
+    let sanitized = serializer.serializeToString(doc.documentElement)
+    
+    // Additional regex-based cleanup for things DOMParser might miss
+    // Use recursive sanitization to prevent bypass attempts
+    let previous: string;
+    do {
+      previous = sanitized;
+      // Remove javascript: URLs (including nested attempts)
+      sanitized = previous.replace(/javascript:/gi, '');
+      // Remove vbscript: URLs
+      sanitized = sanitized.replace(/vbscript:/gi, '');
+      // Remove data: URLs that are not safe images
+      sanitized = sanitized.replace(DANGEROUS_DATA_URI_REGEX, '');
+    } while (sanitized !== previous);
     
     return sanitized
   }
 
   /**
    * Validate SVG content for security issues
+   * Uses comprehensive URL scheme validation.
    */
   static validateSvgContent(svgContent: string): {
     isValid: boolean
@@ -450,28 +622,65 @@ export class SecurityMiddleware {
     const lowerContent = svgContent.toLowerCase()
 
     // Check for script tags
-    if (/<script\b/.test(svgContent)) {
+    if (/<script\b/i.test(svgContent)) {
       errors.push('SVG contains script tags')
     }
 
-    // Check for event handlers
-    if (/\son\w+\s*=/.test(svgContent)) {
+    // Check for event handlers (on* attributes)
+    if (/\son\w+\s*=/i.test(svgContent)) {
       errors.push('SVG contains event handlers')
     }
 
-    // Check for javascript: URLs
-    if (/javascript:/.test(svgContent)) {
+    // Check for any dangerous URL schemes
+    // Extract all potential URLs from href, src, action, etc.
+    const urlPattern = /(?:href|src|action|formaction|poster|cite|url)\s*=\s*["']([^"']+)["']/gi
+    let match
+    while ((match = urlPattern.exec(svgContent)) !== null) {
+      const url = match[1]
+      if (containsDangerousScheme(url)) {
+        errors.push(`SVG contains dangerous URL scheme: ${url.substring(0, 50)}`)
+        break
+      }
+    }
+
+    // Check for javascript: pattern anywhere (CSS, inline styles, etc.)
+    if (/javascript:/i.test(svgContent)) {
       errors.push('SVG contains JavaScript URLs')
     }
 
-    // Check for foreignObject (can contain HTML)
-    if (/<foreignobject\b/.test(lowerContent)) {
+    // Check for dangerous data: URIs
+    if (DANGEROUS_DATA_URI_REGEX.test(svgContent)) {
+      errors.push('SVG contains suspicious data URIs')
+    }
+
+    // Check for other dangerous schemes
+    for (const scheme of DANGEROUS_URL_SCHEMES) {
+      if (scheme === 'data:') continue // Already checked above
+      const schemeRegex = new RegExp('(?:^|[\\s"\'\(=]+)' + scheme.replace(':', '\\:'), 'i')
+      if (schemeRegex.test(svgContent)) {
+        errors.push(`SVG contains dangerous URL scheme: ${scheme}`)
+        break
+      }
+    }
+
+    // Check for foreignObject (can contain HTML with scripts)
+    if (/<foreignobject\b/i.test(svgContent)) {
       errors.push('SVG contains foreignObject')
     }
 
-    // Check for data URIs
-    if (/data:text\/html/.test(svgContent)) {
-      errors.push('SVG contains suspicious data URIs')
+    // Check for embed elements
+    if (/<embed\b/i.test(svgContent)) {
+      errors.push('SVG contains embed elements')
+    }
+
+    // Check for iframe elements
+    if (/<iframe\b/i.test(svgContent)) {
+      errors.push('SVG contains iframe elements')
+    }
+
+    // Check for object elements
+    if (/<object\b/i.test(svgContent)) {
+      errors.push('SVG contains object elements')
     }
 
     return {

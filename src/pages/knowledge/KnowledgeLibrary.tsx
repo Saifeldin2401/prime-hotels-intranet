@@ -67,7 +67,14 @@ const ICON_MAP = {
 function readTime(article: { estimated_read_time?: number; content?: string }): number {
     if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
     if (!article.content) return 2
-    const stripped = article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let stripped = article.content;
+    do {
+      previous = stripped;
+      stripped = previous.replace(/<[^>]*>/g, ' ');
+    } while (stripped !== previous);
+    stripped = stripped.replace(/\s+/g, ' ').trim()
     if (!stripped) return 2
     return Math.max(1, Math.round(stripped.split(' ').length / 200))
 }

@@ -11,13 +11,149 @@
  * - EXIF data detection
  */
 
+import DOMPurify from 'dompurify';
+
+// ============================================================================
+// DANGEROUS URL SCHEMES - SECURITY CRITICAL
+// ============================================================================
+
+/**
+ * Dangerous URL schemes that can execute code or access sensitive resources.
+ * These are blocked in SVG sanitization and validation.
+ */
+const DANGEROUS_URL_SCHEMES = [
+  'javascript:',      // JavaScript execution
+  'vbscript:',        // VBScript execution (IE)
+  'data:',            // Data URIs (can contain HTML/JS)
+  'file:',            // Local file access
+  'about:',           // Browser internal pages
+  'chrome:',          // Chrome internal pages
+  'chrome-extension:',// Chrome extension access
+  'firefox:',         // Firefox internal pages
+  'moz-extension:',   // Firefox extension access
+  'safari-extension:',// Safari extension access
+  'ms-appx:',         // Windows app access
+  'ms-windows-store:',// Windows store
+  'blob:',            // Blob URLs (potential XSS vector)
+  'filesystem:',      // FileSystem API access
+]
+
+/**
+ * Allowed safe data: URI MIME types for images only.
+ * All other data: URIs are considered dangerous.
+ */
+const ALLOWED_DATA_URI_TYPES = [
+  'image/png',
+  'image/jpeg',
+  'image/jpg',
+  'image/gif',
+  'image/webp',
+  'image/bmp',
+  'image/tiff',
+  'image/x-icon',
+  'image/vnd.microsoft.icon',
+]
+
+/**
+ * Regex to match data: URIs that are NOT in the allowed safe list.
+ * This blocks data:text/html, data:application/javascript, etc.
+ */
+const DANGEROUS_DATA_URI_REGEX = new RegExp(
+  'data:(?!(' + ALLOWED_DATA_URI_TYPES.join('|') + ')[;\\s])',
+  'gi'
+)
+
+/**
+ * Check if a URL string contains any dangerous scheme.
+ * Uses a whitelist approach - only http:, https:, and safe data: URIs are allowed.
+ */
+function containsDangerousScheme(url: string): boolean {
+  if (!url || typeof url !== 'string') return false
+  
+  const trimmed = url.trim().toLowerCase()
+  
+  // Check for dangerous schemes
+  for (const scheme of DANGEROUS_URL_SCHEMES) {
+    if (trimmed.startsWith(scheme)) {
+      // Special case: data: URIs need additional checking
+      if (scheme === 'data:') {
+        // Check if it's a safe image data URI
+        for (const safeType of ALLOWED_DATA_URI_TYPES) {
+          if (trimmed.startsWith(`data:${safeType}`)) {
+            return false // Safe data URI
+          }
+        }
+        return true // Dangerous data URI
+      }
+      return true // Other dangerous scheme
+    }
+  }
+  
+  return false
+}
+
+/**
+ * Sanitize a URL attribute value by removing dangerous schemes.
+ * Returns empty string if dangerous scheme detected.
+ */
+function sanitizeUrlValue(url: string): string {
+  if (!url || typeof url !== 'string') return ''
+  
+  // Check for dangerous schemes
+  if (containsDangerousScheme(url)) {
+    return ''
+  }
+  
+  // Additional check: ensure URL starts with safe scheme or is relative
+  const trimmed = url.trim()
+  const lowerTrimmed = trimmed.toLowerCase()
+  
+  // Allow http:, https:, and relative URLs
+  if (
+    lowerTrimmed.startsWith('http://') ||
+    lowerTrimmed.startsWith('https://') ||
+    lowerTrimmed.startsWith('/') ||
+    lowerTrimmed.startsWith('#') ||
+    lowerTrimmed.startsWith('./') ||
+    lowerTrimmed.startsWith('../') ||
+    (!lowerTrimmed.includes(':')) // No scheme = relative
+  ) {
+    return trimmed
+  }
+  
+  // Check for safe data: URIs
+  for (const safeType of ALLOWED_DATA_URI_TYPES) {
+    if (lowerTrimmed.startsWith(`data:${safeType}`)) {
+      return trimmed
+    }
+  }
+  
+  // Unknown scheme - block for safety
+  return ''
+}
+
 // UUID generation using Web Crypto API
 function generateUUID(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    const v = c === 'x' ? r : (r & 0x3) | 0x8;
-    return v.toString(16);
-  });
+  // Use crypto.randomUUID() if available (secure and standard)
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
+  
+  // Fallback to crypto.getRandomValues() for environments without randomUUID
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(16);
+    crypto.getRandomValues(bytes);
+    
+    // Set version (4) and variant (2) bits for UUID v4
+    bytes[6] = (bytes[6] & 0x0f) | 0x40; // Version 4
+    bytes[8] = (bytes[8] & 0x3f) | 0x80; // Variant 2
+    
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0'));
+    return `${hex[0]}${hex[1]}${hex[2]}${hex[3]}-${hex[4]}${hex[5]}-${hex[6]}${hex[7]}-${hex[8]}${hex[9]}-${hex[10]}${hex[11]}${hex[12]}${hex[13]}${hex[14]}${hex[15]}`;
+  }
+  
+  // Last resort fallback for environments without crypto (should not happen in modern browsers)
+  throw new Error('Crypto API not available for secure UUID generation');
 }
 
 // File type definitions with magic numbers (file signatures)
@@ -239,6 +375,22 @@ export async function validateFileSignature(
       detectedMimeType = 'image/svg+xml';
     }
   }
+  
+  // SECURITY: If it's an SVG, sanitize the content before allowing
+  if (detectedMimeType === 'image/svg+xml') {
+    try {
+      const svgText = await file.text();
+      const sanitizedSvg = sanitizeSvgContent(svgText);
+      // Check if sanitization removed significant content (potential attack)
+      if (sanitizedSvg.length < svgText.length * 0.5) {
+        errors.push('SVG file contains potentially dangerous content');
+        detectedMimeType = null;
+      }
+    } catch {
+      errors.push('Failed to validate SVG content');
+      detectedMimeType = null;
+    }
+  }
 
   // Special handling for text files
   if (!detectedMimeType && file.type === 'text/plain') {
@@ -318,6 +470,7 @@ function checkMagicNumbers(
  * - Checks for JavaScript/script tags
  * - Checks for external references
  * - Validates XML structure
+ * - Comprehensive URL scheme validation
  */
 export async function validateSvgContent(file: File): Promise<boolean> {
   try {
@@ -334,9 +487,33 @@ export async function validateSvgContent(file: File): Promise<boolean> {
       return false;
     }
 
-    // Check for javascript: URLs
+    // Check for any dangerous URL schemes in attributes
+    const urlPattern = /(?:href|src|action|formaction|poster|cite|url)\s*=\s*["']([^"']+)["']/gi;
+    let match;
+    while ((match = urlPattern.exec(text)) !== null) {
+      const url = match[1];
+      if (containsDangerousScheme(url)) {
+        return false;
+      }
+    }
+
+    // Check for javascript: pattern anywhere
     if (/javascript:/i.test(text)) {
       return false;
+    }
+
+    // Check for dangerous data: URIs
+    if (DANGEROUS_DATA_URI_REGEX.test(text)) {
+      return false;
+    }
+
+    // Check for other dangerous schemes
+    for (const scheme of DANGEROUS_URL_SCHEMES) {
+      if (scheme === 'data:') continue; // Already checked above
+      const schemeRegex = new RegExp('(?:^|[\\s"\'\\(=]+)' + scheme.replace(':', '\\:'), 'i');
+      if (schemeRegex.test(text)) {
+        return false;
+      }
     }
 
     // Check for foreignObject (can contain HTML)
@@ -344,8 +521,18 @@ export async function validateSvgContent(file: File): Promise<boolean> {
       return false;
     }
 
-    // Check for data URLs with scripts
-    if (/data:text\/html/i.test(text)) {
+    // Check for embed elements
+    if (/<embed\b/i.test(text)) {
+      return false;
+    }
+
+    // Check for iframe elements
+    if (/<iframe\b/i.test(text)) {
+      return false;
+    }
+
+    // Check for object elements
+    if (/<object\b/i.test(text)) {
       return false;
     }
 
@@ -362,21 +549,19 @@ export async function validateSvgContent(file: File): Promise<boolean> {
 
 /**
  * Sanitizes SVG content by removing dangerous elements
+ * SECURITY FIX: Uses DOMPurify with SVG-specific config for comprehensive sanitization
+ * This prevents XSS bypass attacks that could evade simple DOMParser-based filtering
  */
 export function sanitizeSvgContent(svgContent: string): string {
-  // Remove script tags
-  let sanitized = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
-  
-  // Remove event handlers
-  sanitized = sanitized.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '');
-  
-  // Remove javascript: URLs
-  sanitized = sanitized.replace(/javascript:/gi, '');
-  
-  // Remove foreignObject elements
-  sanitized = sanitized.replace(/<foreignobject\b[^<]*(?:(?!<\/foreignobject>)<[^<]*)*<\/foreignobject>/gi, '');
-  
-  return sanitized;
+  // SECURITY: Use DOMPurify with SVG-specific config for comprehensive sanitization
+  return DOMPurify.sanitize(svgContent, {
+    USE_PROFILES: { svg: true },
+    FORBID_TAGS: ['script', 'foreignObject', 'animate', 'set', 'animateMotion', 'animateTransform', 'mpath'],
+    FORBID_ATTR: ['onload', 'onerror', 'onclick', 'onmouseover', 'onmouseout', 'onmousemove', 
+                  'onmousedown', 'onmouseup', 'onfocus', 'onblur', 'onkeydown', 'onkeyup', 
+                  'onkeypress', 'onsubmit', 'onreset', 'onselect', 'onchange'],
+    ALLOW_DATA_ATTR: false, // Disallow data-* attributes which can be exploited
+  });
 }
 
 /**

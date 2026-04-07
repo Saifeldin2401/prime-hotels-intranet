@@ -108,9 +108,14 @@ Deno.serve(async (req) => {
 
           let description = "";
           if (item.description && item.description[0]) {
-            description =
-              item.description[0].replace(/<[^>]*>/g, "").substring(0, 300) +
-              "...";
+            // Use recursive sanitization to prevent bypass attempts with nested tags
+            let previous: string;
+            let sanitized = item.description[0];
+            do {
+              previous = sanitized;
+              sanitized = previous.replace(/<[^>]*>/g, "");
+            } while (sanitized !== previous);
+            description = sanitized.substring(0, 300) + "...";
           }
 
           // 1. Keyword Filtering

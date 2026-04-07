@@ -720,6 +720,44 @@ Deno.serve(async (req: Request) => {
           },
         );
       }
+
+      const invitationMetadata = {
+        full_name: normalizedFullName || null,
+        created_via: "create-user",
+      };
+
+      const { error: invitationError } = await adminClient
+        .from("user_invitations")
+        .upsert({
+          auth_user_id: userId,
+          email: normalizedEmail,
+          role: normalizedRole,
+          property_id: propertyIds[0] || null,
+          department_id: departmentIds[0] || null,
+          invited_by: user.id,
+          invited_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+          status: "pending",
+          token_hash: inviteTokenHash,
+          invite_url: inviteUrl,
+          accepted_at: null,
+          metadata: invitationMetadata,
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: "auth_user_id",
+        });
+
+      if (invitationError) {
+        console.error("Failed to store invitation record:", invitationError);
+        await adminClient.auth.admin.deleteUser(userId);
+        return new Response(
+          JSON.stringify({ error: "Failed to store invitation details." }),
+          {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
     }
 
     return new Response(

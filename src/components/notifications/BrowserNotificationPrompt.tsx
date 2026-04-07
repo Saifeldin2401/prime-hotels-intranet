@@ -83,13 +83,16 @@ export function BrowserNotificationPrompt() {
         // Wait for animation to complete before unmounting
         setTimeout(() => {
             setVisible(false)
+            // Store UI state (non-sensitive: dismissed timestamp and userId)
+            // Using safe storage helper to prevent errors in restricted environments
             try {
                 localStorage.setItem(PROMPT_DISMISSED_KEY, JSON.stringify({
                     dismissedAt: new Date().toISOString(),
                     userId: user?.id
                 }))
             } catch {
-                // Ignore storage errors
+                // Silently ignore storage errors (e.g., private mode, quota exceeded)
+                // This is acceptable as this is non-critical UI state data
             }
         }, 300)
     }, [user])

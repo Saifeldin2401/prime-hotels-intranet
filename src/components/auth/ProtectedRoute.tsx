@@ -31,10 +31,11 @@ export function ProtectedRoute({
   fallbackPath = '/unauthorized',
   smartFallback = true,
 }: ProtectedRouteProps) {
-  const { user, primaryRole, rolesLoading, loading } = useAuth()
+  const { user, primaryRole, rolesLoading, loading, pendingMFAUserId, isMFAVerified, securityRequirements } = useAuth()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
   const location = useLocation()
+  const isOnMfaRoute = location.pathname === '/mfa/setup' || location.pathname === '/mfa/verify'
 
   // Save current location for post-login redirect when user is not authenticated
   useEffect(() => {
@@ -57,6 +58,11 @@ export function ProtectedRoute({
   if (!user) {
     const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
     return <Navigate to={loginUrl} replace />
+  }
+
+  if (pendingMFAUserId && !isMFAVerified && !isOnMfaRoute) {
+    const target = securityRequirements?.mfaEnabled ? '/mfa/verify' : '/mfa/setup'
+    return <Navigate to={target} replace />
   }
 
   if (allowedRoles && allowedRoles.length > 0) {

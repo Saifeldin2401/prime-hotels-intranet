@@ -10,6 +10,8 @@ const ResetPassword = lazy(() => import('@/pages/auth/ResetPassword'))
 const CompleteInvite = lazy(() => import('@/pages/auth/CompleteInvite'))
 const ChangePassword = lazy(() => import('@/pages/auth/ChangePassword'))
 const Unauthorized = lazy(() => import('@/pages/Unauthorized'))
+const MFASetupPage = lazy(() => import('@/pages/auth/MFASetupPage'))
+const MFAVerifyPage = lazy(() => import('@/pages/auth/MFAVerifyPage'))
 
 function FullscreenLoader() {
   return (
@@ -52,6 +54,22 @@ export const StandaloneAuthRoutes = () => {
       <Route path="/reset-password" element={<ResetPassword />} />
       <Route path="/complete-invite" element={<CompleteInvite />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
+      <Route
+        path="/mfa/setup"
+        element={
+          <ProtectedRoute>
+            <MFASetupPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/mfa/verify"
+        element={
+          <ProtectedRoute>
+            <MFAVerifyPage />
+          </ProtectedRoute>
+        }
+      />
     </Route>
   )
 }

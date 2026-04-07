@@ -14,6 +14,13 @@
   to = "/index.html"
   status = 200
 
+# SECURITY NOTE: Content-Security-Policy below uses 'unsafe-inline' for scripts and styles.
+# This is required for Vite's development HMR and some third-party UI libraries.
+# For production hardening:
+# 1. Implement a nonce-based CSP with server-generated nonces
+# 2. Use strict-dynamic for scripts loaded via trusted loaders
+# 3. Generate hash-based CSP for known inline scripts
+# 4. The current policy provides baseline XSS protection but is not maximally strict
 [[headers]]
   for = "/*"
   [headers.values]

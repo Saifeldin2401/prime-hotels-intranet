@@ -36,8 +36,21 @@ export function useAIDocumentSummarizer() {
 
         try {
             // Strip HTML tags for cleaner analysis
-            const cleanContent = content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
-            const cleanPrevious = previousContent?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+            // Use recursive sanitization to prevent bypass attempts with nested tags
+            let previous: string;
+            let cleanContent = content;
+            do {
+              previous = cleanContent;
+              cleanContent = previous.replace(/<[^>]*>/g, ' ');
+            } while (cleanContent !== previous);
+            cleanContent = cleanContent.replace(/\s+/g, ' ').trim()
+            
+            let cleanPrevious = previousContent || '';
+            do {
+              previous = cleanPrevious;
+              cleanPrevious = previous.replace(/<[^>]*>/g, ' ');
+            } while (cleanPrevious !== previous);
+            cleanPrevious = cleanPrevious.replace(/\s+/g, ' ').trim()
 
             const isUpdate = !!previousContent && previousContent !== content
 

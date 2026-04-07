@@ -6,8 +6,23 @@ import type {
   UserRole,
   UserProperty,
 } from '@/lib/types'
-// Simple ID generator
-const generateId = () => Math.random().toString(36).substring(2, 15)
+// Secure ID generator using Web Crypto API
+const generateId = (): string => {
+  // Use crypto.randomUUID() if available
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, '').substring(0, 13);
+  }
+  
+  // Fallback to crypto.getRandomValues()
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const bytes = new Uint8Array(8);
+    crypto.getRandomValues(bytes);
+    return Array.from(bytes, (b) => b.toString(36).padStart(2, '0')).join('').substring(0, 13);
+  }
+  
+  // Last resort fallback for test environments (not for production)
+  return Math.random().toString(36).substring(2, 15);
+}
 
 // Simple date generator
 const generateDate = (daysAgo: number = 0) => {
@@ -26,7 +41,7 @@ export const createMockProfile = (overrides: Partial<Profile> = {}): Profile => 
   hire_date: generateDate(365),
   date_of_birth: generateDate(365 * 30),
   job_title: 'Software Engineer',
-  staff_id: `EMP${Math.floor(Math.random() * 10000)}`,
+  staff_id: `EMP${generateId().substring(0, 4)}`,
   reporting_to: null,
   is_active: true,
   emergency_contact_name: null,

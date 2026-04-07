@@ -348,20 +348,28 @@ DECLARE
   v_secret text;
   v_backup_codes text[];
   v_qr_code_url text;
+  v_secret_alphabet constant text := 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
 BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RAISE EXCEPTION 'Users can only generate MFA secrets for themselves';
+  END IF;
+
   -- Check if user already has MFA enabled
   IF EXISTS (SELECT 1 FROM public.mfa_secrets WHERE user_id = p_user_id AND enabled = true) THEN
     RETURN jsonb_build_object('error', 'MFA already enabled');
   END IF;
   
-  -- Generate random secret (base32 encoded)
-  v_secret := upper(encode(gen_random_bytes(20), 'base64'));
-  v_secret := regexp_replace(v_secret, '[^A-Z2-7]', '', 'g');
-  v_secret := substring(v_secret, 1, 32);
+  -- Generate a 32-character base32-compatible secret for authenticator apps
+  SELECT string_agg(
+    substr(v_secret_alphabet, (get_byte(extensions.gen_random_bytes(1), 0) % 32) + 1, 1),
+    ''
+  )
+  INTO v_secret
+  FROM generate_series(1, 32);
   
   -- Generate backup codes
   v_backup_codes := ARRAY(
-    SELECT substring(encode(gen_random_bytes(4), 'hex'), 1, 8)
+    SELECT substring(encode(extensions.gen_random_bytes(4), 'hex'), 1, 8)
     FROM generate_series(1, 8)
   );
   
@@ -399,6 +407,10 @@ AS $$
 DECLARE
   v_secret public.mfa_secrets%ROWTYPE;
 BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RETURN false;
+  END IF;
+
   -- Get the stored secret
   SELECT * INTO v_secret
   FROM public.mfa_secrets
@@ -442,6 +454,10 @@ AS $$
 DECLARE
   v_user_record auth.users%ROWTYPE;
 BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RETURN false;
+  END IF;
+
   -- Verify the password first
   SELECT * INTO v_user_record
   FROM auth.users
@@ -476,6 +492,10 @@ AS $$
 DECLARE
   v_secret public.mfa_secrets%ROWTYPE;
 BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RETURN false;
+  END IF;
+
   -- Get the stored secret
   SELECT * INTO v_secret
   FROM public.mfa_secrets
@@ -526,6 +546,10 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 BEGIN
+  IF auth.uid() IS DISTINCT FROM p_user_id THEN
+    RETURN false;
+  END IF;
+
   RETURN EXISTS (
     SELECT 1 FROM public.mfa_secrets 
     WHERE user_id = p_user_id AND enabled = true

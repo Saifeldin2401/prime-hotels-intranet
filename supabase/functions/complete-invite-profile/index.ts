@@ -493,6 +493,36 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    const inviteEmail = typeof user.email === "string"
+      ? user.email.trim().toLowerCase()
+      : null;
+    const invitationFilters = [`auth_user_id.eq.${user.id}`];
+    if (inviteEmail) {
+      invitationFilters.push(`email.eq.${inviteEmail}`);
+    }
+
+    const { error: invitationUpdateError } = await adminClient
+      .from("user_invitations")
+      .update({
+        status: "accepted",
+        accepted_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .or(invitationFilters.join(","));
+
+    if (invitationUpdateError) {
+      return new Response(
+        JSON.stringify({
+          error:
+            `Failed to mark invitation as accepted: ${invitationUpdateError.message}`,
+        }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

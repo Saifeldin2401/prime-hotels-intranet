@@ -23,6 +23,7 @@ import { showErrorToast } from '@/lib/toastHelpers';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerificationDialog } from './MFAVerificationDialog';
 import { isCaptchaRequired, getRemainingAttempts } from '@/lib/authSecurityService';
+import { safeLocalStorage } from '@/lib/storage';
 
 export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout' | 'mfa';
 
@@ -33,18 +34,26 @@ export interface LoginViewProps {
 
 function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps) {
   const { t } = useTranslation('auth');
-  const { signIn, user } = useAuth();
+  const { signIn, user, pendingMFAUserId } = useAuth();
 
   const [email, setEmail] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('remembered_email') || '';
+    try {
+      if (typeof window !== 'undefined') {
+        return localStorage.getItem('remembered_email') || '';
+      }
+    } catch {
+      // localStorage not available (Safari private mode, etc.)
     }
     return '';
   });
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('remembered_email');
+    try {
+      if (typeof window !== 'undefined') {
+        return !!localStorage.getItem('remembered_email');
+      }
+    } catch {
+      // localStorage not available (Safari private mode, etc.)
     }
     return false;
   });
@@ -52,8 +61,12 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
   const [emailValid, setEmailValid] = useState<boolean | null>(() => {
-    if (typeof window !== 'undefined') {
-      return !!localStorage.getItem('remembered_email');
+    try {
+      if (typeof window !== 'undefined') {
+        return !!localStorage.getItem('remembered_email');
+      }
+    } catch {
+      // localStorage not available (Safari private mode, etc.)
     }
     return null;
   });
@@ -70,11 +83,15 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   // Check if CAPTCHA is required on mount and email change
   useEffect(() => {
     if (email) {
-      const required = isCaptchaRequired(email);
-      setShowCaptcha(required);
-      if (!required) {
-        setRemainingAttempts(getRemainingAttempts(email));
-      }
+      // SECURITY: All security decisions are server-side; these are async checks
+      void (async () => {
+        const required = await isCaptchaRequired(email);
+        setShowCaptcha(required);
+        if (!required) {
+          const remaining = await getRemainingAttempts(email);
+          setRemainingAttempts(remaining);
+        }
+      })();
     }
   }, [email]);
 
@@ -118,11 +135,15 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
       
       // Check CAPTCHA requirement
       if (value) {
-        const required = isCaptchaRequired(value);
-        setShowCaptcha(required);
-        if (!required) {
-          setRemainingAttempts(getRemainingAttempts(value));
-        }
+        // SECURITY: All security decisions are server-side; these are async checks
+        void (async () => {
+          const required = await isCaptchaRequired(value);
+          setShowCaptcha(required);
+          if (!required) {
+            const remaining = await getRemainingAttempts(value);
+            setRemainingAttempts(remaining);
+          }
+        })();
       }
     },
     [error, validateEmail]
@@ -151,10 +172,14 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
       setError(null);
       setLoading(true);
 
-      if (rememberMe) {
-        localStorage.setItem('remembered_email', email);
-      } else {
-        localStorage.removeItem('remembered_email');
+      try {
+        if (rememberMe) {
+          localStorage.setItem('remembered_email', email);
+        } else {
+          localStorage.removeItem('remembered_email');
+        }
+      } catch {
+        // localStorage not available (Safari private mode, etc.)
       }
 
       try {
@@ -172,7 +197,8 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
             errorMessage = t('errors.invalid_credentials');
             errType = 'auth';
             // Update remaining attempts
-            setRemainingAttempts(getRemainingAttempts(email));
+            const remaining = await getRemainingAttempts(email);
+            setRemainingAttempts(remaining);
           } else if (
             errorMessage?.toLowerCase().includes('rate') ||
             errorMessage?.toLowerCase().includes('too many')
@@ -239,7 +265,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   }, [errorType]);
 
   // Show success state
-  if (loginSuccess || user) {
+  if ((loginSuccess || user) && !showMFADialog && !pendingMFAUserId) {
     return (
       <LazyMotion features={domAnimation}>
         <m.div

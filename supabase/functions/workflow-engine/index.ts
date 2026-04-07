@@ -360,7 +360,7 @@ Deno.serve(async (req) => {
         .eq("id", executionIdForFailure);
     }
 
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

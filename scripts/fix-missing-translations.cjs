@@ -103,6 +103,13 @@ function setNestedValue(obj, keyPath, value) {
     const keys = keyPath.split('.');
     let current = obj;
     
+    // Validate all keys to prevent prototype pollution
+    for (const key of keys) {
+        if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+            throw new Error(`Invalid key in keyPath: ${key}`);
+        }
+    }
+    
     for (let i = 0; i < keys.length - 1; i++) {
         if (!current[keys[i]]) {
             current[keys[i]] = {};

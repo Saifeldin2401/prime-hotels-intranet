@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { AnimatePresence } from 'framer-motion'
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useProperty } from '@/contexts/PropertyContext'
+import { PageLoading } from '@/components/common/LoadingStates'
 import { SidebarNavigation } from './SidebarNavigation'
 
 const CommandPalette = lazy(() =>
@@ -23,6 +25,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { t } = useTranslation('common')
   const { t: t_ext } = useTranslation('extracted')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -74,6 +77,26 @@ export function AppLayout({ children }: AppLayoutProps) {
     mediaQuery.addEventListener('change', handleMediaChange)
     return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [])
+
+  // Safe check for property context - prevents "useProperty must be used within a PropertyProvider" error
+  // If we're not inside the provider yet (e.g. during a redirect or error state),
+  // we render a safe loading state instead of crashing.
+  let hasPropertyContext = false
+  try {
+    // This will throw if outside provider
+    const { currentProperty } = useProperty()
+    hasPropertyContext = !!currentProperty || true // just checking if it exists
+  } catch (e) {
+    hasPropertyContext = false
+  }
+
+  if (!hasPropertyContext) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <PageLoading message={t('status.initializing_app')} />
+      </div>
+    )
+  }
 
   if (isMobileView) {
     return (

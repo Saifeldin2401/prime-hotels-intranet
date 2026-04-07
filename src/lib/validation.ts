@@ -13,6 +13,26 @@ export const phonePattern = /^\+?[1-9]\d{1,14}$/
 // Password validation - strong requirements
 export const passwordPattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{12,}$/
 
+// Individual password requirement patterns for live validation
+export const passwordPatterns = {
+  lowercase: /[a-z]/,
+  uppercase: /[A-Z]/,
+  number: /\d/,
+  special: /[@$!%*?&]/,
+} as const
+
+// Minimum password length
+export const MIN_PASSWORD_LENGTH = 12
+
+// Password requirement labels for UI
+export const passwordRequirementLabels = {
+  length: (min: number) => `At least ${min} characters`,
+  lowercase: 'One lowercase letter',
+  uppercase: 'One uppercase letter',
+  number: 'One number',
+  special: 'One special character (@$!%*?&)',
+} as const
+
 // Name validation - letters, spaces, hyphens, apostrophes only
 export const namePattern = /^[a-zA-Z\s'-]{2,50}$/
 
@@ -40,10 +60,14 @@ export const usernamePattern = /^[a-zA-Z0-9_]{3,30}$/
 
 /**
  * Validate that a string doesn't contain HTML/script tags
+ * Uses a simple check for angle brackets - DOMPurify is used for actual sanitization when needed
  */
 const noHtmlCheck = (value: string): boolean => {
-  const htmlPattern = /<[^>]*>/
-  const scriptPattern = /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi
+  // Simple pattern to detect potential HTML tags
+  // This is intentionally simple - we reject any content that looks like HTML
+  const htmlPattern = /<[^>]+>/
+  // Check for script tag patterns (case-insensitive, various forms)
+  const scriptPattern = /<\s*script\b/i
   return !htmlPattern.test(value) && !scriptPattern.test(value)
 }
 
