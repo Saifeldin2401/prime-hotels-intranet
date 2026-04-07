@@ -174,7 +174,7 @@ export async function getArticles(
         // category_id not available
         // Validate property_id is a real UUID, not 'undefined' string
         if (filters.property_id && filters.property_id !== 'undefined' && filters.property_id.length === 36) {
-            query = query.eq('property_id', filters.property_id)
+            query = query.or(`property_id.is.null,property_id.eq.${filters.property_id}`)
         }
         if (filters.requires_acknowledgment !== undefined) {
             query = query.eq('requires_acknowledgment', filters.requires_acknowledgment)

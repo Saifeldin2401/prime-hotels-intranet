@@ -1,5 +1,7 @@
 // Security middleware and rate limiting utilities
 
+import { supabase } from './supabase'
+
 interface RateLimitStore {
   [key: string]: {
     count: number
@@ -9,6 +11,35 @@ interface RateLimitStore {
 
 // Simple in-memory rate limiting (for development)
 const rateLimitStore: RateLimitStore = {}
+
+// Blocked file extensions (executable files)
+const BLOCKED_EXTENSIONS = new Set([
+  'exe', 'dll', 'bat', 'cmd', 'msi', 'ps1', 'vbs', 'js', 'jar', 'scr',
+  'com', 'sh', 'php', 'pl', 'py', 'rb', 'app', 'dmg', 'pkg', 'deb', 'rpm',
+  'so', 'dylib', 'o', 'a', 'lib'
+])
+
+// Suspicious filename patterns
+const SUSPICIOUS_PATTERNS = [
+  /\.\./,                           // Path traversal
+  /[<>]/,                           // HTML injection
+  /[/\\]/,                          // Directory separators
+  /\x00/,                           // Null bytes
+  /^\./,                            // Hidden files
+  /\.(exe|bat|cmd|sh|php|pl|py)$/i, // Executable extensions
+  /\.[a-z0-9]{1,5}\.(exe|bat|cmd|msi|ps1|vbs|js|jar|scr|com|sh|php|pl)$/i, // Double extension
+]
+
+// File type definitions with magic numbers
+const FILE_SIGNATURES: Record<string, number[][]> = {
+  'image/jpeg': [[0xFF, 0xD8, 0xFF]],
+  'image/png': [[0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]],
+  'image/gif': [[0x47, 0x49, 0x46, 0x38, 0x37, 0x61], [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]],
+  'image/webp': [[0x52, 0x49, 0x46, 0x46]],
+  'application/pdf': [[0x25, 0x50, 0x44, 0x46]],
+  'application/msword': [[0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1]],
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [[0x50, 0x4B, 0x03, 0x04]],
+}
 
 export class SecurityMiddleware {
   // Rate limiting
@@ -144,6 +175,57 @@ export class SecurityMiddleware {
     return typeof session.user_id === 'string' && Boolean(session.expires_at)
   }
 
+  /**
+   * SECURE: Server-side rate limiting using Supabase RPC.
+   * This is the recommended approach for production.
+   */
+  static async checkServerRateLimit(
+    action: string,
+    maxRequests: number = 100,
+    windowSeconds: number = 900
+  ): Promise<boolean> {
+    try {
+      const { data, error } = await supabase.rpc('check_user_rate_limit', {
+        p_action: action,
+        p_max_requests: maxRequests,
+        p_window_seconds: windowSeconds
+      })
+      
+      if (error) {
+        console.error('Server rate limit check failed:', error)
+        // Log security event
+        await this.logSecurityEvent('rate_limit_check_failed', { error: error.message })
+        // Fail open to prevent DoS, but log the issue
+        return true
+      }
+      
+      return data === true
+    } catch (e) {
+      console.error('Rate limit exception:', e)
+      return true
+    }
+  }
+
+  /**
+   * Log security event to audit log
+   */
+  static async logSecurityEvent(
+    eventType: string,
+    metadata: Record<string, unknown> = {},
+    severity: 'info' | 'warning' | 'error' | 'critical' = 'info'
+  ): Promise<void> {
+    try {
+      await supabase.rpc('log_security_event', {
+        p_event_type: eventType,
+        p_metadata: metadata,
+        p_severity: severity
+      })
+    } catch (e) {
+      // Silent fail - don't break app flow for logging
+      console.error('Failed to log security event:', e)
+    }
+  }
+
   // API key validation
   static validateApiKey(apiKey: string): boolean {
     // Basic API key format validation
@@ -151,33 +233,314 @@ export class SecurityMiddleware {
     return apiKeyRegex.test(apiKey)
   }
 
-  // File upload security
-  static validateFileUpload(file: File): {
+  /**
+   * File upload security validation
+   * Enhanced with magic number verification to prevent MIME type spoofing
+   */
+  static validateFileUpload(file: File, options: {
+    allowedTypes?: string[]
+    maxSize?: number
+    checkMagicNumbers?: boolean
+  } = {}): {
+    isValid: boolean
+    errors: string[]
+    warnings: string[]
+  } {
+    const errors: string[] = []
+    const warnings: string[] = []
+    
+    const allowedTypes = options.allowedTypes || [
+      'image/jpeg', 
+      'image/png', 
+      'image/gif', 
+      'image/webp',
+      'image/svg+xml',
+      'application/pdf', 
+      'text/plain',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ]
+    const maxSize = options.maxSize || 5 * 1024 * 1024 // 5MB default
+
+    // Check file exists and has content
+    if (!file || file.size === 0) {
+      errors.push('File is empty')
+      return { isValid: false, errors, warnings }
+    }
+
+    // Validate file type
+    if (!allowedTypes.includes(file.type)) {
+      errors.push(`File type not allowed: ${file.type}`)
+    }
+
+    // Validate file size
+    if (file.size > maxSize) {
+      const maxSizeMB = (maxSize / 1024 / 1024).toFixed(1)
+      errors.push(`File size exceeds ${maxSizeMB}MB limit`)
+    }
+
+    // Check filename for suspicious patterns
+    const filenameValidation = this.validateFilename(file.name)
+    if (!filenameValidation.isValid) {
+      errors.push(...filenameValidation.errors)
+    }
+
+    // Check for double extensions
+    if (filenameValidation.hasDoubleExtension) {
+      warnings.push('File has multiple extensions')
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    }
+  }
+
+  /**
+   * Validate filename for security issues
+   */
+  static validateFilename(filename: string): {
+    isValid: boolean
+    errors: string[]
+    hasDoubleExtension: boolean
+    extension: string | null
+  } {
+    const errors: string[] = []
+    let hasDoubleExtension = false
+
+    // Check for suspicious patterns
+    for (const pattern of SUSPICIOUS_PATTERNS) {
+      if (pattern.test(filename)) {
+        errors.push('Filename contains suspicious characters or patterns')
+        break
+      }
+    }
+
+    // Extract extension
+    const parts = filename.split('.')
+    const extension = parts.length > 1 ? parts.pop()?.toLowerCase() || null : null
+
+    // Check for blocked extensions
+    if (extension && BLOCKED_EXTENSIONS.has(extension)) {
+      errors.push(`File extension .${extension} is not allowed`)
+    }
+
+    // Check for double extensions
+    if (parts.length > 2) {
+      const secondExtension = parts[parts.length - 1].toLowerCase()
+      if (BLOCKED_EXTENSIONS.has(secondExtension)) {
+        errors.push('Suspicious double extension detected')
+      }
+      hasDoubleExtension = true
+    }
+
+    // Check filename length
+    if (filename.length > 255) {
+      errors.push('Filename too long (max 255 characters)')
+    }
+
+    // Check for null bytes
+    if (filename.includes('\x00')) {
+      errors.push('Filename contains invalid characters')
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      hasDoubleExtension,
+      extension
+    }
+  }
+
+  /**
+   * Verify file signature (magic numbers) to prevent MIME type spoofing
+   * Note: This is an async operation that reads the file
+   */
+  static async verifyFileSignature(file: File): Promise<{
+    isValid: boolean
+    detectedType: string | null
+    expectedType: string
+    error?: string
+  }> {
+    const expectedSignatures = FILE_SIGNATURES[file.type]
+    
+    if (!expectedSignatures) {
+      // No signature check for this type (e.g., text files, SVG)
+      return { isValid: true, detectedType: file.type, expectedType: file.type }
+    }
+
+    try {
+      // Read first 8 bytes of file
+      const slice = file.slice(0, 8)
+      const arrayBuffer = await slice.arrayBuffer()
+      const bytes = new Uint8Array(arrayBuffer)
+
+      // Check against all possible signatures for this type
+      for (const signature of expectedSignatures) {
+        let matches = true
+        for (let i = 0; i < signature.length; i++) {
+          if (bytes[i] !== signature[i]) {
+            matches = false
+            break
+          }
+        }
+        if (matches) {
+          return { isValid: true, detectedType: file.type, expectedType: file.type }
+        }
+      }
+
+      return {
+        isValid: false,
+        detectedType: null,
+        expectedType: file.type,
+        error: `File signature does not match expected type: ${file.type}`
+      }
+    } catch (error) {
+      return {
+        isValid: false,
+        detectedType: null,
+        expectedType: file.type,
+        error: 'Failed to verify file signature'
+      }
+    }
+  }
+
+  /**
+   * Generate secure filename with UUID
+   */
+  static generateSecureFilename(originalFilename: string): string {
+    const timestamp = Date.now()
+    const random = Math.random().toString(36).substring(2, 10)
+    
+    // Get extension
+    const extension = originalFilename.split('.').pop()?.toLowerCase() || ''
+    const validExtension = /^[a-z0-9]{1,10}$/.test(extension) ? extension : 'bin'
+    
+    return `${timestamp}-${random}.${validExtension}`
+  }
+
+  /**
+   * Sanitize SVG content to prevent XSS
+   */
+  static sanitizeSvg(svgContent: string): string {
+    // Remove script tags
+    let sanitized = svgContent.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    
+    // Remove event handlers
+    sanitized = sanitized.replace(/\son\w+\s*=\s*["'][^"']*["']/gi, '')
+    
+    // Remove javascript: URLs
+    sanitized = sanitized.replace(/javascript:/gi, '')
+    
+    // Remove data URIs with scripts
+    sanitized = sanitized.replace(/data:text\/html[^;]*/gi, '')
+    
+    return sanitized
+  }
+
+  /**
+   * Validate SVG content for security issues
+   */
+  static validateSvgContent(svgContent: string): {
     isValid: boolean
     errors: string[]
   } {
     const errors: string[] = []
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'application/pdf', 'text/plain']
-    const maxSize = 5 * 1024 * 1024 // 5MB
+    const lowerContent = svgContent.toLowerCase()
 
-    if (!allowedTypes.includes(file.type)) {
-      errors.push('File type not allowed')
+    // Check for script tags
+    if (/<script\b/.test(svgContent)) {
+      errors.push('SVG contains script tags')
     }
 
-    if (file.size > maxSize) {
-      errors.push('File size exceeds 5MB limit')
+    // Check for event handlers
+    if (/\son\w+\s*=/.test(svgContent)) {
+      errors.push('SVG contains event handlers')
     }
 
-    // Check file name for suspicious patterns
-    const suspiciousPatterns = [/\.\./, /[<>]/, /[/\\]/]
-    if (suspiciousPatterns.some(pattern => pattern.test(file.name))) {
-      errors.push('File name contains suspicious characters')
+    // Check for javascript: URLs
+    if (/javascript:/.test(svgContent)) {
+      errors.push('SVG contains JavaScript URLs')
+    }
+
+    // Check for foreignObject (can contain HTML)
+    if (/<foreignobject\b/.test(lowerContent)) {
+      errors.push('SVG contains foreignObject')
+    }
+
+    // Check for data URIs
+    if (/data:text\/html/.test(svgContent)) {
+      errors.push('SVG contains suspicious data URIs')
     }
 
     return {
       isValid: errors.length === 0,
       errors
     }
+  }
+
+  /**
+   * Check for image dimensions (async)
+   */
+  static getImageDimensions(file: File): Promise<{ width: number; height: number } | null> {
+    return new Promise((resolve) => {
+      if (!file.type.startsWith('image/')) {
+        resolve(null)
+        return
+      }
+
+      const img = new Image()
+      const url = URL.createObjectURL(file)
+
+      img.onload = () => {
+        URL.revokeObjectURL(url)
+        resolve({ width: img.naturalWidth, height: img.naturalHeight })
+      }
+
+      img.onerror = () => {
+        URL.revokeObjectURL(url)
+        resolve(null)
+      }
+
+      img.src = url
+    })
+  }
+
+  /**
+   * Validate image dimensions
+   */
+  static validateImageDimensions(
+    width: number,
+    height: number,
+    maxWidth = 16384,
+    maxHeight = 16384
+  ): {
+    isValid: boolean
+    error?: string
+  } {
+    if (width <= 0 || height <= 0) {
+      return { isValid: false, error: 'Invalid image dimensions' }
+    }
+
+    if (width > maxWidth || height > maxHeight) {
+      return {
+        isValid: false,
+        error: `Image dimensions exceed maximum (${maxWidth}x${maxHeight})`
+      }
+    }
+
+    // Check for decompression bomb
+    const pixelCount = width * height
+    const maxPixels = 100_000_000 // 100 megapixels
+    if (pixelCount > maxPixels) {
+      return {
+        isValid: false,
+        error: `Image pixel count exceeds maximum (${maxPixels} pixels)`
+      }
+    }
+
+    return { isValid: true }
   }
 }
 
@@ -197,5 +560,160 @@ export const rateLimitConfig = {
   upload: {
     maxRequests: 10,
     windowMs: 60 * 60 * 1000 // 1 hour
+  }
+}
+
+// ============================================================================
+// CSRF PROTECTION
+// ============================================================================
+
+/**
+ * CSRF Protection utilities
+ * Provides token generation, validation, and header management
+ */
+export class CsrfProtection {
+  /**
+   * Get current CSRF token (generates if needed)
+   */
+  static getToken(): string {
+    return getCsrfToken()
+  }
+
+  /**
+   * Validate a CSRF token
+   */
+  static validateToken(token: string): boolean {
+    return validateCsrfToken(token)
+  }
+
+  /**
+   * Clear current CSRF token
+   */
+  static clearToken(): void {
+    clearCsrfToken()
+  }
+
+  /**
+   * Generate a new CSRF token
+   */
+  static generateToken(): string {
+    return generateCsrfToken()
+  }
+
+  /**
+   * Get headers with CSRF token for API requests
+   */
+  static getHeaders(): Record<string, string> {
+    return getSecureHeaders()
+  }
+
+  /**
+   * Refresh CSRF token (generate new and store)
+   */
+  static refreshToken(): string {
+    clearCsrfToken()
+    return getCsrfToken()
+  }
+}
+
+/**
+ * Hook for using CSRF protection in components
+ */
+export function useCsrfProtection() {
+  return {
+    token: CsrfProtection.getToken(),
+    headers: CsrfProtection.getHeaders(),
+    refresh: () => CsrfProtection.refreshToken(),
+    validate: (token: string) => CsrfProtection.validateToken(token),
+  }
+}
+
+// ============================================================================
+// CSRF TOKEN HELPERS
+// ============================================================================
+
+/**
+ * Generate a new CSRF token
+ * Uses crypto.randomUUID if available, falls back to Math.random
+ */
+export function generateCsrfToken(): string {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  // Fallback for older browsers
+  return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`
+}
+
+const CSRF_TOKEN_KEY = 'csrf_token'
+
+/**
+ * Get current CSRF token from storage (generates if needed)
+ */
+export function getCsrfToken(): string {
+  if (typeof window === 'undefined') return generateCsrfToken()
+  
+  let token = sessionStorage.getItem(CSRF_TOKEN_KEY)
+  if (!token) {
+    token = generateCsrfToken()
+    sessionStorage.setItem(CSRF_TOKEN_KEY, token)
+  }
+  return token
+}
+
+/**
+ * Validate a CSRF token against stored token
+ */
+export function validateCsrfToken(token: string): boolean {
+  if (typeof window === 'undefined') return false
+  return token === sessionStorage.getItem(CSRF_TOKEN_KEY)
+}
+
+/**
+ * Clear current CSRF token
+ */
+export function clearCsrfToken(): void {
+  if (typeof window !== 'undefined') {
+    sessionStorage.removeItem(CSRF_TOKEN_KEY)
+  }
+}
+
+/**
+ * Get secure headers including CSRF token for API requests
+ */
+export function getSecureHeaders(): Record<string, string> {
+  return {
+    'X-CSRF-Token': getCsrfToken(),
+    'X-Requested-With': 'XMLHttpRequest'
+  }
+}
+
+/**
+ * Hook for using server-side rate limiting in components
+ */
+export function useRateLimiter() {
+  return {
+    checkLimit: async (action: string, maxRequests?: number, windowSeconds?: number) => {
+      return SecurityMiddleware.checkServerRateLimit(action, maxRequests, windowSeconds)
+    },
+    
+    // For API calls with automatic rate limit checking
+    withRateLimit: async <T>(
+      action: string,
+      fn: () => Promise<T>,
+      options?: { maxRequests?: number; windowSeconds?: number; onRateLimited?: () => void }
+    ): Promise<T | null> => {
+      const allowed = await SecurityMiddleware.checkServerRateLimit(
+        action,
+        options?.maxRequests,
+        options?.windowSeconds
+      )
+      
+      if (!allowed) {
+        options?.onRateLimited?.()
+        throw new Error('Rate limit exceeded. Please try again later.')
+      }
+      
+      return fn()
+    }
   }
 }

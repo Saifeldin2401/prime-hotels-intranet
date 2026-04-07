@@ -288,12 +288,12 @@ export default function DocumentLibrary() {
   const handleBulkMove = useCallback(async (documentIds: string[], folderId: string | null) => {
     if (documentIds.length === 0) return
 
-    const previousFolderByDocument = documents
+    const previousFolderByDocument: Record<string, string | null> = documents
       .filter((doc) => documentIds.includes(doc.id))
-      .reduce<Record<string, string | null>>((acc, doc) => {
+      .reduce((acc, doc) => {
         acc[doc.id] = doc.folder_id || null
         return acc
-      }, {})
+      }, {} as Record<string, string | null>)
 
     setBulkActionLoading(true)
     try {

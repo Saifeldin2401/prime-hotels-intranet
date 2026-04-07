@@ -88,14 +88,19 @@ export function useUserDataLoader(
 
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
-    async (userId: string) => {
+    async (userId: string, isBackground = false) => {
       const { isAuthError, withTimeout, clearLocalSession } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
 
       try {
         const loadId = ++loadSeqRef.current
         activeUserIdRef.current = userId
-        setRolesLoading(true)
+        
+        // Only trigger global skeleton if not a background refresh
+        if (!isBackground) {
+          setRolesLoading(true)
+        }
+        
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
 
         /**

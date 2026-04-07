@@ -8,7 +8,7 @@ import { requestAISuggestion } from '@/editor/ai/aiClient'
 import { resolveCommands } from '@/editor/ai/commands'
 import type { AIAssistCommand, AIConfig, TextDirection } from '@/editor/types'
 import { getSelectedContent } from '@/editor/utils/selection'
-import { sanitizeHtml } from '@/lib/sanitize'
+import { containsDangerousContent, sanitizeHtml } from '@/lib/sanitize'
 import type { Editor } from '@tiptap/react'
 import { Loader2, Sparkles, Wand2 } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
@@ -55,6 +55,27 @@ export function AIAssistPanel({
     onOpenChange(false)
   }
 
+  /**
+   * SECURITY: AI response validation
+   * Check if the AI-generated content contains potentially dangerous patterns
+   */
+  const validateAiResponse = (html: string): { safe: boolean; sanitized: string } => {
+    // Check for dangerous patterns before sanitization
+    const hasDangerous = containsDangerousContent(html)
+    if (hasDangerous) {
+      console.warn('AI response contained potentially dangerous content, sanitizing...')
+    }
+    
+    // Sanitize the HTML content
+    const sanitized = sanitizeHtml(html, { 
+      allowIframes: false,  // Never allow iframes in AI-generated content
+      allowImages: true,
+      maxLength: 50000,     // Limit content length
+    })
+    
+    return { safe: !hasDangerous, sanitized }
+  }
+
   const runAssist = async () => {
     if (!editor || !activeCommand) return
 
@@ -90,11 +111,15 @@ export function AIAssistPanel({
         controller.signal,
       )
 
+      // SECURITY: Validate and sanitize AI-generated content before display
+      const originalValidation = validateAiResponse(target.html)
+      const suggestedValidation = validateAiResponse(result.html)
+
       setReplacement({
         from: target.from,
         to: target.to,
-        originalHtml: target.html,
-        suggestedHtml: result.html,
+        originalHtml: originalValidation.sanitized,
+        suggestedHtml: suggestedValidation.sanitized,
         replaceAll: (target as { replaceAll?: boolean }).replaceAll,
       })
     } catch (err) {
@@ -109,13 +134,16 @@ export function AIAssistPanel({
   const acceptSuggestion = () => {
     if (!editor || !replacement) return
 
+    // SECURITY: Double-check sanitization before inserting into editor
+    const sanitized = sanitizeHtml(replacement.suggestedHtml, { allowIframes: false })
+
     if (replacement.replaceAll) {
-      editor.chain().focus().setContent(replacement.suggestedHtml).run()
+      editor.chain().focus().setContent(sanitized).run()
     } else {
       editor
         .chain()
         .focus()
-        .insertContentAt({ from: replacement.from, to: replacement.to }, replacement.suggestedHtml)
+        .insertContentAt({ from: replacement.from, to: replacement.to }, sanitized)
         .run()
     }
 
@@ -192,18 +220,20 @@ export function AIAssistPanel({
             <div className="space-y-2">
               <Label className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Current</Label>
               <InlineErrorBoundary>
+                {/* SECURITY: Content was pre-sanitized in validateAiResponse() */}
                 <div
                   className="max-h-64 overflow-auto rounded-lg border bg-muted/30 p-3 text-sm prose prose-sm max-w-none shadow-inner"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.originalHtml) }}
+                  dangerouslySetInnerHTML={{ __html: replacement.originalHtml }}
                 />
               </InlineErrorBoundary>
             </div>
             <div className="space-y-2">
-              <Label className="text-[11px] font-bold uppercase tracking-wider text-hotel-gold">AI Suggestion</Label>
+              <Label className="text-[10px] font-bold uppercase tracking-wider text-hotel-gold">AI Suggestion</Label>
               <InlineErrorBoundary>
+                {/* SECURITY: Content was pre-sanitized in validateAiResponse() */}
                 <div
                   className="max-h-64 overflow-auto rounded-lg border-emerald-500/30 bg-emerald-500/5 p-3 text-sm prose prose-sm max-w-none shadow-inner ring-1 ring-emerald-500/20"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(replacement.suggestedHtml) }}
+                  dangerouslySetInnerHTML={{ __html: replacement.suggestedHtml }}
                 />
               </InlineErrorBoundary>
             </div>

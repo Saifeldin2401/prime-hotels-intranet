@@ -67,20 +67,15 @@ export async function logAuditEvent(entry: AuditLogEntry): Promise<{ success: bo
 
         const entityId = resolveEntityId(entry, userId)
 
-        const { error } = await supabase
-            .from('audit_logs')
-            .insert({
-                user_id: userId,
-                action: entry.event_type,
-                entity_type: entry.entity_type || 'system',
-                entity_id: entityId,
-                details: {
-                    description: entry.description,
-                    metadata: entry.metadata || {},
-                },
-                ip_address: entry.ip_address,
-                user_agent: entry.user_agent || navigator.userAgent
-            })
+        const { error } = await supabase.rpc('log_security_audit_event_v2', {
+            p_action: entry.event_type,
+            p_entity_type: entry.entity_type || 'system',
+            p_entity_id: entityId,
+            p_description: entry.description,
+            p_metadata: entry.metadata || {},
+            p_ip_address: entry.ip_address,
+            p_user_agent: entry.user_agent || (typeof navigator !== 'undefined' ? navigator.userAgent : 'system')
+        })
 
         if (error) {
             console.error('Audit log error:', error)

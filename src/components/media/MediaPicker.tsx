@@ -1,6 +1,12 @@
 /**
  * MediaPicker - Dialog component for selecting media from the library
  * Can be used in Knowledgebase, Training, and other modules
+ * 
+ * Security Features:
+ * - File type validation before upload
+ * - Virus scanning integration
+ * - Secure URL generation
+ * - Access logging
  */
 
 import { Badge } from '@/components/ui/badge';
@@ -14,14 +20,23 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useMedia } from '@/hooks/useMedia';
 import { useProperties } from '@/hooks/useProperties';
+import { useSecureDownload } from '@/hooks/useSecureDownload';
 import { cn, formatFileSize } from '@/lib/utils';
-import type { MediaAsset, MediaCategory, MediaPickerConfig, MediaType } from '@/lib/types/media';
+import type {
+  MediaAsset,
+  MediaCategory,
+  MediaPickerConfig,
+  MediaType,
+  VirusScanStatus,
+} from '@/lib/types/media';
 import {
+  AlertTriangle,
   Check,
   FileAudio,
   FileText,
@@ -30,6 +45,9 @@ import {
   Link2,
   RefreshCw,
   Search,
+  Shield,
+  ShieldAlert,
+  ShieldCheck,
   Upload,
   Video,
   X,
@@ -45,20 +63,42 @@ const MEDIA_TYPE_CONFIG: Record<MediaType, { icon: React.ElementType; label: str
   audio: { icon: FileAudio, label: 'Audio', color: 'text-purple-500', bg: 'bg-purple-50' },
 };
 
+// Scan status icons
+const ScanStatusIcon = ({ status }: { status: VirusScanStatus }) => {
+  switch (status) {
+    case 'clean':
+      return <ShieldCheck className="w-4 h-4 text-green-500" />;
+    case 'suspicious':
+      return <AlertTriangle className="w-4 h-4 text-yellow-500" />;
+    case 'infected':
+      return <ShieldAlert className="w-4 h-4 text-red-500" />;
+    case 'pending':
+      return <Shield className="w-4 h-4 text-gray-400" />;
+    default:
+      return <Shield className="w-4 h-4 text-gray-400" />;
+  }
+};
+
 // Individual media item in picker
 function MediaPickerItem({
   asset,
   isSelected,
   onToggle,
   showCheckbox = true,
+  requireCleanScan = false,
 }: {
   asset: MediaAsset;
   isSelected: boolean;
   onToggle: (asset: MediaAsset) => void;
   showCheckbox?: boolean;
+  requireCleanScan?: boolean;
 }) {
   const typeConfig = MEDIA_TYPE_CONFIG[asset.media_type];
   const TypeIcon = typeConfig.icon;
+  const isQuarantined = asset.virus_scan_status === 'infected' || asset.virus_scan_status === 'suspicious';
+  
+  // Disable selection if file is quarantined and clean scan is required
+  const isDisabled = requireCleanScan && isQuarantined;
 
   return (
     <div
@@ -66,9 +106,10 @@ function MediaPickerItem({
         'group relative rounded-lg border-2 overflow-hidden cursor-pointer transition-all',
         isSelected
           ? 'border-primary bg-primary/5 ring-1 ring-primary'
-          : 'border-border hover:border-primary/50 hover:bg-accent/50'
+          : 'border-border hover:border-primary/50 hover:bg-accent/50',
+        isDisabled && 'opacity-50 cursor-not-allowed pointer-events-none'
       )}
-      onClick={() => onToggle(asset)}
+      onClick={() => !isDisabled && onToggle(asset)}
     >
       {/* Thumbnail */}
       <div className="relative aspect-video bg-muted">
@@ -85,7 +126,7 @@ function MediaPickerItem({
         )}
 
         {/* Selection indicator */}
-        {showCheckbox && (
+        {showCheckbox && !isDisabled && (
           <div
             className={cn(
               'absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
@@ -96,17 +137,30 @@ function MediaPickerItem({
           </div>
         )}
 
-        {/* Type Badge */}
-        <Badge variant="secondary" className="absolute top-2 left-2 text-[10px]">
-          <TypeIcon className="w-3 h-3 mr-1" />
-          {typeConfig.label}
-        </Badge>
+        {/* Scan Status Badge */}
+        <div className="absolute top-2 left-2">
+          <Badge variant="secondary" className="text-[10px] gap-1">
+            <ScanStatusIcon status={asset.virus_scan_status} />
+            <TypeIcon className="w-3 h-3" />
+            {typeConfig.label}
+          </Badge>
+        </div>
 
         {/* Usage count */}
         {asset.usage_count > 0 && (
           <Badge variant="outline" className="absolute bottom-2 right-2 text-[10px] bg-white/90">
             {asset.usage_count} uses
           </Badge>
+        )}
+
+        {/* Quarantine warning */}
+        {isQuarantined && (
+          <div className="absolute inset-0 bg-red-500/20 flex items-center justify-center">
+            <Badge variant="destructive" className="gap-1">
+              <ShieldAlert className="w-3 h-3" />
+              {asset.virus_scan_status === 'infected' ? 'Infected' : 'Suspicious'}
+            </Badge>
+          </div>
         )}
       </div>
 
@@ -141,15 +195,21 @@ function UploadTab({
   onUploadComplete,
   allowedTypes,
   category,
+  maxFileSize,
+  requireCleanScan = false,
 }: {
   onUploadComplete: (asset: MediaAsset) => void;
   allowedTypes?: MediaType[];
   category?: MediaCategory;
+  maxFileSize?: number;
+  requireCleanScan?: boolean;
 }) {
   const { data: properties } = useProperties();
   const primaryProperty = properties?.[0];
-  const { uploadFile, uploading } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false });
+  const { uploadFile, uploading, uploadProgress } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'clean' | 'infected'>('idle');
 
   const getAcceptTypes = () => {
     if (!allowedTypes || allowedTypes.length === 0) {
@@ -169,14 +229,35 @@ function UploadTab({
       const file = e.target.files?.[0];
       if (!file) return;
 
-      const asset = await uploadFile(file, {
-        category: category || 'general',
-        property_id: primaryProperty?.id,
-      });
+      setScanStatus('scanning');
+      setIsScanning(true);
 
-      if (asset) {
-        onUploadComplete(asset);
-        toast.success('File uploaded successfully');
+      try {
+        const result = await uploadFile(file, {
+          category: category || 'general',
+          property_id: primaryProperty?.id,
+          maxFileSize,
+        });
+
+        if (result.asset) {
+          // Check scan result if required
+          if (requireCleanScan && result.scanResult && !result.scanResult.safe) {
+            toast.error('File failed security scan and cannot be used', {
+              description: `Status: ${result.scanResult.status}, Risk Score: ${result.scanResult.riskScore}`,
+            });
+            setScanStatus('infected');
+            return;
+          }
+
+          setScanStatus(result.scanResult?.status === 'clean' ? 'clean' : 'idle');
+          onUploadComplete(result.asset);
+          toast.success('File uploaded and scanned successfully');
+        } else if (result.error) {
+          setScanStatus('idle');
+          // Error already shown by uploadFile
+        }
+      } finally {
+        setIsScanning(false);
       }
 
       // Reset input
@@ -184,7 +265,7 @@ function UploadTab({
         fileInputRef.current.value = '';
       }
     },
-    [uploadFile, category, primaryProperty?.id, onUploadComplete]
+    [uploadFile, category, primaryProperty?.id, maxFileSize, onUploadComplete, requireCleanScan]
   );
 
   return (
@@ -195,24 +276,59 @@ function UploadTab({
         className="hidden"
         accept={getAcceptTypes()}
         onChange={handleFileSelect}
+        disabled={uploading || isScanning}
       />
 
       <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-        <Upload className="w-10 h-10 text-primary" />
+        {uploading || isScanning ? (
+          <RefreshCw className="w-10 h-10 text-primary animate-spin" />
+        ) : (
+          <Upload className="w-10 h-10 text-primary" />
+        )}
       </div>
 
-      <h3 className="text-lg font-medium mb-2">Upload New File</h3>
+      <h3 className="text-lg font-medium mb-2">
+        {uploading ? 'Uploading...' : isScanning ? 'Scanning...' : 'Upload New File'}
+      </h3>
+      
+      {uploadProgress && uploading && (
+        <div className="w-64 mb-4">
+          <Progress value={uploadProgress.percentage} className="h-2" />
+          <p className="text-xs text-muted-foreground text-center mt-1">
+            {uploadProgress.percentage}% - {formatFileSize(uploadProgress.loaded)} / {formatFileSize(uploadProgress.total)}
+          </p>
+        </div>
+      )}
+
+      {scanStatus === 'scanning' && (
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+          <Shield className="w-4 h-4 animate-pulse" />
+          Scanning for security threats...
+        </div>
+      )}
+
+      {scanStatus === 'clean' && (
+        <div className="flex items-center gap-2 text-sm text-green-600 mb-4">
+          <ShieldCheck className="w-4 h-4" />
+          File passed security scan
+        </div>
+      )}
+
       <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
         {allowedTypes && allowedTypes.length > 0
           ? `Supported types: ${allowedTypes.join(', ')}`
           : 'Upload videos, images, documents, or audio files to your media library'}
       </p>
 
-      <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} size="lg">
-        {uploading ? (
+      <Button 
+        onClick={() => fileInputRef.current?.click()} 
+        disabled={uploading || isScanning} 
+        size="lg"
+      >
+        {uploading || isScanning ? (
           <>
             <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-            Uploading...
+            Processing...
           </>
         ) : (
           <>
@@ -224,6 +340,13 @@ function UploadTab({
 
       {allowedTypes?.includes('video') && (
         <p className="text-xs text-muted-foreground mt-4">Maximum file size: 500MB for videos</p>
+      )}
+      
+      {requireCleanScan && (
+        <p className="text-xs text-green-600 mt-2 flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3" />
+          Security scan required for all uploads
+        </p>
       )}
     </div>
   );
@@ -246,17 +369,27 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
     propertyId: primaryProperty?.id,
     autoFetch: false,
   });
+  const { getSecureMediaUrl } = useSecureDownload();
 
   const [selectedAssets, setSelectedAssets] = useState<MediaAsset[]>([]);
   const [activeTab, setActiveTab] = useState('library');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { allowedTypes = [], multiple = true, category = 'general' } = config;
+  const { allowedTypes = [], multiple = true, category = 'general', requireCleanScan = false } = config;
 
-  // Filter assets by allowed types
+  // Filter assets by allowed types and scan status
   const filteredAssets = assets.filter((asset) => {
-    if (allowedTypes.length === 0) return true;
-    return allowedTypes.includes(asset.media_type);
+    // Filter by allowed types
+    if (allowedTypes.length > 0 && !allowedTypes.includes(asset.media_type)) {
+      return false;
+    }
+    
+    // Filter out quarantined files if required
+    if (requireCleanScan && (asset.virus_scan_status === 'infected' || asset.virus_scan_status === 'suspicious')) {
+      return false;
+    }
+    
+    return true;
   });
 
   // Toggle asset selection
@@ -278,11 +411,22 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
   );
 
   // Handle confirm
-  const handleConfirm = useCallback(() => {
-    onSelect(selectedAssets);
+  const handleConfirm = useCallback(async () => {
+    // Generate secure URLs for selected assets
+    const assetsWithSecureUrls = await Promise.all(
+      selectedAssets.map(async (asset) => {
+        const secureUrl = await getSecureMediaUrl(asset.id);
+        return {
+          ...asset,
+          public_url: secureUrl || asset.public_url,
+        };
+      })
+    );
+    
+    onSelect(assetsWithSecureUrls);
     onOpenChange(false);
     setSelectedAssets([]);
-  }, [selectedAssets, onSelect, onOpenChange]);
+  }, [selectedAssets, onSelect, onOpenChange, getSecureMediaUrl]);
 
   // Handle cancel
   const handleCancel = useCallback(() => {
@@ -329,6 +473,12 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
           </DialogTitle>
           <DialogDescription>
             Choose from your media library or upload a new file
+            {requireCleanScan && (
+              <span className="flex items-center gap-1 text-green-600 mt-1">
+                <ShieldCheck className="w-3 h-3" />
+                Only security-scanned files are shown
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 
@@ -394,6 +544,8 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
                   <p className="text-muted-foreground mt-1">
                     {filters.searchQuery
                       ? 'Try adjusting your search'
+                      : requireCleanScan
+                      ? 'No security-scanned files available'
                       : 'Upload files to your media library'}
                   </p>
                   <Button className="mt-4" variant="outline" onClick={() => setActiveTab('upload')}>
@@ -410,6 +562,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
                       isSelected={selectedAssets.some((a) => a.id === asset.id)}
                       onToggle={toggleSelection}
                       showCheckbox={multiple || selectedAssets.length === 0 || selectedAssets[0]?.id !== asset.id}
+                      requireCleanScan={requireCleanScan}
                     />
                   ))}
                 </div>
@@ -422,6 +575,8 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
               onUploadComplete={handleUploadComplete}
               allowedTypes={allowedTypes}
               category={category}
+              maxFileSize={config.maxFileSize}
+              requireCleanScan={requireCleanScan}
             />
           </TabsContent>
         </Tabs>
@@ -442,6 +597,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
                     <Badge key={asset.id} variant="secondary" className="gap-1 shrink-0">
                       <Icon className={cn('w-3 h-3', config.color)} />
                       <span className="truncate max-w-[100px]">{asset.title}</span>
+                      <ScanStatusIcon status={asset.virus_scan_status} />
                       <button
                         onClick={() => removeFromSelection(asset.id)}
                         className="ml-1 hover:text-destructive"

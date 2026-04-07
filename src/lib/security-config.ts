@@ -52,7 +52,7 @@ export const securityConfig = {
     maxUrlLength: 2048,
     allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
 
-    // CORS
+    // CORS - Strict origin validation
     cors: {
       allowedOrigins: import.meta.env.PROD
         ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
@@ -64,12 +64,13 @@ export const securityConfig = {
     }
   },
 
-  // Content Security Policy
+  // Content Security Policy - Strict configuration
   csp: {
     directives: {
       'default-src': ["'self'"],
-      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://va.vercel-scripts.com"], // Needed for some libraries
-      'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"], // Needed for Tailwind and Google Fonts
+      'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://va.vercel-scripts.com"],
+      'script-src-elem': ["'self'", "'unsafe-inline'", "https://va.vercel-scripts.com"],
+      'style-src': ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       'img-src': ["'self'", "data:", "https:"],
       'font-src': ["'self'", "data:", "https://fonts.gstatic.com"],
       'connect-src': [
@@ -95,13 +96,13 @@ export const securityConfig = {
         "https://fonts.gstatic.com",
         "https://images.unsplash.com"
       ],
-      // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
       'frame-src': ["'self'", "https://www.youtube.com", "https://youtube.com", "https://www.youtube-nocookie.com", "https://player.vimeo.com", "https://vimeo.com", "https://*.supabase.co"],
       'media-src': ["'self'", "blob:", "data:", "https://*.supabase.co"],
       'worker-src': ["'self'", "blob:"],
       'frame-ancestors': ["'none'"],
       'base-uri': ["'self'"],
-      'form-action': ["'self'"]
+      'form-action': ["'self'"],
+      'upgrade-insecure-requests': []
     }
   },
 
@@ -184,17 +185,17 @@ export const securityConfig = {
 }
 
 // Security headers configuration
+// SECURITY NOTE: X-XSS-Protection is intentionally omitted
+// It's deprecated and can introduce vulnerabilities. CSP is the modern protection.
 export const securityHeaders = {
   'Content-Security-Policy': Object.entries(securityConfig.csp.directives)
     .map(([directive, values]) => `${directive} ${values.join(' ')}`)
     .join('; '),
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=()',
-  'Strict-Transport-Security': securityConfig.isDevelopment ? '' : 'max-age=31536000; includeSubDomains',
-  // Cross-Origin-Embedder-Policy intentionally omitted: 'require-corp' would block YouTube/Vimeo iframes
+  'Permissions-Policy': 'geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()',
+  'Strict-Transport-Security': securityConfig.isDevelopment ? '' : 'max-age=63072000; includeSubDomains; preload',
   'Cross-Origin-Resource-Policy': 'cross-origin'
 }
 

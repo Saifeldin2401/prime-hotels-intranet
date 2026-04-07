@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
-import { escapeSearchQuery } from '@/lib/utils'
+import { secureSearchUsers } from '@/lib/secureSearch'
+import { sanitizeSearchInput, sanitizeUUID } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 
 
@@ -24,6 +25,21 @@ export function useProfiles(filters?: {
     return useQuery({
         queryKey: ['profiles', normalizedFilters],
         queryFn: async () => {
+            // SECURE: Use parameterized RPC for search queries
+            if (filters?.search) {
+                const sanitizedSearch = sanitizeSearchInput(filters.search)
+                if (sanitizedSearch) {
+                    const secureResults = await secureSearchUsers({
+                        search: sanitizedSearch,
+                        property_id: normalizedPropertyId,
+                        department_id: filters?.department_id,
+                        is_active: true,
+                        limit: filters?.limit || 200
+                    })
+                    return secureResults
+                }
+            }
+            
             let query = supabase
                 .from('profiles')
                 .select(`
@@ -35,17 +51,6 @@ export function useProfiles(filters?: {
                 `)
                 .eq('is_active', true)
                 .order('full_name')
-
-      if (filters?.search) {
-        const normalizedSearch = filters.search
-          .replace(/[^a-zA-Z0-9@._\s-]/g, '')
-          .trim()
-          .slice(0, 100)
-        if (normalizedSearch) {
-          const escaped = escapeSearchQuery(normalizedSearch)
-          query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
-        }
-      }
 
             if (normalizedPropertyId) {
                 // Filter by users who have a user_properties entry for this property

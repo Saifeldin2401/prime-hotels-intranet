@@ -5,6 +5,8 @@ import {
   isAuthorizedServiceRoleRequest,
 } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { getVaultSecret } from "../_shared/vault.ts";
+
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const BLOCKED_EXTENSIONS = new Set([
@@ -70,12 +72,12 @@ function decodeBase64Sample(sampleBase64?: string): Uint8Array {
   }
 }
 
-function evaluateScan(
+async function evaluateScan(
   payload: Required<
     Pick<ScanRequest, "file_name" | "file_size" | "file_type">
   > &
     ScanRequest,
-): ScanEvaluation {
+): Promise<ScanEvaluation> {
   const reasons: string[] = [];
   let risk = 0;
   let status: ScanStatus = "clean";
@@ -137,6 +139,33 @@ function evaluateScan(
     reasons.push("Missing MIME type metadata.");
     risk = Math.max(risk, 50);
     if (status === "clean") status = "suspicious";
+  }
+
+  // VirusTotal Integration
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  
+  const vtApiKey = await getVaultSecret(serviceClient, "VIRUSTOTAL_API_KEY");
+  if (vtApiKey && payload.file_hash_sha256) {
+    try {
+      const vtResponse = await fetch(`https://www.virustotal.com/api/v3/files/${payload.file_hash_sha256}`, {
+        headers: { 'x-apikey': vtApiKey }
+      });
+      if (vtResponse.ok) {
+        const vtData = await vtResponse.json();
+        const stats = vtData.data?.attributes?.last_analysis_stats;
+        if (stats && (stats.malicious > 0 || stats.suspicious > 0)) {
+          reasons.push(`VirusTotal detected malicious content (${stats.malicious} malicious, ${stats.suspicious} suspicious).`);
+          risk = 100;
+          status = "infected";
+        }
+      }
+    } catch (e) {
+      console.error("VirusTotal API error:", e);
+    }
   }
 
   const clean = status === "clean";
@@ -217,7 +246,7 @@ Deno.serve(async (req: Request) => {
       actorUserId = payload.user_id ?? null;
     }
 
-    const evaluation = evaluateScan({
+    const evaluation = await evaluateScan({
       ...payload,
       file_name: fileName,
       file_size: fileSize,

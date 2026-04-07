@@ -20,6 +20,8 @@
     "db:push": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command db push",
     "db:status": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command migration list",
     "audit:ci": "npm audit --omit=dev --audit-level=critical",
+    "security:check": "node scripts/validate-env.js && npm audit",
+    "security:env": "node scripts/validate-env.js",
     "start": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
@@ -75,7 +77,7 @@
     "cmdk": "^1.0.0",
     "core-js": "^3.48.0",
     "date-fns": "^4.1.0",
-    "dompurify": "^3.3.1",
+    "dompurify": "3.3.3",
     "driver.js": "^1.4.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^12.23.26",
@@ -109,7 +111,7 @@
     "tailwind-merge": "^3.4.0",
     "turndown": "^7.2.2",
     "vaul": "^1.1.2",
-    "zod": "^4.1.13",
+    "zod": "4.3.6",
     "zustand": "^5.0.9"
   },
   "devDependencies": {
@@ -118,7 +120,7 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.1",
     "@testing-library/user-event": "^14.6.1",
-    "@types/dompurify": "^3.0.5",
+    "@types/dompurify": "3.0.5",
     "@types/node": "^24.10.3",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",

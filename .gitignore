@@ -23,11 +23,18 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment files
+# Environment files - SECURITY: Never commit files with real credentials
 .env
-.env.*
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
 !.env.example
 !.env.example.secure
+
+# Backup files created during security cleanup
+*.backup
 
 # Local Netlify folder
 .netlify

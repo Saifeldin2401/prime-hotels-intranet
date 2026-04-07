@@ -84,6 +84,14 @@ const ChartTooltipContent = React.forwardRef<
     wrapperStyle: _wrapperStyle,
     activeIndex: _activeIndex,
     accessibilityLayer: _accessibilityLayer,
+    allowEscapeViewBox: _allowEscapeViewBox,
+    animationDuration: _animationDuration,
+    animationEasing: _animationEasing,
+    axisId: _axisId,
+    includeHidden: _includeHidden,
+    coordinate: _coordinate,
+    viewBox: _viewBox,
+    offset: _offset,
     ...otherProps
   } = props as any
 

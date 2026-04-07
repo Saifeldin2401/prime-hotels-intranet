@@ -1,10 +1,23 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+// CORS headers - restrict to allowed origins in production
+const getCorsHeaders = (origin: string | null) => {
+  // In production, validate the origin against an allowlist
+  const allowedOrigins = Deno.env.get("ALLOWED_ORIGINS")?.split(",") || [
+    "https://phg-connect.com",
+    "https://www.phg-connect.com",
+  ];
+  
+  const isAllowed = origin && allowedOrigins.some(allowed => 
+    origin === allowed || origin.endsWith(allowed.replace("https://", "."))
+  );
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin! : allowedOrigins[0],
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+  };
 };
 
 async function sha256(input: string): Promise<string> {
@@ -16,14 +29,42 @@ async function sha256(input: string): Promise<string> {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === "OPTIONS")
     return new Response("ok", { headers: corsHeaders });
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const client = createClient(supabaseUrl, serviceRoleKey);
+  
+  // SECURITY: API key must be provided via environment variable
+  const serperKey = Deno.env.get("SERPER_API_KEY");
+  
+  if (!supabaseUrl || !serviceRoleKey) {
+    return new Response(
+      JSON.stringify({ error: "Server configuration error: Missing Supabase credentials" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+  
+  if (!serperKey) {
+    return new Response(
+      JSON.stringify({ error: "Server configuration error: SERPER_API_KEY not configured" }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
+  }
+  
+  const client = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
-  const serperKey = "88c094dee3b3009f6874a0396d85efaea7b25671";
   const cid = "6082352680985290046";
   const sourceId = "f8a6c813-6b68-48a5-af87-d45b12b5a5d7";
   const propertyId = "990b0b9e-faeb-49fd-9c90-5308d7515c18";

@@ -57,10 +57,12 @@ export function formatFileSize(bytes: number): string {
 }
 
 /**
- * Escape special characters in a search query for safe use in PostgreSQL ILIKE patterns.
- * Characters %, _, and \ have special meaning in ILIKE and need to be escaped.
- * @param query - The raw search query from user input
- * @returns The escaped query safe for use in `.ilike.%${query}%`
+ * DEPRECATED: This function does NOT provide complete protection against SQL injection.
+ * Use secureSearchParams() or database RPC functions instead.
+ * 
+ * Escape special characters in a search query for PostgreSQL ILIKE patterns.
+ * WARNING: This only escapes SQL wildcards. PostgREST operators (comma, parentheses) 
+ * can still be injected. Use with extreme caution.
  */
 export function escapeSearchQuery(query: string): string {
   return query
@@ -70,4 +72,65 @@ export function escapeSearchQuery(query: string): string {
     .replace(/,/g, '\\,')    // Escape PostgREST OR separator
     .replace(/\(/g, '\\(')   // Escape PostgREST grouping
     .replace(/\)/g, '\\)')   // Escape PostgREST grouping
+}
+
+/**
+ * SECURITY CRITICAL: Sanitize user input for use in database queries.
+ * This is a defense-in-depth measure. Prefer using parameterized RPC functions.
+ * Removes all potentially dangerous characters.
+ * @param input - Raw user input
+ * @returns Sanitized string safe for database queries
+ */
+export function sanitizeSearchInput(input: string): string {
+  if (!input) return ''
+  return input
+    .replace(/[^a-zA-Z0-9\s\-_@.]/g, '')  // Only allow safe characters
+    .replace(/\s+/g, ' ')                 // Normalize whitespace
+    .trim()
+    .slice(0, 100)                        // Limit length
+}
+
+/**
+ * SECURITY CRITICAL: Validate and sanitize UUID
+ * @param id - Potential UUID string
+ * @returns Valid UUID or null
+ */
+export function sanitizeUUID(id: string | null | undefined): string | null {
+  if (!id) return null
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(id) ? id.toLowerCase() : null
+}
+
+/**
+ * SECURITY CRITICAL: Validate array of UUIDs
+ * @param ids - Array of potential UUID strings
+ * @returns Array of valid UUIDs
+ */
+export function sanitizeUUIDArray(ids: string[] | null | undefined): string[] {
+  if (!Array.isArray(ids)) return []
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return ids.filter(id => uuidRegex.test(id)).map(id => id.toLowerCase())
+}
+
+/**
+ * Build a safe PostgREST filter object.
+ * Returns null if input is unsafe.
+ */
+export function buildSafeFilter(
+  field: string,
+  operator: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'ilike',
+  value: string | number | boolean
+): { field: string; operator: string; value: string | number | boolean } | null {
+  // Validate field name (only allow alphanumeric and underscore)
+  if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(field)) {
+    return null
+  }
+  
+  // Validate operator
+  const validOperators = ['eq', 'neq', 'gt', 'gte', 'lt', 'lte', 'like', 'ilike']
+  if (!validOperators.includes(operator)) {
+    return null
+  }
+  
+  return { field, operator, value }
 }

@@ -1,6 +1,6 @@
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { PdfViewer } from '@/components/common/PdfViewer'
-import { sanitizeHtml } from '@/lib/sanitize'
+import { sanitizeHtml, sanitizeUrl } from '@/lib/sanitize'
 import type { TrainingContentBlock } from '@/lib/types'
 import { Link as LinkIcon } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -32,10 +32,15 @@ const DocumentBlockDescription = ({
 }: DocumentBlockDescriptionProps) => {
     const { t } = useTranslation('training')
 
+    // SECURITY: All markup is pre-sanitized before being passed to this component
+    // The sanitizeHtml function is called in the parent component (DocumentBlockRenderer)
+    // to ensure all content is safe before rendering
+
     if (!hasTranslation) {
         return (
             <div className="text-sm text-gray-500 prose max-w-none dark:prose-invert">
                 <InlineErrorBoundary>
+                    {/* SECURITY: Content sanitized via sanitizeHtml() in parent */}
                     <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
                 </InlineErrorBoundary>
             </div>
@@ -50,6 +55,7 @@ const DocumentBlockDescription = ({
                         {t('original', 'Original')}
                     </div>
                     <InlineErrorBoundary>
+                        {/* SECURITY: Content sanitized via sanitizeHtml() in parent */}
                         <div dangerouslySetInnerHTML={{ __html: originalMarkup }} />
                     </InlineErrorBoundary>
                 </div>
@@ -58,6 +64,7 @@ const DocumentBlockDescription = ({
                         {t('translatedTo', { language: translationLabel || t('translated', 'Translated') })}
                     </div>
                     <InlineErrorBoundary>
+                        {/* SECURITY: Content sanitized via sanitizeHtml() in parent */}
                         <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
                     </InlineErrorBoundary>
                 </div>
@@ -68,6 +75,7 @@ const DocumentBlockDescription = ({
     return (
         <div className="text-sm text-gray-600 prose max-w-none dark:prose-invert" dir={translationDir}>
             <InlineErrorBoundary>
+                {/* SECURITY: Content sanitized via sanitizeHtml() in parent */}
                 <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
             </InlineErrorBoundary>
         </div>
@@ -82,23 +90,28 @@ export const DocumentBlockRenderer = ({
     translationDir = 'ltr'
 }: DocumentBlockRendererProps) => {
     const { t } = useTranslation('training')
-    const getSafeUrl = (value?: string | null) => {
+    
+    /**
+     * SECURITY: URL validation to prevent javascript: and other dangerous protocols
+     */
+    const getSafeUrl = (value?: string | null): string | null => {
         if (!value) return null
-        try {
-            const parsed = new URL(value)
-            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
-                return parsed.toString()
-            }
-            return null
-        } catch {
-            return null
+        
+        // Use the centralized sanitizeUrl function for protocol validation
+        const sanitized = sanitizeUrl(value)
+        if (!sanitized) {
+            console.warn('Blocked dangerous URL in DocumentBlockRenderer:', value.substring(0, 50))
         }
+        return sanitized
     }
 
     const safeContentUrl = getSafeUrl(block.content_url)
     const isPdf = safeContentUrl?.toLowerCase().endsWith('.pdf')
-    const originalMarkup = sanitizeHtml(block.content)
-    const translatedMarkup = translatedContent ? sanitizeHtml(translatedContent) : ''
+    
+    // SECURITY: Sanitize HTML content before rendering
+    // This prevents XSS attacks from malicious content in the block
+    const originalMarkup = sanitizeHtml(block.content, { allowIframes: false })
+    const translatedMarkup = translatedContent ? sanitizeHtml(translatedContent, { allowIframes: false }) : ''
 
     if (!isPdf) {
         return (
@@ -111,7 +124,7 @@ export const DocumentBlockRenderer = ({
                             <a
                                 href={safeContentUrl}
                                 target="_blank"
-                                rel="noreferrer"
+                                rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline break-all"
                             >
                                 {safeContentUrl}
@@ -153,3 +166,5 @@ export const DocumentBlockRenderer = ({
         </div>
     )
 }
+
+export default DocumentBlockRenderer

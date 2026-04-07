@@ -26,17 +26,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAccountActions } from '@/hooks/useAccountActions'
+import { PendingUserApprovals } from '@/components/admin/PendingUserApprovals'
 import type { AppRole } from '@/lib/constants'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
-type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
+type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive' | 'pending_approval'
 
 interface AccountActionNote {
   id: string
@@ -80,6 +81,7 @@ export default function UserManagement() {
 
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0)
 
   const { suspendAccount, reactivateAccount, forcePasswordReset, cancelPasswordReset, unlockAccount, resendCredentials, isLoading: isActionLoading } = useAccountActions()
 
@@ -541,6 +543,9 @@ export default function UserManagement() {
           </div>
         }
       />
+
+      {/* Pending User Approvals */}
+      <PendingUserApprovals onCountChange={setPendingApprovalCount} />
 
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">

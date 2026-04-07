@@ -1,11 +1,24 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+// CORS headers - restrict to allowed origins in production
+const getCorsHeaders = (origin: string | null) => {
+  // In production, validate the origin against an allowlist
+  const allowedOrigins = Deno.env.get("ALLOWED_ORIGINS")?.split(",") || [
+    "https://phg-connect.com",
+    "https://www.phg-connect.com",
+  ];
+  
+  const isAllowed = origin && allowedOrigins.some(allowed => 
+    origin === allowed || origin.endsWith(allowed.replace("https://", "."))
+  );
+  
+  return {
+    "Access-Control-Allow-Origin": isAllowed ? origin! : allowedOrigins[0],
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  };
 };
 
 function timingSafeBearerMatch(
@@ -31,6 +44,9 @@ async function sha256(input: string): Promise<string> {
 }
 
 Deno.serve(async (req: Request) => {
+  const origin = req.headers.get("origin");
+  const corsHeaders = getCorsHeaders(origin);
+  
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
@@ -49,6 +65,29 @@ Deno.serve(async (req: Request) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    
+    // SECURITY: API key must be provided via environment variable
+    const serperKey = Deno.env.get("SERPER_API_KEY");
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: Missing Supabase credentials" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
+    
+    if (!serperKey) {
+      return new Response(
+        JSON.stringify({ error: "Server configuration error: SERPER_API_KEY not configured" }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
+    }
 
     // Verify service role
     const isServiceRole = timingSafeBearerMatch(
@@ -92,7 +131,6 @@ Deno.serve(async (req: Request) => {
       .single();
 
     // Fetch from Serper API
-    const serperKey = "88c094dee3b3009f6874a0396d85efaea7b25671";
     const cid = "6082352680985290046";
 
     const serperRes = await fetch("https://google.serper.dev/reviews", {

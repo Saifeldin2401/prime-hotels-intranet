@@ -1,6 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware';
+import { scanFile } from '@/hooks/useVirusScan';
+import {
+  validateFile,
+  createSecureStoragePath,
+  calculateFileHash,
+  sanitizeSvgContent,
+  type SecureFileInfo,
+  ALLOWED_FILE_TYPES,
+} from '@/lib/file-security';
 import { toast } from 'sonner';
 import type {
   MediaAsset,
@@ -14,16 +23,23 @@ import type {
   MediaAssetUsage,
 } from '@/lib/types/media';
 
+// Allowed media types mapped to MIME types
 const ALLOWED_MEDIA_TYPES: Record<MediaType, string[]> = {
-  video: ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-matroska'],
+  video: ['video/mp4', 'video/webm', 'video/quicktime'],
   image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-  document: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
-  audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/mp3'],
+  document: [
+    'application/pdf',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'text/plain',
+  ],
+  audio: ['audio/mpeg', 'audio/wav', 'audio/ogg'],
 };
 
+// Default max file sizes in MB
 const DEFAULT_MAX_FILE_SIZES: Record<MediaType, number> = {
   video: 500, // 500MB
-  image: 10,  // 10MB
+  image: 10, // 10MB
   document: 50, // 50MB
   audio: 100, // 100MB
 };
@@ -33,21 +49,42 @@ interface UseMediaOptions {
   autoFetch?: boolean;
 }
 
+interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
+interface UploadResult {
+  asset: MediaAsset | null;
+  error: string | null;
+  scanResult?: {
+    safe: boolean;
+    status: string;
+    riskScore?: number;
+  };
+}
+
 export function useMedia(options: UseMediaOptions = {}) {
   const { propertyId, autoFetch = true } = options;
   const [assets, setAssets] = useState<MediaAsset[]>([]);
   const [collections, setCollections] = useState<MediaCollection[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<MediaAssetWithUsage | null>(null);
   const [filters, setFilters] = useState<MediaFilterOptions>({});
   const abortControllerRef = useRef<AbortController | null>(null);
+  const progressIntervalRef = useRef<number | null>(null);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
+      }
+      if (progressIntervalRef.current) {
+        window.clearInterval(progressIntervalRef.current);
       }
     };
   }, []);
@@ -63,11 +100,13 @@ export function useMedia(options: UseMediaOptions = {}) {
     try {
       let query = supabase
         .from('media_assets')
-        .select(`
+        .select(
+          `
           *,
           uploader:uploaded_by(full_name),
           property:property_id(name)
-        `)
+        `
+        )
         .eq('is_archived', false)
         .order(filterOptions.sortBy || 'created_at', { ascending: filterOptions.sortOrder === 'asc' });
 
@@ -167,8 +206,9 @@ export function useMedia(options: UseMediaOptions = {}) {
   // Get single asset with usage details
   const getAssetWithUsage = useCallback(async (assetId: string): Promise<MediaAssetWithUsage | null> => {
     try {
-      const { data, error } = await supabase
-        .rpc('get_media_asset_with_usage', { p_media_asset_id: assetId });
+      const { data, error } = await supabase.rpc('get_media_asset_with_usage', {
+        p_media_asset_id: assetId,
+      });
 
       if (error) throw error;
 
@@ -187,27 +227,12 @@ export function useMedia(options: UseMediaOptions = {}) {
     }
   }, []);
 
-  // Upload file
-  const uploadFile = useCallback(async (
-    file: File,
-    uploadOptions: MediaUploadOptions = {}
-  ): Promise<MediaAsset | null> => {
-    // Rate limiting check
-    const rateLimitKey = `upload:media:${file.name}`;
-    if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.upload.maxRequests, rateLimitConfig.upload.windowMs)) {
-      toast.error('Too many upload attempts. Please try again later.');
-      return null;
-    }
+  // Validate file before upload
+  const validateFileForUpload = useCallback(
+    async (file: File, maxFileSize?: number): Promise<{ isValid: boolean; errors: string[]; secureInfo?: SecureFileInfo }> => {
+      const errors: string[] = [];
 
-    setUploading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        toast.error('Please sign in to upload files');
-        return null;
-      }
-
-      // Detect media type from MIME type
+      // Detect media type
       let mediaType: MediaType = 'document';
       for (const [type, mimes] of Object.entries(ALLOWED_MEDIA_TYPES)) {
         if (mimes.includes(file.type)) {
@@ -216,217 +241,426 @@ export function useMedia(options: UseMediaOptions = {}) {
         }
       }
 
-      // Validate file type
-      const allowedTypes = ALLOWED_MEDIA_TYPES[mediaType];
-      if (!allowedTypes.includes(file.type)) {
-        toast.error(`Unsupported file type: ${file.type}`);
-        return null;
+      // Get allowed MIME types for this media type
+      const allowedMimeTypes = ALLOWED_MEDIA_TYPES[mediaType];
+
+      // Get max file size
+      const maxSize = maxFileSize
+        ? maxFileSize * 1024 * 1024
+        : DEFAULT_MAX_FILE_SIZES[mediaType] * 1024 * 1024;
+
+      // Run comprehensive file validation
+      const validationResult = await validateFile(file, {
+        allowedMimeTypes,
+        maxFileSize: maxSize,
+        validateImageDimensions: true,
+        scanContent: true,
+      });
+
+      if (!validationResult.isValid) {
+        errors.push(...validationResult.errors);
       }
 
-      // Validate file size
-      const maxSize = DEFAULT_MAX_FILE_SIZES[mediaType] * 1024 * 1024;
-      if (file.size > maxSize) {
-        toast.error(`File too large. Max size for ${mediaType} is ${DEFAULT_MAX_FILE_SIZES[mediaType]}MB`);
-        return null;
+      // Log warnings if any
+      if (validationResult.warnings.length > 0) {
+        console.warn('File upload warnings:', validationResult.warnings);
       }
 
-      // Generate safe filename
-      const timestamp = Date.now();
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const storagePath = `${user.id}/${mediaType}/${timestamp}-${safeName}`;
+      return {
+        isValid: errors.length === 0,
+        errors,
+        secureInfo: validationResult.secureInfo,
+      };
+    },
+    []
+  );
 
-      // Upload to storage
-      const { error: uploadError } = await supabase.storage
-        .from('media')
-        .upload(storagePath, file, {
-          contentType: file.type,
-          upsert: false,
+  // Upload file with comprehensive security
+  const uploadFile = useCallback(
+    async (file: File, uploadOptions: MediaUploadOptions = {}): Promise<UploadResult> => {
+      // Rate limiting check
+      const rateLimitKey = `upload:media:${file.name}`;
+      if (
+        !SecurityMiddleware.rateLimit(
+          rateLimitKey,
+          rateLimitConfig.upload.maxRequests,
+          rateLimitConfig.upload.windowMs
+        )
+      ) {
+        toast.error('Too many upload attempts. Please try again later.');
+        return { asset: null, error: 'Rate limit exceeded' };
+      }
+
+      setUploading(true);
+      setUploadProgress(null);
+
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) {
+          toast.error('Please sign in to upload files');
+          return { asset: null, error: 'Not authenticated' };
+        }
+
+        // Step 1: Validate file
+        const validationResult = await validateFileForUpload(
+          file,
+          uploadOptions.maxFileSize
+        );
+        if (!validationResult.isValid) {
+          validationResult.errors.forEach((error) => toast.error(error));
+          return { asset: null, error: validationResult.errors.join(', ') };
+        }
+
+        const secureInfo = validationResult.secureInfo!;
+
+        // Step 2: Virus scan
+        const scanResult = await scanFile(file, {
+          bucket: 'media',
+          context: 'media_upload',
         });
 
-      if (uploadError) {
-        throw new Error(uploadError.message);
+        if (!scanResult.safe) {
+          toast.error(`Security threat detected: ${scanResult.message || 'File rejected'}`, {
+            description: scanResult.reasons?.join(', '),
+          });
+          return {
+            asset: null,
+            error: 'Virus scan failed',
+            scanResult: {
+              safe: false,
+              status: scanResult.status || 'infected',
+              riskScore: scanResult.riskScore,
+            },
+          };
+        }
+
+        // Step 3: Calculate file hash for integrity
+        const fileHash = await calculateFileHash(file);
+
+        // Step 4: Handle SVG sanitization if needed
+        let fileToUpload: File | Blob = file;
+        if (secureInfo.mimeType === 'image/svg+xml') {
+          const { validateSvgFile } = await import('@/lib/svgSecurity');
+          const validationResult = await validateSvgFile(file);
+          if (!validationResult.valid || !validationResult.file) {
+            toast.error(`Security threat detected: ${validationResult.reason || 'Invalid SVG content'}`);
+            return { asset: null, error: 'SVG sanitization failed' };
+          }
+          fileToUpload = validationResult.file;
+        }
+
+        // Step 5: Detect media type for storage path
+        let mediaType: MediaType = 'document';
+        for (const [type, mimes] of Object.entries(ALLOWED_MEDIA_TYPES)) {
+          if (mimes.includes(secureInfo.mimeType)) {
+            mediaType = type as MediaType;
+            break;
+          }
+        }
+
+        // Step 6: Create secure storage path
+        const storagePath = createSecureStoragePath(
+          user.id,
+          mediaType,
+          secureInfo.secureFilename
+        );
+
+        // Step 7: Simulate progress (since Supabase doesn't provide upload progress)
+        let progress = 0;
+        progressIntervalRef.current = window.setInterval(() => {
+          progress += Math.random() * 15;
+          if (progress > 90) progress = 90;
+          setUploadProgress({
+            loaded: Math.floor((progress / 100) * file.size),
+            total: file.size,
+            percentage: Math.floor(progress),
+          });
+        }, 200);
+
+        // Step 8: Upload to storage with security headers
+        const { error: uploadError } = await supabase.storage
+          .from('media')
+          .upload(storagePath, fileToUpload, {
+            contentType: secureInfo.mimeType,
+            upsert: false,
+            cacheControl: '3600',
+          });
+
+        // Clear progress interval
+        if (progressIntervalRef.current) {
+          window.clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
+        setUploadProgress({ loaded: file.size, total: file.size, percentage: 100 });
+
+        if (uploadError) {
+          throw new Error(uploadError.message);
+        }
+
+        // Step 9: Get signed URL instead of public URL for security
+        const { data: signedUrlData, error: signedUrlError } = await supabase.storage
+          .from('media')
+          .createSignedUrl(storagePath, 3600); // 1 hour expiry
+
+        if (signedUrlError) {
+          console.error('Error creating signed URL:', signedUrlError);
+        }
+
+        const secureUrl = signedUrlData?.signedUrl || '';
+
+        // Step 10: Create database record with security metadata
+        const { data: assetData, error: dbError } = await supabase
+          .from('media_assets')
+          .insert({
+            title: uploadOptions.title || secureInfo.originalFilename.replace(/\.[^/.]+$/, ''),
+            description: uploadOptions.description || null,
+            filename: secureInfo.secureFilename,
+            original_filename: secureInfo.originalFilename,
+            storage_path: storagePath,
+            storage_bucket: 'media',
+            public_url: secureUrl, // Store signed URL initially
+            media_type: mediaType,
+            category: uploadOptions.category || 'general',
+            file_size_bytes: secureInfo.sizeBytes,
+            mime_type: secureInfo.mimeType,
+            width: secureInfo.metadata.width || null,
+            height: secureInfo.metadata.height || null,
+            tags: uploadOptions.tags || [],
+            metadata: {
+              ...secureInfo.metadata,
+              sha256: fileHash,
+              scan_status: scanResult.status,
+              scan_id: scanResult.scanId,
+              uploaded_at: new Date().toISOString(),
+            },
+            uploaded_by: user.id,
+            property_id: uploadOptions.property_id || propertyId || null,
+            is_public: uploadOptions.is_public ?? false,
+          })
+          .select()
+          .single();
+
+        if (dbError) {
+          // Cleanup uploaded file if DB insert fails
+          await supabase.storage.from('media').remove([storagePath]);
+          throw new Error(dbError.message);
+        }
+
+        toast.success('File uploaded successfully');
+
+        // Refresh assets list
+        await fetchAssets(filters);
+
+        return {
+          asset: assetData as MediaAsset,
+          error: null,
+          scanResult: {
+            safe: true,
+            status: scanResult.status || 'clean',
+            riskScore: scanResult.riskScore,
+          },
+        };
+      } catch (error) {
+        console.error('Upload error:', error);
+        const errorMessage = error instanceof Error ? error.message : 'Failed to upload file';
+        toast.error(errorMessage);
+        return { asset: null, error: errorMessage };
+      } finally {
+        setUploading(false);
+        if (progressIntervalRef.current) {
+          window.clearInterval(progressIntervalRef.current);
+          progressIntervalRef.current = null;
+        }
       }
+    },
+    [fetchAssets, filters, propertyId, validateFileForUpload]
+  );
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('media')
-        .getPublicUrl(storagePath);
+  // Get secure download URL with access logging
+  const getSecureDownloadUrl = useCallback(
+    async (assetId: string): Promise<string | null> => {
+      try {
+        // Get asset details
+        const { data: asset, error: fetchError } = await supabase
+          .from('media_assets')
+          .select('storage_path, storage_bucket, mime_type, filename')
+          .eq('id', assetId)
+          .single();
 
-      // Create database record
-      const { data: assetData, error: dbError } = await supabase
-        .from('media_assets')
-        .insert({
-          title: uploadOptions.title || file.name.replace(/\.[^/.]+$/, ''),
-          description: uploadOptions.description || null,
-          filename: `${timestamp}-${safeName}`,
-          original_filename: file.name,
-          storage_path: storagePath,
-          storage_bucket: 'media',
-          public_url: publicUrl,
-          media_type: mediaType,
-          category: uploadOptions.category || 'general',
-          file_size_bytes: file.size,
-          mime_type: file.type,
-          tags: uploadOptions.tags || [],
-          uploaded_by: user.id,
-          property_id: uploadOptions.property_id || propertyId || null,
-          is_public: uploadOptions.is_public ?? false,
-        })
-        .select()
-        .single();
+        if (fetchError || !asset) {
+          toast.error('File not found');
+          return null;
+        }
 
-      if (dbError) {
-        // Cleanup uploaded file if DB insert fails
-        await supabase.storage.from('media').remove([storagePath]);
-        throw new Error(dbError.message);
+        // Generate signed URL with short expiry
+        const { data: signedData, error: signedError } = await supabase.storage
+          .from(asset.storage_bucket)
+          .createSignedUrl(asset.storage_path, 300); // 5 minutes
+
+        if (signedError || !signedData?.signedUrl) {
+          toast.error('Failed to generate secure download link');
+          return null;
+        }
+
+        // Log access (async, don't wait)
+        void (async () => {
+          try {
+            await supabase
+              .from('media_access_logs')
+              .insert({
+                media_asset_id: assetId,
+                accessed_at: new Date().toISOString(),
+                access_type: 'download',
+              });
+          } catch (err) {
+            console.error('Failed to log access:', err);
+          }
+        })();
+
+        return signedData.signedUrl;
+      } catch (error) {
+        console.error('Error generating secure URL:', error);
+        toast.error('Failed to generate download link');
+        return null;
       }
-
-      toast.success('File uploaded successfully');
-      
-      // Refresh assets list
-      await fetchAssets(filters);
-      
-      return assetData as MediaAsset;
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to upload file');
-      return null;
-    } finally {
-      setUploading(false);
-    }
-  }, [fetchAssets, filters, propertyId]);
+    },
+    []
+  );
 
   // Update asset
-  const updateAsset = useCallback(async (
-    assetId: string,
-    formData: MediaAssetFormData
-  ): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('media_assets')
-        .update({
-          title: formData.title,
-          description: formData.description || null,
-          category: formData.category,
-          tags: formData.tags,
-          is_public: formData.is_public,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', assetId);
+  const updateAsset = useCallback(
+    async (assetId: string, formData: MediaAssetFormData): Promise<boolean> => {
+      try {
+        const { error } = await supabase
+          .from('media_assets')
+          .update({
+            title: formData.title,
+            description: formData.description || null,
+            category: formData.category,
+            tags: formData.tags,
+            is_public: formData.is_public,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', assetId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast.success('Asset updated successfully');
-      await fetchAssets(filters);
-      return true;
-    } catch (error) {
-      console.error('Update error:', error);
-      toast.error('Failed to update asset');
-      return false;
-    }
-  }, [fetchAssets, filters]);
+        toast.success('Asset updated successfully');
+        await fetchAssets(filters);
+        return true;
+      } catch (error) {
+        console.error('Update error:', error);
+        toast.error('Failed to update asset');
+        return false;
+      }
+    },
+    [fetchAssets, filters]
+  );
 
   // Delete asset
-  const deleteAsset = useCallback(async (assetId: string): Promise<boolean> => {
-    try {
-      // Get asset details first
-      const { data: asset, error: fetchError } = await supabase
-        .from('media_assets')
-        .select('storage_path, storage_bucket')
-        .eq('id', assetId)
-        .single();
+  const deleteAsset = useCallback(
+    async (assetId: string): Promise<boolean> => {
+      try {
+        // Get asset details first
+        const { data: asset, error: fetchError } = await supabase
+          .from('media_assets')
+          .select('storage_path, storage_bucket')
+          .eq('id', assetId)
+          .single();
 
-      if (fetchError) throw fetchError;
+        if (fetchError) throw fetchError;
 
-      // Delete from database
-      const { error: deleteError } = await supabase
-        .from('media_assets')
-        .delete()
-        .eq('id', assetId);
+        // Delete from database
+        const { error: deleteError } = await supabase
+          .from('media_assets')
+          .delete()
+          .eq('id', assetId);
 
-      if (deleteError) throw deleteError;
+        if (deleteError) throw deleteError;
 
-      // Delete from storage
-      if (asset?.storage_path) {
-        await supabase.storage.from(asset.storage_bucket).remove([asset.storage_path]);
+        // Delete from storage
+        if (asset?.storage_path) {
+          await supabase.storage.from(asset.storage_bucket).remove([asset.storage_path]);
+        }
+
+        toast.success('Asset deleted successfully');
+        await fetchAssets(filters);
+        return true;
+      } catch (error) {
+        console.error('Delete error:', error);
+        toast.error('Failed to delete asset');
+        return false;
       }
-
-      toast.success('Asset deleted successfully');
-      await fetchAssets(filters);
-      return true;
-    } catch (error) {
-      console.error('Delete error:', error);
-      toast.error('Failed to delete asset');
-      return false;
-    }
-  }, [fetchAssets, filters]);
+    },
+    [fetchAssets, filters]
+  );
 
   // Archive asset (soft delete)
-  const archiveAsset = useCallback(async (assetId: string): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('media_assets')
-        .update({ is_archived: true, updated_at: new Date().toISOString() })
-        .eq('id', assetId);
+  const archiveAsset = useCallback(
+    async (assetId: string): Promise<boolean> => {
+      try {
+        const { error } = await supabase
+          .from('media_assets')
+          .update({ is_archived: true, updated_at: new Date().toISOString() })
+          .eq('id', assetId);
 
-      if (error) throw error;
+        if (error) throw error;
 
-      toast.success('Asset archived');
-      await fetchAssets(filters);
-      return true;
-    } catch (error) {
-      console.error('Archive error:', error);
-      toast.error('Failed to archive asset');
-      return false;
-    }
-  }, [fetchAssets, filters]);
+        toast.success('Asset archived');
+        await fetchAssets(filters);
+        return true;
+      } catch (error) {
+        console.error('Archive error:', error);
+        toast.error('Failed to archive asset');
+        return false;
+      }
+    },
+    [fetchAssets, filters]
+  );
 
   // Record media usage
-  const recordUsage = useCallback(async (
-    assetId: string,
-    usageType: string,
-    entityId: string,
-    entityTitle?: string
-  ): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('media_asset_usages')
-        .insert({
+  const recordUsage = useCallback(
+    async (assetId: string, usageType: string, entityId: string, entityTitle?: string): Promise<boolean> => {
+      try {
+        const { error } = await supabase.from('media_asset_usages').insert({
           media_asset_id: assetId,
           usage_type: usageType,
           usage_entity_id: entityId,
           usage_entity_title: entityTitle || null,
         });
 
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error recording usage:', error);
-      return false;
-    }
-  }, []);
+        if (error) throw error;
+        return true;
+      } catch (error) {
+        console.error('Error recording usage:', error);
+        return false;
+      }
+    },
+    []
+  );
 
   // Remove media usage
-  const removeUsage = useCallback(async (
-    assetId: string,
-    usageType: string,
-    entityId: string
-  ): Promise<boolean> => {
-    try {
-      const { error } = await supabase
-        .from('media_asset_usages')
-        .delete()
-        .eq('media_asset_id', assetId)
-        .eq('usage_type', usageType)
-        .eq('usage_entity_id', entityId);
+  const removeUsage = useCallback(
+    async (assetId: string, usageType: string, entityId: string): Promise<boolean> => {
+      try {
+        const { error } = await supabase
+          .from('media_asset_usages')
+          .delete()
+          .eq('media_asset_id', assetId)
+          .eq('usage_type', usageType)
+          .eq('usage_entity_id', entityId);
 
-      if (error) throw error;
-      return true;
-    } catch (error) {
-      console.error('Error removing usage:', error);
-      return false;
-    }
-  }, []);
+        if (error) throw error;
+        return true;
+      } catch (error) {
+        console.error('Error removing usage:', error);
+        return false;
+      }
+    },
+    []
+  );
 
   // Auto-fetch on mount if enabled
   useEffect(() => {
@@ -441,6 +675,7 @@ export function useMedia(options: UseMediaOptions = {}) {
     collections,
     loading,
     uploading,
+    uploadProgress,
     selectedAsset,
     filters,
     setFilters,
@@ -449,6 +684,7 @@ export function useMedia(options: UseMediaOptions = {}) {
     fetchCollections,
     getAssetWithUsage,
     uploadFile,
+    getSecureDownloadUrl,
     updateAsset,
     deleteAsset,
     archiveAsset,
@@ -461,7 +697,10 @@ export function useMedia(options: UseMediaOptions = {}) {
 export function useMediaPicker(propertyId?: string) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedAssets, setSelectedAssets] = useState<MediaAsset[]>([]);
-  const { assets, loading, fetchAssets, filters, setFilters } = useMedia({ propertyId, autoFetch: false });
+  const { assets, loading, fetchAssets, filters, setFilters } = useMedia({
+    propertyId,
+    autoFetch: false,
+  });
 
   const openPicker = useCallback(() => {
     setIsOpen(true);
@@ -474,10 +713,10 @@ export function useMediaPicker(propertyId?: string) {
   }, []);
 
   const toggleAssetSelection = useCallback((asset: MediaAsset) => {
-    setSelectedAssets(prev => {
-      const exists = prev.find(a => a.id === asset.id);
+    setSelectedAssets((prev) => {
+      const exists = prev.find((a) => a.id === asset.id);
       if (exists) {
-        return prev.filter(a => a.id !== asset.id);
+        return prev.filter((a) => a.id !== asset.id);
       }
       return [...prev, asset];
     });

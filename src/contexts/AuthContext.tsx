@@ -12,6 +12,20 @@ import { classifyAuthError, getRetryDelay, getErrorMessage, getErrorCode } from 
 import { isEnabled } from '@/lib/featureFlags'
 import { recordAuthEvent, reportAuthHealth } from '@/lib/authMonitor'
 import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
+import { 
+  validateSessionBinding, 
+  recordLoginAttempt, 
+  isCaptchaRequired,
+  getRemainingAttempts,
+  checkSecurityRequirements,
+  initializeSessionSecurity,
+  clearSessionFingerprint,
+  logSecurityEvent,
+  checkPasswordBreach,
+  revokeAllOtherSessions,
+  enforceSessionLimit,
+} from '@/lib/authSecurityService'
+import { auditLog } from '@/lib/auditLog'
 
 // ─── Context type ──────────────────────────────────────────────────────────
 export interface AuthContextType {
@@ -23,9 +37,17 @@ export interface AuthContextType {
   primaryRole: AppRole | null
   loading: boolean
   rolesLoading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: Error | null }>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null; requiresMFA?: boolean; mfaUserId?: string }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
+  verifyMFA: (code: string) => Promise<boolean>
+  isMFAVerified: boolean
+  securityRequirements: {
+    mfaRequired: boolean
+    mfaEnabled: boolean
+    passwordRotationRequired: boolean
+    setupComplete: boolean
+  } | null
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -60,6 +82,8 @@ const CONFIG = {
   baseRetryDelayMs: 1000,
   // Loading timeout
   loadingTimeoutMs: 5000,
+  // Session security check interval
+  sessionSecurityCheckIntervalMs: 60000, // 1 minute
 } as const
 
 // ─── Logger helper (guarded) ───────────────────────────────────────────────
@@ -87,11 +111,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [departments, setDepartments] = useState<Department[]>([])
   const [loading, setLoading] = useState(true)
   const [rolesLoading, setRolesLoading] = useState(true)
+  const [isMFAVerified, setIsMFAVerified] = useState(false)
+  const [securityRequirements, setSecurityRequirements] = useState<{
+    mfaRequired: boolean
+    mfaEnabled: boolean
+    passwordRotationRequired: boolean
+    setupComplete: boolean
+  } | null>(null)
+  const [pendingMFAUserId, setPendingMFAUserId] = useState<string | null>(null)
 
   // Refs for race condition prevention
   const sessionClearInProgressRef = useRef(false)
   const visibilityTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const sessionSecurityIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // ── Session helpers (error detection, timeout, clear) ──────────────────
   const { isAuthError, withTimeout, clearLocalSession, authRecoveryInProgressRef, resumeValidationInFlightRef, lastResumeValidationAtRef } =
@@ -104,6 +137,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProperties([])
     setDepartments([])
     setRolesLoading(false)
+    setIsMFAVerified(false)
+    setSecurityRequirements(null)
+    setPendingMFAUserId(null)
+    clearSessionFingerprint()
   }, [])
 
   // ── User data loader (profile, roles, properties, departments) ─────────
@@ -133,7 +170,58 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       clearTimeout(retryTimeoutRef.current)
       retryTimeoutRef.current = null
     }
+    if (sessionSecurityIntervalRef.current) {
+      clearInterval(sessionSecurityIntervalRef.current)
+      sessionSecurityIntervalRef.current = null
+    }
   }, [])
+
+  // ── Session security checks ─────────────────────────────────────────────
+  const performSessionSecurityCheck = useCallback(async () => {
+    if (!user) return
+    
+    try {
+      // Validate session binding (IP/User-Agent) with timeout
+      const validation = await Promise.race([
+        validateSessionBinding(),
+        new Promise<{valid: true; reason?: string}>((resolve) => 
+          setTimeout(() => resolve({valid: true}), 2000)
+        )
+      ])
+      
+      if (!validation.valid) {
+        log.warn('[Auth] Session binding validation failed:', validation.reason)
+        
+        await logSecurityEvent('session.binding_failed', {
+          reason: validation.reason,
+          userId: user.id,
+        })
+        
+        // Clear session on binding failure
+        sessionClearInProgressRef.current = true
+        try {
+          await clearLocalSession(`Session binding failed: ${validation.reason}`, resetLocalAuthState)
+        } finally {
+          sessionClearInProgressRef.current = false
+        }
+        return
+      }
+      
+      // Enforce session limits (best effort, don't block)
+      await Promise.race([
+        enforceSessionLimit(user.id, 5),
+        new Promise<void>((resolve) => setTimeout(resolve, 2000))
+      ])
+    } catch (err) {
+      // Security check failed, but don't disrupt user experience
+      log.warn('[Auth] Session security check failed (non-critical):', err)
+    }
+  }, [user, clearLocalSession, resetLocalAuthState])
+
+  const performSecurityCheckRef = useRef(performSessionSecurityCheck)
+  useEffect(() => {
+    performSecurityCheckRef.current = performSessionSecurityCheck
+  }, [performSessionSecurityCheck])
 
   // ── Initial session + auth state listener ──────────────────────────────
   useEffect(() => {
@@ -178,6 +266,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         setRolesLoading(true)
+        
+        // Initialize session security (non-blocking)
+        // These are security enhancements that shouldn't block auth loading
+        void initializeSessionSecurity().catch((err) => {
+          log.warn('[Auth] Session security init failed (non-critical):', err)
+        })
+        
+        // Check security requirements (non-blocking with timeout)
+        const checkRequirements = async () => {
+          try {
+            const requirements = await Promise.race([
+              checkSecurityRequirements(session.user.id),
+              new Promise<null>((_, reject) => 
+                setTimeout(() => reject(new Error('Security check timeout')), 12000)
+              )
+            ])
+            if (requirements) setSecurityRequirements(requirements)
+          } catch (err) {
+            log.warn('[Auth] Security requirements check failed (non-critical):', err)
+          }
+        }
+        void checkRequirements()
+        
         finishLoading()
         loadUserData(session.user.id).catch(() => {
           log.warn('[Auth] Error in loadUserData.')
@@ -207,6 +318,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         })
         if (_event !== 'TOKEN_REFRESHED' || shouldRefreshUserData(session.user.id)) {
           finishLoading()
+          
+          // Initialize session security on sign in (non-blocking)
+          if (_event === 'SIGNED_IN') {
+            void initializeSessionSecurity().catch((err) => {
+              log.warn('[Auth] Session security init failed (non-critical):', err)
+            })
+            
+            // Check security requirements (non-blocking with timeout)
+            const checkRequirements = async () => {
+              try {
+                const requirements = await Promise.race([
+                  checkSecurityRequirements(session.user.id),
+                  new Promise<null>((_, reject) => 
+                    setTimeout(() => reject(new Error('Security check timeout')), 12000)
+                  )
+                ])
+                if (requirements) setSecurityRequirements(requirements)
+              } catch (err) {
+                log.warn('[Auth] Security requirements check failed (non-critical):', err)
+              }
+            }
+            void checkRequirements()
+          }
+          
           loadUserData(session.user.id).catch(() => {
             log.warn('[Auth] Error in loadUserData (auth change).')
           })
@@ -247,6 +382,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
+        // Check session binding first (with timeout)
+        if (user) {
+          const validation = await Promise.race([
+            validateSessionBinding(),
+            new Promise<{valid: true; reason?: string}>((resolve) => 
+              setTimeout(() => resolve({valid: true}), 2000)
+            )
+          ])
+          if (!validation.valid) {
+            log.warn('[Auth] Session binding check failed during resume:', validation.reason)
+            
+            await logSecurityEvent('session.binding_failed_on_resume', {
+              reason: validation.reason,
+            })
+            
+            sessionClearInProgressRef.current = true
+            try {
+              await clearLocalSession('Session binding failed on resume', resetLocalAuthState)
+            } finally {
+              sessionClearInProgressRef.current = false
+              resumeValidationInFlightRef.current = false
+            }
+            return
+          }
+        }
+
         recordAuthEvent({
           type: 'session_validation',
           success: true,
@@ -289,8 +450,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 authRecoveryInProgressRef.current = false
                 setUser((current) => (current?.id === refreshData.session!.user.id ? current : refreshData.session!.user))
                 if (shouldRefreshUserData(refreshData.session.user.id)) {
-                  loadUserData(refreshData.session.user.id).catch(() => {
-                    log.warn('[Auth] Error in loadUserData (resume recovery).')
+                  loadUserData(refreshData.session.user.id, true).catch(() => {
+                    log.warn('[Auth] Background refresh error in loadUserData.')
                   })
                 }
                 finishLoading()
@@ -339,8 +500,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         authRecoveryInProgressRef.current = false
         setUser((current) => (current?.id === verifiedUser.id ? current : verifiedUser))
         if (shouldRefreshUserData(verifiedUser.id)) {
-          loadUserData(verifiedUser.id).catch(() => {
-            log.warn('[Auth] Error in loadUserData (resume validation).')
+          loadUserData(verifiedUser.id, true).catch(() => {
+            log.warn('[Auth] Background refresh error during focus.')
           })
         }
       } catch (unexpectedError) {
@@ -391,6 +552,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     // Only validate on visibility change
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    
+    // Start periodic session security checks
+    sessionSecurityIntervalRef.current = setInterval(() => {
+      void performSecurityCheckRef.current()
+    }, CONFIG.sessionSecurityCheckIntervalMs)
 
     return () => {
       mounted = false
@@ -402,34 +568,144 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [
     clearLocalSession, loadUserData, resetLocalAuthState, shouldRefreshUserData,
     isAuthError, cleanupTimers,
-  ])
+  ]) // Removed 'user' and 'performSessionSecurityCheck' to prevent recursive observer loop
 
   // ── Sign in / sign out / refresh ───────────────────────────────────────
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = useCallback(async (email: string, password: string, captchaToken?: string) => {
+    const normalizedEmail = email.toLowerCase().trim()
+    
     // Rate limiting check
-    const rateLimitKey = `auth:signin:${email.toLowerCase()}`
+    const rateLimitKey = `auth:signin:${normalizedEmail}`
     if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.auth.maxRequests, rateLimitConfig.auth.windowMs)) {
       return { error: new Error('Too many sign-in attempts. Please try again later.') }
+    }
+    
+    // Check brute force protection
+    const bruteForceCheck = await recordLoginAttempt(normalizedEmail, false)
+    if (!bruteForceCheck.allowed) {
+      return { 
+        error: new Error(bruteForceCheck.message || 'Account temporarily locked due to failed attempts.')
+      }
+    }
+    
+    // Check if CAPTCHA is required
+    if (bruteForceCheck.captchaRequired && !captchaToken) {
+      return { 
+        error: new Error('CAPTCHA_REQUIRED'),
+        requiresCaptcha: true,
+      }
     }
     
     try {
       setLoading(true)
       setRolesLoading(true)
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      
+      // Check for password breach before attempting sign in (with timeout)
+      void Promise.race([
+        checkPasswordBreach(password),
+        new Promise<{breached: false}>((resolve) => setTimeout(() => resolve({breached: false}), 2000))
+      ]).then(async (breachCheck) => {
+        if (breachCheck.breached) {
+          await logSecurityEvent('password.breached_detected', {
+            email: normalizedEmail,
+            breachCount: breachCheck.count,
+          })
+        }
+      }).catch(() => {
+        // Ignore breach check errors
+      })
+      
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: normalizedEmail, 
+        password,
+        options: captchaToken ? { captchaToken } : undefined,
+      })
+      
       if (error) {
+        // Record failed attempt
+        await recordLoginAttempt(normalizedEmail, false)
+        
         setLoading(false)
         setRolesLoading(false)
+        
+        // Check for specific error types
+        if (error.message?.includes('Invalid login credentials')) {
+          const remaining = getRemainingAttempts(normalizedEmail)
+          if (remaining <= 2) {
+            return { 
+              error: new Error(`Invalid credentials. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before temporary lockout.`)
+            }
+          }
+        }
+        
         return { error }
       }
+      
       if (data.user) {
+        // Record successful attempt (clears counters)
+        await recordLoginAttempt(normalizedEmail, true)
+        
+        // Initialize session security (non-blocking)
+        void initializeSessionSecurity().catch((err) => {
+          log.warn('[Auth] Session security init failed (non-critical):', err)
+        })
+        
+        // Check if MFA is required (with timeout)
+        let requirements = null
+        try {
+          requirements = await Promise.race([
+            checkSecurityRequirements(data.user.id),
+            new Promise<null>((_, reject) => 
+              setTimeout(() => reject(new Error('Security check timeout')), 3000)
+            )
+          ])
+          if (requirements) setSecurityRequirements(requirements)
+        } catch (err) {
+          log.warn('[Auth] Security requirements check failed (non-critical):', err)
+          // Default to no MFA requirement if check fails
+          requirements = { mfaRequired: false, mfaEnabled: false, setupComplete: true, passwordRotationRequired: false }
+        }
+        
+        if (requirements.mfaRequired && !requirements.mfaEnabled) {
+          // MFA is required but not set up
+          setPendingMFAUserId(data.user.id)
+          setUser(data.user)
+          setLoading(false)
+          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
+        }
+        
+        if (requirements.mfaEnabled) {
+          // MFA is enabled - need to verify
+          /* 
+          // Prevent infinite redirect loop while UI is under development
+          if (requirements.mfaRequired && !isMFAVerified) {
+            // Redirect to MFA verify
+            window.location.href = '/mfa/verify'
+          } else if (!requirements.setupComplete) {
+            // Redirect to mandatory setup
+            window.location.href = '/security/setup'
+          }
+          */
+          setPendingMFAUserId(data.user.id)
+          setUser(data.user)
+          setIsMFAVerified(false)
+          setLoading(false)
+          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
+        }
+        
         setUser(data.user)
         setLoading(false)
         loadUserData(data.user.id).catch(() => {
           log.warn('[Auth] Error loading user data after sign in.')
         })
+        
+        // Log successful login
+        await auditLog.login()
+        await logSecurityEvent('login.success', { email: normalizedEmail })
       } else {
         setLoading(false)
       }
+      
       return { error: null }
     } catch (error) {
       setLoading(false)
@@ -438,15 +714,55 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [loadUserData])
 
+  // ── MFA Verification ────────────────────────────────────────────────────
+  const verifyMFA = useCallback(async (code: string): Promise<boolean> => {
+    if (!pendingMFAUserId) return false
+    
+    try {
+      const { data, error } = await supabase.rpc('verify_mfa_code', {
+        p_user_id: pendingMFAUserId,
+        p_code: code,
+      })
+      
+      if (error || !data) {
+        await logSecurityEvent('mfa.verification_failed', {
+          userId: pendingMFAUserId,
+        })
+        return false
+      }
+      
+      setIsMFAVerified(true)
+      setPendingMFAUserId(null)
+      
+      // Load user data after MFA verification
+      loadUserData(pendingMFAUserId).catch(() => {
+        log.warn('[Auth] Error loading user data after MFA verification.')
+      })
+      
+      await auditLog.login()
+      await logSecurityEvent('login.success_with_mfa', { userId: pendingMFAUserId })
+      
+      return true
+    } catch {
+      return false
+    }
+  }, [pendingMFAUserId, loadUserData])
+
   const signOut = useCallback(async () => {
     localStorage.removeItem('prime_current_property_id')
+    
+    await logSecurityEvent('logout.user_initiated', {
+      userId: user?.id,
+    })
+    
     recordAuthEvent({
       type: 'logout',
       success: true,
       details: { reason: 'user_initiated' },
     })
+    
     await clearLocalSession('User signed out', resetLocalAuthState)
-  }, [clearLocalSession, resetLocalAuthState])
+  }, [clearLocalSession, resetLocalAuthState, user?.id])
 
   const refreshSession = useCallback(async () => {
     try {
@@ -511,6 +827,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     refreshSession,
+    verifyMFA,
+    isMFAVerified,
+    securityRequirements,
   }), [
     user,
     profile,
@@ -523,6 +842,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     refreshSession,
+    verifyMFA,
+    isMFAVerified,
+    securityRequirements,
   ])
 
   // ── Debug: expose health report to window in development ───────────────

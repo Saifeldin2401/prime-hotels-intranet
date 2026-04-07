@@ -3,10 +3,11 @@ import { useAuth } from '@/hooks/useAuth'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { getTransitionErrorMessage, validateTransition } from '@/lib/statusTransitions'
+import { secureSearchTasks } from '@/lib/secureSearch'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Task, TaskComment, TaskStats } from '@/lib/types'
-import { escapeSearchQuery } from '@/lib/utils'
+import { sanitizeSearchInput } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Fetch tasks
@@ -65,9 +66,22 @@ export function useTasks(filters?: {
       if (filters?.departmentId) {
         query = query.eq('department_id', filters.departmentId)
       }
+      
+      // SECURE: Use parameterized RPC for search, or sanitize for simple filters
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+        const sanitized = sanitizeSearchInput(filters.search)
+        if (sanitized) {
+          // Use secure search RPC for complex search
+          const secureResults = await secureSearchTasks({
+            search: sanitized,
+            property_id: filters.propertyId || currentProperty?.id,
+            department_id: filters.departmentId,
+            assigned_to: filters.assignedTo,
+            created_by: filters.createdBy,
+            limit: filters.limit || 100
+          })
+          return secureResults as Task[]
+        }
       }
 
       if (filters?.limit) {
@@ -118,12 +132,16 @@ export function useTasksPaginated(
         }
       }
       if (filters?.departmentId) countQuery = countQuery.eq('department_id', filters.departmentId)
+      
+      // SECURE: Note - count with search uses secure RPC. Skipping count for search to avoid vulnerability.
+      let skipStandardCount = false
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        countQuery = countQuery.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+        skipStandardCount = true
       }
 
-      const { count, error: countError } = await countQuery
+      const { count, error: countError } = skipStandardCount 
+        ? { count: 0, error: null }  // Will use secure search for data
+        : await countQuery
       if (countError) throw countError
       if (pagination?.setTotalCount && count !== null) {
         pagination.setTotalCount(count)
@@ -153,9 +171,22 @@ export function useTasksPaginated(
         }
       }
       if (filters?.departmentId) query = query.eq('department_id', filters.departmentId)
+      
+      // SECURE: Handle search using parameterized RPC
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
+        const sanitized = sanitizeSearchInput(filters.search)
+        if (sanitized) {
+          const secureResults = await secureSearchTasks({
+            search: sanitized,
+            property_id: filters.propertyId || currentProperty?.id,
+            department_id: filters.departmentId,
+            assigned_to: filters.assignedTo,
+            created_by: filters.createdBy,
+            limit: (pagination?.to || 20) - (pagination?.from || 0) + 1,
+            offset: pagination?.from || 0
+          })
+          return secureResults as Task[]
+        }
       }
 
       // Apply pagination

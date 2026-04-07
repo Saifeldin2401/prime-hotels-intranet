@@ -53,15 +53,28 @@ function ChartViewport({ height, children }: { height: number; children: ReactNo
     if (!container) return
 
     const updateReadyState = () => {
-      const rect = container.getBoundingClientRect()
-      setIsReady(rect.width > 0 && rect.height > 0)
+      if (!containerRef.current) return
+      const rect = containerRef.current.getBoundingClientRect()
+      if (rect.width > 0 && rect.height > 0) {
+        // Use requestAnimationFrame to ensure the DOM is settled
+        requestAnimationFrame(() => {
+          setIsReady(true)
+        })
+      } else {
+        setIsReady(false)
+      }
     }
 
     updateReadyState()
+    
     if (typeof ResizeObserver === 'undefined') {
+      setIsReady(true)
       return
     }
-    const observer = new ResizeObserver(updateReadyState)
+
+    const observer = new ResizeObserver(() => {
+      updateReadyState()
+    })
     observer.observe(container)
 
     return () => observer.disconnect()
@@ -70,8 +83,8 @@ function ChartViewport({ height, children }: { height: number; children: ReactNo
   return (
     <div
       ref={containerRef}
-      className="w-full"
-      style={{ height, minHeight: height }}
+      className="w-full relative overflow-hidden"
+      style={{ height, minHeight: height, display: 'block' }}
     >
       {isReady ? children : null}
     </div>
@@ -154,6 +167,21 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
     queryFn: async () => {
       if (!user?.id) return null
 
+      // Get user context for permissions
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select(`
+          *,
+          user_roles(role),
+          user_properties(property_id)
+        `)
+        .eq('id', user.id)
+        .single()
+
+      const userRoles = profile?.user_roles?.map((r: any) => r.role) || []
+      const propertyIds = profile?.user_properties?.map((p: any) => p.property_id) || []
+      const isAdminByRole = userRoles.some(r => ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'compliance_officer'].includes(r))
+
       const startDate = new Date()
       switch (timeRange) {
         case 'week':
@@ -176,11 +204,23 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
         .select('department_id')
         .eq('user_id', user.id)
 
-      if (userDeptsError || !userDepts?.length) {
-        return []
+      let departmentIds = userDepts?.map(ud => ud.department_id) || []
+
+      // If no departments but IS an admin, get ALL departments from user's properties
+      if (departmentIds.length === 0 && isAdminByRole && propertyIds.length > 0) {
+          const { data: allDepts } = await supabase
+              .from('departments')
+              .select('id')
+              .in('property_id', propertyIds)
+          
+          if (allDepts?.length) {
+              departmentIds = allDepts.map(d => d.id)
+          }
       }
 
-      const departmentIds = userDepts.map(ud => ud.department_id)
+      if (userDeptsError || !departmentIds?.length) {
+        return []
+      }
 
       // Get all users in these departments
       const { data: deptUsers, error: deptUsersError } = await supabase
@@ -212,7 +252,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
   })
 
   // Process data for charts
-  const processProgressData = (completions) => {
+  const processProgressData = (completions: any[]) => {
     const dailyProgress = completions?.reduce((acc, completion) => {
       const rawDate = completion.completed_at || completion.updated_at
       if (!rawDate) return acc
@@ -229,7 +269,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
       }))
   }
 
-  const processCategoryData = (completions) => {
+  const processCategoryData = (completions: any[]) => {
     const categoryData = completions?.reduce((acc, completion) => {
       const category = completion.training_module?.category || 'Other'
       acc[category] = (acc[category] || 0) + 1
@@ -243,7 +283,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
         fullMark: 100,
         fill: getCategoryColor(category)
       }))
-      .sort((first, second) => second.count - first.count)
+      .sort((first, second) => (second.count as number) - (first.count as number))
 
     if (sortedCategories.length <= 6) {
       return sortedCategories
@@ -415,7 +455,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               <CardContent>
                 <ChartViewport height={250}>
                   {hasPersonalTrend ? (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                    <ResponsiveContainer width="100%" height={250} minWidth={0} minHeight={250} debounce={50}>
                       <AreaChart data={userDailyProgress}>
                         <defs>
                           <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
@@ -464,7 +504,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               <CardContent>
                 <ChartViewport height={300}>
                   {hasPersonalCategories ? (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={300} debounce={50}>
                       <BarChart data={userCategoryData} layout="vertical" margin={{ left: 8, right: 8 }}>
                         <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                         <XAxis type="number" tick={{ fontSize: 12 }} allowDecimals={false} />
@@ -501,7 +541,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               <CardContent>
                 <ChartViewport height={300}>
                   {userCategoryData.length > 2 ? (
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                    <ResponsiveContainer width="100%" height={300} minWidth={0} minHeight={300} debounce={50}>
                       <RadarChart cx="50%" cy="50%" outerRadius="80%" data={userCategoryData}>
                         <PolarGrid />
                         <PolarAngleAxis dataKey="category" tick={{ fontSize: 12 }} />
@@ -546,7 +586,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               </CardHeader>
               <CardContent>
                 <ChartViewport height={250}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                  <ResponsiveContainer width="100%" height={250} minWidth={0} minHeight={250} debounce={50}>
                     <BarChart data={departmentDailyProgress}>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} />
                       <XAxis
@@ -576,7 +616,7 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
               </CardHeader>
               <CardContent>
                 <ChartViewport height={250}>
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                  <ResponsiveContainer width="100%" height={250} minWidth={0} minHeight={250} debounce={50}>
                     <BarChart data={departmentCategoryData} layout="vertical">
                       <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                       <XAxis type="number" tick={{ fontSize: 12 }} />
