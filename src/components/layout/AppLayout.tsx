@@ -78,25 +78,10 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [])
 
-  // Safe check for property context - prevents "useProperty must be used within a PropertyProvider" error
-  // If we're not inside the provider yet (e.g. during a redirect or error state),
-  // we render a safe loading state instead of crashing.
-  let hasPropertyContext = false
-  try {
-    // This will throw if outside provider
-    const { currentProperty } = useProperty()
-    hasPropertyContext = !!currentProperty || true // just checking if it exists
-  } catch (e) {
-    hasPropertyContext = false
-  }
-
-  if (!hasPropertyContext) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <PageLoading message={t('status.initializing_app')} />
-      </div>
-    )
-  }
+  // Get property context - this will throw if outside PropertyProvider
+  // This is called unconditionally to comply with React Hooks rules
+  const { currentProperty } = useProperty()
+  const hasPropertyContext = !!currentProperty
 
   if (isMobileView) {
     return (

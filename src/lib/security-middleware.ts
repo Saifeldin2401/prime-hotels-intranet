@@ -59,7 +59,7 @@ const ALLOWED_DATA_URI_TYPES = [
  */
 const DANGEROUS_SCHEME_REGEX = new RegExp(
   '(?:^|[\\s"\'\(=]+)(' +
-    DANGEROUS_URL_SCHEMES.map(s => s.replace(':', '\\:')).join('|') +
+    DANGEROUS_URL_SCHEMES.join('|') +
   ')',
   'gi'
 )
@@ -656,7 +656,7 @@ export class SecurityMiddleware {
     // Check for other dangerous schemes
     for (const scheme of DANGEROUS_URL_SCHEMES) {
       if (scheme === 'data:') continue // Already checked above
-      const schemeRegex = new RegExp('(?:^|[\\s"\'\(=]+)' + scheme.replace(':', '\\:'), 'i')
+      const schemeRegex = new RegExp('(?:^|[\\s"\'\(=]+)' + scheme, 'i')
       if (schemeRegex.test(svgContent)) {
         errors.push(`SVG contains dangerous URL scheme: ${scheme}`)
         break

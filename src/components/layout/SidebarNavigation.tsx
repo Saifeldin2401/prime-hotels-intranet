@@ -85,19 +85,17 @@ export function SidebarNavigation({
   const { t } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
   
-  // Safe check for auth context - prevents "useAuth must be used within an AuthProvider" error
-  let authState
-  try {
-    authState = useAuth()
-  } catch (e) {
-    // Return null or loading state if auth context is not available
-    return null
-  }
-  
-  const { user, primaryRole, profile, signOut } = authState
+  // Hooks must be called unconditionally at the top level
+  const authState = useAuth()
   const { groupedNavigation } = useNavigation()
   const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
+  
+  // Extract values from authState after hook is called
+  const user = authState?.user
+  const primaryRole = authState?.primaryRole
+  const profile = authState?.profile
+  const signOut = authState?.signOut
 
   const activeGroupIds = useMemo(
     () => groupedNavigation

@@ -161,7 +161,7 @@ Deno.serve(async (req: Request) => {
         success: true,
         total_reviews: reviews.length,
         inserted,
-        errors: errors.length > 0 ? errors : undefined,
+        errors: errors.length > 0 ? errors.length : undefined,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
