@@ -136,7 +136,9 @@ export async function clearPrimeHotelServiceWorkersAndCaches(): Promise<boolean>
 
   if ('caches' in window) {
     const cacheKeys = await caches.keys()
-    const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
+    const staleCacheKeys = cacheKeys.filter(
+      (key) => key.startsWith('prime-hotels-') || key.startsWith('phg-intranet-')
+    )
     if (staleCacheKeys.length > 0) {
       hadArtifacts = true
     }

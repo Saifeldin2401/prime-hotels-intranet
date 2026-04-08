@@ -1,6 +1,7 @@
 // Security middleware and rate limiting utilities
 
-import { supabase } from './supabase'
+// Lazy import to break circular dependency: supabase.ts → security.ts → security-middleware.ts → supabase.ts
+const getSupabase = () => import('./supabase').then((m) => m.supabase)
 
 interface RateLimitStore {
   [key: string]: {
@@ -315,6 +316,7 @@ export class SecurityMiddleware {
     windowSeconds: number = 900
   ): Promise<boolean> {
     try {
+      const supabase = await getSupabase()
       const { data, error } = await supabase.rpc('check_user_rate_limit', {
         p_action: action,
         p_max_requests: maxRequests,
@@ -345,6 +347,7 @@ export class SecurityMiddleware {
     severity: 'info' | 'warning' | 'error' | 'critical' = 'info'
   ): Promise<void> {
     try {
+      const supabase = await getSupabase()
       await supabase.rpc('log_security_event', {
         p_event_type: eventType,
         p_metadata: metadata,
@@ -860,13 +863,18 @@ const CSRF_TOKEN_KEY = 'csrf_token'
  */
 export function getCsrfToken(): string {
   if (typeof window === 'undefined') return generateCsrfToken()
-  
-  let token = sessionStorage.getItem(CSRF_TOKEN_KEY)
-  if (!token) {
-    token = generateCsrfToken()
-    sessionStorage.setItem(CSRF_TOKEN_KEY, token)
+
+  try {
+    let token = sessionStorage.getItem(CSRF_TOKEN_KEY)
+    if (!token) {
+      token = generateCsrfToken()
+      sessionStorage.setItem(CSRF_TOKEN_KEY, token)
+    }
+    return token
+  } catch {
+    // sessionStorage may throw in private browsing or restricted storage mode
+    return generateCsrfToken()
   }
-  return token
 }
 
 /**
@@ -874,7 +882,11 @@ export function getCsrfToken(): string {
  */
 export function validateCsrfToken(token: string): boolean {
   if (typeof window === 'undefined') return false
-  return token === sessionStorage.getItem(CSRF_TOKEN_KEY)
+  try {
+    return token === sessionStorage.getItem(CSRF_TOKEN_KEY)
+  } catch {
+    return false
+  }
 }
 
 /**

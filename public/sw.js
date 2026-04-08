@@ -7,10 +7,8 @@
  * - Cache management for offline access
  */
 
-const CACHE_NAME = 'phg-intranet-v1';
+const CACHE_NAME = 'prime-hotels-intranet-v2';
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
   '/manifest.json',
   '/prime-logo-light.png',
   '/prime-logo-dark.png',
@@ -46,24 +44,34 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
-  
+
+  // Never cache navigation requests (HTML documents) - always fetch fresh from network
+  // This prevents stale/error HTML pages from being served as a white screen
+  if (event.request.mode === 'navigate' || event.request.destination === 'document') {
+    return;
+  }
+
   // Skip API requests - don't cache them
-  if (event.request.url.includes('/api/') || 
+  if (event.request.url.includes('/api/') ||
       event.request.url.includes('/functions/') ||
-      event.request.url.includes('/auth/')) {
+      event.request.url.includes('/auth/') ||
+      event.request.url.includes('supabase.co')) {
     return;
   }
 
   event.respondWith(
     fetch(event.request)
       .then((response) => {
+        // Only cache successful responses for static assets
+        if (!response.ok) return response;
+
         // Clone the response before caching
         const responseClone = response.clone();
-        
+
         caches.open(CACHE_NAME).then((cache) => {
           cache.put(event.request, responseClone);
         });
-        
+
         return response;
       })
       .catch(() => {

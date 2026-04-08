@@ -107,7 +107,7 @@
 
             if ('caches' in window) {
               const cacheKeys = await caches.keys()
-              const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
+              const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-') || key.startsWith('phg-intranet-'))
               await Promise.allSettled(staleCacheKeys.map((key) => caches.delete(key)))
             }
           } catch {

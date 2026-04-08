@@ -144,11 +144,27 @@ if (!rootElement) {
 const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
 const root = createRoot(rootElement)
 
-root.render(
-  <Wrapper>
-    <App />
-  </Wrapper>
-)
+try {
+  root.render(
+    <Wrapper>
+      <App />
+    </Wrapper>
+  )
+} catch (bootError) {
+  // If React fails to render (e.g. module init error, circular import), show a visible error
+  // instead of a white screen. This runs outside React's error boundary.
+  rootElement.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,sans-serif;padding:2rem;">
+      <div style="text-align:center;max-width:28rem;">
+        <h1 style="font-size:1.25rem;font-weight:600;color:#dc2626;">Something went wrong</h1>
+        <p style="margin-top:.5rem;color:#6b7280;">The application failed to load. Please try refreshing the page.</p>
+        <button onclick="location.reload()" style="margin-top:1rem;padding:.5rem 1.5rem;background:#2563eb;color:white;border:none;border-radius:.5rem;cursor:pointer;font-size:.875rem;">
+          Reload Page
+        </button>
+      </div>
+    </div>`
+  console.error('[PHG] Boot error:', bootError)
+}
 
 void cleanupLegacyPwaArtifacts()
 
