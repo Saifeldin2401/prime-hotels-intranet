@@ -113,12 +113,8 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    if (lockoutStatus.failedAttempts >= 3 && !captchaToken) {
-      return {
-        error: new Error('CAPTCHA_REQUIRED'),
-        requiresCaptcha: true,
-      }
-    }
+    // CAPTCHA check removed as requested
+
 
     try {
       identityContext?.setLoading(true)

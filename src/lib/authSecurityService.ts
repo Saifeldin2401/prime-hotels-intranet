@@ -190,7 +190,7 @@ export function clearSessionFingerprint(): void {
 // all protection decisions to the server:
 
 // Constants for server-side brute force protection (used in server-side functions)
-const MAX_ATTEMPTS_BEFORE_CAPTCHA = 3;
+const MAX_ATTEMPTS_BEFORE_CAPTCHA = 999;
 const MAX_ATTEMPTS_BEFORE_LOCKOUT = 5;
 const LOCKOUT_DURATION_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -260,9 +260,9 @@ export async function recordLoginAttempt(
  * Check if CAPTCHA is required for login
  * SECURITY: Checks server-side failed attempts only
  */
-export async function isCaptchaRequired(email: string): Promise<boolean> {
-  const lockoutStatus = await checkServerSideLockout(email.toLowerCase().trim());
-  return lockoutStatus.failedAttempts >= 3;
+export async function isCaptchaRequired(_email: string): Promise<boolean> {
+  // CAPTCHA disabled as requested
+  return false;
 }
 
 /**

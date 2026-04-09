@@ -72,8 +72,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
   });
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [showCaptcha, setShowCaptcha] = useState(false);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
   const [showMFADialog, setShowMFADialog] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
@@ -85,12 +83,8 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
     if (email) {
       // SECURITY: All security decisions are server-side; these are async checks
       void (async () => {
-        const required = await isCaptchaRequired(email);
-        setShowCaptcha(required);
-        if (!required) {
           const remaining = await getRemainingAttempts(email);
           setRemainingAttempts(remaining);
-        }
       })();
     }
   }, [email]);
@@ -137,12 +131,8 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
       if (value) {
         // SECURITY: All security decisions are server-side; these are async checks
         void (async () => {
-          const required = await isCaptchaRequired(value);
-          setShowCaptcha(required);
-          if (!required) {
             const remaining = await getRemainingAttempts(value);
             setRemainingAttempts(remaining);
-          }
         })();
       }
     },
@@ -157,9 +147,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
     [error]
   );
 
-  const handleCaptchaVerify = useCallback((token: string | null) => {
-    setCaptchaToken(token);
-  }, []);
+
 
   const handleMFASuccess = useCallback(() => {
     setShowMFADialog(false);
@@ -185,8 +173,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
       try {
         const { error: signInError, requiresMFA } = await signIn(
           email, 
-          password,
-          captchaToken || undefined
+          password
         );
 
         if (signInError) {
@@ -221,7 +208,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
           } else if (errorMessage === 'CAPTCHA_REQUIRED') {
             errorMessage = t('errors.captcha_required');
             errType = 'auth';
-            setShowCaptcha(true);
           }
 
           if (!errorMessage) errorMessage = t('errors.title');
@@ -249,7 +235,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
         setLoading(false);
       }
     },
-    [email, password, rememberMe, signIn, t, captchaToken]
+    [email, password, rememberMe, signIn, t]
   );
 
   const getErrorIcon = useCallback(() => {
@@ -447,7 +433,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
             <Button
               type="submit"
               className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
-              disabled={loading || !emailValid || (showCaptcha && !captchaToken)}
+              disabled={loading || !emailValid}
             >
               {/* Shine effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
