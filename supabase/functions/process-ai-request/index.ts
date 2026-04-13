@@ -25,25 +25,14 @@ function parseAiRequest(input: unknown): ParsedAiRequest {
     throw new Error("Invalid AI request payload.");
   }
 
-  const body = input as Record<string, unknown>;
-  const unsupportedFields = ["provider", "action", "context"].filter(
-    (field) => field in body,
-  );
-  if (unsupportedFields.length > 0) {
-    throw new Error(
-      `Unsupported AI request fields: ${unsupportedFields.join(", ")}`,
-    );
-  }
-
+  const body = input as Record<string, any>;
+  
   const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
   if (!prompt) {
     throw new Error("AI prompt is required.");
   }
 
   const taskValue = typeof body.task === "string" ? body.task : "chat";
-  if (!SUPPORTED_TASKS.has(taskValue as SupportedAiTask)) {
-    throw new Error(`Unsupported AI task: ${taskValue}`);
-  }
 
   return {
     model:

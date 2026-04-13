@@ -1340,7 +1340,19 @@ export default function TrainingPlayer() {
                         <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 relative group">
                             {block.content_url ? (
                                 (() => {
-                                    const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(block.content_url!)
+                                    // Check if this is a native video file.
+                                    // Supabase Storage signed URLs have query params after the filename
+                                    // (e.g. .../video.mp4?token=...), so we must check the pathname
+                                    // rather than the full URL string.
+                                    const isDirectVideo = (() => {
+                                        try {
+                                            const pathname = new URL(block.content_url!).pathname
+                                            return /\.(mp4|webm|ogg|mov|m4v)$/i.test(pathname)
+                                        } catch {
+                                            // Fallback: match extension anywhere before a query string
+                                            return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(block.content_url!)
+                                        }
+                                    })()
                                     if (isDirectVideo) {
                                         return (
                                             <VideoPlayer
