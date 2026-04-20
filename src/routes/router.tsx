@@ -21,39 +21,6 @@ import {
     useLocation,
 } from 'react-router-dom'
 
-/**
- * Get contextual loading message based on the current route path
- */
-function getLoadingMessage(pathname: string): string {
-  // Map route patterns to user-friendly loading messages
-  const routeMessages: Record<string, string> = {
-    '/login': 'Loading authentication...',
-    '/dashboard': 'Loading your dashboard...',
-    '/documents': 'Loading documents...',
-    '/knowledge': 'Loading knowledge base...',
-    '/training': 'Loading training modules...',
-    '/hr': 'Loading HR resources...',
-    '/admin': 'Loading admin panel...',
-    '/profile': 'Loading your profile...',
-    '/settings': 'Loading settings...',
-    '/tasks': 'Loading tasks...',
-    '/approvals': 'Loading approvals...',
-    '/messages': 'Loading messages...',
-    '/reviews': 'Loading guest reviews...',
-    '/maintenance': 'Loading maintenance requests...',
-    '/announcements': 'Loading announcements...',
-  }
-
-  // Find matching route pattern
-  for (const [route, message] of Object.entries(routeMessages)) {
-    if (pathname.startsWith(route)) {
-      return message
-    }
-  }
-
-  return 'Loading...'
-}
-
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
@@ -66,7 +33,41 @@ import { OperationsRoutes } from './modules/OperationsRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
+const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
+
+/**
+ * Get contextual loading message based on the current route path
+ */
+function getLoadingMessage(pathname: string): string {
+    // Map route patterns to user-friendly loading messages
+    const routeMessages: Record<string, string> = {
+        '/login': 'Loading authentication...',
+        '/dashboard': 'Loading your dashboard...',
+        '/documents': 'Loading documents...',
+        '/knowledge': 'Loading knowledge base...',
+        '/training': 'Loading training modules...',
+        '/hr': 'Loading HR resources...',
+        '/admin': 'Loading admin panel...',
+        '/profile': 'Loading your profile...',
+        '/settings': 'Loading settings...',
+        '/tasks': 'Loading tasks...',
+        '/approvals': 'Loading approvals...',
+        '/messages': 'Loading messages...',
+        '/reviews': 'Loading guest reviews...',
+        '/maintenance': 'Loading maintenance requests...',
+        '/announcements': 'Loading announcements...',
+    }
+
+    // Find matching route pattern
+    for (const [route, message] of Object.entries(routeMessages)) {
+        if (pathname.startsWith(route)) {
+            return message
+        }
+    }
+
+    return 'Loading...'
+}
 
 const LoadingSpinner = ({ message }: { message?: string }) => (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -132,11 +133,12 @@ const RootIndex = () => {
     }
 
     const redirectPath = getRedirectFromSearch(location.search)
-    const loginTarget = redirectPath
-        ? `/login?redirect=${encodeURIComponent(redirectPath)}`
-        : '/login'
+    if (redirectPath) {
+        const loginTarget = `/login?redirect=${encodeURIComponent(redirectPath)}`
+        return <Navigate to={loginTarget} replace />
+    }
 
-    return <Navigate to={loginTarget} replace />
+    return <PublicHome />
 }
 
 /**
