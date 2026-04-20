@@ -199,7 +199,7 @@ export function MobileLogin() {
                     <p className="text-white/40 text-sm">
                         {t('need_help', 'Need help?')}{' '}
                         <button
-                            onClick={() => navigate('/support')}
+                            onClick={() => navigate('/knowledge')}
                             className="text-hotel-gold hover:underline"
                         >
                             {t('contact_support', 'Contact Support')}

@@ -3,6 +3,7 @@ import { RouteErrorBoundary } from '@/components/common'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
 import {
     buildLoginUrl,
     consumePostLoginRedirect,
@@ -10,7 +11,6 @@ import {
     getSpaRedirectFromSearch,
 } from '@/lib/authRedirect'
 import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
-import { ROUTE_PARAM_PATTERNS } from '@/routes/constants'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
     createBrowserRouter,
@@ -19,9 +19,7 @@ import {
     Outlet,
     Route,
     useLocation,
-    useParams,
 } from 'react-router-dom'
-import { useTranslation } from 'react-i18next'
 
 /**
  * Get contextual loading message based on the current route path
@@ -142,30 +140,6 @@ const RootIndex = () => {
 }
 
 /**
- * RouteParamValidator
- * Validates dynamic route parameters against defined patterns
- * Renders NotFound page if parameters are invalid
- */
-const RouteParamValidator = ({
-    children,
-    validations,
-}: {
-    children: React.ReactNode
-    validations: Record<string, keyof typeof ROUTE_PARAM_PATTERNS>
-}) => {
-    const params = useParams()
-
-    for (const [param, pattern] of Object.entries(validations)) {
-        const value = params[param]
-        if (value && !ROUTE_PARAM_PATTERNS[pattern].test(value)) {
-            return <NotFound />
-        }
-    }
-
-    return <>{children}</>
-}
-
-/**
  * AuthenticatedNotFound - NotFound page wrapped in AppLayout for authenticated users
  */
 const AuthenticatedNotFound = () => {
@@ -202,7 +176,50 @@ const NotFoundWrapper = () => {
     return <AuthenticatedNotFound />
 }
 
-// Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved
+const LegacyAnalyticsRedirect = () => {
+    const { user, loading, primaryRole, rolesLoading } = useAuth()
+    const location = useLocation()
+
+    if (loading || rolesLoading) {
+        return <LoadingSpinner message="Loading analytics..." />
+    }
+
+    if (!user) {
+        return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
+    }
+
+    const destination = (
+        primaryRole === 'corporate_admin' || primaryRole === 'regional_admin'
+            ? '/admin/analytics'
+            : primaryRole === 'regional_hr' || primaryRole === 'property_manager'
+                ? '/reports'
+                : '/learning/analytics'
+    )
+
+    return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
+}
+
+const LegacyScheduleRedirect = () => {
+    const { user, loading } = useAuth()
+    const { hasPermission } = usePermissions()
+    const location = useLocation()
+
+    if (loading) {
+        return <LoadingSpinner message="Loading schedule..." />
+    }
+
+    if (!user) {
+        return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
+    }
+
+    const destination = hasPermission('scheduling.manage')
+        ? '/hr/scheduling'
+        : '/hr/attendance'
+
+    return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
+}
+
+// Catch-all: authenticated users see a real 404, unauthenticated users go to login with original path preserved
 const CatchAllRedirect = () => {
     const { user, loading } = useAuth()
     const location = useLocation()
@@ -212,7 +229,7 @@ const CatchAllRedirect = () => {
     }
 
     if (user) {
-        return <Navigate to="/dashboard" replace />
+        return <NotFoundWrapper />
     }
 
     return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
@@ -226,6 +243,17 @@ export const router = createBrowserRouter(
             <Route element={<RootLayout />} errorElement={<RouteErrorBoundary section="App"><Outlet /></RouteErrorBoundary>}>
                 <Route path="/" element={<RootIndex />} />
                 <Route path="/verify/:code?" element={<VerifyCertificate />} />
+                <Route path="/analytics" element={<LegacyAnalyticsRedirect />} />
+                <Route path="/calendar" element={<LegacyScheduleRedirect />} />
+                <Route path="/schedule" element={<LegacyScheduleRedirect />} />
+                <Route path="/social" element={<Navigate to="/announcements" replace />} />
+                <Route path="/support" element={<Navigate to="/knowledge" replace />} />
+                <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
+                <Route path="/hr/leave-requests" element={<Navigate to="/hr/leave" replace />} />
+                <Route path="/hr/my-attendance" element={<Navigate to="/hr/attendance" replace />} />
+                <Route path="/hr/staff" element={<Navigate to="/directory" replace />} />
+                <Route path="/learning/reports" element={<Navigate to="/learning/analytics" replace />} />
+                <Route path="/learning/team" element={<Navigate to="/learning/analytics" replace />} />
 
                 {AuthRoutes()}
                 {AdminRoutes()}

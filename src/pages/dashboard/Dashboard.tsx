@@ -315,7 +315,7 @@ export function IntegratedDashboard() {
           value: `${managerStats.staffCompliance}%`,
           subtitle: t('widgets.compliance_desc') || 'Training completion rate',
           icon: GraduationCap,
-          href: '/learning/reports',
+          href: '/learning/analytics',
           color: 'emerald'
         },
         {
@@ -345,7 +345,7 @@ export function IntegratedDashboard() {
           value: hrStats.newHiresThisMonth,
           subtitle: t('widgets.hires_desc') || 'Joined this month',
           icon: Users,
-          href: '/hr/staff',
+          href: '/directory',
           color: 'emerald'
         },
         ...baseStats.slice(0, 2)
@@ -367,7 +367,7 @@ export function IntegratedDashboard() {
           value: `${deptHeadStats.trainingCompliance}%`,
           subtitle: t('widgets.dept_compliance_desc') || 'Training progress',
           icon: GraduationCap,
-          href: '/learning/team',
+          href: '/learning/analytics',
           color: 'emerald'
         },
         ...baseStats.slice(0, 2)

@@ -63,7 +63,7 @@ const allActions: QuickAction[] = [
   {
     key: 'analytics',
     icon: BarChart3,
-    href: '/analytics',
+    href: '/reports',
     color: 'bg-indigo-500',
     permission: 'analytics.view'
   },

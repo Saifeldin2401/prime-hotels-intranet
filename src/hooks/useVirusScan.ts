@@ -112,47 +112,43 @@ function runLocalHeuristics(file: File): ScanResult {
     }
 }
 
-async function runServerScan(file: File, options?: ScanOptions): Promise<ScanResult | null> {
-    try {
-        const [sampleBase64, fileHash] = await Promise.all([
-            fileToBase64(file),
-            hashFileSha256(file),
-        ])
+async function runServerScan(file: File, options?: ScanOptions): Promise<ScanResult> {
+    const [sampleBase64, fileHash] = await Promise.all([
+        fileToBase64(file),
+        hashFileSha256(file),
+    ])
 
-        const invokePromise = supabase.functions.invoke('scan-file', {
-            body: {
-                file_name: file.name,
-                file_size: file.size,
-                file_type: file.type,
-                file_hash_sha256: fileHash,
-                sample_base64: sampleBase64,
-                storage_bucket: options?.bucket || null,
-                storage_path: options?.storagePath || null,
-                context: options?.context || null,
-            }
-        })
-
-        const { data, error } = await withTimeout(
-            invokePromise,
-            SERVER_SCAN_TIMEOUT_MS,
-            `scan-file timed out after ${Math.floor(SERVER_SCAN_TIMEOUT_MS / 1000)}s`
-        )
-
-        if (error || !data) {
-            return null
+    const invokePromise = supabase.functions.invoke('scan-file', {
+        body: {
+            file_name: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            file_hash_sha256: fileHash,
+            sample_base64: sampleBase64,
+            storage_bucket: options?.bucket || null,
+            storage_path: options?.storagePath || null,
+            context: options?.context || null,
         }
+    })
 
-        return {
-            safe: Boolean(data.safe),
-            status: data.status || (data.safe ? 'clean' : 'suspicious'),
-            riskScore: typeof data.risk_score === 'number' ? data.risk_score : undefined,
-            scanId: data.scan_id || null,
-            reasons: Array.isArray(data.reasons) ? data.reasons : [],
-            message: data.message || undefined,
-            hashSha256: fileHash
-        }
-    } catch (_error) {
-        return null
+    const { data, error } = await withTimeout(
+        invokePromise,
+        SERVER_SCAN_TIMEOUT_MS,
+        `scan-file timed out after ${Math.floor(SERVER_SCAN_TIMEOUT_MS / 1000)}s`
+    )
+
+    if (error || !data) {
+        throw error || new Error('scan-file returned no data')
+    }
+
+    return {
+        safe: Boolean(data.safe),
+        status: data.status || (data.safe ? 'clean' : 'suspicious'),
+        riskScore: typeof data.risk_score === 'number' ? data.risk_score : undefined,
+        scanId: data.scan_id || null,
+        reasons: Array.isArray(data.reasons) ? data.reasons : [],
+        message: data.message || undefined,
+        hashSha256: fileHash
     }
 }
 
@@ -164,14 +160,18 @@ export async function scanFile(file: File, options?: ScanOptions): Promise<ScanR
             return localResult
         }
 
-        const serverResult = await runServerScan(file, options)
-        if (serverResult) {
-            return serverResult
-        }
-
-        return {
-            ...localResult,
-            message: 'File passed local security checks.'
+        try {
+            return await runServerScan(file, options)
+        } catch (error) {
+            return {
+                safe: false,
+                status: 'error',
+                riskScore: 100,
+                reasons: ['Server-side malware scanning is unavailable.'],
+                message: error instanceof Error
+                    ? 'Upload blocked because the security scanner is unavailable. Please try again.'
+                    : 'Upload blocked because the security scanner is unavailable.',
+            }
         }
 
     } catch (error) {

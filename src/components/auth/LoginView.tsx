@@ -30,9 +30,11 @@ export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout' | 'mfa';
 export interface LoginViewProps {
   isRTL?: boolean;
   onForgotPassword: () => void;
+  /** Called with the current email when the user triggers self-service account unlock */
+  onUnlockAccount?: (email: string) => void;
 }
 
-function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps) {
+function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }: LoginViewProps) {
   const { t } = useTranslation('auth');
   const { signIn, user, pendingMFAUserId } = useAuth();
 
@@ -419,6 +421,18 @@ function LoginViewComponent({ isRTL = false, onForgotPassword }: LoginViewProps)
                 <div className="flex-1 pt-0.5">
                   <p className="font-semibold">{t('errors.title')}</p>
                   <p className="text-sm opacity-90 mt-0.5">{error}</p>
+                  {/* Self-service unlock CTA for locked accounts */}
+                  {errorType === 'lockout' && onUnlockAccount && (
+                    <button
+                      type="button"
+                      onClick={() => onUnlockAccount(email)}
+                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1"
+                      aria-label={t('account_locked.unlock_button')}
+                    >
+                      <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      {t('account_locked.unlock_button')}
+                    </button>
+                  )}
                 </div>
               </m.div>
             )}

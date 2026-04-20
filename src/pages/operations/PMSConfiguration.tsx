@@ -37,7 +37,7 @@ import {
     RefreshCw,
     Save
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -154,6 +154,17 @@ function PMSCard({ pms, onEdit }: { pms: PMSSystem; onEdit: () => void }) {
     )
 }
 
+function getInitialFormState(pms: PMSSystem | null) {
+    return {
+        pms_type: pms?.pms_type || 'other',
+        pms_name: pms?.pms_name || '',
+        api_endpoint: pms?.api_endpoint || '',
+        sync_frequency: pms?.sync_frequency || 'daily',
+        reporting_cutoff_time: pms?.reporting_cutoff_time || '23:00:00',
+        is_active: pms?.is_active ?? true
+    }
+}
+
 interface EditPMSDialogProps {
     pms: PMSSystem | null
     open: boolean
@@ -163,15 +174,14 @@ interface EditPMSDialogProps {
 
 function EditPMSDialog({ pms, open, onClose, onSave }: EditPMSDialogProps) {
     const { t } = useTranslation(['operations', 'common'])
-    const [formData, setFormData] = useState({
-        pms_type: pms?.pms_type || 'other',
-        pms_name: pms?.pms_name || '',
-        api_endpoint: pms?.api_endpoint || '',
-        sync_frequency: pms?.sync_frequency || 'daily',
-        reporting_cutoff_time: pms?.reporting_cutoff_time || '23:00:00',
-        is_active: pms?.is_active ?? true
-    })
+    const [formData, setFormData] = useState(() => getInitialFormState(pms))
     const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        if (open) {
+            setFormData(getInitialFormState(pms))
+        }
+    }, [open, pms])
 
     const handleSave = async () => {
         if (!pms?.id) return
@@ -208,18 +218,6 @@ function EditPMSDialog({ pms, open, onClose, onSave }: EditPMSDialogProps) {
         } finally {
             setSaving(false)
         }
-    }
-
-    // Update form when pms changes
-    if (pms && formData.pms_name !== pms.pms_name) {
-        setFormData({
-            pms_type: pms.pms_type,
-            pms_name: pms.pms_name,
-            api_endpoint: pms.api_endpoint || '',
-            sync_frequency: pms.sync_frequency,
-            reporting_cutoff_time: pms.reporting_cutoff_time,
-            is_active: pms.is_active
-        })
     }
 
     return (
@@ -328,7 +326,7 @@ function EditPMSDialog({ pms, open, onClose, onSave }: EditPMSDialogProps) {
 export default function PMSConfiguration() {
     const { t } = useTranslation(['operations', 'common'])
     const queryClient = useQueryClient()
-    const { data: pmsSystems, isLoading } = usePMSSystems()
+    const { data: pmsSystems, isLoading } = usePMSSystems({ includeInactive: true })
     const [editingPMS, setEditingPMS] = useState<PMSSystem | null>(null)
 
     const handleSave = () => {

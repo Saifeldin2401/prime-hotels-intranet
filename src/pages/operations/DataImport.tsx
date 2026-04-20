@@ -34,6 +34,13 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useCreateImportLog, useDataImportLogs, useDeleteImportLog, useProperties } from '@/hooks/useOperations'
 import i18n from "@/i18n/i18n"
+import {
+    deriveRoomsAvailable,
+    finalizeExtractedData,
+    getImportBlockingIssues,
+    type ExtractedData,
+    type ExtractedRecord,
+} from '@/pages/operations/dataImportValidation'
 import { parseExcelRows } from '@/lib/excel'
 import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
@@ -78,22 +85,6 @@ interface FileQueueItem {
     duplicateWarning?: boolean
 }
 
-interface ExtractedData {
-    records: Array<Record<string, string | number | null | undefined>>
-    detectedFormat: 'pms_daily' | 'occupancy' | 'revenue' | 'unknown'
-    dateRange: { start: string; end: string }
-    summary: {
-        totalRecords: number
-        roomsSold?: number
-        totalRevenue?: number
-        avgOccupancy?: number
-        propertiesFound: number
-    }
-    qualityScore: number
-    qualityIssues: string[]
-    fieldConfidence: Record<string, number>
-}
-
 // ========== CONSTANTS ==========
 const ARABIC_MONTHS: Record<string, string> = {
     'يناير': '01', 'فبراير': '02', 'مارس': '03', 'أبريل': '04',
@@ -126,7 +117,7 @@ function parseCSV(text: string): string[][] {
     })
 }
 
-function calculateQualityScore(records: Record<string, string>[]): { score: number, issues: string[], fieldConfidence: Record<string, number> } {
+function calculateQualityScore(records: ExtractedRecord[]): { score: number, issues: string[], fieldConfidence: Record<string, number> } {
     const issues: string[] = []; const fieldConfidence: Record<string, number> = {}; let totalScore = 100
     if (records.length === 0) {
         return {
@@ -183,12 +174,23 @@ function extractDataFromRows(rows: string[][], properties = [], fileName: string
         const totalRevenue = records.reduce((sum, r) => sum + (parseFloat(String(r.total_revenue)) || parseFloat(String(r.room_revenue)) || 0), 0)
         const { score, issues, fieldConfidence } = calculateQualityScore(records)
         const uniqueProperties = new Set(records.map(r => r.detected_property_id).filter(Boolean))
-        return { records, detectedFormat: 'pms_daily', dateRange: { start: records[0]?.business_date || '', end: records[records.length - 1]?.business_date || '' }, summary: { totalRecords: records.length, roomsSold, totalRevenue, propertiesFound: uniqueProperties.size }, qualityScore: score, qualityIssues: issues, fieldConfidence }
+        return {
+            records,
+            detectedFormat: 'pms_daily',
+            dateRange: {
+                start: String(records[0]?.business_date || ''),
+                end: String(records[records.length - 1]?.business_date || '')
+            },
+            summary: { totalRecords: records.length, roomsSold, totalRevenue, propertiesFound: uniqueProperties.size },
+            qualityScore: score,
+            qualityIssues: issues,
+            fieldConfidence
+        }
     }
     return parseStandardTemplate(rows, properties, fileName)
 }
 
-function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = ''): { data, detected: boolean } {
+function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = ''): { data: ExtractedRecord[], detected: boolean } {
     const isValidFormat = rows.some(row => row.some(cell => cell && (cell.toLowerCase().includes('key performance indicators') || cell.toLowerCase().includes('report date') || cell.toLowerCase().includes('prime al-hamra') || cell.toLowerCase().includes('prime al corniche') || cell.toLowerCase().includes('daily sales report'))))
     if (!isValidFormat) return { data: [], detected: false }
 
@@ -231,9 +233,8 @@ function parsePMSDailyReport(rows: string[][], properties = [], fileName: string
     if (!businessDate) businessDate = new Date().toISOString().split('T')[0]
     if (kpiHeaderRow === -1) return { data: [], detected: true }
     const headers = rows[kpiHeaderRow]; const values = rows[kpiHeaderRow + 1];
-    const extracted: Record<string, string | number | null> = {
+    const extracted: ExtractedRecord = {
         business_date: businessDate,
-        rooms_available: '105',
         detected_property_id: headerPropertyId,
         detected_confidence: headerPropertyId ? 95 : 0
     }
@@ -245,6 +246,12 @@ function parsePMSDailyReport(rows: string[][], properties = [], fileName: string
         if (h.includes('room revenue') && !h.includes('f&b')) extracted.room_revenue = val
         if (h.includes('f&b')) extracted.fb_revenue = val; if (h.includes('total revenue')) extracted.total_revenue = val
     })
+
+    const resolvedRoomsAvailable = deriveRoomsAvailable(extracted)
+    if (resolvedRoomsAvailable) {
+        extracted.rooms_available = resolvedRoomsAvailable
+    }
+
     return { data: [extracted], detected: true }
 }
 
@@ -272,10 +279,10 @@ function parseStandardTemplate(rows: string[][], properties = [], fileName: stri
         contextConfidence = contextDetection.confidence
     }
 
-    const records: Array<Record<string, string | number | null | undefined>> = []
+    const records: ExtractedRecord[] = []
     for (let i = headerRow + 1; i < rows.length; i++) {
         const row = rows[i]; if (!row || row.every(c => !c)) continue
-        const record: Record<string, string | number | null | undefined> = {}
+        const record: ExtractedRecord = {}
         headers.forEach((h, idx) => { record[h] = row[idx] || '' })
 
         // Record-level property detection
@@ -399,7 +406,7 @@ export default function DataImport() {
     }, [fileQueue])
 
     // Handlers (Refactored)
-    const processMultipleFiles = async (files: File[]) => {
+    const processMultipleFiles = useCallback(async (files: File[]) => {
         setIsProcessing(true)
         const newItems: FileQueueItem[] = files.map(file => ({
             id: Math.random().toString(36).substr(2, 9),
@@ -420,7 +427,7 @@ export default function DataImport() {
                 if (fileName.endsWith('.csv')) rows = parseCSV(await item.file.text())
                 else rows = await parseExcel(item.file)
 
-                const extracted = extractDataFromRows(rows, properties, item.file.name)
+                const extracted = finalizeExtractedData(extractDataFromRows(rows, properties, item.file.name))
                 if (extracted.records.length > 0) {
                     const { data: existing } = await supabase.from('daily_occupancy').select('id').eq('property_id', currentProperty?.id).eq('business_date', extracted.dateRange.start).limit(1)
                     setFileQueue(prev => prev.map(f => f.id === item.id ? {
@@ -442,7 +449,7 @@ export default function DataImport() {
         }
         setIsProcessing(false)
         if (currentStep === 'upload') setCurrentStep('review')
-    }
+    }, [currentProperty?.id, currentStep, fileQueue.length, properties, t])
 
     const handleDragOver = useCallback((e: React.DragEvent) => {
         e.preventDefault()
@@ -472,6 +479,24 @@ export default function DataImport() {
         if (!user?.id) return
         setCurrentStep('import'); setImportProgress(0)
         let total = 0; const successFiles = fileQueue.filter(f => f.status === 'success' && f.extractedData)
+
+        const filesWithBlockingIssues = successFiles.filter((fileItem) =>
+            getImportBlockingIssues(fileItem.extractedData!, currentProperty?.id).length > 0
+        )
+
+        if (filesWithBlockingIssues.length > 0) {
+            setCurrentStep('review')
+            setSelectedFileId(filesWithBlockingIssues[0].id)
+            toast({
+                variant: 'destructive',
+                title: t('data_import.toasts.review_required', { defaultValue: 'Review Required Before Import' }),
+                description: t('data_import.toasts.review_required_desc', {
+                    defaultValue: '{{count}} file(s) are missing required data. Complete the highlighted fields and try again.',
+                    count: filesWithBlockingIssues.length
+                })
+            })
+            return
+        }
 
         for (const fileItem of successFiles) {
             const extracted = fileItem.extractedData!
@@ -632,7 +657,10 @@ export default function DataImport() {
             } else {
                 newRecords[recordIndex] = { ...newRecords[recordIndex], [field]: value }
             }
-            return { ...f, extractedData: { ...f.extractedData, records: newRecords } }
+            return {
+                ...f,
+                extractedData: finalizeExtractedData({ ...f.extractedData, records: newRecords })
+            }
         }))
     }
 
@@ -643,7 +671,10 @@ export default function DataImport() {
             return {
                 ...f,
                 extractedData: {
-                    ...f.extractedData,
+                    ...finalizeExtractedData({
+                        ...f.extractedData,
+                        records: newRecords,
+                    }),
                     records: newRecords,
                     summary: { ...f.extractedData.summary, totalRecords: newRecords.length }
                 }
@@ -811,8 +842,9 @@ export default function DataImport() {
                 const newRec = { ...rec }
                 let recordChanged = false
 
-                if (!newRec.rooms_available || newRec.rooms_available === '0') {
-                    newRec.rooms_available = '105'
+                const resolvedRoomsAvailable = deriveRoomsAvailable(newRec)
+                if ((!newRec.rooms_available || newRec.rooms_available === '0') && resolvedRoomsAvailable) {
+                    newRec.rooms_available = resolvedRoomsAvailable
                     recordChanged = true
                 }
 
@@ -835,7 +867,7 @@ export default function DataImport() {
             return (fileModified || conflictToResolve) ? {
                 ...f,
                 duplicateWarning: false,
-                extractedData: { ...f.extractedData, records: newRecords }
+                extractedData: finalizeExtractedData({ ...f.extractedData, records: newRecords })
             } : f
         }))
 
@@ -1130,7 +1162,7 @@ export default function DataImport() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as any)} className="w-[200px]">
+                                            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'json')} className="w-[200px]">
                                                 <TabsList className="grid grid-cols-2 h-9">
                                                     <TabsTrigger value="table" className="text-xs">
                                                         {t('data_import.review.table_view', { defaultValue: 'Table View' })}

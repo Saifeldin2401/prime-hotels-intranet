@@ -321,7 +321,7 @@ export function MobileDashboard() {
                                 <h2 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
                                     Overview
                                 </h2>
-                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/analytics')}>
+                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/reports')}>
                                     View All <ChevronRight className="h-3 w-3 ml-1" />
                                 </Button>
                             </div>
@@ -359,7 +359,7 @@ export function MobileDashboard() {
                                     <Clock className="h-4 w-4 text-primary" />
                                     Today&apos;s Schedule
                                 </h2>
-                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/calendar')}>
+                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/hr/scheduling')}>
                                     Calendar <ChevronRight className="h-3 w-3 ml-1" />
                                 </Button>
                             </div>
@@ -379,7 +379,7 @@ export function MobileDashboard() {
                                                     animate={{ opacity: 1, y: 0 }}
                                                     transition={{ delay: idx * 0.1 }}
                                                     className="flex items-start gap-3 p-4 cursor-pointer hover:bg-muted/50 transition-colors"
-                                                    onClick={() => navigate('/calendar')}
+                                                    onClick={() => navigate('/hr/scheduling')}
                                                 >
                                                     <div className={cn("w-1 h-full min-h-[40px] rounded-full", getScheduleColor(item.type))} />
                                                     <div className="flex-1 min-w-0">
@@ -412,7 +412,7 @@ export function MobileDashboard() {
                             <div className="grid grid-cols-4 gap-2">
                                 {[
                                     { icon: Briefcase, label: 'Tasks', color: 'text-blue-600', bg: 'bg-blue-100', href: '/tasks' },
-                                    { icon: Calendar, label: 'Calendar', color: 'text-emerald-600', bg: 'bg-emerald-100', href: '/calendar' },
+                                    { icon: Calendar, label: 'Calendar', color: 'text-emerald-600', bg: 'bg-emerald-100', href: '/hr/scheduling' },
                                     { icon: FileText, label: 'Docs', color: 'text-amber-600', bg: 'bg-amber-100', href: '/documents' },
                                     { icon: MoreHorizontal, label: 'More', color: 'text-slate-600', bg: 'bg-slate-100', action: () => setShowQuickActions(true) },
                                 ].map((item, idx) => (
@@ -538,7 +538,7 @@ export function MobileDashboard() {
                                     <MessageCircle className="h-4 w-4 text-blue-600" />
                                     Activity Feed
                                 </h2>
-                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/social')}>
+                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/announcements')}>
                                     View All <ChevronRight className="h-3 w-3 ml-1" />
                                 </Button>
                             </div>
@@ -575,7 +575,7 @@ export function MobileDashboard() {
                                             >
                                                 <Card 
                                                     className="border-0 shadow-sm cursor-pointer active:scale-[0.99] transition-all"
-                                                    onClick={() => navigate('/social')}
+                                                    onClick={() => navigate('/announcements')}
                                                 >
                                                     <CardContent className="p-4">
                                                         <div className="flex items-start gap-3">
@@ -778,7 +778,7 @@ export function MobileDashboard() {
                             label="New Request"
                             description="Leave, expense, etc."
                             color="blue"
-                            onClick={() => { setShowQuickActions(false); navigate('/hr/leave-requests') }}
+                            onClick={() => { setShowQuickActions(false); navigate('/hr/leave') }}
                         />
                         <QuickActionButton
                             icon={<Zap className="h-6 w-6" />}
@@ -792,7 +792,7 @@ export function MobileDashboard() {
                             label="Attendance"
                             description="Check in/out"
                             color="green"
-                            onClick={() => { setShowQuickActions(false); navigate('/hr/my-attendance') }}
+                            onClick={() => { setShowQuickActions(false); navigate('/hr/attendance') }}
                         />
                         <QuickActionButton
                             icon={<GraduationCap className="h-6 w-6" />}

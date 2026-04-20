@@ -289,7 +289,7 @@ async function checkServerSideLockout(email: string): Promise<AccountLockoutStat
   try {
     const { data: profile } = await supabase
       .from('profiles')
-      .select('failed_login_attempts, locked_until, account_status')
+      .select('id, failed_login_attempts, locked_until, account_status')
       .eq('email', email)
       .single();
     
@@ -298,11 +298,34 @@ async function checkServerSideLockout(email: string): Promise<AccountLockoutStat
     }
     
     const now = new Date();
-    const isLocked = profile.locked_until && new Date(profile.locked_until) > now;
+    const lockedUntilDate = profile.locked_until ? new Date(profile.locked_until) : null;
+    const isTimedLockExpired = lockedUntilDate !== null && lockedUntilDate <= now;
+
+    // Auto-clear expired lockouts so users are not permanently blocked
+    if (isTimedLockExpired || (profile.account_status === 'locked' && !lockedUntilDate)) {
+      // Only auto-clear time-based lockouts; permanent disables (no locked_until) stay locked
+      if (isTimedLockExpired) {
+        try {
+          await supabase
+            .from('profiles')
+            .update({
+              failed_login_attempts: 0,
+              locked_until: null,
+              account_status: 'active',
+            })
+            .eq('id', profile.id);
+        } catch {
+          // Best-effort clear; do not block the user if this fails
+        }
+        return { isLocked: false, lockedUntil: null, failedAttempts: 0, remainingAttempts: MAX_ATTEMPTS_BEFORE_LOCKOUT };
+      }
+    }
+
+    const isActiveLock = lockedUntilDate !== null && lockedUntilDate > now;
     
     return {
-      isLocked: isLocked || profile.account_status === 'locked',
-      lockedUntil: profile.locked_until ? new Date(profile.locked_until) : null,
+      isLocked: isActiveLock || profile.account_status === 'locked',
+      lockedUntil: lockedUntilDate && lockedUntilDate > now ? lockedUntilDate : null,
       failedAttempts: profile.failed_login_attempts || 0,
       remainingAttempts: Math.max(0, MAX_ATTEMPTS_BEFORE_LOCKOUT - (profile.failed_login_attempts || 0)),
     };
@@ -378,6 +401,48 @@ async function clearServerSideFailedAttempts(email: string): Promise<void> {
     } catch {
       // Ignore errors
     }
+  }
+}
+
+/**
+ * Self-service account unlock: triggered when a user resets their password.
+ * Clears lockout state so they can sign in with their new password.
+ * This is called automatically by the password reset flow.
+ */
+export async function selfServiceUnlockAccount(email: string): Promise<{ success: boolean }> {
+  const normalizedEmail = email.toLowerCase().trim();
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('id, account_status, locked_until')
+      .eq('email', normalizedEmail)
+      .single();
+
+    if (!profile) return { success: false };
+
+    // Only auto-unlock time-based lockouts; do not clear admin-disabled accounts
+    // A permanently disabled account has no locked_until timestamp
+    const isTimedLockout = profile.locked_until !== null;
+    const isDisabledByAdmin = profile.account_status === 'disabled';
+    if (isDisabledByAdmin) return { success: false };
+
+    await supabase
+      .from('profiles')
+      .update({
+        failed_login_attempts: 0,
+        locked_until: null,
+        account_status: 'active',
+      })
+      .eq('id', profile.id);
+
+    await logSecurityEvent('account.self_service_unlock', {
+      email: normalizedEmail,
+      wasTimedLockout: isTimedLockout,
+    });
+
+    return { success: true };
+  } catch {
+    return { success: false };
   }
 }
 
