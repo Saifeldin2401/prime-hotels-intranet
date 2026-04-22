@@ -320,7 +320,7 @@ export function TrainingAssignmentsPanel({
   })
 
   // Fetch Modules
-  const { data: modules } = useQuery({
+  const { data: modules, refetch: refetchAssignableModules } = useQuery({
     queryKey: ['training-modules', 'assignable'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -344,6 +344,11 @@ export function TrainingAssignmentsPanel({
     activeRosterPagination.setPage(1)
     exemptedRosterPagination.setPage(1)
   }, [manageModuleId])
+
+  useEffect(() => {
+    if (!showAssignmentDialog) return
+    void refetchAssignableModules()
+  }, [showAssignmentDialog, refetchAssignableModules])
 
   useEffect(() => {
     activeRosterPagination.setTotalCount(moduleRoster?.active.length || 0)

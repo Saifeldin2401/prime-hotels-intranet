@@ -1777,6 +1777,7 @@ export function TrainingBuilder() {
       removeEncryptedLocalStorage(draftKey)
 
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      queryClient.invalidateQueries({ queryKey: ['training-modules', 'assignable'] })
       queryClient.invalidateQueries({ queryKey: ['training-content-blocks', savedModuleId] })
       queryClient.invalidateQueries({ queryKey: ['training-module-full', savedModuleId] })
 
