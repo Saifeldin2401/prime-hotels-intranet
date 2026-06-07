@@ -60,8 +60,13 @@ export function SessionList() {
   useEffect(() => {
     loadSessions()
     
-    // Refresh sessions every 30 seconds
-    const interval = setInterval(loadSessions, 30000)
+    // Refresh sessions every 2 minutes, only when tab is visible
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void loadSessions()
+      }
+    }, 120000)
+    
     return () => clearInterval(interval)
   }, [loadSessions])
 

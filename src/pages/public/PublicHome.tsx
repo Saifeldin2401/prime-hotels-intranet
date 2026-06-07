@@ -9,6 +9,7 @@ import {
 } from '@/lib/runtimeRecovery';
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { Button } from '@/components/ui/button';
+import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal';
 import { useAuth } from '@/hooks/useAuth';
 import {
     AlertCircle,
@@ -111,7 +112,7 @@ export default function PublicHome() {
         navigate(pendingAuthFlowPath, { replace: true });
         return
       }
-      navigate('/home', { replace: true });
+      navigate('/learning/my', { replace: true });
     }
   }, [authUser, navigate, pendingAuthFlowPath, secureEntryRecoveryNeeded]);
 
@@ -148,7 +149,7 @@ export default function PublicHome() {
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {secureEntryRecoveryFailed
-                ? `PHG Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to continue account setup.`
+                ? `${TEMP_LEARNING_PORTAL_BRAND.productName} detected an unexpected public-page render on ${currentPathname}. Retry the secure link to continue account setup.`
                 : AUTH_ROUTE_RECOVERY_MESSAGE}
             </p>
           </div>
@@ -282,7 +283,7 @@ export default function PublicHome() {
 
             <div className="mb-6">
               <span className="text-4xl sm:text-5xl lg:text-7xl font-bold text-hotel-gold font-serif">
-                {t('prime_connect')}
+                {TEMP_LEARNING_PORTAL_BRAND.productName}
               </span>
               <div className="mt-2 text-white/70 text-lg">
                 {t('brand_tagline')}
@@ -467,7 +468,7 @@ export default function PublicHome() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Brand */}
             <div>
-              <img src="/prime-logo-light.png" alt="Prime Hotels" className="h-10 w-auto mb-4" />
+              <img src={TEMP_LEARNING_PORTAL_BRAND.logo} alt={TEMP_LEARNING_PORTAL_BRAND.fullName} className="h-10 w-auto mb-4" />
               <p className="text-white/60 text-sm leading-relaxed">
                 {t('footer.description')}
               </p>

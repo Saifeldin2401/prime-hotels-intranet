@@ -23,7 +23,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardStats } from '@/hooks/useDashboardStats'
-import { useGuestReviews, formatRating, getRatingColor, getRatingBgColor, getPlatformName, formatTimeAgo } from '@/hooks/useGuestReviews'
+
 import { useNotifications } from '@/hooks/useNotifications'
 import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import { cn } from '@/lib/utils'
@@ -84,7 +84,7 @@ export function MobileDashboard() {
     const { data: stats, isLoading: _isLoading } = useDashboardStats()
     const { notifications, unreadCount, isLoading: isLoadingNotifications } = useNotifications()
     const { feedItems, isLoading: feedLoading } = useUnifiedSocialFeed({ enabled: true })
-    const { data: guestReviewData, isLoading: isLoadingReviews } = useGuestReviews({ limit: 3, daysBack: 30 })
+
     const [showQuickActions, setShowQuickActions] = useState(false)
     const [showProfile, setShowProfile] = useState(false)
     const [greeting, setGreeting] = useState(getGreeting())
@@ -221,7 +221,7 @@ export function MobileDashboard() {
             queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] }),
             queryClient.invalidateQueries({ queryKey: ['notifications'] }),
             queryClient.invalidateQueries({ queryKey: ['social-feed'] }),
-            queryClient.invalidateQueries({ queryKey: ['guest-reviews'] }),
+
         ])
         setGreeting(getGreeting())
     }
@@ -617,119 +617,7 @@ export function MobileDashboard() {
                             )}
                         </section>
 
-                        {/* Guest Reviews Widget */}
-                        <section className="px-4 mb-6">
-                            <div className="flex items-center justify-between mb-3">
-                                <h2 className="font-semibold flex items-center gap-2">
-                                    <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                                    Guest Reviews
-                                </h2>
-                                <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/reviews')}>
-                                    View All <ChevronRight className="h-3 w-3 ml-1" />
-                                </Button>
-                            </div>
-                            
-                            {isLoadingReviews ? (
-                                <Card className="border-0 shadow-sm">
-                                    <CardContent className="p-4 space-y-3">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-xl bg-muted animate-pulse shrink-0" />
-                                            <div className="flex-1 space-y-2">
-                                                <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
-                                                <div className="h-3 bg-muted rounded animate-pulse w-3/4" />
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            ) : !guestReviewData || guestReviewData.totalReviews === 0 ? (
-                                <Card className="border-0 shadow-sm">
-                                    <CardContent className="p-6 text-center">
-                                        <Star className="h-10 w-10 text-muted-foreground/40 mx-auto mb-2" />
-                                        <p className="text-sm font-medium text-muted-foreground">No reviews yet</p>
-                                        <p className="text-xs text-muted-foreground/70 mt-1">Reviews will appear here</p>
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                <div className="space-y-3">
-                                    {/* Quick Stats Row */}
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <div className="bg-amber-50 rounded-xl p-3 text-center">
-                                            <div className="flex items-center justify-center gap-1 mb-1">
-                                                <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
-                                                <span className={cn("text-lg font-bold", getRatingColor(guestReviewData.averageRating))}>
-                                                    {formatRating(guestReviewData.averageRating)}
-                                                </span>
-                                            </div>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Avg Rating</p>
-                                        </div>
-                                        <div className="bg-blue-50 rounded-xl p-3 text-center">
-                                            <p className="text-lg font-bold text-blue-600">{guestReviewData.totalReviews}</p>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Reviews</p>
-                                        </div>
-                                        <div className="bg-rose-50 rounded-xl p-3 text-center">
-                                            <p className="text-lg font-bold text-rose-600">{guestReviewData.pendingResponses}</p>
-                                            <p className="text-[10px] text-muted-foreground uppercase font-medium">Pending</p>
-                                        </div>
-                                    </div>
-                                    
-                                    {/* Recent Reviews */}
-                                    <AnimatePresence>
-                                        {guestReviewData.recentReviews.map((review, idx) => (
-                                            <m.div
-                                                key={review.id}
-                                                initial={{ opacity: 0, y: 10 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: idx * 0.1 }}
-                                            >
-                                                <Card 
-                                                    className={cn(
-                                                        "border-0 shadow-sm cursor-pointer active:scale-[0.99] transition-all",
-                                                        review.critical_flag && "border-l-4 border-l-rose-500"
-                                                    )}
-                                                    onClick={() => navigate('/reviews')}
-                                                >
-                                                    <CardContent className="p-3">
-                                                        <div className="flex items-start gap-3">
-                                                            <div className={cn(
-                                                                "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
-                                                                getRatingBgColor(review.rating_normalized_5)
-                                                            )}>
-                                                                <span className={cn("text-sm font-bold", getRatingColor(review.rating_normalized_5))}>
-                                                                    {formatRating(review.rating_normalized_5)}
-                                                                </span>
-                                                            </div>
-                                                            <div className="flex-1 min-w-0">
-                                                                <div className="flex items-center gap-2 mb-0.5">
-                                                                    <p className="font-semibold text-sm truncate">
-                                                                        {review.reviewer_name || 'Anonymous'}
-                                                                    </p>
-                                                                    {review.critical_flag && (
-                                                                        <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-4">
-                                                                            Critical
-                                                                        </Badge>
-                                                                    )}
-                                                                </div>
-                                                                <p className="text-xs text-muted-foreground line-clamp-1">
-                                                                    {review.review_title || review.review_text?.substring(0, 60) + '...'}
-                                                                </p>
-                                                                <div className="flex items-center gap-2 mt-1.5">
-                                                                    <Badge variant="secondary" className="text-[10px]">
-                                                                        {getPlatformName(review.platform)}
-                                                                    </Badge>
-                                                                    <span className="text-[10px] text-muted-foreground">
-                                                                        {formatTimeAgo(review.collected_at)}
-                                                                    </span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            </m.div>
-                                        ))}
-                                    </AnimatePresence>
-                                </div>
-                            )}
-                        </section>
+
 
                         {/* Training Progress Mini Widget */}
                         <section className="px-4 mb-6">

@@ -75,7 +75,7 @@ export async function testSlackWebhook(webhookUrl: string, message?: string): Pr
  * Test a Slack edge function endpoint
  */
 export async function testSlackEndpoint(
-  endpoint: 'slack-events' | 'slack-commands' | 'slack-interactive' | 'slack-training' | 'slack-reviews'
+  endpoint: 'slack-events' | 'slack-commands' | 'slack-interactive' | 'slack-training'
 ): Promise<SlackTestResponse> {
   const { data: { session } } = await supabase.auth.getSession();
   
@@ -191,31 +191,7 @@ export async function sendSlackTrainingDigest(): Promise<{ success: boolean; dig
   return data as { success: boolean; digest_sent?: number; error?: string };
 }
 
-/**
- * Send reviews summary via Slack
- */
-export async function sendSlackReviewsSummary(): Promise<{ success: boolean; reviews_count?: number; error?: string }> {
-  const { data: { session } } = await supabase.auth.getSession();
-  
-  if (!session) {
-    throw new Error('Not authenticated');
-  }
-  
-  const response = await fetch(
-    `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/slack-reviews`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ action: 'daily_summary' }),
-    }
-  );
-  
-  const data = await response.json();
-  return data as { success: boolean; reviews_count?: number; error?: string };
-}
+
 
 /**
  * Get webhook URLs for configuration

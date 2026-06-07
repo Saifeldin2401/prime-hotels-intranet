@@ -79,11 +79,7 @@ export const ROUTES = {
     SOPS: '/operations/sops',
   },
 
-  // Guest Reviews
-  GUEST_REVIEWS: {
-    DASHBOARD: '/guest-reviews',
-    SETTINGS: '/guest-reviews/settings',
-  },
+
 
   // Media
   MEDIA: {

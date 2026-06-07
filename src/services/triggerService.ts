@@ -7,7 +7,7 @@
 
 import { createBulkNotifications } from '@/lib/notificationService'
 import { persistLearningAssignments } from '@/lib/learningAssignmentMutations'
-import { supabase } from '@/lib/supabase'
+import { env, supabase } from '@/lib/supabase'
 
 // ============================================================================
 // TYPES
@@ -70,21 +70,44 @@ export async function processTrigger(context: TriggerContext): Promise<{
     errors: string[]
 }> {
     try {
-        const { data, error } = await supabase.functions.invoke('process-event', {
-            body: {
-                event_type: context.event,
-                payload: {
-                    ...context.metadata,
-                    user_id: context.affected_users?.[0], // Primary user
-                    department_id: context.department_id,
-                    source_id: context.source_id,
-                    source_type: context.source_type,
-                    affected_users: context.affected_users
-                }
+        const requestPayload = {
+            event_type: context.event,
+            payload: {
+                ...context.metadata,
+                user_id: context.affected_users?.[0], // Primary user
+                department_id: context.department_id,
+                source_id: context.source_id,
+                source_type: context.source_type,
+                affected_users: context.affected_users
             }
+        }
+
+        // Use direct fetch with minimal headers so edge-function CORS remains compatible.
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session?.access_token) {
+            return {
+                success: false,
+                actionsExecuted: 0,
+                errors: ['Not authenticated for trigger processing']
+            }
+        }
+
+        const response = await fetch(`${env.VITE_SUPABASE_URL}/functions/v1/process-event`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`,
+                'apikey': env.VITE_SUPABASE_ANON_KEY,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(requestPayload)
         })
 
-        if (error) throw error
+        if (!response.ok) {
+            const responseText = await response.text().catch(() => '')
+            throw new Error(`process-event failed (${response.status}): ${responseText || response.statusText}`)
+        }
+
+        const data = await response.json().catch(() => null)
         if (!data || typeof data !== 'object') {
             return {
                 success: false,
@@ -99,19 +122,21 @@ export async function processTrigger(context: TriggerContext): Promise<{
             results?: TriggerExecutionResult[]
         }
 
-        const payload = data as TriggerProcessorResponse
-        const results = Array.isArray(payload.results) ? payload.results : []
+        const responsePayload = data as TriggerProcessorResponse
+        const results = Array.isArray(responsePayload.results) ? responsePayload.results : []
 
         return {
-            success: Boolean(payload.success),
+            success: Boolean(responsePayload.success),
             actionsExecuted: results.length,
             errors: results
                 .map((result) => (result.success === false ? result.error : null))
                 .filter((errorMessage): errorMessage is string => typeof errorMessage === 'string' && errorMessage.length > 0)
         }
     } catch (error: unknown) {
-        console.error('Trigger service error:', error)
         const message = error instanceof Error ? error.message : String(error)
+        if (import.meta.env.DEV) {
+            console.warn('Trigger service warning:', message)
+        }
         return { success: false, actionsExecuted: 0, errors: [message] }
     }
 }

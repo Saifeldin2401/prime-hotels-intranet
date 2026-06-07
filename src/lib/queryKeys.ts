@@ -211,24 +211,7 @@ export const notificationKeys = {
   preferences: (userId: string) => [...notificationKeys.all, 'preferences', userId] as const,
 } as const
 
-// ============================================================================
-// GUEST REVIEWS
-// ============================================================================
 
-export const reviewKeys = {
-  all: ['reviews'] as const,
-  
-  lists: () => [...reviewKeys.all, 'list'] as const,
-  list: (filters: { propertyId?: string; platform?: string; rating?: number } = {}) => 
-    [...reviewKeys.lists(), filters] as const,
-  
-  detail: (id: string) => [...reviewKeys.all, id] as const,
-  
-  stats: (propertyId?: string) => [...reviewKeys.all, 'stats', propertyId ?? 'all'] as const,
-  
-  sentiment: (propertyId?: string) => 
-    [...reviewKeys.all, 'sentiment', propertyId ?? 'all'] as const,
-} as const
 
 // ============================================================================
 // DOCUMENTS
@@ -305,7 +288,6 @@ export const queryKeys = {
   hr: hrKeys,
   approvals: approvalKeys,
   notifications: notificationKeys,
-  reviews: reviewKeys,
   documents: documentKeys,
   analytics: analyticsKeys,
   messaging: messagingKeys,

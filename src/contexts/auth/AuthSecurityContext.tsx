@@ -62,7 +62,7 @@ export function useAuthSecurity() {
 
 // ─── Configuration ───────────────────────────────────────────────────────────
 const CONFIG = {
-  sessionSecurityCheckIntervalMs: 60000, // 1 minute
+  sessionSecurityCheckIntervalMs: 300000, // 5 minutes — reduced to save disk I/O
 } as const
 
 // ─── Provider ────────────────────────────────────────────────────────────────
@@ -155,6 +155,8 @@ export function AuthSecurityProvider({ children }: { children: ReactNode }) {
     if (!userId) return
 
     sessionSecurityIntervalRef.current = setInterval(() => {
+      // Skip security checks when tab is not visible to reduce disk I/O
+      if (document.visibilityState !== 'visible') return
       void performSecurityCheckRef.current()
     }, CONFIG.sessionSecurityCheckIntervalMs)
 

@@ -6,7 +6,7 @@ class AnalyticsService {
     private buffer: AnalyticsEvent[] = []
     private batchSize = 10
     private maxBufferSize = 500
-    private flushInterval = 5000
+    private flushInterval = 30000 // Reduced frequency (30s) to save disk I/O
     private flushTimer: NodeJS.Timeout | null = null
     private sessionId: string | null = null
     private userId: string | null = null

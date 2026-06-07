@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
@@ -314,8 +315,8 @@ ASSISTANT RESPONSE:`
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg transform rotate-3 ring-1 ring-white/20">
                                         <img
-                                            src="/prime-logo-light.png"
-                                            alt="Prime Hotels"
+                                            src={TEMP_LEARNING_PORTAL_BRAND.logo}
+                                            alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
                                             className="h-10 w-auto object-contain"
                                         />
                                     </div>

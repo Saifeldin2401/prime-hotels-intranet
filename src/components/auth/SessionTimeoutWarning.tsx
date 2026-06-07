@@ -97,12 +97,6 @@ export function SessionTimeoutWarning({
         warningShownRef.current = true;
         setShowWarning(true);
         setRemainingSeconds(Math.ceil((timeoutTime - idleTime) / 1000));
-        
-        recordAuthEvent({
-          type: 'session_validation',
-          success: true,
-          details: { reason: 'timeout_warning_shown' },
-        });
       }
       
       // Update countdown

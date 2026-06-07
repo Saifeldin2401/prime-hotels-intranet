@@ -105,6 +105,7 @@ export function useDashboardStats() {
         enabled: !!user?.id,
         staleTime: 120000, // Fresh for 2 minutes
         refetchInterval: 300000, // Refetch every 5 minutes
+        refetchIntervalInBackground: false,
     })
 }
 
@@ -241,7 +242,8 @@ export function usePropertyManagerStats(options?: { enabled?: boolean }) {
                 trainingCompletion: Math.min(trainingCompletion, 100)
             }
         },
-        refetchInterval: 120000,
+        refetchInterval: 300000, // Increased to 5 min to save disk I/O
+        refetchIntervalInBackground: false,
         staleTime: 60000,
         enabled: options?.enabled ?? true
     })
@@ -396,7 +398,8 @@ export function useDepartmentHeadStats() {
                 departmentIds: deptIds
             }
         },
-        refetchInterval: 120000,
+        refetchInterval: 300000, // Increased to 5 min to save disk I/O
+        refetchIntervalInBackground: false,
         staleTime: 60000,
         enabled: primaryRole === 'department_head' && !!profile?.id
     })
@@ -554,6 +557,7 @@ export function useHRStats(options?: { propertyId?: string; enabled?: boolean })
             }
         },
         refetchInterval: 300000,
+        refetchIntervalInBackground: false,
         staleTime: 120000,
         enabled: (options?.enabled ?? true) && !!propId
     })
@@ -718,6 +722,7 @@ export function useAreaManagerStats(options?: { propertyId?: string; enabled?: b
             }
         },
         refetchInterval: 300000,
+        refetchIntervalInBackground: false,
         staleTime: 120000,
         enabled: options?.enabled ?? true
     })
@@ -863,6 +868,7 @@ export function useCorporateStats(options?: { propertyId?: string; enabled?: boo
             }
         },
         refetchInterval: 300000,
+        refetchIntervalInBackground: false,
         staleTime: 120000,
         enabled: options?.enabled ?? true
     })

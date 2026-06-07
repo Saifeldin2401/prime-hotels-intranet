@@ -6,10 +6,58 @@
  * Run it before building: node scripts/validate-env.js
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 const requiredEnvVars = [
   'VITE_SUPABASE_URL',
   'VITE_SUPABASE_ANON_KEY',
 ];
+
+const envFileOrder = [
+  '.env',
+  '.env.local',
+  `.env.${process.env.NODE_ENV || 'development'}`,
+  `.env.${process.env.NODE_ENV || 'development'}.local`,
+];
+
+function parseEnvLine(line) {
+  const trimmed = line.trim();
+  if (!trimmed || trimmed.startsWith('#')) return null;
+
+  const exportPrefix = 'export ';
+  const source = trimmed.startsWith(exportPrefix)
+    ? trimmed.slice(exportPrefix.length).trim()
+    : trimmed;
+  const equalsIndex = source.indexOf('=');
+  if (equalsIndex <= 0) return null;
+
+  const key = source.slice(0, equalsIndex).trim();
+  let value = source.slice(equalsIndex + 1).trim();
+  const quote = value[0];
+  if (
+    (quote === '"' || quote === "'") &&
+    value.endsWith(quote)
+  ) {
+    value = value.slice(1, -1);
+  }
+  return { key, value };
+}
+
+function loadLocalEnvFiles() {
+  const root = process.cwd();
+  for (const fileName of envFileOrder) {
+    const fullPath = path.join(root, fileName);
+    if (!fs.existsSync(fullPath)) continue;
+
+    const content = fs.readFileSync(fullPath, 'utf8');
+    for (const line of content.split(/\r?\n/)) {
+      const parsed = parseEnvLine(line);
+      if (!parsed || process.env[parsed.key] !== undefined) continue;
+      process.env[parsed.key] = parsed.value;
+    }
+  }
+}
 
 const productionOnlyVars = [
   'VITE_APP_URL',
@@ -30,6 +78,8 @@ const placeholderPatterns = [
 ];
 
 function validateEnv() {
+  loadLocalEnvFiles();
+
   const errors = [];
   const warnings = [];
   const isProduction = process.env.NODE_ENV === 'production';

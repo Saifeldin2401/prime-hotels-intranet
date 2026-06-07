@@ -1,5 +1,6 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
+import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal'
 import { motion } from 'framer-motion'
 import { ChevronRight, Clock, Fingerprint, Shield, Sparkles, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
@@ -198,8 +199,8 @@ export default function Login() {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <img
-                  src="/prime-logo-light.png"
-                  alt="Prime Hotels"
+                  src={TEMP_LEARNING_PORTAL_BRAND.logo}
+                  alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
                   className="h-14 w-auto opacity-95 drop-shadow-2xl"
                 />
               </motion.div>
@@ -234,7 +235,7 @@ export default function Login() {
               >
                 <Sparkles className="w-4 h-4 text-yellow-300" />
               </motion.div>
-              <span className="text-sm font-medium text-white/95 tracking-wide">PHG Connect</span>
+              <span className="text-sm font-medium text-white/95 tracking-wide">{TEMP_LEARNING_PORTAL_BRAND.productName}</span>
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             </div>
           </motion.div>
@@ -305,7 +306,7 @@ export default function Login() {
               {t('copyright', { year })}
             </span>
             <div className="flex items-center gap-2 text-white/30">
-              <span className="text-xs uppercase tracking-[0.2em] font-medium">PHG Connect</span>
+              <span className="text-xs uppercase tracking-[0.2em] font-medium">{TEMP_LEARNING_PORTAL_BRAND.name}</span>
               <ChevronRight className="w-3 h-3" />
             </div>
           </div>
@@ -349,8 +350,8 @@ export default function Login() {
         <div className="absolute top-0 inset-x-0 p-4 lg:hidden z-30">
           <div className="flex items-center justify-between">
             <img
-              src="/prime-logo-dark.png"
-              alt="Prime Hotels"
+              src={TEMP_LEARNING_PORTAL_BRAND.logo}
+              alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
               className="h-8 w-auto"
             />
             <LanguageSwitcher />

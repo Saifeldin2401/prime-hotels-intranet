@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 930 540" role="img" aria-labelledby="title desc">
+  <title id="title">Diyafa Hotels and Resorts</title>
+  <desc id="desc">Temporary Diyafa learning portal brand mark.</desc>
+  <rect width="930" height="540" fill="none"/>
+  <g transform="translate(0 -65)">
+    <path fill="#c61b68" d="M352.212 741.509 564.104 619.894V501.875L455.022 564.462V439.284l-102.81 59.014z"/>
+    <path fill="#9c2d5c" d="M782.285 498.297 679.447 439.283v125.183L570.37 501.875v118.023l211.915 121.61z"/>
+    <path fill="#c61b68" d="m679.446 804.097 99.707-57.228-99.707-57.227z"/>
+    <path fill="#9c2d5c" d="m455.023 689.644-99.693 57.223 99.693 57.227z"/>
+  </g>
+  <text x="465" y="398" text-anchor="middle" fill="#c61b68" font-family="Roboto Condensed, Arial Narrow, Arial, sans-serif" font-size="76" font-weight="800" letter-spacing="1">
+    Diyafa Hotels &amp; Resorts
+  </text>
+  <text x="465" y="464" text-anchor="middle" direction="rtl" fill="#aaa5ad" font-family="Almarai, Tahoma, Arial, sans-serif" font-size="48" font-weight="800">
+    ضيافة للفنادق والمنتجعات
+  </text>
+</svg>

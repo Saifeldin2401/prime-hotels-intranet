@@ -185,21 +185,7 @@
             "coming_up_on": "سيأتي في",
             "coo_title": "المدير التنفيذي للعمليات"
         },
-        "guest_reviews": {
-            "title": "تقييمات الضيوف",
-            "all_properties": "جميع المنشآت",
-            "select_property": "اختر المنشأة",
-            "avg_rating": "متوسط التقييم",
-            "total": "الإجمالي",
-            "pending": "معلق",
-            "response_rate": "معدل الاستجابة",
-            "critical": "حرج",
-            "critical_short": "حرج",
-            "manage_reviews": "إدارة التقييمات",
-            "view_all": "عرض الكل",
-            "no_reviews": "لا توجد تقييمات بعد",
-            "check_back": "ستظهر التقييمات هنا"
-        },
+
         "pinned_items": "العناصر المثبتة",
         "pinned_items_desc": "وصول سريع للعناصر المهمة",
         "pinned": {
@@ -1132,17 +1118,5 @@
         "asr": "العصر",
         "maghrib": "المغرب",
         "isha": "العشاء"
-    },
-    "reviews": {
-        "anonymous_guest": "ضيف مجهول",
-        "unknown_property": "غير معروف",
-        "no_reviews": "لا توجد تقييمات بعد",
-        "check_back": "ستظهر التقييمات هنا",
-        "avg_rating": "متوسط التقييم",
-        "total": "الإجمالي",
-        "pending": "معلق",
-        "critical": "حرج",
-        "response_rate": "معدل الاستجابة",
-        "manage": "إدارة التقييمات"
     }
 }
