@@ -1,4 +1,4 @@
-import { createCertificate } from '@/lib/certificateService'
+import { createCertificate } from '@/services/certificateService'
 import { supabase } from '@/lib/supabase'
 
 type PathRow = {

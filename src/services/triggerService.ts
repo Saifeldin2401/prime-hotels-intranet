@@ -5,7 +5,7 @@
  * Automatically assigns training when specific events occur.
  */
 
-import { createBulkNotifications } from '@/lib/notificationService'
+import { createBulkNotifications } from '@/services/notificationService'
 import { persistLearningAssignments } from '@/lib/learningAssignmentMutations'
 import { env, supabase } from '@/lib/supabase'
 

@@ -15,7 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useDownloadCertificate, useMyCertificates } from '@/hooks/useCertificates'
-import type { Certificate } from '@/lib/certificateService'
+import type { Certificate } from '@/services/certificateService'
 import { format } from 'date-fns'
 import {
     AlertCircle,

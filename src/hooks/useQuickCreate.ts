@@ -1,7 +1,7 @@
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import type { Event } from '@/hooks/useEvents'
-import { createNotification } from '@/lib/notificationService'
+import { createNotification } from '@/services/notificationService'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Announcement, MaintenanceTicket, Task } from '@/lib/types'

@@ -25,9 +25,7 @@
     "start": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^5.2.2",
-    "@huggingface/inference": "^4.13.5",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.2",
     "@radix-ui/react-avatar": "^1.1.11",
@@ -91,7 +89,6 @@
     "mammoth": "^1.11.0",
     "marked": "^17.0.1",
     "mermaid": "^11.15.0",
-    "openai": "^6.10.0",
     "pdfjs-dist": "^5.4.449",
     "react": "^19.2.0",
     "react-confetti": "^6.4.0",

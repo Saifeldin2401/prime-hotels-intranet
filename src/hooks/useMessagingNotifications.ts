@@ -1,5 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
-import { createBulkNotifications, createNotification } from '@/lib/notificationService'
+import { createBulkNotifications, createNotification } from '@/services/notificationService'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Message } from '@/lib/types'
