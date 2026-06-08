@@ -60,7 +60,6 @@ const ClusterOverviewWidget = lazyWidget(() => import('./ClusterOverviewWidget')
 const PropertyComparisonWidget = lazyWidget(() => import('./PropertyComparisonWidget'), 'PropertyComparisonWidget')
 const ShiftHandoverWidget = lazyWidget(() => import('./ShiftHandoverWidget'), 'ShiftHandoverWidget')
 const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
-const GuestReviewsWidget = lazyWidget(() => import('./GuestReviewsWidget'), 'GuestReviewsWidget')
 
 /**
  * WIDGET_REGISTRY
@@ -229,15 +228,6 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low'
     },
-    guestReviews: {
-        id: 'guestReviews',
-        component: GuestReviewsWidget,
-        title: 'Guest Reviews',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'medium',
-        gridSize: { w: 1, h: 2 }
-    },
     clusterOverview: {
         id: 'clusterOverview',
         component: ClusterOverviewWidget,
@@ -282,7 +272,6 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staf
         sidebar: [
             'quickInsights',
             'motivation',
-            'guestReviews',
             'announcements',
             'pinnedItems',
             'knowledgeBase',
@@ -305,7 +294,6 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staf
         sidebar: [
             'quickInsights',
             'motivation',
-            'guestReviews',
             'teamActivity',
             'announcements',
             'pinnedItems',
@@ -328,7 +316,6 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staf
         ],
         sidebar: [
             'motivation',
-            'guestReviews',
             'maintenance',
             'announcements',
             'eliteSpotlight',

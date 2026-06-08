@@ -24,12 +24,7 @@ CREATE TABLE sop_documents (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   title TEXT NOT NULL,
   title_ar TEXT NOT NULL,
-  code TEXT UNIQUE NOT NULL GENERATED ALWAYS AS (
-    'SOP-' || 
-    (SELECT short_code FROM departments WHERE id = department_id) || 
-    '-' || 
-    lpad((row_number() OVER (PARTITION BY department_id ORDER BY created_at) + 1000)::TEXT, 4, '0')
-  ) STORED,
+  code TEXT UNIQUE,
   description TEXT,
   description_ar TEXT,
   department_id UUID NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
@@ -49,9 +44,7 @@ CREATE TABLE sop_documents (
   published_at TIMESTAMPTZ,
   published_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   archived_at TIMESTAMPTZ,
-  archived_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
-  CONSTRAINT fk_current_version FOREIGN KEY (current_version_id) 
-    REFERENCES sop_document_versions(id) ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED
+  archived_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
 -- SOP Document Versions

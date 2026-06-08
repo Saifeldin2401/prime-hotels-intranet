@@ -56,7 +56,7 @@ export function useAuditTemplates() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('audit_templates')
-        .select('*')
+        .select('id, name, description, scope_type, property_id, department_id, frequency, next_run_at, last_run_at, is_active, created_by, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -173,7 +173,7 @@ export function useAuditItems(templateId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('audit_items')
-        .select('*')
+        .select('id, template_id, title, category, severity, required, order_index')
         .order('order_index', { ascending: true })
 
       if (templateId) {
@@ -194,7 +194,7 @@ export function useAuditRuns(templateId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('audit_runs')
-        .select('*')
+        .select('id, template_id, status, scheduled_for, started_at, completed_at, created_by, created_at')
         .order('created_at', { ascending: false })
 
       if (templateId) {
@@ -214,7 +214,7 @@ export function useAuditFindings(runId?: string) {
     queryFn: async () => {
       let query = supabase
         .from('audit_findings')
-        .select('*')
+        .select('id, run_id, item_id, status, notes, assigned_to, created_at, updated_at')
         .order('created_at', { ascending: false })
 
       if (runId) {

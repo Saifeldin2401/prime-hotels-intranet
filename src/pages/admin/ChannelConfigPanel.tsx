@@ -111,7 +111,6 @@ export function ChannelConfigPanel() {
           webhook_url_encrypted: webhookUrl, // Should be encrypted in production
           channel_mappings: {
             general: '#general',
-            guest_reviews: '#guest-reviews',
             escalations: '#escalations',
             maintenance: '#maintenance',
             approvals: '#approvals'

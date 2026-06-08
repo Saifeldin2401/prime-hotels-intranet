@@ -22,7 +22,6 @@ export type DashboardWidgetId =
   | 'todaysBirthdays'
   | 'onlineUsers'
   | 'pinnedItems'
-  | 'guestReviews'
   | 'eliteSpotlight'
   | 'motivation'
   | 'quickActions'
@@ -139,10 +138,7 @@ export const WIDGET_PERMISSIONS: WidgetPermission[] = [
     widgetId: 'pinnedItems',
     minLevel: 'individual',
   },
-  {
-    widgetId: 'guestReviews',
-    minLevel: 'individual',
-  },
+
   {
     widgetId: 'eliteSpotlight',
     minLevel: 'individual',
@@ -263,7 +259,6 @@ export function getRoleBasedLayoutProfile(context: DashboardContext) {
         ]),
         sidebar: filterWidgets([
           include('motivation'),
-          include('guestReviews'),
           include('announcements'),
           include('pinnedItems'),
           include('knowledgeBase'),
@@ -286,7 +281,6 @@ export function getRoleBasedLayoutProfile(context: DashboardContext) {
         ]),
         sidebar: filterWidgets([
           include('motivation'),
-          include('guestReviews'),
           include('teamActivity'),
           include('announcements'),
           include('eliteSpotlight'),

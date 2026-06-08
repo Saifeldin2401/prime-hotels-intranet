@@ -38,9 +38,9 @@ CREATE TABLE training_content_blocks (
   training_module_id UUID REFERENCES training_modules(id) ON DELETE CASCADE NOT NULL,
   type content_block_type NOT NULL,
   content TEXT NOT NULL,
-  order INTEGER NOT NULL,
+  "order" INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(training_module_id, order)
+  UNIQUE(training_module_id, "order")
 );
 
 -- Training quizzes table
@@ -51,9 +51,9 @@ CREATE TABLE training_quizzes (
   type quiz_type NOT NULL,
   options TEXT[], -- For MCQ
   correct_answer TEXT NOT NULL,
-  order INTEGER NOT NULL,
+  "order" INTEGER NOT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(training_module_id, order)
+  UNIQUE(training_module_id, "order")
 );
 
 -- Training assignments table

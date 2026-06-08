@@ -147,3 +147,6 @@ test-pii-*.js
 resend_reminders.*
 capture.py
 find_dupes.py
+
+# Local scratch/working directory
+scratch/

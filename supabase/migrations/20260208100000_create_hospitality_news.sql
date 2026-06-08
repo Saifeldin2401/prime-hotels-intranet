@@ -40,9 +40,9 @@ CREATE POLICY "Admins can manage news"
     TO authenticated
     USING (
         EXISTS (
-            SELECT 1 FROM public.profiles
-            WHERE profiles.id = auth.uid()
-            AND profiles.role IN ('corporate_admin', 'super_admin')
+            SELECT 1 FROM public.user_roles
+            WHERE user_roles.user_id = auth.uid()
+            AND user_roles.role::text IN ('corporate_admin', 'super_admin')
         )
     );
 

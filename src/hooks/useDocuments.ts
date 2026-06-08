@@ -795,21 +795,23 @@ export function useDocument(documentId: string) {
 export function useCreateDocument() {
   const queryClient = useQueryClient()
   const { user, primaryRole } = useAuth()
-  const { currentProperty } = useProperty()
+  const { currentProperty, propertyIds } = useProperty()
 
   return useMutation({
     mutationFn: async (document: Partial<Document>) => {
       if (!user) throw new Error('User must be authenticated')
 
-      if (document.property_id !== undefined && !isRealPropertyId(document.property_id)) {
-        throw new Error('A valid property_id is required to create a document')
-      }
-
       const resolvedPropertyId = isRealPropertyId(document.property_id)
         ? document.property_id
-        : (isRealPropertyId(currentProperty?.id) ? currentProperty.id : null)
+        : (
+          isRealPropertyId(currentProperty?.id)
+            ? currentProperty.id
+            : (propertyIds[0] ?? null)
+        )
 
-      if (!resolvedPropertyId && document.visibility && document.visibility !== 'all_properties') {
+      const resolvedVisibility = document.visibility ?? (resolvedPropertyId ? 'property' : 'all_properties')
+
+      if (!resolvedPropertyId && resolvedVisibility !== 'all_properties') {
         throw new Error('A valid property_id is required for non-global documents')
       }
 
@@ -821,7 +823,8 @@ export function useCreateDocument() {
         .from('documents')
         .insert({
           ...document,
-          property_id: resolvedPropertyId ?? document.property_id ?? null,
+          property_id: resolvedPropertyId,
+          visibility: resolvedVisibility,
           created_by: user.id,
           status: canAutoPublish ? 'PUBLISHED' : 'DRAFT',
           // Set published fields for auto-published documents

@@ -143,7 +143,6 @@ export interface SlackChannelMapping {
 export const DEFAULT_CHANNEL_MAPPINGS: SlackChannelMapping[] = [
   { channel_type: 'general', channel_name: '#general', description: 'General notifications' },
   { channel_type: 'training-hub', channel_name: '#training-hub', description: 'Training updates and reminders' },
-  { channel_type: 'guest-reviews', channel_name: '#guest-reviews', description: 'Guest review alerts and summaries' },
   { channel_type: 'operations', channel_name: '#operations', description: 'Operations alerts and incidents' },
   { channel_type: 'escalations', channel_name: '#escalations', description: 'Escalated issues requiring attention' },
   { channel_type: 'maintenance', channel_name: '#maintenance', description: 'Maintenance requests and updates' },
@@ -168,19 +167,7 @@ export interface SlackDigestResponse {
   error?: string;
 }
 
-export interface SlackReviewsResponse {
-  success: boolean;
-  reviews_count?: number;
-  summary?: {
-    total: number;
-    averageRating: number;
-    critical: number;
-    high: number;
-    medium: number;
-    low: number;
-  };
-  error?: string;
-}
+
 
 // ============================================================================
 // Command Types
@@ -202,13 +189,7 @@ export const SLACK_COMMANDS: SlackCommandDefinition[] = [
     access: 'all',
     examples: ['/training', '/training @john.doe'],
   },
-  {
-    command: '/reviews',
-    description: "View today's guest review summary",
-    usage: '/reviews [property-name]',
-    access: 'manager',
-    examples: ['/reviews', '/reviews "Grand Hotel"'],
-  },
+
   {
     command: '/ops',
     description: 'Operations dashboard quick links',

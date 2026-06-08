@@ -1,6 +1,7 @@
 -- Allow document authors/admins to clean up pending approval rows for their document (used when resubmitting)
 
-CREATE POLICY IF NOT EXISTS "document_approvals_delete_author_admin_pending"
+DROP POLICY IF EXISTS "document_approvals_delete_author_admin_pending" ON public.document_approvals;
+CREATE POLICY "document_approvals_delete_author_admin_pending"
 ON public.document_approvals
 FOR DELETE
 TO authenticated

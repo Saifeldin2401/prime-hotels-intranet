@@ -18,7 +18,9 @@ export function useMaintenanceStats(propertyId?: string) {
       const canManageAll = ['regional_admin', 'regional_hr', 'corporate_admin', 'super_admin'].includes(userRole || '')
       const isScoped = isRealPropertyId(activePropertyId)
 
-      let baseQuery = supabase.from('maintenance_tickets').select('*')
+      let baseQuery = supabase
+        .from('maintenance_tickets')
+        .select('id, status, priority, category, reported_by_id, assigned_to_id, created_at, completed_at, estimated_cost')
 
       if (isScoped) {
         baseQuery = baseQuery.eq('property_id', activePropertyId)
@@ -116,7 +118,7 @@ export function useMaintenanceTrends(days = 30) {
 
       let baseQuery = supabase
         .from('maintenance_tickets')
-        .select('*')
+        .select('id, priority, created_at, completed_at')
         .gte('created_at', startDate.toISOString())
 
       // Filter by current property selection

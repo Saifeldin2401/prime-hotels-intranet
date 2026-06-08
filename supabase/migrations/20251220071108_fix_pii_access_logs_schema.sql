@@ -1,15 +1,23 @@
 -- Fix pii_access_logs table to match application requirements
-ALTER TABLE public.pii_access_logs 
-  RENAME COLUMN actor_id TO accessed_by;
+-- Fix pii_access_logs table conditionally
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pii_access_logs' AND column_name='actor_id') THEN
+    ALTER TABLE public.pii_access_logs RENAME COLUMN actor_id TO accessed_by;
+  END IF;
 
-ALTER TABLE public.pii_access_logs 
-  RENAME COLUMN target_user_id TO user_id;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pii_access_logs' AND column_name='target_user_id') THEN
+    ALTER TABLE public.pii_access_logs RENAME COLUMN target_user_id TO user_id;
+  END IF;
 
-ALTER TABLE public.pii_access_logs 
-  RENAME COLUMN fields_accessed TO pii_fields;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pii_access_logs' AND column_name='fields_accessed') THEN
+    ALTER TABLE public.pii_access_logs RENAME COLUMN fields_accessed TO pii_fields;
+  END IF;
 
-ALTER TABLE public.pii_access_logs 
-  RENAME COLUMN reason TO justification;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='pii_access_logs' AND column_name='reason') THEN
+    ALTER TABLE public.pii_access_logs RENAME COLUMN reason TO justification;
+  END IF;
+END $$;
 
 -- Add missing columns
 ALTER TABLE public.pii_access_logs 

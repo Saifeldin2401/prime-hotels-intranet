@@ -93,18 +93,16 @@ CREATE TRIGGER update_requests_updated_at
 CREATE OR REPLACE FUNCTION is_hr(user_id UUID) RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.id
     WHERE ur.user_id = is_hr.user_id
-    AND r.name IN ('regional_admin', 'regional_hr', 'property_hr')
+    AND ur.role::text IN ('regional_admin', 'regional_hr', 'property_hr')
   );
 $$ LANGUAGE sql SECURITY DEFINER;
 
 CREATE OR REPLACE FUNCTION is_admin(user_id UUID) RETURNS BOOLEAN AS $$
   SELECT EXISTS (
     SELECT 1 FROM user_roles ur
-    JOIN roles r ON ur.role_id = r.id
     WHERE ur.user_id = is_admin.user_id
-    AND r.name = 'regional_admin'
+    AND ur.role::text = 'regional_admin'
   );
 $$ LANGUAGE sql SECURITY DEFINER;
 
@@ -115,19 +113,29 @@ CREATE OR REPLACE FUNCTION can_view_request(user_id UUID, request_id UUID) RETUR
   BEGIN
     -- Get request details
     SELECT * INTO req FROM requests WHERE id = can_view_request.request_id;
-    IF NOT FOUND THEN RETURN FALSE;
+    IF NOT FOUND THEN 
+      RETURN FALSE;
+    END IF;
     
     -- User can view their own requests
-    IF req.requester_id = can_view_request.user_id THEN RETURN TRUE;
+    IF req.requester_id = can_view_request.user_id THEN 
+      RETURN TRUE;
+    END IF;
     
     -- HR and admin can view all requests
-    IF is_hr(can_view_request.user_id) THEN RETURN TRUE;
+    IF is_hr(can_view_request.user_id) THEN 
+      RETURN TRUE;
+    END IF;
     
     -- Current assignee can view
-    IF req.current_assignee_id = can_view_request.user_id THEN RETURN TRUE;
+    IF req.current_assignee_id = can_view_request.user_id THEN 
+      RETURN TRUE;
+    END IF;
     
     -- Supervisor can view their team's requests
-    IF req.supervisor_id = can_view_request.user_id THEN RETURN TRUE;
+    IF req.supervisor_id = can_view_request.user_id THEN 
+      RETURN TRUE;
+    END IF;
     
     RETURN FALSE;
   END;
@@ -138,20 +146,18 @@ CREATE OR REPLACE FUNCTION find_hr_assignee(property_id UUID) RETURNS UUID AS $$
     hr_user_id UUID;
   BEGIN
     -- Find property HR first
-    SELECT p.user_id INTO hr_user_id
+    SELECT up.user_id INTO hr_user_id
     FROM user_properties up
     JOIN user_roles ur ON up.user_id = ur.user_id
-    JOIN roles r ON ur.role_id = r.id
     WHERE up.property_id = find_hr_assignee.property_id
-    AND r.name = 'property_hr'
+    AND ur.role::text = 'property_hr'
     LIMIT 1;
     
     -- If no property HR, find regional HR
     IF hr_user_id IS NULL THEN
       SELECT ur.user_id INTO hr_user_id
       FROM user_roles ur
-      JOIN roles r ON ur.role_id = r.id
-      WHERE r.name = 'regional_hr'
+      WHERE ur.role::text = 'regional_hr'
       LIMIT 1;
     END IF;
     

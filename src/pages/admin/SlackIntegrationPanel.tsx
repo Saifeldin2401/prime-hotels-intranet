@@ -512,7 +512,6 @@ export function SlackIntegrationPanel() {
                     <SelectItem value="slack-commands">slack-commands</SelectItem>
                     <SelectItem value="slack-interactive">slack-interactive</SelectItem>
                     <SelectItem value="slack-training">slack-training</SelectItem>
-                    <SelectItem value="slack-reviews">slack-reviews</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button 
@@ -577,7 +576,6 @@ function AddIntegrationForm({ properties, onSubmit, isSubmitting, onCancel }: Ad
   const [channelMappings, setChannelMappings] = useState<Record<string, string>>({
     general: '#general',
     'training-hub': '#training-hub',
-    'guest-reviews': '#guest-reviews',
     operations: '#operations',
   });
 

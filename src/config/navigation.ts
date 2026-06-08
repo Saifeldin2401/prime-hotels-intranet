@@ -379,16 +379,7 @@ export const ROUTES: RouteConfig[] = [
         group: 'operations',
         order: 3
     },
-    {
-        path: '/reviews',
-        title: 'guest_reviews',
-        icon: MessageSquare,
-        description: 'Monitor and respond to guest reviews',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        badgeKey: 'pendingGuestReviews',
-        group: 'operations',
-        order: 4
-    },
+
 
     // -------------------------------------------------------------------------
     // HR MANAGEMENT GROUP
@@ -865,15 +856,7 @@ export const ROUTES: RouteConfig[] = [
         group: 'administration',
         order: 3.81
     },
-    {
-        path: '/admin/reviews/settings',
-        title: 'guest_review_settings',
-        icon: MessageSquare,
-        description: 'Configure guest review ownership, notifications, tones, and reports',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'administration',
-        order: 3.82
-    },
+
     {
         path: '/admin/notifications',
         title: 'notification_batches',

@@ -48,7 +48,8 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
         domain: user.email.substring(user.email.indexOf('@') + 1),
       })) as PendingUser[];
     },
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 120000, // Refresh every 2 minutes
+    refetchIntervalInBackground: false, // Do not fetch in background
   });
 
   // Notify parent component of count

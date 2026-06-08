@@ -8,7 +8,6 @@ import {
   hrKeys,
   approvalKeys,
   notificationKeys,
-  reviewKeys,
   documentKeys,
   analyticsKeys,
   organizationKeys,
@@ -334,30 +333,7 @@ describe('Query Key Factories', () => {
     })
   })
 
-  describe('reviewKeys', () => {
-    it('should create list keys', () => {
-      expect(reviewKeys.lists()).toEqual(['reviews', 'list'])
-      expect(reviewKeys.list({ propertyId: '123', platform: 'booking' })).toEqual([
-        'reviews',
-        'list',
-        { propertyId: '123', platform: 'booking' },
-      ])
-    })
 
-    it('should create detail keys', () => {
-      expect(reviewKeys.detail('review-123')).toEqual(['reviews', 'review-123'])
-    })
-
-    it('should create stats keys', () => {
-      expect(reviewKeys.stats()).toEqual(['reviews', 'stats', 'all'])
-      expect(reviewKeys.stats('prop-123')).toEqual(['reviews', 'stats', 'prop-123'])
-    })
-
-    it('should create sentiment keys', () => {
-      expect(reviewKeys.sentiment()).toEqual(['reviews', 'sentiment', 'all'])
-      expect(reviewKeys.sentiment('prop-123')).toEqual(['reviews', 'sentiment', 'prop-123'])
-    })
-  })
 
   describe('documentKeys', () => {
     it('should create list keys', () => {
@@ -430,7 +406,6 @@ describe('Query Key Factories', () => {
       expect(queryKeys.hr).toBe(hrKeys)
       expect(queryKeys.approvals).toBe(approvalKeys)
       expect(queryKeys.notifications).toBe(notificationKeys)
-      expect(queryKeys.reviews).toBe(reviewKeys)
       expect(queryKeys.documents).toBe(documentKeys)
       expect(queryKeys.analytics).toBe(analyticsKeys)
       expect(queryKeys.organization).toBe(organizationKeys)

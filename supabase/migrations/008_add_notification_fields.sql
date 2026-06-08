@@ -11,7 +11,5 @@ ALTER TABLE public.notifications
 CREATE INDEX IF NOT EXISTS idx_notifications_user_entity ON public.notifications (user_id, entity_type, entity_id);
 
 -- Update RLS policies to allow INSERT of new columns (no change needed for SELECT)
--- Ensure INSERT policy permits all columns
 ALTER POLICY "notifications_insert_service" ON public.notifications
-  USING (true)
   WITH CHECK (true);

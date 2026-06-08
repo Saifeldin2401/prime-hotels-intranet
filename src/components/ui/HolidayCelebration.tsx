@@ -4,9 +4,27 @@ import { Moon, Sparkles, Star, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import Confetti from 'react-confetti';
 import { useTranslation } from 'react-i18next';
-import { useWindowSize } from 'react-use';
 
 export type HolidayEvent = 'RAMADAN' | 'EID_FITR' | 'EID_ADHA' | 'SAUDI_NATIONAL' | 'SAUDI_FOUNDING' | null;
+
+function useWindowSize() {
+  const [size, setSize] = useState(() => ({
+    width: typeof window === 'undefined' ? 0 : window.innerWidth,
+    height: typeof window === 'undefined' ? 0 : window.innerHeight,
+  }));
+
+  useEffect(() => {
+    const updateSize = () => {
+      setSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, []);
+
+  return size;
+}
 
 export function HolidayCelebration() {
   const { i18n } = useTranslation('common');

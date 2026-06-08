@@ -10,6 +10,7 @@ BEGIN
 END $$;
 
 -- Helper to parse request_id from object path "{request_id}/{file}"
+DROP FUNCTION IF EXISTS public.request_id_from_storage_path(text) CASCADE;
 CREATE OR REPLACE FUNCTION public.request_id_from_storage_path(p_path text)
 RETURNS uuid
 LANGUAGE plpgsql

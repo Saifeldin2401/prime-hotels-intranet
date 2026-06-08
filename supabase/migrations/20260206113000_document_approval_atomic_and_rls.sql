@@ -1,7 +1,8 @@
 -- Document approval reliability: RLS + atomic approve/reject
 
 -- RLS: allow authors/admins to create approval records when submitting for review
-CREATE POLICY IF NOT EXISTS "document_approvals_insert_author_admin"
+DROP POLICY IF EXISTS "document_approvals_insert_author_admin" ON public.document_approvals;
+CREATE POLICY "document_approvals_insert_author_admin"
 ON public.document_approvals
 FOR INSERT
 TO authenticated
@@ -18,7 +19,8 @@ WITH CHECK (
 );
 
 -- RLS: allow approvers (or active delegates) to update their pending approvals
-CREATE POLICY IF NOT EXISTS "document_approvals_update_approver_or_delegate"
+DROP POLICY IF EXISTS "document_approvals_update_approver_or_delegate" ON public.document_approvals;
+CREATE POLICY "document_approvals_update_approver_or_delegate"
 ON public.document_approvals
 FOR UPDATE
 TO authenticated

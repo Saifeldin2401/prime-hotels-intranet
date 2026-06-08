@@ -24,7 +24,6 @@ import {
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
-import { GuestReviewRoutes } from './modules/GuestReviewRoutes'
 import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
 import { MediaRoutes } from './modules/MediaRoutes'
@@ -54,7 +53,6 @@ function getLoadingMessage(pathname: string): string {
         '/tasks': 'Loading tasks...',
         '/approvals': 'Loading approvals...',
         '/messages': 'Loading messages...',
-        '/reviews': 'Loading guest reviews...',
         '/maintenance': 'Loading maintenance requests...',
         '/announcements': 'Loading announcements...',
     }
@@ -261,7 +259,6 @@ export const router = createBrowserRouter(
                 {AdminRoutes()}
                 {HRRoutes()}
                 {OperationsRoutes()}
-                {GuestReviewRoutes()}
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
                 {MediaRoutes()}

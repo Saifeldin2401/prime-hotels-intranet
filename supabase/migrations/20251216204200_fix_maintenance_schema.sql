@@ -1,8 +1,12 @@
 -- Fix Maintenance Tickets Schema (2025-12-16)
 
--- 1. Rename location to room_number (assuming it stores room info)
-ALTER TABLE maintenance_tickets 
-RENAME COLUMN location TO room_number;
+-- 1. Rename location to room_number conditionally
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='maintenance_tickets' AND column_name='location') THEN
+    ALTER TABLE maintenance_tickets RENAME COLUMN location TO room_number;
+  END IF;
+END $$;
 
 -- 2. Add missing columns required by Frontend/Types
 ALTER TABLE maintenance_tickets

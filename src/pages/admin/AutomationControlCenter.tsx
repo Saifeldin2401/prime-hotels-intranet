@@ -76,7 +76,8 @@ export default function AutomationControlCenter() {
         lastChecked: new Date().toISOString()
       }
     },
-    refetchInterval: 30000
+    refetchInterval: 120000,
+    refetchIntervalInBackground: false,
   })
 
   // REAL mutation - Emergency stop

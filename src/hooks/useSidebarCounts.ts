@@ -107,6 +107,18 @@ export function useSidebarCounts() {
             return row.requester_id === user.id || row.current_assignee_id === user.id
         }
 
+        // Apply server-side filter to requests channel to reduce DB load
+        let requestFilter: { event: '*'; schema: string; table: string; filter?: string }
+        if (isRegionalAccess || isPropertyLevel || isDepartmentHead) {
+            if (currentPropertyId && isRealPropertyId(currentPropertyId)) {
+                requestFilter = { event: '*', schema: 'public', table: 'requests', filter: `property_id=eq.${currentPropertyId}` }
+            } else {
+                requestFilter = { event: '*', schema: 'public', table: 'requests' }
+            }
+        } else {
+            requestFilter = { event: '*', schema: 'public', table: 'requests', filter: `current_assignee_id=eq.${user.id}` }
+        }
+
         const channel = supabase
             .channel('sidebar-counts-realtime')
             // Listen for notification changes
@@ -148,14 +160,10 @@ export function useSidebarCounts() {
                     scheduleInvalidate()
                 }
             )
-            // Listen for request changes (approvals)
+            // Listen for request changes (approvals) with filter
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'requests',
-                },
+                requestFilter,
                 (payload) => {
                     if (shouldInvalidateForRequest(payload)) {
                         scheduleInvalidate()
@@ -184,7 +192,8 @@ export function useSidebarCounts() {
     return useQuery({
         queryKey: ['sidebar-counts', user?.id, primaryRole, currentPropertyId, propertyIdsKey, departmentIdsKey],
         enabled: !!user?.id,
-        refetchInterval: 120000, // Fallback polling every 2 minutes (Realtime handles immediate updates)
+        refetchInterval: 300000, // Fallback polling every 5 minutes (Realtime handles immediate updates)
+        refetchIntervalInBackground: false, // Do not fetch in background
         staleTime: 45000, // Consider data fresh for 45 seconds
         queryFn: async (): Promise<SidebarCounts> => {
             if (!user?.id) {
