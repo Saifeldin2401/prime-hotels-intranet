@@ -237,11 +237,14 @@ export function UserForm({ user, onClose }: UserFormProps) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('job_titles')
-        .select('*')
+        .select(`
+            *,
+            department:departments(id, property_id)
+        `)
         .order('title', { ascending: true })
 
       if (error) throw error
-      return data as { id: string; title: string; default_role: AppRole; category: string }[]
+      return data as { id: string; title: string; default_role: AppRole; category: string; department?: { id: string; property_id: string } }[]
     },
   })
   const [openJobTitle, setOpenJobTitle] = useState(false)
