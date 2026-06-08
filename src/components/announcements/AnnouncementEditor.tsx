@@ -202,7 +202,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       // Create notifications for target users
       if (data.send_push_notification && uniqueUserIds.length > 0) {
         try {
-          const { createBulkNotifications } = await import('@/lib/notificationService')
+          const { createBulkNotifications } = await import('@/services/notificationService')
           await createBulkNotifications({
             userIds: uniqueUserIds,
             type: 'announcement_new',
@@ -295,7 +295,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
         if (uniqueUserIds.length > 0) {
           try {
-            const { createBulkNotifications } = await import('@/lib/notificationService')
+            const { createBulkNotifications } = await import('@/services/notificationService')
             await createBulkNotifications({
               userIds: uniqueUserIds,
               type: 'announcement_new',

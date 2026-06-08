@@ -34,7 +34,7 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { useTranslationAI } from '@/hooks/useTranslationAI'
-import { createNotification } from '@/lib/notificationService'
+import { createNotification } from '@/services/notificationService'
 import { supabase } from '@/lib/supabase'
 import { type KnowledgeArticle, KNOWLEDGE_STATUS } from '@/types/knowledge'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

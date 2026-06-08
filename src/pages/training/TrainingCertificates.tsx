@@ -15,7 +15,7 @@ import {
     useVerifyCertificate
 } from '@/hooks/useCertificates'
 import { usePermissions } from '@/hooks/usePermissions'
-import type { Certificate } from '@/lib/certificateService'
+import type { Certificate } from '@/services/certificateService'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {

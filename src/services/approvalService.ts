@@ -1,5 +1,5 @@
-import { supabase } from './supabase'
-import type { Profile } from './types'
+import { supabase } from '@/lib/supabase'
+import type { Profile } from '@/lib/types'
 
 /**
  * Get the manager (reporting_to) of an employee

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
 import { useDebounce } from '@/hooks/useDebounce'
-import { createBulkNotifications } from '@/lib/notificationService'
+import { createBulkNotifications } from '@/services/notificationService'
 import {
     getLearningAssignmentErrorMessage,
     persistLearningAssignments,

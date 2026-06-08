@@ -10,7 +10,7 @@ import {
     createBulkNotifications,
     createNotification,
     NotificationTemplates
-} from '@/lib/notificationService'
+} from '@/services/notificationService'
 import { useCallback } from 'react'
 
 

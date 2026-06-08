@@ -5,7 +5,7 @@
  * for all system events across modules
  */
 
-import { supabase } from './supabase'
+import { supabase } from '@/lib/supabase'
 
 // Extended notification types covering all system events
 export type NotificationType =

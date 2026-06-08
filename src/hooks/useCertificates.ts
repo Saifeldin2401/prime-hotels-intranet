@@ -21,7 +21,7 @@ import {
     verifyCertificate,
     type Certificate,
     type CertificateData
-} from '@/lib/certificateService'
+} from '@/services/certificateService'
 import { supabase } from '@/lib/supabase'
 import { showErrorToast, showSuccessToast } from '@/lib/toastHelpers'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'

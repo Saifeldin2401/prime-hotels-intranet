@@ -5,7 +5,7 @@
  * Integrates with leave requests, promotions, transfers, and other workflows.
  */
 
-import { createNotification } from '@/lib/notificationService'
+import { createNotification } from '@/services/notificationService'
 
 export type ApprovalType =
     | 'leave_request'
