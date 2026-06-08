@@ -10,7 +10,6 @@
  */
 
 import { Button } from '@/components/ui/button'
-import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
@@ -91,13 +90,13 @@ export function MobileLogin() {
                 <div className="text-center mb-8">
                     <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
                         <img
-                            src={TEMP_LEARNING_PORTAL_BRAND.logo}
-                            alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
+                            src="/prime-logo-light.png"
+                            alt="PRIME Hotels"
                             className="w-16 h-16 object-contain"
                         />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-1">
-                        {TEMP_LEARNING_PORTAL_BRAND.productName}
+                        PRIME Connect
                     </h1>
                     <p className="text-white/60 text-sm">
                         {t('sign_in_to_continue', 'Sign in to continue')}
@@ -116,7 +115,7 @@ export function MobileLogin() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="name@dyafa.com"
+                                placeholder="name@primehotels.com"
                                 className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
                                 {...register('email')}
                             />

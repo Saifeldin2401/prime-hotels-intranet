@@ -2,18 +2,25 @@
 -- 1. Drop the check constraint that enforces uppercase 'INSERT', 'UPDATE', etc.
 ALTER TABLE public.audit_logs DROP CONSTRAINT IF EXISTS audit_logs_operation_check;
 
--- Rename columns to match the application code
-ALTER TABLE public.audit_logs 
-    RENAME COLUMN operation TO action;
+-- Rename columns to match the application code conditionally
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='operation') THEN
+    ALTER TABLE public.audit_logs RENAME COLUMN operation TO action;
+  END IF;
 
-ALTER TABLE public.audit_logs 
-    RENAME COLUMN table_name TO entity_type;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='table_name') THEN
+    ALTER TABLE public.audit_logs RENAME COLUMN table_name TO entity_type;
+  END IF;
 
-ALTER TABLE public.audit_logs 
-    RENAME COLUMN record_id TO entity_id;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='record_id') THEN
+    ALTER TABLE public.audit_logs RENAME COLUMN record_id TO entity_id;
+  END IF;
 
-ALTER TABLE public.audit_logs 
-    RENAME COLUMN changed_by TO user_id;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='audit_logs' AND column_name='changed_by') THEN
+    ALTER TABLE public.audit_logs RENAME COLUMN changed_by TO user_id;
+  END IF;
+END $$;
 
 -- Add new columns
 ALTER TABLE public.audit_logs 

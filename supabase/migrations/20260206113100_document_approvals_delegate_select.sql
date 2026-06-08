@@ -1,6 +1,7 @@
 -- Allow delegates (temporary approvers) to view approvals they can act on
 
-CREATE POLICY IF NOT EXISTS "document_approvals_select_approver_or_delegate"
+DROP POLICY IF EXISTS "document_approvals_select_approver_or_delegate" ON public.document_approvals;
+CREATE POLICY "document_approvals_select_approver_or_delegate"
 ON public.document_approvals
 FOR SELECT
 TO authenticated

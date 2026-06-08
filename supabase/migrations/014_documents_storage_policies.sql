@@ -3,15 +3,17 @@ INSERT INTO storage.buckets (id, name, public)
 VALUES ('documents', 'documents', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Enable RLS on the bucket
-ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on the bucket (already managed by Supabase, commenting out to avoid owner permission error)
+-- ALTER TABLE storage.buckets ENABLE ROW LEVEL SECURITY;
 
 -- Create storage policies for the documents bucket
+DROP POLICY IF EXISTS "Allow public read access to documents" ON storage.objects;
 CREATE POLICY "Allow public read access to documents"
   ON storage.objects FOR SELECT
   USING (bucket_id = 'documents');
 
 -- Allow authenticated users to upload files to their own folder
+DROP POLICY IF EXISTS "Allow authenticated uploads to user folders" ON storage.objects;
 CREATE POLICY "Allow authenticated uploads to user folders"
   ON storage.objects FOR INSERT
   TO authenticated
@@ -21,6 +23,7 @@ CREATE POLICY "Allow authenticated uploads to user folders"
   );
 
 -- Allow users to update their own files
+DROP POLICY IF EXISTS "Allow users to update their own files" ON storage.objects;
 CREATE POLICY "Allow users to update their own files"
   ON storage.objects FOR UPDATE
   USING (
@@ -29,6 +32,7 @@ CREATE POLICY "Allow users to update their own files"
   );
 
 -- Allow users to delete their own files
+DROP POLICY IF EXISTS "Allow users to delete their own files" ON storage.objects;
 CREATE POLICY "Allow users to delete their own files"
   ON storage.objects FOR DELETE
   USING (

@@ -15,8 +15,10 @@ import { ActionSheet, QuickActionButton, QuickActionGrid } from '@/components/mo
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
+import { useNavigation } from '@/hooks/useNavigation'
+import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
-import { Award, BookOpen, GraduationCap, HelpCircle, LayoutGrid } from 'lucide-react'
+import { Bell, Briefcase, Home, LayoutGrid, Plus, User } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
@@ -51,8 +53,15 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
   const { t } = useTranslation('nav')
   const location = useLocation()
   const navigate = useNavigate()
+  const { groupedNavigation } = useNavigation()
+  const { notifications } = useNotifications()
   const { profile } = useAuth()
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+
+  // Calculate unread notifications
+  const unreadCount = useMemo(() => {
+    return notifications?.filter(n => !n.is_read).length || 0
+  }, [notifications])
 
   // Get user initials for avatar fallback
   const userInitials = useMemo(() => {
@@ -119,24 +128,24 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
         {/* Safe Area Spacer */}
         <div className="relative flex items-end justify-around h-20 max-w-lg mx-auto pb-safe">
           
-          {/* My Learning */}
+          {/* Home */}
           <NavButton
-            to="/learning/my"
-            isActive={isActive('/learning/my')}
+            to="/"
+            isActive={isActive('/', true)}
             onClick={handleHaptic}
-            icon={<GraduationCap className="w-5 h-5" />}
-            activeIcon={<GraduationCap className="w-5 h-5 fill-current" />}
-            label={t('my_training', 'Training')}
+            icon={<Home className="w-5 h-5" />}
+            activeIcon={<Home className="w-5 h-5 fill-current" />}
+            label={t('home', 'Home')}
           />
 
-          {/* Knowledge */}
+          {/* Tasks */}
           <NavButton
-            to="/knowledge"
-            isActive={isActive('/knowledge')}
+            to="/tasks"
+            isActive={isActive('/tasks')}
             onClick={handleHaptic}
-            icon={<BookOpen className="w-5 h-5" />}
-            activeIcon={<BookOpen className="w-5 h-5 fill-current" />}
-            label={t('knowledge_base', 'Knowledge')}
+            icon={<Briefcase className="w-5 h-5" />}
+            activeIcon={<Briefcase className="w-5 h-5 fill-current" />}
+            label={t('tasks', 'Tasks')}
           />
 
           {/* Floating Action Button (FAB) */}
@@ -174,14 +183,15 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             <div className="absolute inset-0 rounded-full ring-4 ring-amber-400/30 animate-ping pointer-events-none" />
           </div>
 
-          {/* Certificates */}
+          {/* Notifications */}
           <NavButton
-            to="/training/certificates"
-            isActive={isActive('/training/certificates')}
+            to="/notifications"
+            isActive={isActive('/notifications')}
             onClick={handleHaptic}
-            icon={<Award className="w-5 h-5" />}
-            activeIcon={<Award className="w-5 h-5 fill-current" />}
-            label={t('my_certificates', 'Awards')}
+            icon={<Bell className="w-5 h-5" />}
+            activeIcon={<Bell className="w-5 h-5 fill-current" />}
+            label={t('alerts', 'Alerts')}
+            badge={unreadCount > 0 ? unreadCount : undefined}
           />
 
           {/* Menu with User Avatar */}
@@ -228,40 +238,40 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
         showCloseButton={true}
       >
         <QuickActionGrid className="py-4">
-          {/* My Learning */}
+          {/* Leave Request */}
           <QuickActionButton
-            icon={<GraduationCap className="w-6 h-6" />}
-            label={t('my_training', 'My Training')}
-            description="Continue learning"
+            icon={<Briefcase className="w-6 h-6" />}
+            label={t('leaveRequest', 'Leave Request')}
+            description="Submit time off"
             color="blue"
-            onClick={() => handleQuickAction('/learning/my')}
+            onClick={() => handleQuickAction('/hr/leave')}
           />
 
-          {/* Knowledge Base */}
+          {/* Maintenance */}
           <QuickActionButton
-            icon={<BookOpen className="w-6 h-6" />}
-            label={t('knowledge_base', 'Knowledge')}
-            description="Browse resources"
+            icon={<LayoutGrid className="w-6 h-6" />}
+            label={t('maintenance', 'Maintenance')}
+            description="Report issues"
             color="amber"
-            onClick={() => handleQuickAction('/knowledge')}
+            onClick={() => handleQuickAction('/maintenance/submit')}
           />
 
-          {/* Quizzes */}
+          {/* Profile */}
           <QuickActionButton
-            icon={<HelpCircle className="w-6 h-6" />}
-            label={t('quizzes', 'Quizzes')}
-            description="Manage assessments"
+            icon={<User className="w-6 h-6" />}
+            label={t('profile', 'Profile')}
+            description="View account"
             color="green"
-            onClick={() => handleQuickAction('/learning/quizzes')}
+            onClick={() => handleQuickAction('/profile')}
           />
 
-          {/* Certificates */}
+          {/* Notifications */}
           <QuickActionButton
-            icon={<Award className="w-6 h-6" />}
-            label={t('my_certificates', 'Certificates')}
-            description="View awards"
+            icon={<Bell className="w-6 h-6" />}
+            label={t('notifications', 'Notifications')}
+            description="View alerts"
             color="purple"
-            onClick={() => handleQuickAction('/training/certificates')}
+            onClick={() => handleQuickAction('/notifications')}
           />
         </QuickActionGrid>
       </ActionSheet>

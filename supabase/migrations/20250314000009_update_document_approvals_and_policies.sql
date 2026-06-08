@@ -18,7 +18,8 @@ SET entity_type = 'document',
 WHERE entity_type IS NULL;
 
 -- RLS: allow insert of document_versions for document authors and regional admins
-CREATE POLICY IF NOT EXISTS "document_versions_insert_for_document_authors"
+DROP POLICY IF EXISTS "document_versions_insert_for_document_authors" ON public.document_versions;
+CREATE POLICY "document_versions_insert_for_document_authors"
 ON public.document_versions
 FOR INSERT
 TO authenticated
@@ -34,7 +35,8 @@ WITH CHECK (
 );
 
 -- RLS: allow users to insert their own document acknowledgments when they can see the document
-CREATE POLICY IF NOT EXISTS "document_acknowledgments_insert"
+DROP POLICY IF EXISTS "document_acknowledgments_insert" ON public.document_acknowledgments;
+CREATE POLICY "document_acknowledgments_insert"
 ON public.document_acknowledgments
 FOR INSERT
 TO authenticated

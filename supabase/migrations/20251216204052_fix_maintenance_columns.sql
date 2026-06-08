@@ -1,18 +1,24 @@
 -- Standardize Maintenance Ticket Columns (2025-12-16)
 
--- 1. Rename Columns to use _id suffix
-ALTER TABLE maintenance_tickets 
-RENAME COLUMN reported_by TO reported_by_id;
+-- 1. Rename Columns and Constraints to use _id suffix conditionally
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='maintenance_tickets' AND column_name='reported_by') THEN
+    ALTER TABLE maintenance_tickets RENAME COLUMN reported_by TO reported_by_id;
+  END IF;
 
-ALTER TABLE maintenance_tickets 
-RENAME COLUMN assigned_to TO assigned_to_id;
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='maintenance_tickets' AND column_name='assigned_to') THEN
+    ALTER TABLE maintenance_tickets RENAME COLUMN assigned_to TO assigned_to_id;
+  END IF;
 
--- 2. Rename Constraints for consistency
-ALTER TABLE maintenance_tickets
-RENAME CONSTRAINT maintenance_tickets_reported_by_fkey TO maintenance_tickets_reported_by_id_fkey;
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_tickets_reported_by_fkey') THEN
+    ALTER TABLE maintenance_tickets RENAME CONSTRAINT maintenance_tickets_reported_by_fkey TO maintenance_tickets_reported_by_id_fkey;
+  END IF;
 
-ALTER TABLE maintenance_tickets
-RENAME CONSTRAINT maintenance_tickets_assigned_to_fkey TO maintenance_tickets_assigned_to_id_fkey;
+  IF EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'maintenance_tickets_assigned_to_fkey') THEN
+    ALTER TABLE maintenance_tickets RENAME CONSTRAINT maintenance_tickets_assigned_to_fkey TO maintenance_tickets_assigned_to_id_fkey;
+  END IF;
+END $$;
 
 -- 3. Re-create Indexes with new names
 DROP INDEX IF EXISTS idx_maintenance_reported_by;

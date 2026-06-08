@@ -50,17 +50,17 @@ $$;
 -- Function to create a new SOP document
 CREATE OR REPLACE FUNCTION create_sop_document(
   p_title TEXT,
+  p_department_id UUID,
+  p_created_by UUID,
   p_title_ar TEXT DEFAULT NULL,
   p_description TEXT DEFAULT NULL,
   p_description_ar TEXT DEFAULT NULL,
-  p_department_id UUID,
   p_category_id UUID DEFAULT NULL,
   p_subcategory_id UUID DEFAULT NULL,
   p_content JSONB DEFAULT '{}',
   p_status TEXT DEFAULT 'draft',
   p_is_template BOOLEAN DEFAULT FALSE,
-  p_template_id UUID DEFAULT NULL,
-  p_created_by UUID
+  p_template_id UUID DEFAULT NULL
 )
 RETURNS TABLE(
   id UUID,
@@ -164,6 +164,7 @@ $$;
 -- Function to update SOP document
 CREATE OR REPLACE FUNCTION update_sop_document(
   p_document_id UUID,
+  p_updated_by UUID,
   p_title TEXT DEFAULT NULL,
   p_title_ar TEXT DEFAULT NULL,
   p_description TEXT DEFAULT NULL,
@@ -173,8 +174,7 @@ CREATE OR REPLACE FUNCTION update_sop_document(
   p_subcategory_id UUID DEFAULT NULL,
   p_content JSONB DEFAULT NULL,
   p_status TEXT DEFAULT NULL,
-  p_change_summary TEXT DEFAULT NULL,
-  p_updated_by UUID
+  p_change_summary TEXT DEFAULT NULL
 )
 RETURNS TABLE(
   success BOOLEAN,
@@ -473,7 +473,7 @@ BEGIN
       WHEN p_sort_by = 'status' AND p_sort_order = 'desc' THEN sd.status
       WHEN p_sort_by = 'created_at' AND p_sort_order = 'asc' THEN sd.created_at
       ELSE sd.updated_at
-    END
+    END,
     CASE 
       WHEN p_sort_order = 'desc' THEN NULL
       ELSE sd.updated_at

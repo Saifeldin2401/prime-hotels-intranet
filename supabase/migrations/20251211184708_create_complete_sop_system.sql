@@ -23,7 +23,7 @@ ALTER TABLE sop_reading_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sop_quiz_questions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE sop_quiz_attempts ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Published SOPs are viewable by all authenticated users" ON sop_documents FOR SELECT TO authenticated USING (status = 'published');
+CREATE POLICY "Published SOPs are viewable by all authenticated users" ON sop_documents FOR SELECT TO authenticated USING (status = 'approved');
 CREATE POLICY "Regional admin/HR can manage all SOPs" ON sop_documents FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role IN ('regional_admin', 'regional_hr')));
 CREATE POLICY "Property HR can manage property SOPs" ON sop_documents FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM user_roles ur JOIN user_properties up ON up.user_id = ur.user_id WHERE ur.user_id = auth.uid() AND ur.role = 'property_hr' AND (up.property_id = sop_documents.property_id OR sop_documents.property_id IS NULL)));
 
@@ -38,7 +38,7 @@ CREATE POLICY "Regional admin/HR can view all reading logs" ON sop_reading_logs 
 
 CREATE POLICY "Regional admin/HR can manage quiz questions" ON sop_quiz_questions FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM user_roles WHERE user_roles.user_id = auth.uid() AND user_roles.role IN ('regional_admin', 'regional_hr')));
 CREATE POLICY "Property HR can manage property quiz questions" ON sop_quiz_questions FOR ALL TO authenticated USING (EXISTS (SELECT 1 FROM user_roles ur JOIN user_properties up ON up.user_id = ur.user_id JOIN sop_documents sd ON sd.id = sop_quiz_questions.sop_document_id WHERE ur.user_id = auth.uid() AND ur.role = 'property_hr' AND (sd.property_id = up.property_id OR sd.property_id IS NULL)));
-CREATE POLICY "Users can view quiz questions for accessible SOPs" ON sop_quiz_questions FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM sop_documents sd WHERE sd.id = sop_quiz_questions.sop_document_id AND sd.status = 'published'));
+CREATE POLICY "Users can view quiz questions for accessible SOPs" ON sop_quiz_questions FOR SELECT TO authenticated USING (EXISTS (SELECT 1 FROM sop_documents sd WHERE sd.id = sop_quiz_questions.sop_document_id AND sd.status = 'approved'));
 
 CREATE POLICY "Users can view own quiz attempts" ON sop_quiz_attempts FOR SELECT TO authenticated USING (user_id = auth.uid());
 CREATE POLICY "Users can create own quiz attempts" ON sop_quiz_attempts FOR INSERT TO authenticated WITH CHECK (user_id = auth.uid());

@@ -1,6 +1,5 @@
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { Button } from '@/components/ui/button'
-import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal'
 import { Menu, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -51,14 +50,14 @@ export function PublicNavbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
             <img
-              src={TEMP_LEARNING_PORTAL_BRAND.logo}
-              alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
+              src="/prime-logo-light.png"
+              alt="Prime Hotels"
               className="h-8 w-auto"
             />
             <div className="hidden sm:block">
-              <div className="text-sm font-bold text-hotel-gold">{TEMP_LEARNING_PORTAL_BRAND.productName}</div>
+              <div className="text-sm font-bold text-hotel-gold">PHG Connect</div>
               <div className="text-[10px] text-white/60 uppercase tracking-wider">
-                Learning & Knowledge
+                {t('official_intranet')}
               </div>
             </div>
           </Link>

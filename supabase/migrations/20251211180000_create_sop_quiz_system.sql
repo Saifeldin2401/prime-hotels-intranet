@@ -97,7 +97,7 @@ CREATE POLICY "Users can view quiz questions for accessible SOPs"
     EXISTS (
       SELECT 1 FROM sop_documents sd
       WHERE sd.id = sop_quiz_questions.sop_document_id
-      AND sd.status = 'published'
+      AND sd.status = 'approved'
     )
   );
 

@@ -118,8 +118,15 @@ CREATE TABLE IF NOT EXISTS sop_role_assignments (
     is_required BOOLEAN DEFAULT FALSE,
     due_days_after_assignment INTEGER, -- days after assignment to complete
     created_by UUID REFERENCES auth.users(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    UNIQUE(document_id, role, COALESCE(property_id, '00000000-0000-0000-0000-000000000000'), COALESCE(department_id, '00000000-0000-0000-0000-000000000000'))
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_sop_role_assignments_unique_target
+ON sop_role_assignments (
+    document_id,
+    role,
+    (COALESCE(property_id, '00000000-0000-0000-0000-000000000000'::uuid)),
+    (COALESCE(department_id, '00000000-0000-0000-0000-000000000000'::uuid))
 );
 
 CREATE INDEX IF NOT EXISTS idx_sop_role_assignments_role ON sop_role_assignments(role);

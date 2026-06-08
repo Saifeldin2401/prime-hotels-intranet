@@ -1,6 +1,7 @@
 -- Integrate leave_requests into unified requests workflow
 
 -- Find an HR assignee for a property (property_hr preferred, otherwise any regional_hr, otherwise regional_admin)
+DROP FUNCTION IF EXISTS public.find_hr_assignee(UUID);
 CREATE OR REPLACE FUNCTION public.find_hr_assignee(p_property_id UUID)
 RETURNS UUID
 LANGUAGE plpgsql
@@ -145,6 +146,7 @@ CREATE TRIGGER leave_requests_create_workflow_request
   EXECUTE FUNCTION public.create_request_for_leave_request();
 
 -- RPC to apply actions (approve/reject/return/forward/close/comment)
+DROP FUNCTION IF EXISTS public.request_apply_action(UUID, TEXT, TEXT, UUID, TEXT);
 CREATE OR REPLACE FUNCTION public.request_apply_action(
   p_request_id UUID,
   p_action TEXT,

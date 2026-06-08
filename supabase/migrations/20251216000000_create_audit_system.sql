@@ -1,6 +1,9 @@
 -- Migration: Create Audit Log System
 -- Description: Centralized audit logging for compliance and history tracking
 
+-- Drop existing if conflict with 009 schema
+DROP TABLE IF EXISTS audit_logs CASCADE;
+
 -- Create audit_log table
 CREATE TABLE IF NOT EXISTS audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

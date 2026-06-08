@@ -1,7 +1,7 @@
 {
-    "name": "Diyafa Learning Portal",
-    "short_name": "Diyafa Learning",
-    "description": "Diyafa training, knowledge base, and learning resources",
+    "name": "PHG Connect",
+    "short_name": "PHG Connect",
+    "description": "PHG intranet and app platform",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0B1C3E",

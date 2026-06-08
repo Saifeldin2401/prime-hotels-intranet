@@ -163,7 +163,7 @@ CREATE POLICY "maintenance_update_scoped"
 ON public.maintenance_tickets
 FOR UPDATE
 USING (
-  reporter_id = auth.uid()
+  reported_by_id = auth.uid()
   OR assigned_to_id = auth.uid()
   OR EXISTS (
     SELECT 1 FROM public.user_roles
@@ -188,7 +188,7 @@ CREATE POLICY "leave_select_scoped"
 ON public.leave_requests
 FOR SELECT
 USING (
-  user_id = auth.uid()
+  requester_id = auth.uid()
   OR is_regional_admin_or_higher(auth.uid())
   OR (
     property_id = ANY(get_user_properties(auth.uid()))
@@ -205,7 +205,7 @@ CREATE POLICY "leave_insert_scoped"
 ON public.leave_requests
 FOR INSERT
 WITH CHECK (
-  user_id = auth.uid()
+  requester_id = auth.uid()
   AND property_id = ANY(get_user_properties(auth.uid()))
   AND (
     department_id IS NULL
@@ -219,13 +219,13 @@ ON public.leave_requests
 FOR UPDATE
 USING (
   -- Own pending requests
-  (user_id = auth.uid() AND status = 'pending')
+  (requester_id = auth.uid() AND status = 'pending')
   -- OR can approve this request
   OR can_approve_leave(auth.uid(), property_id, department_id)
 )
 WITH CHECK (
   -- Own pending requests
-  (user_id = auth.uid() AND status = 'pending')
+  (requester_id = auth.uid() AND status = 'pending')
   -- OR can approve this request
   OR can_approve_leave(auth.uid(), property_id, department_id)
 );
@@ -286,7 +286,7 @@ CREATE POLICY "sop_select_scoped"
 ON public.sop_documents
 FOR SELECT
 USING (
-  status = 'published'
+  status = 'approved'
   AND (
     is_regional_admin_or_higher(auth.uid())
     OR property_id IS NULL
@@ -323,7 +323,7 @@ CREATE POLICY "sop_update_scoped"
 ON public.sop_documents
 FOR UPDATE
 USING (
-  created_by_id = auth.uid()
+  created_by = auth.uid()
   OR EXISTS (
     SELECT 1 FROM public.user_roles
     WHERE user_id = auth.uid()

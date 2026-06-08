@@ -59,8 +59,8 @@ ON CONFLICT (id) DO UPDATE SET
 -- 2. STORAGE RLS POLICIES FOR MEDIA BUCKET
 -- =============================================================================
 
--- Enable RLS on storage.objects
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- Enable RLS on storage.objects (commented out to avoid owner permission error)
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to avoid conflicts
 DROP POLICY IF EXISTS "Media bucket select policy" ON storage.objects;

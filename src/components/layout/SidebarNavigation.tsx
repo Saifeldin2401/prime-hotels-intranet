@@ -46,7 +46,6 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
 import { useNavigation } from '@/hooks/useNavigation'
-import { TEMP_LEARNING_PORTAL_BRAND } from '@/config/temporaryLearningPortal'
 import { sidebarItemVariants } from '@/lib/motion'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
@@ -396,8 +395,8 @@ export function SidebarNavigation({
             {!isMobile && (
               <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
                 <img
-                  src={TEMP_LEARNING_PORTAL_BRAND.logo}
-                  alt={TEMP_LEARNING_PORTAL_BRAND.fullName}
+                  src="/prime-logo-light.png"
+                  alt="Prime Hotels"
                   className={cn("w-auto transition-all duration-300", collapsed ? "h-8" : "h-14")}
                 />
               </div>
@@ -616,7 +615,7 @@ export function SidebarNavigation({
                         <AlertDialogHeader>
                           <AlertDialogTitle className="text-hotel-gold font-serif">{t('common:auth.confirm_signout', 'Confirm Sign Out')}</AlertDialogTitle>
                           <AlertDialogDescription className="text-white/70">
-                            {t('common:auth.signout_message', `Are you sure you want to sign out of ${TEMP_LEARNING_PORTAL_BRAND.productName}? You will need to log back in to continue learning.`)}
+                            {t('common:auth.signout_message', 'Are you sure you want to sign out of PRIME Connect? You will need to log back in to access your dashboard.')}
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>

@@ -328,7 +328,7 @@ CREATE POLICY "Authenticated users can create questions" ON knowledge_questions
 
 CREATE POLICY "Creators can update own questions" ON knowledge_questions
     FOR UPDATE USING (created_by = auth.uid() OR auth.uid() IN (
-        SELECT id FROM profiles WHERE role IN ('regional_admin', 'regional_hr', 'property_hr')
+        SELECT user_id FROM user_roles WHERE role::text IN ('regional_admin', 'regional_hr', 'property_hr')
     ));
 
 -- Options: Follow parent question visibility
@@ -349,7 +349,7 @@ CREATE POLICY "Usages follow question visibility" ON knowledge_question_usages
 
 CREATE POLICY "HR can manage usages" ON knowledge_question_usages
     FOR ALL USING (auth.uid() IN (
-        SELECT id FROM profiles WHERE role IN ('regional_admin', 'regional_hr', 'property_hr', 'property_manager')
+        SELECT user_id FROM user_roles WHERE role::text IN ('regional_admin', 'regional_hr', 'property_hr', 'property_manager')
     ));
 
 -- Attempts: Users see own attempts
@@ -362,7 +362,7 @@ CREATE POLICY "Users can create attempts" ON knowledge_question_attempts
 -- Versions: Readable by HR/admins
 CREATE POLICY "HR can view versions" ON knowledge_question_versions
     FOR SELECT USING (auth.uid() IN (
-        SELECT id FROM profiles WHERE role IN ('regional_admin', 'regional_hr', 'property_hr')
+        SELECT user_id FROM user_roles WHERE role::text IN ('regional_admin', 'regional_hr', 'property_hr')
     ));
 
 -- Sessions: Users see own sessions

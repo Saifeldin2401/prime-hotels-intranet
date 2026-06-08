@@ -108,7 +108,7 @@ const RootIndex = () => {
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? '/learning/my'
+        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? '/home'
     }, [user, location.search])
 
     useEffect(() => {

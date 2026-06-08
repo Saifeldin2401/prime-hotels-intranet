@@ -1,6 +1,6 @@
 # Supabase Configuration for PHG Connect
 
-project_id = "prime-hotels-intranet-master"
+project_id = "dhbfaclkfysqwfppuxxa"
 
 [api]
 enabled = true

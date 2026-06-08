@@ -1,5 +1,5 @@
 /**
- * Service Worker for Diyafa Learning Portal
+ * Service Worker for Prime Hotels Intranet
  * 
  * Handles:
  * - Push notifications
@@ -7,10 +7,11 @@
  * - Cache management for offline access
  */
 
-const CACHE_NAME = 'diyafa-learning-portal-v1';
+const CACHE_NAME = 'prime-hotels-intranet-v2';
 const STATIC_ASSETS = [
   '/manifest.json',
-  '/dyafa-logo.svg',
+  '/prime-logo-light.png',
+  '/prime-logo-dark.png',
 ];
 
 // Install event - cache static assets
@@ -88,15 +89,15 @@ self.addEventListener('push', (event) => {
     data = event.data.json();
   } catch {
     data = {
-      title: 'Diyafa Learning Portal',
+      title: 'Prime Hotels Intranet',
       body: event.data.text(),
     };
   }
 
   const options = {
     body: data.body || 'New notification',
-    icon: data.icon || '/dyafa-logo.svg',
-    badge: data.badge || '/dyafa-logo.svg',
+    icon: data.icon || '/prime-logo-light.png',
+    badge: data.badge || '/prime-logo-light.png',
     tag: data.tag || 'default',
     requireInteraction: data.requireInteraction || false,
     actions: data.actions || [],
@@ -105,7 +106,7 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(
-      data.title || 'Diyafa Learning Portal',
+      data.title || 'Prime Hotels Intranet',
       options
     )
   );

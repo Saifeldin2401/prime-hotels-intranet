@@ -28,8 +28,8 @@ CREATE POLICY "Users can view own documents" ON employee_documents
   FOR SELECT USING (
     auth.uid() = user_id OR 
     EXISTS (
-      SELECT 1 FROM profiles 
-      WHERE id = auth.uid() 
+      SELECT 1 FROM user_roles 
+      WHERE user_id = auth.uid() 
       AND role IN ('regional_admin', 'regional_hr', 'property_manager', 'property_hr')
     )
   );
