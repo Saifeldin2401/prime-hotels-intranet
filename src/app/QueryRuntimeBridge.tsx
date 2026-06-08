@@ -1,7 +1,6 @@
 import { focusManager, onlineManager } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 
-import { isEnabled } from '@/lib/featureFlags'
 
 import { persistQueryCache, restoreQueryCache } from './queryPersistence'
 
@@ -39,7 +38,7 @@ export function QueryRuntimeBridge() {
 
   useEffect(() => {
     let debounceTimer: number | null = null
-    const debounceMs = isEnabled('debouncedFocusManager') ? 500 : 0
+    const debounceMs = 500
 
     focusManager.setEventListener((handleFocus) => {
       const onFocus = () => {

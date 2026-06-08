@@ -14,7 +14,6 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { supabase } from '@/lib/supabase'
 import { shouldSuppressAuthenticatedAppState } from '@/lib/authFlowState'
 import { classifyAuthError, getErrorMessage, getErrorCode, getRetryDelay } from '@/lib/authErrorUtils'
-import { isEnabled } from '@/lib/featureFlags'
 import { recordAuthEvent } from '@/lib/authMonitor'
 import { useAuthSession } from './useAuthSession'
 
@@ -283,9 +282,7 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
           return
         }
 
-        const debounceMs = isEnabled('smartSessionValidation')
-          ? CONFIG.visibilityDebounceMs
-          : 0
+        const debounceMs = CONFIG.visibilityDebounceMs
 
         visibilityTimeoutRef.current = setTimeout(() => {
           if (document.visibilityState === 'visible' && navigator.onLine) {
