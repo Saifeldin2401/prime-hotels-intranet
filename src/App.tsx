@@ -7,99 +7,15 @@ import { PropertyProvider } from '@/contexts/PropertyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { router } from '@/routes/router'
-import { isEnabled } from '@/lib/featureFlags'
-import { QueryClientProvider, dehydrate, focusManager, hydrate, onlineManager, type DehydratedState, type Query } from '@tanstack/react-query'
+import { QueryClientProvider } from '@tanstack/react-query'
 import { queryClient } from '@/lib/queryClient'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { useEffect, useState, type ComponentType } from 'react'
 import { RouterProvider } from 'react-router-dom'
-
-const QUERY_CACHE_KEY = 'prime_query_cache_v4'
-const QUERY_CACHE_TTL_MS = 1000 * 60 * 5 // 5 minutes
-const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
-const NON_PERSISTED_QUERY_PREFIXES = new Set([
-  'learning-progress',
-  'learning-assignments',
-  'learning-assignment-exemptions',
-  'learning-assignments-module-links',
-  'learning-quizzes',
-  'my-assignments',
-  'module-assignment-roster',
-  'training-module-full',
-  'training-progress',
-  'training-assignments',
-  'assignment-progress',
-])
-
-const getPrimaryQueryKey = (queryKey: readonly unknown[]) => {
-  const primaryKey = queryKey[0]
-  return typeof primaryKey === 'string' ? primaryKey : null
-}
-
-const shouldPersistQuery = (query: Pick<Query, 'queryKey' | 'meta' | 'state'>) => {
-  if (query.meta?.persist === false) return false
-  if (query.state.status !== 'success') return false
-
-  const primaryKey = getPrimaryQueryKey(query.queryKey)
-  if (primaryKey && NON_PERSISTED_QUERY_PREFIXES.has(primaryKey)) {
-    return false
-  }
-
-  const data = query.state.data as unknown
-  if (Array.isArray(data) && data.length > 200) {
-    return false
-  }
-
-  return true
-}
-
-const filterDehydratedState = (state: DehydratedState): DehydratedState => ({
-  ...state,
-  queries: state.queries.filter((query) => shouldPersistQuery({
-    queryKey: query.queryKey,
-    meta: query.meta,
-    state: query.state,
-  } as Pick<Query, 'queryKey' | 'meta' | 'state'>)),
-})
-
-const restoreQueryCache = () => {
-  if (typeof window === 'undefined') return
-  try {
-    const raw = window.sessionStorage.getItem(QUERY_CACHE_KEY)
-    if (!raw) return
-    const parsed = JSON.parse(raw)
-    if (!parsed?.timestamp || !parsed?.state) return
-    if (Date.now() - parsed.timestamp > QUERY_CACHE_TTL_MS) {
-      window.sessionStorage.removeItem(QUERY_CACHE_KEY)
-      return
-    }
-    hydrate(queryClient, filterDehydratedState(parsed.state))
-  } catch {
-    // Ignore cache restore errors
-  }
-}
-
-const persistQueryCache = () => {
-  if (typeof window === 'undefined') return
-  try {
-    const state = dehydrate(queryClient, {
-      shouldDehydrateQuery: shouldPersistQuery
-    })
-    window.sessionStorage.setItem(
-      QUERY_CACHE_KEY,
-      JSON.stringify({ timestamp: Date.now(), state })
-    )
-  } catch {
-    // Clear oversized cache entries to avoid repeated quota failures.
-    try {
-      window.sessionStorage.removeItem(QUERY_CACHE_KEY)
-    } catch {
-      // Ignore storage cleanup errors.
-    }
-  }
-}
+import { configureQueryManagers, installQueryCachePersistence, restoreQueryCache } from '@/lib/queryPersistence'
+import { UPDATE_AVAILABLE_EVENT, applyPendingAppUpdate, hasPendingAppUpdate } from '@/lib/appUpdate'
 
 restoreQueryCache()
 
@@ -114,48 +30,6 @@ const shouldEnableVercelInsights = () => {
     host === 'www.phg-connect.com' ||
     host === 'connect.primehotels.com'
   )
-}
-
-const hasPendingAppUpdate = () => {
-  if (typeof window === 'undefined') return false
-  return Boolean((window as Window & { __PHG_UPDATE_AVAILABLE__?: boolean }).__PHG_UPDATE_AVAILABLE__)
-}
-
-const applyPendingAppUpdate = async () => {
-  if (typeof window === 'undefined') return
-
-  const registrations = await navigator.serviceWorker.getRegistrations()
-  const waitingWorker = registrations.find((registration) => registration.waiting)?.waiting
-
-  if (!waitingWorker) {
-    window.location.reload()
-    return
-  }
-
-  await new Promise<void>((resolve) => {
-    let didResolve = false
-
-    const finish = () => {
-      if (didResolve) return
-      didResolve = true
-      resolve()
-    }
-
-    const handleControllerChange = () => {
-      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
-      finish()
-      window.location.reload()
-    }
-
-    navigator.serviceWorker.addEventListener('controllerchange', handleControllerChange, { once: true })
-    waitingWorker.postMessage({ type: 'SKIP_WAITING' })
-
-    window.setTimeout(() => {
-      navigator.serviceWorker.removeEventListener('controllerchange', handleControllerChange)
-      finish()
-      window.location.reload()
-    }, 3000)
-  })
 }
 
 function DashboardPrefetcher() {
@@ -224,84 +98,14 @@ function App() {
     }
   }, [])
 
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'hidden') {
-        persistQueryCache()
-      }
-    }
+  useEffect(() => installQueryCachePersistence(), [])
 
-    const handlePageHide = () => {
-      persistQueryCache()
-    }
-
-    const handleBeforeUnload = () => {
-      persistQueryCache()
-    }
-
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('pagehide', handlePageHide)
-    window.addEventListener('beforeunload', handleBeforeUnload)
-
-    return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('pagehide', handlePageHide)
-      window.removeEventListener('beforeunload', handleBeforeUnload)
-    }
-  }, [])
-
-  useEffect(() => {
-    let debounceTimer: ReturnType<typeof setTimeout> | null = null
-    
-    const debouncedFocusManager = isEnabled('debouncedFocusManager')
-    const debounceMs = debouncedFocusManager ? 500 : 0
-
-    focusManager.setEventListener((handleFocus) => {
-      const onFocus = () => {
-        if (document.visibilityState !== 'visible') return
-        
-        // Clear existing timer to debounce rapid focus events
-        if (debounceTimer) clearTimeout(debounceTimer)
-        
-        // Debounce: wait after focus stabilizes
-        debounceTimer = setTimeout(() => {
-          // Only refetch if we're still visible and online
-          if (document.visibilityState === 'visible' && navigator.onLine) {
-            handleFocus()
-          }
-        }, debounceMs)
-      }
-      window.addEventListener('focus', onFocus)
-      document.addEventListener('visibilitychange', onFocus)
-      return () => {
-        window.removeEventListener('focus', onFocus)
-        document.removeEventListener('visibilitychange', onFocus)
-        if (debounceTimer) clearTimeout(debounceTimer)
-      }
-    })
-
-    onlineManager.setEventListener((handleOnline) => {
-      const onOnline = () => {
-        // Delay to let network stabilize before marking as online
-        setTimeout(() => handleOnline(true), 1000)
-      }
-      const onOffline = () => handleOnline(false)
-      window.addEventListener('online', onOnline)
-      window.addEventListener('offline', onOffline)
-      return () => {
-        window.removeEventListener('online', onOnline)
-        window.removeEventListener('offline', onOffline)
-      }
-    })
-  }, [])
+  useEffect(() => configureQueryManagers(), [])
 
   useEffect(() => {
     if (typeof window === 'undefined') return
 
-    const handleUpdateAvailable = () => {
-      setIsUpdateAvailable(true)
-    }
-
+    const handleUpdateAvailable = () => setIsUpdateAvailable(true)
     window.addEventListener(UPDATE_AVAILABLE_EVENT, handleUpdateAvailable)
     return () => window.removeEventListener(UPDATE_AVAILABLE_EVENT, handleUpdateAvailable)
   }, [])
