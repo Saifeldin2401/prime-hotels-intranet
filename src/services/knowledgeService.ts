@@ -138,13 +138,13 @@ export async function getArticles(
           visibility,
           property_id, department_id,
           requires_acknowledgment,
-          created_by, updated_by,
+          created_by, last_published_by,
           created_at, updated_at,
-          current_version, published_version_number, last_published_at,
+          current_version,
           estimated_read_time,
           view_count,
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
-          last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+          last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
           department:departments(id, name),
           category:categories(id, name)
         `, { count: 'exact' })
@@ -217,7 +217,7 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
             .select(`
                 *,
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
-                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 sop:sop_documents(linked_training_id, linked_quiz_id),
                 department:departments(id, name),\n                category:categories(id, name),\n                document_department_access(department_id, department:departments(id, name))
             `)
@@ -269,12 +269,12 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string): Promi
             .select(`
                 id, title, description,
                 status, content_type,
-                created_by, updated_by,
-                current_version, published_version_number, last_published_at,
+                created_by, last_published_by,
+                current_version,
                 created_at, updated_at,
                 estimated_read_time, view_count,
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
-                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 department:departments(id, name),
                 category:categories(id, name)
             `)
@@ -307,12 +307,12 @@ export async function getRecentArticles(limit = 10, propertyId?: string): Promis
             .select(`
                 id, title, description,
                 status, content_type,
-                created_by, updated_by,
-                current_version, published_version_number, last_published_at,
+                created_by, last_published_by,
+                current_version,
                 created_at, updated_at,
                 estimated_read_time, view_count,
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
-                last_editor:profiles!documents_updated_by_fkey(id, full_name, avatar_url),
+                last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 department:departments(id, name),
                 category:categories(id, name)
             `)
@@ -427,7 +427,7 @@ export async function getContextualHelp(triggerType: string, triggerValue: strin
 
     const baseQuery = () => supabase
         .from('documents')
-        .select('id, title, description, content_type, status, current_version, published_version_number, last_published_at, view_count')
+        .select('id, title, description, content_type, status, current_version, view_count')
         .in('content_type', relevantTypes)
         .eq('status', 'PUBLISHED')
         .eq('is_deleted', false)
@@ -776,9 +776,7 @@ export async function getRelatedArticles(documentId: string): Promise<RelatedArt
                     description,
                     content_type,
                     status,
-                    current_version,
-                    published_version_number,
-                    last_published_at
+                    current_version
                 )
             `)
             .eq('source_document_id', documentId)
@@ -852,13 +850,13 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
 async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Promise<RawKnowledgeArticle> {
     if (!data?.id) return data
     if (data.status === 'PUBLISHED') return data
-    if (!data.published_version_number) return data
+    if (!data.current_version) return data
 
     const { data: snapshot, error } = await supabase
         .from('document_versions')
         .select('version_number, title, description, content, file_url, status')
         .eq('document_id', data.id)
-        .eq('version_number', data.published_version_number)
+        .eq('version_number', data.current_version)
         .maybeSingle()
 
     if (error || !snapshot) {
@@ -873,7 +871,7 @@ async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Prom
         file_url: snapshot.file_url ?? data.file_url,
         status: snapshot.status || 'PUBLISHED',
         current_version: snapshot.version_number ?? data.current_version,
-        updated_at: data.last_published_at || data.updated_at
+        updated_at: data.updated_at
     }
 }
 
@@ -882,12 +880,12 @@ async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Pr
     const needsSnapshot = rows.filter(row =>
         row?.id &&
         row?.status !== 'PUBLISHED' &&
-        row?.published_version_number
+        row?.current_version
     )
     if (!needsSnapshot.length) return rows
 
     const docIds = Array.from(new Set(needsSnapshot.map(row => row.id)))
-    const versionNumbers = Array.from(new Set(needsSnapshot.map(row => row.published_version_number)))
+    const versionNumbers = Array.from(new Set(needsSnapshot.map(row => row.current_version)))
 
     const { data: snapshots, error } = await supabase
         .from('document_versions')
@@ -902,8 +900,8 @@ async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Pr
     )
 
     return rows.map(row => {
-        if (!row?.id || row?.status === 'PUBLISHED' || !row?.published_version_number) return row
-        const snapshot = snapshotMap.get(`${row.id}:${row.published_version_number}`)
+        if (!row?.id || row?.status === 'PUBLISHED' || !row?.current_version) return row
+        const snapshot = snapshotMap.get(`${row.id}:${row.current_version}`)
         if (!snapshot) return row
         return {
             ...row,
@@ -913,7 +911,7 @@ async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Pr
             file_url: snapshot.file_url ?? row.file_url,
             status: snapshot.status || row.status || 'PUBLISHED',
             current_version: snapshot.version_number ?? row.current_version,
-            updated_at: row.last_published_at || row.updated_at
+            updated_at: row.updated_at
         }
     })
 }
@@ -990,10 +988,10 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
         category: normalizeNamedJoin(category) || (toOptionalString(data.category_id) ? { id: toStringValue(data.category_id), name: 'Category' } : undefined),
         version: toNumberValue(data.current_version, toNumberValue(data.version, 1)),
         current_version: toNumberValue(data.current_version, toNumberValue(data.version, 1)),
-        published_version_number: typeof data.published_version_number === 'number' ? data.published_version_number : null,
-        last_published_at: toNullableString(data.last_published_at),
+        published_version_number: typeof data.current_version === 'number' ? data.current_version : null,
+        last_published_at: toNullableString(data.updated_at),
         estimated_read_time: typeof data.estimated_read_time === 'number' ? data.estimated_read_time : computeReadMinutes(toNullableString(data.content)),
-        updated_by: toNullableString(data.updated_by),
+        updated_by: toNullableString(data.last_published_by),
         author: author
             ? {
                 id: toStringValue(author.id),

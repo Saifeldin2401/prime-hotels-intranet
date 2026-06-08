@@ -132,7 +132,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.my_work',
         icon: User,
         order: 1,
-        visibleTo: [], // Temporarily hidden for Diyafa rebrand
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -156,7 +156,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.operations',
         icon: CheckSquare,
         order: 4,
-        visibleTo: [], // Temporarily hidden for Diyafa rebrand
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -164,7 +164,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.hr_management',
         icon: Users,
         order: 5,
-        visibleTo: [], // Temporarily hidden for Diyafa rebrand
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -172,7 +172,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.my_hr',
         icon: Users,
         order: 5.5,
-        visibleTo: [], // Temporarily hidden for Diyafa rebrand
+        visibleTo: 'all',
         collapsible: true
     },
     {
@@ -189,7 +189,7 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         title: 'groups.communication',
         icon: MessageSquare,
         order: 8,
-        visibleTo: [], // Temporarily hidden for Diyafa rebrand
+        visibleTo: 'all',
         collapsible: true
     },
     {
