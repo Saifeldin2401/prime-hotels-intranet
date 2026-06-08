@@ -372,7 +372,7 @@ async function handleTrainingCommand(
     buildActions([
       buildButton("Open PHG Learning", "training_phg", {
         style: "primary",
-        url: "https://phg-connect.com/learning/my-learning",
+        url: "https://www.phg-connect.com/learning/my-learning",
       }),
     ]),
   );
@@ -507,7 +507,7 @@ async function handleReviewsCommand(
       buildActions([
         buildButton("View All Reviews", "reviews_phg", {
           style: "primary",
-          url: "https://phg-connect.com/guest-reviews",
+          url: "https://www.phg-connect.com/guest-reviews",
         }),
       ]),
     );
@@ -562,7 +562,7 @@ async function handleOpsCommand(
       {
         actions: [
           buildButton("View Ops Dashboard", "ops_dashboard", {
-            url: "https://phg-connect.com/operations",
+            url: "https://www.phg-connect.com/operations",
           }),
         ],
       },
@@ -582,13 +582,13 @@ async function handleOpsCommand(
     buildDivider(),
     buildActions([
       buildButton("Maintenance", "ops_maintenance", {
-        url: "https://phg-connect.com/maintenance",
+        url: "https://www.phg-connect.com/maintenance",
       }),
       buildButton("Incidents", "ops_incidents", {
-        url: "https://phg-connect.com/incidents",
+        url: "https://www.phg-connect.com/incidents",
       }),
       buildButton("Tasks", "ops_tasks", {
-        url: "https://phg-connect.com/tasks",
+        url: "https://www.phg-connect.com/tasks",
       }),
     ]),
   ];
@@ -675,7 +675,7 @@ async function handleWhoAmICommand(
     buildDivider(),
     buildActions([
       buildButton("Edit Profile", "whoami_edit", {
-        url: "https://phg-connect.com/profile",
+        url: "https://www.phg-connect.com/profile",
       }),
     ]),
     buildContext("Your Slack account is linked to this PHG profile"),

@@ -51,10 +51,10 @@ Deno.serve(async (req: Request) => {
       const recipientName = user.full_name || "PRIME User";
       let html = template.html_template
         .replace(/{{recipient_name}}/g, recipientName)
-        .replace(/{{action_url}}/g, "https://phg-connect.com/login")
+        .replace(/{{action_url}}/g, "https://www.phg-connect.com/login")
         .replace(
           /{{logo_url}}/g,
-          "https://phg-connect.com/prime-logo-white-full.png",
+          "https://www.phg-connect.com/prime-logo-white-full.png",
         )
         .replace(/{{title}}/g, "Password Update Required")
         .replace(/{{year}}/g, new Date().getFullYear().toString())
@@ -63,7 +63,7 @@ Deno.serve(async (req: Request) => {
 
       let text = (template.text_template || "")
         .replace(/{{recipient_name}}/g, recipientName)
-        .replace(/{{action_url}}/g, "https://phg-connect.com/login");
+        .replace(/{{action_url}}/g, "https://www.phg-connect.com/login");
 
       return {
         from: "PRIME Connect Security <notifications@phg-connect.com>",

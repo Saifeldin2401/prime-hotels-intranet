@@ -5,7 +5,7 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "http://localhost:3000",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
-  "https://phg-connect.com",
+  "https://www.phg-connect.com",
   "https://www.phg-connect.com",
   "https://prime-hotels-intranet.vercel.app",
 ] as const;
@@ -34,7 +34,7 @@ function buildCorsHeaders(req: Request): Record<string, string> {
 
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (
-  Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com"
+  Deno.env.get("APP_BASE_URL") ?? "https://www.phg-connect.com"
 ).replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
 const ENV_DEFAULT_FROM_EMAIL =

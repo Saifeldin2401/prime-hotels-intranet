@@ -165,7 +165,7 @@ serve(async (req) => {
     const appBaseUrl = (
       readSecret(config.app_base_url) ||
       Deno.env.get("APP_BASE_URL") ||
-      "https://phg-connect.com"
+      "https://www.phg-connect.com"
     ).replace(/\/+$/, "");
     const fromName = readSecret(config.email_from_name) || "PHG Connect";
     const fromEmail =

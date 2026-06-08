@@ -13,7 +13,7 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://phg-connect.com",
+  "https://www.phg-connect.com",
   "https://www.phg-connect.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -47,7 +47,7 @@ function resolveCorsOrigin(req: Request): string {
   const origin = (req.headers.get("origin") || "").trim();
   const allowed = getAllowedOrigins();
   if (origin && allowed.includes(origin)) return origin;
-  return allowed[0] || "https://phg-connect.com";
+  return allowed[0] || "https://www.phg-connect.com";
 }
 
 function buildCorsHeaders(req: Request): Record<string, string> {
@@ -85,9 +85,6 @@ function resolveAppUrl(req: Request, appUrlFromBody: unknown): string {
     if (!candidate) continue;
     try {
       const parsed = new URL(candidate);
-      if (parsed.hostname === "www.phg-connect.com") {
-        parsed.hostname = "phg-connect.com";
-      }
       parsed.pathname = "";
       parsed.search = "";
       parsed.hash = "";
@@ -97,7 +94,7 @@ function resolveAppUrl(req: Request, appUrlFromBody: unknown): string {
     }
   }
 
-  return "https://phg-connect.com";
+  return "https://www.phg-connect.com";
 }
 
 Deno.serve(async (req: Request) => {
@@ -262,8 +259,10 @@ Deno.serve(async (req: Request) => {
     });
 
     if (!emailResponse.ok) {
+      const errorText = await emailResponse.text().catch(() => "no body");
+      console.error("SEND-EMAIL ERROR:", errorText);
       return new Response(
-        JSON.stringify({ error: "Failed to send invitation email." }),
+        JSON.stringify({ error: `Failed to send invitation email. Details: ${errorText}` }),
         {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },

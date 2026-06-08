@@ -599,7 +599,7 @@ async function sendWeeklySummary(
     buildDivider(),
     buildActions([
       buildButton("View Dashboard", "training_dashboard", {
-        url: "https://phg-connect.com/learning/dashboard",
+        url: "https://www.phg-connect.com/learning/dashboard",
       }),
     ]),
   ];

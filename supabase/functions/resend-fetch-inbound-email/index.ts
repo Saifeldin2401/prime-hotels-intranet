@@ -1,5 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { isAuthorizedServiceRoleRequest } from "../_shared/auth.ts";
 
 function jsonResponse(payload: unknown, status = 200): Response {

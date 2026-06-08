@@ -5,7 +5,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const CANONICAL_APP_URL = "https://phg-connect.com";
+const CANONICAL_APP_URL = "https://www.phg-connect.com";
 
 type ResolvedAppUrl = {
   appUrl: string;
@@ -89,9 +89,6 @@ function resolveAppUrl(req: Request): ResolvedAppUrl {
     if (!candidate.value) continue;
     try {
       const parsed = new URL(candidate.value);
-      if (parsed.hostname === "www.phg-connect.com") {
-        parsed.hostname = "phg-connect.com";
-      }
       parsed.pathname = "";
       parsed.search = "";
       parsed.hash = "";
@@ -276,6 +273,11 @@ Deno.serve(async (req: Request) => {
         ? `${resetRedirectTo}?token_hash=${hashedToken}&type=recovery`
         : resetRedirectTo;
 
+      let emailSendSuccess = false;
+      let emailSendStatus = 0;
+      let emailSendResponse = "";
+      let emailSendError = "";
+
       try {
         const emailResponse = await fetch(
           `${SUPABASE_URL}/functions/v1/send-email`,
@@ -304,25 +306,25 @@ Deno.serve(async (req: Request) => {
           },
         );
 
+        emailSendStatus = emailResponse.status;
+        emailSendSuccess = emailResponse.ok;
         if (!emailResponse.ok) {
-          const responseText = await emailResponse.text().catch(() => "");
+          emailSendResponse = await emailResponse.text().catch(() => "");
           logEvent("warn", "email_send_failed", {
             requestId,
             emailDomain,
             status: emailResponse.status,
-            responseText,
+            responseText: emailSendResponse,
             resetRedirectTo,
           });
         }
       } catch (emailError) {
+        emailSendError = emailError instanceof Error ? emailError.message : String(emailError);
         logEvent("warn", "email_send_failed", {
           requestId,
           emailDomain,
           resetRedirectTo,
-          error:
-            emailError instanceof Error
-              ? emailError.message
-              : String(emailError),
+          error: emailSendError,
         });
       }
     }
@@ -338,6 +340,12 @@ Deno.serve(async (req: Request) => {
           details: {
             source: "public-forgot-password",
             request_id: requestId,
+            email_send: {
+              success: emailSendSuccess,
+              status: emailSendStatus,
+              response: emailSendResponse,
+              error: emailSendError,
+            },
           },
           ip_address: ip,
         })

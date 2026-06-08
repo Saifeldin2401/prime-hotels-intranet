@@ -639,7 +639,7 @@ async function handleWelcomeAction(
           ]),
       buildActions([
         buildButton("Go to Learning", "training_phg", {
-          url: "https://phg-connect.com/learning/my-learning",
+          url: "https://www.phg-connect.com/learning/my-learning",
         }),
       ]),
     ];

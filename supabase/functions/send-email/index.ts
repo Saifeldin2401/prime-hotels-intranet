@@ -7,7 +7,7 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (
-  Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com"
+  Deno.env.get("APP_BASE_URL") ?? "https://www.phg-connect.com"
 ).replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
 const ENV_DEFAULT_FROM_EMAIL =

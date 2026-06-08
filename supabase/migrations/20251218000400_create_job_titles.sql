@@ -24,12 +24,12 @@ USING (
     EXISTS (
         SELECT 1 FROM public.user_roles 
         WHERE user_id = auth.uid() 
-        AND role IN ('admin', 'super_admin')
+        AND role IN ('regional_admin', 'regional_hr')
     )
 );
 
 -- Seed data from existing list
-INSERT INTO public.job_titles (title, role, category) VALUES
+INSERT INTO public.job_titles (title, default_role, category) VALUES
 ('Front Desk Agent', 'staff', 'Front Office'),
 ('Guest Service Agent', 'staff', 'Front Office'),
 ('Night Auditor', 'staff', 'Front Office'),

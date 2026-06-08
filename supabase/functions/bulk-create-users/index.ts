@@ -10,7 +10,7 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://phg-connect.com",
+  "https://www.phg-connect.com",
   "https://www.phg-connect.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -31,7 +31,7 @@ function resolveCorsOrigin(req: Request): string {
   const origin = (req.headers.get("origin") || "").trim();
   const allowed = getAllowedOrigins();
   if (origin && allowed.includes(origin)) return origin;
-  return allowed[0] || "https://phg-connect.com";
+  return allowed[0] || "https://www.phg-connect.com";
 }
 
 function buildCorsHeaders(req: Request): Record<string, string> {

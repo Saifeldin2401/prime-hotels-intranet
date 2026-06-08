@@ -515,7 +515,7 @@ async function handleMemberJoined(
     buildActions([
       buildButton("View My Training", "welcome_training", { style: "primary" }),
       buildButton("Open PHG Connect", "welcome_phg", {
-        url: "https://phg-connect.com",
+        url: "https://www.phg-connect.com",
       }),
     ]),
     buildContext("You can DM me anytime for quick updates!"),
@@ -627,7 +627,7 @@ async function handleReactionAdded(
           ),
           buildActions([
             buildButton("View in PHG Connect", `view_task_${task.id}`, {
-              url: `https://phg-connect.com/tasks/${task.id}`,
+              url: `https://www.phg-connect.com/tasks/${task.id}`,
             }),
           ]),
         ],

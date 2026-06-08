@@ -65,8 +65,134 @@ vector_port = 54328
 backend = "postgres"
 
 [functions]
+[functions.action-registry]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/action-registry/index.ts"
+
+[functions.admin-account-actions]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/admin-account-actions/index.ts"
+
+[functions.ai-translation]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/ai-translation/index.ts"
+
+[functions.approval-escalation]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/approval-escalation/index.ts"
+
+[functions.auto-analyze-feedback]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/auto-analyze-feedback/index.ts"
+
+[functions.auto-triage-ticket]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/auto-triage-ticket/index.ts"
+
+[functions.bulk-notification-processor]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/bulk-notification-processor/index.ts"
+
+[functions.complete-invite-profile]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/complete-invite-profile/index.ts"
+
+[functions.create-user]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/create-user/index.ts"
+
+[functions.delete-user]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/delete-user/index.ts"
+
+[functions.encrypt-field]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/encrypt-field/index.ts"
+
 [functions.fetch-news]
 enabled = true
 verify_jwt = true
 import_map = "./functions/fetch-news/deno.json"
 entrypoint = "./functions/fetch-news/index.ts"
+
+[functions.image-proxy]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/image-proxy/index.ts"
+
+[functions.process-ai-request]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/process-ai-request/index.ts"
+
+[functions.process-event]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/process-event/index.ts"
+
+[functions.public-forgot-password]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/public-forgot-password/index.ts"
+
+[functions.resend-user-invitation]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/resend-user-invitation/index.ts"
+
+[functions.scan-file]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/scan-file/index.ts"
+
+[functions.scheduled-reports]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/scheduled-reports/index.ts"
+
+[functions.send-email]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/send-email/index.ts"
+
+[functions.slack-commands]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/slack-commands/index.ts"
+
+[functions.slack-events]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/slack-events/index.ts"
+
+[functions.slack-interactive]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/slack-interactive/index.ts"
+
+[functions.slack-training]
+enabled = true
+verify_jwt = false
+entrypoint = "./functions/slack-training/index.ts"
+
+[functions.weather-proxy]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/weather-proxy/index.ts"
+
+[functions.workflow-engine]
+enabled = true
+verify_jwt = true
+entrypoint = "./functions/workflow-engine/index.ts"
+

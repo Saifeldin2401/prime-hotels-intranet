@@ -1,6 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
-import { createClient } from "@supabase/supabase-js";
-import { Webhook } from "npm:svix@1.46.0";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Webhook } from "npm:svix@1.95.1";
 
 type ResendReceivedEvent = {
   type: string;
