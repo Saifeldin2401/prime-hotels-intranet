@@ -107,6 +107,8 @@ class AnalyticsService {
                 .insert({
                     user_id: this.userId,
                     user_agent: navigator.userAgent,
+                    session_token_hash: crypto.randomUUID(), // Fix for not-null constraint
+                    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
                     device_info: {
                         platform: navigator.platform,
                         language: navigator.language,

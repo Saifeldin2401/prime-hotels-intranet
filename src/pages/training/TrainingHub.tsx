@@ -143,13 +143,7 @@ export default function TrainingHub() {
         .not('is_deleted', 'is', true)
         .order(sortBy, { ascending: sortOrder === 'asc' })
 
-      if (statusFilter !== 'all') {
-        query = query.eq('status', statusFilter)
-      }
-
-      if (categoryFilter !== 'all') {
-        query = query.eq('category', categoryFilter)
-      }
+      // Status and category filters removed as those columns do not exist in the current schema
 
       if (debouncedSearch) {
         query = query.ilike('title', `%${debouncedSearch}%`)
@@ -186,7 +180,7 @@ export default function TrainingHub() {
     queryFn: async () => {
       const { data: modules, error: modulesError } = await supabase
         .from('training_modules')
-        .select('id, status')
+        .select('id')
         .eq('is_deleted', false)
 
       if (modulesError) {
@@ -202,8 +196,8 @@ export default function TrainingHub() {
       }
 
       const total = modules?.length || 0
-      const published = modules?.filter(m => m.status === 'published').length || 0
-      const draft = modules?.filter(m => m.status === 'draft').length || 0
+      const published = modules?.length || 0
+      const draft = 0
       const completed = progress?.filter(p => p.status === 'completed').length || 0
       const inProgress = progress?.filter(p => p.status === 'in_progress').length || 0
       const scoresWithValues = progress?.filter(p => p.quiz_score != null) || []
@@ -227,14 +221,7 @@ export default function TrainingHub() {
   const { data: categories } = useQuery({
     queryKey: ['training-categories'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('training_modules')
-        .select('category')
-        .not('category', 'is', null)
-
-      if (error) throw error
-      const uniqueCategories = [...new Set(data.map(m => m.category).filter(Boolean))]
-      return uniqueCategories as string[]
+      return []
     },
     enabled: canManageModules
   })
@@ -302,11 +289,8 @@ export default function TrainingHub() {
         .insert({
           title: `${module.title} (Copy)`,
           description: module.description,
-          category: module.category,
-          difficulty_level: module.difficulty_level,
-          estimated_duration: module.estimated_duration,
-          created_by: profile?.id,
-          status: 'draft'
+          estimated_duration_minutes: module.estimated_duration ? parseInt(module.estimated_duration) : null,
+          created_by: profile?.id
         })
         .select()
         .single()

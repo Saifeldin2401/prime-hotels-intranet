@@ -130,7 +130,7 @@ export function useUserDataLoader(
         // ── Load profile ──────────────────────────────────────────
         const profilePromise = supabase
           .from('profiles')
-          .select('id, email, full_name, phone, avatar_url, hire_date, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at, language, date_of_birth, job_title_id, iqama_number, bio')
+          .select('id, email, full_name, phone, avatar_url, hire_date, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at, date_of_birth, iqama_number, bio')
           .eq('id', userId)
           .limit(1)
 

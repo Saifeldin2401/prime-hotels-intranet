@@ -193,16 +193,11 @@ export default function Login() {
           >
             {/* Logo */}
             <div className="flex items-center gap-4">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <img
-                  src="/prime-logo-light.png"
-                  alt="Prime Hotels"
-                  className="h-14 w-auto opacity-95 drop-shadow-2xl"
-                />
-              </motion.div>
+                <div className="w-full text-center mb-8">
+                  <span className="text-4xl font-bold text-white tracking-widest uppercase drop-shadow-lg">
+                    Diyafa
+                  </span>
+                </div>
             </div>
 
             {/* Language Switcher */}
@@ -348,11 +343,9 @@ export default function Login() {
         {/* Mobile Header */}
         <div className="absolute top-0 inset-x-0 p-4 lg:hidden z-30">
           <div className="flex items-center justify-between">
-            <img
-              src="/prime-logo-dark.png"
-              alt="Prime Hotels"
-              className="h-8 w-auto"
-            />
+            <span className="text-xl font-bold text-gray-900 dark:text-white tracking-widest uppercase">
+              Diyafa
+            </span>
             <LanguageSwitcher />
           </div>
         </div>
