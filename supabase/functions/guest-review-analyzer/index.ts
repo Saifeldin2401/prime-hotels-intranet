@@ -93,6 +93,19 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
+function isServiceRoleJwt(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+    return payload.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function extractBearerToken(authHeader: string | null): string | null {
   if (!authHeader?.startsWith("Bearer ")) return null;
   const token = authHeader.slice("Bearer ".length).trim();
@@ -220,31 +233,6 @@ async function getManualCallerContext(
     roles: roleValues,
     propertyIds: (props ?? []).map((p) => String(p.property_id)),
   };
-}
-
-async function getVaultServiceRoleSecret(serviceClient: ReturnType<typeof createClient>): Promise<string | null> {
-  // Check env first
-  const envKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SERVICE_ROLE_KEY");
-  if (envKey && envKey.trim()) return envKey.trim();
-  
-  // Check vault for both naming conventions
-  const { data: data1 } = await serviceClient
-    .from("vault.decrypted_secrets")
-    .select("decrypted_secret")
-    .filter("name", "eq", "service_role_key")
-    .limit(1)
-    .maybeSingle();
-  
-  if (data1?.decrypted_secret) return String(data1.decrypted_secret);
-  
-  const { data: data2 } = await serviceClient
-    .from("vault.decrypted_secrets")
-    .select("decrypted_secret")
-    .filter("name", "eq", "SERVICE_ROLE_KEY")
-    .limit(1)
-    .maybeSingle();
-  
-  return typeof data2?.decrypted_secret === "string" ? data2.decrypted_secret : null;
 }
 
 async function resolveOwner(
@@ -417,28 +405,14 @@ Deno.serve(async (req: Request) => {
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const appBaseUrl = Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com";
 
-    const rootServiceClient = createClient(supabaseUrl, serviceRoleKey, {
+    const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false },
     });
-    const vaultServiceRoleKey = await getVaultServiceRoleSecret(rootServiceClient);
     const isServiceRole = timingSafeBearerMatch(authHeader, serviceRoleKey);
-    const isVaultServiceRole = vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false;
-    const isInternalService = isServiceRole || isVaultServiceRole;
-
-    const serviceToken = isInternalService ? serviceRoleKey : extractBearerToken(authHeader);
-    if (!serviceToken) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const supabase = createClient(supabaseUrl, isServiceRole ? serviceRoleKey : serviceToken, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const isInternalService = isServiceRole || isServiceRoleJwt(authHeader);
 
     const manualContext = !isInternalService
-      ? await getManualCallerContext(supabaseUrl, anonKey, authHeader, rootServiceClient)
+      ? await getManualCallerContext(supabaseUrl, anonKey, authHeader, serviceClient)
       : null;
     if (!isInternalService && !manualContext) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
@@ -447,7 +421,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const { data: review, error: reviewError } = await createClient(supabaseUrl, serviceRoleKey)
+    const { data: review, error: reviewError } = await serviceClient
       .from("guest_reviews")
       .select("*")
       .eq("id", reviewId)
@@ -472,13 +446,13 @@ Deno.serve(async (req: Request) => {
     const dueHours = analysis.critical ? 12 : 24;
     const dueAt = new Date(Date.now() + dueHours * 60 * 60 * 1000).toISOString();
 
-    const { data: property } = await createClient(supabaseUrl, serviceRoleKey)
+    const { data: property } = await serviceClient
       .from("properties")
       .select("name")
       .eq("id", review.property_id)
       .maybeSingle();
 
-    await createClient(supabaseUrl, serviceRoleKey).from("guest_review_issues").delete().eq("review_id", reviewId);
+    await serviceClient.from("guest_review_issues").delete().eq("review_id", reviewId);
     const issueRows = analysis.categories.map((category) => ({
       review_id: reviewId,
       category,
@@ -491,10 +465,10 @@ Deno.serve(async (req: Request) => {
       issue_summary_ar: "تم تحديد ملاحظة تحتاج متابعة",
     }));
     if (issueRows.length > 0) {
-      await createClient(supabaseUrl, serviceRoleKey).from("guest_review_issues").insert(issueRows);
+      await serviceClient.from("guest_review_issues").insert(issueRows);
     }
 
-    await createClient(supabaseUrl, serviceRoleKey)
+    await serviceClient
       .from("guest_review_assignments")
       .delete()
       .eq("review_id", reviewId)
@@ -511,7 +485,7 @@ Deno.serve(async (req: Request) => {
     const assignmentInserts: Array<Record<string, unknown>> = [];
     const assignmentMeta: Array<{ responsibility: ResponsibilityCode; assigneeProfileId: string | null }> = [];
     for (const responsibility of responsibilities) {
-      const owner = await resolveOwner(createClient(supabaseUrl, serviceRoleKey), String(review.property_id), responsibility);
+      const owner = await resolveOwner(serviceClient, String(review.property_id), responsibility);
       assignmentInserts.push({
         review_id: reviewId,
         property_id: review.property_id,
@@ -528,7 +502,7 @@ Deno.serve(async (req: Request) => {
       assignmentMeta.push({ responsibility, assigneeProfileId: owner.profileId });
     }
 
-    const { data: assignments, error: assignmentError } = await createClient(supabaseUrl, serviceRoleKey)
+    const { data: assignments, error: assignmentError } = await serviceClient
       .from("guest_review_assignments")
       .insert(assignmentInserts)
       .select("id,responsibility_code,assignee_profile_id");
@@ -541,21 +515,21 @@ Deno.serve(async (req: Request) => {
       draft_response_ar: analysis.draftResponseAr,
       metadata: { auto_generated: true },
     };
-    const { data: existingResp } = await createClient(supabaseUrl, serviceRoleKey)
+    const { data: existingResp } = await serviceClient
       .from("guest_review_responses")
       .select("id")
       .eq("review_id", reviewId)
       .maybeSingle();
     if (existingResp?.id) {
-      await createClient(supabaseUrl, serviceRoleKey)
+      await serviceClient
         .from("guest_review_responses")
         .update(responsePayload)
         .eq("id", existingResp.id);
     } else {
-      await createClient(supabaseUrl, serviceRoleKey).from("guest_review_responses").insert(responsePayload);
+      await serviceClient.from("guest_review_responses").insert(responsePayload);
     }
 
-    await createClient(supabaseUrl, serviceRoleKey)
+    await serviceClient
       .from("guest_reviews")
       .update({
         sentiment: analysis.sentiment,
@@ -576,7 +550,7 @@ Deno.serve(async (req: Request) => {
       })
       .eq("id", reviewId);
 
-    await createClient(supabaseUrl, serviceRoleKey).from("guest_review_audit_events").insert({
+    await serviceClient.from("guest_review_audit_events").insert({
       property_id: review.property_id,
       review_id: reviewId,
       actor_id: manualContext?.userId ?? null,
@@ -608,7 +582,7 @@ Deno.serve(async (req: Request) => {
         ? `URGENT: Guest review requires immediate attention – ${property?.name ?? 'Property'}`
         : `Guest review follow-up required – ${property?.name ?? 'Property'} (${review.platform ?? 'platform'})`;
 
-      await createClient(supabaseUrl, serviceRoleKey).from('tasks').insert({
+      await serviceClient.from('tasks').insert({
         title: taskTitle,
         description: [
           analysis.summaryEn,
@@ -631,7 +605,7 @@ Deno.serve(async (req: Request) => {
     // ────────────────────────────────────────────────────────────────────────
 
     await enqueueNotifications(
-      createClient(supabaseUrl, serviceRoleKey),
+      serviceClient,
       reviewId,
       String(review.property_id),
       (assignments ?? []).map((a) => ({

@@ -55,6 +55,22 @@ content_bundle.json
 injection_plan.json
 research_and_sources.json
 
+# Throwaway debug/diff/report artifacts (do not commit)
+*.diff
+*.patch
+*_utf8.txt
+*_utf8.json
+pr_*.txt
+pr[0-9]*.diff
+console_logs*.json
+_debug_*.json
+error.txt
+errors-only.txt
+lint-results.txt
+lint_output.txt
+bundle-stats.html
+build_error.txt
+
 # Local agent/skills tooling artifacts (do not commit)
 .agent/
 .adal/
