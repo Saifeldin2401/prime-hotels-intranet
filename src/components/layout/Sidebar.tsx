@@ -68,11 +68,11 @@ export function Sidebar() {
     <div className="flex flex-col w-64 bg-card border-e h-screen">
       <div className="flex flex-col gap-4 p-4 border-b bg-hotel-navy overflow-hidden">
         <div className="flex items-center justify-center w-full">
-          <img
-            src="/prime-logo-light.png"
-            alt="Prime Hotels"
-            className="w-full h-auto object-contain transition-transform hover:scale-110 scale-125"
-          />
+          <div className="w-full text-center py-2">
+            <span className="text-2xl font-bold text-white tracking-widest uppercase">
+              Diyafa
+            </span>
+          </div>
         </div>
 
         {/* Property name display */}
