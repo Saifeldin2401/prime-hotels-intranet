@@ -40,7 +40,7 @@ import {
 import type { Document } from '@/lib/types';
 import type { KnowledgeVisibility } from '@/types/knowledge';
 import { FileText, BookOpen, Eye, Shield, Users, Building, Globe, Check, Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -95,9 +95,9 @@ export function DocumentPublishDialog({
     primaryRole || ''
   );
 
-  // Form state
-  const [title, setTitle] = useState(document?.title || '');
-  const [description, setDescription] = useState(document?.description || '');
+  // Form state - initialized from document prop
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState<KnowledgeVisibility>('property');
   const [departmentId, setDepartmentId] = useState<string>('');
   const [categoryId, setCategoryId] = useState<string>('');
@@ -106,19 +106,27 @@ export function DocumentPublishDialog({
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
 
-  // Reset form when document changes
+  // Track last document ID to detect changes
+  const lastDocIdRef = useRef<string | undefined>(undefined);
+
+  // Reset form when document changes (using layout effect to avoid setState in render cycle)
   useEffect(() => {
-    if (document) {
-      setTitle(document.title);
-      setDescription(document.description || '');
-      setVisibility('property');
-      setDepartmentId(document.department_id || '');
-      setCategoryId('');
-      setRequiresAcknowledgment(false);
-      setAutoPublish(false);
-      setTags([]);
+    if (document && document.id !== lastDocIdRef.current) {
+      lastDocIdRef.current = document.id;
+      // Use setTimeout to defer state updates to next tick
+      const timeoutId = setTimeout(() => {
+        setTitle(document.title);
+        setDescription(document.description || '');
+        setVisibility('property');
+        setDepartmentId(document.department_id || '');
+        setCategoryId('');
+        setRequiresAcknowledgment(false);
+        setAutoPublish(false);
+        setTags([]);
+      }, 0);
+      return () => clearTimeout(timeoutId);
     }
-  }, [document?.id, open]);
+  }, [document?.id]);
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {

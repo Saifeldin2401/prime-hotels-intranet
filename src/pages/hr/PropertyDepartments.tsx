@@ -320,6 +320,7 @@ export default function PropertyDepartments() {
                                                         size="icon"
                                                         className="text-gray-400 hover:text-hotel-navy hover:bg-slate-100"
                                                         onClick={() => startEdit(dept)}
+                                                        aria-label={t('accessibility.edit_department', 'Edit Department')}
                                                     >
                                                         <Pencil className="w-4 h-4" />
                                                     </Button>
@@ -328,6 +329,7 @@ export default function PropertyDepartments() {
                                                         size="icon"
                                                         className="text-gray-400 hover:text-red-600 hover:bg-red-50"
                                                         onClick={() => handleDelete(dept.id, dept.name)}
+                                                        aria-label={t('accessibility.delete_department', 'Delete Department')}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </Button>

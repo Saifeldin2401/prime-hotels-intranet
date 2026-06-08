@@ -5,11 +5,11 @@
     "overview": "تدفق الذكاء",
     "analytics": "التحليلات",
     "properties": "حسب المنشأة",
+    "monitoring": "المراقبة",
     "sources": "المصادر",
     "settings": "الإعدادات"
   },
   "actions": {
-    "testSlack": "اختبار Slack",
     "refreshHub": "تحديث المركز",
     "syncNow": "مزامنة التقييمات الآن",
     "openFullSettings": "فتح الإعدادات الكاملة",
@@ -24,23 +24,64 @@
     "expires": "تنتهي في {{date}}",
     "expired": "منتهية الصلاحية"
   },
+  "monitoring": {
+    "live": "مباشر",
+    "paused": "متوقف",
+    "sound": "صوت",
+    "new": "جديد"
+  },
+  "sort": {
+    "newestCritical": "الأحدث + الحرج",
+    "newest": "الأحدث أولاً",
+    "oldest": "الأقدم أولاً",
+    "mostCritical": "الأكثر خطورة",
+    "highestRating": "أعلى تقييم",
+    "lowestRating": "أدنى تقييم"
+  },
+  "pagination": {
+    "showing": "عرض",
+    "of": "من",
+    "previous": "السابق",
+    "next": "التالي"
+  },
+  "date": {
+    "today": "اليوم",
+    "yesterday": "أمس",
+    "daysAgo": "منذ {{count}} يوم",
+    "unknown": "غير معروف",
+    "new": "جديد"
+  },
+  "card": {
+    "reviewerFeedback": "تقييم {{name}}",
+    "platformFeedback": "تقييم {{platform}}",
+    "guest": "ضيف"
+  },
+  "sentiment": {
+    "positive": "إيجابي",
+    "negative": "سلبي",
+    "mixed": "مختلط",
+    "neutral": "محايد"
+  },
+  "stats": {
+    "pendingCount": "{{count}} قيد المعالجة"
+  },
   "responseEngine": {
     "title": "محرك الردود",
-    "internalNotes": "الملاحظات الداخلية وخطة العمل",
-    "internalNotesPlaceholder": "الخطوات التشغيلية المتخذة أو عضو الفريق المكلف...",
-    "englishResponse": "الرد المعتمد بالإنجليزية",
-    "arabicResponse": "الرد المعتمد بالعربية",
-    "aiAssisted": "بمساعدة الذكاء الاصطناعي",
-    "smartTranslation": "ترجمة ذكية",
     "englishPlaceholder": "صياغة الرد الرسمي هنا...",
     "arabicPlaceholder": "صغ الرد الرسمي هنا...",
     "status": "الحالة: {{status}}",
-    "statusDescription": "التحديد كمنشور يحدث حالة لوحة المعلومات العامة."
+    "statusDescription": "تحديد المنشور يحدث حالة لوحة البيانات العامة.",
+    "internalNotes": "ملاحظات الفريق الداخلية",
+    "internalNotesPlaceholder": "أضف أي سياق داخلي هنا...",
+    "englishResponse": "الرد الرسمي بالإنجليزية",
+    "arabicResponse": "الرد الرسمي بالعربية",
+    "aiAssisted": "مولد بالذكاء الاصطناعي",
+    "smartTranslation": "ترجمة عربية ذكية"
   },
   "rawIntelligence": {
-    "title": "الذكاء الخام",
-    "platformVerbatim": "نص الضيف من المنصة",
-    "operationalIssues": "المشكلات التشغيلية المحددة",
+    "title": "الإشارة الخام",
+    "platformVerbatim": "نص ملاحظات الضيف",
+    "operationalIssues": "النتائج التشغيلية",
     "noAnomalies": "لم يتم اكتشاف شذوذ تشغيلي مميز."
   },
   "analytics": {
@@ -84,9 +125,12 @@
     "moreReviewsNeeded": "مطلوب المزيد من التقييمات لتوليد الرؤى",
     "service": "خدمة",
     "other": "أخرى",
-    "executiveSummary": "ملخص الذكاء التنفيذي",
-    "executiveSummaryDesc": "مجموع {{count}} تقييم عبر جميع المنشآت المفلترة",
-    "nps": "NPS",
+    "executiveSummary": {
+      "title": "الملخص التنفيذي",
+      "processing": "تقوم وحدة الذكاء الاصطناعي حاليًا بمعالجة هذا التقييم...",
+      "overall": "مجموع {{count}} تقييم عبر جميع المنشآت المفلترة",
+      "nps": "NPS"
+    },
     "excellentRating": "ممتاز",
     "acceptable": "مقبول",
     "needsAttention": "يحتاج اهتماماً",
@@ -129,6 +173,14 @@
       "30d": "30 يوم",
       "90d": "90 يوم"
     }
+  },
+  "propertyDashboard": {
+    "title": "مقارنة أداء المنشآت",
+    "subtitle": "تحليلات متعددة لـ {{count}} منشأة",
+    "name": "الاسم",
+    "expandAll": "توسيع الكل",
+    "collapseAll": "طي الكل",
+    "recentReviews": "التقييمات الأخيرة"
   },
   "sources": {
     "title": "مركز ذكاء OTA",
@@ -236,7 +288,6 @@
     "otaSourceAdded": "تمت إضافة مصدر OTA بنجاح.",
     "deleted": "تم الحذف",
     "sourceRemoved": "تم إزالة مصدر OTA.",
-    "updated": "تم التحديث",
     "pollingUpdated": "تم تحديث إعدادات الجمع بنجاح.",
     "error": "خطأ"
   },

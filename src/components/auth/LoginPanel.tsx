@@ -3,9 +3,10 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { getRedirectFromSearch } from '@/lib/authRedirect'
+import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
 import { Eye, EyeOff, Loader2, Lock, User } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 interface LoginPanelProps {
@@ -21,7 +22,19 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
     const { toast } = useToast()
     const navigate = useNavigate()
     const location = useLocation()
-    const redirectPath = getRedirectFromSearch(location.search)
+    
+    // Use ref to preserve redirect across renders - critical for when auth state changes during login
+    const postLoginDestinationRef = useRef<string>('/')
+    
+    useEffect(() => {
+        // Capture redirect on mount (or when location changes)
+        const redirectPath = getRedirectFromSearch(location.search)
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        const storedRedirect = peekPostLoginRedirect()
+        const destination = pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/'
+        
+        postLoginDestinationRef.current = destination
+    }, [location.search])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -51,7 +64,7 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
                     title: 'Welcome back!',
                     description: 'Redirecting to your dashboard...',
                 })
-                navigate(redirectPath ?? '/', { replace: true })
+                navigate(postLoginDestinationRef.current, { replace: true })
             }
         } catch (_err) {
             toast({

@@ -197,6 +197,7 @@ export default function MyGoals() {
                                                         size="icon"
                                                         className="mt-1"
                                                         onClick={() => handleToggleStatus(goal.id, goal.status || '')}
+                                                        aria-label={goal.status === 'completed' ? t('accessibility.mark_goal_incomplete', 'Mark Goal as Incomplete') : t('accessibility.mark_goal_complete', 'Mark Goal as Complete')}
                                                     >
                                                         {goal.status === 'completed' ? (
                                                             <CheckCircle2 className="w-6 h-6 text-green-500" />

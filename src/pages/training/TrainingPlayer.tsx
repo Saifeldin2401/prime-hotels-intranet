@@ -56,6 +56,7 @@ import {
     X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import type { TFunction } from 'i18next'
 import { marked } from 'marked'
 
 type PersistedModuleProgress = {
@@ -227,6 +228,141 @@ function RichTextBlockContent({
                 <div dangerouslySetInnerHTML={{ __html: translatedMarkup }} />
             </InlineErrorBoundary>
         </div>
+    )
+}
+
+type VideoPlayerProps = {
+    src: string
+    blockId: string
+    onMarkWatched: (blockId: string) => void
+    onTrackProgress: (blockId: string, currentTime: number, duration: number) => void
+    onRegisterSeek: (blockId: string, currentTime: number) => void
+    t: TFunction<'training', undefined>
+}
+
+function VideoPlayer({ src, blockId, onMarkWatched, onTrackProgress, onRegisterSeek, t }: VideoPlayerProps) {
+    const [videoError, setVideoError] = useState<string | null>(null)
+    const [videoLoading, setVideoLoading] = useState(true)
+    const [refreshingUrl, setRefreshingUrl] = useState(false)
+    const [currentSrc, setCurrentSrc] = useState(src)
+    const videoRef = useRef<HTMLVideoElement>(null)
+
+    // Detect if URL is a Supabase storage URL that needs refreshing
+    const isSupabaseStorageUrl = (url: string): boolean => {
+        return url.includes('.supabase.co/storage/') || 
+               url.includes('/storage/v1/object/') ||
+               url.includes('/storage/v1/s3/')
+    }
+
+    // Refresh signed URL for Supabase storage
+    const refreshSignedUrl = useCallback(async (originalUrl: string): Promise<string | null> => {
+        try {
+            // Extract bucket and path from the URL
+            const url = new URL(originalUrl)
+            const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(signed|public)\/([^/]+)\/(.+)/)
+            
+            if (!pathMatch) {
+                // Try S3-style URL pattern
+                const s3Match = url.pathname.match(/\/storage\/v1\/s3\/(.+)/)
+                if (s3Match) {
+                    // For S3 URLs, we need to get the bucket from the hostname or use 'media' as default
+                    const bucket = 'media' // Default bucket, adjust if needed
+                    const path = s3Match[1]
+                    const { data, error } = await supabase.storage
+                        .from(bucket)
+                        .createSignedUrl(path, 3600) // 1 hour expiry
+                    
+                    if (error) throw error
+                    return data?.signedUrl || null
+                }
+                return null
+            }
+
+            const bucket = pathMatch[2]
+            const path = decodeURIComponent(pathMatch[3])
+
+            const { data, error } = await supabase.storage
+                .from(bucket)
+                .createSignedUrl(path, 3600) // 1 hour expiry
+
+            if (error) throw error
+            return data?.signedUrl || null
+        } catch (err) {
+            console.error('Failed to refresh signed URL:', err)
+            return null
+        }
+    }, [])
+
+    // Handle video load error - try to refresh the URL if it's a Supabase URL
+    const handleVideoError = useCallback(async () => {
+        if (isSupabaseStorageUrl(currentSrc) && !refreshingUrl) {
+            setRefreshingUrl(true)
+            const freshUrl = await refreshSignedUrl(currentSrc)
+            
+            if (freshUrl) {
+                setCurrentSrc(freshUrl)
+                setVideoLoading(true)
+                setVideoError(null)
+                // The video element will reload with the new src
+            } else {
+                setVideoLoading(false)
+                setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or access has expired.'))
+            }
+            setRefreshingUrl(false)
+        } else {
+            setVideoLoading(false)
+            setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.'))
+        }
+    }, [currentSrc, refreshingUrl, refreshSignedUrl, t])
+
+    return (
+        <>
+            {(videoLoading || refreshingUrl) && !videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10">
+                    <div className="animate-spin h-10 w-10 border-4 border-white/30 border-t-white rounded-full mb-3"></div>
+                    <span className="text-sm">
+                        {refreshingUrl ? t('refreshingVideo', 'Refreshing access...') : t('loadingVideo', 'Loading video...')}
+                    </span>
+                </div>
+            )}
+            {videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center">
+                    <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
+                    <span className="text-sm mb-2">{videoError}</span>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                            setVideoError(null)
+                            setVideoLoading(true)
+                            // Try refreshing the URL again
+                            if (isSupabaseStorageUrl(currentSrc)) {
+                                void handleVideoError()
+                            } else {
+                                // For non-Supabase URLs, just reload
+                                videoRef.current?.load()
+                            }
+                        }}
+                        className="mt-2 border-white/30 text-white hover:bg-white/10"
+                    >
+                        {t('retry', 'Retry')}
+                    </Button>
+                </div>
+            )}
+            <video
+                ref={videoRef}
+                src={currentSrc}
+                className={cn("w-full h-full", (videoError || refreshingUrl) && "opacity-0")}
+                controls
+                onLoadedData={() => setVideoLoading(false)}
+                onError={handleVideoError}
+                onTimeUpdate={(e) => {
+                    const target = e.currentTarget
+                    onTrackProgress(blockId, target.currentTime, target.duration)
+                }}
+                onSeeking={(e) => onRegisterSeek(blockId, e.currentTarget.currentTime)}
+            />
+        </>
     )
 }
 
@@ -1204,24 +1340,34 @@ export default function TrainingPlayer() {
                         <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 relative group">
                             {block.content_url ? (
                                 (() => {
-                                    const isDirectVideo = /\.(mp4|webm|ogg)$/i.test(block.content_url)
+                                    // Check if this is a native video file.
+                                    // Supabase Storage signed URLs have query params after the filename
+                                    // (e.g. .../video.mp4?token=...), so we must check the pathname
+                                    // rather than the full URL string.
+                                    const isDirectVideo = (() => {
+                                        try {
+                                            const pathname = new URL(block.content_url!).pathname
+                                            return /\.(mp4|webm|ogg|mov|m4v)$/i.test(pathname)
+                                        } catch {
+                                            // Fallback: match extension anywhere before a query string
+                                            return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(block.content_url!)
+                                        }
+                                    })()
                                     if (isDirectVideo) {
                                         return (
-                                            <video
-                                                src={block.content_url}
-                                                className="w-full h-full"
-                                                controls
-                                                onTimeUpdate={(e) => {
-                                                    const target = e.currentTarget
-                                                    trackMediaProgress(block.id, target.currentTime, target.duration)
-                                                }}
-                                                onSeeking={(e) => registerMediaSeek(block.id, e.currentTarget.currentTime)}
+                                            <VideoPlayer
+                                                src={block.content_url!}
+                                                blockId={block.id}
+                                                onMarkWatched={handleMarkWatched}
+                                                onTrackProgress={trackMediaProgress}
+                                                onRegisterSeek={registerMediaSeek}
+                                                t={t}
                                             />
                                         )
                                     }
                                     return (
                                         <iframe
-                                            src={block.content_url}
+                                            src={block.content_url!}
                                             className="w-full h-full"
                                             allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
                                             allowFullScreen
@@ -1788,6 +1934,7 @@ export default function TrainingPlayer() {
                             size="icon"
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className="bg-slate-50 hover:bg-slate-100 h-10 w-10 rounded-full"
+                            aria-label={t('accessibility.toggleSidebar', 'Toggle sidebar')}
                         >
                             <Menu className="h-5 w-5 text-hotel-navy" />
                         </Button>
@@ -1861,6 +2008,7 @@ export default function TrainingPlayer() {
                             size="icon"
                             onClick={() => navigate('/learning/my')}
                             className="sm:hidden h-10 w-10 text-hotel-navy"
+                            aria-label={t('accessibility.exitTraining', 'Exit training')}
                         >
                             <X className="h-5 w-5" />
                         </Button>

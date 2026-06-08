@@ -377,9 +377,20 @@ export function useDepartmentContentCounts() {
 
             // Convert to object keyed by stable id for sidebar URL params.
             // Prefer IDs that resolve through departments table to keep matching search filters stable.
-            return Object.values(byName)
+            return Object.values(byName as Record<string, {
+                id: string
+                name: string
+                counts: Record<string, number>
+                total: number
+                departmentIds?: Set<string>
+            }>)
                 .sort((a, b) => a.name.localeCompare(b.name))
-                .reduce((acc, dept) => {
+                .reduce<Record<string, {
+                    id: string
+                    name: string
+                    counts: Record<string, number>
+                    total: number
+                }>>((acc, dept) => {
                     const allIds = Array.from(dept.departmentIds || []) as string[]
                     const knownIds = allIds.filter(id => !!departmentNameById[id])
                     const stableId = (knownIds.length > 0 ? knownIds : allIds).sort()[0] || dept.id

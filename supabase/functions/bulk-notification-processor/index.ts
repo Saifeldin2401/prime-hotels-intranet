@@ -15,8 +15,8 @@ function resolveCorsOrigin(req: Request): string {
   if (!origin) return DEFAULT_ALLOWED_ORIGINS[0];
 
   const cleanOrigin = origin.trim().replace(/\/$/, "");
-  const isAllowed = DEFAULT_ALLOWED_ORIGINS.some(allowed =>
-    allowed.replace(/\/$/, "") === cleanOrigin
+  const isAllowed = DEFAULT_ALLOWED_ORIGINS.some(
+    (allowed) => allowed.replace(/\/$/, "") === cleanOrigin,
   );
 
   return isAllowed ? origin : DEFAULT_ALLOWED_ORIGINS[0];
@@ -25,16 +25,20 @@ function resolveCorsOrigin(req: Request): string {
 function buildCorsHeaders(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": resolveCorsOrigin(req),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-csrf-token, x-requested-with",
     "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
-const ENV_APP_BASE_URL = (Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com").replace(/\/+$/, "");
+const ENV_APP_BASE_URL = (
+  Deno.env.get("APP_BASE_URL") ?? "https://phg-connect.com"
+).replace(/\/+$/, "");
 const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
-const ENV_DEFAULT_FROM_EMAIL = Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
+const ENV_DEFAULT_FROM_EMAIL =
+  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
 const RESEND_MIN_INTERVAL_MS = 550;
 const RESEND_MAX_RETRIES = 3;
 const RESEND_RETRY_BASE_MS = 750;
@@ -140,7 +144,14 @@ interface RuntimeConfig {
   fromEmail: string;
 }
 
-const allowedRoles = ["corporate_admin", "regional_admin", "property_manager", "department_head", "property_hr", "regional_hr"];
+const allowedRoles = [
+  "corporate_admin",
+  "regional_admin",
+  "property_manager",
+  "department_head",
+  "property_hr",
+  "regional_hr",
+];
 const supportedDomains: NotificationDomain[] = [
   "system",
   "user_management",
@@ -198,7 +209,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "system",
     subject_template: "Welcome to PHG Connect - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>Hello {{recipient_name}},</p><p>{{message}}</p><p><a href=\"{{action_url}}\">Open PHG Connect</a></p><p>phg-connect.com</p>",
+      '<h1>{{title}}</h1><p>Hello {{recipient_name}},</p><p>{{message}}</p><p><a href="{{action_url}}">Open PHG Connect</a></p><p>phg-connect.com</p>',
     text_template: "Welcome | {{title}}\n\n{{message}}\n\n{{action_url}}",
     from_name: "PHG Connect",
     from_email: "notifications@phg-connect.com",
@@ -209,8 +220,9 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "escalation_alert",
     subject_template: "Operations Alert - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p>Priority: {{priority}}</p><p><a href=\"{{action_url}}\">Review Incident</a></p>",
-    text_template: "Operations Alert | {{title}}\n\n{{message}}\nPriority: {{priority}}\n\n{{action_url}}",
+      '<h1>{{title}}</h1><p>{{message}}</p><p>Priority: {{priority}}</p><p><a href="{{action_url}}">Review Incident</a></p>',
+    text_template:
+      "Operations Alert | {{title}}\n\n{{message}}\nPriority: {{priority}}\n\n{{action_url}}",
     from_name: "PHG Connect Operations",
     from_email: "notifications@phg-connect.com",
   },
@@ -220,7 +232,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "request_approved",
     subject_template: "HR Update - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p><a href=\"{{action_url}}\">View HR Workflow</a></p>",
+      '<h1>{{title}}</h1><p>{{message}}</p><p><a href="{{action_url}}">View HR Workflow</a></p>',
     text_template: "HR Update | {{title}}\n\n{{message}}\n\n{{action_url}}",
     from_name: "PHG Connect HR",
     from_email: "notifications@phg-connect.com",
@@ -231,8 +243,9 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "approval_required",
     subject_template: "Finance Approval Required - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p>Amount: {{amount}}</p><p><a href=\"{{action_url}}\">Review Approval</a></p>",
-    text_template: "Finance Approval Required | {{title}}\n\n{{message}}\nAmount: {{amount}}\n\n{{action_url}}",
+      '<h1>{{title}}</h1><p>{{message}}</p><p>Amount: {{amount}}</p><p><a href="{{action_url}}">Review Approval</a></p>',
+    text_template:
+      "Finance Approval Required | {{title}}\n\n{{message}}\nAmount: {{amount}}\n\n{{action_url}}",
     from_name: "PHG Connect Finance",
     from_email: "notifications@phg-connect.com",
   },
@@ -242,8 +255,9 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "system",
     subject_template: "Sales Alert - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p>Opportunity Stage: {{stage}}</p><p><a href=\"{{action_url}}\">Open Sales Dashboard</a></p>",
-    text_template: "Sales Alert | {{title}}\n\n{{message}}\nStage: {{stage}}\n\n{{action_url}}",
+      '<h1>{{title}}</h1><p>{{message}}</p><p>Opportunity Stage: {{stage}}</p><p><a href="{{action_url}}">Open Sales Dashboard</a></p>',
+    text_template:
+      "Sales Alert | {{title}}\n\n{{message}}\nStage: {{stage}}\n\n{{action_url}}",
     from_name: "PHG Connect Sales",
     from_email: "notifications@phg-connect.com",
   },
@@ -253,8 +267,9 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "system",
     subject_template: "Management KPI Alert - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p>Reporting Window: {{period}}</p><p><a href=\"{{action_url}}\">Open Executive Dashboard</a></p>",
-    text_template: "Management KPI Alert | {{title}}\n\n{{message}}\nWindow: {{period}}\n\n{{action_url}}",
+      '<h1>{{title}}</h1><p>{{message}}</p><p>Reporting Window: {{period}}</p><p><a href="{{action_url}}">Open Executive Dashboard</a></p>',
+    text_template:
+      "Management KPI Alert | {{title}}\n\n{{message}}\nWindow: {{period}}\n\n{{action_url}}",
     from_name: "PHG Connect Management",
     from_email: "notifications@phg-connect.com",
   },
@@ -264,8 +279,9 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     notification_type: "system",
     subject_template: "PHG Connect Notification - {{title}}",
     html_template:
-      "<h1>{{title}}</h1><p>{{message}}</p><p><a href=\"{{action_url}}\">Open PHG Connect</a></p>",
-    text_template: "PHG Connect Notification | {{title}}\n\n{{message}}\n\n{{action_url}}",
+      '<h1>{{title}}</h1><p>{{message}}</p><p><a href="{{action_url}}">Open PHG Connect</a></p>',
+    text_template:
+      "PHG Connect Notification | {{title}}\n\n{{message}}\n\n{{action_url}}",
     from_name: "PHG Connect",
     from_email: "notifications@phg-connect.com",
   },
@@ -280,7 +296,11 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing Authorization header" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Authorization header" },
+        401,
+        corsHeaders,
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -288,7 +308,11 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
     if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
-      return jsonResponse({ error: "Missing required Supabase environment variables" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing required Supabase environment variables" },
+        500,
+        corsHeaders,
+      );
     }
 
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
@@ -312,21 +336,47 @@ Deno.serve(async (req) => {
       .eq("user_id", user.id);
 
     if (roleError) {
-      return jsonResponse({ error: "Failed to validate user role" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Failed to validate user role" },
+        500,
+        corsHeaders,
+      );
     }
 
-    const hasPermission = (userRoles ?? []).some((roleRow: { role: string }) => allowedRoles.includes(roleRow.role));
+    const hasPermission = (userRoles ?? []).some((roleRow: { role: string }) =>
+      allowedRoles.includes(roleRow.role),
+    );
     if (!hasPermission) {
-      return jsonResponse({ error: "Unauthorized: insufficient permissions for bulk notification processing" }, 403, corsHeaders);
+      return jsonResponse(
+        {
+          error:
+            "Unauthorized: insufficient permissions for bulk notification processing",
+        },
+        403,
+        corsHeaders,
+      );
     }
 
     const runtimeConfig = await loadRuntimeConfig(supabase);
     if (!runtimeConfig.resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing RESEND_API_KEY" },
+        500,
+        corsHeaders,
+      );
     }
 
     const body = (await req.json()) as NotificationRequest;
-    const { action, userIds, notificationType, notificationData, batchId, batchSize = 50, emailSubject, emailHtml } = body;
+    const {
+      action,
+      userIds,
+      notificationType,
+      notificationData,
+      batchId,
+      batchSize = 50,
+      emailSubject,
+      emailHtml,
+    } = body;
 
     if (action === "create_batch") {
       let targetUserIds = userIds || [];
@@ -339,7 +389,14 @@ Deno.serve(async (req) => {
           .eq("is_active", true);
 
         if (profilesError) {
-          return jsonResponse({ error: "Failed to fetch all profiles", details: profilesError.message }, 500, corsHeaders);
+          return jsonResponse(
+            {
+              error: "Failed to fetch all profiles",
+              details: profilesError.message,
+            },
+            500,
+            corsHeaders,
+          );
         }
         targetUserIds = (allProfiles || []).map((p) => p.id);
       } else if (body.propertyId) {
@@ -350,7 +407,14 @@ Deno.serve(async (req) => {
           .eq("property_id", body.propertyId);
 
         if (propertyError) {
-          return jsonResponse({ error: "Failed to fetch property users", details: propertyError.message }, 500, corsHeaders);
+          return jsonResponse(
+            {
+              error: "Failed to fetch property users",
+              details: propertyError.message,
+            },
+            500,
+            corsHeaders,
+          );
         }
         targetUserIds = (propertyUsers || []).map((p) => p.user_id);
       } else if (body.departmentId) {
@@ -361,25 +425,46 @@ Deno.serve(async (req) => {
           .eq("department_id", body.departmentId);
 
         if (deptError) {
-          return jsonResponse({ error: "Failed to fetch department users", details: deptError.message }, 500, corsHeaders);
+          return jsonResponse(
+            {
+              error: "Failed to fetch department users",
+              details: deptError.message,
+            },
+            500,
+            corsHeaders,
+          );
         }
         targetUserIds = (deptUsers || []).map((p) => p.user_id);
       }
 
       if (targetUserIds.length === 0) {
-        return jsonResponse({ error: "userIds required (or target 'all' with active users)" }, 400, corsHeaders);
+        return jsonResponse(
+          { error: "userIds required (or target 'all' with active users)" },
+          400,
+          corsHeaders,
+        );
       }
 
       const dedupedUserIds = [...new Set(targetUserIds)];
-      const normalizedDomain = normalizeDomain(body.businessDomain || notificationData?.businessDomain, notificationType);
-      const normalizedType = normalizeNotificationType(notificationType ?? "system");
-      const normalizedChannels = normalizeChannels(body.channels, body.sendEmail ?? notificationData?.send_email);
+      const normalizedDomain = normalizeDomain(
+        body.businessDomain || notificationData?.businessDomain,
+        notificationType,
+      );
+      const normalizedType = normalizeNotificationType(
+        notificationType ?? "system",
+      );
+      const normalizedChannels = normalizeChannels(
+        body.channels,
+        body.sendEmail ?? notificationData?.send_email,
+      );
       const resolvedTemplateKey = resolveTemplateKey(
         body.templateKey ?? notificationData?.templateKey,
         normalizedDomain,
         normalizedType,
       );
-      const normalizedPriority = normalizePriority(body.priority ?? notificationData?.priority);
+      const normalizedPriority = normalizePriority(
+        body.priority ?? notificationData?.priority,
+      );
       const scheduledFor = body.scheduledFor ?? null;
 
       const { data: batch, error: batchError } = await supabase
@@ -401,7 +486,14 @@ Deno.serve(async (req) => {
         .single();
 
       if (batchError || !batch) {
-        return jsonResponse({ error: "Failed to create notification batch", details: batchError?.message }, 500, corsHeaders);
+        return jsonResponse(
+          {
+            error: "Failed to create notification batch",
+            details: batchError?.message,
+          },
+          500,
+          corsHeaders,
+        );
       }
 
       const chunkSize = 100;
@@ -423,27 +515,50 @@ Deno.serve(async (req) => {
           scheduled_for: scheduledFor,
         }));
 
-        const { error: queueError } = await supabase.from("notification_queue").insert(queueItems);
+        const { error: queueError } = await supabase
+          .from("notification_queue")
+          .insert(queueItems);
         if (queueError) {
-          return jsonResponse({ error: "Failed to enqueue notification batch", details: queueError.message }, 500, corsHeaders);
+          return jsonResponse(
+            {
+              error: "Failed to enqueue notification batch",
+              details: queueError.message,
+            },
+            500,
+            corsHeaders,
+          );
         }
       }
 
-      const processResult = await processNotifications(supabase, batch.id, batchSize, runtimeConfig);
-      return jsonResponse({
-        success: true,
-        batchId: batch.id,
-        totalQueued: dedupedUserIds.length,
-        processed: processResult.processed,
-        remaining: processResult.remaining,
-        failed: processResult.failed,
-        emailSent: processResult.emailSent,
-        emailFailed: processResult.emailFailed,
-      }, 200, corsHeaders);
+      const processResult = await processNotifications(
+        supabase,
+        batch.id,
+        batchSize,
+        runtimeConfig,
+      );
+      return jsonResponse(
+        {
+          success: true,
+          batchId: batch.id,
+          totalQueued: dedupedUserIds.length,
+          processed: processResult.processed,
+          remaining: processResult.remaining,
+          failed: processResult.failed,
+          emailSent: processResult.emailSent,
+          emailFailed: processResult.emailFailed,
+        },
+        200,
+        corsHeaders,
+      );
     }
 
     if (action === "process_batch") {
-      const result = await processNotifications(supabase, batchId, batchSize, runtimeConfig);
+      const result = await processNotifications(
+        supabase,
+        batchId,
+        batchSize,
+        runtimeConfig,
+      );
       return jsonResponse(result, 200, corsHeaders);
     }
 
@@ -459,7 +574,11 @@ Deno.serve(async (req) => {
         .single();
 
       if (batchError || !batch) {
-        return jsonResponse({ error: "Batch not found", details: batchError?.message }, 404, corsHeaders);
+        return jsonResponse(
+          { error: "Batch not found", details: batchError?.message },
+          404,
+          corsHeaders,
+        );
       }
 
       const { count: pendingCount } = await supabase
@@ -468,7 +587,11 @@ Deno.serve(async (req) => {
         .eq("batch_id", batchId)
         .eq("status", "pending");
 
-      const [{ count: emailSentCount }, { count: emailFailedCount }, { count: emailQueuedCount }] = await Promise.all([
+      const [
+        { count: emailSentCount },
+        { count: emailFailedCount },
+        { count: emailQueuedCount },
+      ] = await Promise.all([
         supabase
           .from("notification_delivery_events")
           .select("*", { count: "exact", head: true })
@@ -486,13 +609,17 @@ Deno.serve(async (req) => {
           .eq("status", "queued"),
       ]);
 
-      return jsonResponse({
-        ...(batch as NotificationBatchRow),
-        pending_count: pendingCount ?? 0,
-        email_sent: emailSentCount ?? 0,
-        email_failed: emailFailedCount ?? 0,
-        email_queued: emailQueuedCount ?? 0,
-      }, 200, corsHeaders);
+      return jsonResponse(
+        {
+          ...(batch as NotificationBatchRow),
+          pending_count: pendingCount ?? 0,
+          email_sent: emailSentCount ?? 0,
+          email_failed: emailFailedCount ?? 0,
+          email_queued: emailQueuedCount ?? 0,
+        },
+        200,
+        corsHeaders,
+      );
     }
 
     return jsonResponse({ error: "Invalid action" }, 400, corsHeaders);
@@ -507,7 +634,13 @@ async function processNotifications(
   batchId: string | undefined,
   batchSize: number,
   runtimeConfig: RuntimeConfig,
-): Promise<{ processed: number; remaining: number; failed: number; emailSent: number; emailFailed: number }> {
+): Promise<{
+  processed: number;
+  remaining: number;
+  failed: number;
+  emailSent: number;
+  emailFailed: number;
+}> {
   let processed = 0;
   let failed = 0;
   let emailSent = 0;
@@ -526,12 +659,22 @@ async function processNotifications(
 
   const { data, error } = await query;
   if (error) {
-    return { processed: 0, remaining: 0, failed: 0, emailSent: 0, emailFailed: 0 };
+    return {
+      processed: 0,
+      remaining: 0,
+      failed: 0,
+      emailSent: 0,
+      emailFailed: 0,
+    };
   }
 
   const pendingItems = (data as NotificationQueueRow[] | null) ?? [];
-  const dueItems = pendingItems.filter((item) => !item.scheduled_for || new Date(item.scheduled_for) <= new Date());
-  const prioritized = dueItems.sort((a, b) => priorityRank(b.priority) - priorityRank(a.priority));
+  const dueItems = pendingItems.filter(
+    (item) => !item.scheduled_for || new Date(item.scheduled_for) <= new Date(),
+  );
+  const prioritized = dueItems.sort(
+    (a, b) => priorityRank(b.priority) - priorityRank(a.priority),
+  );
   const selectedItems = prioritized.slice(0, batchSize);
 
   if (selectedItems.length === 0) {
@@ -555,13 +698,20 @@ async function processNotifications(
   for (const item of selectedItems) {
     const attemptNumber = (item.attempts ?? 0) + 1;
     const maxAttempts = item.max_attempts ?? 3;
-    const hasEmailChannel = normalizeChannels(item.channels, item.send_email).includes("email");
+    const hasEmailChannel = normalizeChannels(
+      item.channels,
+      item.send_email,
+    ).includes("email");
     let emailSentForItem = 0;
 
     try {
       await supabase
         .from("notification_queue")
-        .update({ status: "processing", attempts: attemptNumber, error_message: null })
+        .update({
+          status: "processing",
+          attempts: attemptNumber,
+          error_message: null,
+        })
         .eq("id", item.id);
 
       const dataPayload: NotificationData = item.notification_data ?? {};
@@ -585,8 +735,17 @@ async function processNotifications(
             recipientEmail: "unknown",
             status: "failed",
             attempts: attemptNumber,
-            templateKey: item.template_key || resolveTemplateKey(undefined, item.business_domain, item.notification_type),
-            businessDomain: normalizeDomain(item.business_domain, item.notification_type),
+            templateKey:
+              item.template_key ||
+              resolveTemplateKey(
+                undefined,
+                item.business_domain,
+                item.notification_type,
+              ),
+            businessDomain: normalizeDomain(
+              item.business_domain,
+              item.notification_type,
+            ),
             notificationType: normalizeNotificationType(item.notification_type),
             errorMessage: "Recipient email not found",
             requestPayload: dataPayload,
@@ -595,7 +754,11 @@ async function processNotifications(
           throw new Error(`Recipient email not found for user ${item.user_id}`);
         }
 
-        const emailEnabled = await isEmailEnabledForType(supabase, item.user_id, item.notification_type);
+        const emailEnabled = await isEmailEnabledForType(
+          supabase,
+          item.user_id,
+          item.notification_type,
+        );
         if (!emailEnabled) {
           await logDeliveryEvent(supabase, {
             queueId: item.id,
@@ -604,26 +767,46 @@ async function processNotifications(
             recipientEmail,
             status: "suppressed",
             attempts: attemptNumber,
-            templateKey: item.template_key || resolveTemplateKey(undefined, item.business_domain, item.notification_type),
-            businessDomain: normalizeDomain(item.business_domain, item.notification_type),
+            templateKey:
+              item.template_key ||
+              resolveTemplateKey(
+                undefined,
+                item.business_domain,
+                item.notification_type,
+              ),
+            businessDomain: normalizeDomain(
+              item.business_domain,
+              item.notification_type,
+            ),
             notificationType: normalizeNotificationType(item.notification_type),
             errorMessage: "Suppressed due to user preferences",
             requestPayload: dataPayload,
             responsePayload: {},
           });
         } else {
-          const template = await resolveTemplate(supabase, item, dataPayload, templateCache);
+          const template = await resolveTemplate(
+            supabase,
+            item,
+            dataPayload,
+            templateCache,
+          );
           const context = buildTemplateContext(
             item,
             dataPayload,
             profile?.full_name as string | null,
             recipientEmail,
             runtimeConfig.appBaseUrl,
-            profile?.language as string | null || "en"
+            (profile?.language as string | null) || "en",
           );
 
-          const subject = renderTemplate(item.email_subject || template.subject_template, context);
-          const html = renderTemplate(item.email_html_override || template.html_template, context);
+          const subject = renderTemplate(
+            item.email_subject || template.subject_template,
+            context,
+          );
+          const html = renderTemplate(
+            item.email_html_override || template.html_template,
+            context,
+          );
           const text = renderTemplate(template.text_template || "", context);
 
           const resendResult = await sendWithResend({
@@ -635,8 +818,17 @@ async function processNotifications(
             fromEmail: template.from_email || runtimeConfig.fromEmail,
             apiKey: runtimeConfig.resendApiKey,
             tags: [
-              { name: "domain", value: normalizeDomain(item.business_domain, item.notification_type) },
-              { name: "type", value: normalizeNotificationType(item.notification_type) },
+              {
+                name: "domain",
+                value: normalizeDomain(
+                  item.business_domain,
+                  item.notification_type,
+                ),
+              },
+              {
+                name: "type",
+                value: normalizeNotificationType(item.notification_type),
+              },
               { name: "batch_id", value: item.batch_id || "none" },
             ],
           });
@@ -651,13 +843,20 @@ async function processNotifications(
               status: "failed",
               attempts: attemptNumber,
               templateKey: template.template_key,
-              businessDomain: normalizeDomain(item.business_domain, item.notification_type),
-              notificationType: normalizeNotificationType(item.notification_type),
+              businessDomain: normalizeDomain(
+                item.business_domain,
+                item.notification_type,
+              ),
+              notificationType: normalizeNotificationType(
+                item.notification_type,
+              ),
               errorMessage: resendResult.errorMessage,
               requestPayload: { subject, html, text, context },
               responsePayload: resendResult.payload,
             });
-            throw new Error(resendResult.errorMessage || "Failed to send email via Resend");
+            throw new Error(
+              resendResult.errorMessage || "Failed to send email via Resend",
+            );
           }
 
           emailSent++;
@@ -670,7 +869,10 @@ async function processNotifications(
             status: "sent",
             attempts: attemptNumber,
             templateKey: template.template_key,
-            businessDomain: normalizeDomain(item.business_domain, item.notification_type),
+            businessDomain: normalizeDomain(
+              item.business_domain,
+              item.notification_type,
+            ),
             notificationType: normalizeNotificationType(item.notification_type),
             errorMessage: null,
             requestPayload: { subject, context },
@@ -680,16 +882,27 @@ async function processNotifications(
       }
 
       if (shouldInApp) {
-        await createInAppNotification(supabase, item, dataPayload, profile?.language as string | null || "en");
+        await createInAppNotification(
+          supabase,
+          item,
+          dataPayload,
+          (profile?.language as string | null) || "en",
+        );
       }
 
       await supabase
         .from("notification_queue")
-        .update({ status: "sent", processed_at: new Date().toISOString(), error_message: null })
+        .update({
+          status: "sent",
+          processed_at: new Date().toISOString(),
+          error_message: null,
+        })
         .eq("id", item.id);
 
       if (item.batch_id) {
-        await supabase.rpc("increment_batch_processed", { p_batch_id: item.batch_id });
+        await supabase.rpc("increment_batch_processed", {
+          p_batch_id: item.batch_id,
+        });
         if (hasEmailChannel && emailSentForItem > 0) {
           await supabase.rpc("increment_batch_email_counters", {
             p_batch_id: item.batch_id,
@@ -701,7 +914,8 @@ async function processNotifications(
 
       processed++;
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Unknown processing error";
+      const message =
+        error instanceof Error ? error.message : "Unknown processing error";
       const finalFailure = attemptNumber >= maxAttempts;
 
       await supabase
@@ -716,7 +930,9 @@ async function processNotifications(
       if (finalFailure) {
         failed++;
         if (item.batch_id) {
-          await supabase.rpc("increment_batch_failed", { p_batch_id: item.batch_id });
+          await supabase.rpc("increment_batch_failed", {
+            p_batch_id: item.batch_id,
+          });
           if (hasEmailChannel) {
             await supabase.rpc("increment_batch_email_counters", {
               p_batch_id: item.batch_id,
@@ -751,8 +967,15 @@ async function resolveTemplate(
   payload: NotificationData,
   cache: Map<string, NotificationTemplateRow>,
 ): Promise<NotificationTemplateRow> {
-  const businessDomain = normalizeDomain(item.business_domain || payload.businessDomain, item.notification_type);
-  const templateKey = resolveTemplateKey(item.template_key || payload.templateKey, businessDomain, item.notification_type);
+  const businessDomain = normalizeDomain(
+    item.business_domain || payload.businessDomain,
+    item.notification_type,
+  );
+  const templateKey = resolveTemplateKey(
+    item.template_key || payload.templateKey,
+    businessDomain,
+    item.notification_type,
+  );
 
   if (cache.has(templateKey)) {
     return cache.get(templateKey)!;
@@ -772,7 +995,8 @@ async function resolveTemplate(
     return data as NotificationTemplateRow;
   }
 
-  const fallback = defaultTemplates[templateKey] || defaultTemplates.system_generic_alert;
+  const fallback =
+    defaultTemplates[templateKey] || defaultTemplates.system_generic_alert;
   cache.set(templateKey, fallback);
   return fallback;
 }
@@ -786,8 +1010,17 @@ async function createInAppNotification(
   const metadata = {
     ...(dataPayload ?? {}),
     queue_item_id: item.id,
-    business_domain: normalizeDomain(item.business_domain, item.notification_type),
-    template_key: item.template_key || resolveTemplateKey(undefined, item.business_domain, item.notification_type),
+    business_domain: normalizeDomain(
+      item.business_domain,
+      item.notification_type,
+    ),
+    template_key:
+      item.template_key ||
+      resolveTemplateKey(
+        undefined,
+        item.business_domain,
+        item.notification_type,
+      ),
   };
 
   const { data: existing } = await supabase
@@ -803,16 +1036,22 @@ async function createInAppNotification(
 
   const type = normalizeNotificationType(item.notification_type);
   const link = resolveRelativeLink(dataPayload);
-  const entityType = typeof dataPayload.entityType === "string" ? dataPayload.entityType : null;
-  const entityId = typeof dataPayload.entityId === "string" && isUUID(dataPayload.entityId) ? dataPayload.entityId : null;
+  const entityType =
+    typeof dataPayload.entityType === "string" ? dataPayload.entityType : null;
+  const entityId =
+    typeof dataPayload.entityId === "string" && isUUID(dataPayload.entityId)
+      ? dataPayload.entityId
+      : null;
 
-  const title = userLanguage === "ar" && dataPayload.title_ar
-    ? dataPayload.title_ar as string
-    : asText(dataPayload.title, "New Notification");
+  const title =
+    userLanguage === "ar" && dataPayload.title_ar
+      ? (dataPayload.title_ar as string)
+      : asText(dataPayload.title, "New Notification");
 
-  const message = userLanguage === "ar" && dataPayload.message_ar
-    ? dataPayload.message_ar as string
-    : asText(dataPayload.message, "You have a new notification");
+  const message =
+    userLanguage === "ar" && dataPayload.message_ar
+      ? (dataPayload.message_ar as string)
+      : asText(dataPayload.message, "You have a new notification");
 
   await supabase.from("notifications").insert({
     user_id: item.user_id,
@@ -835,15 +1074,19 @@ async function isEmailEnabledForType(
 ): Promise<boolean> {
   const { data } = await supabase
     .from("notification_preferences")
-    .select("email_enabled, approval_email, training_email, announcement_email, maintenance_email")
+    .select(
+      "email_enabled, approval_email, training_email, announcement_email, maintenance_email",
+    )
     .eq("user_id", userId)
     .maybeSingle();
 
   if (!data) return true;
   if (data.email_enabled === false) return false;
 
-  if (type.includes("approval") || type.includes("request")) return data.approval_email !== false;
-  if (type.includes("training") || type.startsWith("sop_")) return data.training_email !== false;
+  if (type.includes("approval") || type.includes("request"))
+    return data.approval_email !== false;
+  if (type.includes("training") || type.startsWith("sop_"))
+    return data.training_email !== false;
   if (type.includes("announcement")) return data.announcement_email !== false;
   if (type.includes("maintenance")) return data.maintenance_email !== false;
   return true;
@@ -858,7 +1101,11 @@ async function sendWithResend(params: {
   fromEmail: string;
   apiKey: string;
   tags: Array<{ name: string; value: string }>;
-}): Promise<{ ok: boolean; payload: Record<string, unknown>; errorMessage?: string }> {
+}): Promise<{
+  ok: boolean;
+  payload: Record<string, unknown>;
+  errorMessage?: string;
+}> {
   if (!params.apiKey) {
     return { ok: false, payload: {}, errorMessage: "Missing RESEND_API_KEY" };
   }
@@ -891,25 +1138,38 @@ async function sendWithResend(params: {
       });
 
       resendLastRequestAt = Date.now();
-      const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+      const payload = (await response.json().catch(() => ({}))) as Record<
+        string,
+        unknown
+      >;
       if (response.ok) {
         return { ok: true, payload };
       }
 
       lastPayload = payload;
-      lastErrorMessage = typeof payload?.message === "string" ? payload.message : "Resend send failed";
+      lastErrorMessage =
+        typeof payload?.message === "string"
+          ? payload.message
+          : "Resend send failed";
 
       const shouldRetry = response.status === 429 || response.status >= 500;
       if (!shouldRetry || attempt === RESEND_MAX_RETRIES) {
         return { ok: false, payload, errorMessage: lastErrorMessage };
       }
 
-      const retryAfterMs = parseRetryAfterMs(response.headers.get("retry-after"));
+      const retryAfterMs = parseRetryAfterMs(
+        response.headers.get("retry-after"),
+      );
       await sleep(retryAfterMs ?? RESEND_RETRY_BASE_MS * attempt);
     } catch (error) {
-      lastErrorMessage = error instanceof Error ? error.message : "Resend request failed";
+      lastErrorMessage =
+        error instanceof Error ? error.message : "Resend request failed";
       if (attempt === RESEND_MAX_RETRIES) {
-        return { ok: false, payload: lastPayload, errorMessage: lastErrorMessage };
+        return {
+          ok: false,
+          payload: lastPayload,
+          errorMessage: lastErrorMessage,
+        };
       }
       await sleep(RESEND_RETRY_BASE_MS * attempt);
     }
@@ -935,7 +1195,10 @@ async function logDeliveryEvent(
     responsePayload: Record<string, unknown>;
   },
 ): Promise<void> {
-  const providerMessageId = typeof payload.responsePayload?.id === "string" ? payload.responsePayload.id : null;
+  const providerMessageId =
+    typeof payload.responsePayload?.id === "string"
+      ? payload.responsePayload.id
+      : null;
 
   await supabase.from("notification_delivery_events").insert({
     queue_id: payload.queueId ?? null,
@@ -945,7 +1208,10 @@ async function logDeliveryEvent(
     provider: "resend",
     provider_message_id: providerMessageId,
     template_key: payload.templateKey,
-    business_domain: normalizeDomain(payload.businessDomain, payload.notificationType),
+    business_domain: normalizeDomain(
+      payload.businessDomain,
+      payload.notificationType,
+    ),
     notification_type: normalizeNotificationType(payload.notificationType),
     status: payload.status,
     attempts: payload.attempts,
@@ -962,7 +1228,10 @@ function normalizeNotificationType(type?: string): string {
   return knownNotificationTypes.has(value) ? value : "system";
 }
 
-function normalizeDomain(domain?: string | null, notificationType?: string): NotificationDomain {
+function normalizeDomain(
+  domain?: string | null,
+  notificationType?: string,
+): NotificationDomain {
   const normalized = (domain ?? "").trim().toLowerCase();
   if (supportedDomains.includes(normalized as NotificationDomain)) {
     return normalized as NotificationDomain;
@@ -971,21 +1240,41 @@ function normalizeDomain(domain?: string | null, notificationType?: string): Not
   const type = (notificationType ?? "").toLowerCase();
   if (type.includes("maintenance")) return "operations";
   if (type.includes("training")) return "learning";
-  if (type.includes("approval") || type.includes("request") || type.includes("promotion") || type.includes("transfer")) return "hr";
+  if (
+    type.includes("approval") ||
+    type.includes("request") ||
+    type.includes("promotion") ||
+    type.includes("transfer")
+  )
+    return "hr";
   if (type.includes("announcement")) return "management";
   return "system";
 }
 
-function normalizeChannels(channels?: NotificationChannel[], sendEmail?: boolean): NotificationChannel[] {
-  const fromRequest = (channels ?? []).filter((value): value is NotificationChannel => value === "in_app" || value === "email");
+function normalizeChannels(
+  channels?: NotificationChannel[],
+  sendEmail?: boolean,
+): NotificationChannel[] {
+  const fromRequest = (channels ?? []).filter(
+    (value): value is NotificationChannel =>
+      value === "in_app" || value === "email",
+  );
   if (fromRequest.length > 0) {
     return [...new Set(fromRequest)];
   }
   return sendEmail ? ["in_app", "email"] : ["in_app"];
 }
 
-function normalizePriority(priority?: string): "low" | "normal" | "high" | "critical" {
-  if (priority === "low" || priority === "normal" || priority === "high" || priority === "critical") return priority;
+function normalizePriority(
+  priority?: string,
+): "low" | "normal" | "high" | "critical" {
+  if (
+    priority === "low" ||
+    priority === "normal" ||
+    priority === "high" ||
+    priority === "critical"
+  )
+    return priority;
   return "normal";
 }
 
@@ -1004,8 +1293,13 @@ function priorityRank(priority?: string): number {
   }
 }
 
-function resolveTemplateKey(inputTemplateKey: string | undefined, domain: string | null | undefined, type?: string): string {
-  if (inputTemplateKey && inputTemplateKey.trim().length > 0) return inputTemplateKey.trim();
+function resolveTemplateKey(
+  inputTemplateKey: string | undefined,
+  domain: string | null | undefined,
+  type?: string,
+): string {
+  if (inputTemplateKey && inputTemplateKey.trim().length > 0)
+    return inputTemplateKey.trim();
 
   const normalizedDomain = normalizeDomain(domain, type);
   switch (normalizedDomain) {
@@ -1029,13 +1323,22 @@ function resolveTemplateKey(inputTemplateKey: string | undefined, domain: string
 }
 
 function resolveRelativeLink(dataPayload: NotificationData): string {
-  if (typeof dataPayload.link === "string" && dataPayload.link.trim().length > 0) {
+  if (
+    typeof dataPayload.link === "string" &&
+    dataPayload.link.trim().length > 0
+  ) {
     return dataPayload.link;
   }
-  if (typeof dataPayload.moduleId === "string" && dataPayload.moduleId.length > 0) {
+  if (
+    typeof dataPayload.moduleId === "string" &&
+    dataPayload.moduleId.length > 0
+  ) {
     return "/learning/training/" + dataPayload.moduleId;
   }
-  if (typeof dataPayload.announcement_id === "string" && dataPayload.announcement_id.length > 0) {
+  if (
+    typeof dataPayload.announcement_id === "string" &&
+    dataPayload.announcement_id.length > 0
+  ) {
     return "/announcements/" + dataPayload.announcement_id;
   }
   return "/notifications";
@@ -1047,19 +1350,36 @@ function buildTemplateContext(
   recipientName: string | null,
   recipientEmail: string,
   appBaseUrl: string,
-  language = "en"
+  language = "en",
 ): Record<string, string> {
   const isAr = language === "ar";
-  const domain = normalizeDomain(item.business_domain || (payload.businessDomain as string), item.notification_type);
+  const domain = normalizeDomain(
+    item.business_domain || (payload.businessDomain as string),
+    item.notification_type,
+  );
   const branding = resolveBranding(domain);
   const link = resolveRelativeLink(payload);
   const actionUrl = resolveAbsoluteUrlWithBase(link, appBaseUrl);
 
   const baseContext: Record<string, string> = {
-    title: isAr && payload.title_ar ? asText(payload.title_ar, "") : asText(payload.title, "PHG Connect Notification"),
-    message: isAr && payload.message_ar ? asText(payload.message_ar, "") : asText(payload.message, isAr ? "لديك تحديث جديد في PHG Connect." : "You have a new update in PHG Connect."),
+    title:
+      isAr && payload.title_ar
+        ? asText(payload.title_ar, "")
+        : asText(payload.title, "PHG Connect Notification"),
+    message:
+      isAr && payload.message_ar
+        ? asText(payload.message_ar, "")
+        : asText(
+            payload.message,
+            isAr
+              ? "لديك تحديث جديد في PHG Connect."
+              : "You have a new update in PHG Connect.",
+          ),
     action_url: actionUrl,
-    action_label: isAr && payload.actionLabel_ar ? asText(payload.actionLabel_ar, "") : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
+    action_label:
+      isAr && payload.actionLabel_ar
+        ? asText(payload.actionLabel_ar, "")
+        : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
     app_url: appBaseUrl,
     logo_url: appBaseUrl + "/prime-logo-white-full.png", // Corrected high-contrast logo
     recipient_name: recipientName || recipientEmail,
@@ -1074,14 +1394,24 @@ function buildTemplateContext(
     footer_text: isAr
       ? "إشعار تلقائي من PHG Connect. تم الإرسال بناءً على إجراء داخل القسم أو مهمة/اعتماد مرتبط بك."
       : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
-    has_data_box: (payload.data_box || payload.data_box_ar || payload.variables?.data_box || payload.variables?.data_box_ar) ? "true" : "false",
-    data_box_content: isAr && (payload.data_box_ar || payload.variables?.data_box_ar)
-      ? asText(payload.data_box_ar || payload.variables?.data_box_ar, "")
-      : asText(payload.data_box || payload.variables?.data_box, "")
+    has_data_box:
+      payload.data_box ||
+      payload.data_box_ar ||
+      payload.variables?.data_box ||
+      payload.variables?.data_box_ar
+        ? "true"
+        : "false",
+    data_box_content:
+      isAr && (payload.data_box_ar || payload.variables?.data_box_ar)
+        ? asText(payload.data_box_ar || payload.variables?.data_box_ar, "")
+        : asText(payload.data_box || payload.variables?.data_box, ""),
   };
 
   // Merge remaining variables
-  const customVariables = payload.variables && typeof payload.variables === 'object' ? payload.variables : payload;
+  const customVariables =
+    payload.variables && typeof payload.variables === "object"
+      ? payload.variables
+      : payload;
   for (const [key, value] of Object.entries(customVariables)) {
     if (key !== "data_box" && key !== "variables") {
       baseContext[key] = asText(value, "");
@@ -1092,86 +1422,115 @@ function buildTemplateContext(
 }
 
 function resolveBranding(domain: string) {
-  const map: Record<string, { color: string; gradient: string; labelEn: string; labelAr: string }> = {
+  const map: Record<
+    string,
+    { color: string; gradient: string; labelEn: string; labelAr: string }
+  > = {
     user_management: {
       color: "#0B1C3E",
       gradient: "linear-gradient(135deg, #0B1C3E 0%, #1E40AF 100%)",
       labelEn: "User Management",
-      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
+      labelAr:
+        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u0633\u062A\u062E\u062F\u0645\u064A\u0646",
     },
     hr: {
       color: "#0D9488",
       gradient: "linear-gradient(135deg, #0D9488 0%, #0F766E 100%)",
       labelEn: "HR & Workplace Excellence",
-      labelAr: "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
+      labelAr:
+        "\u0627\u0644\u0645\u0648\u0627\u0631\u062F \u0627\u0644\u0628\u0634\u0631\u064A\u0629 \u0648\u0627\u0644\u062A\u0645\u064A\u0632 \u0627\u0644\u0648\u0638\u064A\u0641\u064A",
     },
     learning: {
       color: "#D97706",
       gradient: "linear-gradient(135deg, #D97706 0%, #B45309 100%)",
       labelEn: "Learning & Academy",
-      labelAr: "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
+      labelAr:
+        "\u0627\u0644\u062A\u0639\u0644\u0645 \u0648\u0627\u0644\u0623\u0643\u0627\u062F\u064A\u0645\u064A\u0629",
     },
     finance: {
       color: "#2563EB",
       gradient: "linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)",
       labelEn: "Finance & Approvals",
-      labelAr: "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
+      labelAr:
+        "\u0627\u0644\u0645\u0627\u0644\u064A\u0629 \u0648\u0627\u0644\u0627\u0639\u062A\u0645\u0627\u062F\u0627\u062A",
     },
     operations: {
       color: "#DC2626",
       gradient: "linear-gradient(135deg, #DC2626 0%, #991B1B 100%)",
       labelEn: "Operations & Safety",
-      labelAr: "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
+      labelAr:
+        "\u0627\u0644\u0639\u0645\u0644\u064A\u0627\u062A \u0648\u0627\u0644\u0633\u0644\u0627\u0645\u0629",
     },
     management: {
       color: "#1E293B",
       gradient: "linear-gradient(135deg, #334155 0%, #0F172A 100%)",
       labelEn: "Corporate Management",
-      labelAr: "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
+      labelAr:
+        "\u0627\u0644\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0639\u0627\u0645\u0629",
     },
     sales: {
       color: "#4F46E5",
       gradient: "linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)",
       labelEn: "Sales & Pipelines",
-      labelAr: "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
+      labelAr:
+        "\u0627\u0644\u0645\u0628\u064A\u0639\u0627\u062A \u0648\u062E\u0637\u0648\u0637 \u0627\u0644\u0625\u064A\u0631\u0627\u062F\u0627\u062A",
     },
     system: {
       color: "#0F172A",
       gradient: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
       labelEn: "System Administration",
-      labelAr: "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
+      labelAr:
+        "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0646\u0638\u0627\u0645",
     },
   };
 
   return map[domain] || map.system;
 }
 
-function renderTemplate(template: string, context: Record<string, string>): string {
+function renderTemplate(
+  template: string,
+  context: Record<string, string>,
+): string {
   // Simple variable replacement
-  let rendered = template.replace(/\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g, (_match, rawKey: string) => {
-    const key = rawKey.trim();
-    return context[key] ?? "";
-  });
+  let rendered = template.replace(
+    /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
+    (_match, rawKey: string) => {
+      const key = rawKey.trim();
+      return context[key] ?? "";
+    },
+  );
 
   // Handle conditional logic for Data Box
   if (context.has_data_box === "true") {
-    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "$1");
+    rendered = rendered.replace(
+      /\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g,
+      "$1",
+    );
   } else {
-    rendered = rendered.replace(/\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g, "");
+    rendered = rendered.replace(
+      /\{\{#if has_data_box\}\}([\s\S]*?)\{\{\/if\}\}/g,
+      "",
+    );
   }
 
   return rendered;
 }
 
-function resolveAbsoluteUrlWithBase(pathOrUrl: string, appBaseUrl: string): string {
+function resolveAbsoluteUrlWithBase(
+  pathOrUrl: string,
+  appBaseUrl: string,
+): string {
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   const path = pathOrUrl.startsWith("/") ? pathOrUrl : "/" + pathOrUrl;
   return appBaseUrl.replace(/\/+$/, "") + path;
 }
 
-async function loadRuntimeConfig(supabase: ReturnType<typeof createClient>): Promise<RuntimeConfig> {
+async function loadRuntimeConfig(
+  supabase: ReturnType<typeof createClient>,
+): Promise<RuntimeConfig> {
   const { data } = await supabase.rpc("get_email_runtime_config");
-  const config = (data && typeof data === "object") ? (data as Record<string, unknown>) : {};
+  const config =
+    data && typeof data === "object" ? (data as Record<string, unknown>) : {};
   const rpcResend = readSecretString(config.resend_api_key);
   const rpcBaseUrl = readSecretString(config.app_base_url);
   const rpcFromName = readSecretString(config.email_from_name);
@@ -1185,7 +1544,10 @@ async function loadRuntimeConfig(supabase: ReturnType<typeof createClient>): Pro
   };
 }
 
-async function getRemainingCount(supabase: ReturnType<typeof createClient>, batchId?: string): Promise<number> {
+async function getRemainingCount(
+  supabase: ReturnType<typeof createClient>,
+  batchId?: string,
+): Promise<number> {
   let query = supabase
     .from("notification_queue")
     .select("*", { count: "exact", head: true })
@@ -1199,7 +1561,11 @@ async function getRemainingCount(supabase: ReturnType<typeof createClient>, batc
   return count ?? 0;
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: Record<string, string> = {}): Response {
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status = 200,
+  corsHeaders: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -1208,7 +1574,8 @@ function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeader
 
 function asText(value: unknown, fallback: string): string {
   if (typeof value === "string") return value;
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   return fallback;
 }
 
@@ -1219,7 +1586,9 @@ function readSecretString(value: unknown): string | null {
 }
 
 function isUUID(value: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function parseRetryAfterMs(value: string | null): number | null {
@@ -1235,6 +1604,3 @@ function sleep(ms: number): Promise<void> {
   const clamped = Number.isFinite(ms) && ms > 0 ? ms : 0;
   return new Promise((resolve) => setTimeout(resolve, clamped));
 }
-
-
-

@@ -17,14 +17,16 @@ import {
 } from '@/components/ui/table'
 import { cn } from '@/lib/utils'
 import {
-    ColumnDef,
     flexRender,
     getCoreRowModel,
     getPaginationRowModel,
     getSortedRowModel,
+    useReactTable,
+} from '@tanstack/react-table'
+import type {
+    ColumnDef,
     PaginationState,
     SortingState,
-    useReactTable,
 } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useState } from 'react'
@@ -296,7 +298,9 @@ export function MobileTable<TData>({
                 {!cardConfig?.detailFields && row.getVisibleCells().slice(2).map((cell) => (
                   <div key={cell.id} className="mt-2 flex justify-between gap-4">
                     <dt className="text-sm text-muted-foreground">
-                      {flexRender(cell.column.columnDef.header, cell.getContext())}
+                      {typeof cell.column.columnDef.header === 'string'
+                        ? cell.column.columnDef.header
+                        : cell.column.id}
                     </dt>
                     <dd className="text-sm font-medium">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}

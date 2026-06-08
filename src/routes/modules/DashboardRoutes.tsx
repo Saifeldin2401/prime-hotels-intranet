@@ -1,8 +1,10 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { RouteErrorBoundary } from '@/components/common'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
-import { Navigate, Route } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 
 const Dashboard = lazy(() => import('@/pages/dashboard/Dashboard'))
 
@@ -21,36 +23,44 @@ export function DashboardRoutes() {
             </AppLayout>
           </ProtectedRoute>
         }
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       
-      {/* Legacy redirects */}
+      {/* Legacy redirects - preserve query params (e.g., ?redirect=...) */}
       <Route
         path="/home"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Home" />}
       />
       <Route
         path="/staff-dashboard"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       <Route
         path="/dashboard/property-manager"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       <Route
         path="/dashboard/property-hr"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       <Route
         path="/dashboard/department-head"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       <Route
         path="/dashboard/regional-hr"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
       <Route
         path="/dashboard/corporate-admin"
-        element={<Navigate to="/dashboard" replace />}
+        element={<PreserveQueryNavigate to="/dashboard" />}
+        errorElement={<RouteErrorBoundary section="Dashboard" />}
       />
     </>
   )

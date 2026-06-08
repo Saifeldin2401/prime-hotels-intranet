@@ -1,5 +1,7 @@
 import { useAuth } from '@/hooks/useAuth';
-import { getRedirectFromSearch } from '@/lib/authRedirect';
+import { getRedirectFromSearch, consumePostLoginRedirect } from '@/lib/authRedirect';
+import { getAuthFlowRedirectPath, clearAuthFlowState } from '@/lib/authFlowState';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from "react-i18next";
 import { Navigate, useLocation } from 'react-router-dom';
 
@@ -7,12 +9,29 @@ import { Navigate, useLocation } from 'react-router-dom';
  * Unified Dashboard Routing
  *
  * All roles land on /dashboard, which renders role-specific content.
+ * This component handles post-login redirects including deep links.
  */
 export function RoleBasedRedirect() {
     const { t: t_ext } = useTranslation('extracted');
     const { user, loading, rolesLoading } = useAuth()
     const location = useLocation()
-    const redirectPath = getRedirectFromSearch(location.search)
+    
+    // Compute destination synchronously
+    const destination = useMemo(() => {
+        const pendingAuthFlowPath = getAuthFlowRedirectPath()
+        const urlRedirect = getRedirectFromSearch(location.search)
+        const sessionRedirect = consumePostLoginRedirect()
+        
+        // Priority: auth flow > URL param > session storage > default
+        return pendingAuthFlowPath ?? urlRedirect ?? sessionRedirect ?? "/dashboard"
+    }, [location.search])
+
+    // Clear auth flow state after computing destination
+    useEffect(() => {
+        if (user && getAuthFlowRedirectPath()) {
+            clearAuthFlowState()
+        }
+    }, [user])
 
     // Show loading while auth is loading
     if (loading) {
@@ -27,6 +46,7 @@ export function RoleBasedRedirect() {
     }
 
     if (!user) {
+        const redirectPath = getRedirectFromSearch(location.search)
         const loginUrl = redirectPath
             ? `/login?redirect=${encodeURIComponent(redirectPath)}`
             : '/login'
@@ -34,8 +54,6 @@ export function RoleBasedRedirect() {
     }
 
     // Wait for roles to load
-    // We strictly wait for rolesLoading to be false.
-    // AuthContext now has a safety timeout internally, so we don't need a second one here.
     if (rolesLoading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -47,9 +65,6 @@ export function RoleBasedRedirect() {
         )
     }
 
-    // Always redirect to unified dashboard (or preserved deep link)
-    return <Navigate to={redirectPath ?? "/dashboard"} replace />
+    // Navigate to computed destination
+    return <Navigate to={destination} replace />
 }
-
-// Note: getDashboardPathForRole function removed from this file to fix fast refresh warning.
-// It now always returns '/dashboard' and is inlined in ProtectedRoute.tsx where needed.

@@ -338,7 +338,7 @@ async function fetchQuizDefinition(quizId: string) {
     .single()
 
   if (error) throw error
-  return data as QuizDefinitionRow
+  return data as unknown as QuizDefinitionRow
 }
 
 function buildRepairInputs(quiz: QuizDefinitionRow, issues: QuizIntegrityIssue[]) {
@@ -625,7 +625,7 @@ export const quizIntegrityService = {
         const updated = await applyQuestionRepair({
           question_id: repair.question_id,
           question_text: repair.question_text,
-          question_type: repair.question_type,
+          question_type: repair.question_type as SupportedQuestionType,
           options: repair.options,
           correct_answer: repair.correct_answer,
           explanation: repair.explanation,

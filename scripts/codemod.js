@@ -111,7 +111,7 @@ for (const sourceFile of project.getSourceFiles()) {
         if (keyName) {
             extractedStrings[keyName] = text;
             try {
-                node.replaceWithText(`{${hookName}('${keyName}', '${text.replace(/'/g, "\\'")}')}`);
+                node.replaceWithText(`{${hookName}('${keyName}', '${text.replace(/[\\']/g, '\\$&')}')}`);
                 modifiedStringsCount++;
             } catch (e) { }
         }
@@ -122,7 +122,7 @@ for (const sourceFile of project.getSourceFiles()) {
         if (keyName) {
             extractedStrings[keyName] = text;
             try {
-                attr.setInitializer(`{${hookName}('${keyName}', '${text.replace(/'/g, "\\'")}')}`);
+                attr.setInitializer(`{${hookName}('${keyName}', '${text.replace(/[\\']/g, '\\$&')}')}`);
                 modifiedStringsCount++;
             } catch (e) { }
         }

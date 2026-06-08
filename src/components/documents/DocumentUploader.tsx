@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/components/ui/use-toast'
 import { useUploadEmployeeDocument } from '@/hooks/useEmployeeDocuments'
 import { cn } from '@/lib/utils'
+import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
 import { File, Loader2, Upload, X } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -63,6 +64,17 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
 
     const handleUpload = async () => {
         if (!file) return
+
+        // Rate limiting check for file uploads
+        const rateLimitKey = `upload:document:${file.name}`
+        if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.upload.maxRequests, rateLimitConfig.upload.windowMs)) {
+            toast({
+                title: 'Upload rate limited',
+                description: 'Too many upload attempts. Please try again later.',
+                variant: 'destructive'
+            })
+            return
+        }
 
         try {
             await uploadDocument.mutateAsync({
@@ -198,6 +210,7 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                                         e.stopPropagation()
                                         setFile(null)
                                     }}
+                                    aria-label={t('accessibility.remove_file', 'Remove file')}
                                 >
                                     <X className="h-5 w-5" />
                                 </Button>

@@ -419,11 +419,11 @@ async function ensureDepartment(maps: MapsState, config: BulkConfig, propertyId:
     `create department ${deptName}`,
     config,
     () => withTimeout(
-      supabase
+      Promise.resolve(supabase
         .from('departments')
         .insert({ property_id: propertyId, name: deptName, is_active: true })
         .select('id,name,property_id,is_active')
-        .single(),
+        .single()),
       config.requestTimeoutMs,
       `Department create (${deptName})`
     )

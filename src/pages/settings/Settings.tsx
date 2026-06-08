@@ -12,6 +12,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { NotificationSettings } from './NotificationSettings'
+import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
 
 export default function Settings() {
     const { t: t_ext } = useTranslation('extracted');
@@ -22,7 +23,6 @@ export default function Settings() {
         high_contrast,
         large_text,
         keyboard_shortcuts,
-        timezone,
         updateSettings: updateUserSettings,
         loading: settingsLoading
     } = useUserSettings()
@@ -170,28 +170,6 @@ export default function Settings() {
                                         </SelectContent>
                                     </Select>
                                 </div>
-
-                                <div className="h-px bg-border/50 mx-[-24px]" />
-
-                                <div className="flex items-center justify-between">
-                                    <div className="flex flex-col gap-1">
-                                        <Label className="text-gray-900 dark:text-gray-100 font-medium">{t('general.timezone.label')}</Label>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t('general.timezone.description')}</p>
-                                    </div>
-                                    <Select
-                                        value={timezone}
-                                        onValueChange={(val) => updateUserSettings({ timezone: val })}
-                                    >
-                                        <SelectTrigger id="timezone-select" className="w-[220px] bg-white dark:bg-hotel-navy-dark">
-                                            <SelectValue placeholder={t('general.timezone.select_placeholder')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="Asia/Riyadh">{t_ext('riyadh_gmt_3', 'Riyadh (GMT+3)')}</SelectItem>
-                                            <SelectItem value="Asia/Dubai">{t_ext('dubai_gmt_4', 'Dubai (GMT+4)')}</SelectItem>
-                                            <SelectItem value="UTC">{t_ext('utc', 'UTC')}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
                             </CardContent>
                         </Card>
 
@@ -264,7 +242,10 @@ export default function Settings() {
                 </TabsContent>
 
                 <TabsContent value="notifications">
-                    <NotificationSettings />
+                    <div className="grid gap-6">
+                        <NotificationSettings />
+                        <PushNotificationSettings />
+                    </div>
                 </TabsContent>
 
                 <TabsContent value="security">

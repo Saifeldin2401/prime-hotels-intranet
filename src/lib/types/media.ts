@@ -2,6 +2,7 @@ import type { Database } from '@/lib/database.types';
 
 export type MediaType = 'video' | 'image' | 'document' | 'audio';
 export type MediaCategory = 'training' | 'knowledgebase' | 'announcement' | 'general' | 'compliance' | 'onboarding' | 'marketing' | 'other';
+export type VirusScanStatus = 'pending' | 'clean' | 'suspicious' | 'infected' | 'error';
 
 export interface MediaAsset {
   id: string;
@@ -21,13 +22,26 @@ export interface MediaAsset {
   height: number | null;
   thumbnail_url: string | null;
   tags: string[];
-  metadata: Record<string, unknown>;
+  metadata: Record<string, unknown> & {
+    sha256?: string;
+    scan_status?: string;
+    scan_id?: string;
+    hasExif?: boolean;
+  };
   usage_count: number;
   last_used_at: string | null;
   uploaded_by: string | null;
   property_id: string | null;
   is_public: boolean;
   is_archived: boolean;
+  
+  // Security fields
+  virus_scan_status: VirusScanStatus;
+  virus_scan_score: number;
+  sha256_hash: string | null;
+  scanned_at: string | null;
+  content_disposition: 'inline' | 'attachment';
+  
   created_at: string;
   updated_at: string;
 }
@@ -73,6 +87,7 @@ export interface MediaUploadOptions {
   tags?: string[];
   property_id?: string | null;
   is_public?: boolean;
+  maxFileSize?: number; // in MB
 }
 
 export interface MediaFilterOptions {
@@ -86,6 +101,7 @@ export interface MediaFilterOptions {
   dateTo?: string;
   sortBy?: 'created_at' | 'title' | 'usage_count' | 'file_size';
   sortOrder?: 'asc' | 'desc';
+  scanStatus?: VirusScanStatus | 'all';
 }
 
 export interface MediaStats {
@@ -93,8 +109,10 @@ export interface MediaStats {
   totalSizeBytes: number;
   byType: Record<MediaType, number>;
   byCategory: Record<MediaCategory, number>;
+  byScanStatus: Record<VirusScanStatus, number>;
   mostUsed: MediaAsset[];
   recentlyUploaded: MediaAsset[];
+  quarantinedCount: number;
 }
 
 // Picker types for integration
@@ -104,6 +122,7 @@ export interface MediaPickerConfig {
   multiple?: boolean;
   category?: MediaCategory;
   title?: string;
+  requireCleanScan?: boolean; // Only allow files that passed virus scan
 }
 
 export interface MediaPickerResult {
@@ -118,4 +137,59 @@ export interface MediaAssetFormData {
   category: MediaCategory;
   tags: string[];
   is_public: boolean;
+}
+
+// Upload progress
+export interface UploadProgress {
+  loaded: number;
+  total: number;
+  percentage: number;
+}
+
+// Upload result with security info
+export interface SecureUploadResult {
+  asset: MediaAsset | null;
+  error: string | null;
+  scanResult?: {
+    safe: boolean;
+    status: VirusScanStatus;
+    riskScore?: number;
+    reasons?: string[];
+  };
+  progress?: UploadProgress;
+}
+
+// Access log entry
+export interface MediaAccessLog {
+  id: string;
+  media_asset_id: string;
+  accessed_by: string | null;
+  accessed_at: string;
+  access_type: 'view' | 'download' | 'share';
+  ip_address?: string;
+  user_agent?: string;
+  request_id?: string;
+  metadata?: Record<string, unknown>;
+}
+
+// Security validation result
+export interface FileValidationResult {
+  isValid: boolean;
+  detectedMimeType: string | null;
+  errors: string[];
+  warnings: string[];
+  secureInfo?: {
+    secureFilename: string;
+    extension: string;
+    storagePath: string;
+    originalFilename: string;
+    mimeType: string;
+    sizeBytes: number;
+    metadata: {
+      hasExif?: boolean;
+      width?: number;
+      height?: number;
+      duration?: number;
+    };
+  };
 }

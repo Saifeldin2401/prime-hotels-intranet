@@ -1,5 +1,6 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+import { isReviewOlderThanDays } from "../_shared/review-dates.ts";
 
 const MANUAL_ALLOWED_ROLES = new Set([
   "corporate_admin",
@@ -9,8 +10,10 @@ const MANUAL_ALLOWED_ROLES = new Set([
   "property_hr",
 ]);
 
-const GOOGLE_PLACE_EXCLUDE_RE = /mall|shopping|restaurant|cafe|museum|park|beach|gym|hospital|clinic/i;
-const GOOGLE_PLACE_LODGING_RE = /hotel|resort|lodging|inn|accommodation|suites|hostel|motel|serviced/i;
+const GOOGLE_PLACE_EXCLUDE_RE =
+  /mall|shopping|restaurant|cafe|museum|park|beach|gym|hospital|clinic/i;
+const GOOGLE_PLACE_LODGING_RE =
+  /hotel|resort|lodging|inn|accommodation|suites|hostel|motel|serviced/i;
 const INVALID_REVIEW_TEXT_RE = [
   /^scraperapi fetch - html length:/i,
   /^direct fetch - html length:/i,
@@ -20,18 +23,51 @@ const INVALID_REVIEW_TEXT_RE = [
 const SUPPORTED_PLATFORMS = new Set(["google", "booking", "agoda"]);
 const SCRAPER_RENDER_PLATFORMS = new Set(["agoda"]);
 const MAX_SOURCES_PER_RUN = 8;
+const DEFAULT_MAX_REVIEW_AGE_DAYS = 30;
+const FIRECRAWL_URL = "https://api.firecrawl.dev/v2/scrape";
+
+const FIRECRAWL_REVIEW_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    reviews: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: true,
+        properties: {
+          source_review_id: { type: ["string", "null"] },
+          reviewer_name: { type: ["string", "null"] },
+          review_title: { type: ["string", "null"] },
+          review_text: { type: ["string", "null"] },
+          rating: { type: ["number", "string", "null"] },
+          rating_scale: { type: ["number", "string", "null"] },
+          published_at: { type: ["string", "null"] },
+          review_language: { type: ["string", "null"] },
+          review_url: { type: ["string", "null"] },
+        },
+        required: ["review_text"],
+      },
+    },
+  },
+  required: ["reviews"],
+} as const;
 
 function buildCorsHeaders(req: Request): Record<string, string> {
   const origin = req.headers.get("origin") || "*";
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type",
     "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
-function timingSafeBearerMatch(authHeader: string | null, secret: string): boolean {
+function timingSafeBearerMatch(
+  authHeader: string | null,
+  secret: string,
+): boolean {
   if (!authHeader || !secret) return false;
   const expected = `Bearer ${secret}`;
   if (authHeader.length !== expected.length) return false;
@@ -42,9 +78,28 @@ function timingSafeBearerMatch(authHeader: string | null, secret: string): boole
   return out === 0;
 }
 
+function isServiceRoleJwt(authHeader: string | null): boolean {
+  if (!authHeader) return false;
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  try {
+    const parts = token.split(".");
+    if (parts.length !== 3) return false;
+    // Decode payload (base64url)
+    const payload = JSON.parse(
+      atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")),
+    );
+    return payload.role === "service_role";
+  } catch {
+    return false;
+  }
+}
+
 function decodeHtmlEntities(value: string): string {
   try {
-    const doc = new DOMParser().parseFromString(`<body>${value}</body>`, "text/html");
+    const doc = new DOMParser().parseFromString(
+      `<body>${value}</body>`,
+      "text/html",
+    );
     const text = doc?.body?.textContent;
     if (typeof text === "string" && text.length > 0) return text;
   } catch {
@@ -55,7 +110,7 @@ function decodeHtmlEntities(value: string): string {
     amp: "&",
     lt: "<",
     gt: ">",
-    quot: "\"",
+    quot: '"',
     apos: "'",
     nbsp: " ",
     middot: "-",
@@ -64,8 +119,8 @@ function decodeHtmlEntities(value: string): string {
     hellip: "...",
     rsquo: "'",
     lsquo: "'",
-    rdquo: "\"",
-    ldquo: "\"",
+    rdquo: '"',
+    ldquo: '"',
   };
 
   return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (_, entity) => {
@@ -83,9 +138,9 @@ function fixMojibake(value: string): string {
     .replace(/\u00c2/g, "")
     .replace(/\u00e2\u20ac\u2122/g, "'")
     .replace(/\u00e2\u20ac\u02dc/g, "'")
-    .replace(/\u00e2\u20ac\u0153/g, "\"")
-    .replace(/\u00e2\u20ac\u009d/g, "\"")
-    .replace(/\u00e2\u20ac"/g, "\"")
+    .replace(/\u00e2\u20ac\u0153/g, '"')
+    .replace(/\u00e2\u20ac\u009d/g, '"')
+    .replace(/\u00e2\u20ac"/g, '"')
     .replace(/\u00e2\u20ac\u201c/g, "-")
     .replace(/\u00e2\u20ac\u201d/g, "-")
     .replace(/\u00e2\u20ac\u00a6/g, "...")
@@ -117,11 +172,44 @@ function toNullableString(value: unknown): string | null {
   return v ? v : null;
 }
 
-function normalizeRating(value: unknown): { r5: number | null; r10: number | null } {
+function buildReviewFingerprint(review: {
+  review_url?: string | null;
+  reviewer_name?: string | null;
+  review_title?: string | null;
+  review_text?: string | null;
+  review_text_normalized?: string | null;
+  review_language?: string | null;
+  rating_normalized_10?: number | null;
+  published_at?: string | null;
+}): string {
+  return JSON.stringify({
+    review_url: toNullableString(review.review_url),
+    reviewer_name: toNullableString(review.reviewer_name),
+    review_title: toNullableString(review.review_title),
+    review_text: cleanText(review.review_text),
+    review_text_normalized: cleanText(review.review_text_normalized),
+    review_language: toNullableString(review.review_language),
+    rating_normalized_10: review.rating_normalized_10 ?? null,
+    published_at: review.published_at ?? null,
+  });
+}
+
+function normalizeRating(
+  value: unknown,
+  scale?: unknown,
+): { r5: number | null; r10: number | null } {
   const n = Number(value);
   if (!Number.isFinite(n)) return { r5: null, r10: null };
-  if (n <= 5) return { r5: Number(n.toFixed(2)), r10: Number((n * 2).toFixed(2)) };
-  if (n <= 10) return { r5: Number((n / 2).toFixed(2)), r10: Number(n.toFixed(2)) };
+  const explicitScale = Number(scale);
+  if (Number.isFinite(explicitScale) && explicitScale > 0) {
+    const normalized10 = Number(((n / explicitScale) * 10).toFixed(2));
+    const normalized5 = Number((normalized10 / 2).toFixed(2));
+    return { r5: normalized5, r10: normalized10 };
+  }
+  if (n <= 5)
+    return { r5: Number(n.toFixed(2)), r10: Number((n * 2).toFixed(2)) };
+  if (n <= 10)
+    return { r5: Number((n / 2).toFixed(2)), r10: Number(n.toFixed(2)) };
   return { r5: null, r10: null };
 }
 
@@ -129,15 +217,20 @@ function parseDate(value: unknown): string | null {
   if (!value) return null;
   let s = cleanText(value);
   if (!s) return null;
-  
+
   // Remove common prefixes
-  s = s.replace(/^reviewed:\s*/i, "").replace(/^reviewed\s+/i, "").trim();
-  
+  s = s
+    .replace(/^reviewed:\s*/i, "")
+    .replace(/^reviewed\s+/i, "")
+    .trim();
+
   const now = new Date();
   const lowerS = s.toLowerCase();
-  
+
   // Handle relative dates (e.g., "2 days ago", "last week", "yesterday")
-  const relativeMatch = lowerS.match(/(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+ago/);
+  const relativeMatch = lowerS.match(
+    /(\d+)\s+(day|days|week|weeks|month|months|year|years)\s+ago/,
+  );
   if (relativeMatch) {
     const amount = parseInt(relativeMatch[1], 10);
     const unit = relativeMatch[2];
@@ -145,46 +238,70 @@ function parseDate(value: unknown): string | null {
     if (unit.startsWith("day")) date.setDate(date.getDate() - amount);
     else if (unit.startsWith("week")) date.setDate(date.getDate() - amount * 7);
     else if (unit.startsWith("month")) date.setMonth(date.getMonth() - amount);
-    else if (unit.startsWith("year")) date.setFullYear(date.getFullYear() - amount);
+    else if (unit.startsWith("year"))
+      date.setFullYear(date.getFullYear() - amount);
     return date.toISOString();
   }
-  
+
   if (lowerS.includes("yesterday")) {
     const date = new Date(now);
     date.setDate(date.getDate() - 1);
     return date.toISOString();
   }
-  
+
   // Handle "last week", "this week", etc.
   if (lowerS.includes("last week")) {
     const date = new Date(now);
     date.setDate(date.getDate() - 7);
     return date.toISOString();
   }
-  
+
   // Handle formats like "Mar 2026", "March 2026"
   const monthYearMatch = s.match(/^([A-Za-z]+)\s+(\d{4})$/);
   if (monthYearMatch) {
-    const monthNames = ["january", "february", "march", "april", "may", "june",
-                       "july", "august", "september", "october", "november", "december"];
-    const monthIdx = monthNames.findIndex(m => monthYearMatch[1].toLowerCase().startsWith(m));
+    const monthNames = [
+      "january",
+      "february",
+      "march",
+      "april",
+      "may",
+      "june",
+      "july",
+      "august",
+      "september",
+      "october",
+      "november",
+      "december",
+    ];
+    const monthIdx = monthNames.findIndex((m) =>
+      monthYearMatch[1].toLowerCase().startsWith(m),
+    );
     if (monthIdx !== -1) {
       const date = new Date(parseInt(monthYearMatch[2], 10), monthIdx, 15);
       if (Number.isFinite(date.getTime())) return date.toISOString();
     }
   }
-  
+
   // Handle formats like "29 Mar 2026", "March 29, 2026", "2026-03-29"
   // Try multiple date parsing approaches
   const dateFormats = [
     // "29 March 2026" or "29 Mar 2026"
-    { regex: /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/, parser: (m: string[]) => new Date(`${m[2]} ${m[1]}, ${m[3]}`) },
+    {
+      regex: /(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/,
+      parser: (m: string[]) => new Date(`${m[2]} ${m[1]}, ${m[3]}`),
+    },
     // "March 29, 2026"
-    { regex: /([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/, parser: (m: string[]) => new Date(`${m[1]} ${m[2]}, ${m[3]}`) },
+    {
+      regex: /([A-Za-z]+)\s+(\d{1,2}),?\s+(\d{4})/,
+      parser: (m: string[]) => new Date(`${m[1]} ${m[2]}, ${m[3]}`),
+    },
     // ISO format "2026-03-29"
-    { regex: /(\d{4})-(\d{2})-(\d{2})/, parser: (m: string[]) => new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`) },
+    {
+      regex: /(\d{4})-(\d{2})-(\d{2})/,
+      parser: (m: string[]) => new Date(`${m[1]}-${m[2]}-${m[3]}T00:00:00Z`),
+    },
   ];
-  
+
   for (const fmt of dateFormats) {
     const match = s.match(fmt.regex);
     if (match) {
@@ -196,7 +313,7 @@ function parseDate(value: unknown): string | null {
       }
     }
   }
-  
+
   // Fallback to native Date parsing
   const d = new Date(s);
   if (Number.isFinite(d.getTime())) {
@@ -208,7 +325,7 @@ function parseDate(value: unknown): string | null {
     }
     return d.toISOString();
   }
-  
+
   return null;
 }
 
@@ -218,7 +335,9 @@ function matchOne(input: string, pattern: RegExp): string | null {
 }
 
 function collectMatches(input: string, pattern: RegExp): string[] {
-  return Array.from(input.matchAll(pattern), (match) => match[1]).filter(Boolean);
+  return Array.from(input.matchAll(pattern), (match) => match[1]).filter(
+    Boolean,
+  );
 }
 
 function blockSplit(input: string, pattern: RegExp): string[] {
@@ -227,21 +346,27 @@ function blockSplit(input: string, pattern: RegExp): string[] {
 
 function isValidReviewCandidate(text: string): boolean {
   if (!text) return false;
-  if (INVALID_REVIEW_TEXT_RE.some((pattern) => pattern.test(text))) return false;
+  if (INVALID_REVIEW_TEXT_RE.some((pattern) => pattern.test(text)))
+    return false;
   return text.length >= 5;
 }
 
 async function sha256(input: string): Promise<string> {
   const bytes = new TextEncoder().encode(input);
   const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function getVaultSecret(client: ReturnType<typeof createClient>, name: string): Promise<string | null> {
+async function getVaultSecret(
+  client: ReturnType<typeof createClient>,
+  name: string,
+): Promise<string | null> {
   const envValue = Deno.env.get(name);
   if (envValue?.trim()) return envValue.trim();
   const { data } = await client
@@ -250,7 +375,9 @@ async function getVaultSecret(client: ReturnType<typeof createClient>, name: str
     .filter("name", "eq", name)
     .limit(1)
     .maybeSingle();
-  return typeof data?.decrypted_secret === "string" ? data.decrypted_secret : null;
+  return typeof data?.decrypted_secret === "string"
+    ? data.decrypted_secret
+    : null;
 }
 
 async function getManualContext(
@@ -275,7 +402,9 @@ async function getManualContext(
 
 function extractFidFromGoogleUrl(url: string): string | null {
   try {
-    const match = decodeURIComponent(url).match(/!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i);
+    const match = decodeURIComponent(url).match(
+      /!1s(0x[0-9a-f]+:0x[0-9a-f]+)/i,
+    );
     return match ? match[1] : null;
   } catch {
     return null;
@@ -293,11 +422,18 @@ function extractGoogleSearchQuery(url: string): string | null {
 
 function placeNameScore(title: string, query: string): number {
   const titleLower = title.toLowerCase();
-  const words = query.toLowerCase().split(/\s+/).filter((word) =>
-    word.length > 2 && !["the", "and", "for", "by", "hotel", "hotels"].includes(word)
-  );
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(
+      (word) =>
+        word.length > 2 &&
+        !["the", "and", "for", "by", "hotel", "hotels"].includes(word),
+    );
   if (words.length === 0) return 0;
-  return words.filter((word) => titleLower.includes(word)).length / words.length;
+  return (
+    words.filter((word) => titleLower.includes(word)).length / words.length
+  );
 }
 
 function extractReviewerName(value: unknown): string | null {
@@ -309,8 +445,13 @@ function extractReviewerName(value: unknown): string | null {
   return null;
 }
 
-async function findGoogleCidBySearch(query: string, serperKey: string): Promise<string | null> {
-  const hotelQuery = /hotel|resort|inn|suites/i.test(query) ? query : `${query} hotel`;
+async function findGoogleCidBySearch(
+  query: string,
+  serperKey: string,
+): Promise<string | null> {
+  const hotelQuery = /hotel|resort|inn|suites/i.test(query)
+    ? query
+    : `${query} hotel`;
   const placesRes = await fetch("https://google.serper.dev/places", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
@@ -318,12 +459,13 @@ async function findGoogleCidBySearch(query: string, serperKey: string): Promise<
   });
 
   if (placesRes.ok) {
-    const data = await placesRes.json() as Record<string, unknown>;
-    const places = (data.places as Array<Record<string, unknown>> ?? []);
+    const data = (await placesRes.json()) as Record<string, unknown>;
+    const places = (data.places as Array<Record<string, unknown>>) ?? [];
 
     for (const place of places) {
       const category = String(place.category ?? place.type ?? "").toLowerCase();
-      if (GOOGLE_PLACE_LODGING_RE.test(category) && place.cid) return `cid:${place.cid}`;
+      if (GOOGLE_PLACE_LODGING_RE.test(category) && place.cid)
+        return `cid:${place.cid}`;
     }
 
     let bestCid: string | null = null;
@@ -331,7 +473,10 @@ async function findGoogleCidBySearch(query: string, serperKey: string): Promise<
     for (const place of places) {
       const category = String(place.category ?? place.type ?? "").toLowerCase();
       if (GOOGLE_PLACE_EXCLUDE_RE.test(category)) continue;
-      const score = placeNameScore(String(place.title ?? place.name ?? ""), query);
+      const score = placeNameScore(
+        String(place.title ?? place.name ?? ""),
+        query,
+      );
       if (score > bestScore && place.cid) {
         bestScore = score;
         bestCid = String(place.cid);
@@ -343,21 +488,39 @@ async function findGoogleCidBySearch(query: string, serperKey: string): Promise<
   const searchRes = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
-    body: JSON.stringify({ q: `${hotelQuery} google maps reviews`, gl: "sa", hl: "en", num: 5 }),
+    body: JSON.stringify({
+      q: `${hotelQuery} google maps reviews`,
+      gl: "sa",
+      hl: "en",
+      num: 5,
+    }),
   });
   if (!searchRes.ok) return null;
-  const data = await searchRes.json() as Record<string, unknown>;
-  for (const result of (data.organic as Array<Record<string, unknown>> ?? [])) {
+  const data = (await searchRes.json()) as Record<string, unknown>;
+  for (const result of (data.organic as Array<Record<string, unknown>>) ?? []) {
     const link = String(result.link ?? "");
-    if (link.includes("google.com/maps") || link.includes("maps.google.com")) {
-      const fid = extractFidFromGoogleUrl(link);
-      if (fid) return fid;
+    // Secure URL host checking to prevent incomplete URL substring sanitization
+    try {
+      const url = new URL(link);
+      const isGoogleMaps = (
+        (url.hostname === "google.com" || url.hostname.endsWith(".google.com")) &&
+        url.pathname.startsWith("/maps")
+      ) || url.hostname === "maps.google.com";
+      if (isGoogleMaps) {
+        const fid = extractFidFromGoogleUrl(link);
+        if (fid) return fid;
+      }
+    } catch {
+      // Invalid URL, skip
     }
   }
   return null;
 }
 
-async function callSerperReviews(body: Record<string, unknown>, serperKey: string): Promise<Array<Record<string, unknown>>> {
+async function callSerperReviews(
+  body: Record<string, unknown>,
+  serperKey: string,
+): Promise<Array<Record<string, unknown>>> {
   const res = await fetch("https://google.serper.dev/reviews", {
     method: "POST",
     headers: { "X-API-KEY": serperKey, "Content-Type": "application/json" },
@@ -367,24 +530,37 @@ async function callSerperReviews(body: Record<string, unknown>, serperKey: strin
     const err = await res.text().catch(() => "");
     throw new Error(`Serper Reviews HTTP ${res.status}: ${err.slice(0, 300)}`);
   }
-  const data = await res.json() as Record<string, unknown>;
-  return Array.isArray(data.reviews) ? data.reviews as Array<Record<string, unknown>> : [];
+  const data = (await res.json()) as Record<string, unknown>;
+  return Array.isArray(data.reviews)
+    ? (data.reviews as Array<Record<string, unknown>>)
+    : [];
 }
 
-function mapSerperReviews(reviews: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+function mapSerperReviews(
+  reviews: Array<Record<string, unknown>>,
+): Array<Record<string, unknown>> {
   return reviews
     .map((review) => ({
-      review_text: sanitizeReviewText(review.snippet ?? review.text ?? review.body ?? ""),
-      reviewer_name: extractReviewerName(review.name) ?? extractReviewerName(review.user),
+      review_text: sanitizeReviewText(
+        review.snippet ?? review.text ?? review.body ?? "",
+      ),
+      reviewer_name:
+        extractReviewerName(review.name) ?? extractReviewerName(review.user),
       rating: review.rating ?? null,
-      published_at: parseDate(review.isoDate) ?? parseDate(review.iso_date) ?? parseDate(review.date),
+      published_at:
+        parseDate(review.isoDate) ??
+        parseDate(review.iso_date) ??
+        parseDate(review.date),
       review_title: review.title ?? null,
-      source_review_id: review.reviewId ?? review.review_id ?? review.id ?? null,
+      source_review_id:
+        review.reviewId ?? review.review_id ?? review.id ?? null,
       review_url: review.link ?? null,
       review_language: review.language ?? "en",
       metadata: review,
     }))
-    .filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
+    .filter((review) =>
+      isValidReviewCandidate(String(review.review_text ?? "")),
+    );
 }
 
 async function fetchSerperReviews(
@@ -393,7 +569,10 @@ async function fetchSerperReviews(
   serviceClient: ReturnType<typeof createClient>,
 ): Promise<Array<Record<string, unknown>>> {
   const sourceUrl = String(source.source_url ?? "");
-  const schema = (source.firecrawl_extract_schema ?? {}) as Record<string, unknown>;
+  const schema = (source.firecrawl_extract_schema ?? {}) as Record<
+    string,
+    unknown
+  >;
   const sourceName = String(source.source_name ?? "");
 
   if (schema.cid || schema.fid || schema.place_id) {
@@ -407,7 +586,10 @@ async function fetchSerperReviews(
 
   const urlFid = extractFidFromGoogleUrl(sourceUrl);
   if (urlFid) {
-    const reviews = await callSerperReviews({ fid: urlFid, gl: "sa", hl: "en" }, serperKey);
+    const reviews = await callSerperReviews(
+      { fid: urlFid, gl: "sa", hl: "en" },
+      serperKey,
+    );
     if (reviews.length > 0) return mapSerperReviews(reviews);
   }
 
@@ -419,7 +601,8 @@ async function fetchSerperReviews(
   if (!searchQuery) throw new Error("Cannot resolve Google Place identifier");
 
   const resolvedId = await findGoogleCidBySearch(searchQuery, serperKey);
-  if (!resolvedId) throw new Error(`Could not find Google Place via search: ${searchQuery}`);
+  if (!resolvedId)
+    throw new Error(`Could not find Google Place via search: ${searchQuery}`);
 
   const body: Record<string, unknown> = { gl: "sa", hl: "en" };
   if (resolvedId.startsWith("cid:")) {
@@ -438,13 +621,16 @@ async function fetchSerperReviews(
   }
 
   const reviews = await callSerperReviews(body, serperKey);
-  if (reviews.length === 0) throw new Error(`Serper returned 0 reviews for: ${searchQuery}`);
+  if (reviews.length === 0)
+    throw new Error(`Serper returned 0 reviews for: ${searchQuery}`);
   return mapSerperReviews(reviews);
 }
 
 function reviewsUrl(url: string, platform: string, sinceDate?: string): string {
   if (platform === "booking") {
-    const match = url.match(/booking\.com\/hotel\/([^/]+)\/([^./]+)(?:\.[a-z-]+)?\.html/i);
+    const match = url.match(
+      /booking\.com\/hotel\/([^/]+)\/([^./]+)(?:\.[a-z-]+)?\.html/i,
+    );
     if (match) {
       const country = match[1];
       const slug = match[2];
@@ -460,12 +646,274 @@ function reviewsUrl(url: string, platform: string, sinceDate?: string): string {
   return url;
 }
 
-async function fetchWithScraperApi(url: string, apiKey: string, platform: string, sinceDate?: string): Promise<string> {
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function getSourceFirecrawlOptions(source: Record<string, unknown>) {
+  const firecrawlOptions = isObject(source.firecrawl_options)
+    ? source.firecrawl_options
+    : {};
+  const scrapeOptions = isObject(firecrawlOptions.scrapeOptions)
+    ? firecrawlOptions.scrapeOptions
+    : {};
+  const maxReviewAgeDays = Number(firecrawlOptions.maxReviewAgeDays);
+
+  return {
+    firecrawlOptions,
+    scrapeOptions,
+    prompt:
+      typeof firecrawlOptions.prompt === "string" &&
+      firecrawlOptions.prompt.trim()
+        ? firecrawlOptions.prompt.trim()
+        : null,
+    maxReviewAgeDays:
+      Number.isFinite(maxReviewAgeDays) && maxReviewAgeDays > 0
+        ? Math.floor(maxReviewAgeDays)
+        : DEFAULT_MAX_REVIEW_AGE_DAYS,
+  };
+}
+
+function buildDefaultFirecrawlPrompt(platform: string): string {
+  const platformName = platform[0]?.toUpperCase() + platform.slice(1);
+  return [
+    `Extract real ${platformName} guest reviews visible on this page.`,
+    "Return JSON with a top-level reviews array only.",
+    "For each review include: source_review_id, reviewer_name, review_title, review_text, rating, rating_scale, published_at, review_language, review_url.",
+    "Exclude aggregate scores, review counts, summaries, and non-review page text.",
+  ].join(" ");
+}
+
+function getDefaultFirecrawlLocation(scrapeOptions: Record<string, unknown>) {
+  if (isObject(scrapeOptions.location)) {
+    return scrapeOptions.location;
+  }
+
+  return {
+    country: "SA",
+    languages: ["en-US", "ar-SA"],
+  };
+}
+
+function buildFirecrawlBaseRequest(
+  source: Record<string, unknown>,
+  platform: string,
+  sinceDate?: string,
+) {
+  const { scrapeOptions } = getSourceFirecrawlOptions(source);
+  const targetUrl = reviewsUrl(
+    String(source.source_url ?? ""),
+    platform,
+    sinceDate,
+  );
+
+  const defaultProxy = platform === "agoda" ? "enhanced" : "auto";
+  const defaultWaitFor = platform === "agoda" ? 5000 : 2500;
+  const defaultActions =
+    platform === "agoda" ? [{ type: "wait", milliseconds: 5000 }] : undefined;
+
+  const {
+    formats: _formats,
+    maxAge: _maxAge,
+    storeInCache: _storeInCache,
+    onlyMainContent: _onlyMainContent,
+    waitFor: _waitFor,
+    proxy: _proxy,
+    timeout: _timeout,
+    location: _location,
+    actions: _actions,
+    ...rest
+  } = scrapeOptions;
+
+  return {
+    targetUrl,
+    request: {
+      url: targetUrl,
+      timeout: Number.isFinite(Number(_timeout)) ? Number(_timeout) : 45000,
+      waitFor: Number.isFinite(Number(_waitFor))
+        ? Number(_waitFor)
+        : defaultWaitFor,
+      proxy: typeof _proxy === "string" && _proxy ? _proxy : defaultProxy,
+      maxAge: 0,
+      storeInCache: false,
+      blockAds: true,
+      removeBase64Images: true,
+      location: getDefaultFirecrawlLocation(scrapeOptions),
+      actions:
+        Array.isArray(_actions) && _actions.length > 0
+          ? _actions
+          : defaultActions,
+      ...rest,
+    } as Record<string, unknown>,
+  };
+}
+
+async function callFirecrawlScrape(
+  requestBody: Record<string, unknown>,
+  apiKey: string,
+): Promise<Record<string, unknown>> {
+  const res = await fetch(FIRECRAWL_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(requestBody),
+  });
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Firecrawl HTTP ${res.status}: ${body.slice(0, 300)}`);
+  }
+
+  const payload = await res.json().catch(() => null);
+  if (
+    !isObject(payload) ||
+    payload.success !== true ||
+    !isObject(payload.data)
+  ) {
+    throw new Error("Firecrawl returned an invalid scrape payload");
+  }
+
+  return payload.data;
+}
+
+function extractFirecrawlHtml(data: Record<string, unknown>): string {
+  if (typeof data.rawHtml === "string" && data.rawHtml.trim())
+    return data.rawHtml;
+  if (typeof data.html === "string" && data.html.trim()) return data.html;
+
+  if (isObject(data.actions) && Array.isArray(data.actions.scrapes)) {
+    const firstScrape = data.actions.scrapes.find(
+      (entry) =>
+        isObject(entry) && typeof entry.html === "string" && entry.html.trim(),
+    ) as Record<string, unknown> | undefined;
+
+    if (firstScrape?.html && typeof firstScrape.html === "string") {
+      return firstScrape.html;
+    }
+  }
+
+  return "";
+}
+
+function mapFirecrawlJsonReviews(
+  data: Record<string, unknown>,
+): Array<Record<string, unknown>> {
+  const jsonBlock = isObject(data.json)
+    ? data.json
+    : Array.isArray(data.json)
+      ? { reviews: data.json }
+      : data;
+
+  const reviewRows = Array.isArray(jsonBlock.reviews) ? jsonBlock.reviews : [];
+
+  return reviewRows
+    .map((review) => {
+      const row = isObject(review) ? review : {};
+      return {
+        source_review_id: toNullableString(
+          row.source_review_id ?? row.review_id ?? row.id,
+        ),
+        reviewer_name: toNullableString(
+          row.reviewer_name ?? row.reviewer ?? row.author,
+        ),
+        rating: row.rating ?? row.score ?? row.stars ?? null,
+        rating_scale: row.rating_scale ?? row.scale ?? row.ratingScale ?? null,
+        published_at: parseDate(row.published_at ?? row.date ?? row.created_at),
+        review_title: toNullableString(
+          row.review_title ?? row.title ?? row.headline,
+        ),
+        review_text: sanitizeReviewText(
+          row.review_text ?? row.text ?? row.comment ?? row.content,
+        ),
+        review_url: toNullableString(row.review_url ?? row.url ?? row.link),
+        review_language: toNullableString(row.review_language ?? row.language),
+        metadata: row,
+      };
+    })
+    .filter((review) =>
+      isValidReviewCandidate(String(review.review_text ?? "")),
+    );
+}
+
+async function fetchWithFirecrawl(
+  source: Record<string, unknown>,
+  apiKey: string,
+  platform: string,
+  sinceDate?: string,
+): Promise<{ method: string; reviews: Array<Record<string, unknown>> }> {
+  const { prompt } = getSourceFirecrawlOptions(source);
+  const { request } = buildFirecrawlBaseRequest(source, platform, sinceDate);
+
+  const htmlPayload = await callFirecrawlScrape(
+    {
+      ...request,
+      formats: ["rawHtml", "html"],
+      onlyMainContent: false,
+    },
+    apiKey,
+  );
+
+  const html = extractFirecrawlHtml(htmlPayload);
+  const htmlReviews =
+    platform === "booking"
+      ? parseBookingReviews(html)
+      : parseAgodaReviews(html);
+
+  if (htmlReviews.length > 0) {
+    return {
+      method: `firecrawl+${platform}-html`,
+      reviews: htmlReviews,
+    };
+  }
+
+  const jsonPayload = await callFirecrawlScrape(
+    {
+      ...request,
+      formats: [
+        {
+          type: "json",
+          schema: FIRECRAWL_REVIEW_SCHEMA,
+          prompt: prompt ?? buildDefaultFirecrawlPrompt(platform),
+        },
+      ],
+      onlyMainContent: true,
+    },
+    apiKey,
+  );
+
+  const jsonReviews = mapFirecrawlJsonReviews(jsonPayload);
+  if (jsonReviews.length === 0) {
+    throw new Error(
+      `Firecrawl returned 0 ${platform} reviews after html and json extraction`,
+    );
+  }
+
+  return {
+    method: `firecrawl+${platform}-json`,
+    reviews: jsonReviews,
+  };
+}
+
+async function fetchWithScraperApi(
+  url: string,
+  apiKey: string,
+  platform: string,
+  sinceDate?: string,
+): Promise<string> {
   const targetUrl = reviewsUrl(url, platform, sinceDate);
-  const params = new URLSearchParams({ api_key: apiKey, url: targetUrl, country_code: "us" });
+  const params = new URLSearchParams({
+    api_key: apiKey,
+    url: targetUrl,
+    country_code: "us",
+  });
   if (SCRAPER_RENDER_PLATFORMS.has(platform)) {
     params.set("render", "true");
-    params.set("wait_for_selector", platform === "agoda" ? ".Review-comment" : "body");
+    params.set(
+      "wait_for_selector",
+      platform === "agoda" ? ".Review-comment" : "body",
+    );
     params.set("wait", "5000");
   }
 
@@ -483,40 +931,90 @@ function parseBookingReviews(html: string): Array<Record<string, unknown>> {
     /<li class="review_list_new_item_block"[\s\S]*?(?=<li class="review_list_new_item_block"|$)/g,
   );
 
-  return blocks.map((block) => {
-    const reviewBodies = collectMatches(block, /<span class="c-review__body"[^>]*>([\s\S]*?)<\/span>/g)
-      .map((text) => sanitizeReviewText(text))
-      .filter(Boolean);
+  return blocks
+    .map((block) => {
+      const reviewBodies = collectMatches(
+        block,
+        /<span class="c-review__body"[^>]*>([\s\S]*?)<\/span>/g,
+      )
+        .map((text) => sanitizeReviewText(text))
+        .filter(Boolean);
 
-    const ratingText = matchOne(block, /<div class="bui-review-score__badge"[^>]*>\s*([0-9.]+)\s*<\/div>/i)
-      ?? matchOne(block, /aria-label="Scored ([0-9.]+)/i);
+      const ratingText =
+        matchOne(
+          block,
+          /<div class="bui-review-score__badge"[^>]*>\s*([0-9.]+)\s*<\/div>/i,
+        ) ?? matchOne(block, /aria-label="Scored ([0-9.]+)/i);
 
-    const language = matchOne(block, /<span class="c-review__body"[^>]*lang="([^"]+)"/i);
+      const language = matchOne(
+        block,
+        /<span class="c-review__body"[^>]*lang="([^"]+)"/i,
+      );
 
-    return {
-      source_review_id: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
-      reviewer_name: toNullableString(matchOne(block, /<span class="bui-avatar-block__title">([\s\S]*?)<\/span>/i)),
-      rating: ratingText ? Number(ratingText) : null,
-      // Try multiple date patterns for Booking
-      published_at: parseDate(matchOne(block, /Reviewed:\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i))
-        ?? parseDate(matchOne(block, /Reviewed:\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i))
-        ?? parseDate(matchOne(block, /Reviewed:\s*(\d{4}-\d{2}-\d{2})/i))
-        ?? parseDate(matchOne(block, /data-date="(\d{4}-\d{2}-\d{2})"/i))
-        ?? parseDate(matchOne(block, /<span[^>]*class="c-review-block__date"[^>]*>\s*([A-Za-z]+\s+\d{4})\s*<\/span>/i))
-        ?? parseDate(matchOne(block, /Reviewed:\s*([^<\n]+)/i)),
-      review_title: toNullableString(matchOne(block, /<h3[^>]*class="[^"]*c-review-block__title[^"]*"[^>]*>([\s\S]*?)<\/h3>/i)),
-      review_text: reviewBodies.join("\n").trim(),
-      review_url: toNullableString(matchOne(block, /data-review-url="([^"]+)"/i)),
-      review_language: language ? language.slice(0, 2).toLowerCase() : null,
-      metadata: {
-        room_type: toNullableString(matchOne(block, /<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>\s*<\/a>/i)),
-        traveler_type: toNullableString(
-          matchOne(block, /review-panel-wide__traveller_type[\s\S]*?<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>/i),
+      return {
+        source_review_id: toNullableString(
+          matchOne(block, /data-review-url="([^"]+)"/i),
         ),
-        stay_date: toNullableString(matchOne(block, /<span class="c-review-block__date">\s*([^<]+)\s*<\/span>/i)),
-      },
-    };
-  }).filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
+        reviewer_name: toNullableString(
+          matchOne(
+            block,
+            /<span class="bui-avatar-block__title">([\s\S]*?)<\/span>/i,
+          ),
+        ),
+        rating: ratingText ? Number(ratingText) : null,
+        // Try multiple date patterns for Booking
+        published_at:
+          parseDate(
+            matchOne(block, /Reviewed:\s*([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i),
+          ) ??
+          parseDate(
+            matchOne(block, /Reviewed:\s*(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i),
+          ) ??
+          parseDate(matchOne(block, /Reviewed:\s*(\d{4}-\d{2}-\d{2})/i)) ??
+          parseDate(matchOne(block, /data-date="(\d{4}-\d{2}-\d{2})"/i)) ??
+          parseDate(
+            matchOne(
+              block,
+              /<span[^>]*class="c-review-block__date"[^>]*>\s*([A-Za-z]+\s+\d{4})\s*<\/span>/i,
+            ),
+          ) ??
+          parseDate(matchOne(block, /Reviewed:\s*([^<\n]+)/i)),
+        review_title: toNullableString(
+          matchOne(
+            block,
+            /<h3[^>]*class="[^"]*c-review-block__title[^"]*"[^>]*>([\s\S]*?)<\/h3>/i,
+          ),
+        ),
+        review_text: reviewBodies.join("\n").trim(),
+        review_url: toNullableString(
+          matchOne(block, /data-review-url="([^"]+)"/i),
+        ),
+        review_language: language ? language.slice(0, 2).toLowerCase() : null,
+        metadata: {
+          room_type: toNullableString(
+            matchOne(
+              block,
+              /<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>\s*<\/a>/i,
+            ),
+          ),
+          traveler_type: toNullableString(
+            matchOne(
+              block,
+              /review-panel-wide__traveller_type[\s\S]*?<div class="bui-list__body">\s*([\s\S]*?)\s*<\/div>/i,
+            ),
+          ),
+          stay_date: toNullableString(
+            matchOne(
+              block,
+              /<span class="c-review-block__date">\s*([^<]+)\s*<\/span>/i,
+            ),
+          ),
+        },
+      };
+    })
+    .filter((review) =>
+      isValidReviewCandidate(String(review.review_text ?? "")),
+    );
 }
 
 function parseAgodaReviews(html: string): Array<Record<string, unknown>> {
@@ -525,41 +1023,88 @@ function parseAgodaReviews(html: string): Array<Record<string, unknown>> {
     /<div data-element-name="review-comment"[\s\S]*?(?=<div data-element-name="review-comment"|<\/ol>)/g,
   );
 
-  return blocks.map((block) => ({
-    source_review_id: toNullableString(matchOne(block, /data-review-id="([^"]+)"/i)),
-    reviewer_name: toNullableString(
-      matchOne(block, /data-info-type="reviewer-name"[\s\S]*?<strong>([\s\S]*?)<\/strong>/i),
-    ),
-    rating: Number(matchOne(block, /<div class="Review-comment-leftScore">([0-9.]+)<\/div>/i) ?? ""),
-    // Try multiple date patterns for Agoda
-    published_at: parseDate(matchOne(block, /Reviewed\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i))
-      ?? parseDate(matchOne(block, /Reviewed\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i))
-      ?? parseDate(matchOne(block, /Reviewed\s+(\d{4}-\d{2}-\d{2})/i))
-      ?? parseDate(matchOne(block, /data-selenium="review-date"[^>]*>([^<]+)/i))
-      ?? parseDate(matchOne(block, /Reviewed\s+([^<]+)<\/span>/i)),
-    review_title: toNullableString(matchOne(block, /data-testid="review-title">([\s\S]*?)<\/h4>/i)),
-    review_text: sanitizeReviewText(matchOne(block, /data-testid="review-comment">([\s\S]*?)<\/p>/i)),
-    review_url: toNullableString(matchOne(block, /data-review-id="([^"]+)"/i)),
-    review_language: null,
-    metadata: {
-      reviewer_country: toNullableString(
-        matchOne(block, /data-info-type="reviewer-name"[\s\S]*?<span>\s*from\s*<\/span><span>([\s\S]*?)<\/span>/i),
+  return blocks
+    .map((block) => ({
+      source_review_id: toNullableString(
+        matchOne(block, /data-review-id="([^"]+)"/i),
       ),
-      traveler_type: toNullableString(matchOne(block, /data-info-type="group-name"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
-      room_type: toNullableString(matchOne(block, /data-info-type="room-type"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
-      stay_detail: toNullableString(matchOne(block, /data-info-type="stay-detail"[\s\S]*?<span>([\s\S]*?)<\/span>/i)),
-    },
-  })).filter((review) => isValidReviewCandidate(String(review.review_text ?? "")));
+      reviewer_name: toNullableString(
+        matchOne(
+          block,
+          /data-info-type="reviewer-name"[\s\S]*?<strong>([\s\S]*?)<\/strong>/i,
+        ),
+      ),
+      rating: Number(
+        matchOne(
+          block,
+          /<div class="Review-comment-leftScore">([0-9.]+)<\/div>/i,
+        ) ?? "",
+      ),
+      // Try multiple date patterns for Agoda
+      published_at:
+        parseDate(
+          matchOne(block, /Reviewed\s+([A-Za-z]+\s+\d{1,2},?\s+\d{4})/i),
+        ) ??
+        parseDate(
+          matchOne(block, /Reviewed\s+(\d{1,2}\s+[A-Za-z]+\s+\d{4})/i),
+        ) ??
+        parseDate(matchOne(block, /Reviewed\s+(\d{4}-\d{2}-\d{2})/i)) ??
+        parseDate(
+          matchOne(block, /data-selenium="review-date"[^>]*>([^<]+)/i),
+        ) ??
+        parseDate(matchOne(block, /Reviewed\s+([^<]+)<\/span>/i)),
+      review_title: toNullableString(
+        matchOne(block, /data-testid="review-title">([\s\S]*?)<\/h4>/i),
+      ),
+      review_text: sanitizeReviewText(
+        matchOne(block, /data-testid="review-comment">([\s\S]*?)<\/p>/i),
+      ),
+      review_url: toNullableString(
+        matchOne(block, /data-review-id="([^"]+)"/i),
+      ),
+      review_language: null,
+      metadata: {
+        reviewer_country: toNullableString(
+          matchOne(
+            block,
+            /data-info-type="reviewer-name"[\s\S]*?<span>\s*from\s*<\/span><span>([\s\S]*?)<\/span>/i,
+          ),
+        ),
+        traveler_type: toNullableString(
+          matchOne(
+            block,
+            /data-info-type="group-name"[\s\S]*?<span>([\s\S]*?)<\/span>/i,
+          ),
+        ),
+        room_type: toNullableString(
+          matchOne(
+            block,
+            /data-info-type="room-type"[\s\S]*?<span>([\s\S]*?)<\/span>/i,
+          ),
+        ),
+        stay_detail: toNullableString(
+          matchOne(
+            block,
+            /data-info-type="stay-detail"[\s\S]*?<span>([\s\S]*?)<\/span>/i,
+          ),
+        ),
+      },
+    }))
+    .filter((review) =>
+      isValidReviewCandidate(String(review.review_text ?? "")),
+    );
 }
 
 async function collectPlatformReviews(
   source: Record<string, unknown>,
   serperKey: string | null,
+  firecrawlKey: string | null,
+  firecrawlBackupKey: string | null,
   scraperKey: string | null,
   serviceClient: ReturnType<typeof createClient>,
 ): Promise<{ method: string; reviews: Array<Record<string, unknown>> }> {
   const platform = String(source.platform ?? "");
-  
+
   // Calculate since date for incremental collection (last 7 days or since last success)
   let sinceDate: string | undefined;
   if (source.last_success_at) {
@@ -572,7 +1117,8 @@ async function collectPlatformReviews(
   }
 
   if (platform === "google") {
-    if (!serperKey) throw new Error("SERPER_API_KEY not configured for Google source");
+    if (!serperKey)
+      throw new Error("SERPER_API_KEY not configured for Google source");
     return {
       method: "serper",
       reviews: await fetchSerperReviews(source, serperKey, serviceClient),
@@ -580,19 +1126,83 @@ async function collectPlatformReviews(
   }
 
   if (platform === "booking") {
-    if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Booking source");
-    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform, sinceDate);
-    return { method: "scraperapi+booking-html", reviews: parseBookingReviews(html) };
+    const firecrawlErrors: string[] = [];
+
+    for (const [label, apiKey] of [
+      ["primary", firecrawlKey],
+      ["backup", firecrawlBackupKey],
+    ] as const) {
+      if (!apiKey) continue;
+
+      try {
+        return await fetchWithFirecrawl(source, apiKey, platform, sinceDate);
+      } catch (error) {
+        firecrawlErrors.push(
+          `${label}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    if (scraperKey) {
+      const html = await fetchWithScraperApi(
+        String(source.source_url ?? ""),
+        scraperKey,
+        platform,
+        sinceDate,
+      );
+      return {
+        method: "scraperapi+booking-html",
+        reviews: parseBookingReviews(html),
+      };
+    }
+
+    throw new Error(
+      firecrawlErrors.join(" | ") ||
+        "No Firecrawl or ScraperAPI key configured for Booking source",
+    );
   }
 
   if (platform === "agoda") {
-    if (!scraperKey) throw new Error("SCRAPER_API_KEY not configured for Agoda source");
-    const html = await fetchWithScraperApi(String(source.source_url ?? ""), scraperKey, platform, sinceDate);
-    return { method: "scraperapi+agoda-html", reviews: parseAgodaReviews(html) };
+    const firecrawlErrors: string[] = [];
+
+    for (const [label, apiKey] of [
+      ["primary", firecrawlKey],
+      ["backup", firecrawlBackupKey],
+    ] as const) {
+      if (!apiKey) continue;
+
+      try {
+        return await fetchWithFirecrawl(source, apiKey, platform, sinceDate);
+      } catch (error) {
+        firecrawlErrors.push(
+          `${label}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    if (scraperKey) {
+      const html = await fetchWithScraperApi(
+        String(source.source_url ?? ""),
+        scraperKey,
+        platform,
+        sinceDate,
+      );
+      return {
+        method: "scraperapi+agoda-html",
+        reviews: parseAgodaReviews(html),
+      };
+    }
+
+    throw new Error(
+      firecrawlErrors.join(" | ") ||
+        "No Firecrawl or ScraperAPI key configured for Agoda source",
+    );
   }
 
   if (!SUPPORTED_PLATFORMS.has(platform)) {
-    throw new Error(`Unsupported platform on current reliable collector: ${platform}`);
+    throw new Error(
+      `Unsupported platform on current reliable collector: ${platform}`,
+    );
   }
 
   throw new Error(`Unhandled platform: ${platform}`);
@@ -600,25 +1210,39 @@ async function collectPlatformReviews(
 
 Deno.serve(async (req: Request) => {
   const corsHeaders = buildCorsHeaders(req);
-  if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method === "OPTIONS")
+    return new Response("ok", { headers: corsHeaders });
 
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const body = await req.json().catch(() => ({}) as Record<string, unknown>);
     const sourceId = typeof body.source_id === "string" ? body.source_id : null;
-    const runMode = typeof body.run_mode === "string" ? body.run_mode : "scheduled";
+    const runMode =
+      typeof body.run_mode === "string" ? body.run_mode : "scheduled";
     const dryRun = body.dry_run === true;
-    const defaultYesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10);
-    const targetDate = typeof body.target_date === "string" ? body.target_date : defaultYesterday;
-    const batchOffset = typeof body.batch_offset === "number" ? Number(body.batch_offset) : 0;
-    const maxSources = typeof body.max_sources === "number" ? Number(body.max_sources) : MAX_SOURCES_PER_RUN;
+    const defaultYesterday = new Date(Date.now() - 86_400_000)
+      .toISOString()
+      .slice(0, 10);
+    const targetDate =
+      typeof body.target_date === "string"
+        ? body.target_date
+        : defaultYesterday;
+    const batchOffset =
+      typeof body.batch_offset === "number" ? Number(body.batch_offset) : 0;
+    const maxSources =
+      typeof body.max_sources === "number"
+        ? Number(body.max_sources)
+        : MAX_SOURCES_PER_RUN;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -627,13 +1251,17 @@ Deno.serve(async (req: Request) => {
       auth: { autoRefreshToken: false, persistSession: false },
     });
 
-    const vaultServiceRoleKey = await getVaultSecret(serviceClient, "service_role_key");
     const isInternalService =
       timingSafeBearerMatch(authHeader, serviceRoleKey) ||
-      (vaultServiceRoleKey ? timingSafeBearerMatch(authHeader, vaultServiceRoleKey) : false);
+      isServiceRoleJwt(authHeader);
 
     if (!isInternalService) {
-      const ctx = await getManualContext(supabaseUrl, anonKey, authHeader, serviceClient);
+      const ctx = await getManualContext(
+        supabaseUrl,
+        anonKey,
+        authHeader,
+        serviceClient,
+      );
       if (!ctx) {
         return new Response(JSON.stringify({ error: "Forbidden" }), {
           status: 403,
@@ -643,7 +1271,18 @@ Deno.serve(async (req: Request) => {
     }
 
     const serperKey = await getVaultSecret(serviceClient, "SERPER_API_KEY");
+    const firecrawlKey = await getVaultSecret(
+      serviceClient,
+      "FIRECRAWL_API_KEY",
+    );
+    const firecrawlBackupKey = await getVaultSecret(
+      serviceClient,
+      "FIRECRAWL_API_KEY_BACKUP",
+    );
     const scraperKey = await getVaultSecret(serviceClient, "SCRAPER_API_KEY");
+    const downstreamServiceRoleKey =
+      (await getVaultSecret(serviceClient, "service_role_key")) ??
+      serviceRoleKey;
 
     const now = new Date();
     const { data: allSources, error: sourceErr } = await serviceClient
@@ -654,8 +1293,11 @@ Deno.serve(async (req: Request) => {
       .order("updated_at", { ascending: true });
     if (sourceErr) throw sourceErr;
 
+    const bypassNextPoll =
+      runMode === "manual" || runMode === "backfill" || sourceId !== null;
     const allDue = (allSources ?? []).filter((source) => {
       if (sourceId && String(source.id) !== sourceId) return false;
+      if (bypassNextPoll) return true;
       if (!source.next_poll_at) return true;
       return new Date(String(source.next_poll_at)).getTime() <= now.getTime();
     });
@@ -678,50 +1320,76 @@ Deno.serve(async (req: Request) => {
       let collectionMethod = "unknown";
 
       try {
-        const { method, reviews } = await collectPlatformReviews(source, serperKey, scraperKey, serviceClient);
+        const { method, reviews } = await collectPlatformReviews(
+          source,
+          serperKey,
+          firecrawlKey,
+          firecrawlBackupKey,
+          scraperKey,
+          serviceClient,
+        );
         collectionMethod = method;
         reviewsCollected = reviews.length;
+        const analysisJobs: Promise<void>[] = [];
+        const { maxReviewAgeDays } = getSourceFirecrawlOptions(source);
+        const collectionTimestamp = new Date();
 
         if (reviewsCollected === 0) {
           throw new Error("No reviews returned from collection step");
         }
 
         for (const row of reviews) {
-          const reviewText = sanitizeReviewText(row.review_text ?? row.text ?? row.content ?? row.comment);
+          const reviewText = sanitizeReviewText(
+            row.review_text ?? row.text ?? row.content ?? row.comment,
+          );
           if (!isValidReviewCandidate(reviewText)) continue;
 
-          const sourceReviewId = toNullableString(row.source_review_id ?? row.review_id ?? row.id);
-          const reviewerName = toNullableString(row.reviewer_name ?? row.reviewer ?? row.author);
-          
-          // Parse the review date
-          let publishedAt = parseDate(row.published_at ?? row.date ?? row.created_at);
-          
-          // FIXED: Skip reviews from before 2026 - only collect current year reviews
-          if (publishedAt) {
-            const reviewDate = new Date(publishedAt);
-            const reviewYear = reviewDate.getFullYear();
-            if (reviewYear < 2026) {
-              console.log(`[guest-review-collector] Skipping old review from ${reviewYear}: ${reviewerName || 'Unknown'}`);
-              continue; // Skip this review - too old
-            }
-          }
-          
-          // FIXED: Ensure published_at is always set with proper fallback chain
+          const sourceReviewId = toNullableString(
+            row.source_review_id ?? row.review_id ?? row.id,
+          );
+          const reviewerName = toNullableString(
+            row.reviewer_name ?? row.reviewer ?? row.author,
+          );
+
+          let publishedAt = parseDate(
+            row.published_at ?? row.date ?? row.created_at,
+          );
+
           if (!publishedAt) {
-            publishedAt = new Date().toISOString();
-            console.warn(`[guest-review-collector] Date parsing failed for review, using current timestamp as fallback. Source: ${source.source_name}`);
+            console.warn(
+              `[guest-review-collector] Skipping review with missing published_at. Source: ${source.source_name}`,
+            );
+            continue;
           }
-          
-          const rating = normalizeRating(row.rating ?? row.score ?? row.stars);
-          const dedupeHash = await sha256([
-            String(source.property_id),
-            String(source.platform),
-            sourceReviewId ?? "",
-            reviewerName ?? "",
-            publishedAt ?? "",
-            String(rating.r10 ?? ""),
-            reviewText.toLowerCase(),
-          ].join("|"));
+
+          if (
+            isReviewOlderThanDays(
+              publishedAt,
+              maxReviewAgeDays,
+              collectionTimestamp,
+            )
+          ) {
+            console.log(
+              `[guest-review-collector] Skipping review older than ${maxReviewAgeDays} days: ${reviewerName || "Unknown"}`,
+            );
+            continue;
+          }
+
+          const rating = normalizeRating(
+            row.rating ?? row.score ?? row.stars,
+            row.rating_scale ?? row.scale ?? row.ratingScale,
+          );
+          const dedupeHash = await sha256(
+            [
+              String(source.property_id),
+              String(source.platform),
+              sourceReviewId ?? "",
+              reviewerName ?? "",
+              publishedAt ?? "",
+              String(rating.r10 ?? ""),
+              reviewText.toLowerCase(),
+            ].join("|"),
+          );
 
           let existingId: string | null = null;
           if (sourceReviewId) {
@@ -752,10 +1420,13 @@ Deno.serve(async (req: Request) => {
             review_url: toNullableString(row.review_url ?? row.url),
             source_listing_url: source.source_url,
             reviewer_name: reviewerName,
-            review_title: toNullableString(row.review_title ?? row.title ?? row.headline),
+            review_title: toNullableString(
+              row.review_title ?? row.title ?? row.headline,
+            ),
             review_text: reviewText,
             review_text_normalized: reviewText.toLowerCase(),
-            review_language: toNullableString(row.review_language ?? row.language) ?? "en",
+            review_language:
+              toNullableString(row.review_language ?? row.language) ?? "en",
             original_rating: rating.r5,
             rating_normalized_5: rating.r5,
             rating_normalized_10: rating.r10,
@@ -771,15 +1442,48 @@ Deno.serve(async (req: Request) => {
 
           let reviewId: string;
           let changed = true;
+          let previousAnalysisStatus: string | null = null;
+          let previousReviewStatus: string | null = null;
 
           if (existingId) {
             const { data: old } = await serviceClient
               .from("guest_reviews")
-              .select("review_text")
+              .select(
+                "review_url, reviewer_name, review_title, review_text, review_text_normalized, review_language, rating_normalized_10, published_at, ai_analysis_status, status",
+              )
               .eq("id", existingId)
               .maybeSingle();
-            changed = cleanText(old?.review_text) !== reviewText;
+            previousAnalysisStatus =
+              typeof old?.ai_analysis_status === "string"
+                ? old.ai_analysis_status
+                : null;
+            previousReviewStatus =
+              typeof old?.status === "string" ? old.status : null;
+            changed =
+              buildReviewFingerprint({
+                review_url: old?.review_url,
+                reviewer_name: old?.reviewer_name,
+                review_title: old?.review_title,
+                review_text: old?.review_text,
+                review_text_normalized: old?.review_text_normalized,
+                review_language: old?.review_language,
+                rating_normalized_10: old?.rating_normalized_10,
+                published_at: old?.published_at,
+              }) !== buildReviewFingerprint(reviewPayload);
             const { created_at: _createdAt, ...updatePayload } = reviewPayload;
+
+            if (!changed) {
+              updatePayload.ai_analysis_status =
+                previousAnalysisStatus ?? "completed";
+              updatePayload.status = previousReviewStatus ?? "collected";
+            }
+
+            if (dryRun) {
+              reviewId = existingId;
+              if (changed) reviewsUpdated += 1;
+              continue;
+            }
+
             const { error: updateErr } = await serviceClient
               .from("guest_reviews")
               .update(updatePayload)
@@ -791,73 +1495,126 @@ Deno.serve(async (req: Request) => {
             reviewId = existingId;
             if (changed) reviewsUpdated += 1;
           } else {
+            if (dryRun) {
+              reviewsNew += 1;
+              continue;
+            }
+
             const { data, error: insertErr } = await serviceClient
               .from("guest_reviews")
               .insert(reviewPayload)
               .select("id")
               .single();
             if (insertErr || !data?.id) {
-              console.error("INSERT error:", insertErr?.message, insertErr?.code);
+              console.error(
+                "INSERT error:",
+                insertErr?.message,
+                insertErr?.code,
+              );
               continue;
             }
             reviewId = String(data.id);
             reviewsNew += 1;
           }
 
-          await serviceClient.from("guest_review_raw_snapshots").insert({
-            review_id: reviewId,
-            source_id: source.id,
-            source_url: source.source_url,
-            firecrawl_method: collectionMethod,
-            request_payload: {
-              url: source.source_url,
-              platform: source.platform,
-              method: collectionMethod,
-              target_date: targetDate,
-            },
-            response_payload: row,
-            extraction_metadata: { source_name: source.source_name, platform: source.platform },
-            checksum: await sha256(JSON.stringify(row)),
-          }).then(({ error }) => {
-            if (error) console.error("snapshot insert error:", error.message);
-          });
+          await serviceClient
+            .from("guest_review_raw_snapshots")
+            .insert({
+              review_id: reviewId,
+              source_id: source.id,
+              source_url: source.source_url,
+              firecrawl_method: collectionMethod,
+              request_payload: {
+                url: source.source_url,
+                platform: source.platform,
+                method: collectionMethod,
+                target_date: targetDate,
+              },
+              response_payload: row,
+              extraction_metadata: {
+                source_name: source.source_name,
+                platform: source.platform,
+              },
+              checksum: await sha256(JSON.stringify(row)),
+            })
+            .then(({ error }) => {
+              if (error) console.error("snapshot insert error:", error.message);
+            });
 
           if (changed && !dryRun) {
-            fetch(`${supabaseUrl}/functions/v1/guest-review-analyzer`, {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${serviceRoleKey}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({ review_id: reviewId, force: true }),
-            }).catch(() => null);
+            analysisJobs.push(
+              (async () => {
+                try {
+                  const response = await fetch(
+                    `${supabaseUrl}/functions/v1/guest-review-analyzer`,
+                    {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${downstreamServiceRoleKey}`,
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        review_id: reviewId,
+                        force: true,
+                      }),
+                    },
+                  );
+
+                  if (!response.ok) {
+                    const errorText = await response.text().catch(() => "");
+                    console.error(
+                      `analyzer request failed for review ${reviewId}:`,
+                      response.status,
+                      errorText,
+                    );
+                  }
+                } catch (error) {
+                  console.error(
+                    `analyzer request error for review ${reviewId}:`,
+                    error,
+                  );
+                }
+              })(),
+            );
           }
         }
 
-        const nextPollAt = new Date(now.getTime() + Number(source.poll_frequency_hours ?? 24) * 3_600_000).toISOString();
-        await serviceClient.from("guest_review_sources").update({
-          last_polled_at: now.toISOString(),
-          last_success_at: now.toISOString(),
-          next_poll_at: nextPollAt,
-          consecutive_failures: 0,
-          health_status: "healthy",
-          last_error: null,
-        }).eq("id", source.id);
+        if (analysisJobs.length > 0) {
+          await Promise.allSettled(analysisJobs);
+        }
 
-        await serviceClient.from("guest_review_collection_runs").update({
-          status: "completed",
-          completed_at: new Date().toISOString(),
-          reviews_collected: reviewsCollected,
-          reviews_new: reviewsNew,
-          reviews_updated: reviewsUpdated,
-          result_summary: {
-            source_name: source.source_name,
-            platform: source.platform,
-            method: collectionMethod,
-            target_date: targetDate,
-            dry_run: dryRun,
-          },
-        }).eq("id", runRow.id);
+        const nextPollAt = new Date(
+          now.getTime() + Number(source.poll_frequency_hours ?? 24) * 3_600_000,
+        ).toISOString();
+        await serviceClient
+          .from("guest_review_sources")
+          .update({
+            last_polled_at: now.toISOString(),
+            last_success_at: now.toISOString(),
+            next_poll_at: nextPollAt,
+            consecutive_failures: 0,
+            health_status: "healthy",
+            last_error: null,
+          })
+          .eq("id", source.id);
+
+        await serviceClient
+          .from("guest_review_collection_runs")
+          .update({
+            status: "completed",
+            completed_at: new Date().toISOString(),
+            reviews_collected: reviewsCollected,
+            reviews_new: reviewsNew,
+            reviews_updated: reviewsUpdated,
+            result_summary: {
+              source_name: source.source_name,
+              platform: source.platform,
+              method: collectionMethod,
+              target_date: targetDate,
+              dry_run: dryRun,
+            },
+          })
+          .eq("id", runRow.id);
 
         results.push({
           source_id: source.id,
@@ -874,20 +1631,26 @@ Deno.serve(async (req: Request) => {
         const failures = Number(source.consecutive_failures ?? 0) + 1;
         const message = error instanceof Error ? error.message : String(error);
 
-        await serviceClient.from("guest_review_sources").update({
-          last_polled_at: now.toISOString(),
-          consecutive_failures: failures,
-          health_status: failures >= 3 ? "degraded" : "healthy",
-          last_error: message,
-        }).eq("id", source.id);
+        await serviceClient
+          .from("guest_review_sources")
+          .update({
+            last_polled_at: now.toISOString(),
+            consecutive_failures: failures,
+            health_status: failures >= 3 ? "degraded" : "healthy",
+            last_error: message,
+          })
+          .eq("id", source.id);
 
-        await serviceClient.from("guest_review_collection_runs").update({
-          status: "failed",
-          completed_at: new Date().toISOString(),
-          reviews_collected: reviewsCollected,
-          error_count: 1,
-          error_message: message,
-        }).eq("id", runRow.id);
+        await serviceClient
+          .from("guest_review_collection_runs")
+          .update({
+            status: "failed",
+            completed_at: new Date().toISOString(),
+            reviews_collected: reviewsCollected,
+            error_count: 1,
+            error_message: message,
+          })
+          .eq("id", runRow.id);
 
         await serviceClient.from("guest_review_audit_events").insert({
           property_id: source.property_id,
@@ -909,34 +1672,47 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    const succeeded = results.filter((result) => result.status === "completed").length;
-    const failed = results.filter((result) => result.status === "failed").length;
-    const totalNew = results.reduce((sum, result) => sum + Number(result.reviews_new ?? 0), 0);
+    const succeeded = results.filter(
+      (result) => result.status === "completed",
+    ).length;
+    const failed = results.filter(
+      (result) => result.status === "failed",
+    ).length;
+    const totalNew = results.reduce(
+      (sum, result) => sum + Number(result.reviews_new ?? 0),
+      0,
+    );
 
-    return new Response(JSON.stringify({
-      success: true,
-      processed_sources: dueSources.length,
-      total_due: allDue.length,
-      batch_offset: batchOffset,
-      has_more: hasMore,
-      next_batch_offset: hasMore ? batchOffset + maxSources : null,
-      succeeded,
-      failed,
-      total_new_reviews: totalNew,
-      target_date: targetDate,
-      results,
-    }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        processed_sources: dueSources.length,
+        total_due: allDue.length,
+        batch_offset: batchOffset,
+        has_more: hasMore,
+        next_batch_offset: hasMore ? batchOffset + maxSources : null,
+        succeeded,
+        failed,
+        total_new_reviews: totalNew,
+        target_date: targetDate,
+        results,
+      }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("guest-review-collector fatal:", error);
-    return new Response(JSON.stringify({
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: false,
+        error: "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });

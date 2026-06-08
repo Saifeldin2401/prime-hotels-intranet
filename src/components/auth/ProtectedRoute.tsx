@@ -1,24 +1,24 @@
-﻿import { useAuth } from '@/hooks/useAuth'
-import type { Permission } from '@/hooks/usePermissions'
-import { usePermissions } from '@/hooks/usePermissions'
-import { buildLoginUrl } from '@/lib/authRedirect'
-import { ROLES, type AppRole } from '@/lib/constants'
+import type { ReactNode } from 'react'
+
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
+
+import { canRoleAccess, type Permission } from '@/features/access/policy'
+import { useAuth } from '@/hooks/useAuth'
+import { usePermissions } from '@/hooks/usePermissions'
+import { buildLoginUrl, setPostLoginRedirect } from '@/lib/authRedirect'
+import type { AppRole } from '@/lib/constants'
+
 import { PasswordEnforcementGuard } from './PasswordEnforcementGuard'
-// getDashboardPathForRole removed - now always returns '/dashboard'
+import { useEffect } from 'react'
 
 interface ProtectedRouteProps {
-  children: React.ReactNode
+  children: ReactNode
   allowedRoles?: AppRole[]
   requiredPermission?: Permission
   requiredPropertyId?: string
   requiredDepartmentId?: string
   fallbackPath?: string
-  /**
-   * If true, redirect to user's dashboard when role doesn't match
-   * instead of /unauthorized
-   */
   smartFallback?: boolean
 }
 
@@ -28,22 +28,21 @@ export function ProtectedRoute({
   requiredPermission,
   requiredPropertyId,
   requiredDepartmentId,
-  fallbackPath = "/unauthorized",
-  smartFallback = true // Default to smart fallback for better UX
+  fallbackPath = '/unauthorized',
+  smartFallback = true,
 }: ProtectedRouteProps) {
-  const { user, primaryRole, rolesLoading, loading } = useAuth()
+  const { user, primaryRole, rolesLoading, loading, pendingMFAUserId, isMFAVerified, securityRequirements } = useAuth()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
   const location = useLocation()
+  const isOnMfaRoute = location.pathname === '/mfa/setup' || location.pathname === '/mfa/verify'
 
-  const roleAllowed = (role: AppRole, allowed: AppRole[]) => {
-    if (allowed.includes(role)) return true
-    const currentLevel = ROLES[role]?.level ?? Number.MAX_SAFE_INTEGER
-    return allowed.some((allowedRole) => {
-      const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
-      return currentLevel <= allowedLevel
-    })
-  }
+  // Save current location for post-login redirect when user is not authenticated
+  useEffect(() => {
+    if (!user && !loading) {
+      setPostLoginRedirect(location.pathname, location.search, location.hash)
+    }
+  }, [user, loading, location.pathname, location.search, location.hash])
 
   if (loading) {
     return (
@@ -57,12 +56,16 @@ export function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
+    const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
+    return <Navigate to={loginUrl} replace />
   }
 
-  // Check role-based access
+  if (pendingMFAUserId && !isMFAVerified && !isOnMfaRoute) {
+    const target = securityRequirements?.mfaEnabled ? '/mfa/verify' : '/mfa/setup'
+    return <Navigate to={target} replace />
+  }
+
   if (allowedRoles && allowedRoles.length > 0) {
-    // If roles are still loading or not resolved, show loading state to prevent unauthorized access
     if (rolesLoading || !primaryRole) {
       return (
         <div className="flex items-center justify-center min-h-screen">
@@ -74,22 +77,17 @@ export function ProtectedRoute({
       )
     }
 
-    // Roles have loaded - check if user has access
-    if (primaryRole && !roleAllowed(primaryRole, allowedRoles)) {
-      // Use smart fallback - redirect to user's correct dashboard
-      if (smartFallback && primaryRole) {
-        const correctDashboard = '/dashboard'
-        return <Navigate to={correctDashboard} replace />
+    if (!canRoleAccess(primaryRole, allowedRoles)) {
+      if (smartFallback) {
+        return <Navigate to="/dashboard" replace />
       }
       return <Navigate to={fallbackPath} replace />
     }
   }
 
-  // Check permission-based access
   if (requiredPermission && !hasPermission(requiredPermission, requiredPropertyId, requiredDepartmentId)) {
     if (smartFallback && primaryRole) {
-      const correctDashboard = '/dashboard'
-      return <Navigate to={correctDashboard} replace />
+      return <Navigate to="/dashboard" replace />
     }
     return <Navigate to={fallbackPath} replace />
   }
@@ -100,5 +98,3 @@ export function ProtectedRoute({
     </PasswordEnforcementGuard>
   )
 }
-
-

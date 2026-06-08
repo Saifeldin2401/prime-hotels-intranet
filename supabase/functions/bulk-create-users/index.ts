@@ -13,13 +13,17 @@ const DEFAULT_ALLOWED_ORIGINS = [
   "https://phg-connect.com",
   "https://www.phg-connect.com",
   "http://localhost:5173",
+  "http://127.0.0.1:5173",
   "http://localhost:3000",
 ] as const;
 
 function getAllowedOrigins(): string[] {
   const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
   if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
-  const parsed = raw.split(",").map((origin) => origin.trim()).filter(Boolean);
+  const parsed = raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
 }
 
@@ -33,9 +37,10 @@ function resolveCorsOrigin(req: Request): string {
 function buildCorsHeaders(req: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": resolveCorsOrigin(req),
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-csrf-token, x-requested-with",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Vary": "Origin",
+    Vary: "Origin",
   };
 }
 
@@ -175,7 +180,9 @@ function parseCsvLine(line: string): string[] {
   return out;
 }
 
-async function requirePrivilegedUser(req: Request): Promise<{ authHeader: string; userId: string } | null> {
+async function requirePrivilegedUser(
+  req: Request,
+): Promise<{ authHeader: string; userId: string } | null> {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader) return null;
 
@@ -194,8 +201,10 @@ async function requirePrivilegedUser(req: Request): Promise<{ authHeader: string
     .select("role")
     .eq("user_id", user.id);
 
-  const hasPermission = (roles as Array<{ role: string }> | null | undefined)?.some(
-    (r: { role: string }) => ["regional_admin", "regional_hr"].includes(r.role),
+  const hasPermission = (
+    roles as Array<{ role: string }> | null | undefined
+  )?.some((r: { role: string }) =>
+    ["regional_admin", "regional_hr"].includes(r.role),
   );
   if (!hasPermission) return null;
 
@@ -205,7 +214,8 @@ async function requirePrivilegedUser(req: Request): Promise<{ authHeader: string
 function mapRoleLevel(roleLevel: string): AppRole {
   const normalized = normalizeText(roleLevel);
 
-  if (normalized.includes("owner") || normalized.includes("super admin")) return "regional_admin";
+  if (normalized.includes("owner") || normalized.includes("super admin"))
+    return "regional_admin";
   if (normalized.includes("group director")) return "regional_admin";
   if (normalized.includes("group admin")) return "regional_admin";
   if (normalized.includes("property leader")) return "property_manager";
@@ -216,7 +226,9 @@ function mapRoleLevel(roleLevel: string): AppRole {
   throw new Error(`Unknown roleLevel: ${roleLevel}`);
 }
 
-async function resolveProperties(propertyCell: string): Promise<{ ids: string[]; matches: NameMatch[]; errors: string[] }> {
+async function resolveProperties(
+  propertyCell: string,
+): Promise<{ ids: string[]; matches: NameMatch[]; errors: string[] }> {
   const trimmed = propertyCell.trim();
   if (!trimmed) return { ids: [], matches: [], errors: ["Missing property"] };
 
@@ -227,8 +239,15 @@ async function resolveProperties(propertyCell: string): Promise<{ ids: string[];
       .from("properties")
       .select("id,name")
       .eq("is_deleted", false);
-    if (error) return { ids: [], matches: [], errors: [`Failed to fetch properties: ${error.message}`] };
-    const ids = ((data ?? []) as Array<{ id: string; name: string }>).map((p: { id: string; name: string }) => p.id);
+    if (error)
+      return {
+        ids: [],
+        matches: [],
+        errors: [`Failed to fetch properties: ${error.message}`],
+      };
+    const ids = ((data ?? []) as Array<{ id: string; name: string }>).map(
+      (p: { id: string; name: string }) => p.id,
+    );
     return {
       ids,
       matches: [
@@ -244,7 +263,10 @@ async function resolveProperties(propertyCell: string): Promise<{ ids: string[];
     };
   }
 
-  if (normalizedAlias === "__CITY_JEDDAH__" || normalizedAlias === "__CITY_RIYADH__") {
+  if (
+    normalizedAlias === "__CITY_JEDDAH__" ||
+    normalizedAlias === "__CITY_RIYADH__"
+  ) {
     const city = normalizedAlias === "__CITY_JEDDAH__" ? "Jeddah" : "Riyadh";
     const { data, error } = await adminClient
       .from("properties")
@@ -253,12 +275,20 @@ async function resolveProperties(propertyCell: string): Promise<{ ids: string[];
       .ilike("name", `%${city}%`);
 
     if (error) {
-      return { ids: [], matches: [], errors: [`Failed to fetch ${city} properties: ${error.message}`] };
+      return {
+        ids: [],
+        matches: [],
+        errors: [`Failed to fetch ${city} properties: ${error.message}`],
+      };
     }
 
     const rows = (data ?? []) as Array<{ id: string; name: string }>;
     if (rows.length === 0) {
-      return { ids: [], matches: [], errors: [`No properties matched city: ${city}`] };
+      return {
+        ids: [],
+        matches: [],
+        errors: [`No properties matched city: ${city}`],
+      };
     }
 
     const ids = rows.map((p: { id: string; name: string }) => p.id);
@@ -269,7 +299,11 @@ async function resolveProperties(propertyCell: string): Promise<{ ids: string[];
           input: city,
           matched: { id: `CITY:${city.toUpperCase()}`, name: `${city} (all)` },
           score: 1,
-          candidates: rows.map((p: { id: string; name: string }) => ({ id: p.id, name: p.name, score: 1 })),
+          candidates: rows.map((p: { id: string; name: string }) => ({
+            id: p.id,
+            name: p.name,
+            score: 1,
+          })),
           kind: "exact",
         },
       ],
@@ -299,12 +333,21 @@ async function resolveProperties(propertyCell: string): Promise<{ ids: string[];
   return { ids: Array.from(new Set(ids)), matches, errors };
 }
 
-async function resolveDepartment(departmentCell: string, propertyIds: string[]): Promise<{ ids: string[]; match: NameMatch; errors: string[] }> {
+async function resolveDepartment(
+  departmentCell: string,
+  propertyIds: string[],
+): Promise<{ ids: string[]; match: NameMatch; errors: string[] }> {
   const trimmed = departmentCell.trim();
   if (!trimmed) {
     return {
       ids: [],
-      match: { input: trimmed, matched: null, score: null, candidates: [], kind: "none" },
+      match: {
+        input: trimmed,
+        matched: null,
+        score: null,
+        candidates: [],
+        kind: "none",
+      },
       errors: ["Missing department"],
     };
   }
@@ -325,7 +368,9 @@ async function resolveDepartment(departmentCell: string, propertyIds: string[]):
       if (perProp.matched) {
         ids.push(perProp.matched.id);
         candidates.push(
-          ...perProp.candidates.map((c: { id: string; name: string; score: number }) => ({ ...c })),
+          ...perProp.candidates.map(
+            (c: { id: string; name: string; score: number }) => ({ ...c }),
+          ),
         );
       }
     }
@@ -333,14 +378,20 @@ async function resolveDepartment(departmentCell: string, propertyIds: string[]):
     return {
       ids: Array.from(new Set(ids)),
       match: { ...match, candidates },
-      errors: ids.length === 0 ? [`Department not found for any property: ${trimmed}`] : [],
+      errors:
+        ids.length === 0
+          ? [`Department not found for any property: ${trimmed}`]
+          : [],
     };
   }
 
   return { ids: [match.matched.id], match, errors: [] };
 }
 
-async function fuzzyResolveDepartment(name: string, propertyIds: string[]): Promise<NameMatch> {
+async function fuzzyResolveDepartment(
+  name: string,
+  propertyIds: string[],
+): Promise<NameMatch> {
   const normalizedInput = normalizeText(name);
 
   // Exact (normalized) match first.
@@ -353,8 +404,15 @@ async function fuzzyResolveDepartment(name: string, propertyIds: string[]): Prom
       query = query.in("property_id", propertyIds);
     }
     const { data } = await query;
-    const exact = ((data ?? []) as Array<{ id: string; name: string; property_id: string | null }>).find(
-      (d: { id: string; name: string; property_id: string | null }) => normalizeText(d.name) === normalizedInput,
+    const exact = (
+      (data ?? []) as Array<{
+        id: string;
+        name: string;
+        property_id: string | null;
+      }>
+    ).find(
+      (d: { id: string; name: string; property_id: string | null }) =>
+        normalizeText(d.name) === normalizedInput,
     );
     if (exact) {
       return {
@@ -369,22 +427,41 @@ async function fuzzyResolveDepartment(name: string, propertyIds: string[]): Prom
 
   // Fuzzy via pg_trgm similarity.
   try {
-    const { data, error } = await adminClient.rpc("search_departments_by_similarity", {
-      search_text: name,
-      property_ids: propertyIds,
-      result_limit: 5,
-    });
+    const { data, error } = await adminClient.rpc(
+      "search_departments_by_similarity",
+      {
+        search_text: name,
+        property_ids: propertyIds,
+        result_limit: 5,
+      },
+    );
 
     if (error) {
-      return { input: name, matched: null, score: null, candidates: [], kind: "none" };
+      return {
+        input: name,
+        matched: null,
+        score: null,
+        candidates: [],
+        kind: "none",
+      };
     }
 
     const rows = (data ?? []) as { id: string; name: string; score: number }[];
-    const candidates = rows.map((r) => ({ id: r.id, name: r.name, score: r.score }));
+    const candidates = rows.map((r) => ({
+      id: r.id,
+      name: r.name,
+      score: r.score,
+    }));
     const best = candidates[0];
 
     if (!best || best.score < 0.25) {
-      return { input: name, matched: null, score: best?.score ?? null, candidates, kind: "none" };
+      return {
+        input: name,
+        matched: null,
+        score: best?.score ?? null,
+        candidates,
+        kind: "none",
+      };
     }
 
     return {
@@ -395,11 +472,20 @@ async function fuzzyResolveDepartment(name: string, propertyIds: string[]): Prom
       kind: "fuzzy",
     };
   } catch {
-    return { input: name, matched: null, score: null, candidates: [], kind: "none" };
+    return {
+      input: name,
+      matched: null,
+      score: null,
+      candidates: [],
+      kind: "none",
+    };
   }
 }
 
-async function fuzzyResolveByName(table: "properties", input: string): Promise<NameMatch> {
+async function fuzzyResolveByName(
+  table: "properties",
+  input: string,
+): Promise<NameMatch> {
   const normalizedInput = normalizeText(input);
 
   const { data: allRows, error: allError } = await adminClient
@@ -412,31 +498,57 @@ async function fuzzyResolveByName(table: "properties", input: string): Promise<N
   }
 
   const exact = ((allRows ?? []) as Array<{ id: string; name: string }>).find(
-    (r: { id: string; name: string }) => normalizeText(r.name) === normalizedInput,
+    (r: { id: string; name: string }) =>
+      normalizeText(r.name) === normalizedInput,
   );
   if (exact) {
-    return { input, matched: { id: exact.id, name: exact.name }, score: 1, candidates: [], kind: "exact" };
+    return {
+      input,
+      matched: { id: exact.id, name: exact.name },
+      score: 1,
+      candidates: [],
+      kind: "exact",
+    };
   }
 
   // Fuzzy: compute similarity in SQL and take top 5.
-  const { data, error } = await adminClient.rpc("search_properties_by_similarity", {
-    search_text: input,
-    result_limit: 5,
-  });
+  const { data, error } = await adminClient.rpc(
+    "search_properties_by_similarity",
+    {
+      search_text: input,
+      result_limit: 5,
+    },
+  );
 
   if (error) {
     return { input, matched: null, score: null, candidates: [], kind: "none" };
   }
 
   const rows = (data ?? []) as { id: string; name: string; score: number }[];
-  const candidates = rows.map((r) => ({ id: r.id, name: r.name, score: r.score }));
+  const candidates = rows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    score: r.score,
+  }));
   const best = candidates[0];
 
   if (!best || best.score < 0.25) {
-    return { input, matched: null, score: best?.score ?? null, candidates, kind: "none" };
+    return {
+      input,
+      matched: null,
+      score: best?.score ?? null,
+      candidates,
+      kind: "none",
+    };
   }
 
-  return { input, matched: { id: best.id, name: best.name }, score: best.score, candidates, kind: "fuzzy" };
+  return {
+    input,
+    matched: { id: best.id, name: best.name },
+    score: best.score,
+    candidates,
+    kind: "fuzzy",
+  };
 }
 
 async function resolveJobTitle(input: string): Promise<JobTitleMatch> {
@@ -454,15 +566,24 @@ async function resolveJobTitle(input: string): Promise<JobTitleMatch> {
       .limit(1)
       .maybeSingle();
     if (data?.title) {
-      return { input, matched: data.title, score: 1, candidates: [], kind: "exact" };
+      return {
+        input,
+        matched: data.title,
+        score: 1,
+        candidates: [],
+        kind: "exact",
+      };
     }
   }
 
   // Fuzzy via similarity.
-  const { data, error } = await adminClient.rpc("search_job_titles_by_similarity", {
-    search_text: trimmed,
-    result_limit: 5,
-  });
+  const { data, error } = await adminClient.rpc(
+    "search_job_titles_by_similarity",
+    {
+      search_text: trimmed,
+      result_limit: 5,
+    },
+  );
 
   if (error) {
     return { input, matched: null, score: null, candidates: [], kind: "none" };
@@ -473,10 +594,22 @@ async function resolveJobTitle(input: string): Promise<JobTitleMatch> {
   const best = candidates[0];
 
   if (!best || best.score < 0.25) {
-    return { input, matched: null, score: best?.score ?? null, candidates, kind: "none" };
+    return {
+      input,
+      matched: null,
+      score: best?.score ?? null,
+      candidates,
+      kind: "none",
+    };
   }
 
-  return { input, matched: best.title, score: best.score, candidates, kind: "fuzzy" };
+  return {
+    input,
+    matched: best.title,
+    score: best.score,
+    candidates,
+    kind: "fuzzy",
+  };
 }
 
 Deno.serve(async (req: Request) => {
@@ -489,10 +622,13 @@ Deno.serve(async (req: Request) => {
   try {
     const privileged = await requirePrivilegedUser(req);
     if (!privileged) {
-      return new Response(JSON.stringify({ error: "Forbidden: Insufficient privileges" }), {
-        status: 403,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Forbidden: Insufficient privileges" }),
+        {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const body = (await req.json()) as {
@@ -544,7 +680,8 @@ Deno.serve(async (req: Request) => {
       if (!row.email?.trim()) errors.push("Missing email");
       if (!row.fullName?.trim()) errors.push("Missing fullName");
       if (!row.dateOfBirth?.trim()) errors.push("Missing dateOfBirth");
-      if (row.dateOfBirth && !isISODate(row.dateOfBirth)) errors.push("Invalid dateOfBirth format (YYYY-MM-DD)");
+      if (row.dateOfBirth && !isISODate(row.dateOfBirth))
+        errors.push("Invalid dateOfBirth format (YYYY-MM-DD)");
 
       let mappedRole: AppRole | null = null;
       try {
@@ -556,7 +693,10 @@ Deno.serve(async (req: Request) => {
       const prop = await resolveProperties(row.property);
       errors.push(...prop.errors);
 
-      const dept = await resolveDepartment(normalizeDepartmentAlias(row.department), prop.ids);
+      const dept = await resolveDepartment(
+        normalizeDepartmentAlias(row.department),
+        prop.ids,
+      );
       errors.push(...dept.errors);
 
       const jobTitleMatch = await resolveJobTitle(row.jobTitle);
@@ -576,7 +716,8 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    const hasErrors = duplicateEmails.length > 0 || results.some((r) => r.errors.length > 0);
+    const hasErrors =
+      duplicateEmails.length > 0 || results.some((r) => r.errors.length > 0);
 
     if (mode === "dry-run") {
       return new Response(
@@ -584,32 +725,55 @@ Deno.serve(async (req: Request) => {
           success: !hasErrors,
           duplicateEmails,
           results,
-          requiresApproval: results.some((r) => r.jobTitleMatch.kind === "fuzzy" || r.departmentMatch.kind === "fuzzy" || r.propertyMatches.some((m) => m.kind === "fuzzy")),
+          requiresApproval: results.some(
+            (r) =>
+              r.jobTitleMatch.kind === "fuzzy" ||
+              r.departmentMatch.kind === "fuzzy" ||
+              r.propertyMatches.some((m) => m.kind === "fuzzy"),
+          ),
         }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        {
+          status: 200,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
       );
     }
 
     // mode === "create"
     if (!approve) {
-      return new Response(JSON.stringify({ error: "Create mode requires approve=true" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Create mode requires approve=true" }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     if (duplicateEmails.length > 0) {
-      return new Response(JSON.stringify({ error: "Duplicate emails in input", duplicateEmails }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Duplicate emails in input", duplicateEmails }),
+        {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
-    const createReports: Array<{ email: string; success: boolean; userId?: string; error?: string }> = [];
+    const createReports: Array<{
+      email: string;
+      success: boolean;
+      userId?: string;
+      error?: string;
+    }> = [];
 
     for (const r of results) {
       if (r.errors.length > 0 || !r.mappedRole) {
-        createReports.push({ email: r.email, success: false, error: r.errors.join("; ") || "Invalid row" });
+        createReports.push({
+          email: r.email,
+          success: false,
+          error: r.errors.join("; ") || "Invalid row",
+        });
         continue;
       }
 
@@ -636,13 +800,25 @@ Deno.serve(async (req: Request) => {
 
         const payload = await resp.json().catch(() => ({}));
         if (!resp.ok) {
-          createReports.push({ email: r.email, success: false, error: payload?.error || `Failed with status ${resp.status}` });
+          createReports.push({
+            email: r.email,
+            success: false,
+            error: payload?.error || `Failed with status ${resp.status}`,
+          });
           continue;
         }
 
-        createReports.push({ email: r.email, success: true, userId: payload?.userId });
+        createReports.push({
+          email: r.email,
+          success: true,
+          userId: payload?.userId,
+        });
       } catch (e) {
-        createReports.push({ email: r.email, success: false, error: e instanceof Error ? e.message : String(e) });
+        createReports.push({
+          email: r.email,
+          success: false,
+          error: e instanceof Error ? e.message : String(e),
+        });
       }
     }
 
@@ -651,14 +827,21 @@ Deno.serve(async (req: Request) => {
         success: createReports.every((r) => r.success),
         results: createReports,
       }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
     );
   } catch (err) {
-    return new Response(JSON.stringify({ error: err instanceof Error ? err.message : String(err) }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    console.error("bulk-create-users error:", err);
+    return new Response(
+      JSON.stringify({
+        error: "Internal server error",
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
-
-

@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BrainCircuit, Loader2, RefreshCcw, Settings, Sparkles, User, X, Zap } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Message {
     id: string
@@ -28,6 +29,7 @@ You understand the following 5 modules deeply:
 Answer questions directly and professionally about how to configure these systems.`
 
 export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose: () => void }) {
+    const { t } = useTranslation()
     const [messages, setMessages] = useState<Message[]>([])
     const [input, setInput] = useState('')
     const [isLoading, setIsLoading] = useState(false)
@@ -132,10 +134,22 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <Button variant="ghost" size="icon" onClick={() => setMessages([{ id: 'w', role: 'assistant', content: 'Resetting node. How can I help?', timestamp: new Date() }])} className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={() => setMessages([{ id: 'w', role: 'assistant', content: 'Resetting node. How can I help?', timestamp: new Date() }])} 
+                                        className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10"
+                                        aria-label={t("accessibility.reset_chat", "Reset chat")}
+                                    >
                                         <RefreshCcw className="h-5 w-5" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" onClick={onClose} className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10">
+                                    <Button 
+                                        variant="ghost" 
+                                        size="icon" 
+                                        onClick={onClose} 
+                                        className="text-white/60 hover:text-white hover:bg-white/10 h-10 w-10"
+                                        aria-label={t("accessibility.close", "Close")}
+                                    >
                                         <X className="h-6 w-6" />
                                     </Button>
                                 </div>
@@ -177,7 +191,12 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
                             <form onSubmit={handleSubmit}>
                                 <div className="relative bg-gray-50 rounded-xl flex items-center p-1.5 focus-within:bg-white focus-within:ring-2 focus-within:ring-hotel-navy/5 shadow-inner">
                                     <Input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} placeholder="Ask how to configure retention policies..." disabled={isLoading} className="flex-1 bg-transparent border-none focus-visible:ring-0 text-sm px-4 py-4 h-auto" />
-                                    <Button type="submit" disabled={!input.trim() || isLoading} className={cn("rounded-lg h-10 w-10 transition-all", input.trim() ? "bg-hotel-navy hover:bg-[#0f172a] text-white" : "bg-gray-200 text-gray-400")}>
+                                    <Button 
+                                        type="submit" 
+                                        disabled={!input.trim() || isLoading} 
+                                        className={cn("rounded-lg h-10 w-10 transition-all", input.trim() ? "bg-hotel-navy hover:bg-[#0f172a] text-white" : "bg-gray-200 text-gray-400")}
+                                        aria-label={isLoading ? t("accessibility.sending", "Sending...") : t("accessibility.send_message", "Send message")}
+                                    >
                                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Zap className="h-5 w-5" />}
                                     </Button>
                                 </div>

@@ -48,7 +48,7 @@ export function MobileVideoPlayer({
     const [isFullscreen, setIsFullscreen] = useState(false)
     const [buffered, setBuffered] = useState(0)
     const [showSpeedMenu, setShowSpeedMenu] = useState(false)
-    const controlsTimeoutRef = useRef<NodeJS.Timeout>()
+    const controlsTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     // Format time display
     const formatTime = (seconds: number) => {

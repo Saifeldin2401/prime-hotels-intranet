@@ -263,13 +263,14 @@ export function CalendarWidget() {
         id: `shift-${shift.id}`,
         title: `${t('schedule.calendar.shift', 'Shift')}: ${shift.shift_type || t('schedule.calendar.work', 'Work')}`,
         start_time: shiftStart,
+        start_date: shiftStart,
         end_time: shiftEnd,
         type: 'shift',
-        location: shift.location || t('schedule.calendar.property', 'Property')
+        location: shift.location || shift.property?.name || t('schedule.calendar.property', 'Property')
       }
     })
 
-    const ksaHolidays = KSA_HOLIDAYS_2026
+    const ksaHolidays: CalendarHolidayEvent[] = KSA_HOLIDAYS_2026
       .filter(h => {
         const hDate = parseISO(h.date)
         return isSameMonth(hDate, currentDate) && !fetchedHolidays.some(fh => fh.start_time.startsWith(h.date))
@@ -278,6 +279,7 @@ export function CalendarWidget() {
         id: `holiday-${h.date}`,
         title: isRTL ? h.nameAr : h.name,
         start_time: `${h.date}T00:00:00`,
+        start_date: `${h.date}T00:00:00`,
         type: 'holiday',
         location: t('common.ksa', 'Saudi Arabia')
       }))
@@ -310,9 +312,8 @@ export function CalendarWidget() {
 
   const getEventsForDate = (date: Date) => {
     return allEvents.filter((event) => {
-      const eventDateRaw = event.start_time || event.start_date
-      if (!eventDateRaw) return false
-      const eventDate = parseISO(eventDateRaw)
+      if (!event.start_time) return false
+      const eventDate = parseISO(event.start_time)
       return isSameDay(eventDate, date)
     })
   }
@@ -390,6 +391,7 @@ export function CalendarWidget() {
                   size="icon"
                   className="h-8 w-8 hover:bg-white hover:shadow-sm transition-all rounded-lg text-slate-500 hover:text-slate-800"
                   onClick={() => setCurrentDate(subMonths(currentDate, 1))}
+                  aria-label={t('accessibility.previous_month', 'Previous month')}
                 >
                   <ChevronLeft className={cn("w-4 h-4", isRTL && "rotate-180")} />
                 </Button>
@@ -401,6 +403,7 @@ export function CalendarWidget() {
                   size="icon"
                   className="h-8 w-8 hover:bg-white hover:shadow-sm transition-all rounded-lg text-slate-500 hover:text-slate-800"
                   onClick={() => setCurrentDate(addMonths(currentDate, 1))}
+                  aria-label={t('accessibility.next_month', 'Next month')}
                 >
                   <ChevronRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
                 </Button>
@@ -409,6 +412,7 @@ export function CalendarWidget() {
                 size="icon"
                 onClick={() => setIsAddModalOpen(true)}
                 className="rounded-xl h-10 w-10 bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition-all flex items-center justify-center shrink-0"
+                aria-label={t('accessibility.add_event', 'Add event')}
               >
                 <Plus className="w-5 h-5" />
               </Button>

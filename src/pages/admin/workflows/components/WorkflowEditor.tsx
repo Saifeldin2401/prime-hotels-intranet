@@ -37,6 +37,8 @@ type WorkflowStepConfig = {
     [key: string]: unknown
 }
 
+type SimpleWorkflowAction = 'none' | 'send_training_reminders' | 'custom'
+
 function getStepConfig(step: Partial<WorkflowStep>): WorkflowStepConfig {
     return typeof step.config === 'object' && step.config !== null
         ? step.config as WorkflowStepConfig
@@ -66,7 +68,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
     const [eventType, setEventType] = useState('NEW_HIRE')
     const [customEventType, setCustomEventType] = useState('')
     const [scheduleCron, setScheduleCron] = useState('0 9 * * *')
-    const [simpleAction, setSimpleAction] = useState<'none' | 'send_training_reminders' | 'custom'>('none')
+    const [simpleAction, setSimpleAction] = useState<SimpleWorkflowAction>('none')
     const isNewWorkflow = !workflow.id
 
     // ============================================
@@ -93,15 +95,17 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
       const draft = loadDraft()
       if (draft) {
-        if (draft.name) setName(draft.name)
-        if (draft.description) setDescription(draft.description)
-        if (draft.type) setType(draft.type)
-        if (draft.triggerConfig) setTriggerConfig(draft.triggerConfig)
-        if (draft.actionConfig) setActionConfig(draft.actionConfig)
-        if (draft.localSteps) setLocalSteps(draft.localSteps)
-        if (draft.eventType) setEventType(draft.eventType)
-        if (draft.scheduleCron) setScheduleCron(draft.scheduleCron)
-        if (draft.simpleAction) setSimpleAction(draft.simpleAction)
+        if (typeof draft.name === 'string') setName(draft.name)
+        if (typeof draft.description === 'string') setDescription(draft.description)
+        if (draft.type === 'manual' || draft.type === 'scheduled' || draft.type === 'event-based') setType(draft.type)
+        if (typeof draft.triggerConfig === 'string') setTriggerConfig(draft.triggerConfig)
+        if (typeof draft.actionConfig === 'string') setActionConfig(draft.actionConfig)
+        if (Array.isArray(draft.localSteps)) setLocalSteps(draft.localSteps)
+        if (typeof draft.eventType === 'string') setEventType(draft.eventType)
+        if (typeof draft.scheduleCron === 'string') setScheduleCron(draft.scheduleCron)
+        if (draft.simpleAction === 'none' || draft.simpleAction === 'send_training_reminders' || draft.simpleAction === 'custom') {
+            setSimpleAction(draft.simpleAction)
+        }
 
         if (!restoredDraftRef.current) {
           restoredDraftRef.current = true
@@ -175,6 +179,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                 setActionConfig(JSON.stringify({}, null, 2))
                 setLocalSteps([
                     {
+                        step_order: 1,
                         name: 'Send Welcome Notification',
                         action: 'send_notification',
                         config: {
@@ -183,6 +188,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         }
                     },
                     {
+                        step_order: 2,
                         name: 'Create Onboarding Task',
                         action: 'create_task',
                         config: {
@@ -266,6 +272,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
     const handleAddStep = () => {
         setLocalSteps([...localSteps, {
+            step_order: localSteps.length + 1,
             name: 'New Step',
             action: 'send_notification',
             config: {}
@@ -278,7 +285,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
 
     const handleStepChange = (index: number, field: keyof WorkflowStep, value: WorkflowStep[keyof WorkflowStep]) => {
         const updatedSteps = [...localSteps]
-        updatedSteps[index] = { ...updatedSteps[index], [field]: value }
+        updatedSteps[index] = { ...updatedSteps[index], [field]: value } as WorkflowEditorStep
         setLocalSteps(updatedSteps)
     }
 

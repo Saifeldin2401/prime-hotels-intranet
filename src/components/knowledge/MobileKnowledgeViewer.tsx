@@ -262,7 +262,14 @@ export function MobileKnowledgeViewer() {
     // Reading time
     const readingTime = useMemo(() => {
         if (!article?.content) return 1
-        const words = article.content.replace(/<[^>]*>/g, '').split(/\s+/).length
+        // Use recursive sanitization to prevent bypass attempts with nested tags
+        let previous: string;
+        let sanitized = article.content;
+        do {
+          previous = sanitized;
+          sanitized = previous.replace(/<[^>]*>/g, '');
+        } while (sanitized !== previous);
+        const words = sanitized.split(/\s+/).length
         return Math.max(1, Math.ceil(words / 200))
     }, [article?.content])
 
@@ -315,6 +322,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setShowTOC(true)}
+                                aria-label={t('accessibility.open_table_of_contents', 'Open table of contents')}
                             >
                                 <List className="h-5 w-5" />
                             </Button>
@@ -323,6 +331,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setIsFocusMode(!isFocusMode)}
+                                aria-label={isFocusMode ? t('accessibility.exit_focus_mode', 'Exit focus mode') : t('accessibility.enter_focus_mode', 'Enter focus mode')}
                             >
                                 {isFocusMode ? (
                                     <Minimize2 className="h-5 w-5" />
@@ -335,6 +344,7 @@ export function MobileKnowledgeViewer() {
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setShowActions(true)}
+                                aria-label={t('accessibility.more_actions', 'More actions')}
                             >
                                 <MoreVertical className="h-5 w-5" />
                             </Button>

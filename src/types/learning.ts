@@ -6,7 +6,7 @@
 import type { KnowledgeQuestion, QuestionStatus } from './questions'
 
 export type LearningTargetType = 'user' | 'department' | 'role' | 'property' | 'everyone'
-export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module'
+export type LearningContentType = 'quiz' | 'sop' | 'video' | 'external_link' | 'module' | 'microlearning'
 export type LearningAssignmentStatus = 'assigned' | 'in_progress' | 'completed' | 'overdue' | 'excused'
 
 
@@ -73,7 +73,7 @@ export interface LearningAssignment {
 
     // Rules
     due_date?: string
-    valid_from: string
+    valid_from?: string
     expires_at?: string
 
     // Meta
@@ -118,6 +118,17 @@ export interface LearningProgress {
     time_spent_seconds?: number | null
     last_activity_at?: string | null
     metadata?: Record<string, unknown> // flexible for now to store answers/attempt details
+    user?: {
+        id: string
+        full_name?: string | null
+        job_title?: string | null
+        first_name?: string | null
+        last_name?: string | null
+        department?: { name?: string | null } | Array<{ name?: string | null }> | null
+    }
+    quiz?: {
+        title?: string | null
+    }
 
     created_at: string
     updated_at: string

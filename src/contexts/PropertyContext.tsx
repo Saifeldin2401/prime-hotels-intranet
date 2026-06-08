@@ -6,7 +6,8 @@ import {
 } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import type { Property } from '@/lib/types'
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import { safeLocalStorage } from '@/lib/storage'
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 
 interface PropertyContextType {
     currentProperty: Property | null
@@ -20,6 +21,25 @@ interface PropertyContextType {
 }
 
 const PropertyContext = createContext<PropertyContextType | undefined>(undefined)
+
+const createPseudoProperty = (name: string, address: string): Property => ({
+    id: CONSOLIDATED_PROPERTY_ID,
+    name,
+    address,
+    phone: '',
+    is_active: true,
+    latitude: null,
+    longitude: null,
+    created_at: new Date().toISOString()
+})
+
+const toProperty = (value: unknown): Property | null => {
+    if (!value || Array.isArray(value) || typeof value !== 'object') {
+        return null
+    }
+
+    return value as Property
+}
 
 export function PropertyProvider({ children }: { children: React.ReactNode }) {
     const { user, primaryRole } = useAuth()
@@ -53,14 +73,10 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (error) throw error
 
                 // Add Group-level option for corporate users (also acts as Head Office)
-                const allOption: Property = {
-                    id: CONSOLIDATED_PROPERTY_ID,
-                    name: 'PRIME GROUP (HEAD OFFICE)',
-                    address: 'Corporate Headquarters & Global Operations',
-                    phone: '',
-                    is_active: true,
-                    created_at: new Date().toISOString()
-                }
+                const allOption = createPseudoProperty(
+                    'PRIME GROUP (HEAD OFFICE)',
+                    'Corporate Headquarters & Global Operations'
+                )
 
                 // Filter out the redundant 'PRIME Head Office' from the list if it exists
                 const filteredData = (data || []).filter(p => p.name !== 'PRIME Head Office')
@@ -75,7 +91,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (error) throw error
 
                 const mappedProperties = (data ?? [])
-                    .map((item) => item.property as Property | null | undefined)
+                    .map((item) => toProperty(item.property))
                     .filter((p): p is Property => !!p)
 
                 const uniqueProperties = Array.from(
@@ -85,14 +101,10 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 // If user is assigned to 2+ properties, add a cluster aggregation option
                 if (uniqueProperties.length > 1) {
                     const clusterNames = uniqueProperties.map((property) => property.name).join(' & ')
-                    const clusterOption: Property = {
-                        id: CONSOLIDATED_PROPERTY_ID,
-                        name: `My Cluster (${uniqueProperties.length})`,
-                        address: clusterNames,
-                        phone: '',
-                        is_active: true,
-                        created_at: new Date().toISOString()
-                    }
+                    const clusterOption = createPseudoProperty(
+                        `My Cluster (${uniqueProperties.length})`,
+                        clusterNames
+                    )
                     props = [clusterOption, ...uniqueProperties]
                 } else {
                     props = uniqueProperties
@@ -104,7 +116,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
             // Determine current property
             if (props.length > 0) {
                 // 1. Try to restore from local storage
-                const savedId = localStorage.getItem('prime_current_property_id')
+                const savedId = safeLocalStorage.getItem('prime_current_property_id')
                 const savedProp = props.find(p => p.id === savedId)
 
                 if (savedProp) {
@@ -112,7 +124,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     // 2. Default to the first available
                     setCurrentProperty(props[0])
-                    localStorage.setItem('prime_current_property_id', props[0].id)
+                    safeLocalStorage.setItem('prime_current_property_id', props[0].id)
                 }
             } else {
                 setCurrentProperty(null)
@@ -129,28 +141,52 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         fetchProperties()
     }, [user, primaryRole])
 
-    const switchProperty = (propertyId: string) => {
-        const prop = availableProperties.find(p => p.id === propertyId)
-        if (prop) {
-            setCurrentProperty(prop)
-            localStorage.setItem('prime_current_property_id', propertyId)
-        }
-    }
+    // Memoize callbacks to prevent unnecessary re-renders
+    const switchProperty = useCallback((propertyId: string) => {
+        setCurrentProperty(prev => {
+            const prop = availableProperties.find(p => p.id === propertyId)
+            if (prop) {
+                safeLocalStorage.setItem('prime_current_property_id', propertyId)
+                return prop
+            }
+            return prev
+        })
+    }, [availableProperties])
+
+    const refreshProperties = useCallback(() => fetchProperties(), [])
 
     // Real property IDs (excludes the consolidated pseudo-property).
-    const propertyIds = availableProperties
-        .filter((property) => isRealPropertyId(property.id))
-        .map(p => p.id)
+    const propertyIds = useMemo(() => 
+        availableProperties
+            .filter((property) => isRealPropertyId(property.id))
+            .map(p => p.id),
+        [availableProperties]
+    )
 
-    const value = {
+    // Memoize derived values
+    const isMultiPropertyUser = useMemo(() => 
+        propertyIds.length > 1 || isCorporateRole,
+        [propertyIds.length, isCorporateRole]
+    )
+
+    // Memoize context value to prevent re-renders of consumers
+    const value = useMemo(() => ({
         currentProperty,
         availableProperties,
         isLoading,
-        isMultiPropertyUser: propertyIds.length > 1 || isCorporateRole,
+        isMultiPropertyUser,
         propertyIds,
         switchProperty,
-        refreshProperties: fetchProperties
-    }
+        refreshProperties
+    }), [
+        currentProperty,
+        availableProperties,
+        isLoading,
+        isMultiPropertyUser,
+        propertyIds,
+        switchProperty,
+        refreshProperties
+    ])
 
     return (
         <PropertyContext.Provider value={value}>

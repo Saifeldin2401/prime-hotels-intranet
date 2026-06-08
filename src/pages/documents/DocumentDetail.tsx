@@ -2,7 +2,7 @@ import { DocumentAnalyticsCard } from '@/components/documents/DocumentAnalyticsC
 import { DocumentComments } from '@/components/documents/DocumentComments'
 import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
-import { DocumentMetadataForm } from '@/components/documents/DocumentMetadataForm'
+import { DocumentMetadataForm, type DocumentMetadata } from '@/components/documents/DocumentMetadataForm'
 import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
@@ -76,6 +76,7 @@ export default function DocumentDetail() {
   const [editMetadataOpen, setEditMetadataOpen] = useState(false)
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
+  const [metadataDraft, setMetadataDraft] = useState<DocumentMetadata | null>(null)
 
   const {
     summary: aiSummary,
@@ -192,6 +193,22 @@ export default function DocumentDetail() {
     })
   }, [document?.id, updateDocument, toast])
 
+  useEffect(() => {
+    if (!document || !editMetadataOpen) return
+
+    setMetadataDraft({
+      title: document.title,
+      description: document.description || '',
+      documentNumber: document.document_number || undefined,
+      expiryDate: document.expires_at ? new Date(document.expires_at) : undefined,
+      confidentiality: document.confidentiality_level || 'internal',
+      ownerId: document.owner_id || '',
+      folderId: document.folder_id || null,
+      tags: document.tags?.map((tag) => tag.name) || [],
+      customFields: [],
+    })
+  }, [document, editMetadataOpen])
+
   const copyShareLink = useCallback(() => {
     const link = `${window.location.origin}/documents/${id}`
     navigator.clipboard.writeText(link)
@@ -243,8 +260,12 @@ export default function DocumentDetail() {
       {/* Expiry Banner */}
       {(isExpired || isExpiringSoon) && (
         <DocumentExpiryBanner
-          expiryDate={document.expires_at!}
-          documentId={document.id}
+          documents={[{
+            id: document.id,
+            title: document.title,
+            expiryDate: document.expires_at!,
+            documentNumber: document.document_number || undefined,
+          }]}
           className="mb-4"
         />
       )}
@@ -289,7 +310,7 @@ export default function DocumentDetail() {
                   </Button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
+                      <Button variant="ghost" size="icon" aria-label={t('accessibility.more_actions', 'More actions')}>
                         <MoreVertical className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -675,12 +696,33 @@ export default function DocumentDetail() {
           <DialogHeader>
             <DialogTitle>Edit Document Metadata</DialogTitle>
           </DialogHeader>
-          <DocumentMetadataForm
-            document={document}
-            folders={folders}
-            onSubmit={handleUpdateMetadata}
-            onCancel={() => setEditMetadataOpen(false)}
-          />
+          {metadataDraft && (
+            <div className="space-y-4">
+              <DocumentMetadataForm
+                metadata={metadataDraft}
+                onChange={setMetadataDraft}
+                folders={folders}
+              />
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setEditMetadataOpen(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={() => handleUpdateMetadata({
+                    title: metadataDraft.title,
+                    description: metadataDraft.description || null,
+                    document_number: metadataDraft.documentNumber || null,
+                    expires_at: metadataDraft.expiryDate ? metadataDraft.expiryDate.toISOString() : null,
+                    confidentiality_level: metadataDraft.confidentiality,
+                    owner_id: metadataDraft.ownerId || null,
+                    folder_id: metadataDraft.folderId || null,
+                  })}
+                >
+                  Save
+                </Button>
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

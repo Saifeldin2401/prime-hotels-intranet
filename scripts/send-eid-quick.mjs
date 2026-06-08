@@ -1,28 +1,50 @@
 import fs from 'fs';
 
-const RESEND_API_KEY = "re_eQhYG7XK_xWuoxmtwt2q3cu2XhVKnsgzn";
-const APP_URL = "https://phg-connect.com";
-const FROM_NAME = "PHG Connect";
-const FROM_EMAIL = "notifications@phg-connect.com";
+/**
+ * Eid Greeting Email Sender Script
+ * 
+ * SECURITY NOTICE: This script requires the RESEND_API_KEY environment variable.
+ * Never hardcode API keys in this file.
+ * 
+ * Usage:
+ *   RESEND_API_KEY=your_api_key node scripts/send-eid-quick.mjs
+ */
 
-const emails = [
-  "alatawi1213@gmail.com", "badr@alfaheedgroup.com", "eslam.mady.2020@gmail.com",
-  "badebaksh@gmail.com", "tiyat9922@gmail.com", "guestrelation@primehotelsgroup.com",
-  "gm@primehotelsgroup.com", "fo@primehotelsgroup.com", "cost@primehotlesgroup.com",
-  "aawb2012@gmail.com", "cl@primehotelsgroup.com", "mahranahmed231@gmail.com",
-  "moh-oo@hotmail.com", "looa01230th@gmail.com", "aymanabdelhamid091@gmail.com",
-  "acctfco@gmail.com", "cl.d@primehotelsgroup.com", "fc@primehotelsgroup.com",
-  "neehaal1989@gmail.com", "mohamedgalallld@gmail.com", "fhdalnzv209@gmail.com",
-  "ibf672017@gmail.com", "elegantlayla88@gmail.com", "sales4@primehotelsgroup.com",
-  "admin@prime.com", "fb.dir@primehotelsgroup.com", "faisal@primehotelsgroup.com",
-  "nawaf@alfaheedgroup.com", "reservation.alriyadh@primehotelsgroup.com",
-  "sales3@primehotelsgroup.com", "mahmoudelakabawey@gmail.com", "play.com99874@gmail.com",
-  "ibneyusuf111@gmail.com", "sales1@primehotelsgroup.com", "sales@primehotelsgroup.com",
-  "azoooz.bk1993@gmail.com", "a.taha.mamoun1991@gmail.com", "abdullahahmed54574@gmail.com",
-  "iimansoor6@gmail.com", "hassanshalaby280@gmail.com", "hmada18emam@gmail.com",
-  "moustafamarzook7200416@gmail.com", "zooommm551@gmail.com", "mohamedreao49@gmail.com",
-  "naserelsady2020@gmail.com", "saifeldinislam@gmail.com", "mahmoudmo919@yahoo.com"
-];
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+
+if (!RESEND_API_KEY) {
+  console.error('ERROR: RESEND_API_KEY environment variable is required');
+  console.error('Please set it before running this script:');
+  console.error('  RESEND_API_KEY=your_api_key node scripts/send-eid-quick.mjs');
+  process.exit(1);
+}
+
+// Validate API key format
+if (!RESEND_API_KEY.startsWith('re_')) {
+  console.error('ERROR: Invalid RESEND_API_KEY format. Key should start with "re_"');
+  process.exit(1);
+}
+
+const APP_URL = process.env.APP_URL || "https://phg-connect.com";
+const FROM_NAME = process.env.FROM_NAME || "PHG Connect";
+const FROM_EMAIL = process.env.FROM_EMAIL || "notifications@phg-connect.com";
+
+// Email recipients should be provided via environment variable or external file
+// Format: comma-separated list of emails
+const EMAILS_ENV = process.env.EMAIL_RECIPIENTS;
+
+// Default recipients list (only used if EMAIL_RECIPIENTS env var is not set)
+const defaultEmails = [];
+
+const emails = EMAILS_ENV 
+  ? EMAILS_ENV.split(',').map(e => e.trim()).filter(Boolean)
+  : defaultEmails;
+
+if (emails.length === 0) {
+  console.error('ERROR: No email recipients specified.');
+  console.error('Set EMAIL_RECIPIENTS environment variable with comma-separated email addresses.');
+  process.exit(1);
+}
 
 function getBeautifulEidTemplate(appUrl) {
   const logoUrl = `${appUrl}/prime-logo-white-full.png`;
@@ -149,4 +171,7 @@ async function sendEmails() {
     console.log("All emails sent.");
 }
 
-sendEmails();
+sendEmails().catch(err => {
+  console.error('Failed to send emails:', err);
+  process.exit(1);
+});

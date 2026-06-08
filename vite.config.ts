@@ -6,22 +6,27 @@ import { sentryVitePlugin } from "@sentry/vite-plugin"
 const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.vercel-scripts.com", // Needed for some libraries, Vercel Analytics and Speed Insights
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://va.vercel-scripts.com https://*.vercel-scripts.com", 
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Needed for Tailwind and Google Fonts
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
     "media-src 'self' blob: data: https://*.supabase.co",
-    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com`,
+    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://api.pwnedpasswords.com`,
     // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
     `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co`,
     "frame-ancestors 'none'"
   ].join('; '),
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
+  // X-XSS-Protection removed: Deprecated header, modern browsers ignore it
+  // CSP provides better XSS protection
   'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'geolocation=(self), microphone=(), camera=()',
+  'Permissions-Policy': 'geolocation=(self), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()',
+  // HSTS: Enforce HTTPS (only in production)
+  'Strict-Transport-Security': process.env.NODE_ENV === 'production' 
+    ? 'max-age=63072000; includeSubDomains; preload' 
+    : '',
   // Cache busting: force browsers to fetch latest after updates
   'Cache-Control': 'no-cache, no-store, must-revalidate',
   'Pragma': 'no-cache',
@@ -108,13 +113,15 @@ export default defineConfig({
     },
     // Generate sourcemaps for Sentry upload but use 'hidden' in production so they aren't
     // referenced in the bundle (Sentry plugin deletes .map files after upload anyway).
-    sourcemap: enableSentryUpload ? 'hidden' : (process.env.NODE_ENV !== 'production'),
+    sourcemap: enableSentryUpload ? 'hidden' : false,
+    // Raise chunk size warning limit - mermaid/excel/editor are heavy by nature and already split
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes('node_modules')) return undefined
 
-          // Large visualization / document libraries
+          // Large visualization / document libraries - these are the biggest chunks
           if (
             id.includes('/node_modules/mermaid') ||
             id.includes('/node_modules/d3-') ||

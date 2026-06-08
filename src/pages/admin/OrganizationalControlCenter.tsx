@@ -33,6 +33,57 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+type NamedRelation = { name?: string | null }
+type PersonRelation = { full_name?: string | null }
+type PromotionRow = {
+    id: string
+    from_role: string | null
+    to_role: string | null
+    from_title: string | null
+    to_title: string | null
+    effective_date: string
+    employee: PersonRelation | PersonRelation[] | null
+}
+type TransferRow = {
+    id: string
+    effective_date: string
+    employee: PersonRelation | PersonRelation[] | null
+    from_property: NamedRelation | NamedRelation[] | null
+    to_property: NamedRelation | NamedRelation[] | null
+}
+type PendingOrgChanges = {
+    promotions: PromotionRow[]
+    transfers: TransferRow[]
+}
+type OrgChangeHistoryRow = {
+    id: string
+    entity_type: string
+    entity_id: string | null
+    action: string
+    details: {
+        old?: { reporting_to?: string | null }
+        new?: { reporting_to?: string | null }
+    } | null
+    created_at: string
+    changed_by_profile: PersonRelation | PersonRelation[] | null
+}
+
+function getFirstRelation<T>(relation: T | T[] | null | undefined): T | null {
+    if (Array.isArray(relation)) {
+        return relation[0] ?? null
+    }
+
+    return relation ?? null
+}
+
+function getRelationName(relation: NamedRelation | NamedRelation[] | null | undefined, fallback: string) {
+    return getFirstRelation(relation)?.name || fallback
+}
+
+function getPersonName(relation: PersonRelation | PersonRelation[] | null | undefined, fallback: string) {
+    return getFirstRelation(relation)?.full_name || fallback
+}
+
 export default function OrganizationalControlCenter() {
     const { t } = useTranslation(['admin', 'common'])
     const [activeTab, setActiveTab] = useState('orgchart')
@@ -409,10 +460,10 @@ function AssignmentsTable({
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {emp.user_properties?.[0]?.properties?.name || '—'}
+                                        {getRelationName(emp.user_properties?.[0]?.properties, '—')}
                                     </TableCell>
                                     <TableCell>
-                                        {emp.user_departments?.[0]?.departments?.name || '—'}
+                                        {getRelationName(emp.user_departments?.[0]?.departments, '—')}
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="text-xs">
@@ -452,7 +503,7 @@ function AssignmentsTable({
 // Pending Changes Table
 function PendingChangesTable() {
     const { t } = useTranslation('admin')
-    const { data: pendingChanges, isLoading } = useQuery({
+    const { data: pendingChanges, isLoading } = useQuery<PendingOrgChanges>({
         queryKey: ['pending-org-changes'],
         queryFn: async () => {
             const today = new Date().toISOString().split('T')[0]
@@ -482,7 +533,7 @@ function PendingChangesTable() {
             return {
                 promotions: promotions || [],
                 transfers: transfers || []
-            }
+            } as PendingOrgChanges
         }
     })
 
@@ -536,7 +587,7 @@ function PendingChangesTable() {
                                         <TableBody>
                                             {pendingChanges.promotions.map((p) => (
                                                 <TableRow key={p.id}>
-                                                    <TableCell className="font-medium">{p.employee?.full_name}</TableCell>
+                                                    <TableCell className="font-medium">{(Array.isArray(p.employee) ? p.employee[0]?.full_name : p.employee?.full_name) || '—'}</TableCell>
                                                     <TableCell>
                                                         <span className="text-gray-500">{p.from_title || p.from_role}</span>
                                                         <span className="mx-2">→</span>
@@ -567,11 +618,11 @@ function PendingChangesTable() {
                                         <TableBody>
                                             {pendingChanges.transfers.map((tr) => (
                                                 <TableRow key={tr.id}>
-                                                    <TableCell className="font-medium">{tr.employee?.full_name}</TableCell>
+                                                    <TableCell className="font-medium">{(Array.isArray(tr.employee) ? tr.employee[0]?.full_name : tr.employee?.full_name) || '—'}</TableCell>
                                                     <TableCell>
-                                                        <span className="text-gray-500">{tr.from_property?.name || 'N/A'}</span>
+                                                        <span className="text-gray-500">{(Array.isArray(tr.from_property) ? tr.from_property[0]?.name : tr.from_property?.name) || 'N/A'}</span>
                                                         <span className="mx-2">→</span>
-                                                        <span className="font-medium text-blue-600">{tr.to_property?.name}</span>
+                                                        <span className="font-medium text-blue-600">{Array.isArray(tr.to_property) ? tr.to_property[0]?.name : tr.to_property?.name}</span>
                                                     </TableCell>
                                                     <TableCell>{formatDateTime(tr.effective_date)}</TableCell>
                                                 </TableRow>
@@ -591,7 +642,7 @@ function PendingChangesTable() {
 // Org Change History Component
 function OrgChangeHistory() {
     const { t } = useTranslation('admin')
-    const { data: history, isLoading } = useQuery({
+    const { data: history, isLoading } = useQuery<OrgChangeHistoryRow[]>({
         queryKey: ['org-change-history'],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -605,7 +656,7 @@ function OrgChangeHistory() {
                 .limit(50)
 
             if (error) throw error
-            return data
+            return (data || []) as OrgChangeHistoryRow[]
         }
     })
 
@@ -669,7 +720,7 @@ function OrgChangeHistory() {
                                             {entry.entity_type}
                                         </TableCell>
                                         <TableCell>
-                                            {entry.changed_by_profile?.full_name || 'System'}
+                                            {getPersonName(entry.changed_by_profile, 'System')}
                                         </TableCell>
                                         <TableCell className="max-w-xs truncate text-xs text-gray-500">
                                             {entry.action === 'update' && entry.details?.old?.reporting_to !== entry.details?.new?.reporting_to && (

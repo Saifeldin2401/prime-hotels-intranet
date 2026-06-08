@@ -25,6 +25,7 @@ import {
 import { useGuestReviews, formatRating, getRatingColor, getRatingBgColor, getPlatformName } from '@/hooks/useGuestReviews'
 import { useAuth } from '@/hooks/useAuth'
 import { useProperty } from '@/contexts/PropertyContext'
+import { DEFAULT_REVIEW_MONITOR_DAYS, getReviewEventDate } from '@/lib/reviewDates'
 import { cn } from '@/lib/utils'
 import { Star, ChevronRight, Building2, AlertCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
@@ -48,7 +49,7 @@ export function GuestReviewsWidget({ focusMode }: GuestReviewsWidgetProps) {
   
   const { data: reviewData, isLoading } = useGuestReviews({
     limit: 5,
-    daysBack: 30,
+    daysBack: DEFAULT_REVIEW_MONITOR_DAYS,
     propertyId: effectivePropertyId === 'all' ? undefined : effectivePropertyId,
   })
 
@@ -235,7 +236,10 @@ export function GuestReviewsWidget({ focusMode }: GuestReviewsWidgetProps) {
                         {getPlatformName(review.platform)}
                       </Badge>
                       <span className="text-[10px] text-slate-400">
-                        {formatDistanceToNow(new Date(review.collected_at), { addSuffix: true })}
+                        {formatDistanceToNow(
+                          getReviewEventDate(review) ?? new Date(review.collected_at),
+                          { addSuffix: true },
+                        )}
                       </span>
                       {isHeadOfficeUser && effectivePropertyId === 'all' && (
                         <span className="text-[10px] text-slate-400 truncate max-w-[100px]">

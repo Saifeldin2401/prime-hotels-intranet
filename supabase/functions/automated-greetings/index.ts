@@ -19,63 +19,88 @@ serve(async (req) => {
 
   try {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Missing Supabase env vars" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Supabase env vars" },
+        500,
+        corsHeaders,
+      );
     }
 
     // Verify admin access
     const authHeader = req.headers.get("Authorization");
     const cronSecret = req.headers.get("X-Cron-Secret");
-    
-    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
+
+    const isServiceRoleCall =
+      authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`;
     const isInternalCronCall = cronSecret === "PRIME_HOLIDAY_CRON_2026";
-    
+
     if (!isServiceRoleCall && !isInternalCronCall && authHeader) {
       // User authentication flow...
-      const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "", {
-        global: { headers: { Authorization: authHeader || "" } },
-      });
+      const userClient = createClient(
+        SUPABASE_URL,
+        Deno.env.get("SUPABASE_ANON_KEY") || "",
+        {
+          global: { headers: { Authorization: authHeader || "" } },
+        },
+      );
 
-      const { data: { user }, error: userError } = await userClient.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await userClient.auth.getUser();
       if (!userError && user) {
         // Must be admin
-        const serviceClientAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+        const serviceClientAdmin = createClient(
+          SUPABASE_URL,
+          SUPABASE_SERVICE_ROLE_KEY,
+        );
         const { data: roleRows } = await serviceClientAdmin
           .from("user_roles")
           .select("role")
           .eq("user_id", user.id)
           .in("role", ["corporate_admin", "regional_admin", "super_admin"]);
-        
+
         if (!roleRows || roleRows.length === 0) {
-          return jsonResponse({ error: "Forbidden: Only admins can trigger greetings." }, 403, corsHeaders);
+          return jsonResponse(
+            { error: "Forbidden: Only admins can trigger greetings." },
+            403,
+            corsHeaders,
+          );
         }
       } else {
         return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
       }
     } else if (!isServiceRoleCall) {
-        return jsonResponse({ error: "Missing authentication" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "Missing authentication" },
+        401,
+        corsHeaders,
+      );
     }
 
     const body: RequestBody = await req.json().catch(() => ({}));
 
     // 1. Determine what event today is
     let eventCode = body.eventCode;
-    
+
     if (!eventCode) {
       // Get current date
       const d = new Date();
       // Adjust server time to KSA (UTC+3)
-      const ksaTime = new Date(d.getTime() + (3 * 60 * 60 * 1000));
+      const ksaTime = new Date(d.getTime() + 3 * 60 * 60 * 1000);
       const gregorianDay = ksaTime.getUTCDate();
       const gregorianMonth = ksaTime.getUTCMonth() + 1;
       const gregorianYear = ksaTime.getUTCFullYear();
-      
-      const dateStr = `${gregorianDay.toString().padStart(2, '0')}-${gregorianMonth.toString().padStart(2, '0')}-${gregorianYear}`;
-      
+
+      const dateStr = `${gregorianDay.toString().padStart(2, "0")}-${gregorianMonth.toString().padStart(2, "0")}-${gregorianYear}`;
+
       try {
-        const hijriRes = await fetch(`http://api.aladhan.com/v1/gToH?date=${dateStr}&adjustment=0`);
+        const hijriRes = await fetch(
+          `http://api.aladhan.com/v1/gToH?date=${dateStr}&adjustment=0`,
+        );
         const hijriData = await hijriRes.json();
         const hijri = hijriData.data?.hijri;
-        
+
         if (hijri) {
           const hijriDay = parseInt(hijri.day, 10);
           const hijriMonth = hijri.month.number; // 1 to 12
@@ -83,8 +108,10 @@ serve(async (req) => {
           if (hijriMonth === 9 && hijriDay === 1) eventCode = "RAMADAN";
           else if (hijriMonth === 10 && hijriDay === 1) eventCode = "EID_FITR";
           else if (hijriMonth === 12 && hijriDay === 10) eventCode = "EID_ADHA";
-          else if (gregorianMonth === 9 && gregorianDay === 23) eventCode = "SAUDI_NATIONAL";
-          else if (gregorianMonth === 2 && gregorianDay === 22) eventCode = "SAUDI_FOUNDING";
+          else if (gregorianMonth === 9 && gregorianDay === 23)
+            eventCode = "SAUDI_NATIONAL";
+          else if (gregorianMonth === 2 && gregorianDay === 22)
+            eventCode = "SAUDI_FOUNDING";
         }
       } catch (err) {
         console.error("Failed to fetch Hijri date", err);
@@ -92,38 +119,74 @@ serve(async (req) => {
     }
 
     if (!eventCode) {
-      return jsonResponse({ message: "No special event scheduled for today.", date_checked: new Date().toISOString() }, 200, corsHeaders);
+      return jsonResponse(
+        {
+          message: "No special event scheduled for today.",
+          date_checked: new Date().toISOString(),
+        },
+        200,
+        corsHeaders,
+      );
     }
 
     // Must confirm send or use test email to prevent accidental mass emails
     if (!body.test_email && !body.send_all && isServiceRoleCall) {
-        // If this was invoked via automated Cron, we will trust it if no body is passed or send_all is omitted
-        // But to be safe, we will assume true if it was a cron job (often empty body or specific secret).
-        // Let's force cron jobs to send `{"send_all": true}` in the webhook body.
-        return jsonResponse({ error: "Dry run: To send to everyone, send { \"send_all\": true }. For test, use { \"test_email\": \"your@email.com\" }", eventCode }, 400, corsHeaders);
+      // If this was invoked via automated Cron, we will trust it if no body is passed or send_all is omitted
+      // But to be safe, we will assume true if it was a cron job (often empty body or specific secret).
+      // Let's force cron jobs to send `{"send_all": true}` in the webhook body.
+      return jsonResponse(
+        {
+          error:
+            'Dry run: To send to everyone, send { "send_all": true }. For test, use { "test_email": "your@email.com" }',
+          eventCode,
+        },
+        400,
+        corsHeaders,
+      );
     }
 
     // 2. Fetch Config
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+    const serviceClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
         auth: { autoRefreshToken: false, persistSession: false },
-    });
-    const { data: configData } = await serviceClient.rpc("get_email_runtime_config");
-    const config = configData as Record<string, any> || {};
-    const readSecret = (v: any) => typeof v === 'string' && v.trim() ? v.trim() : null;
-    
-    const resendApiKey = readSecret(config.resend_api_key) || Deno.env.get("RESEND_API_KEY");
-    const appBaseUrl = (readSecret(config.app_base_url) || Deno.env.get("APP_BASE_URL") || "https://phg-connect.com").replace(/\/+$/, "");
+      },
+    );
+    const { data: configData } = await serviceClient.rpc(
+      "get_email_runtime_config",
+    );
+    const config = (configData as Record<string, any>) || {};
+    const readSecret = (v: any) =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const resendApiKey =
+      readSecret(config.resend_api_key) || Deno.env.get("RESEND_API_KEY");
+    const appBaseUrl = (
+      readSecret(config.app_base_url) ||
+      Deno.env.get("APP_BASE_URL") ||
+      "https://phg-connect.com"
+    ).replace(/\/+$/, "");
     const fromName = readSecret(config.email_from_name) || "PHG Connect";
-    const fromEmail = readSecret(config.email_from_address) || "notifications@phg-connect.com";
+    const fromEmail =
+      readSecret(config.email_from_address) || "notifications@phg-connect.com";
 
     if (!resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY from database config" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing RESEND_API_KEY from database config" },
+        500,
+        corsHeaders,
+      );
     }
 
     // 3. Build Template
     const templateData = getTemplateForEvent(eventCode, appBaseUrl);
     if (!templateData) {
-        return jsonResponse({ error: `Unknown event code: ${eventCode}` }, 400, corsHeaders);
+      return jsonResponse(
+        { error: `Unknown event code: ${eventCode}` },
+        400,
+        corsHeaders,
+      );
     }
 
     // 4. Collect Emails
@@ -137,123 +200,162 @@ serve(async (req) => {
         .eq("is_active", true)
         .not("email", "is", null);
 
-      if (profilesError) return jsonResponse({ error: "DB Error", details: profilesError.message }, 500, corsHeaders);
-      emailsToSend = profiles.map(p => p.email?.trim()).filter(e => e && e.includes("@")) as string[];
+      if (profilesError)
+        return jsonResponse(
+          { error: "DB Error", details: profilesError.message },
+          500,
+          corsHeaders,
+        );
+      emailsToSend = profiles
+        .map((p) => p.email?.trim())
+        .filter((e) => e && e.includes("@")) as string[];
     }
     emailsToSend = [...new Set(emailsToSend)];
 
     if (emailsToSend.length === 0) {
-      return jsonResponse({ message: "No recipients found." }, 200, corsHeaders);
+      return jsonResponse(
+        { message: "No recipients found." },
+        200,
+        corsHeaders,
+      );
     }
 
     // 5. Fire via Resend Batch API
     const BATCH_SIZE = 100;
     const allResults = [];
-    
+
     for (let i = 0; i < emailsToSend.length; i += BATCH_SIZE) {
       const batchRecipients = emailsToSend.slice(i, i + BATCH_SIZE);
-      const payload = batchRecipients.map(email => ({
+      const payload = batchRecipients.map((email) => ({
         from: `${fromName} <${fromEmail}>`,
         to: [email],
         subject: templateData.subject,
         html: templateData.html,
-        tags: [{ name: "campaign", value: `automated_${eventCode.toLowerCase()}` }]
+        tags: [
+          { name: "campaign", value: `automated_${eventCode.toLowerCase()}` },
+        ],
       }));
 
       const response = await fetch("https://api.resend.com/emails/batch", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${resendApiKey}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${resendApiKey}`,
+        },
         body: JSON.stringify(payload),
       });
 
       const result = await response.json().catch(() => ({}));
       allResults.push({ status: response.status, data: result });
-      if (i + BATCH_SIZE < emailsToSend.length) await new Promise(r => setTimeout(r, 500));
+      if (i + BATCH_SIZE < emailsToSend.length)
+        await new Promise((r) => setTimeout(r, 500));
     }
 
-    return jsonResponse({ success: true, event: eventCode, sent_count: emailsToSend.length, runs: allResults }, 200, corsHeaders);
-
+    return jsonResponse(
+      {
+        success: true,
+        event: eventCode,
+        sent_count: emailsToSend.length,
+        runs: allResults,
+      },
+      200,
+      corsHeaders,
+    );
   } catch (error) {
     console.error(error);
-    return jsonResponse({ error: error instanceof Error ? error.message : "Unexpected error" }, 500, corsHeaders);
+    return jsonResponse(
+      { error: error instanceof Error ? error.message : "Unexpected error" },
+      500,
+      corsHeaders,
+    );
   }
 });
 
 function getTemplateForEvent(eventCode: string, appUrl: string) {
-    let subject = "Greetings from PRIME Hotels";
-    let englishText = "";
-    let arabicText = "";
-    let englishTitle = "";
-    let arabicTitle = "";
-    let primaryColor = "#0B1C3E"; 
-    let accentColor = "#D4AF37"; 
-    let topLabelArabic = "";
-    let topLabelEnglish = "";
+  let subject = "Greetings from PRIME Hotels";
+  let englishText = "";
+  let arabicText = "";
+  let englishTitle = "";
+  let arabicTitle = "";
+  let primaryColor = "#0B1C3E";
+  let accentColor = "#D4AF37";
+  let topLabelArabic = "";
+  let topLabelEnglish = "";
 
-    switch(eventCode) {
-        case "RAMADAN":
-            subject = "Ramadan Kareem from PRIME Hotels | رمضان كريم";
-            englishTitle = "Dear Team,";
-            arabicTitle = "أعزائنا الموظفين،";
-            topLabelEnglish = "RAMADAN KAREEM";
-            topLabelArabic = "رمضان كريم";
-            englishText = "As the holy month of Ramadan begins, we extend our warmest wishes to you and your families. May this blessed month bring you peace, reflection, and abundant blessings. Thank you for your continued dedication to PRIME Hotels Group as we continue to deliver exceptional hospitality.";
-            arabicText = "بمناسبة حلول شهر رمضان المبارك، نتقدم إليكم ولعائلاتكم بأصدق التهاني وأطيب الأمنيات. نسأل الله أن يتقبل صيامكم وقيامكم وأن يعيده عليكم بالخير واليمن والبركات. تقبل الله طاعاتكم وشكراً لجهودكم المستمرة في مجموعة فنادق برايم.";
-            primaryColor = "#0A2540";
-            accentColor = "#E6C27A";
-            break;
-        case "EID_FITR":
-            subject = "Eid Al-Fitr Mubarak from PRIME Hotels | عيد فطر مبارك";
-            englishTitle = "Dear Team,";
-            arabicTitle = "أعزائنا الموظفين،";
-            topLabelEnglish = "EID AL-FITR MUBARAK";
-            topLabelArabic = "عيد فطر مبارك";
-            englishText = "On the joyful occasion of Eid Al-Fitr, we extend our warmest wishes to all team members across Prime Hotels Group properties. May this special time bring joy, peace, and prosperity to you and your families. We deeply appreciate your hard work and excellence.";
-            arabicText = "بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي مجموعة فنادق برايم. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار. نشكر لكم التزامكم واحترافيتكم العالية التي تثري تجربة ضيوفنا.";
-            primaryColor = "#0B1C3E";
-            accentColor = "#D4AF37";
-            break;
-        case "EID_ADHA":
-            subject = "Eid Al-Adha Mubarak from PRIME Hotels | عيد أضحى مبارك";
-            englishTitle = "Dear Team,";
-            arabicTitle = "أعزائنا الموظفين،";
-            topLabelEnglish = "EID AL-ADHA MUBARAK";
-            topLabelArabic = "عيد أضحى مبارك";
-            englishText = "Wishing you a blessed and joyful Eid Al-Adha. May this season of sacrifice and celebration bring abundant happiness, health, and success to you and your loved ones. We value your commitment to PRIME Hotels Group.";
-            arabicText = "بمناسبة حلول عيد الأضحى المبارك، نتقدم إليكم بأسمى آيات التهاني والتبريكات. أعاده الله عليكم وعلى ذويكم باليمن والبركات والصحة والعافية. كل عام وأنتم بخير، مع خالص التقدير لجهودكم المخلصة في مجموعة فنادق برايم.";
-            primaryColor = "#0A1F30";
-            accentColor = "#D4AF37";
-            break;
-        case "SAUDI_NATIONAL":
-            subject = "Happy Saudi National Day | اليوم الوطني السعودي";
-            englishTitle = "Dear Team,";
-            arabicTitle = "أعزائنا الموظفين،";
-            topLabelEnglish = "SAUDI NATIONAL DAY";
-            topLabelArabic = "اليوم الوطني السعودي";
-            englishText = "On the occasion of the Saudi National Day, we proudly celebrate the glorious heritage, visionary leadership, and unprecedented prosperity of the Kingdom. Wishing you and our beloved Kingdom continued peace, progress, and success.";
-            arabicText = "بمناسبة اليوم الوطني للمملكة العربية السعودية، نحتفل معاً بمسيرة نماء وازدهار ورؤية طموحة لمملكتنا الحبيبة. دام عزك يا وطن، وكل عام والمملكة وقيادتها وشعبها بخير وسلام ومزيد من الرفعة.";
-            primaryColor = "#006C35"; // Saudi Green
-            accentColor = "#D4AF37";
-            break;
-        case "SAUDI_FOUNDING":
-            subject = "Happy Saudi Founding Day | يوم التأسيس السعودي";
-            englishTitle = "Dear Team,";
-            arabicTitle = "أعزائنا الموظفين،";
-            topLabelEnglish = "SAUDI FOUNDING DAY";
-            topLabelArabic = "يوم التأسيس";
-            englishText = "On Saudi Founding Day, we proudly commemorate the deep roots and rich history of the Kingdom of Saudi Arabia. We wish you a beautiful celebration marking three centuries of vibrant heritage, resilience, and a bright future.";
-            arabicText = "في يوم التأسيس، نستذكر بفخر واعتزاز الجذور الراسخة والتاريخ العريق للمملكة العربية السعودية. نحتفل بثلاثة قرون من العز والمجد والأصالة. دامت أفراح الوطن ومسيرته الحضارية العظيمة.";
-            primaryColor = "#2A1813"; // Earthy deep maroon
-            accentColor = "#D0A45D";
-            break;
-        default:
-            return null;
-    }
+  switch (eventCode) {
+    case "RAMADAN":
+      subject = "Ramadan Kareem from PRIME Hotels | رمضان كريم";
+      englishTitle = "Dear Team,";
+      arabicTitle = "أعزائنا الموظفين،";
+      topLabelEnglish = "RAMADAN KAREEM";
+      topLabelArabic = "رمضان كريم";
+      englishText =
+        "As the holy month of Ramadan begins, we extend our warmest wishes to you and your families. May this blessed month bring you peace, reflection, and abundant blessings. Thank you for your continued dedication to PRIME Hotels Group as we continue to deliver exceptional hospitality.";
+      arabicText =
+        "بمناسبة حلول شهر رمضان المبارك، نتقدم إليكم ولعائلاتكم بأصدق التهاني وأطيب الأمنيات. نسأل الله أن يتقبل صيامكم وقيامكم وأن يعيده عليكم بالخير واليمن والبركات. تقبل الله طاعاتكم وشكراً لجهودكم المستمرة في مجموعة فنادق برايم.";
+      primaryColor = "#0A2540";
+      accentColor = "#E6C27A";
+      break;
+    case "EID_FITR":
+      subject = "Eid Al-Fitr Mubarak from PRIME Hotels | عيد فطر مبارك";
+      englishTitle = "Dear Team,";
+      arabicTitle = "أعزائنا الموظفين،";
+      topLabelEnglish = "EID AL-FITR MUBARAK";
+      topLabelArabic = "عيد فطر مبارك";
+      englishText =
+        "On the joyful occasion of Eid Al-Fitr, we extend our warmest wishes to all team members across Prime Hotels Group properties. May this special time bring joy, peace, and prosperity to you and your families. We deeply appreciate your hard work and excellence.";
+      arabicText =
+        "بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي مجموعة فنادق برايم. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار. نشكر لكم التزامكم واحترافيتكم العالية التي تثري تجربة ضيوفنا.";
+      primaryColor = "#0B1C3E";
+      accentColor = "#D4AF37";
+      break;
+    case "EID_ADHA":
+      subject = "Eid Al-Adha Mubarak from PRIME Hotels | عيد أضحى مبارك";
+      englishTitle = "Dear Team,";
+      arabicTitle = "أعزائنا الموظفين،";
+      topLabelEnglish = "EID AL-ADHA MUBARAK";
+      topLabelArabic = "عيد أضحى مبارك";
+      englishText =
+        "Wishing you a blessed and joyful Eid Al-Adha. May this season of sacrifice and celebration bring abundant happiness, health, and success to you and your loved ones. We value your commitment to PRIME Hotels Group.";
+      arabicText =
+        "بمناسبة حلول عيد الأضحى المبارك، نتقدم إليكم بأسمى آيات التهاني والتبريكات. أعاده الله عليكم وعلى ذويكم باليمن والبركات والصحة والعافية. كل عام وأنتم بخير، مع خالص التقدير لجهودكم المخلصة في مجموعة فنادق برايم.";
+      primaryColor = "#0A1F30";
+      accentColor = "#D4AF37";
+      break;
+    case "SAUDI_NATIONAL":
+      subject = "Happy Saudi National Day | اليوم الوطني السعودي";
+      englishTitle = "Dear Team,";
+      arabicTitle = "أعزائنا الموظفين،";
+      topLabelEnglish = "SAUDI NATIONAL DAY";
+      topLabelArabic = "اليوم الوطني السعودي";
+      englishText =
+        "On the occasion of the Saudi National Day, we proudly celebrate the glorious heritage, visionary leadership, and unprecedented prosperity of the Kingdom. Wishing you and our beloved Kingdom continued peace, progress, and success.";
+      arabicText =
+        "بمناسبة اليوم الوطني للمملكة العربية السعودية، نحتفل معاً بمسيرة نماء وازدهار ورؤية طموحة لمملكتنا الحبيبة. دام عزك يا وطن، وكل عام والمملكة وقيادتها وشعبها بخير وسلام ومزيد من الرفعة.";
+      primaryColor = "#006C35"; // Saudi Green
+      accentColor = "#D4AF37";
+      break;
+    case "SAUDI_FOUNDING":
+      subject = "Happy Saudi Founding Day | يوم التأسيس السعودي";
+      englishTitle = "Dear Team,";
+      arabicTitle = "أعزائنا الموظفين،";
+      topLabelEnglish = "SAUDI FOUNDING DAY";
+      topLabelArabic = "يوم التأسيس";
+      englishText =
+        "On Saudi Founding Day, we proudly commemorate the deep roots and rich history of the Kingdom of Saudi Arabia. We wish you a beautiful celebration marking three centuries of vibrant heritage, resilience, and a bright future.";
+      arabicText =
+        "في يوم التأسيس، نستذكر بفخر واعتزاز الجذور الراسخة والتاريخ العريق للمملكة العربية السعودية. نحتفل بثلاثة قرون من العز والمجد والأصالة. دامت أفراح الوطن ومسيرته الحضارية العظيمة.";
+      primaryColor = "#2A1813"; // Earthy deep maroon
+      accentColor = "#D0A45D";
+      break;
+    default:
+      return null;
+  }
 
-    const logoUrl = `${appUrl}/prime-logo-white-full.png`;
-    const year = new Date().getFullYear().toString();
+  const logoUrl = `${appUrl}/prime-logo-white-full.png`;
+  const year = new Date().getFullYear().toString();
 
-    const html = `
+  const html = `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -321,10 +423,14 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
 </html>
     `.trim();
 
-    return { subject, html };
+  return { subject, html };
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: HeadersInit = {}): Response {
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status = 200,
+  corsHeaders: HeadersInit = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },

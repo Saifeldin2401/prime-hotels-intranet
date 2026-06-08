@@ -10,6 +10,7 @@ import {
 import { clearAuthFlowState, setAuthFlowState } from '@/lib/authFlowState'
 import { auditLog } from '@/lib/auditLog'
 import { securityConfig } from '@/lib/security-config'
+import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, Mail, RefreshCw, ShieldCheck } from 'lucide-react'
@@ -210,6 +211,13 @@ export default function ResetPassword() {
         const email = resendEmail.trim().toLowerCase()
         if (!email || !email.includes('@')) {
             setResendError(t('forgot_password.invalid_email'))
+            return
+        }
+
+        // Rate limiting check
+        const rateLimitKey = `auth:password-reset:${email}`
+        if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.auth.maxRequests, rateLimitConfig.auth.windowMs)) {
+            setResendError(t('reset_password.resend_rate_limited'))
             return
         }
 

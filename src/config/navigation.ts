@@ -12,7 +12,8 @@
  * - i18n ready: All labels use translation keys
  */
 
-import { ROLES, type AppRole } from '@/lib/constants'
+import { canRoleAccess, type AllowedRoles } from '@/features/access/policy'
+import type { AppRole } from '@/lib/constants'
 import {
     Activity,
     ArrowRightLeft,
@@ -48,6 +49,7 @@ import {
     Wallet,
     Workflow,
     Wrench,
+    Zap,
     type LucideIcon
 } from 'lucide-react'
 
@@ -80,7 +82,7 @@ export interface RouteConfig {
     /** Optional description for tooltips/help */
     description?: string
     /** Which roles can access this route */
-    allowedRoles: AppRole[] | 'all'
+    allowedRoles: AllowedRoles
     /** Permission matrix per role (optional, for fine-grained control) */
     permissions?: Partial<Record<AppRole, Permission[]>>
     /** Key for dynamic badge count from useSidebarCounts */
@@ -107,7 +109,7 @@ export interface NavigationGroupConfig {
     icon: LucideIcon
     order: number
     /** Roles that can see this group at all */
-    visibleTo: AppRole[] | 'all'
+    visibleTo: AllowedRoles
     /** Whether group is collapsible in sidebar */
     collapsible: boolean
 }
@@ -963,6 +965,15 @@ export const ROUTES: RouteConfig[] = [
         order: 7.5
     },
     {
+        path: '/admin/automation',
+        title: 'automation_center',
+        icon: Zap,
+        description: 'Manage system automations, rules, and workflows',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 7.8
+    },
+    {
         path: '/admin/settings',
         title: 'system_settings',
         icon: Settings,
@@ -1032,32 +1043,14 @@ export function resolvePathForRole(route: RouteConfig, role: AppRole | null): st
  * Check if a role can access a route
  */
 export function canAccessRoute(route: RouteConfig, role: AppRole | null): boolean {
-    if (!role) return false
-    if (route.allowedRoles === 'all') return true
-
-    if (route.allowedRoles.includes(role)) return true
-
-    const currentLevel = ROLES[role]?.level ?? Number.MAX_SAFE_INTEGER
-    return route.allowedRoles.some((allowedRole) => {
-        const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
-        return currentLevel <= allowedLevel
-    })
+    return canRoleAccess(role, route.allowedRoles)
 }
 
 /**
  * Check if a role can see a navigation group
  */
 export function canSeeGroup(group: NavigationGroupConfig, role: AppRole | null): boolean {
-    if (!role) return false
-    if (group.visibleTo === 'all') return true
-
-    if (group.visibleTo.includes(role)) return true
-
-    const currentLevel = ROLES[role]?.level ?? Number.MAX_SAFE_INTEGER
-    return group.visibleTo.some((allowedRole) => {
-        const allowedLevel = ROLES[allowedRole]?.level ?? Number.MAX_SAFE_INTEGER
-        return currentLevel <= allowedLevel
-    })
+    return canRoleAccess(role, group.visibleTo)
 }
 
 /**

@@ -19,7 +19,15 @@ const PRIVILEGED_ROLES = new Set<AppRole>([
 ]);
 
 const isAppRole = (value: unknown): value is AppRole => {
-  return typeof value === "string" && (PRIVILEGED_ROLES.has(value as AppRole) || value === "property_manager" || value === "property_hr" || value === "department_head" || value === "manager" || value === "staff");
+  return (
+    typeof value === "string" &&
+    (PRIVILEGED_ROLES.has(value as AppRole) ||
+      value === "property_manager" ||
+      value === "property_hr" ||
+      value === "department_head" ||
+      value === "manager" ||
+      value === "staff")
+  );
 };
 
 type CompensationPlan =
@@ -80,10 +88,13 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Missing Authorization header" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Missing Authorization header" }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
@@ -99,10 +110,13 @@ Deno.serve(async (req) => {
     } = await supabaseUserClient.auth.getUser();
 
     if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized", details: userError?.message }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Unauthorized", details: userError?.message }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const { execution_id } = await req.json();
@@ -127,9 +141,12 @@ Deno.serve(async (req) => {
     const roles = (roleRows || []).map((row) => row.role).filter(isAppRole);
     const isPrivilegedCaller = roles.some((role) => PRIVILEGED_ROLES.has(role));
 
-    const { data: policyRows, error: policyError } = await supabase.rpc("get_active_policy", {
-      p_domain: "workflow",
-    });
+    const { data: policyRows, error: policyError } = await supabase.rpc(
+      "get_active_policy",
+      {
+        p_domain: "workflow",
+      },
+    );
 
     if (policyError) {
       console.warn("Failed to load workflow policy:", policyError.message);
@@ -147,14 +164,20 @@ Deno.serve(async (req) => {
     const definition = execution.workflow_definitions;
 
     const metadata = (execution.metadata || {}) as Record<string, unknown>;
-    const triggeredBy = typeof metadata.triggered_by === "string" ? metadata.triggered_by : null;
+    const triggeredBy =
+      typeof metadata.triggered_by === "string" ? metadata.triggered_by : null;
 
     if (!isPrivilegedCaller) {
       if (!triggeredBy || triggeredBy !== user.id) {
-        return new Response(JSON.stringify({ error: "Forbidden: not authorized to execute this workflow" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({
+            error: "Forbidden: not authorized to execute this workflow",
+          }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       const { data: callerProps } = await supabase
@@ -166,23 +189,37 @@ Deno.serve(async (req) => {
         .select("department_id")
         .eq("user_id", user.id);
 
-      const propertyIds = new Set((callerProps || []).map((row) => row.property_id));
-      const departmentIds = new Set((callerDepts || []).map((row) => row.department_id));
-      const metadataPropertyId = typeof metadata.property_id === "string" ? metadata.property_id : null;
-      const metadataDepartmentId = typeof metadata.department_id === "string" ? metadata.department_id : null;
+      const propertyIds = new Set(
+        (callerProps || []).map((row) => row.property_id),
+      );
+      const departmentIds = new Set(
+        (callerDepts || []).map((row) => row.department_id),
+      );
+      const metadataPropertyId =
+        typeof metadata.property_id === "string" ? metadata.property_id : null;
+      const metadataDepartmentId =
+        typeof metadata.department_id === "string"
+          ? metadata.department_id
+          : null;
 
       if (metadataPropertyId && !propertyIds.has(metadataPropertyId)) {
-        return new Response(JSON.stringify({ error: "Forbidden: property scope mismatch" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Forbidden: property scope mismatch" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
 
       if (metadataDepartmentId && !departmentIds.has(metadataDepartmentId)) {
-        return new Response(JSON.stringify({ error: "Forbidden: department scope mismatch" }), {
-          status: 403,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        return new Response(
+          JSON.stringify({ error: "Forbidden: department scope mismatch" }),
+          {
+            status: 403,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
     }
 
@@ -237,7 +274,10 @@ Deno.serve(async (req) => {
 
           success = false;
           failureReason = message;
-          compensationResults = await compensateExecutedActions(supabase, executedActions);
+          compensationResults = await compensateExecutedActions(
+            supabase,
+            executedActions,
+          );
           break;
         }
       }
@@ -266,7 +306,10 @@ Deno.serve(async (req) => {
 
         success = false;
         failureReason = message;
-        compensationResults = await compensateExecutedActions(supabase, executedActions);
+        compensationResults = await compensateExecutedActions(
+          supabase,
+          executedActions,
+        );
       }
     } else {
       stepResults.push({
@@ -317,7 +360,7 @@ Deno.serve(async (req) => {
         .eq("id", executionIdForFailure);
     }
 
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: "Internal server error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -418,7 +461,9 @@ async function applyCompensation(
         const { error: stepError } = await supabase
           .from("request_steps")
           .update({
-            assignee_id: compensation.previous_step_assignee_id ?? compensation.previous_assignee_id,
+            assignee_id:
+              compensation.previous_step_assignee_id ??
+              compensation.previous_assignee_id,
           })
           .eq("id", compensation.step_id);
 
@@ -440,15 +485,15 @@ async function executeAction(
   policy: Record<string, any> | null,
 ): Promise<ActionExecutionResult> {
   const actionOverrides = policy?.action_overrides?.[actionType];
-  const effectiveConfig = actionOverrides ? { ...config, ...actionOverrides } : config;
+  const effectiveConfig = actionOverrides
+    ? { ...config, ...actionOverrides }
+    : config;
 
   console.log(`Executing action: ${actionType}`, effectiveConfig);
 
   switch (actionType) {
     case "send_notification": {
-      const userId = String(
-        effectiveConfig.user_id ?? context?.user_id ?? "",
-      );
+      const userId = String(effectiveConfig.user_id ?? context?.user_id ?? "");
       if (!userId) throw new Error("send_notification requires user_id");
 
       const { data: createdNotification, error } = await supabase
@@ -457,7 +502,9 @@ async function executeAction(
           user_id: userId,
           type: String(effectiveConfig.notification_type ?? "announcement_new"),
           title: String(effectiveConfig.title ?? "Notification"),
-          message: String(effectiveConfig.message ?? "You have a new notification"),
+          message: String(
+            effectiveConfig.message ?? "You have a new notification",
+          ),
           metadata: { ...(context || {}), workflow_triggered: true },
         })
         .select("id")
@@ -469,7 +516,12 @@ async function executeAction(
         action: actionType,
         summary: { user_id: userId },
         compensations: createdNotification?.id
-          ? [{ kind: "delete_notifications", notification_ids: [createdNotification.id] }]
+          ? [
+              {
+                kind: "delete_notifications",
+                notification_ids: [createdNotification.id],
+              },
+            ]
           : [],
       };
     }
@@ -510,7 +562,8 @@ async function executeAction(
 
         if (!notifError) {
           remindersSent += 1;
-          if (createdNotification?.id) notificationIds.push(createdNotification.id);
+          if (createdNotification?.id)
+            notificationIds.push(createdNotification.id);
         }
       }
 
@@ -518,14 +571,21 @@ async function executeAction(
         action: actionType,
         summary: { reminders_sent: remindersSent },
         compensations: notificationIds.length
-          ? [{ kind: "delete_notifications", notification_ids: notificationIds }]
+          ? [
+              {
+                kind: "delete_notifications",
+                notification_ids: notificationIds,
+              },
+            ]
           : [],
       };
     }
 
     case "assign_training": {
       const userId = String(effectiveConfig.user_id ?? context?.user_id ?? "");
-      const moduleId = String(effectiveConfig.module_id ?? effectiveConfig.content_id ?? "");
+      const moduleId = String(
+        effectiveConfig.module_id ?? effectiveConfig.content_id ?? "",
+      );
 
       if (!userId || !moduleId) {
         throw new Error("assign_training requires user_id and module_id");
@@ -575,21 +635,26 @@ async function executeAction(
         .maybeSingle();
 
       if (assignmentError || !currentAssignment) {
-        throw new Error(assignmentError?.message || "Unable to resolve assignment row");
+        throw new Error(
+          assignmentError?.message || "Unable to resolve assignment row",
+        );
       }
 
-      const { data: createdNotification, error: notificationError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: userId,
-          type: "training_assigned",
-          title: "New Training Assigned",
-          message:
-            String(effectiveConfig.message ?? "You have been assigned a new training module."),
-          metadata: { content_id: moduleId, workflow_triggered: true },
-        })
-        .select("id")
-        .single();
+      const { data: createdNotification, error: notificationError } =
+        await supabase
+          .from("notifications")
+          .insert({
+            user_id: userId,
+            type: "training_assigned",
+            title: "New Training Assigned",
+            message: String(
+              effectiveConfig.message ??
+                "You have been assigned a new training module.",
+            ),
+            metadata: { content_id: moduleId, workflow_triggered: true },
+          })
+          .select("id")
+          .single();
 
       if (notificationError) throw notificationError;
 
@@ -644,8 +709,9 @@ async function executeAction(
 
       if (!requestId) throw new Error("escalate_approval requires request_id");
 
-      const escalatedTo =
-        effectiveConfig.escalate_to ? String(effectiveConfig.escalate_to) : "";
+      const escalatedTo = effectiveConfig.escalate_to
+        ? String(effectiveConfig.escalate_to)
+        : "";
       if (!escalatedTo) {
         await supabase.rpc("check_and_escalate_requests");
         return {
@@ -716,36 +782,39 @@ async function executeAction(
       });
 
       const notificationIds: string[] = [];
-      const { data: targetNotification, error: targetNotificationError } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: escalatedTo,
-          type: "escalation_alert",
-          title: "Request Escalated to You",
-          message: `Request #${request.request_no || "Unknown"} has been escalated and requires your attention.`,
-          metadata: { request_id: requestId, workflow_triggered: true },
-        })
-        .select("id")
-        .single();
-
-      if (targetNotificationError) throw targetNotificationError;
-      if (targetNotification?.id) notificationIds.push(targetNotification.id);
-
-      if (request.current_assignee_id) {
-        const { data: previousNotification, error: previousNotificationError } = await supabase
+      const { data: targetNotification, error: targetNotificationError } =
+        await supabase
           .from("notifications")
           .insert({
-            user_id: request.current_assignee_id,
+            user_id: escalatedTo,
             type: "escalation_alert",
-            title: "Request Escalated",
-            message: `Request #${request.request_no || "Unknown"} has been escalated to another approver.`,
+            title: "Request Escalated to You",
+            message: `Request #${request.request_no || "Unknown"} has been escalated and requires your attention.`,
             metadata: { request_id: requestId, workflow_triggered: true },
           })
           .select("id")
           .single();
 
+      if (targetNotificationError) throw targetNotificationError;
+      if (targetNotification?.id) notificationIds.push(targetNotification.id);
+
+      if (request.current_assignee_id) {
+        const { data: previousNotification, error: previousNotificationError } =
+          await supabase
+            .from("notifications")
+            .insert({
+              user_id: request.current_assignee_id,
+              type: "escalation_alert",
+              title: "Request Escalated",
+              message: `Request #${request.request_no || "Unknown"} has been escalated to another approver.`,
+              metadata: { request_id: requestId, workflow_triggered: true },
+            })
+            .select("id")
+            .single();
+
         if (previousNotificationError) throw previousNotificationError;
-        if (previousNotification?.id) notificationIds.push(previousNotification.id);
+        if (previousNotification?.id)
+          notificationIds.push(previousNotification.id);
       }
 
       const compensations: CompensationPlan[] = [
@@ -780,9 +849,12 @@ async function executeAction(
           description: String(effectiveConfig.description ?? ""),
           status: "todo",
           priority: String(effectiveConfig.priority ?? "medium"),
-          assigned_to_id: effectiveConfig.assigned_to_id ?? context?.user_id ?? null,
-          property_id: effectiveConfig.property_id ?? context?.property_id ?? null,
-          department_id: effectiveConfig.department_id ?? context?.department_id ?? null,
+          assigned_to_id:
+            effectiveConfig.assigned_to_id ?? context?.user_id ?? null,
+          property_id:
+            effectiveConfig.property_id ?? context?.property_id ?? null,
+          department_id:
+            effectiveConfig.department_id ?? context?.department_id ?? null,
           due_date:
             effectiveConfig.due_date ??
             new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),

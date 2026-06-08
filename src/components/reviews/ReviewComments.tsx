@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
@@ -30,6 +31,7 @@ interface ReviewCommentsProps {
 }
 
 export function ReviewComments({ reviewId, className }: ReviewCommentsProps) {
+  const { t } = useTranslation()
   const { user, profile } = useAuth()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -203,6 +205,7 @@ export function ReviewComments({ reviewId, className }: ReviewCommentsProps) {
                           size="icon"
                           className="h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => deleteCommentMutation.mutate(comment.id)}
+                          aria-label={t('accessibility.delete_comment', 'Delete comment')}
                         >
                           <Trash2 className="h-3 w-3 text-muted-foreground" />
                         </Button>
@@ -247,6 +250,7 @@ export function ReviewComments({ reviewId, className }: ReviewCommentsProps) {
               variant="ghost"
               className="h-6 w-6"
               onClick={() => setShowMentions(!showMentions)}
+              aria-label={t('accessibility.toggle_mentions', 'Toggle mentions')}
             >
               <AtSign className="h-3.5 w-3.5" />
             </Button>

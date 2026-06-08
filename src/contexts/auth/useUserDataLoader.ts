@@ -78,9 +78,6 @@ export function useUserDataLoader(
     try {
       const { data, error } = await supabase.auth.refreshSession()
       if (data?.session?.user && !error) {
-        if (import.meta.env.DEV) {
-          console.log(`[Auth] Token refresh recovered session during ${context}`)
-        }
         return true
       }
     } catch {
@@ -91,14 +88,19 @@ export function useUserDataLoader(
 
   /** Loads all user data (profile, roles, properties, departments). */
   const loadUserData = useCallback(
-    async (userId: string) => {
+    async (userId: string, isBackground = false) => {
       const { isAuthError, withTimeout, clearLocalSession } = session
       const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
 
       try {
         const loadId = ++loadSeqRef.current
         activeUserIdRef.current = userId
-        setRolesLoading(true)
+        
+        // Only trigger global skeleton if not a background refresh
+        if (!isBackground) {
+          setRolesLoading(true)
+        }
+        
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
 
         /**
@@ -128,7 +130,7 @@ export function useUserDataLoader(
         // ── Load profile ──────────────────────────────────────────
         const profilePromise = supabase
           .from('profiles')
-          .select('*')
+          .select('id, email, full_name, phone, avatar_url, hire_date, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at, language, date_of_birth, job_title_id, iqama_number, bio')
           .eq('id', userId)
           .limit(1)
 

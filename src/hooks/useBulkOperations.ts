@@ -129,14 +129,14 @@ export function useBulkUpdateTasks() {
                     .in('id', ids)
                 : { data: [] as Array<{ id: string }> }
 
-            const beforeById = new Map(
-                (beforeRows || []).map((row: Record<string, unknown>) => {
+            const beforeById = new Map<string, Record<string, unknown>>(
+                ((beforeRows || []) as Array<Record<string, unknown>>).map((row) => {
                     const id = String(row.id)
                     const before = updateKeys.reduce<Record<string, unknown>>((acc, key) => {
                         acc[key] = row[key]
                         return acc
                     }, {})
-                    return [id, before]
+                    return [id, before] as const
                 })
             )
 
@@ -178,7 +178,7 @@ export function useBulkUpdateTasks() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry) => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -273,7 +273,7 @@ export function useBulkAssignTasks() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry) => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -385,7 +385,7 @@ export function useBulkUpdateTaskStatus() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry) => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -476,7 +476,7 @@ export function useBulkDeleteTasks() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry): entry is { id: string; before: { is_deleted: boolean } } => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -557,14 +557,14 @@ export function useBulkUpdateMaintenanceTickets() {
                 })
             }
 
-            const beforeById = new Map(
-                (beforeRows || []).map((row: Record<string, unknown>) => {
+            const beforeById = new Map<string, Record<string, unknown>>(
+                ((beforeRows || []) as Array<Record<string, unknown>>).map((row) => {
                     const id = String(row.id)
                     const before = updateKeys.reduce<Record<string, unknown>>((acc, key) => {
                         acc[key] = row[key]
                         return acc
                     }, {})
-                    return [id, before]
+                    return [id, before] as const
                 })
             )
 
@@ -573,7 +573,7 @@ export function useBulkUpdateMaintenanceTickets() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry) => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -669,7 +669,7 @@ export function useBulkAssignMaintenanceTickets() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry) => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -762,7 +762,7 @@ export function useBulkApproveLeaveRequests() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
+                .filter((entry): entry is { id: string; before: { status: string; approved_by_id: string | null } } => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {

@@ -135,6 +135,7 @@ export default function SystemWiki() {
                                         icon={getContentIcon(art.slug)}
                                         activeTab={activeTab}
                                         onClick={setActiveTab}
+                                        badge={undefined}
                                     />
                                 ))
                             ) : (

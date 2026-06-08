@@ -139,7 +139,14 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
 })
 
 const hasDraftableArticleContent = (formData: ArticleFormData) => {
-    const richTextContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let richTextContent = formData.content;
+    do {
+      previous = richTextContent;
+      richTextContent = previous.replace(/<[^>]*>/g, ' ');
+    } while (richTextContent !== previous);
+    richTextContent = richTextContent.replace(/\s+/g, ' ').trim()
 
     return Boolean(
         formData.title.trim() ||
@@ -728,7 +735,7 @@ export default function KnowledgeEditor() {
             ].filter(Boolean)
 
             if (labels.length > 1) {
-                const normalizeMermaidLabel = (value: string) => value.replace(/"/g, '\\"')
+                const normalizeMermaidLabel = (value: string) => value.replace(/[\\"]/g, '\\$&')
                 const nodeId = (index: number) => `N${index + 1}`
                 const lines = ['flowchart TD']
 
@@ -1069,7 +1076,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
     const calculateEstimatedReadTime = useCallback((value: string): number | null => {
         if (!value) return null
-        const plainText = value.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+        // Use recursive sanitization to prevent bypass attempts with nested tags
+        let previous: string;
+        let plainText = value;
+        do {
+          previous = plainText;
+          plainText = previous.replace(/<[^>]*>/g, ' ');
+        } while (plainText !== previous);
+        plainText = plainText.replace(/\s+/g, ' ').trim()
         if (!plainText) return null
         return Math.max(1, Math.round(plainText.split(' ').length / 200))
     }, [])
@@ -1108,7 +1122,14 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             if (needsSummary || needsDescription) {
                 toast.info('🤖 Auto-generating summary...', { duration: 2000 })
                 try {
-                    const cleanContent = formData.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+                    // Use recursive sanitization to prevent bypass attempts with nested tags
+                    let previous: string;
+                    let cleanContent = formData.content;
+                    do {
+                      previous = cleanContent;
+                      cleanContent = previous.replace(/<[^>]*>/g, ' ');
+                    } while (cleanContent !== previous);
+                    cleanContent = cleanContent.replace(/\s+/g, ' ').trim()
                     if (needsSummary) {
                         const summaryResult = await aiService.improveContent(
                             `Write a 2-3 sentence professional summary of this hotel document.\n\nDOCUMENT:\n${cleanContent.substring(0, 3000)}\n\nWrite ONLY the summary in English.`,
@@ -1397,7 +1418,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t('accessibility.back', 'Go back')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
@@ -1522,6 +1543,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                             size="sm"
                                             className="h-5 w-5 p-0"
                                             onClick={clearSuggestions}
+                                            aria-label={t('accessibility.clear_suggestions', 'Clear suggestions')}
                                         >
                                             <X className="w-3 h-3" />
                                         </Button>
@@ -1559,7 +1581,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 <Label>{t('editor.url_label')}</Label>
                                 <div className="flex gap-2">
                                     <Input value={formData.file_url} onChange={e => updateField('file_url', e.target.value)} placeholder={t('editor.url_placeholder')} className="mt-1" />
-                                    <Button variant="outline" size="icon" className="mt-1"><LinkIcon className="h-4 w-4" /></Button>
+                                    <Button variant="outline" size="icon" className="mt-1" aria-label={t('accessibility.link', 'Add link')}><LinkIcon className="h-4 w-4" /></Button>
                                 </div>
                             </div>
 

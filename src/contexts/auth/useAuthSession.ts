@@ -55,9 +55,6 @@ export function useAuthSession() {
     async (reason: string, onCleared: () => void) => {
       // If a clear is already in flight, wait for it then reset state
       if (authRecoveryInProgressRef.current && clearPromiseRef.current) {
-        if (import.meta.env.DEV) {
-          console.log(`[Auth] Session clear already in progress, waiting. New reason: ${reason}`)
-        }
         await clearPromiseRef.current.catch(() => {})
         onCleared()
         return

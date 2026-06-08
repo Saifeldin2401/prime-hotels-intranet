@@ -44,7 +44,12 @@ function logEvent(
   message: string,
   context: Record<string, unknown>,
 ): void {
-  const logger = level === "error" ? console.error : level === "warn" ? console.warn : console.log;
+  const logger =
+    level === "error"
+      ? console.error
+      : level === "warn"
+        ? console.warn
+        : console.log;
   logger(`[public-forgot-password] ${message}`, context);
 }
 
@@ -72,7 +77,10 @@ function resolveClientIp(req: Request): string {
 function resolveAppUrl(req: Request): ResolvedAppUrl {
   const candidates = [
     { value: (Deno.env.get("APP_URL") || "").trim(), source: "APP_URL" },
-    { value: (Deno.env.get("APP_BASE_URL") || "").trim(), source: "APP_BASE_URL" },
+    {
+      value: (Deno.env.get("APP_BASE_URL") || "").trim(),
+      source: "APP_BASE_URL",
+    },
     { value: (Deno.env.get("SITE_URL") || "").trim(), source: "SITE_URL" },
     { value: (req.headers.get("origin") || "").trim(), source: "origin" },
   ];
@@ -150,7 +158,12 @@ Deno.serve(async (req: Request) => {
   }
 
   if (req.method !== "POST") {
-    return jsonResponse({ error: "Method not allowed" }, 405, corsHeaders, requestId);
+    return jsonResponse(
+      { error: "Method not allowed" },
+      405,
+      corsHeaders,
+      requestId,
+    );
   }
 
   try {
@@ -161,7 +174,12 @@ Deno.serve(async (req: Request) => {
         hasAnonKey: Boolean(SUPABASE_ANON_KEY),
         hasServiceRoleKey: Boolean(SUPABASE_SERVICE_ROLE_KEY),
       });
-      return jsonResponse({ error: "Missing environment configuration" }, 500, corsHeaders, requestId);
+      return jsonResponse(
+        { error: "Missing environment configuration" },
+        500,
+        corsHeaders,
+        requestId,
+      );
     }
 
     const body = (await req.json().catch(() => ({}))) as { email?: unknown };
@@ -190,7 +208,13 @@ Deno.serve(async (req: Request) => {
         emailDomain,
         retryAfterSeconds: rate.retryAfterSeconds ?? null,
       });
-      return jsonResponse({ error: "Too many requests" }, 429, corsHeaders, requestId, extraHeaders);
+      return jsonResponse(
+        { error: "Too many requests" },
+        429,
+        corsHeaders,
+        requestId,
+        extraHeaders,
+      );
     }
 
     await adminClient
@@ -220,13 +244,14 @@ Deno.serve(async (req: Request) => {
     const profileUserId = profile?.id || null;
     const recipientName = (profile?.full_name || "").trim() || email;
 
-    const { data: linkData, error: linkError } = await adminClient.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo: resetRedirectTo,
-      },
-    });
+    const { data: linkData, error: linkError } =
+      await adminClient.auth.admin.generateLink({
+        type: "recovery",
+        email,
+        options: {
+          redirectTo: resetRedirectTo,
+        },
+      });
 
     if (linkError) {
       logEvent("error", "generate_link_failed", {
@@ -252,29 +277,32 @@ Deno.serve(async (req: Request) => {
         : resetRedirectTo;
 
       try {
-        const emailResponse = await fetch(`${SUPABASE_URL}/functions/v1/send-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
-            "apikey": SUPABASE_SERVICE_ROLE_KEY,
-          },
-          body: JSON.stringify({
-            to: email,
-            templateKey: "system_generic_alert",
-            title: "Password reset",
-            message: "Use the link below to reset your PHG Connect password.",
-            actionUrl: resetLink,
-            actionLabel: "Reset Password",
-            businessDomain: "user_management",
-            notificationType: "system",
-            userId: profileUserId || undefined,
-            variables: {
-              recipient_name: recipientName,
-              reset_url: resetLink,
+        const emailResponse = await fetch(
+          `${SUPABASE_URL}/functions/v1/send-email`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              apikey: SUPABASE_SERVICE_ROLE_KEY,
             },
-          }),
-        });
+            body: JSON.stringify({
+              to: email,
+              templateKey: "system_generic_alert",
+              title: "Password reset",
+              message: "Use the link below to reset your PHG Connect password.",
+              actionUrl: resetLink,
+              actionLabel: "Reset Password",
+              businessDomain: "user_management",
+              notificationType: "system",
+              userId: profileUserId || undefined,
+              variables: {
+                recipient_name: recipientName,
+                reset_url: resetLink,
+              },
+            }),
+          },
+        );
 
         if (!emailResponse.ok) {
           const responseText = await emailResponse.text().catch(() => "");
@@ -291,7 +319,10 @@ Deno.serve(async (req: Request) => {
           requestId,
           emailDomain,
           resetRedirectTo,
-          error: emailError instanceof Error ? emailError.message : String(emailError),
+          error:
+            emailError instanceof Error
+              ? emailError.message
+              : String(emailError),
         });
       }
     }

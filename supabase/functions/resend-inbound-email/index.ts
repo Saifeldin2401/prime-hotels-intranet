@@ -39,7 +39,8 @@ Deno.serve(async (req: Request) => {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Headers": "content-type, svix-id, svix-timestamp, svix-signature",
+        "Access-Control-Allow-Headers":
+          "content-type, svix-id, svix-timestamp, svix-signature",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
       },
     });
@@ -50,11 +51,15 @@ Deno.serve(async (req: Request) => {
   }
 
   const SUPABASE_URL = Deno.env.get("SUPABASE_URL") ?? "";
-  const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const SUPABASE_SERVICE_ROLE_KEY =
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
   const RESEND_WEBHOOK_SECRET = Deno.env.get("RESEND_WEBHOOK_SECRET") ?? "";
 
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-    return jsonResponse({ error: "Missing Supabase environment variables" }, 500);
+    return jsonResponse(
+      { error: "Missing Supabase environment variables" },
+      500,
+    );
   }
 
   if (!RESEND_WEBHOOK_SECRET) {

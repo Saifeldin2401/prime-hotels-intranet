@@ -41,6 +41,7 @@ import {
     X
 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 const RELATION_TYPES = [
     { value: 'see_also', label: 'Related / See Also', color: 'blue' },
@@ -60,6 +61,7 @@ export function RelatedArticlesEditor({
     relatedArticles,
     onUpdate
 }: RelatedArticlesEditorProps) {
+    const { t } = useTranslation('knowledge')
     const queryClient = useQueryClient()
     const [searchOpen, setSearchOpen] = useState(false)
     const [searchQuery, setSearchQuery] = useState('')
@@ -253,6 +255,7 @@ export function RelatedArticlesEditor({
                                     className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => removeRelation.mutate(article.id)}
                                     disabled={removeRelation.isPending}
+                                    aria-label={t('accessibility.remove_related_article', 'Remove related article')}
                                 >
                                     {removeRelation.isPending ? (
                                         <Loader2 className="h-4 w-4 animate-spin" />

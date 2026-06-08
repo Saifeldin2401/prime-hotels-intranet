@@ -24,7 +24,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useIsMobile } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, LazyMotion, domAnimation, m, PanInfo, useAnimation } from 'framer-motion'
+import { AnimatePresence, LazyMotion, domAnimation, m, useAnimation } from 'framer-motion'
+import type { PanInfo } from 'framer-motion'
 import {
     BookOpen,
     CheckCircle2,
@@ -44,6 +45,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import DOMPurify from 'dompurify'
 import { useNavigate, useParams } from 'react-router-dom'
 
 interface MobileTrainingPlayerProps {
@@ -229,6 +231,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                 size="icon"
                                 className="touch-target"
                                 onClick={() => setIsTOCOpen(true)}
+                                aria-label={t('accessibility.open_contents', 'Open table of contents')}
                             >
                                 <List className="h-5 w-5" />
                             </Button>
@@ -237,6 +240,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                 size="icon"
                                 className="touch-target"
                                 disabled={isTranslating}
+                                aria-label={t('accessibility.translate', 'Translate')}
                             >
                                 <Languages className="h-5 w-5" />
                             </Button>
@@ -419,7 +423,7 @@ function MobileBlockRenderer({ block, onComplete }: MobileBlockRendererProps) {
             return (
                 <Card className="overflow-hidden">
                     <CardContent className="p-4 prose prose-sm max-w-none">
-                        <div dangerouslySetInnerHTML={{ __html: block.content || '' }} />
+                        <div dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(block.content || '') }} />
                     </CardContent>
                 </Card>
             )

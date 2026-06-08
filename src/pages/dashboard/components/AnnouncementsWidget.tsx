@@ -124,7 +124,7 @@ export function AnnouncementsWidget() {
                 </m.div>
               ) : (
                 announcements?.map((announcement, index: number) => {
-                  const isHighPriority = announcement.priority === 'high' || announcement.priority === 'urgent';
+                  const isHighPriority = announcement.priority === 'important' || announcement.priority === 'critical';
                   const isNew = new Date().getTime() - new Date(announcement.created_at).getTime() < 1000 * 60 * 60 * 24 * 2; // 48 hours
                   const requiresAck = announcement.requires_acknowledgment || isHighPriority;
                   const hasRead = isRead(announcement.id);
@@ -167,7 +167,16 @@ export function AnnouncementsWidget() {
                               </div>
 
                               <p className="text-sm font-medium text-slate-500 line-clamp-1 mb-3">
-                                {announcement.content?.replace(/<[^>]*>?/gm, '') || "Click to view full details..."}
+                                {(() => {
+                              // Use recursive sanitization to prevent bypass attempts with nested tags
+                              let previous: string;
+                              let sanitized = announcement.content || '';
+                              do {
+                                previous = sanitized;
+                                sanitized = previous.replace(/<[^>]*>?/gm, '');
+                              } while (sanitized !== previous);
+                              return sanitized || "Click to view full details...";
+                            })()}
                               </p>
                             </Link>
 

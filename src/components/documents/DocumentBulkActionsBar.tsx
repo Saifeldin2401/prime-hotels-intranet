@@ -27,6 +27,7 @@ import {
     X,
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import type { DocumentTag } from "./DocumentTagManager";
 
 interface DocumentBulkActionsBarProps {
@@ -72,6 +73,7 @@ export function DocumentBulkActionsBar({
   isProcessing,
   className,
 }: DocumentBulkActionsBarProps) {
+  const { t } = useTranslation();
   const [moveDialogOpen, setMoveDialogOpen] = React.useState(false);
   const [tagDialogOpen, setTagDialogOpen] = React.useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = React.useState(false);
@@ -283,6 +285,7 @@ export function DocumentBulkActionsBar({
           className="text-white hover:bg-white/20 shrink-0"
           onClick={() => onSelectNone?.()}
           disabled={isProcessing}
+          aria-label={t("accessibility.clear_selection", "Clear selection")}
         >
           <X className="w-4 h-4" />
         </Button>

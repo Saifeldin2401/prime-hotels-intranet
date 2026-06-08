@@ -169,6 +169,7 @@ export default function ApprovalsDashboard() {
                             size="icon"
                             className={cn("h-10 w-10 rounded-none rounded-l-md", viewMode === 'grid' && "bg-muted text-primary")}
                             onClick={() => setViewMode('grid')}
+                            aria-label={t('accessibility.grid_view', 'Grid View')}
                         >
                             <LayoutGrid className="w-4 h-4" />
                         </Button>
@@ -177,6 +178,7 @@ export default function ApprovalsDashboard() {
                             size="icon"
                             className={cn("h-10 w-10 rounded-none rounded-r-md", viewMode === 'list' && "bg-muted text-primary")}
                             onClick={() => setViewMode('list')}
+                            aria-label={t('accessibility.list_view', 'List View')}
                         >
                             <LayoutList className="w-4 h-4" />
                         </Button>

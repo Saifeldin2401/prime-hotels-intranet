@@ -97,16 +97,21 @@ serve(async (req) => {
       headers: {
         // Some CDNs behave better with a UA
         "User-Agent": "phg-connect-image-proxy/1.0",
-        "Accept": "image/*,*/*;q=0.8",
+        Accept: "image/*,*/*;q=0.8",
       },
     });
 
     if (!upstream.ok) {
-      return json({ error: "Upstream fetch failed", status: upstream.status }, 502);
+      return json(
+        { error: "Upstream fetch failed", status: upstream.status },
+        502,
+      );
     }
 
-    const contentType = upstream.headers.get("content-type") || "application/octet-stream";
-    const cacheControl = upstream.headers.get("cache-control") || "public, max-age=3600";
+    const contentType =
+      upstream.headers.get("content-type") || "application/octet-stream";
+    const cacheControl =
+      upstream.headers.get("cache-control") || "public, max-age=3600";
 
     const bytes = new Uint8Array(await upstream.arrayBuffer());
 
@@ -123,7 +128,3 @@ serve(async (req) => {
     return json({ error: message }, 500);
   }
 });
-
-
-
-

@@ -10,6 +10,12 @@ const AUTH_SENSITIVE_PREFIXES = [
 export const AUTH_ROUTE_RECOVERY_MESSAGE =
   'PHG Connect is recovering your secure link. This should take a moment.'
 
+function isLocalDevelopmentHost(hostname: string): boolean {
+  return hostname === 'localhost'
+    || hostname === '127.0.0.1'
+    || hostname === '[::1]'
+}
+
 export function canonicalizeAppUrl(candidate: string | null | undefined): string {
   const fallback = new URL(DEFAULT_CANONICAL_APP_URL)
 
@@ -19,6 +25,9 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
 
   try {
     const parsed = new URL(candidate)
+    if (isLocalDevelopmentHost(parsed.hostname)) {
+      return fallback.toString().replace(/\/$/, '')
+    }
     if (parsed.hostname === 'www.phg-connect.com') {
       parsed.hostname = 'phg-connect.com'
     }
@@ -127,7 +136,9 @@ export async function clearPrimeHotelServiceWorkersAndCaches(): Promise<boolean>
 
   if ('caches' in window) {
     const cacheKeys = await caches.keys()
-    const staleCacheKeys = cacheKeys.filter((key) => key.startsWith('prime-hotels-'))
+    const staleCacheKeys = cacheKeys.filter(
+      (key) => key.startsWith('prime-hotels-') || key.startsWith('phg-intranet-')
+    )
     if (staleCacheKeys.length > 0) {
       hadArtifacts = true
     }

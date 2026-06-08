@@ -27,7 +27,7 @@ type ToastVariant = 'default' | 'destructive' | 'error' | 'success' | 'warning' 
 
 interface ToastOptions {
   title?: string
-  description?: string
+  description?: React.ReactNode
   variant?: ToastVariant
   duration?: number
   action?: {

@@ -121,7 +121,7 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
             </Select>
 
             {hasFilters && (
-                <Button variant="ghost" onClick={() => onChange({})} size="icon">
+                <Button variant="ghost" onClick={() => onChange({})} size="icon" aria-label={t('accessibility.clear_filters', 'Clear filters')}>
                     <X className="h-4 w-4" />
                 </Button>
             )}

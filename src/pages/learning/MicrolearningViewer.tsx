@@ -17,6 +17,21 @@ import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 
+// Helper function to securely check if URL is from YouTube or Vimeo
+function isYouTubeOrVimeoUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url)
+        const validHosts = [
+            'youtube.com', 'www.youtube.com',
+            'youtu.be', 'www.youtu.be',
+            'vimeo.com', 'www.vimeo.com'
+        ]
+        return validHosts.includes(parsed.hostname)
+    } catch {
+        return false
+    }
+}
+
 export default function MicrolearningViewer() {
     const { t: t_ext } = useTranslation('extracted');
     const { id } = useParams()
@@ -53,8 +68,10 @@ export default function MicrolearningViewer() {
                 .select('*')
                 .eq('user_id', user?.id)
                 .eq('content_id', id)
-                .eq('content_type', 'microlearning')
-                .single()
+                .in('content_type', ['microlearning', 'video'])
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .maybeSingle()
             return data
         },
         enabled: !!id && !!user
@@ -96,7 +113,7 @@ export default function MicrolearningViewer() {
             await learningService.submitQuizProgress({
                 user_id: user.id,
                 content_id: id!,
-                content_type: 'video', // 'video' maps to 'microlearning' in backend/types logic generally or we use specifically 'video'
+                content_type: 'microlearning',
                 status: 'completed',
                 progress_percentage: 100,
                 passed: true,
@@ -136,7 +153,7 @@ export default function MicrolearningViewer() {
                     {t_ext('back', 'Back')}</Button>
 
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-lg group">
-                    {content.video_url.includes('youtube') || content.video_url.includes('vimeo') ? (
+                    {isYouTubeOrVimeoUrl(content.video_url) ? (
                         // Naive embed for demo - in prod would use a proper player library
                         <iframe
                             src={content.video_url.replace('watch?v=', 'embed/')}

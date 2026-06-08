@@ -45,6 +45,7 @@ import {
     X
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 import { useDropzone } from "react-dropzone";
 
 export interface DocumentVersion {
@@ -127,6 +128,7 @@ export function DocumentVersionUpload({
   const [compareVersion2, setCompareVersion2] = React.useState<string>("");
   const [uploadProgress, setUploadProgress] = React.useState(0);
   const [isUploading, setIsUploading] = React.useState(false);
+  const { t } = useTranslation();
 
   const { getRootProps, getInputProps, isDragActive, fileRejections } = useDropzone({
     // acceptedFileTypes is already in the MIME-type keyed format react-dropzone v14+ expects
@@ -348,6 +350,7 @@ export function DocumentVersionUpload({
                           e.stopPropagation();
                           onDownload?.(version);
                         }}
+                        aria-label={t('accessibility.download_version', 'Download version')}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
@@ -489,6 +492,7 @@ export function DocumentVersionUpload({
                   size="icon"
                   onClick={() => setSelectedFile(null)}
                   disabled={isUploading}
+                  aria-label={t('accessibility.remove_file', 'Remove file')}
                 >
                   <X className="w-4 h-4" />
                 </Button>

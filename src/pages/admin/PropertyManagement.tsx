@@ -169,10 +169,17 @@ function DepartmentManager({ property }: { property: Property }) {
                                                 size="icon"
                                                 className="h-6 w-6 text-gray-400 hover:text-gray-700 hover:bg-gray-100"
                                                 onClick={() => startEdit(dept)}
+                                                aria-label={t('accessibility.edit_department', 'Edit department')}
                                             >
                                                 <Pencil className="w-3 h-3" />
                                             </Button>
-                                            <Button variant="ghost" size="icon" className="h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50" onClick={() => handleDelete(dept.id)}>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="icon" 
+                                                className="h-6 w-6 text-gray-400 hover:text-red-500 hover:bg-red-50" 
+                                                onClick={() => handleDelete(dept.id)}
+                                                aria-label={t('accessibility.delete_department', 'Delete department')}
+                                            >
                                                 <Trash2 className="w-3 h-3" />
                                             </Button>
                                         </div>
@@ -370,14 +377,19 @@ export default function PropertyManagement() {
                                         <Badge variant={property.is_active ? 'default' : 'secondary'}>
                                             {property.is_active ? t('admin:properties.active') : t('admin:properties.inactive')}
                                         </Badge>
-                                        <Button variant="ghost" size="icon" onClick={() => handleEdit(property)}>
+                                        <Button 
+                                            variant="ghost" 
+                                            size="icon" 
+                                            onClick={() => handleEdit(property)}
+                                            aria-label={t('accessibility.edit_property', 'Edit property')}
+                                        >
                                             <Pencil className="w-4 h-4 text-gray-500" />
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="icon"
                                             onClick={() => handleOpenDelete(property)}
-                                            title={t('common:action.delete', { defaultValue: 'Delete' })}
+                                            aria-label={t('accessibility.delete_property', 'Delete property')}
                                         >
                                             <Trash2 className="w-4 h-4 text-red-600" />
                                         </Button>

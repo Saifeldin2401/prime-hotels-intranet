@@ -12,8 +12,10 @@ import { useProperties } from '@/hooks/useProperties'
 import { format } from 'date-fns'
 import { AlertCircle, Clock, Code, Database, Edit2, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export default function ReportBuilder() {
+    const { t } = useTranslation(['admin', 'common'])
     const { reports, isLoading, createReport, updateReport, deleteReport } = useReports()
     const { data: _properties } = useProperties()
     const [selectedReport, setSelectedReport] = useState<Partial<ReportDefinition> | null>(null)
@@ -137,7 +139,7 @@ export default function ReportBuilder() {
                                                 </CardTitle>
                                                 <CardDescription className="text-xs line-clamp-1 mt-1">{report.description}</CardDescription>
                                             </div>
-                                            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => startEditing(report)}>
+                                            <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => startEditing(report)} aria-label={t('accessibility.edit_report', 'Edit Report')}>
                                                 <Edit2 className="h-3 w-3 text-indigo-600" />
                                             </Button>
                                         </div>
@@ -159,7 +161,7 @@ export default function ReportBuilder() {
                                     </CardContent>
                                     <CardFooter className="p-3 border-t bg-slate-50 flex justify-between items-center text-xs text-muted-foreground">
                                         <div>Created {format(new Date(report.created_at), 'MMM dd, yyyy')}</div>
-                                        <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-red-600" onClick={() => handleDelete(report.id)}>
+                                        <Button size="icon" variant="ghost" className="h-6 w-6 hover:text-red-600" onClick={() => handleDelete(report.id)} aria-label={t('accessibility.delete_report', 'Delete Report')}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
                                     </CardFooter>

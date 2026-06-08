@@ -270,6 +270,7 @@ function ModuleListPanel({
                             size="icon"
                             className="size-7 hover:bg-slate-200/60"
                             title={t('actions', 'Actions')}
+                            aria-label={t('accessibility.open_actions', 'Open actions')}
                           >
                             <MoreVertical className="size-3.5" />
                           </Button>
@@ -313,6 +314,7 @@ function ModuleListPanel({
                       size="icon"
                       className="size-7 hover:bg-slate-200/60"
                       title={t('viewDetails', 'View details')}
+                      aria-label={t('accessibility.view_details', 'View details')}
                       onClick={() => onViewDetails(record.id)}
                     >
                       <Eye className="size-3.5" />

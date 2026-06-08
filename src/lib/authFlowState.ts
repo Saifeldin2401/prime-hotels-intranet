@@ -73,10 +73,11 @@ export function isStandaloneAuthFlowPathname(pathname: string): pathname is (typ
   )
 }
 
-export function setAuthFlowState(flow: AuthFlowName, path?: string) {
+export function setAuthFlowState(flow: AuthFlowName, path?: string, location?: { pathname: string; search: string; hash: string }) {
   if (typeof window === 'undefined') return
 
-  const fallbackPath = `${window.location.pathname}${window.location.search}${window.location.hash}` || getDefaultFlowPath(flow)
+  const loc = location ?? window.location
+  const fallbackPath = `${loc.pathname}${loc.search}${loc.hash}` || getDefaultFlowPath(flow)
   const sanitizedPath = sanitizeFlowPath(path) ?? fallbackPath
 
   try {
@@ -114,6 +115,7 @@ export function shouldSuppressAuthenticatedAppState(
   pathname: string,
   search = '',
   hash = '',
+  storedPath?: string,
 ): boolean {
   if (hasAuthRecoveryParams(search, hash)) {
     return true
@@ -123,6 +125,7 @@ export function shouldSuppressAuthenticatedAppState(
   const activeFlow = readStoredAuthFlowState()
   if (!activeFlow) return false
 
-  const flowPath = getDefaultFlowPath(activeFlow.flow)
+  // Use stored path if provided (for testing), otherwise use the flow's default path
+  const flowPath = storedPath ? normalizePathname(storedPath) : getDefaultFlowPath(activeFlow.flow)
   return currentPath === flowPath || currentPath.startsWith(`${flowPath}/`)
 }

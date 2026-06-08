@@ -101,7 +101,22 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       const fileUrl = urlData.publicUrl
 
       // Create document record
-      const documentData = {
+      const documentData: {
+        title: string
+        description: string | null
+        file_url: string
+        storage_bucket: string
+        storage_path: string
+        visibility: DocumentVisibility
+        status: DocumentStatus
+        requires_acknowledgment: boolean
+        created_by: string
+        current_version: number
+        file_size: number
+        content_type: string
+        property_id?: string
+        department_id?: string
+      } = {
         title,
         description: description || null,
         file_url: fileUrl,

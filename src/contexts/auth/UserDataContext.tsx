@@ -1,0 +1,195 @@
+/**
+ * UserDataContext - User profile data
+ * 
+ * This context handles:
+ * - Profile data
+ * - User roles
+ * - Properties
+ * - Departments
+ * - Data loading and refresh
+ */
+
+import type { ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState, useEffect } from 'react'
+import type { Department, Profile, Property, UserRole } from '@/lib/types'
+import type { AppRole } from '@/lib/constants'
+import { AuthIdentityContext } from './AuthIdentityContext'
+import { AuthSecurityContext } from './AuthSecurityContext'
+import { useUserDataLoader } from './useUserDataLoader'
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+export interface UserDataContextType {
+  profile: Profile | null
+  roles: UserRole[]
+  properties: Property[]
+  departments: Department[]
+  rolesLoading: boolean
+  primaryRole: AppRole | null
+  loadUserData: (userId: string, isBackground?: boolean) => Promise<void>
+  shouldRefreshUserData: (userId: string) => boolean
+  resetUserData: () => void
+  setRolesLoading: (loading: boolean) => void
+}
+
+export const UserDataContext = createContext<UserDataContextType | undefined>(undefined)
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
+export function useUserData() {
+  const context = useContext(UserDataContext)
+  if (context === undefined) {
+    throw new Error('useUserData must be used within a UserDataProvider')
+  }
+  return context
+}
+
+// ─── Role priority order (lower = higher privilege) ──────────────────────────
+const ROLE_ORDER: Record<AppRole, number> = {
+  corporate_admin: 1,
+  regional_admin: 2,
+  regional_hr: 3,
+  property_manager: 4,
+  property_hr: 5,
+  department_head: 6,
+  manager: 7,
+  staff: 8,
+}
+
+// ─── Types for session helpers (to avoid circular deps) ──────────────────────
+interface SessionHelpers {
+  isAuthError: (error: unknown) => boolean
+  withTimeout: <T>(promise: Promise<T>, ms: number, label: string) => Promise<T>
+  clearLocalSession: (reason: string, onCleared: () => void) => Promise<void>
+}
+
+// ─── Provider ────────────────────────────────────────────────────────────────
+export function UserDataProvider({ children }: { children: ReactNode }) {
+  const identityContext = useContext(AuthIdentityContext)
+  const securityContext = useContext(AuthSecurityContext)
+  const userId = identityContext?.user?.id ?? null
+  const setUser = identityContext?.setUser ?? (() => {})
+  const pendingMFAUserId = securityContext?.pendingMFAUserId ?? null
+
+  const [profile, setProfile] = useState<Profile | null>(null)
+  const [roles, setRoles] = useState<UserRole[]>([])
+  const [properties, setProperties] = useState<Property[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [rolesLoading, setRolesLoading] = useState(true)
+
+  // Refs to track user data loading
+  const profileRef = useRef<Profile | null>(null)
+  const rolesRef = useRef<UserRole[]>([])
+
+  const resetUserData = useCallback(() => {
+    setProfile(null)
+    setRoles([])
+    setProperties([])
+    setDepartments([])
+    setRolesLoading(false)
+    profileRef.current = null
+    rolesRef.current = []
+  }, [])
+
+  const stateSetters = useMemo(
+    () => ({ setProfile, setRoles, setProperties, setDepartments, setRolesLoading }),
+    []
+  )
+
+  // Minimal session helpers for the data loader
+  const sessionHelpersRef = useRef<SessionHelpers>({
+    isAuthError: (error: unknown) => {
+      if (!error || typeof error !== 'object') return false
+      const candidate = error as { code?: string | number; status?: number }
+      const code = String(candidate.code ?? '')
+      const status = Number(candidate.status ?? 0)
+      return (
+        status === 401 ||
+        code === '401' ||
+        code === 'PGRST301' ||
+        code === 'PGRST302' ||
+        code.toUpperCase().includes('JWT')
+      )
+    },
+    withTimeout: <T,>(promise: Promise<T>, ms: number, label: string): Promise<T> => {
+      return new Promise<T>((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error(`${label} timeout`)), ms)
+        promise
+          .then((value) => {
+            clearTimeout(timer)
+            resolve(value)
+          })
+          .catch((err) => {
+            clearTimeout(timer)
+            reject(err)
+          })
+      })
+    },
+    clearLocalSession: async (_reason: string, onCleared: () => void) => {
+      // This will be overridden by AuthIdentityProvider if needed
+      onCleared()
+    }
+  })
+
+  const resetLocalAuthState = useCallback(() => {
+    setUser(null)
+    resetUserData()
+  }, [setUser, resetUserData])
+
+  const { loadUserData, shouldRefreshUserData, syncProfileRef, syncRolesRef } =
+    useUserDataLoader(stateSetters, sessionHelpersRef.current, resetLocalAuthState)
+
+  // Keep refs in sync with state
+  useEffect(() => {
+    syncProfileRef(profile)
+    profileRef.current = profile
+  }, [profile, syncProfileRef])
+
+  useEffect(() => {
+    syncRolesRef(roles)
+    rolesRef.current = roles
+  }, [roles, syncRolesRef])
+
+  useEffect(() => {
+    if (!userId) {
+      resetUserData()
+      return
+    }
+
+    if (pendingMFAUserId === userId) {
+      resetUserData()
+      return
+    }
+
+    if (!shouldRefreshUserData(userId)) return
+
+    loadUserData(userId).catch(() => {
+      if (import.meta.env.DEV) {
+        console.warn('[UserData] Failed to auto-load user data.')
+      }
+    })
+  }, [userId, pendingMFAUserId, loadUserData, resetUserData, shouldRefreshUserData])
+
+  // ── Derived: primary role ─────────────────────────────────────────────────
+  const primaryRole = useMemo(() => {
+    if (roles.length === 0) return null
+    return [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
+  }, [roles])
+
+  const value = useMemo(() => ({
+    profile,
+    roles,
+    properties,
+    departments,
+    rolesLoading,
+    primaryRole,
+    loadUserData,
+    shouldRefreshUserData,
+    resetUserData,
+    setRolesLoading,
+  }), [profile, roles, properties, departments, rolesLoading, primaryRole, loadUserData, shouldRefreshUserData, resetUserData])
+
+  return (
+    <UserDataContext.Provider value={value}>
+      {children}
+    </UserDataContext.Provider>
+  )
+}

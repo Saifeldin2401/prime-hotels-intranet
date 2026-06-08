@@ -121,7 +121,7 @@ export function useAcknowledgeAnnouncement() {
       const previousAnnouncements = queryClient.getQueryData(['announcements'])
 
       // Optimistically mark as read
-      queryClient.setQueryData(['announcements'], (old) => {
+      queryClient.setQueryData<Array<{ id: string; is_read?: boolean; read_at?: string }>>(['announcements'], (old) => {
         if (!old) return old
         return old.map(announcement => 
           announcement.id === announcementId 
@@ -178,7 +178,7 @@ export function useApproveRequest() {
       const previousRequests = queryClient.getQueryData(['requests-inbox'])
 
       // Optimistically update request status
-      queryClient.setQueryData(['requests-inbox'], (old) => {
+      queryClient.setQueryData<Array<{ id: string; status?: string }>>(['requests-inbox'], (old) => {
         if (!old) return old
         return old.map(request => 
           request.id === requestId 
@@ -245,12 +245,12 @@ export function useNotificationAction() {
       const previousNotifications = queryClient.getQueryData(['notifications'])
 
       if (action === 'delete') {
-        queryClient.setQueryData(['notifications'], (old) => {
+        queryClient.setQueryData<Array<{ id: string }>>(['notifications'], (old) => {
           if (!old) return old
           return old.filter(n => n.id !== notificationId)
         })
       } else {
-        queryClient.setQueryData(['notifications'], (old) => {
+        queryClient.setQueryData<Array<{ id: string; action_taken?: boolean; action_taken_at?: string; dismissed_at?: string }>>(['notifications'], (old) => {
           if (!old) return old
           return old.map(notification => 
             notification.id === notificationId 
@@ -306,7 +306,7 @@ export function useMarkAllNotificationsRead() {
       
       const previousNotifications = queryClient.getQueryData(['notifications'])
 
-      queryClient.setQueryData(['notifications'], (old) => {
+      queryClient.setQueryData<Array<{ read_at?: string; is_read?: boolean }>>(['notifications'], (old) => {
         if (!old) return old
         return old.map(notification => ({
           ...notification,

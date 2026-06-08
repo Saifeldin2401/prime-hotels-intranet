@@ -48,8 +48,11 @@ export interface Profile {
   // Relations
   reporting_to_profile?: Profile // Populated when fetching with joins
   roles?: AppRole[]
+  role?: AppRole | null
   properties?: Property[]
+  property?: Property | null
   departments?: Department[]
+  department_id?: string | null
 }
 
 export interface UserRole {

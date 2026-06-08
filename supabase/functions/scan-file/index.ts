@@ -1,7 +1,12 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
-import { getServiceRoleToken, isAuthorizedServiceRoleRequest } from "../_shared/auth.ts";
+import {
+  getServiceRoleToken,
+  isAuthorizedServiceRoleRequest,
+} from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { getVaultSecret } from "../_shared/vault.ts";
+
 
 const MAX_FILE_SIZE_BYTES = 25 * 1024 * 1024;
 const BLOCKED_EXTENSIONS = new Set([
@@ -21,8 +26,10 @@ const BLOCKED_EXTENSIONS = new Set([
   "pl",
 ]);
 
-const SUSPICIOUS_DOUBLE_EXTENSION_REGEX = /\.[a-z0-9]{1,5}\.(exe|dll|bat|cmd|msi|ps1|vbs|js|jar|scr|com|sh|php|pl)$/i;
-const EICAR_SIGNATURE = "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
+const SUSPICIOUS_DOUBLE_EXTENSION_REGEX =
+  /\.[a-z0-9]{1,5}\.(exe|dll|bat|cmd|msi|ps1|vbs|js|jar|scr|com|sh|php|pl)$/i;
+const EICAR_SIGNATURE =
+  "X5O!P%@AP[4\\PZX54(P^)7CC)7}$EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*";
 
 type ScanRequest = {
   file_name?: string;
@@ -50,7 +57,7 @@ function decodeBase64Sample(sampleBase64?: string): Uint8Array {
   if (!sampleBase64) return new Uint8Array();
 
   const normalized = sampleBase64.includes(",")
-    ? sampleBase64.split(",").pop() ?? ""
+    ? (sampleBase64.split(",").pop() ?? "")
     : sampleBase64;
 
   try {
@@ -65,7 +72,12 @@ function decodeBase64Sample(sampleBase64?: string): Uint8Array {
   }
 }
 
-function evaluateScan(payload: Required<Pick<ScanRequest, "file_name" | "file_size" | "file_type">> & ScanRequest): ScanEvaluation {
+async function evaluateScan(
+  payload: Required<
+    Pick<ScanRequest, "file_name" | "file_size" | "file_type">
+  > &
+    ScanRequest,
+): Promise<ScanEvaluation> {
   const reasons: string[] = [];
   let risk = 0;
   let status: ScanStatus = "clean";
@@ -73,9 +85,13 @@ function evaluateScan(payload: Required<Pick<ScanRequest, "file_name" | "file_si
   const fileName = payload.file_name.trim().toLowerCase();
   const fileSize = Number(payload.file_size || 0);
   const fileType = (payload.file_type || "").toLowerCase();
-  const extension = fileName.includes(".") ? fileName.split(".").pop() ?? "" : "";
+  const extension = fileName.includes(".")
+    ? (fileName.split(".").pop() ?? "")
+    : "";
   const sampleBytes = decodeBase64Sample(payload.sample_base64);
-  const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(sampleBytes);
+  const sampleText = new TextDecoder("utf-8", { fatal: false }).decode(
+    sampleBytes,
+  );
 
   if (!fileName) {
     reasons.push("Missing file name.");
@@ -125,10 +141,35 @@ function evaluateScan(payload: Required<Pick<ScanRequest, "file_name" | "file_si
     if (status === "clean") status = "suspicious";
   }
 
+  // VirusTotal Integration
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const serviceClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  
+  const vtApiKey = await getVaultSecret(serviceClient, "VIRUSTOTAL_API_KEY");
+  if (vtApiKey && payload.file_hash_sha256) {
+    try {
+      const vtResponse = await fetch(`https://www.virustotal.com/api/v3/files/${payload.file_hash_sha256}`, {
+        headers: { 'x-apikey': vtApiKey }
+      });
+      if (vtResponse.ok) {
+        const vtData = await vtResponse.json();
+        const stats = vtData.data?.attributes?.last_analysis_stats;
+        if (stats && (stats.malicious > 0 || stats.suspicious > 0)) {
+          reasons.push(`VirusTotal detected malicious content (${stats.malicious} malicious, ${stats.suspicious} suspicious).`);
+          risk = 100;
+          status = "infected";
+        }
+      }
+    } catch (e) {
+      console.error("VirusTotal API error:", e);
+    }
+  }
+
   const clean = status === "clean";
-  const message = clean
-    ? "File passed security scan."
-    : reasons.join(" ");
+  const message = clean ? "File passed security scan." : reasons.join(" ");
 
   return {
     safe: clean,
@@ -158,13 +199,19 @@ Deno.serve(async (req: Request) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const authHeader = req.headers.get("Authorization");
     const serviceRoleJwt = getServiceRoleToken(authHeader);
-    const isServiceCall = isAuthorizedServiceRoleRequest(authHeader, serviceRoleKey);
+    const isServiceCall = isAuthorizedServiceRoleRequest(
+      authHeader,
+      serviceRoleKey,
+    );
 
     if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-      return new Response(JSON.stringify({ error: "Scan service is not configured." }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({ error: "Scan service is not configured." }),
+        {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     const payload = (await req.json()) as ScanRequest;
@@ -186,7 +233,8 @@ Deno.serve(async (req: Request) => {
 
     let actorUserId: string | null = null;
     if (!isServiceCall) {
-      const { data: userData, error: userError } = await authClient.auth.getUser();
+      const { data: userData, error: userError } =
+        await authClient.auth.getUser();
       if (userError || !userData.user) {
         return new Response(JSON.stringify({ error: "Unauthorized" }), {
           status: 401,
@@ -198,7 +246,7 @@ Deno.serve(async (req: Request) => {
       actorUserId = payload.user_id ?? null;
     }
 
-    const evaluation = evaluateScan({
+    const evaluation = await evaluateScan({
       ...payload,
       file_name: fileName,
       file_size: fileSize,
@@ -228,7 +276,9 @@ Deno.serve(async (req: Request) => {
         scan_metadata: {
           reasons: evaluation.reasons,
           context: payload.context ?? null,
-          sample_bytes_length: payload.sample_base64 ? decodeBase64Sample(payload.sample_base64).length : 0,
+          sample_bytes_length: payload.sample_base64
+            ? decodeBase64Sample(payload.sample_base64).length
+            : 0,
         },
       })
       .select("id")
@@ -238,31 +288,35 @@ Deno.serve(async (req: Request) => {
       console.error("Failed to persist file scan:", insertError);
     }
 
-    return new Response(JSON.stringify({
-      safe: evaluation.safe,
-      status: evaluation.status,
-      risk_score: evaluation.risk_score,
-      message: evaluation.message,
-      reasons: evaluation.reasons,
-      scan_id: scanRow?.id ?? null,
-    }), {
-      status: evaluation.safe ? 200 : 422,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        safe: evaluation.safe,
+        status: evaluation.status,
+        risk_score: evaluation.risk_score,
+        message: evaluation.message,
+        reasons: evaluation.reasons,
+        scan_id: scanRow?.id ?? null,
+      }),
+      {
+        status: evaluation.safe ? 200 : 422,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   } catch (error) {
     console.error("scan-file error:", error);
-    return new Response(JSON.stringify({
-      safe: false,
-      status: "error",
-      risk_score: 100,
-      message: error instanceof Error ? error.message : "Unexpected scan error",
-      reasons: ["Scan service failure."],
-    }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        safe: false,
+        status: "error",
+        risk_score: 100,
+        message:
+          error instanceof Error ? error.message : "Unexpected scan error",
+        reasons: ["Scan service failure."],
+      }),
+      {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      },
+    );
   }
 });
-
-
-

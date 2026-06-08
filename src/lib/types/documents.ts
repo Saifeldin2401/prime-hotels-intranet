@@ -24,6 +24,7 @@ export interface Document {
   updated_at: string
   view_count: number
   estimated_read_time?: number | null
+  featured?: boolean | null
   content_type: string
   expires_at?: string | null
   review_reminder_date?: string | null

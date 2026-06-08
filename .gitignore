@@ -23,11 +23,18 @@ dist-ssr
 *.sln
 *.sw?
 
-# Environment files
+# Environment files - SECURITY: Never commit files with real credentials
 .env
-.env.*
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
 !.env.example
 !.env.example.secure
+
+# Backup files created during security cleanup
+*.backup
 
 # Local Netlify folder
 .netlify
@@ -101,5 +108,42 @@ build_error.txt
 .vibe/
 .windsurf/
 .zencoder/
+.agents/
+.codex/
+.cursor/
+.jules/
+.orchids/
 /skills/
 /skills-lock.json
+
+# Translation/temp data files
+arabic_translations.json
+broken_arabic.txt
+english_to_translate.json
+
+# Patch/diff files
+*.diff
+*.patch
+pr_*.txt
+prs.json
+
+# MCP config
+.mcp-supabase.json
+
+# Temporary directories
+tmp/
+
+# Development helper scripts
+apply_patch.cjs
+verify_breadcrumbs_smoke.tsx
+check-*.cjs
+check-*.js
+dump-*.cjs
+extract_*.cjs
+fix-*.js
+fix-*.mjs
+generate_*.py
+test-pii-*.js
+resend_reminders.*
+capture.py
+find_dupes.py

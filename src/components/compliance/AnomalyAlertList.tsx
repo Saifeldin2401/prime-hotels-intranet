@@ -16,6 +16,16 @@ interface AnomalyAlertListProps {
   isLoading?: boolean
 }
 
+const hasUniqueTargets = (
+  details: AnomalyDetection['details'] | SuspiciousActivity['details']
+): details is AnomalyDetection['details'] & { unique_targets: number } =>
+  typeof details === 'object' && details !== null && 'unique_targets' in details && typeof details.unique_targets === 'number'
+
+const hasDownloadCount = (
+  details: AnomalyDetection['details'] | SuspiciousActivity['details']
+): details is SuspiciousActivity['details'] & { download_count: number } =>
+  typeof details === 'object' && details !== null && 'download_count' in details && typeof details.download_count === 'number'
+
 export function AnomalyAlertList({
   anomalies,
   suspiciousActivity,
@@ -97,10 +107,10 @@ export function AnomalyAlertList({
                       {alert.details.access_count && (
                         <li>Access count: {alert.details.access_count}</li>
                       )}
-                      {alert.details.unique_targets && (
+                      {hasUniqueTargets(alert.details) && (
                         <li>Unique targets: {alert.details.unique_targets}</li>
                       )}
-                      {alert.details.download_count && (
+                      {hasDownloadCount(alert.details) && (
                         <li>Download count: {alert.details.download_count}</li>
                       )}
                     </ul>

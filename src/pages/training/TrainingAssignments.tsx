@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { PaginationBar } from '@/components/ui/pagination-bar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
@@ -26,6 +27,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useLearningProgress, type LearningProgress } from '@/hooks/useLearningProgress'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
+import { usePagination } from '@/hooks/usePagination'
 import {
   getLearningAssignmentErrorMessage,
   persistLearningAssignments,
@@ -66,7 +68,7 @@ import {
     Users,
     X
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -101,6 +103,8 @@ interface LearningAssignment {
 }
 
 type AssignmentStatus = 'active' | 'completed' | 'overdue' | 'due_soon'
+
+const ROSTER_PAGE_SIZE = 10
 
 type EnrichedProgressRecord = LearningProgress & {
   resolvedDepartmentName: string
@@ -262,6 +266,8 @@ export function TrainingAssignmentsPanel({
   const [assignmentsFilterDueStatus, setAssignmentsFilterDueStatus] = useState<string>('all')
   const [selectedAssignments, setSelectedAssignments] = useState<Set<string>>(new Set())
   const [showFilters, setShowFilters] = useState(false)
+  const activeRosterPagination = usePagination(ROSTER_PAGE_SIZE)
+  const exemptedRosterPagination = usePagination(ROSTER_PAGE_SIZE)
 
   const resetReassignDialog = useCallback(() => {
     setReassignEntry(null)
@@ -314,7 +320,7 @@ export function TrainingAssignmentsPanel({
   })
 
   // Fetch Modules
-  const { data: modules } = useQuery({
+  const { data: modules, refetch: refetchAssignableModules } = useQuery({
     queryKey: ['training-modules', 'assignable'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -333,6 +339,29 @@ export function TrainingAssignmentsPanel({
     queryFn: () => learningService.getModuleAssignmentRoster(manageModuleId!),
     enabled: !!manageModuleId
   })
+
+  useEffect(() => {
+    activeRosterPagination.setPage(1)
+    exemptedRosterPagination.setPage(1)
+  }, [manageModuleId])
+
+  useEffect(() => {
+    if (!showAssignmentDialog) return
+    void refetchAssignableModules()
+  }, [showAssignmentDialog, refetchAssignableModules])
+
+  useEffect(() => {
+    activeRosterPagination.setTotalCount(moduleRoster?.active.length || 0)
+    exemptedRosterPagination.setTotalCount(moduleRoster?.exempted.length || 0)
+  }, [moduleRoster?.active.length, moduleRoster?.exempted.length])
+
+  const paginatedActiveRoster = useMemo(() => (
+    (moduleRoster?.active || []).slice(activeRosterPagination.from, activeRosterPagination.to + 1)
+  ), [activeRosterPagination.from, activeRosterPagination.to, moduleRoster?.active])
+
+  const paginatedExemptedRoster = useMemo(() => (
+    (moduleRoster?.exempted || []).slice(exemptedRosterPagination.from, exemptedRosterPagination.to + 1)
+  ), [exemptedRosterPagination.from, exemptedRosterPagination.to, moduleRoster?.exempted])
 
   // Combine assignments with modules
   const assignments = useMemo(() => {
@@ -2481,6 +2510,7 @@ export function TrainingAssignmentsPanel({
                                 variant="ghost"
                                 className="h-7 w-7 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-2"
                                 onClick={() => handleDelete(targets[0].assignmentId)}
+                                aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                               >
                                 <Trash2 className="w-4 h-4" />
                               </Button>
@@ -2505,6 +2535,7 @@ export function TrainingAssignmentsPanel({
                                       variant="ghost"
                                       className="h-6 w-6 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-1"
                                       onClick={() => handleDelete(target.assignmentId)}
+                                      aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </Button>
@@ -2643,7 +2674,7 @@ export function TrainingAssignmentsPanel({
                             </TableCell>
                           </TableRow>
                         ) : (
-                          (moduleRoster?.active || []).map((entry) => (
+                          paginatedActiveRoster.map((entry) => (
                             <TableRow key={entry.user_id}>
                               <TableCell>
                                 <div className="flex items-center gap-3">
@@ -2751,6 +2782,7 @@ export function TrainingAssignmentsPanel({
                       </TableBody>
                     </Table>
                   </div>
+                  <PaginationBar pagination={activeRosterPagination} showPageSizeSelector={false} />
 
                   <div className="space-y-2">
                     <Label htmlFor="remove-reason">{t('removeReason', 'Removal reason')}</Label>
@@ -2783,7 +2815,7 @@ export function TrainingAssignmentsPanel({
                             </TableCell>
                           </TableRow>
                         ) : (
-                          (moduleRoster?.exempted || []).map((entry) => (
+                          paginatedExemptedRoster.map((entry) => (
                             <TableRow key={entry.user_id}>
                               <TableCell>
                                 <div className="font-medium">{entry.full_name}</div>
@@ -2829,6 +2861,7 @@ export function TrainingAssignmentsPanel({
                       </TableBody>
                     </Table>
                   </div>
+                  <PaginationBar pagination={exemptedRosterPagination} showPageSizeSelector={false} />
                 </TabsContent>
               </Tabs>
             </div>

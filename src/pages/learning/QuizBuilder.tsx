@@ -18,7 +18,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { learningService } from '@/services/learningService'
 import { quizIntegrityService } from '@/services/quizIntegrityService'
-import type { LearningQuiz } from '@/types/learning'
+import type { CreateQuizDTO, LearningQuiz } from '@/types/learning'
+import type { QuestionStatus } from '@/types/questions'
 import { ArrowDown, ArrowUp, GripVertical, Plus, Save, Sparkles, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -177,15 +178,27 @@ export default function QuizBuilder() {
             delete quizData.updated_at
             delete quizData.id
 
+            const quizPayload: CreateQuizDTO = {
+                title: quizData.title || '',
+                description: quizData.description || undefined,
+                category_id: quizData.category_id || undefined,
+                linked_sop_id: quizData.linked_sop_id || undefined,
+                time_limit_minutes: quizData.time_limit_minutes ?? undefined,
+                passing_score_percentage: quizData.passing_score_percentage ?? undefined,
+                randomize_questions: quizData.randomize_questions ?? false,
+                show_feedback_during: quizData.show_feedback_during ?? false,
+                status: (quizData.status || 'draft') as QuestionStatus,
+            }
+
             let savedQuiz
             if (id) {
-                savedQuiz = await learningService.updateQuiz(id, quizData)
-                await ensureSavedQuizIntegrity(id, quizData.status ?? quiz.status)
+                savedQuiz = await learningService.updateQuiz(id, quizPayload)
+                await ensureSavedQuizIntegrity(id, quizPayload.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_updated') })
             } else {
-                quizData.created_by = user.id
-                savedQuiz = await learningService.createQuiz(quizData)
-                await ensureSavedQuizIntegrity(savedQuiz.id, quizData.status ?? quiz.status)
+                quizPayload.created_by = user.id
+                savedQuiz = await learningService.createQuiz(quizPayload)
+                await ensureSavedQuizIntegrity(savedQuiz.id, quizPayload.status ?? quiz.status)
                 toast({ title: t('common.success'), description: t('training:quizzes.builder.quiz_created') })
                 navigate(`/learning/quizzes/${savedQuiz.id}`, { replace: true })
             }
@@ -281,7 +294,7 @@ export default function QuizBuilder() {
                                 <Label>{t('training:status')}</Label>
                                 <Select
                                     value={quiz.status}
-                                    onValueChange={(val) => setQuiz({ ...quiz, status: val })}
+                                    onValueChange={(val) => setQuiz({ ...quiz, status: val as QuestionStatus })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue />
@@ -391,11 +404,12 @@ export default function QuizBuilder() {
                                                 </div>
                                             </div>
                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <Button variant="ghost" size="icon" title={t_ext('move_up', 'Move Up')}><ArrowUp className="h-4 w-4" /></Button>
-                                                <Button variant="ghost" size="icon" title={t_ext('move_down', 'Move Down')}><ArrowDown className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" aria-label={t('accessibility.move_up', 'Move Up')} title={t_ext('move_up', 'Move Up')}><ArrowUp className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="icon" aria-label={t('accessibility.move_down', 'Move Down')} title={t_ext('move_down', 'Move Down')}><ArrowDown className="h-4 w-4" /></Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    aria-label={t('accessibility.remove_question', 'Remove Question')}
                                                     className="text-red-500 hover:text-red-600"
                                                     onClick={() => handleRemoveQuestion(q.question_id)}
                                                 >

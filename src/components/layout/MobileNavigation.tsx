@@ -244,7 +244,7 @@ export function MobileNavigation({ onMenuClick, className }: MobileNavigationPro
             label={t('leaveRequest', 'Leave Request')}
             description="Submit time off"
             color="blue"
-            onClick={() => handleQuickAction('/hr/leave-requests')}
+            onClick={() => handleQuickAction('/hr/leave')}
           />
 
           {/* Maintenance */}

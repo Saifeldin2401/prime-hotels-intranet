@@ -211,6 +211,7 @@ export const BuilderCanvas = ({
                                                     e.stopPropagation()
                                                     onDeleteSection(section.id)
                                                 }}
+                                                aria-label={t('accessibility.delete_section', 'Delete section')}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
@@ -286,6 +287,7 @@ export const BuilderCanvas = ({
                                                                     variant="ghost"
                                                                     className="h-7 w-7 p-0 text-red-500 hover:text-red-600 hover:bg-red-50"
                                                                     onClick={() => onDeleteContent(section.id, item.id)}
+                                                                    aria-label={t('accessibility.delete_content', 'Delete content')}
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
                                                                 </Button>

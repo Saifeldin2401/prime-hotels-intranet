@@ -1,134 +1,29 @@
 import { Fragment, StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import * as Sentry from '@sentry/react'
+
+import App from './App'
 import './i18n/i18n'
 import './index.css'
 import './rtl.css'
 
+import { getSpaRedirectFromSearch } from '@/lib/authRedirect'
 import { clearPrimeHotelServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
 import { isValidSentryDsn } from '@/lib/sentry'
-import * as Sentry from "@sentry/react"
-import App from './App'
 
 if (typeof globalThis.t_ext !== 'function') {
   globalThis.t_ext = (_key: string, fallback?: string) => fallback ?? _key
 }
 
-const STALE_MODULE_RELOAD_KEY = '__stale_module_reload_done__'
-const STALE_MODULE_SW_RESET_KEY = '__stale_module_sw_reset_done__'
+const LEGACY_SESSION_KEYS = [
+  '__stale_module_reload_done__',
+  '__stale_module_sw_reset_done__',
+  '__phg_boot_import_recovery__',
+  '__phg_version_reload_done__',
+]
+const LEGACY_LOCAL_KEYS = ['__phg_app_version__']
+const LEGACY_SEARCH_PARAMS = ['__reload', '__boot_recover', '__phg_sw_cleanup']
 const PWA_DISABLED_CLEANUP_KEY = '__pwa_disabled_cleanup_done__'
-const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
-
-function extractErrorMessage(reason: unknown): string {
-  if (typeof reason === 'string') return reason
-  if (reason && typeof reason === 'object') {
-    const maybeMessage = (reason as { message?: unknown }).message
-    if (typeof maybeMessage === 'string') return maybeMessage
-  }
-  return ''
-}
-
-function isRecoverableModuleLoadError(reason: unknown): boolean {
-  const message = extractErrorMessage(reason)
-  if (!message) return false
-
-  return /Outdated Optimize Dep|Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk \d+ failed/i.test(message)
-}
-
-function reportStaleModuleRecovery(stage: 'reload' | 'service_worker_reset' | 'exhausted', message: string) {
-  if (!sentryEnabled) return
-
-  Sentry.captureMessage('stale_module_recovery', {
-    level: 'warning',
-    tags: {
-      scope: 'boot_recovery',
-      stage,
-    },
-    extra: {
-      route: window.location.pathname + window.location.search + window.location.hash,
-      buildVersion: SERVICE_WORKER_BUILD_VERSION,
-      message,
-      serviceWorkerReset: stage === 'service_worker_reset',
-    },
-  })
-}
-
-async function clearServiceWorkerState() {
-  await clearPrimeHotelServiceWorkersAndCaches()
-}
-
-function navigateForRecovery() {
-  const url = new URL(window.location.href)
-  url.searchParams.set('__reload', Date.now().toString())
-  window.location.replace(url.toString())
-}
-
-async function recoverFromStaleModuleLoad(reason: unknown): Promise<boolean> {
-  if (!isRecoverableModuleLoadError(reason)) return false
-
-  const message = extractErrorMessage(reason) || 'Unknown stale module load error'
-  try {
-    if (sessionStorage.getItem(STALE_MODULE_RELOAD_KEY) === '1') {
-      if (sessionStorage.getItem(STALE_MODULE_SW_RESET_KEY) === '1') {
-        reportStaleModuleRecovery('exhausted', message)
-        return false
-      }
-
-      sessionStorage.setItem(STALE_MODULE_SW_RESET_KEY, '1')
-      reportStaleModuleRecovery('service_worker_reset', message)
-      await clearServiceWorkerState()
-      navigateForRecovery()
-      return true
-    }
-
-    sessionStorage.setItem(STALE_MODULE_RELOAD_KEY, '1')
-    reportStaleModuleRecovery('reload', message)
-  } catch {
-    // Continue even if sessionStorage is unavailable.
-  }
-
-  navigateForRecovery()
-  return true
-}
-
-window.addEventListener('error', (event) => {
-  const errorLike = (event as ErrorEvent).error ?? event.message
-  if (!isRecoverableModuleLoadError(errorLike)) return
-
-  event.preventDefault()
-  void recoverFromStaleModuleLoad(errorLike)
-})
-
-window.addEventListener('unhandledrejection', (event) => {
-  if (!isRecoverableModuleLoadError(event.reason)) return
-
-  event.preventDefault()
-  void recoverFromStaleModuleLoad(event.reason)
-})
-
-// Vite emits this event when a preloaded chunk/dependency fails to load.
-window.addEventListener('vite:preloadError', (event) => {
-  const detail = (event as unknown as CustomEvent<{ payload?: unknown; message?: unknown }>).detail
-  const candidate = detail?.payload ?? detail?.message ?? event
-  if (!isRecoverableModuleLoadError(candidate)) return
-
-  if ('preventDefault' in event) {
-    event.preventDefault()
-  }
-  void recoverFromStaleModuleLoad(candidate)
-})
-
-const redirectParam = new URLSearchParams(window.location.search).get('__redirect')
-let redirectPath: string | null = null
-if (redirectParam) {
-  try {
-    const decoded = decodeURIComponent(redirectParam)
-    if (decoded.startsWith('/')) {
-      redirectPath = decoded
-    }
-  } catch {
-    // Ignore malformed redirect parameters
-  }
-}
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
 const SENTRY_ENV = import.meta.env.VITE_SENTRY_ENV || import.meta.env.MODE
@@ -137,11 +32,6 @@ const SENTRY_RELEASE =
   import.meta.env.VITE_VERCEL_GIT_COMMIT_SHA ||
   import.meta.env.VITE_GIT_COMMIT ||
   undefined
-const PWA_ENABLED = import.meta.env.VITE_ENABLE_PWA === 'true'
-const SERVICE_WORKER_BUILD_VERSION =
-  import.meta.env.VITE_APP_BUILD_VERSION ||
-  SENTRY_RELEASE ||
-  'app'
 
 const sentryEnabled = isValidSentryDsn(SENTRY_DSN)
 const tracesSampleRate = Number(import.meta.env.VITE_SENTRY_TRACES_SAMPLE_RATE ?? (import.meta.env.PROD ? 0.1 : 1.0))
@@ -165,121 +55,147 @@ if (sentryEnabled) {
   })
 }
 
-const isDev = import.meta.env.DEV
-const devLog = (...args: unknown[]) => {
-  if (isDev) console.log(...args)
-}
-const reportNonFatalError = (message: string, error: unknown) => {
-  if (sentryEnabled) {
-    Sentry.captureException(error, { level: 'warning', tags: { scope: 'pwa' }, extra: { message } })
-  }
-  if (isDev) {
-    console.error(message, error)
-  }
-}
-
-const notifyAppUpdateAvailable = () => {
+function clearLegacyRecoveryState() {
   if (typeof window === 'undefined') return
 
-  const updateState = window as Window & {
-    __PHG_UPDATE_AVAILABLE__?: boolean
-  }
-
-  if (updateState.__PHG_UPDATE_AVAILABLE__) return
-
-  updateState.__PHG_UPDATE_AVAILABLE__ = true
-  window.dispatchEvent(new CustomEvent(UPDATE_AVAILABLE_EVENT))
-
-  if (sentryEnabled) {
-    Sentry.captureMessage('pwa_update_available', {
-      level: 'info',
-      tags: { scope: 'pwa' },
-      extra: {
-        route: window.location.pathname + window.location.search + window.location.hash,
-        buildVersion: SERVICE_WORKER_BUILD_VERSION,
-      },
-    })
+  try {
+    for (const key of LEGACY_SESSION_KEYS) {
+      window.sessionStorage.removeItem(key)
+    }
+    for (const key of LEGACY_LOCAL_KEYS) {
+      window.localStorage.removeItem(key)
+    }
+  } catch {
+    // Ignore storage errors during boot.
   }
 }
 
-if (redirectPath) {
+function restoreSpaRedirectFromSearch() {
+  if (typeof window === 'undefined') return
+
+  const redirectPath = getSpaRedirectFromSearch(window.location.search)
+  if (!redirectPath) return
+
   if (import.meta.env.PROD && sentryEnabled) {
     Sentry.captureMessage('spa_route_404', {
       level: 'warning',
-      extra: { path: redirectPath }
+      extra: { path: redirectPath },
     })
   }
+
   window.history.replaceState(null, '', redirectPath)
 }
 
-const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
+function stripLegacyRecoveryParams() {
+  if (typeof window === 'undefined') return
 
-createRoot(document.getElementById('root')!).render(
-  <Wrapper>
-    <App />
-  </Wrapper>
-)
+  const url = new URL(window.location.href)
+  let didChange = false
 
-// If the app stays up, allow future one-time recoveries in this tab.
-window.setTimeout(() => {
-  try {
-    sessionStorage.removeItem(STALE_MODULE_RELOAD_KEY)
-    sessionStorage.removeItem(STALE_MODULE_SW_RESET_KEY)
-  } catch {
-    // Ignore storage errors.
+  for (const param of LEGACY_SEARCH_PARAMS) {
+    if (url.searchParams.has(param)) {
+      url.searchParams.delete(param)
+      didChange = true
+    }
   }
-}, 30_000)
 
-// Register Service Worker for PWA
+  if (!didChange) return
+
+  window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`)
+}
+
+async function cleanupLegacyPwaArtifacts() {
+  if (typeof window === 'undefined' || !import.meta.env.PROD) return
+
+  try {
+    const alreadyCleaned = window.sessionStorage.getItem(PWA_DISABLED_CLEANUP_KEY) === '1'
+    if (alreadyCleaned) return
+    window.sessionStorage.setItem(PWA_DISABLED_CLEANUP_KEY, '1')
+  } catch {
+    // Continue even if sessionStorage is unavailable.
+  }
+
+  try {
+    await clearPrimeHotelServiceWorkersAndCaches()
+  } catch (error) {
+    if (sentryEnabled) {
+      Sentry.captureException(error, {
+        level: 'warning',
+        tags: { scope: 'pwa_cleanup' },
+      })
+    }
+  }
+}
+
+clearLegacyRecoveryState()
+restoreSpaRedirectFromSearch()
+stripLegacyRecoveryParams()
+
+;(window as Window & { __PHG_FORCE_REFRESH__?: () => Promise<void> }).__PHG_FORCE_REFRESH__ = async () => {
+  await clearPrimeHotelServiceWorkersAndCaches()
+  window.location.reload()
+}
+
+const rootElement = document.getElementById('root')
+if (!rootElement) {
+  throw new Error('Root element not found')
+}
+
+const Wrapper = import.meta.env.DEV ? StrictMode : Fragment
+const root = createRoot(rootElement)
+
+try {
+  root.render(
+    <Wrapper>
+      <App />
+    </Wrapper>
+  )
+} catch (bootError) {
+  // If React fails to render (e.g. module init error, circular import), show a visible error
+  // instead of a white screen. This runs outside React's error boundary.
+  rootElement.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:center;min-height:100vh;font-family:system-ui,sans-serif;padding:2rem;">
+      <div style="text-align:center;max-width:28rem;">
+        <h1 style="font-size:1.25rem;font-weight:600;color:#dc2626;">Something went wrong</h1>
+        <p style="margin-top:.5rem;color:#6b7280;">The application failed to load. Please try refreshing the page.</p>
+        <button onclick="location.reload()" style="margin-top:1rem;padding:.5rem 1.5rem;background:#2563eb;color:white;border:none;border-radius:.5rem;cursor:pointer;font-size:.875rem;">
+          Reload Page
+        </button>
+      </div>
+    </div>`
+  console.error('[PHG] Boot error:', bootError)
+}
+
+void cleanupLegacyPwaArtifacts()
+
+// Register service worker for push notifications and offline support
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
-    if (!PWA_ENABLED) {
-      try {
-        const hasAlreadyCleanedUp = sessionStorage.getItem(PWA_DISABLED_CLEANUP_KEY) === '1'
-        if (hasAlreadyCleanedUp) return
-        sessionStorage.setItem(PWA_DISABLED_CLEANUP_KEY, '1')
-      } catch {
-        // Continue even if sessionStorage is unavailable.
-      }
-
-      void clearServiceWorkerState().catch((error) => {
-        reportNonFatalError('[PWA] Failed to clear disabled service worker state', error)
-      })
-      return
-    }
-
-    navigator.serviceWorker
-      .register(`/sw.js?v=${encodeURIComponent(SERVICE_WORKER_BUILD_VERSION)}`)
+    navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        registration.update().catch(() => {})
-
-        if (registration.waiting) {
-          devLog('[PWA] Update already waiting; leaving activation to the next full launch.')
-          notifyAppUpdateAvailable()
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.log('[SW] Service Worker registered:', registration.scope)
         }
-
-        // Check for updates every hour
-        setInterval(() => {
-          registration.update().catch(() => {})
-        }, 1000 * 60 * 60);
-
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
-          if (installingWorker) {
-            installingWorker.onstatechange = () => {
-              if (installingWorker.state === 'installed') {
-                if (navigator.serviceWorker.controller) {
-                  // Do not force activation/reload while the user is active.
-                  devLog('[PWA] New content available; activation deferred until next launch.');
-                  notifyAppUpdateAvailable()
-                }
+        
+        // Handle updates
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                // New version available
+                window.dispatchEvent(new CustomEvent('phg:update-available'))
               }
-            };
+            })
           }
-        };
+        })
       })
       .catch((error) => {
-        reportNonFatalError('[PWA] Service Worker registration failed', error)
+        if (import.meta.env.DEV) {
+          // eslint-disable-next-line no-console
+          console.error('[SW] Service Worker registration failed:', error)
+        }
       })
   })
 }

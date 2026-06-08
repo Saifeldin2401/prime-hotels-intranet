@@ -16,11 +16,11 @@ export function transformMermaidCodeBlocks(html: string): string {
         /<pre[^>]*>\s*<code[^>]*class=["']?[^"']*(?:language-mermaid|mermaid)[^"']*["']?[^>]*>([\s\S]*?)<\/code>\s*<\/pre>/gi,
         (_m, code) => {
             const decoded = String(code)
-                .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
                 .replace(/&quot;/g, '"')
                 .replace(/&#39;/g, "'")
+                .replace(/&amp;/g, '&')
             // Re-escape before interpolation to avoid injecting raw HTML.
             return `<pre class="mermaid">${escapeHtml(decoded.trim())}</pre>`
         }
@@ -74,11 +74,11 @@ export async function renderMermaidDiagrams(container: HTMLElement | null): Prom
 
             // Robust entity decoding
             code = code
-                .replace(/&amp;/g, '&')
                 .replace(/&lt;/g, '<')
                 .replace(/&gt;/g, '>')
                 .replace(/&quot;/g, '"')
                 .replace(/&#39;/g, "'")
+                .replace(/&amp;/g, '&')
                 .trim()
 
             if (!code || (!code.startsWith('graph') && !code.startsWith('flowchart') && !code.startsWith('sequenceDiagram'))) {

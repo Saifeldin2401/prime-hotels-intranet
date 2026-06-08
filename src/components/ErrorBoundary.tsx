@@ -23,6 +23,19 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo)
+    
+    // Send to Sentry if available
+    if (typeof window !== 'undefined' && (window as unknown as { Sentry?: unknown }).Sentry) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Sentry = (window as unknown as { Sentry: any }).Sentry
+      Sentry.captureException(error, { extra: { errorInfo } })
+    }
+    
+    // Show visible error banner for debugging
+    const debugDiv = document.createElement('div')
+    debugDiv.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:white;padding:12px;font-family:monospace;font-size:12px;white-space:pre-wrap;max-height:200px;overflow:auto;'
+    debugDiv.textContent = `ERROR: ${error.message}\nStack: ${error.stack?.slice(0, 500) || 'N/A'}...`
+    document.body.appendChild(debugDiv)
   }
 
   render() {

@@ -65,7 +65,7 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -92,8 +92,8 @@ function getMediaTypeFromMime(mimeType: string): 'video' | 'image' | null {
   return null;
 }
 
-// Media Card Component
-function MediaCard({
+// Media Card Component - Memoized to prevent unnecessary re-renders
+const MediaCard = React.memo(function MediaCard({
   asset,
   isSelected,
   onSelect,
@@ -150,15 +150,15 @@ function MediaCard({
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCopyUrl(); }}>
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCopyUrl(); }} aria-label={t('accessibility.copy_url', 'Copy URL')}>
             <Link2 className="w-4 h-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(asset); }}>
+          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); onEdit(asset); }} aria-label={t('accessibility.edit', 'Edit')}>
             <Edit3 className="w-4 h-4" />
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" aria-label={t('accessibility.more_options', 'More options')}>
                 <MoreVertical className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -257,7 +257,7 @@ function MediaCard({
       </CardContent>
     </Card>
   );
-}
+})
 
 // Edit Asset Dialog
 function EditAssetDialog({
@@ -645,6 +645,7 @@ export default function MediaLibrary() {
                   size="icon"
                   className="h-9 w-9"
                   onClick={() => setViewMode('grid')}
+                  aria-label={t('accessibility.grid_view', 'Switch to grid view')}
                 >
                   <Grid3X3 className="w-4 h-4" />
                 </Button>
@@ -653,6 +654,7 @@ export default function MediaLibrary() {
                   size="icon"
                   className="h-9 w-9"
                   onClick={() => setViewMode('list')}
+                  aria-label={t('accessibility.list_view', 'Switch to list view')}
                 >
                   <LayoutList className="w-4 h-4" />
                 </Button>

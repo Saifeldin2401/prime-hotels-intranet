@@ -1,6 +1,7 @@
 
 
 import { supabase } from './supabase'
+import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse } from '@/types/ai'
 
 
 
@@ -178,11 +179,9 @@ const cleanText = (text: string): string => {
 async function callHuggingFace(model: string, prompt: string) {
 
   try {
-
-    const { data, error } = await supabase.functions.invoke('process-ai-request', {
-
-      body: { model, prompt }
-
+    const request: ProcessAiRequest = { model, prompt }
+    const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
+      body: request
     })
 
 
@@ -199,7 +198,7 @@ async function callHuggingFace(model: string, prompt: string) {
 
 
 
-    if (data && data.success === false) {
+    if (isProcessAiErrorResponse(data)) {
 
       // Check for session expiry
 
@@ -221,7 +220,7 @@ async function callHuggingFace(model: string, prompt: string) {
 
     // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
 
-    return (data.response || data.generated_text || data.result) as string
+    return (data.response || data.result) as string
 
   } catch (error: unknown) {
 
@@ -408,7 +407,14 @@ export const aiService = {
 
   }): Promise<QuizQuestion[]> {
 
-    const context = request.sopContent.replace(/<[^>]*>/g, '').substring(0, 3000)
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let sanitized = request.sopContent;
+    do {
+      previous = sanitized;
+      sanitized = previous.replace(/<[^>]*>/g, '');
+    } while (sanitized !== previous);
+    const context = sanitized.substring(0, 3000)
 
     const count = request.count || 5
 
@@ -548,9 +554,14 @@ export const aiService = {
     }
 
     const serializedQuestions = JSON.stringify(questions, null, 2)
-    const moduleContext = (request.moduleContext || '')
-      .replace(/<[^>]*>/g, ' ')
-      .replace(/\s+/g, ' ')
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let moduleContext = request.moduleContext || '';
+    do {
+      previous = moduleContext;
+      moduleContext = previous.replace(/<[^>]*>/g, ' ');
+    } while (moduleContext !== previous);
+    moduleContext = moduleContext.replace(/\s+/g, ' ')
       .trim()
       .slice(0, 4000)
 

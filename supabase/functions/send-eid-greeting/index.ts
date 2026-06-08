@@ -18,34 +18,59 @@ serve(async (req) => {
 
   try {
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return jsonResponse({ error: "Missing Supabase environment variables" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Supabase environment variables" },
+        500,
+        corsHeaders,
+      );
     }
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      return jsonResponse({ error: "Missing Authorization header" }, 401, corsHeaders);
+      return jsonResponse(
+        { error: "Missing Authorization header" },
+        401,
+        corsHeaders,
+      );
     }
 
     // Initialize service client for admin access to get all profiles and configs
-    const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-      auth: { autoRefreshToken: false, persistSession: false },
-    });
+    const serviceClient = createClient(
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      {
+        auth: { autoRefreshToken: false, persistSession: false },
+      },
+    );
 
     // Verify user is an admin
-    const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY") || "", {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const userClient = createClient(
+      SUPABASE_URL,
+      Deno.env.get("SUPABASE_ANON_KEY") || "",
+      {
+        global: { headers: { Authorization: authHeader } },
+      },
+    );
 
-    const isServiceRoleCall = authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` || 
-                              req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
+    const isServiceRoleCall =
+      authHeader === `Bearer ${SUPABASE_SERVICE_ROLE_KEY}` ||
+      req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
 
     if (!isServiceRoleCall) {
-      const { data: { user }, error: userError } = await userClient.auth.getUser();
+      const {
+        data: { user },
+        error: userError,
+      } = await userClient.auth.getUser();
       if (userError || !user) {
         return jsonResponse({ error: "Unauthorized" }, 401, corsHeaders);
       }
-      
-      const adminRoles = ["corporate_admin", "regional_admin", "property_manager", "super_admin"];
+
+      const adminRoles = [
+        "corporate_admin",
+        "regional_admin",
+        "property_manager",
+        "super_admin",
+      ];
       const { data: roleRows, error: roleError } = await serviceClient
         .from("user_roles")
         .select("role")
@@ -53,30 +78,54 @@ serve(async (req) => {
         .in("role", adminRoles);
 
       if (roleError || !roleRows || roleRows.length === 0) {
-        return jsonResponse({ error: "Forbidden: Only admins can trigger system-wide greetings." }, 403, corsHeaders);
+        return jsonResponse(
+          {
+            error: "Forbidden: Only admins can trigger system-wide greetings.",
+          },
+          403,
+          corsHeaders,
+        );
       }
     }
 
     const body: RequestBody = await req.json().catch(() => ({}));
-    
+
     if (!body.test_email && !body.send_all) {
-      return jsonResponse({ 
-        error: "Dry run: To send to everyone, include { \"send_all\": true } in request body. To test, include { \"test_email\": \"your@email.com\" }." 
-      }, 400, corsHeaders);
+      return jsonResponse(
+        {
+          error:
+            'Dry run: To send to everyone, include { "send_all": true } in request body. To test, include { "test_email": "your@email.com" }.',
+        },
+        400,
+        corsHeaders,
+      );
     }
 
     // Get config
-    const { data: configData } = await serviceClient.rpc("get_email_runtime_config");
-    const config = configData as Record<string, any> || {};
-    const readSecret = (v: any) => typeof v === 'string' && v.trim() ? v.trim() : null;
-    
-    const resendApiKey = readSecret(config.resend_api_key) || Deno.env.get("RESEND_API_KEY");
-    const appBaseUrl = (readSecret(config.app_base_url) || Deno.env.get("APP_BASE_URL") || "https://phg-connect.com").replace(/\/+$/, "");
+    const { data: configData } = await serviceClient.rpc(
+      "get_email_runtime_config",
+    );
+    const config = (configData as Record<string, any>) || {};
+    const readSecret = (v: any) =>
+      typeof v === "string" && v.trim() ? v.trim() : null;
+
+    const resendApiKey =
+      readSecret(config.resend_api_key) || Deno.env.get("RESEND_API_KEY");
+    const appBaseUrl = (
+      readSecret(config.app_base_url) ||
+      Deno.env.get("APP_BASE_URL") ||
+      "https://phg-connect.com"
+    ).replace(/\/+$/, "");
     const fromName = readSecret(config.email_from_name) || "PHG Connect";
-    const fromEmail = readSecret(config.email_from_address) || "notifications@phg-connect.com";
+    const fromEmail =
+      readSecret(config.email_from_address) || "notifications@phg-connect.com";
 
     if (!resendApiKey) {
-      return jsonResponse({ error: "Missing RESEND_API_KEY" }, 500, corsHeaders);
+      return jsonResponse(
+        { error: "Missing RESEND_API_KEY" },
+        500,
+        corsHeaders,
+      );
     }
 
     // Build unique luxurious HTML template with supplied text
@@ -96,19 +145,27 @@ serve(async (req) => {
         .not("email", "is", null);
 
       if (profilesError) {
-        return jsonResponse({ error: "Failed to fetch profiles", details: profilesError.message }, 500, corsHeaders);
+        return jsonResponse(
+          { error: "Failed to fetch profiles", details: profilesError.message },
+          500,
+          corsHeaders,
+        );
       }
 
       emailsToSend = profiles
-        .map(p => p.email?.trim())
-        .filter(e => e && e.includes("@")) as string[];
+        .map((p) => p.email?.trim())
+        .filter((e) => e && e.includes("@")) as string[];
     }
 
     // Deduplicate emails just in case
     emailsToSend = [...new Set(emailsToSend)];
 
     if (emailsToSend.length === 0) {
-      return jsonResponse({ success: true, message: "No actual recipients found to send." }, 200, corsHeaders);
+      return jsonResponse(
+        { success: true, message: "No actual recipients found to send." },
+        200,
+        corsHeaders,
+      );
     }
 
     console.log(`Sending Eid greeting to ${emailsToSend.length} recipients...`);
@@ -116,18 +173,16 @@ serve(async (req) => {
     // We use Resend Batch API to send 100 emails at once, preventing edge function timeout
     const BATCH_SIZE = 100;
     const allResults = [];
-    
+
     for (let i = 0; i < emailsToSend.length; i += BATCH_SIZE) {
       const batchRecipients = emailsToSend.slice(i, i + BATCH_SIZE);
-      
-      const payload = batchRecipients.map(email => ({
+
+      const payload = batchRecipients.map((email) => ({
         from: `${fromName} <${fromEmail}>`,
         to: [email],
         subject: "Eid Mubarak from PRIME Hotels | عيد مبارك",
         html: htmlTemplate,
-        tags: [
-          { name: "campaign", value: "eid_greeting_system" }
-        ]
+        tags: [{ name: "campaign", value: "eid_greeting_system" }],
       }));
 
       // Fire to Resend Batch API
@@ -135,7 +190,7 @@ serve(async (req) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${resendApiKey}`,
+          Authorization: `Bearer ${resendApiKey}`,
         },
         body: JSON.stringify(payload),
       });
@@ -144,23 +199,29 @@ serve(async (req) => {
       allResults.push({
         status: response.status,
         chunk: i / BATCH_SIZE,
-        data: result
+        data: result,
       });
-      
+
       // small delay to respect rate limits if we have thousands
       if (i + BATCH_SIZE < emailsToSend.length) {
-         await new Promise(r => setTimeout(r, 500));
+        await new Promise((r) => setTimeout(r, 500));
       }
     }
 
-    return jsonResponse({ 
-      success: true, 
-      sent_count: emailsToSend.length,
-      runs: allResults
-    }, 200, corsHeaders);
-    
+    return jsonResponse(
+      {
+        success: true,
+        sent_count: emailsToSend.length,
+        runs: allResults,
+      },
+      200,
+      corsHeaders,
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error in send-eid-greeting";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Unexpected error in send-eid-greeting";
     console.error(error);
     return jsonResponse({ error: message }, 500, corsHeaders);
   }
@@ -255,7 +316,11 @@ function getBeautifulEidTemplate(appUrl: string): string {
   `.trim();
 }
 
-function jsonResponse(payload: Record<string, unknown>, status = 200, corsHeaders: HeadersInit = {}): Response {
+function jsonResponse(
+  payload: Record<string, unknown>,
+  status = 200,
+  corsHeaders: HeadersInit = {},
+): Response {
   return new Response(JSON.stringify(payload), {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },

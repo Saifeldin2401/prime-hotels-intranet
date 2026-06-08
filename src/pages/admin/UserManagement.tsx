@@ -26,17 +26,18 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAccountActions } from '@/hooks/useAccountActions'
+import { PendingUserApprovals } from '@/components/admin/PendingUserApprovals'
 import type { AppRole } from '@/lib/constants'
 import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
+import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
-type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive'
+type AccountStatusFilter = 'all' | 'active' | 'suspended' | 'locked' | 'inactive' | 'pending_approval'
 
 interface AccountActionNote {
   id: string
@@ -48,6 +49,10 @@ interface AccountActionNote {
     full_name: string | null
     email: string | null
   } | null
+}
+
+type AccountActionNoteRow = Omit<AccountActionNote, 'created_by'> & {
+  created_by: AccountActionNote['created_by'] | AccountActionNote['created_by'][]
 }
 
 export default function UserManagement() {
@@ -76,6 +81,7 @@ export default function UserManagement() {
 
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
+  const [pendingApprovalCount, setPendingApprovalCount] = useState(0)
 
   const { suspendAccount, reactivateAccount, forcePasswordReset, cancelPasswordReset, unlockAccount, resendCredentials, isLoading: isActionLoading } = useAccountActions()
 
@@ -162,7 +168,10 @@ export default function UserManagement() {
         .limit(5)
 
       if (error) throw error
-      return (data || []) as AccountActionNote[]
+      return ((data || []) as AccountActionNoteRow[]).map((note) => ({
+        ...note,
+        created_by: Array.isArray(note.created_by) ? (note.created_by[0] ?? null) : note.created_by
+      }))
     }
   })
 
@@ -535,6 +544,9 @@ export default function UserManagement() {
         }
       />
 
+      {/* Pending User Approvals */}
+      <PendingUserApprovals onCountChange={setPendingApprovalCount} />
+
       {/* Status Filter Tabs */}
       <div className="flex flex-wrap gap-2">
         {(['all', 'active', 'suspended', 'locked', 'inactive'] as const).map((status) => (
@@ -683,6 +695,7 @@ export default function UserManagement() {
                           e.stopPropagation()
                           handleEdit(user)
                         }}
+                        aria-label={t('actions.edit', 'Edit user')}
                       >
                         <Edit className="w-4 h-4" />
                       </Button>
@@ -695,6 +708,7 @@ export default function UserManagement() {
                             size="icon"
                             className="h-8 w-8 text-gray-400 hover:text-gray-600"
                             onClick={(e) => e.stopPropagation()}
+                            aria-label={t('actions.more', 'More actions')}
                           >
                             <MoreVertical className="w-4 h-4" />
                           </Button>

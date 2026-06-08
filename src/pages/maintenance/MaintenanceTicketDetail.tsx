@@ -25,6 +25,7 @@ import {
 import { openUrlInNewTab, resolveMaintenanceAttachmentUrl } from '@/lib/secureFileAccess'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import type { MaintenanceTicket } from '@/lib/types'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import { ArrowLeft, Calendar, Download, Loader2, MapPin, Send, Settings, User } from 'lucide-react'
@@ -66,8 +67,8 @@ export default function MaintenanceTicketDetail() {
 
     const [newComment, setNewComment] = useState('')
     const [manageOpen, setManageOpen] = useState(false)
-    const [manageStatus, setManageStatus] = useState('open')
-    const [managePriority, setManagePriority] = useState('medium')
+    const [manageStatus, setManageStatus] = useState<MaintenanceTicket['status']>('open')
+    const [managePriority, setManagePriority] = useState<MaintenanceTicket['priority']>('medium')
     const [manageAssignee, setManageAssignee] = useState('')
     const [manageEta, setManageEta] = useState('')
     const [manageParts, setManageParts] = useState('')
@@ -99,13 +100,16 @@ export default function MaintenanceTicketDetail() {
 
             if (error) throw error
 
-            const mapped = (data || []).map((p) => ({
-                id: p.id as string,
-                full_name: p.full_name as string | null,
-                email: p.email as string,
-                role: p.user_roles?.role as string,
-                property_ids: (p.user_properties || []).map((up) => up.property_id as string),
-            }))
+            const mapped = (data || []).map((p) => {
+                const userRoles = p.user_roles as { role?: string } | Array<{ role?: string }> | null | undefined
+                return {
+                    id: p.id as string,
+                    full_name: p.full_name as string | null,
+                    email: p.email as string,
+                    role: (Array.isArray(userRoles) ? userRoles[0]?.role : userRoles?.role) as string,
+                    property_ids: (p.user_properties || []).map((up) => up.property_id as string),
+                }
+            })
 
             return ticket?.property_id
                 ? mapped.filter((p) => p.role === 'corporate_admin' || p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(ticket.property_id))
@@ -173,7 +177,7 @@ export default function MaintenanceTicketDetail() {
         if (!ticket) return
         setManageSaving(true)
         try {
-            const updates = {
+            const updates: Partial<MaintenanceTicket> = {
                 status: manageStatus,
                 priority: managePriority,
                 estimated_completion_date: manageEta || null,
@@ -376,7 +380,7 @@ export default function MaintenanceTicketDetail() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                             <Label>{t_ext('status_1', 'Status')}</Label>
-                            <Select value={manageStatus} onValueChange={setManageStatus}>
+                            <Select value={manageStatus} onValueChange={(value) => setManageStatus(value as MaintenanceTicket['status'])}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t_ext('select_status', 'Select status')} />
                                 </SelectTrigger>
@@ -392,7 +396,7 @@ export default function MaintenanceTicketDetail() {
 
                         <div className="space-y-2">
                             <Label>{t_ext('priority', 'Priority')}</Label>
-                            <Select value={managePriority} onValueChange={setManagePriority}>
+                            <Select value={managePriority} onValueChange={(value) => setManagePriority(value as MaintenanceTicket['priority'])}>
                                 <SelectTrigger>
                                     <SelectValue placeholder={t_ext('select_priority', 'Select priority')} />
                                 </SelectTrigger>

@@ -20,6 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { Cloud, Hash, Palette, Plus, Tag, X } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export interface DocumentTag {
   id: string;
@@ -80,6 +81,7 @@ export function DocumentTagManager({
   mode = "manage",
   className,
 }: DocumentTagManagerProps) {
+  const { t } = useTranslation();
   const [newTagName, setNewTagName] = React.useState("");
   const [selectedColor, setSelectedColor] = React.useState(TAG_COLORS[10].value);
   const [isCreating, setIsCreating] = React.useState(false);
@@ -167,6 +169,7 @@ export function DocumentTagManager({
                       size="icon"
                       className="shrink-0"
                       style={{ backgroundColor: selectedColor }}
+                      aria-label={t("accessibility.select_color", "Select color")}
                     >
                       <Palette className="w-4 h-4 text-white" />
                     </Button>
@@ -277,6 +280,7 @@ export function DocumentTagManager({
                               e.stopPropagation();
                               onDeleteTag(tag.id);
                             }}
+                            aria-label={t("accessibility.delete_tag", "Delete tag")}
                           >
                             <X className="w-3 h-3" />
                           </Button>
@@ -411,6 +415,7 @@ export function DocumentTagManager({
                     size="icon"
                     className="h-4 w-4 ml-1 hover:bg-black/10"
                     onClick={() => handleToggleTag(tag.id)}
+                    aria-label={t("accessibility.remove_tag", "Remove tag")}
                   >
                     <X className="w-3 h-3" />
                   </Button>

@@ -24,6 +24,7 @@ import {
     User
 } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 interface Referral {
     id: string
@@ -42,6 +43,16 @@ interface Referral {
     updated_at: string
     job_posting_id: string
     referred_by: string
+}
+
+interface ReferralHistoryItem {
+    id: string
+    old_status: string | null
+    new_status: string
+    change_note: string | null
+    created_at: string
+    changed_by: string | null
+    changer: Array<{ id: string; full_name: string | null }> | null
 }
 
 interface CandidateProfileDialogProps {
@@ -83,6 +94,7 @@ export function CandidateProfileDialog({
     propertyName,
     departmentName
 }: CandidateProfileDialogProps) {
+    const { t } = useTranslation()
     const { roles: _roles } = useAuth()
     const { hasPermission } = usePermissions()
     const queryClient = useQueryClient()
@@ -96,7 +108,7 @@ export function CandidateProfileDialog({
     const referralId = referral?.id || null
     const isHR = hasPermission('hr.manage_candidates')
 
-    const { data: history = [] } = useQuery({
+    const { data: history = [] } = useQuery<ReferralHistoryItem[]>({
         queryKey: ['referral-history', referralId],
         queryFn: async () => {
             const { data, error } = await supabase
@@ -106,7 +118,7 @@ export function CandidateProfileDialog({
                 .order('created_at', { ascending: true })
 
             if (error) throw error
-            return data || []
+            return (data ?? []) as ReferralHistoryItem[]
         },
         enabled: !!referralId
     })
@@ -365,7 +377,7 @@ export function CandidateProfileDialog({
                                             </p>
                                             <p className="text-xs text-gray-500">
                                                 {formatRelativeTime(item.created_at)}
-                                                {item.changer?.full_name ? ` • ${item.changer.full_name}` : ''}
+                                                {item.changer?.[0]?.full_name ? ` • ${item.changer[0].full_name}` : ''}
                                             </p>
                                             {item.change_note && (
                                                 <p className="text-xs text-gray-600 mt-1">{item.change_note}</p>

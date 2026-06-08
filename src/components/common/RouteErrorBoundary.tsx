@@ -3,7 +3,7 @@ import { Component, type ErrorInfo, type ReactNode } from 'react'
 import { RouteFallbackUI } from './RouteFallbackUI'
 
 interface Props {
-    children: ReactNode
+    children?: ReactNode
     fallback?: ReactNode
     section?: string // Name of the route section for better error messages
 }

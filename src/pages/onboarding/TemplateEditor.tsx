@@ -91,12 +91,12 @@ export default function TemplateEditor() {
 
       const draft = loadDraft()
       if (draft) {
-        if (draft.title) setTitle(draft.title)
-        if (draft.targetType) setTargetType(draft.targetType)
-        if (draft.role) setRole(draft.role)
-        if (draft.jobTitle) setJobTitle(draft.jobTitle)
-        if (draft.requiredTrainingIds) setRequiredTrainingIds(draft.requiredTrainingIds)
-        if (draft.tasks) setTasks(draft.tasks)
+        if (typeof draft.title === 'string') setTitle(draft.title)
+        if (draft.targetType === 'role' || draft.targetType === 'job_title' || draft.targetType === 'all') setTargetType(draft.targetType)
+        if (draft.role === 'all' || (typeof draft.role === 'string' && Object.prototype.hasOwnProperty.call(ROLES, draft.role))) setRole(draft.role as AppRole | 'all')
+        if (typeof draft.jobTitle === 'string') setJobTitle(draft.jobTitle)
+        if (Array.isArray(draft.requiredTrainingIds)) setRequiredTrainingIds(draft.requiredTrainingIds.filter((id): id is string => typeof id === 'string'))
+        if (Array.isArray(draft.tasks)) setTasks(draft.tasks as OnboardingTaskDefinition[])
 
         if (!restoredDraftRef.current) {
           restoredDraftRef.current = true
@@ -387,6 +387,7 @@ export default function TemplateEditor() {
                                             size="icon"
                                             className="h-4 w-4 p-0 hover:bg-transparent text-muted-foreground hover:text-foreground"
                                             onClick={() => setRequiredTrainingIds(prev => prev.filter(tid => tid !== id))}
+                                            aria-label={t('accessibility.remove', 'Remove')}
                                         >
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
@@ -443,7 +444,7 @@ export default function TemplateEditor() {
                                             placeholder={t('editor.placeholders.task_title')}
                                         />
                                     </div>
-                                    <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => handleRemoveTask(index)}>
+                                    <Button type="button" variant="ghost" size="icon" className="text-destructive mt-6" onClick={() => handleRemoveTask(index)} aria-label={t('accessibility.delete', 'Delete')}>
                                         <Trash2 className="h-4 w-4" />
                                     </Button>
                                 </div>

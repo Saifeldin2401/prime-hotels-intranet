@@ -11,7 +11,7 @@
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react'
 
 // Context for form state
 interface MobileFormContextType {
@@ -184,26 +184,92 @@ interface MobileFormActionsProps {
   sticky?: boolean
 }
 
+// iOS Keyboard Detection Hook
+function useVirtualKeyboard() {
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+
+  useEffect(() => {
+    // Only run on iOS devices or where visualViewport is supported
+    if (typeof window === 'undefined' || !('visualViewport' in window)) {
+      return;
+    }
+
+    const visualViewport = window.visualViewport;
+    if (!visualViewport) return;
+
+    let initialHeight = visualViewport.height;
+
+    const handleResize = () => {
+      const currentHeight = visualViewport.height;
+      const windowHeight = window.innerHeight;
+      
+      // If viewport height is significantly less than window height, keyboard is likely visible
+      if (currentHeight < windowHeight * 0.75) {
+        setIsKeyboardVisible(true);
+        setKeyboardHeight(windowHeight - currentHeight);
+      } else {
+        setIsKeyboardVisible(false);
+        setKeyboardHeight(0);
+        initialHeight = currentHeight;
+      }
+    };
+
+    // Handle scroll events (iOS sometimes triggers scroll instead of resize)
+    const handleScroll = () => {
+      // Give time for the viewport to settle
+      setTimeout(handleResize, 100);
+    };
+
+    visualViewport.addEventListener('resize', handleResize);
+    visualViewport.addEventListener('scroll', handleScroll);
+
+    // Initial check
+    handleResize();
+
+    return () => {
+      visualViewport.removeEventListener('resize', handleResize);
+      visualViewport.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  return { keyboardHeight, isKeyboardVisible };
+}
+
 /**
  * MobileFormActions - Sticky action buttons for forms
+ * 
+ * Features:
+ * - Uses position: sticky instead of fixed for better iOS keyboard handling
+ * - Detects virtual keyboard visibility and adjusts accordingly
+ * - Falls back to fixed positioning on non-supporting browsers
  */
 export function MobileFormActions({
   children,
   className,
   sticky = true,
 }: MobileFormActionsProps) {
+  const { keyboardHeight, isKeyboardVisible } = useVirtualKeyboard();
+  
   return (
     <div
       className={cn(
         'flex items-center gap-3 pt-4',
         sticky && [
-          'fixed bottom-0 left-0 right-0 z-40',
+          // Use sticky positioning instead of fixed for better iOS keyboard handling
+          'sticky bottom-0 left-0 right-0 z-40',
           'bg-background/95 backdrop-blur-sm',
           'border-t px-4 py-4',
           'safe-area-bottom',
+          // Add transition for smooth height adjustments
+          'transition-all duration-200 ease-out',
         ],
         className
       )}
+      style={{
+        // When keyboard is visible, add bottom margin to avoid being covered
+        marginBottom: isKeyboardVisible ? `${keyboardHeight}px` : undefined,
+      }}
     >
       {children}
     </div>

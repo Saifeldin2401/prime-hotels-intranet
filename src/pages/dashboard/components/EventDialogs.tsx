@@ -185,7 +185,7 @@ export function EventDialogs({
                                             {t(`schedule.calendar.${selectedEvent.type}`, selectedEvent.type)}
                                         </Badge>
                                         <div className="flex items-center gap-2">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-600" aria-label={t('accessibility.edit_event', 'Edit event')}>
                                                 <Edit className="w-4 h-4" />
                                             </Button>
                                             {selectedEvent.id && !selectedEvent.id.toString().startsWith('shift') && (
@@ -194,6 +194,7 @@ export function EventDialogs({
                                                     size="icon"
                                                     className="h-8 w-8 text-slate-400 hover:text-red-500"
                                                     onClick={() => setIsDeleteDialogOpen(true)}
+                                                    aria-label={t('accessibility.delete_event', 'Delete event')}
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </Button>

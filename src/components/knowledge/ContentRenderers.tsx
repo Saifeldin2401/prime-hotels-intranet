@@ -18,6 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { useAuth } from '@/hooks/useAuth'
 import { useTrackRelatedClick, useTrackRelatedImpressions } from '@/hooks/useKnowledge'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { ChecklistItem, FAQItem, RelatedArticle } from '@/types/knowledge'
 import type { TFunction } from 'i18next'
@@ -27,9 +28,11 @@ import {
     Circle,
     ExternalLink,
     HelpCircle,
-    Maximize
+    Loader2,
+    Maximize,
+    Video as VideoIcon,
 } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -42,118 +45,436 @@ interface VideoPlayerProps {
     title?: string
 }
 
-export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
-    const isYouTube = videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be')
-    const isVimeo = videoUrl.includes('vimeo.com')
+// Helper to check if URL is YouTube
+function getIsYouTube(videoUrl: string): boolean {
+    try {
+        const url = new URL(videoUrl)
+        return url.hostname === 'youtube.com' ||
+               url.hostname === 'www.youtube.com' ||
+               url.hostname === 'youtu.be' ||
+               url.hostname === 'www.youtu.be'
+    } catch {
+        return false
+    }
+}
 
-    const getEmbedUrl = (url: string) => {
-        if (!url) return ''
+// Helper to check if URL is Vimeo
+function getIsVimeo(videoUrl: string): boolean {
+    try {
+        const url = new URL(videoUrl)
+        return url.hostname === 'vimeo.com' ||
+               url.hostname === 'www.vimeo.com'
+    } catch {
+        return false
+    }
+}
 
-        if (isYouTube) {
-            try {
-                const parsed = new URL(url)
+// Helper to get embed URL for YouTube/Vimeo
+function getEmbedUrl(videoUrl: string, isYouTube: boolean, isVimeo: boolean): string {
+    if (!videoUrl) return ''
 
-                // Common formats:
-                // - https://www.youtube.com/watch?v=VIDEOID
-                // - https://youtu.be/VIDEOID
-                // - https://www.youtube.com/shorts/VIDEOID
-                // - https://www.youtube.com/embed/VIDEOID
-                // - https://www.youtube.com/live/VIDEOID
-                let videoId: string | null = null
+    if (isYouTube) {
+        try {
+            const parsed = new URL(videoUrl)
+            let videoId: string | null = null
 
-                if (parsed.hostname === 'youtu.be') {
-                    videoId = parsed.pathname.replace('/', '').trim() || null
-                } else if (parsed.pathname.startsWith('/watch')) {
-                    videoId = parsed.searchParams.get('v')
-                } else if (parsed.pathname.startsWith('/shorts/')) {
-                    videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
-                } else if (parsed.pathname.startsWith('/embed/')) {
-                    videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
-                } else if (parsed.pathname.startsWith('/live/')) {
-                    videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
-                }
-
-                // Fallback: regex extraction for odd formats
-                if (!videoId) {
-                    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
-                    const match = url.match(regExp)
-                    videoId = match?.[2] || null
-                }
-
-                if (!videoId || videoId.length < 8) return ''
-
-                const params = new URLSearchParams({
-                    rel: '0',
-                    modestbranding: '1',
-                    playsinline: '1',
-                })
-
-                return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
-            } catch {
-                return ''
+            if (parsed.hostname === 'youtu.be') {
+                videoId = parsed.pathname.replace('/', '').trim() || null
+            } else if (parsed.pathname.startsWith('/watch')) {
+                videoId = parsed.searchParams.get('v')
+            } else if (parsed.pathname.startsWith('/shorts/')) {
+                videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/embed/')) {
+                videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/live/')) {
+                videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
             }
-        }
 
-        if (isVimeo) {
-            try {
-                const parsed = new URL(url)
-                // Formats:
-                // - https://vimeo.com/123456
-                // - https://player.vimeo.com/video/123456
-                const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
-                const id = match?.[2]
-                if (id) return `https://player.vimeo.com/video/${id}`
-            } catch {
-                // ignore
+            if (!videoId) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
+                const match = videoUrl.match(regExp)
+                videoId = match?.[2] || null
             }
-        }
 
-        return url
+            if (!videoId || videoId.length < 8) return ''
+
+            const params = new URLSearchParams({
+                rel: '0',
+                modestbranding: '1',
+                playsinline: '1',
+            })
+
+            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+        } catch {
+            return ''
+        }
     }
 
-    if (isYouTube || isVimeo) {
-        const embedUrl = getEmbedUrl(videoUrl)
-        return (
-            <div className="space-y-4">
-                <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                    <iframe
-                        src={embedUrl}
-                        title={title ? `Knowledge video: ${title}` : "Knowledge video player"}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                        referrerPolicy="strict-origin-when-cross-origin"
-                        loading="lazy"
-                    />
+    if (isVimeo) {
+        try {
+            const parsed = new URL(videoUrl)
+            const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
+            const id = match?.[2]
+            if (id) return `https://player.vimeo.com/video/${id}`
+        } catch {
+            // ignore
+        }
+    }
+
+    return videoUrl
+}
+
+// Embedded video player for YouTube/Vimeo
+function EmbeddedVideoPlayer({ videoUrl, title, isYouTube, isVimeo }: VideoPlayerProps & { isYouTube: boolean; isVimeo: boolean }) {
+    const embedUrl = getEmbedUrl(videoUrl, isYouTube, isVimeo)
+    return (
+        <div className="space-y-4">
+            <div className="aspect-video rounded-lg overflow-hidden bg-black">
+                <iframe
+                    src={embedUrl}
+                    title={title ? `Knowledge video: ${title}` : "Knowledge video player"}
+                    className="w-full h-full"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    referrerPolicy="strict-origin-when-cross-origin"
+                    loading="lazy"
+                />
+            </div>
+            <div className="flex justify-center">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-gray-500 hover:text-hotel-navy"
+                    onClick={() => window.open(videoUrl, '_blank')}
+                >
+                    <ExternalLink className="h-3 w-3 mr-2" />
+                    Having trouble? Watch directly on YouTube
+                </Button>
+            </div>
+        </div>
+    )
+}
+
+// Direct video file player with signed URL refresh support
+function DirectVideoPlayer({ videoUrl, title }: VideoPlayerProps) {
+    const [videoError, setVideoError] = useState<string | null>(null)
+    const [videoLoading, setVideoLoading] = useState(true)
+    const [refreshingUrl, setRefreshingUrl] = useState(false)
+    const [currentSrc, setCurrentSrc] = useState(videoUrl)
+    const videoRef = useRef<HTMLVideoElement>(null)
+    const hasAttemptedRefresh = useRef(false)
+
+    // Detect if URL is a Supabase storage URL that needs refreshing
+    const isSupabaseStorageUrl = useCallback((url: string): boolean => {
+        if (!url) return false
+        // Check for common Supabase storage patterns
+        return url.includes('.supabase.co') || 
+               url.includes('/storage/v1/') ||
+               url.includes('x-amz-date') || // Signed URL query param
+               url.includes('X-Amz-Signature') || // S3 signed URL
+               url.includes('.mp4') || // Direct video file
+               url.includes('.webm') ||
+               url.includes('.mov')
+    }, [])
+
+    // Check if URL is just a filename (no protocol, no hostname)
+    const isPlainFilename = useCallback((url: string): boolean => {
+        if (!url) return false
+        // If no protocol and no slashes at start, likely just a filename
+        return !url.includes('://') && !url.startsWith('/') && !url.startsWith('http')
+    }, [])
+
+    // Refresh signed URL for Supabase storage
+    const refreshSignedUrl = useCallback(async (originalUrl: string): Promise<string | null> => {
+        try {
+            // Pattern 0: Plain filename - look up in media_assets
+            if (isPlainFilename(originalUrl)) {
+                const { data: mediaAsset } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path, filename')
+                    .or(`filename.eq.${originalUrl},original_filename.eq.${originalUrl}`)
+                    .maybeSingle()
+                
+                if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                    const { data, error } = await supabase.storage
+                        .from(mediaAsset.storage_bucket)
+                        .createSignedUrl(mediaAsset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+                
+                // Try searching for files containing this name
+                const { data: mediaAssets } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path, filename')
+                    .ilike('filename', `%${originalUrl}%`)
+                    .limit(5)
+                
+                if (mediaAssets && mediaAssets.length > 0) {
+                    const asset = mediaAssets[0]
+                    const { data, error } = await supabase.storage
+                        .from(asset.storage_bucket)
+                        .createSignedUrl(asset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+                
+                return null
+            }
+
+            const url = new URL(originalUrl)
+            
+            // Pattern 1: Standard Supabase storage signed URL
+            const signedMatch = url.pathname.match(/\/storage\/v1\/object\/signed\/([^/]+)\/(.+)/)
+            if (signedMatch) {
+                const bucket = signedMatch[1]
+                const path = decodeURIComponent(signedMatch[2])
+
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+
+            // Pattern 2: Public URL
+            const publicMatch = url.pathname.match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)/)
+            if (publicMatch) {
+                const bucket = publicMatch[1]
+                const path = decodeURIComponent(publicMatch[2])
+
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+            
+            // Pattern 3: S3-style URL
+            const s3Match = url.pathname.match(/\/storage\/v1\/s3\/(.+)/)
+            if (s3Match) {
+                const bucket = 'media'
+                const path = s3Match[1]
+                const { data, error } = await supabase.storage
+                    .from(bucket)
+                    .createSignedUrl(path, 3600)
+                
+                if (error) throw error
+                return data?.signedUrl || null
+            }
+
+            // Pattern 4: Any Supabase URL with query params
+            if (url.hostname.includes('.supabase.co') && url.search) {
+                const pathParts = url.pathname.split('/').filter(Boolean)
+                if (pathParts.length >= 2) {
+                    let bucketIndex = 0
+                    let pathIndex = 1
+                    
+                    if (pathParts[0] === 'storage' && pathParts[1] === 'v1') {
+                        const objectIndex = pathParts.indexOf('object')
+                        if (objectIndex >= 0 && pathParts[objectIndex + 1]) {
+                            bucketIndex = objectIndex + 1
+                            pathIndex = objectIndex + 2
+                        }
+                    }
+                    
+                    if (pathParts[bucketIndex] && pathParts[pathIndex]) {
+                        const bucket = pathParts[bucketIndex]
+                        const path = pathParts.slice(pathIndex).join('/')
+                        
+                        const { data, error } = await supabase.storage
+                            .from(bucket)
+                            .createSignedUrl(path, 3600)
+                        
+                        if (!error) return data?.signedUrl || null
+                    }
+                }
+            }
+
+            // Pattern 5: Relative path
+            if (!url.hostname || url.hostname === window.location.hostname) {
+                const filename = url.pathname.split('/').pop() || originalUrl
+                const { data: mediaAsset } = await supabase
+                    .from('media_assets')
+                    .select('storage_bucket, storage_path')
+                    .eq('filename', filename)
+                    .maybeSingle()
+                
+                if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                    const { data, error } = await supabase.storage
+                        .from(mediaAsset.storage_bucket)
+                        .createSignedUrl(mediaAsset.storage_path, 3600)
+                    
+                    if (!error) return data?.signedUrl || null
+                }
+            }
+
+            // Last resort: try to find media asset by matching the URL
+            const { data: mediaAsset } = await supabase
+                .from('media_assets')
+                .select('storage_bucket, storage_path')
+                .eq('public_url', originalUrl)
+                .maybeSingle()
+            
+            if (mediaAsset?.storage_bucket && mediaAsset?.storage_path) {
+                const { data, error } = await supabase.storage
+                    .from(mediaAsset.storage_bucket)
+                    .createSignedUrl(mediaAsset.storage_path, 3600)
+                
+                if (!error) return data?.signedUrl || null
+            }
+
+            return null
+        } catch (err) {
+            console.error('Failed to refresh signed URL:', err)
+            return null
+        }
+    }, [isPlainFilename])
+
+    const handleVideoError = useCallback(async () => {
+        if (isSupabaseStorageUrl(currentSrc) && !hasAttemptedRefresh.current) {
+            hasAttemptedRefresh.current = true
+            setRefreshingUrl(true)
+            const freshUrl = await refreshSignedUrl(currentSrc)
+            
+            if (freshUrl) {
+                setCurrentSrc(freshUrl)
+                setVideoLoading(true)
+                setVideoError(null)
+                setTimeout(() => {
+                    videoRef.current?.load()
+                }, 50)
+            } else {
+                setVideoLoading(false)
+                setVideoError('Unable to load video. The file may be missing or access has expired.')
+            }
+            setRefreshingUrl(false)
+        } else {
+            setVideoLoading(false)
+            setVideoError('Unable to load video. The file may be missing or unsupported.')
+        }
+    }, [currentSrc, isSupabaseStorageUrl, refreshSignedUrl])
+
+    // Proactive refresh on mount if URL looks like it needs refreshing
+    useEffect(() => {
+        if (isPlainFilename(videoUrl)) {
+            hasAttemptedRefresh.current = true
+            setRefreshingUrl(true)
+            refreshSignedUrl(videoUrl).then(freshUrl => {
+                if (freshUrl) {
+                    setCurrentSrc(freshUrl)
+                } else {
+                    setVideoError('Video file not found in media library')
+                    setVideoLoading(false)
+                }
+                setRefreshingUrl(false)
+            }).catch(() => {
+                setVideoError('Failed to load video')
+                setVideoLoading(false)
+                setRefreshingUrl(false)
+            })
+        }
+    }, [videoUrl, isPlainFilename, refreshSignedUrl])
+
+    // Force video reload when src changes
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.load()
+        }
+    }, [currentSrc])
+    useEffect(() => {
+        if (!videoLoading || !currentSrc) return
+        
+        const checkInterval = setInterval(() => {
+            const video = videoRef.current
+            if (!video) return
+            
+            if ((video.networkState === 0 || video.networkState === 1) && 
+                video.readyState === 0 && 
+                !hasAttemptedRefresh.current) {
+                void handleVideoError()
+            }
+        }, 2000)
+
+        const timeout = setTimeout(() => {
+            const video = videoRef.current
+            if (video && video.readyState === 0 && !hasAttemptedRefresh.current) {
+                void handleVideoError()
+            }
+        }, 8000)
+
+        return () => {
+            clearInterval(checkInterval)
+            clearTimeout(timeout)
+        }
+    }, [videoLoading, currentSrc, handleVideoError])
+
+    return (
+        <div className="aspect-video rounded-lg overflow-hidden bg-black relative">
+            {(videoLoading || refreshingUrl) && !videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10">
+                    {refreshingUrl ? (
+                        <>
+                            <Loader2 className="h-10 w-10 animate-spin mb-3" />
+                            <span className="text-sm">Refreshing access...</span>
+                        </>
+                    ) : (
+                        <>
+                            <div className="animate-spin h-10 w-10 border-4 border-white/30 border-t-white rounded-full mb-3"></div>
+                            <span className="text-sm">Loading video...</span>
+                        </>
+                    )}
                 </div>
-                <div className="flex justify-center">
+            )}
+            {videoError && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center">
+                    <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
+                    <span className="text-sm mb-2">{videoError}</span>
                     <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
-                        className="text-xs text-gray-500 hover:text-hotel-navy"
-                        onClick={() => window.open(videoUrl, '_blank')}
+                        onClick={() => {
+                            setVideoError(null)
+                            setVideoLoading(true)
+                            if (isSupabaseStorageUrl(currentSrc)) {
+                                void handleVideoError()
+                            } else {
+                                videoRef.current?.load()
+                            }
+                        }}
+                        className="mt-2 border-white/30 text-white hover:bg-white/10"
                     >
-                        <ExternalLink className="h-3 w-3 mr-2" />
-                        Having trouble? Watch directly on YouTube
+                        Retry
                     </Button>
                 </div>
-            </div>
-        )
-    }
-
-    // Direct video file
-    return (
-        <div className="aspect-video rounded-lg overflow-hidden bg-black">
+            )}
             <video
-                src={videoUrl}
+                ref={videoRef}
+                src={currentSrc}
                 controls
-                className="w-full h-full"
+                className={cn("w-full h-full", (videoError || refreshingUrl) && "opacity-0")}
                 poster={undefined}
+                onLoadedData={() => setVideoLoading(false)}
+                onError={handleVideoError}
             >
                 Your browser does not support the video tag.
             </video>
         </div>
     )
+}
+
+// Main VideoPlayer component that delegates to the appropriate player
+export function VideoPlayer({ videoUrl, title }: VideoPlayerProps) {
+    const isYouTube = getIsYouTube(videoUrl)
+    const isVimeo = getIsVimeo(videoUrl)
+
+    if (isYouTube || isVimeo) {
+        return <EmbeddedVideoPlayer videoUrl={videoUrl} title={title} isYouTube={isYouTube} isVimeo={isVimeo} />
+    }
+
+    return <DirectVideoPlayer videoUrl={videoUrl} title={title} />
 }
 
 // ============================================================================
@@ -527,3 +848,7 @@ export function ImageGalleryRenderer({ images, cacheVersion }: ImageGalleryRende
         </>
     )
 }
+
+// Re-export ArticleContent from separate file
+export { ArticleContent } from './ArticleContent'
+export { default as ArticleContentDefault } from './ArticleContent'

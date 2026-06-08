@@ -76,7 +76,7 @@ const navigationItems = [
   },
   {
     name: 'Admin',
-    href: '/admin',
+    href: '/admin/users',
     icon: Icons.Settings,
     requiredRole: 'corporate_admin' as const
   }

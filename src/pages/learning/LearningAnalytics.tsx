@@ -131,8 +131,8 @@ type RecentAttemptRow = {
     id: string
     score: number | null
     completed_at: string | null
-    user: QuizProfile | null
-    quiz: { title: string | null } | null
+    user: QuizProfile | QuizProfile[] | null
+    quiz: { title: string | null } | Array<{ title: string | null }> | null
 }
 
 type TopUserRow = {
@@ -149,9 +149,11 @@ type TeamProgressRow = {
     last_accessed_at: string | null
     completed_at: string | null
     score_percentage: number | null
-    user: (QuizProfile & {
-        department?: { name: string | null } | null
-    }) | null
+    user: ((QuizProfile & {
+        department?: { name: string | null } | Array<{ name: string | null }> | null
+    }) | Array<QuizProfile & {
+        department?: { name: string | null } | Array<{ name: string | null }> | null
+    }>) | null
 }
 
 const TIME_RANGES: readonly TimeRange[] = ['7d', '30d', '90d', 'all']
@@ -262,9 +264,9 @@ export default function LearningAnalytics() {
             }
 
             const recentActivity = ((recentAttempts as RecentAttemptRow[] | null) || []).map(a => ({
-                user_id: a.user?.id || '',
-                user_name: `${a.user?.first_name || ''} ${a.user?.last_name || ''}`.trim(),
-                quiz_title: a.quiz?.title || '',
+                user_id: (Array.isArray(a.user) ? a.user[0]?.id : a.user?.id) || '',
+                user_name: `${Array.isArray(a.user) ? a.user[0]?.first_name || '' : a.user?.first_name || ''} ${Array.isArray(a.user) ? a.user[0]?.last_name || '' : a.user?.last_name || ''}`.trim(),
+                quiz_title: (Array.isArray(a.quiz) ? a.quiz[0]?.title : a.quiz?.title) || '',
                 score: a.score || 0,
                 completed_at: a.completed_at || ''
             }))
@@ -319,13 +321,18 @@ export default function LearningAnalytics() {
                     .from('training_modules')
                     .select('id, title')
                     .in('id', teamModuleIds)
-                : { data: [], error: null }
+                : { data: [] as Array<{ id: string; title: string | null }> }
             const teamModuleMap = new Map((teamModules || []).map((module) => [module.id, module.title]))
 
             const teamProgress = ((teamProgressData as TeamProgressRow[] | null) || []).map(item => ({
                 id: item.id,
-                user_name: `${item.user?.first_name || ''} ${item.user?.last_name || ''}`.trim(),
-                department: item.user?.department?.name || 'Unassigned',
+                user_name: `${Array.isArray(item.user) ? item.user[0]?.first_name || '' : item.user?.first_name || ''} ${Array.isArray(item.user) ? item.user[0]?.last_name || '' : item.user?.last_name || ''}`.trim(),
+                department: (() => {
+                    const departmentRelation = Array.isArray(item.user) ? item.user[0]?.department : item.user?.department
+                    return Array.isArray(departmentRelation)
+                        ? departmentRelation[0]?.name || 'Unassigned'
+                        : departmentRelation?.name || 'Unassigned'
+                })(),
                 module_title: teamModuleMap.get(item.content_id) || 'Unknown Module',
                 status: item.status,
                 score: item.score_percentage,
@@ -479,7 +486,7 @@ export default function LearningAnalytics() {
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate('/learning/my')}>
+                    <Button variant="ghost" size="icon" aria-label={t('accessibility.go_back', 'Go Back')} onClick={() => navigate('/learning/my')}>
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>

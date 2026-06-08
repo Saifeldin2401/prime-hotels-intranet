@@ -110,7 +110,22 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
         setIsSubmitting(true)
 
         try {
-            const jobData = {
+            const jobData: {
+                title: string
+                property_id: string | null
+                department_id: string | null
+                seniority_level: SeniorityLevel
+                employment_type: EmploymentType
+                description: string | null
+                requirements: string | null
+                responsibilities: string | null
+                salary_range_min: number | null
+                salary_range_max: number | null
+                closes_at: string | null
+                status: 'draft' | 'open'
+                created_by: string | undefined
+                published_at?: string
+            } = {
                 title: formData.title,
                 property_id: formData.property_id || null,
                 department_id: formData.department_id || null,

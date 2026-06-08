@@ -276,10 +276,10 @@ export default function TrainingCertificates() {
                         </div>
                         <div className="flex items-center gap-2">
                           <Badge variant="outline" className={getStatusColor(cert.status)}>{cert.status}</Badge>
-                          <Button variant="ghost" size="icon" onClick={() => copyLink(cert.verificationCode)} title={t('copyLink')}>
+                          <Button variant="ghost" size="icon" onClick={() => copyLink(cert.verificationCode)} title={t('copyLink')} aria-label={t('accessibility.copyLink', 'Copy verification link')}>
                             <Copy className="w-4 h-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleView(cert)}>
+                          <Button variant="ghost" size="icon" onClick={() => handleView(cert)} aria-label={t('accessibility.viewCertificate', 'View certificate')}>
                             <ExternalLink className="w-4 h-4" />
                           </Button>
                         </div>

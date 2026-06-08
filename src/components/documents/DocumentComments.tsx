@@ -39,6 +39,7 @@ import {
     Trash2
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 export interface User {
   id: string;
@@ -145,6 +146,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   onStartReply,
   onStartEdit,
 }) => {
+  const { t } = useTranslation();
   const isReplying = replyToId === comment.id;
   const isEditing = editId === comment.id;
   const isAuthor = comment.author.id === currentUser.id;
@@ -277,6 +279,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 opacity-0 group-hover:opacity-100"
+                      aria-label={t('accessibility.comment_options', 'Comment options')}
                     >
                       <MoreHorizontal className="w-4 h-4" />
                     </Button>
@@ -399,6 +402,7 @@ export function DocumentComments({
   onDelete,
   className,
 }: DocumentCommentsProps) {
+  const { t } = useTranslation();
   const [newComment, setNewComment] = React.useState("");
   const [replyToId, setReplyToId] = React.useState<string | null>(null);
   const [replyContent, setReplyContent] = React.useState("");
@@ -638,6 +642,7 @@ export function DocumentComments({
                     className="absolute bottom-2 right-2 h-8 w-8 bg-[#0B1C3E] hover:bg-[#1a3a6e]"
                     onClick={handleSubmitComment}
                     disabled={!newComment.trim()}
+                    aria-label={t('accessibility.send_comment', 'Send comment')}
                   >
                     <Send className="w-4 h-4" />
                   </Button>

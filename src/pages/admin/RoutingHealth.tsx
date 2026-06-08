@@ -476,7 +476,7 @@ export default function RoutingHealth() {
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="space-y-2">
                   <label className="text-xs font-medium">Scope</label>
-                  <Select value={scopeType} onValueChange={(v) => setScopeType(v)}>
+                  <Select value={scopeType} onValueChange={(v) => setScopeType(v as typeof scopeType)}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -573,6 +573,7 @@ export default function RoutingHealth() {
                       variant="ghost"
                       className="text-destructive h-8 w-8"
                       onClick={() => removeDelegation.mutate(d.id)}
+                      aria-label={t('accessibility.remove_delegation', 'Remove Delegation')}
                     >
                       <UserX className="h-4 w-4" />
                     </Button>

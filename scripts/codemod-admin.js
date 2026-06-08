@@ -35,7 +35,7 @@ for (const sourceFile of project.getSourceFiles()) {
             // Convert text into a translation key format: admin_component.some_text
             const keyName = toCamelCaseKey(text);
             if (keyName) {
-                node.replaceWithText(`{t('admin.${keyName}', '${text.replace(/'/g, "\\'")}')}`);
+                node.replaceWithText(`{t('admin.${keyName}', '${text.replace(/[\\']/g, '\\$&')}')}`);
                 hasModifications = true;
             }
         }

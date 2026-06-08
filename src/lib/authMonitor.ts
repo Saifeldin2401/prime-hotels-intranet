@@ -43,6 +43,15 @@ const eventBuffer: AuthEvent[] = []
 const MAX_BUFFER_SIZE = 50
 
 /**
+ * Log event to console in development
+ */
+function logEvent(event: AuthEvent): void {
+  const emoji = event.success ? '✓' : '✗'
+  const details = event.details ? JSON.stringify(event.details) : ''
+  console.log(`[Auth] ${emoji} ${event.type}${event.error ? ` - ${event.error}` : ''} ${details}`)
+}
+
+/**
  * Record an auth event
  */
 export function recordAuthEvent(event: Omit<AuthEvent, 'timestamp'>): void {
@@ -139,18 +148,6 @@ function sendToAnalytics(event: AuthEvent): void {
 }
 
 /**
- * Log event to console in development
- */
-function logEvent(event: AuthEvent): void {
-  const prefix = event.success ? '✅' : '❌'
-  console.log(
-    `[AuthMonitor] ${prefix} ${event.type}`,
-    event.details || '',
-    event.error ? `Error: ${event.error}` : ''
-  )
-}
-
-/**
  * Get current session metrics
  */
 export function getSessionMetrics(): Readonly<SessionMetrics> {
@@ -208,14 +205,9 @@ export function resetMetrics(): void {
  */
 export function reportAuthHealth(): void {
   const health = isSessionHealthy()
-  console.group('[AuthMonitor] Session Health Report')
-  console.log('Metrics:', getSessionMetrics())
-  console.log('Healthy:', health.healthy)
   if (health.concerns.length > 0) {
     console.warn('Concerns:', health.concerns)
   }
-  console.log('Recent Events:', getRecentEvents(5))
-  console.groupEnd()
 }
 
 // Auto-report health every 60 seconds in development

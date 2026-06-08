@@ -1,8 +1,9 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
-import { Navigate, Route } from 'react-router-dom'
+import { Route } from 'react-router-dom'
 
 const MyProfile = lazy(() => import('@/pages/profile/MyProfile'))
 const UserProfile = lazy(() => import('@/pages/profile/UserProfile'))
@@ -106,7 +107,7 @@ export const MiscRoutes = () => (
         />
         <Route
             path="/messages"
-            element={<Navigate to="/messaging" replace />}
+            element={<PreserveQueryNavigate to="/messaging" />}
         />
         <Route
             path="/tasks"
@@ -186,7 +187,7 @@ export const MiscRoutes = () => (
         />
         <Route
             path="/help"
-            element={<Navigate to="/knowledge" replace />}
+            element={<PreserveQueryNavigate to="/knowledge" />}
         />
         <Route
             path="/maintenance"

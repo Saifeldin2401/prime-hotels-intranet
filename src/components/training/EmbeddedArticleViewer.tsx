@@ -1,3 +1,4 @@
+import { ArticleContent } from '@/components/knowledge/ArticleContent'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -5,7 +6,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslationAI, type TranslationTargetLanguage } from '@/hooks/useTranslationAI'
-import { sanitizeHtml } from '@/lib/sanitize'
 import { supabase } from '@/lib/supabase'
 import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 import { useQuery } from '@tanstack/react-query'
@@ -89,7 +89,18 @@ const EmbeddedHtmlContent = ({
                     </div>
                 ) : (
                     <InlineErrorBoundary>
-                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(displayContent) }} />
+                        {/*
+                         * Use ArticleContent instead of plain dangerouslySetInnerHTML.
+                         * ArticleContent pre-extracts <video> tags before DOMPurify runs,
+                         * replacing them with VideoPlayer components that handle signed-URL
+                         * refresh.  Plain dangerouslySetInnerHTML causes DOMPurify to strip
+                         * the src attribute from video elements whose URL contains query-string
+                         * tokens (e.g. Supabase signed URLs), leaving an empty black player.
+                         */}
+                        <ArticleContent
+                            content={displayContent ?? ''}
+                            className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                        />
                     </InlineErrorBoundary>
                 )}
             </div>
@@ -101,14 +112,16 @@ const EmbeddedHtmlContent = ({
                         {t('original', 'Original')}
                     </div>
                     <InlineErrorBoundary>
-                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }} />
+                        <ArticleContent
+                            content={content}
+                            className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                        />
                     </InlineErrorBoundary>
                 </div>
             )}
         </div>
     )
 }
-
 export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
     // Use a key to force re-mount when critical props change
     // This is cleaner than useEffect for state resets and fixes the react-doctor error

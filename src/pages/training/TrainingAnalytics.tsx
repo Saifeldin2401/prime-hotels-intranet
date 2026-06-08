@@ -294,7 +294,7 @@ export default function TrainingAnalytics() {
                 description={t('analytics.description')}
                 actions={
                     <div className="flex items-center gap-3">
-                        <Select value={timeRange} onValueChange={(v) => setTimeRange(v)}>
+                        <Select value={timeRange} onValueChange={(v) => setTimeRange(v as '7d' | '30d' | '90d' | 'all')}>
                             <SelectTrigger className="w-[140px]">
                                 <SelectValue />
                             </SelectTrigger>

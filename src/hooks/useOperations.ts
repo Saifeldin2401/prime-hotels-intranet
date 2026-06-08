@@ -37,11 +37,12 @@ export function useProperties() {
 // PMS SYSTEMS
 // ============================================================================
 
-export function usePMSSystems() {
+export function usePMSSystems(options?: { includeInactive?: boolean }) {
     const { currentProperty } = useProperty()
+    const includeInactive = options?.includeInactive ?? false
 
     return useQuery({
-        queryKey: ['pms-systems', currentProperty?.id],
+        queryKey: ['pms-systems', currentProperty?.id, includeInactive],
         queryFn: async () => {
             let query = supabase
                 .from('pms_systems')
@@ -49,8 +50,11 @@ export function usePMSSystems() {
           *,
           property:properties(id, name)
         `)
-                .eq('is_active', true)
                 .order('created_at', { ascending: false })
+
+            if (!includeInactive) {
+                query = query.eq('is_active', true)
+            }
 
             const propertyId = currentProperty?.id
             if (isRealPropertyId(propertyId)) {
@@ -317,12 +321,11 @@ export function useDeleteImportLog() {
 
     return useMutation({
         mutationFn: async (id: string) => {
-            const tables = ['daily_occupancy', 'daily_revenue', 'market_segments', 'room_inventory', 'rate_summary']
-            for (const table of tables) {
-                await supabase.from(table).delete().eq('source_import_id', id)
-            }
-            const { error: logError } = await supabase.from('data_import_logs').delete().eq('id', id)
-            if (logError) throw logError
+            const { error } = await supabase.rpc('delete_operations_import', {
+                import_log_id: id,
+            })
+
+            if (error) throw error
             return id
         },
         onSuccess: () => {
@@ -332,10 +335,7 @@ export function useDeleteImportLog() {
             queryClient.invalidateQueries({ queryKey: ['operations-kpis'] })
             crudToasts.delete.success('Import history and associated data')
         },
-        onError: (err) => {
-            console.error('Delete mutation error:', err)
-            crudToasts.delete.error('import history')
-        }
+        onError: () => crudToasts.delete.error('import history')
     })
 }
 

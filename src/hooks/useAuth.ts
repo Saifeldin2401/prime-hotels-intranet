@@ -15,18 +15,38 @@ const hmrFallback: AuthContextType = {
     signIn: async () => ({ error: new Error('AuthProvider not mounted') }),
     signOut: async () => {},
     refreshSession: async () => {},
+    verifyMFA: async () => false,
+    isMFAVerified: false,
+    pendingMFAUserId: null,
+    securityRequirements: null,
 } as const
 
+/**
+ * useAuth - Backward-compatible hook that returns combined auth state
+ * 
+ * This hook provides the same interface as before the refactor.
+ * For optimal performance, consider using the individual hooks:
+ *   - useAuthIdentity() - user, loading state only
+ *   - useAuthSecurity() - MFA, security requirements only  
+ *   - useUserData() - profile, roles, properties, departments only
+ *   - useAuthActions() - actions only (stable reference, never causes re-render!)
+ * 
+ * @example
+ * // Before (still works but causes re-renders on any auth change)
+ * const { user, profile, signIn } = useAuth()
+ * 
+ * // After (optimal - only re-renders when user changes)
+ * const { user } = useAuthIdentity()
+ * const { signIn } = useAuthActions() // Never causes re-render!
+ */
 export function useAuth() {
     const context = useContext(AuthContext)
     if (context === undefined) {
         if (import.meta.hot) {
             // During HMR, components may temporarily mount outside the provider tree
-            console.debug('useAuth: AuthProvider not found (HMR), using fallback')
             return hmrFallback
         }
         throw new Error('useAuth must be used within an AuthProvider')
     }
     return context
 }
-

@@ -1,85 +1,154 @@
+<div align="center">
+
+<img src="public/prime-hotels-logo.png" alt="Prime Hotels Group" width="200"/>
+
 # PHG Connect Intranet Platform
 
-A comprehensive multi-property hotel intranet system built with React, TypeScript, and Supabase, featuring full bilingual support (English/Arabic).
+**A comprehensive multi-property hotel intranet system with bilingual support (English/Arabic)**
 
-## Features
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Vite](https://img.shields.io/badge/Vite-Latest-646CFF?logo=vite&logoColor=white)](https://vitejs.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-### Core System
-- **6 Role Levels**: Regional Admin, Regional HR, Property Manager, Property HR, Department Head, Staff
-- **Multi-Property Support**: Manage multiple hotel properties from a single platform
-- **Bilingual Interface**: Full English and Arabic localization with RTL support
-- **Responsive Design**: Mobile-first design optimized for all devices
+[Live Demo](https://phg-connect.com) · [Documentation](#documentation) · [Report Bug](../../issues) · [Request Feature](../../issues)
 
-### Knowledge Base
-- **Comprehensive Documentation System**: SOPs, policies, guides, checklists, FAQs, and more
-- **Department-Specific Content**: Organized by department and content type
-- **Search & Browse**: Full-text search with advanced filtering
-- **Review Queue**: Admin workflow for content approval and publishing
-- **Analytics Dashboard**: Content performance metrics and engagement tracking
-- **PDF Support**: View and download PDF documents inline
-- **Required Reading**: Track mandatory document acknowledgments
+</div>
 
-### Document Management
-- **Upload & Approval Workflow**: Draft → Pending Review → Approved → Published
-- **Version Control**: Track document history and changes
-- **Acknowledgments**: Mandatory acknowledgments with tracking
-- **Visibility Controls**: Property-level and department-level access control
+---
 
-### Training & Development
-- **Module Creation**: Rich content blocks with videos, images, and text
-- **Quiz Builder**: Multiple choice, true/false, and fill-in-the-blank questions
-- **AI-Powered Question Generation**: Automatically generate quiz questions from content
-- **Assignment System**: Assign to users, departments, properties, or all staff
-- **Progress Tracking**: Monitor completion rates and scores
-- **Certificates**: Auto-generated completion certificates
-- **Learning Paths**: Structure training into career development tracks
+## 📋 Table of Contents
 
-### Communication
-- **Announcements**: Targeted announcements with priority levels and scheduling
-- **Bulk Notifications**: Batch notification system for large-scale communications
-- **In-App Notifications**: Real-time notifications via Supabase Realtime
-- **Email Notifications**: Automated email delivery via Resend
-- **Notification Preferences**: User-configurable notification settings
-- **HR Operations Center**: Centralized notification management and filtering
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Architecture](#architecture)
+- [Quick Start](#quick-start)
+- [Documentation](#documentation)
+- [Screenshots](#screenshots)
+- [Roadmap](#roadmap)
+- [Support](#support)
 
-### HR & Staff Management
-- **User Directory**: Searchable staff directory with advanced filters
-- **Role Management**: Hierarchical role-based access control
-- **Department Organization**: Organize staff by department and property
-- **Job Posting System**: Internal job postings with application tracking
-- **Leave Request System**: Digital leave request workflow with approvals
-- **Maintenance Requests**: Property maintenance ticket system
+---
 
-### Audit & Compliance
-- **Comprehensive Audit Logging**: All actions tracked with timestamps
-- **PII Access Tracking**: Special tracking for sensitive data access
-- **Retention Policies**: 3-year audit retention, 7-year PII retention
-- **Security Advisors**: Built-in security and performance recommendations
-- **Approval History**: Complete audit trail for all approvals
+## 🎯 Overview
 
-### Approval Engine
-- **Multi-Level Approval Chains**: Configurable approval workflows
-- **Temporary Delegation**: Delegate approval authority temporarily
-- **Auto-Escalation**: Automatic escalation after configurable thresholds
-- **Approval History**: Track approval decisions and comments
+PHG Connect is an enterprise-grade intranet platform built for multi-property hotel management. It provides a centralized hub for staff communication, document management, training, and HR operations with full support for both English and Arabic languages.
 
-## Prerequisites
+### ✨ Highlights
+
+- 🌍 **Bilingual Interface** - Complete English & Arabic localization with RTL support
+- 🏨 **Multi-Property** - Manage multiple hotel properties from a single platform
+- 📱 **Mobile-First** - Responsive design optimized for all devices
+- 🔐 **Enterprise Security** - Role-based access control with comprehensive audit logging
+- ⚡ **Real-time** - Live notifications and updates via Supabase Realtime
+
+---
+
+## 🔑 Key Features
+
+### 👥 Role-Based Access Control
+6 hierarchical role levels with granular permissions:
+
+| Role | Scope |
+|------|-------|
+| Regional Admin | Cross-property system administration |
+| Regional HR | HR operations across all properties |
+| Property Manager | Single property oversight |
+| Property HR | HR operations within property |
+| Department Head | Department-level management |
+| Staff | Standard employee access |
+
+### 📚 Knowledge Base
+- **Document Management** - SOPs, policies, guides, checklists, FAQs
+- **Approval Workflow** - Draft → Pending Review → Approved → Published
+- **Version Control** - Track document history and changes
+- **Required Reading** - Mandatory acknowledgments with tracking
+- **Analytics Dashboard** - Content performance metrics
+
+### 🎓 Training & Development
+- **Module Creation** - Rich content with videos, images, and text
+- **Quiz Builder** - Multiple choice, true/false, fill-in-the-blank
+- **AI Question Generation** - Auto-generate quiz questions from content
+- **Assignment System** - Assign to users, departments, or properties
+- **Certificates** - Auto-generated completion certificates
+- **Learning Paths** - Structured career development tracks
+
+### 📢 Communication Hub
+- **Announcements** - Targeted with priority levels and scheduling
+- **Bulk Notifications** - Large-scale communications
+- **In-App Notifications** - Real-time via Supabase Realtime
+- **Email Notifications** - Automated delivery via Resend
+- **HR Operations Center** - Centralized notification management
+
+### 🏢 HR & Staff Management
+- **Staff Directory** - Searchable with advanced filters
+- **Job Postings** - Internal postings with application tracking
+- **Leave Requests** - Digital workflow with approvals
+- **Maintenance Tickets** - Property maintenance request system
+
+### 🔒 Audit & Compliance
+- **Comprehensive Logging** - All actions tracked with timestamps
+- **PII Tracking** - Special tracking for sensitive data access
+- **Retention Policies** - 3-year audit, 7-year PII retention
+- **Security Advisors** - Built-in security recommendations
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                      Frontend Layer                          │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
+│  │   React 18  │  │ TypeScript  │  │    Tailwind CSS     │  │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                    Backend Services                          │
+│  ┌─────────────────────────────────────────────────────┐   │
+│  │              Supabase Platform                       │   │
+│  │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐  │   │
+│  │  │PostgreSQL│ │   Auth   │ │ Storage  │ │Realtime│  │   │
+│  │  └──────────┘ └──────────┘ └──────────┘ └────────┘  │   │
+│  └─────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                              │
+┌─────────────────────────────────────────────────────────────┐
+│                   Edge Functions                             │
+│         ┌─────────────────┐  ┌─────────────────┐            │
+│         │   send-email    │  │ bulk-notification│           │
+│         └─────────────────┘  └─────────────────┘            │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
 
 - Node.js 18+ and npm
 - Supabase account and project
 - Resend API key (for email notifications)
 
-## Setup
-
-1. **Install Dependencies**
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/Saifeldin2401/prime-hotels-intranet.git
+cd prime-hotels-intranet
+
+# Install dependencies
 npm install
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your Supabase credentials
 ```
 
-2. **Configure Environment Variables**
-
-Create a `.env` file in the root directory:
+### Environment Configuration
 
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
@@ -88,131 +157,145 @@ VITE_APP_URL=https://phg-connect.com
 VITE_ALLOWED_ORIGINS=https://phg-connect.com,https://www.phg-connect.com
 ```
 
-3. **Set Up Supabase Database**
+### Database Setup
 
-Run all migrations in the `supabase/migrations/` directory in chronological order. Key migrations include:
-- Initial schema and authentication
-- Security functions and RLS policies
-- Documents, training, and knowledge base schemas
-- Notifications and announcements
-- Audit logging and retention
-- Bulk notification system
+Run all migrations in `supabase/migrations/` directory in chronological order.
 
-4. **Set Up Storage Buckets**
+### Storage Buckets
 
-Create storage buckets in Supabase:
+Create the following Supabase Storage buckets:
 - `documents` - For document files and PDFs
 - `training` - For training materials
 - `announcements` - For announcement attachments
 - `knowledge` - For knowledge base attachments
 
-5. **Deploy Edge Functions**
-
-Deploy Edge Functions:
+### Edge Functions
 
 ```bash
+# Deploy Edge Functions
 supabase functions deploy send-email
 supabase functions deploy bulk-notification-processor
+
+# Set secrets
+supabase secrets set RESEND_API_KEY=your_resend_api_key \
+  APP_BASE_URL=https://phg-connect.com \
+  EMAIL_FROM_ADDRESS=notifications@phg-connect.com \
+  EMAIL_FROM_NAME="PHG Connect"
 ```
 
-Set required secrets:
-
-```bash
-supabase secrets set RESEND_API_KEY=your_resend_api_key APP_BASE_URL=https://phg-connect.com EMAIL_FROM_ADDRESS=notifications@phg-connect.com EMAIL_FROM_NAME="PHG Connect"
-```
-
-6. **Enable pg_cron (Optional)**
-
-For automated escalation and retention cleanup:
-
-```sql
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-```
-
-## Development
+### Development
 
 ```bash
 npm run dev
 ```
 
-## Building for Production
+### Production Build
 
 ```bash
 npm run build
 ```
 
-## Project Structure
+---
 
-```
-phg-connect/
-├── src/
-│   ├── components/        # React components
-│   │   ├── admin/        # Admin-specific components
-│   │   ├── auth/         # Authentication components
-│   │   ├── documents/    # Document viewer components
-│   │   ├── layout/       # Layout components
-│   │   ├── notifications/# Notification components
-│   │   ├── common/       # Shared/common components
-│   │   └── ui/           # Shadcn UI components
-│   ├── contexts/         # React contexts (Auth, Theme)
-│   ├── hooks/            # Custom React hooks
-│   ├── i18n/             # Internationalization
-│   │   └── locales/      # Arabic and English translations
-│   ├── lib/              # Utility functions and services
-│   ├── pages/            # Page components
-│   │   ├── knowledge/   # Knowledge Base pages
-│   │   ├── learning/    # Training pages
-│   │   ├── hr/          # HR pages
-│   │   └── public/      # Public pages (login, homepage)
-│   └── types/            # TypeScript type definitions
-├── supabase/
-│   ├── migrations/       # Database migrations
-│   └── functions/        # Edge Functions
-└── public/               # Static assets
-```
+## 📖 Documentation
 
-## Recent Updates
+| Document | Description |
+|----------|-------------|
+| [User Manual](USER_MANUAL.md) | End-user guide for platform navigation and features |
+| [Admin Technical Guide](ADMIN_TECHNICAL_GUIDE.md) | System administration and configuration |
+| [System Architecture](SYSTEM_ARCHITECTURE.md) | Technical architecture overview |
+| [Full System Manual](FULL_SYSTEM_MANUAL.md) | Comprehensive system documentation |
+| [Production Deployment](PRODUCTION_DEPLOYMENT_GUIDE.md) | Deployment guide for production environments |
+| [Testing Guide](TESTING_GUIDE.md) | Testing procedures and best practices |
+| [Troubleshooting](TROUBLESHOOTING.md) | Common issues and solutions |
+| [Knowledge Base Guide](KNOWLEDGE_BASE_GUIDE.md) | KB system documentation |
+| [Guest Reviews Setup](SETUP_GUEST_REVIEWS.md) | Guest review system configuration |
+| [Get Started](GET_STARTED.md) | Quick onboarding guide |
 
-### December 2024
-- ✅ Complete Arabic localization for Knowledge Base
-- ✅ Fixed translation key conflicts and duplicates
-- ✅ Added bulk notification system for large-scale communications
-- ✅ Implemented PDF viewer for knowledge base documents
-- ✅ Added Saudi/International team representation in public pages
-- ✅ Fixed RTL/LTR layout handling for bilingual interface
-- ✅ Standardized toast notifications across all modules
-- ✅ Added Knowledge Base analytics and review queue
+---
 
-## Key Technologies
+## 📸 Screenshots
 
-- **Frontend**: React 18, TypeScript, Vite
-- **UI Framework**: Tailwind CSS, Shadcn UI
-- **Backend**: Supabase (PostgreSQL, Auth, Storage, Realtime)
-- **Internationalization**: react-i18next
-- **Notifications**: Resend Email API
-- **PDF Rendering**: react-pdf
-- **Date Handling**: date-fns with locale support
+<div align="center">
 
-## Security
+*Dashboard and Analytics*
 
-- Row Level Security (RLS) policies on all tables
-- Role-based access control at database level
-- Secure password handling via Supabase Auth
-- Comprehensive audit logging for compliance
-- PII access tracking and retention policies
-- Security advisor recommendations built-in
+*Knowledge Base Interface*
 
-## Deployment
+*Training Module View*
 
-The application is designed for deployment on:
-- **Frontend**: Netlify, Vercel, or similar
-- **Backend**: Supabase managed service
-- **Edge Functions**: Supabase Edge Runtime
+*Mobile Responsive Design*
 
-## License
+</div>
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Guest Review Intelligence System
+- [ ] Advanced Analytics & Reporting
+- [ ] Mobile App (iOS/Android)
+- [ ] AI-Powered Content Recommendations
+- [ ] Integration with Property Management Systems
+- [ ] Advanced Workflow Automation
+- [ ] Multi-Factor Authentication
+
+See [FEATURES.md](FEATURES.md) for detailed feature planning.
+
+---
+
+## 🛡️ Security
+
+- ✅ Row Level Security (RLS) policies on all tables
+- ✅ Role-based access control at database level
+- ✅ Secure password handling via Supabase Auth
+- ✅ Comprehensive audit logging for compliance
+- ✅ PII access tracking and retention policies
+- ✅ Security advisor recommendations built-in
+
+---
+
+## 📦 Tech Stack
+
+| Category | Technology |
+|----------|------------|
+| **Frontend** | React 18, TypeScript, Vite |
+| **UI Framework** | Tailwind CSS, Shadcn UI |
+| **Backend** | Supabase (PostgreSQL, Auth, Storage, Realtime) |
+| **i18n** | react-i18next |
+| **Email** | Resend API |
+| **PDF** | react-pdf |
+| **Dates** | date-fns |
+
+---
+
+## 🤝 Contributing
+
+This is a private repository for Prime Hotels Group internal use. For internal development guidelines, contact the IT department.
+
+---
+
+## 📄 License
 
 Private - PHG Connect Internal Use Only
 
-## Support
+Copyright © 2024 Prime Hotels Group. All rights reserved.
 
-For internal support, contact the IT department or HR administration.
+---
+
+## 🆘 Support
+
+For technical support or questions:
+
+- **Internal Users**: Contact IT Department or HR Administration
+- **Technical Issues**: [Open an issue](../../issues)
+
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#phg-connect-intranet-platform)**
+
+Built with ❤️ by the Prime Hotels Group IT Team
+
+</div>

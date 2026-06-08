@@ -84,10 +84,18 @@ export function SidebarNavigation({
 }: SidebarNavigationProps) {
   const { t } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
-  const { primaryRole, profile, signOut } = useAuth()
+  
+  // Hooks must be called unconditionally at the top level
+  const authState = useAuth()
   const { groupedNavigation } = useNavigation()
   const { currentProperty } = useProperty()
   const [expandedGroups, setExpandedGroups] = useState<string[]>([])
+  
+  // Extract values from authState after hook is called
+  const user = authState?.user
+  const primaryRole = authState?.primaryRole
+  const profile = authState?.profile
+  const signOut = authState?.signOut
 
   const activeGroupIds = useMemo(
     () => groupedNavigation
@@ -123,14 +131,15 @@ export function SidebarNavigation({
 
   // Get user initials for avatar
   const userInitials = useMemo(() => {
-    if (!profile?.full_name) return 'U'
-    return profile.full_name
+    const name = profile?.full_name || (typeof user?.email === 'string' ? user.email.split('@')[0] : '')
+    if (!name) return 'U'
+    return name
       .split(' ')
       .map(n => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2)
-  }, [profile?.full_name])
+  }, [profile?.full_name, user?.email, user])
 
   const renderNavItem = (item: NavigationItem) => {
     const Icon = item.icon
@@ -455,7 +464,7 @@ export function SidebarNavigation({
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white truncate">
-                      {profile?.full_name || 'Guest User'}
+                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                     </p>
                     <p className="text-xs text-white/50 uppercase tracking-wider truncate">
                       {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
@@ -467,6 +476,7 @@ export function SidebarNavigation({
                       size="icon"
                       onClick={() => { navigate('/notifications'); onClose(); }}
                       className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
+                      aria-label={t('accessibility.notifications', 'Notifications')}
                     >
                       <Bell className="h-4 w-4" />
                     </Button>
@@ -475,6 +485,7 @@ export function SidebarNavigation({
                       size="icon"
                       onClick={() => { navigate('/settings'); onClose(); }}
                       className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
+                      aria-label={t('accessibility.settings', 'Settings')}
                     >
                       <Settings className="h-4 w-4" />
                     </Button>
@@ -501,7 +512,7 @@ export function SidebarNavigation({
 
                       <div className="flex-1 min-w-0 text-left">
                         <p className="text-sm font-semibold text-white truncate font-serif tracking-wide group-hover:text-hotel-gold transition-colors">
-                          {profile?.full_name || 'Guest User'}
+                          {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                         </p>
                         <div className="flex flex-col gap-0.5">
                           <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">

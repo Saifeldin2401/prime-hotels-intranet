@@ -29,6 +29,7 @@ import {
     Trash2,
 } from "lucide-react";
 import * as React from "react";
+import { useTranslation } from "react-i18next";
 
 interface DocumentFolderTreeProps {
   folders: DocumentFolder[];
@@ -102,6 +103,7 @@ const FolderNode: React.FC<FolderNodeProps> = ({
   onInlineCreateSubmit,
   onInlineCreateCancel,
 }) => {
+  const { t } = useTranslation();
   const isExpanded = expandedFolders.has(folder.id);
   const isSelected = selectedFolderId === folder.id;
   const isDragging = draggingId === folder.id;
@@ -226,6 +228,7 @@ const FolderNode: React.FC<FolderNodeProps> = ({
                   isSelected && "hover:bg-white/20 hover:text-white"
                 )}
                 onClick={(e) => e.stopPropagation()}
+                aria-label={t("accessibility.folder_actions", "Folder actions")}
               >
                 <MoreHorizontal className="w-4 h-4" />
               </Button>

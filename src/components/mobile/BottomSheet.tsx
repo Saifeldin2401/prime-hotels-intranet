@@ -35,7 +35,9 @@ export function BottomSheet({
     defaultSnap = 'content'
 }: BottomSheetProps) {
     const { t } = useTranslation('common')
-    const [isVisible, setIsVisible] = useState(false)
+    // Track previous open state to detect changes
+    const prevOpenRef = useRef(open)
+    const [isVisible, setIsVisible] = useState(open)
     const [isDragging, setIsDragging] = useState(false)
     const [translateY, setTranslateY] = useState(0)
     const sheetRef = useRef<HTMLDivElement>(null)
@@ -43,15 +45,18 @@ export function BottomSheet({
     const currentY = useRef(0)
 
     useEffect(() => {
-        if (open) {
-            setIsVisible(true)
-            document.body.style.overflow = 'hidden'
-        } else {
-            const timer = setTimeout(() => setIsVisible(false), 300)
-            document.body.style.overflow = ''
-            return () => clearTimeout(timer)
+        // Only update when open state actually changes
+        if (open !== prevOpenRef.current) {
+            prevOpenRef.current = open
+            if (open) {
+                setIsVisible(true)
+                document.body.style.overflow = 'hidden'
+            } else {
+                const timer = setTimeout(() => setIsVisible(false), 300)
+                document.body.style.overflow = ''
+                return () => clearTimeout(timer)
+            }
         }
-
         return () => {
             document.body.style.overflow = ''
         }

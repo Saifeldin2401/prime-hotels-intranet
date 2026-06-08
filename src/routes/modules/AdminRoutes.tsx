@@ -34,6 +34,9 @@ const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const SIEMIntegrations = lazy(() => import('@/pages/admin/SIEMIntegrations'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
+const AutomationControlCenter = lazy(() => import('@/pages/admin/AutomationControlCenter'))
+const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
+const SlackIntegrationPanel = lazy(() => import('@/pages/admin/SlackIntegrationPanel').then(m => ({ default: m.SlackIntegrationPanel })))
 
 export const AdminRoutes = () => (
     <>
@@ -357,6 +360,36 @@ export const AdminRoutes = () => (
                         <MotionWrapper>
                             <ReportBuilder />
                         </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/automation"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <AutomationControlCenter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/invitations"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
+                    <AppLayout>
+                        <UserInvitations />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/slack"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <SlackIntegrationPanel />
                     </AppLayout>
                 </ProtectedRoute>
             }

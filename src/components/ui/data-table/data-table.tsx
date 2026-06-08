@@ -20,6 +20,7 @@ import { ResponsiveTable } from "@/components/ui/responsive-table"
 import {
     Table,
     TableBody,
+    TableCaption,
     TableCell,
     TableHead,
     TableHeader,
@@ -35,6 +36,8 @@ interface DataTableProps<TData, TValue> {
     data: TData[]
     searchKey?: string
     searchPlaceholder?: string
+    caption?: string
+    ariaLabel?: string
 }
 
 export function DataTable<TData, TValue>({
@@ -42,6 +45,8 @@ export function DataTable<TData, TValue>({
     data,
     searchKey,
     searchPlaceholder,
+    caption,
+    ariaLabel = 'Data table',
 }: DataTableProps<TData, TValue>) {
     const { t, i18n } = useTranslation('common')
     const isRTL = i18n.dir() === 'rtl'
@@ -86,13 +91,21 @@ export function DataTable<TData, TValue>({
                 </div>
             )}
             <ResponsiveTable className="rounded-md border mx-0 px-0">
-                <Table>
+                <Table role="table" aria-label={ariaLabel}>
+                    {caption && (
+                        <TableCaption className="sr-only">{caption}</TableCaption>
+                    )}
                     <TableHeader>
                         {table.getHeaderGroups().map((headerGroup) => (
-                            <TableRow key={headerGroup.id}>
+                            <TableRow key={headerGroup.id} role="row">
                                 {headerGroup.headers.map((header) => {
                                     return (
-                                        <TableHead key={header.id} className={isRTL ? 'text-right' : ''}>
+                                        <TableHead 
+                                            key={header.id} 
+                                            className={isRTL ? 'text-right' : ''}
+                                            scope="col"
+                                            role="columnheader"
+                                        >
                                             {header.isPlaceholder
                                                 ? null
                                                 : flexRender(
@@ -111,17 +124,22 @@ export function DataTable<TData, TValue>({
                                 <TableRow
                                     key={row.id}
                                     data-state={row.getIsSelected() && "selected"}
+                                    role="row"
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id}>
+                                        <TableCell key={cell.id} role="cell">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </TableCell>
                                     ))}
                                 </TableRow>
                             ))
                         ) : (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} className="h-24 text-center">
+                            <TableRow role="row">
+                                <TableCell 
+                                    colSpan={columns.length} 
+                                    className="h-24 text-center"
+                                    role="cell"
+                                >
                                     {t('noResults')}
                                 </TableCell>
                             </TableRow>

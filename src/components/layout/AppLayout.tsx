@@ -6,6 +6,8 @@ import { cn } from '@/lib/utils'
 import { AnimatePresence } from 'framer-motion'
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useProperty } from '@/contexts/PropertyContext'
+import { PageLoading } from '@/components/common/LoadingStates'
 import { SidebarNavigation } from './SidebarNavigation'
 
 const CommandPalette = lazy(() =>
@@ -23,6 +25,7 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
+  const { t } = useTranslation('common')
   const { t: t_ext } = useTranslation('extracted')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
@@ -74,6 +77,11 @@ export function AppLayout({ children }: AppLayoutProps) {
     mediaQuery.addEventListener('change', handleMediaChange)
     return () => mediaQuery.removeEventListener('change', handleMediaChange)
   }, [])
+
+  // Get property context - this will throw if outside PropertyProvider
+  // This is called unconditionally to comply with React Hooks rules
+  const { currentProperty } = useProperty()
+  const hasPropertyContext = !!currentProperty
 
   if (isMobileView) {
     return (

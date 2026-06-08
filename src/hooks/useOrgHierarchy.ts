@@ -63,6 +63,16 @@ export interface OrgHierarchy {
     totalEmployees: number
 }
 
+type RelatedEntityWithId = { id: string } | null | undefined
+
+function getRelatedId(relation: RelatedEntityWithId | RelatedEntityWithId[]): string | null {
+    if (Array.isArray(relation)) {
+        return relation[0]?.id ?? null
+    }
+
+    return relation?.id ?? null
+}
+
 // Role classifications
 const EXECUTIVE_ROLES = ['corporate_admin', 'regional_admin', 'regional_hr']
 const SUPERVISOR_JOB_TITLES = ['supervisor', 'lead', 'senior', 'chief', 'head waiter', 'captain']
@@ -344,10 +354,10 @@ export function useOrgHierarchy(searchTerm?: string) {
         // Transform profiles to OrgEmployee
         const employees: OrgEmployee[] = profiles.map((p) => {
             const propertyIds = (p.user_properties || [])
-                .map((up) => up.property?.id)
+                .map((up) => getRelatedId(up.property as RelatedEntityWithId | RelatedEntityWithId[]))
                 .filter((id): id is string => !!id)
             const departmentIds = (p.user_departments || [])
-                .map((ud) => ud.department?.id)
+                .map((ud) => getRelatedId(ud.department as RelatedEntityWithId | RelatedEntityWithId[]))
                 .filter((id): id is string => !!id)
 
             return ({

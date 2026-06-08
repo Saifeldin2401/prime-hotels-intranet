@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { getCsrfToken } from './security'
 import { validateEnvironment } from './env-validation'
 
 // Validate environment variables on startup
@@ -67,14 +68,16 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: true,
+    detectSessionInUrl: false, // Disabled: manual token handling for auth flows
     // Use localStorage for consistent session persistence across tabs
     storage: createSafeStorage('local'),
   },
-  // Security: Add global request headers
+  // Security: Add global request headers with CSRF token
   global: {
     headers: {
-      'X-Client-Info': 'phg-connect/1.0.0'
+      'X-Client-Info': 'phg-connect/1.0.0',
+      'X-CSRF-Token': getCsrfToken(),
+      'X-Requested-With': 'XMLHttpRequest'
     }
   },
   // Security: Enable real-time with proper authentication

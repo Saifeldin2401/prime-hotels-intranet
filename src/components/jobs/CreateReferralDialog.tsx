@@ -402,6 +402,7 @@ export function CreateReferralDialog({
                                     size="icon"
                                     onClick={removeFile}
                                     disabled={success || uploading}
+                                    aria-label={t('common:removeFile', 'Remove file')}
                                 >
                                     <X className="h-4 w-4" />
                                 </Button>

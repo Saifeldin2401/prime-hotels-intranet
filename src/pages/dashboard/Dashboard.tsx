@@ -58,7 +58,8 @@ const NotificationsPanel = lazy(() => import('./components/NotificationsPanel').
 import { WelcomeHeader } from './components/WelcomeHeader'
 
 import { useTranslation } from "react-i18next"
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { getRedirectFromSearch } from '@/lib/authRedirect'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -99,6 +100,7 @@ function RegistryWidgetRenderer({
   extraProps,
   onRemoveWidget
 }: RegistryWidgetRendererProps) {
+  const { t } = useTranslation('dashboard')
   if (!effectivePermittedWidgets.includes(id) || visibleWidgets[id] === false) return null
   const WidgetComponent = WIDGET_REGISTRY[id].component
 
@@ -130,6 +132,7 @@ function RegistryWidgetRenderer({
           size="icon"
           className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
           onClick={() => onRemoveWidget(id)}
+          aria-label={t('accessibility.remove_widget', 'Remove widget')}
         >
           <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
         </Button>
@@ -141,15 +144,33 @@ function RegistryWidgetRenderer({
 export function IntegratedDashboard() {
   const { t, ready } = useTranslation('dashboard');
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, profile, primaryRole, loading, rolesLoading } = useAuth()
+
+  // Handle post-login redirect
+  useEffect(() => {
+    if (!loading && user) {
+      import('@/lib/authRedirect').then(({ consumePostLoginRedirect, getRedirectFromSearch }) => {
+        const urlRedirect = getRedirectFromSearch(location.search)
+        const sessionRedirect = consumePostLoginRedirect()
+        const redirectPath = urlRedirect ?? sessionRedirect
+        
+        if (redirectPath) {
+          navigate(redirectPath, { replace: true })
+        }
+      })
+    }
+  }, [loading, user, location.search, navigate])
+
   const { data: baseStats, isLoading: baseLoading, refetch: refetchBase } = useDashboardStats()
+  const primaryRoleValue = primaryRole as string | undefined
 
   // Role-specific hooks
   const isManager = primaryRole === 'property_manager'
   const isHR = primaryRole === 'property_hr'
   const isDeptHead = primaryRole === 'department_head'
-  const isAreaManager = primaryRole === 'area_manager'
-  const isCorporate = primaryRole === 'corporate_admin' || primaryRole === 'regional_admin' || primaryRole === 'super_admin'
+  const isAreaManager = primaryRoleValue === 'area_manager'
+  const isCorporate = primaryRoleValue === 'corporate_admin' || primaryRoleValue === 'regional_admin' || primaryRoleValue === 'super_admin'
 
   const { data: managerStats, isLoading: managerLoading } = usePropertyManagerStats({ enabled: isManager })
   const { data: hrStats, isLoading: hrLoading } = useHRStats({ enabled: isHR })
@@ -294,7 +315,7 @@ export function IntegratedDashboard() {
           value: `${managerStats.staffCompliance}%`,
           subtitle: t('widgets.compliance_desc') || 'Training completion rate',
           icon: GraduationCap,
-          href: '/learning/reports',
+          href: '/learning/analytics',
           color: 'emerald'
         },
         {
@@ -324,7 +345,7 @@ export function IntegratedDashboard() {
           value: hrStats.newHiresThisMonth,
           subtitle: t('widgets.hires_desc') || 'Joined this month',
           icon: Users,
-          href: '/hr/staff',
+          href: '/directory',
           color: 'emerald'
         },
         ...baseStats.slice(0, 2)
@@ -346,7 +367,7 @@ export function IntegratedDashboard() {
           value: `${deptHeadStats.trainingCompliance}%`,
           subtitle: t('widgets.dept_compliance_desc') || 'Training progress',
           icon: GraduationCap,
-          href: '/learning/team',
+          href: '/learning/analytics',
           color: 'emerald'
         },
         ...baseStats.slice(0, 2)
@@ -420,6 +441,7 @@ export function IntegratedDashboard() {
             size="icon"
             className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/10 hover:bg-white/20 text-white shadow-none border border-white/10 backdrop-blur-sm rounded-full"
             onClick={() => handleRemoveWidget('socialFeed')}
+            aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
             <X className="w-4 h-4 text-white" />
           </Button>
@@ -475,6 +497,7 @@ export function IntegratedDashboard() {
             size="icon"
             className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
             onClick={() => handleRemoveWidget('quickActions')}
+            aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
             <X className="w-3.5 h-3.5 text-slate-400 hover:text-slate-600" />
           </Button>

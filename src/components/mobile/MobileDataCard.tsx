@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 import { ChevronRight, MoreVertical } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 
 export interface MobileDataCardField<T> {
   /** Unique key for the field */
@@ -103,6 +104,7 @@ export function MobileDataCard<T>({
   showChevron = false,
   badge,
 }: MobileDataCardProps<T>) {
+  const { t } = useTranslation('common')
   const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set())
 
   const toggleCard = (id: string) => {
@@ -210,6 +212,7 @@ export function MobileDataCard<T>({
                             e.stopPropagation()
                             toggleCard(id)
                           }}
+                          aria-label={t('accessibility.moreActions', 'More actions')}
                         >
                           <MoreVertical className="h-4 w-4" />
                         </Button>

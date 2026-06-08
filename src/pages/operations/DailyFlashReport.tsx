@@ -570,7 +570,7 @@ export default function DailyFlashReport() {
             {/* Header */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between print:hidden">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" asChild>
+                    <Button variant="ghost" size="icon" asChild aria-label={t('accessibility.back_to_operations', 'Back to operations')}>
                         <Link to="/operations">
                             <ArrowLeft className="h-4 w-4" />
                         </Link>

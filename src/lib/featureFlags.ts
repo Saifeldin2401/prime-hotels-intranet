@@ -139,11 +139,4 @@ export function getAllFlags(): Record<FeatureFlag, { enabled: boolean; override:
   }
 }
 
-/**
- * Log all feature flags to console (for debugging)
- */
-export function logFeatureFlags(): void {
-  if (import.meta.env.DEV) {
-    console.log('[FeatureFlags]', getAllFlags())
-  }
-}
+

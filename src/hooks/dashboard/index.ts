@@ -1,12 +1,8 @@
-/**
- * Dashboard hooks barrel export.
- * Import from '@/hooks/dashboard' for organized access.
- */
-export { useDashboardFocus } from '../useDashboardFocus'
-export { useDashboardMetrics } from '../useDashboardMetrics'
-export { useDashboardPreferences } from '../useDashboardPreferences'
-export { useDashboardStats } from '../useDashboardStats'
-export { useQuickActions } from '../useQuickActions'
-export { useQuickCreate } from '../useQuickCreate'
-export { useSidebarCounts } from '../useSidebarCounts'
-export { useWidgetPermissions } from '../useWidgetPermissions'
+export * from '../useDashboardFocus'
+export * from '../useDashboardMetrics'
+export * from '../useDashboardPreferences'
+export * from '../useDashboardStats'
+export * from '../useQuickActions'
+export * from '../useQuickCreate'
+export * from '../useSidebarCounts'
+export * from '../useWidgetPermissions'

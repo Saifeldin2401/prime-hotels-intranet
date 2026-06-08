@@ -122,7 +122,6 @@ class AnalyticsService {
             if (error) {
                 // If it's a 401 or 403, it's expected if the session just expired
                 if (this.isAuthError(error)) {
-                    console.debug('Analytics session creation skipped: Unauthorized')
                     return
                 }
                 throw error
@@ -165,13 +164,11 @@ class AnalyticsService {
 
             // If user changed or logged out
             if (newUser !== this.userId) {
-                console.debug('[Analytics] Auth state changed:', event, newUser)
                 this.userId = newUser
 
                 // If we have a session, update it. If not, start one.
                 if (newUser) {
-                    void this.identify(newUser).catch((error) => {
-                        console.warn('[Analytics] Failed to identify user after auth change:', error)
+                    void this.identify(newUser).catch(() => {
                     })
                 } else {
                     // Logged out: end current session
@@ -252,7 +249,6 @@ class AnalyticsService {
                 await this.startNewSession()
                 if (!this.sessionId) {
                     // Still failing? Keep events in buffer and retry later.
-                    console.warn('Cannot flush analytics: No valid session ID')
                     return
                 }
             }

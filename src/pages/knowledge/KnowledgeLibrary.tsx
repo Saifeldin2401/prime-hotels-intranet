@@ -67,7 +67,14 @@ const ICON_MAP = {
 function readTime(article: { estimated_read_time?: number; content?: string }): number {
     if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
     if (!article.content) return 2
-    const stripped = article.content.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim()
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let stripped = article.content;
+    do {
+      previous = stripped;
+      stripped = previous.replace(/<[^>]*>/g, ' ');
+    } while (stripped !== previous);
+    stripped = stripped.replace(/\s+/g, ' ').trim()
     if (!stripped) return 2
     return Math.max(1, Math.round(stripped.split(' ').length / 200))
 }
@@ -277,6 +284,7 @@ export default function KnowledgeLibrary() {
                                     size="icon"
                                     className={cn("h-8 w-8 rounded-md", viewMode === 'grid' ? "bg-hotel-navy text-white" : "text-gray-400")}
                                     onClick={() => setViewMode('grid')}
+                                    aria-label={t('accessibility.grid_view', 'Switch to grid view')}
                                 >
                                     <Grid3X3 className="h-4 w-4" />
                                 </Button>
@@ -285,6 +293,7 @@ export default function KnowledgeLibrary() {
                                     size="icon"
                                     className={cn("h-8 w-8 rounded-md", viewMode === 'list' ? "bg-hotel-navy text-white" : "text-gray-400")}
                                     onClick={() => setViewMode('list')}
+                                    aria-label={t('accessibility.list_view', 'Switch to list view')}
                                 >
                                     <List className="h-4 w-4" />
                                 </Button>
@@ -422,6 +431,7 @@ export default function KnowledgeLibrary() {
                                                                 size="icon"
                                                                 className="h-8 w-8 bg-white/90 shadow-sm ring-1 ring-gray-100 hover:bg-white"
                                                                 title={t('library.edit', { defaultValue: 'Edit' })}
+                                                                aria-label={t('accessibility.edit', 'Edit article')}
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </Button>
@@ -432,6 +442,7 @@ export default function KnowledgeLibrary() {
                                                             size="icon"
                                                             className="h-8 w-8 bg-white/90 shadow-sm ring-1 ring-gray-100 hover:bg-red-50 text-red-600"
                                                             title={t('library.delete', { defaultValue: 'Delete' })}
+                                                            aria-label={t('accessibility.delete', 'Delete article')}
                                                             onClick={(e) => {
                                                                 e.preventDefault()
                                                                 e.stopPropagation()

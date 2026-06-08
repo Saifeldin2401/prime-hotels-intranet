@@ -406,7 +406,7 @@ export function useDynamicLayoutProfile(): LayoutProfile {
         propertyIds
     )
 
-    return getDynamicLayoutProfile(context)
+    return getDynamicLayoutProfile(context) as LayoutProfile
 }
 
 /**

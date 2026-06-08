@@ -161,13 +161,16 @@ export default function RequestDetail() {
 
       if (error) throw error
 
-      const mapped = (data || []).map((p) => ({
-        id: p.id as string,
-        full_name: p.full_name as string | null,
-        email: p.email as string,
-        role: p.user_roles?.role as string,
-        property_ids: (p.user_properties || []).map((up) => up.property_id as string),
-      }))
+      const mapped = (data || []).map((p) => {
+        const userRoles = p.user_roles as { role?: string } | Array<{ role?: string }> | null | undefined
+        return {
+          id: p.id as string,
+          full_name: p.full_name as string | null,
+          email: p.email as string,
+          role: (Array.isArray(userRoles) ? userRoles[0]?.role : userRoles?.role) as string,
+          property_ids: (p.user_properties || []).map((up) => up.property_id as string),
+        }
+      })
 
       const filtered = propertyId
         ? mapped.filter((p) => p.role === 'regional_hr' || p.role === 'regional_admin' || p.property_ids.includes(propertyId))

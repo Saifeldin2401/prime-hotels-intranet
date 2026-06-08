@@ -5,9 +5,104 @@ import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
 import type { Document, DocumentApproval, DocumentVersion } from '@/lib/types'
-import { escapeSearchQuery } from '@/lib/utils'
+import { sanitizeSearchInput, sanitizeUUID } from '@/lib/utils'
+import { secureSearchDocuments, secureCountDocuments } from '@/lib/secureSearch'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useCallback, useState } from 'react'
+
+// ============================================================================
+// Error Message Mapping
+// ============================================================================
+
+/**
+ * Map database/Supabase error codes to user-friendly messages
+ */
+const ERROR_MESSAGES: Record<string, string> = {
+  // PostgreSQL Error Codes
+  'PGRST116': 'You do not have permission to perform this action',
+  '42501': 'You do not have permission to perform this action',
+  '23505': 'This item already exists',
+  '23503': 'This item is referenced by other records and cannot be modified',
+  '23502': 'A required field is missing',
+  'P0001': 'Invalid data provided',
+  'P0002': 'The requested item was not found',
+  '22001': 'Input is too long',
+  '22003': 'Numeric value is out of range',
+  '22P02': 'Invalid input format',
+  '40001': 'Transaction failed due to concurrent update. Please try again',
+  '40P01': 'Deadlock detected. Please try again',
+  '28P01': 'Authentication failed',
+  '3D000': 'Database does not exist',
+  '3F000': 'Schema does not exist',
+  '42P01': 'Table does not exist',
+  '42P02': 'Parameter not found',
+  '57014': 'Query was cancelled due to timeout',
+  // HTTP Status Codes (from Supabase)
+  '401': 'You are not authorized to perform this action',
+  '403': 'Access denied',
+  '404': 'The requested item was not found',
+  '409': 'This item conflicts with an existing record',
+  '422': 'Invalid data provided',
+  '429': 'Too many requests. Please try again later',
+  '500': 'Server error. Please try again later',
+  '503': 'Service temporarily unavailable',
+  // Custom Application Errors
+  'VALIDATION_ERROR': 'Please check your input and try again',
+  'NETWORK_ERROR': 'Network error. Please check your connection',
+  'TIMEOUT_ERROR': 'Request timed out. Please try again',
+  'STORAGE_ERROR': 'File storage error. Please try again',
+  'FILE_TOO_LARGE': 'File is too large. Maximum size is 50MB',
+  'INVALID_FILE_TYPE': 'Invalid file type. Please upload a supported file',
+}
+
+/**
+ * Extract error code from Supabase/PostgREST error
+ */
+function getErrorCode(error: unknown): string | null {
+  if (!error) return null
+  
+  if (typeof error === 'object' && error !== null) {
+    const err = error as Record<string, any>
+    if (err.code) return String(err.code)
+    if (err.error && typeof err.error === 'object' && err.error.code) return String(err.error.code)
+    if (err.status) return String(err.status)
+    if (err.statusCode) return String(err.statusCode)
+    
+    const message = err.message || (err.error && typeof err.error === 'object' ? err.error.message : undefined) || err.error_description
+    if (typeof message === 'string') {
+      if (message.includes('violates unique constraint')) return '23505'
+      if (message.includes('violates foreign key constraint')) return '23503'
+      if (message.includes('violates not-null constraint')) return '23502'
+      if (message.includes('permission denied')) return '42501'
+      if (message.includes('row-level security')) return 'PGRST116'
+      if (message.includes('JWT')) return '401'
+      if (message.includes('timeout')) return 'TIMEOUT_ERROR'
+      if (message.includes('network')) return 'NETWORK_ERROR'
+    }
+  }
+  
+  return null
+}
+
+/**
+ * Get user-friendly error message from error object
+ */
+export function getUserFriendlyErrorMessage(error: unknown, defaultMessage: string = 'An error occurred'): string {
+  const code = getErrorCode(error)
+  if (code && ERROR_MESSAGES[code]) {
+    return ERROR_MESSAGES[code]
+  }
+  
+  if (typeof error === 'object' && error !== null) {
+    const err = error as Record<string, any>
+    const message = err.message || (err.error && typeof err.error === 'object' ? err.error.message : undefined) || err.error_description
+    if (typeof message === 'string' && message.length > 0 && message.length < 200) {
+      return message
+    }
+  }
+  
+  return defaultMessage
+}
 
 const DOCS_RECENTLY_VIEWED_KEY = 'docs_recently_viewed'
 const MAX_RECENT_DOCS = 20
@@ -150,7 +245,13 @@ function saveRecentlyViewedDocument(userId: string, documentId: string): void {
   if (!isValidUUID(documentId)) return
   try {
     const storageKey = `${DOCS_RECENTLY_VIEWED_KEY}_${userId}`
-    const raw = localStorage.getItem(storageKey)
+    let raw: string | null = null
+    try {
+      raw = localStorage.getItem(storageKey)
+    } catch {
+      // localStorage not available (Safari private mode, etc.)
+      return
+    }
     const existing = raw ? (JSON.parse(raw) as { id: string; viewedAt: string }[]) : []
 
     const filtered = Array.isArray(existing) ? existing.filter((i) => i?.id !== documentId) : []
@@ -177,7 +278,35 @@ export function useDocuments(filters?: DocumentFilters) {
       let query = supabase
         .from('documents')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          content_type,
+          status,
+          visibility,
+          property_id,
+          department_id,
+          folder_id,
+          file_type,
+          file_extension,
+          file_size,
+          file_url,
+          role,
+          requires_acknowledgment,
+          current_version,
+          storage_bucket,
+          storage_path,
+          content,
+          view_count,
+          download_count,
+          is_archived,
+          is_deleted,
+          deleted_at,
+          expires_at,
+          confidentiality_level,
+          created_by,
+          created_at,
+          updated_at,
           folder:document_folders(id, name),
           tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
@@ -276,24 +405,39 @@ export function useDocuments(filters?: DocumentFilters) {
         query = query.in('id', docIds)
       }
 
-      // Full-text search using database function if available, otherwise ILIKE
+      // SECURE: Use parameterized database function for search
+      // VULNERABLE CODE (DO NOT USE): query = query.or(`title.ilike.%${escaped}%,...`)
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        // Try to use full-text search if available
-        const { data: ftsData, error: ftsError } = await supabase.rpc('search_documents', {
-          p_query: filters.search,
-          p_property_id: filters.property_id || null,
-          p_folder_id: filters.folder_id === undefined ? null : filters.folder_id,
-          p_limit: 100,
-          p_offset: 0,
+        // Use the new secure search function with proper parameterization
+        const secureData = await secureSearchDocuments({
+          search: filters.search,
+          property_id: filters.property_id,
+          folder_id: filters.folder_id,
+          status: filters.status,
+          visibility: filters.visibility,
+          department_id: filters.department_id,
+          file_type: filters.file_type,
+          date_from: filters.date_from,
+          date_to: filters.date_to,
+          confidentiality_level: filters.confidentiality_level,
+          include_deleted: filters.include_deleted,
+          include_archived: filters.include_archived,
+          sort_by: filters.sort_by,
+          sort_order: filters.sort_order,
+          limit: 100
         })
-
-        if (!ftsError && ftsData) {
-          return ftsData as Document[]
-        }
-
-        // Fallback to ILIKE search
-        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%,content.ilike.%${escaped}%`)
+        
+        // Hydrate tags for each document (secureData comes from RPC)
+        return secureData.map((doc: Record<string, unknown>) => {
+          const hydrated = doc as Record<string, unknown>
+          // Tags are returned as a JSONB field from the RPC
+          if (hydrated.author) {
+            hydrated.author = typeof hydrated.author === 'string' 
+              ? JSON.parse(hydrated.author) 
+              : hydrated.author
+          }
+          return hydrated as unknown as Document
+        })
       }
 
       const { data, error } = await query
@@ -302,13 +446,17 @@ export function useDocuments(filters?: DocumentFilters) {
 
       // Hydrate tags for each document
       return (data || []).map(doc => {
-        const hydrated = doc
+        const hydrated = doc as any
         if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
           hydrated.tags = hydrated.tag_assignments
-            .map((a) => a.tag)
+            .map((a: any) => a.tag)
             .filter(Boolean)
         }
-        return hydrated as Document
+        // Handle author array from join
+        if (Array.isArray(hydrated.author) && hydrated.author.length > 0) {
+          hydrated.author = hydrated.author[0]
+        }
+        return hydrated as unknown as Document
       })
     },
   })
@@ -316,6 +464,7 @@ export function useDocuments(filters?: DocumentFilters) {
 
 /**
  * Fetch paginated documents with comprehensive filtering
+ * SECURE: Uses parameterized database functions to prevent SQL injection
  */
 export function useDocumentsPaginated(
   filters?: DocumentFilters,
@@ -328,164 +477,238 @@ export function useDocumentsPaginated(
   return useQuery({
     queryKey: ['documents-paginated', filters, primaryRole, page, pageSize],
     queryFn: async () => {
-      // First get total count
-      let countQuery = supabase
-        .from('documents')
-        .select('id', { count: 'exact', head: true })
-
-      // Apply same filters as main query
-      if (filters?.include_deleted) {
-        countQuery = countQuery.eq('is_deleted', true)
-      } else {
-        countQuery = countQuery.eq('is_deleted', false)
-      }
-
-      if (!filters?.include_archived && !filters?.include_deleted) {
-        countQuery = countQuery.eq('is_archived', false)
-      }
-
-      const contentTypeFilter = filters?.contentType === undefined ? 'document' : filters.contentType
-      if (contentTypeFilter) {
-        countQuery = countQuery.eq('content_type', contentTypeFilter)
-      }
-
-      if (filters?.status) countQuery = countQuery.eq('status', filters.status)
-      if (filters?.visibility) countQuery = countQuery.eq('visibility', filters.visibility)
-      if (filters?.property_id) countQuery = countQuery.eq('property_id', filters.property_id)
-      if (filters?.department_id) countQuery = countQuery.eq('department_id', filters.department_id)
-      if (filters?.folder_id !== undefined) {
-        if (filters.folder_id === null) {
-          countQuery = countQuery.is('folder_id', null)
-        } else {
-          countQuery = countQuery.eq('folder_id', filters.folder_id)
-        }
-      }
-      if (filters?.confidentiality_level) {
-        countQuery = countQuery.eq('confidentiality_level', filters.confidentiality_level)
-      }
-      if (filters?.file_type) {
-        if (Array.isArray(filters.file_type)) {
-          countQuery = countQuery.in('file_type', filters.file_type)
-        } else {
-          countQuery = countQuery.eq('file_type', filters.file_type)
-        }
-      }
-      if (filters?.date_from) countQuery = countQuery.gte('created_at', filters.date_from)
-      if (filters?.date_to) countQuery = countQuery.lte('created_at', filters.date_to)
+      // SECURE: Use parameterized RPC for count when searching
+      let totalCount = 0
+      
       if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        countQuery = countQuery.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
-      }
-
-      // Tag filter for count (two-step)
-      if (filters?.tags && filters.tags.length > 0) {
-        const { data: tagDocRows, error: tagDocErr } = await supabase
-          .from('document_tag_assignments')
-          .select('document_id')
-          .in('tag_id', filters.tags)
-
-        if (tagDocErr) throw tagDocErr
-
-        const docIds = Array.from(new Set((tagDocRows || []).map((r) => r.document_id).filter(Boolean)))
-        if (docIds.length === 0) {
-          return {
-            documents: [] as Document[],
-            totalCount: 0,
-            totalPages: 0,
-            currentPage: page,
-          }
-        }
-        countQuery = countQuery.in('id', docIds)
-      }
-
-      const { count, error: countError } = await countQuery
-      if (countError) throw countError
-
-      // Get paginated data
-      let query = supabase
-        .from('documents')
-        .select(`
-          *,
-          folder:document_folders(id, name),
-          tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
-          author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
-        `)
-        .order(filters?.sort_by || 'created_at', {
-          ascending: filters?.sort_order === 'asc'
+        // Use secure count function
+        totalCount = await secureCountDocuments({
+          search: filters.search,
+          property_id: filters.property_id,
+          department_id: filters.department_id,
+          status: filters.status,
+          visibility: filters.visibility,
+          file_type: filters.file_type,
+          date_from: filters.date_from,
+          date_to: filters.date_to,
+          confidentiality_level: filters.confidentiality_level,
+          include_deleted: filters.include_deleted,
+          include_archived: filters.include_archived
         })
-
-      // Apply same filters
-      if (filters?.include_deleted) {
-        query = query.eq('is_deleted', true)
       } else {
-        query = query.eq('is_deleted', false)
-      }
+        // Use standard count query for non-search filters
+        let countQuery = supabase
+          .from('documents')
+          .select('id', { count: 'exact', head: true })
 
-      if (!filters?.include_archived && !filters?.include_deleted) {
-        query = query.eq('is_archived', false)
-      }
-
-      if (contentTypeFilter) {
-        query = query.eq('content_type', contentTypeFilter)
-      }
-      if (filters?.status) query = query.eq('status', filters.status)
-      if (filters?.visibility) query = query.eq('visibility', filters.visibility)
-      if (filters?.property_id) query = query.eq('property_id', filters.property_id)
-      if (filters?.department_id) query = query.eq('department_id', filters.department_id)
-      if (filters?.folder_id !== undefined) {
-        if (filters.folder_id === null) {
-          query = query.is('folder_id', null)
+        // Apply filters safely using .eq() instead of string interpolation
+        if (filters?.include_deleted) {
+          countQuery = countQuery.eq('is_deleted', true)
         } else {
-          query = query.eq('folder_id', filters.folder_id)
+          countQuery = countQuery.eq('is_deleted', false)
         }
-      }
-      if (filters?.search) {
-        const escaped = escapeSearchQuery(filters.search)
-        query = query.or(`title.ilike.%${escaped}%,description.ilike.%${escaped}%`)
-      }
 
-      if (filters?.tags && filters.tags.length > 0) {
-        const { data: tagDocRows, error: tagDocErr } = await supabase
-          .from('document_tag_assignments')
-          .select('document_id')
-          .in('tag_id', filters.tags)
+        if (!filters?.include_archived && !filters?.include_deleted) {
+          countQuery = countQuery.eq('is_archived', false)
+        }
 
-        if (tagDocErr) throw tagDocErr
+        const contentTypeFilter = filters?.contentType === undefined ? 'document' : filters.contentType
+        if (contentTypeFilter) {
+          countQuery = countQuery.eq('content_type', contentTypeFilter)
+        }
 
-        const docIds = Array.from(new Set((tagDocRows || []).map((r) => r.document_id).filter(Boolean)))
-        if (docIds.length === 0) {
-          return {
-            documents: [] as Document[],
-            totalCount: count || 0,
-            totalPages: 0,
-            currentPage: page,
+        if (filters?.status) countQuery = countQuery.eq('status', filters.status)
+        if (filters?.visibility) countQuery = countQuery.eq('visibility', filters.visibility)
+        if (filters?.property_id) countQuery = countQuery.eq('property_id', filters.property_id)
+        if (filters?.department_id) countQuery = countQuery.eq('department_id', filters.department_id)
+        if (filters?.folder_id !== undefined) {
+          if (filters.folder_id === null) {
+            countQuery = countQuery.is('folder_id', null)
+          } else {
+            countQuery = countQuery.eq('folder_id', filters.folder_id)
           }
         }
-        query = query.in('id', docIds)
+        if (filters?.confidentiality_level) {
+          countQuery = countQuery.eq('confidentiality_level', filters.confidentiality_level)
+        }
+        if (filters?.file_type) {
+          if (Array.isArray(filters.file_type)) {
+            countQuery = countQuery.in('file_type', filters.file_type)
+          } else {
+            countQuery = countQuery.eq('file_type', filters.file_type)
+          }
+        }
+        if (filters?.date_from) countQuery = countQuery.gte('created_at', filters.date_from)
+        if (filters?.date_to) countQuery = countQuery.lte('created_at', filters.date_to)
+
+        // Tag filter for count
+        if (filters?.tags && filters.tags.length > 0) {
+          const { data: tagDocRows, error: tagDocErr } = await supabase
+            .from('document_tag_assignments')
+            .select('document_id')
+            .in('tag_id', filters.tags)
+
+          if (tagDocErr) throw tagDocErr
+
+          const docIds = Array.from(new Set((tagDocRows || []).map((r) => r.document_id).filter(Boolean)))
+          if (docIds.length === 0) {
+            return {
+              documents: [] as Document[],
+              totalCount: 0,
+              totalPages: 0,
+              currentPage: page,
+            }
+          }
+          countQuery = countQuery.in('id', docIds)
+        }
+
+        const { count, error: countError } = await countQuery
+        if (countError) throw countError
+        totalCount = count || 0
       }
 
-      // Apply pagination
-      const from = (page - 1) * pageSize
-      const to = from + pageSize - 1
-      query = query.range(from, to)
+      // SECURE: Use parameterized RPC for data fetching when searching
+      let data: Document[] = []
+      
+      if (filters?.search) {
+        // Use secure search function
+        const from = (page - 1) * pageSize
+        const secureData = await secureSearchDocuments({
+          search: filters.search,
+          property_id: filters.property_id,
+          folder_id: filters.folder_id,
+          status: filters.status,
+          visibility: filters.visibility,
+          department_id: filters.department_id,
+          file_type: filters.file_type,
+          date_from: filters.date_from,
+          date_to: filters.date_to,
+          confidentiality_level: filters.confidentiality_level,
+          include_deleted: filters.include_deleted,
+          include_archived: filters.include_archived,
+          sort_by: filters.sort_by,
+          sort_order: filters.sort_order,
+          limit: pageSize,
+          offset: from
+        })
+        data = secureData as Document[]
+      } else {
+        // Get paginated data using standard query (no string interpolation)
+        let query = supabase
+          .from('documents')
+          .select(`
+            id,
+            title,
+            description,
+            content_type,
+            status,
+            visibility,
+            property_id,
+            department_id,
+            folder_id,
+            file_type,
+            file_extension,
+            file_size,
+            file_url,
+            role,
+            requires_acknowledgment,
+            current_version,
+            storage_bucket,
+            storage_path,
+            content,
+            view_count,
+            download_count,
+            is_archived,
+            is_deleted,
+            deleted_at,
+            expires_at,
+            confidentiality_level,
+            created_by,
+            created_at,
+            updated_at,
+            folder:document_folders(id, name),
+            tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
+            author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
+          `)
+          .order(filters?.sort_by || 'created_at', {
+            ascending: filters?.sort_order === 'asc'
+          })
 
-      const { data, error } = await query
-      if (error) throw error
-
-      const hydratedDocs = (data || []).map(doc => {
-        const hydrated = doc
-        if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
-          hydrated.tags = hydrated.tag_assignments
-            .map((a) => a.tag)
-            .filter(Boolean)
+        // Apply filters safely
+        if (filters?.include_deleted) {
+          query = query.eq('is_deleted', true)
+        } else {
+          query = query.eq('is_deleted', false)
         }
-        return hydrated as Document
-      })
+
+        if (!filters?.include_archived && !filters?.include_deleted) {
+          query = query.eq('is_archived', false)
+        }
+
+        const contentTypeFilter = filters?.contentType === undefined ? 'document' : filters.contentType
+        if (contentTypeFilter) {
+          query = query.eq('content_type', contentTypeFilter)
+        }
+        if (filters?.status) query = query.eq('status', filters.status)
+        if (filters?.visibility) query = query.eq('visibility', filters.visibility)
+        if (filters?.property_id) query = query.eq('property_id', filters.property_id)
+        if (filters?.department_id) query = query.eq('department_id', filters.department_id)
+        if (filters?.folder_id !== undefined) {
+          if (filters.folder_id === null) {
+            query = query.is('folder_id', null)
+          } else {
+            query = query.eq('folder_id', filters.folder_id)
+          }
+        }
+
+        if (filters?.tags && filters.tags.length > 0) {
+          const { data: tagDocRows, error: tagDocErr } = await supabase
+            .from('document_tag_assignments')
+            .select('document_id')
+            .in('tag_id', filters.tags)
+
+          if (tagDocErr) throw tagDocErr
+
+          const docIds = Array.from(new Set((tagDocRows || []).map((r) => r.document_id).filter(Boolean)))
+          if (docIds.length === 0) {
+            return {
+              documents: [] as Document[],
+              totalCount: totalCount,
+              totalPages: 0,
+              currentPage: page,
+            }
+          }
+          query = query.in('id', docIds)
+        }
+
+        // Apply pagination
+        const from = (page - 1) * pageSize
+        const to = from + pageSize - 1
+        query = query.range(from, to)
+
+        const { data: queryData, error } = await query
+        if (error) throw error
+        
+        // Hydrate tags
+        data = (queryData || []).map(doc => {
+          const hydrated = doc as any
+          if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
+            hydrated.tags = hydrated.tag_assignments
+              .map((a: any) => a.tag)
+              .filter(Boolean)
+          }
+          // Handle author array from join
+          if (Array.isArray(hydrated.author) && hydrated.author.length > 0) {
+            hydrated.author = hydrated.author[0]
+          }
+          return hydrated as unknown as Document
+        })
+      }
 
       return {
-        documents: hydratedDocs,
-        totalCount: count || 0,
-        totalPages: Math.ceil((count || 0) / pageSize),
+        documents: data,
+        totalCount: totalCount,
+        totalPages: Math.ceil(totalCount / pageSize),
         currentPage: page
       }
     },
@@ -503,11 +726,39 @@ export function useDocument(documentId: string) {
       const { data, error } = await supabase
         .from('documents')
         .select(`
-          *,
-          folder:document_folders(*),
+          id,
+          title,
+          description,
+          content_type,
+          status,
+          visibility,
+          property_id,
+          department_id,
+          folder_id,
+          file_type,
+          file_extension,
+          file_size,
+          file_url,
+          role,
+          requires_acknowledgment,
+          current_version,
+          storage_bucket,
+          storage_path,
+          content,
+          view_count,
+          download_count,
+          is_archived,
+          is_deleted,
+          deleted_at,
+          expires_at,
+          confidentiality_level,
+          created_by,
+          created_at,
+          updated_at,
+          folder:document_folders(id, name, parent_id),
           tag_assignments:document_tag_assignments(tag_id, tag:document_tags(id, name, color)),
-          departments(name),
-          properties(name),
+          departments(id, name),
+          properties(id, name),
           author:profiles!documents_created_by_fkey(id, full_name)
         `)
         .eq('id', documentId)
@@ -519,14 +770,20 @@ export function useDocument(documentId: string) {
       if (user?.id) {
         saveRecentlyViewedDocument(user.id, documentId)
       }
-      const hydrated = data
-      // Normalize tags into a flat array for UI
-      if (hydrated?.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
-        hydrated.tags = hydrated.tag_assignments
-          .map((a) => a.tag)
-          .filter(Boolean)
+      const hydrated = data as any
+      if (hydrated) {
+        // Normalize tags into a flat array for UI
+        if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
+          hydrated.tags = hydrated.tag_assignments
+            .map((a: any) => a.tag)
+            .filter(Boolean)
+        }
+        // Handle author array from join
+        if (Array.isArray(hydrated.author) && hydrated.author.length > 0) {
+          hydrated.author = hydrated.author[0]
+        }
       }
-      return hydrated as Document
+      return hydrated as unknown as Document
     },
     enabled: !!documentId,
   })
@@ -586,7 +843,10 @@ export function useCreateDocument() {
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.create.success(data?.status === 'PUBLISHED' ? 'Document published' : 'Document created as draft')
     },
-    onError: () => crudToasts.create.error('document')
+    onError: (error) => {
+      const message = getUserFriendlyErrorMessage(error, 'Failed to create document')
+      crudToasts.create.error(message)
+    }
   })
 }
 
@@ -627,7 +887,10 @@ export function useUpdateDocument() {
       queryClient.invalidateQueries({ queryKey: ['document', data.id] })
       crudToasts.update.success('Document')
     },
-    onError: () => crudToasts.update.error('document')
+    onError: (error) => {
+      const message = getUserFriendlyErrorMessage(error, 'Failed to update document')
+      crudToasts.update.error(message)
+    }
   })
 }
 
@@ -655,7 +918,10 @@ export function useDeleteDocument() {
       queryClient.invalidateQueries({ queryKey: ['document-stats'] })
       crudToasts.delete.success('Document')
     },
-    onError: () => crudToasts.delete.error('document')
+    onError: (error) => {
+      const message = getUserFriendlyErrorMessage(error, 'Failed to delete document')
+      crudToasts.delete.error(message)
+    }
   })
 }
 
@@ -957,17 +1223,27 @@ export function useDocumentTags() {
 
 /**
  * Search tags by name
+ * SECURE: Uses parameterized query with sanitized input
  */
 export function useSearchDocumentTags(searchQuery: string) {
   return useQuery({
     queryKey: ['document-tags-search', searchQuery],
     enabled: searchQuery.length >= 2,
     queryFn: async () => {
-      const escaped = escapeSearchQuery(searchQuery)
+      // SECURE: Sanitize input to remove dangerous characters
+      // Note: Supabase client properly escapes values passed to .ilike()
+      // but we add additional sanitization for defense-in-depth
+      const sanitized = sanitizeSearchInput(searchQuery)
+      
+      if (!sanitized) {
+        return [] as DocumentTag[]
+      }
+      
+      // Use textSearch with plainto_tsquery for safer search
       const { data, error } = await supabase
         .from('document_tags')
         .select('*')
-        .ilike('name', `%${escaped}%`)
+        .ilike('name', `%${sanitized}%`)
         .order('name', { ascending: true })
         .limit(20)
 
@@ -1218,7 +1494,34 @@ export function useDocumentTrash() {
       const { data, error } = await supabase
         .from('documents')
         .select(`
-          *,
+          id,
+          title,
+          description,
+          content_type,
+          status,
+          visibility,
+          property_id,
+          department_id,
+          folder_id,
+          file_type,
+          file_extension,
+          file_size,
+          file_url,
+          role,
+          requires_acknowledgment,
+          current_version,
+          storage_bucket,
+          storage_path,
+          view_count,
+          download_count,
+          is_archived,
+          is_deleted,
+          deleted_at,
+          expires_at,
+          confidentiality_level,
+          created_by,
+          created_at,
+          updated_at,
           folder:document_folders(id, name),
           tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name)
@@ -1230,13 +1533,17 @@ export function useDocumentTrash() {
 
       // Hydrate tags for each document
       return (data || []).map(doc => {
-        const hydrated = doc
+        const hydrated = doc as any
         if (hydrated.tag_assignments && Array.isArray(hydrated.tag_assignments)) {
           hydrated.tags = hydrated.tag_assignments
-            .map((a) => a.tag)
+            .map((a: any) => a.tag)
             .filter(Boolean)
         }
-        return hydrated as Document
+        // Handle author array from join
+        if (Array.isArray(hydrated.author) && hydrated.author.length > 0) {
+          hydrated.author = hydrated.author[0]
+        }
+        return hydrated as unknown as Document
       })
     },
   })

@@ -11,6 +11,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useTranslation } from "react-i18next";
 import {
     BarChart3,
     Calendar,
@@ -78,7 +79,20 @@ function calculateTrend(
   };
 }
 
-const CustomTooltip = ({ active, payload, label }) => {
+interface AnalyticsTooltipEntry {
+  color?: string
+  dataKey?: string | number
+  name?: string
+  value?: number | string
+}
+
+interface AnalyticsTooltipProps {
+  active?: boolean
+  payload?: AnalyticsTooltipEntry[]
+  label?: string | number
+}
+
+const CustomTooltip = ({ active, payload, label }: AnalyticsTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border shadow-lg">
@@ -90,7 +104,9 @@ const CustomTooltip = ({ active, payload, label }) => {
               style={{ backgroundColor: entry.color }}
             />
             <span className="text-muted-foreground capitalize">{entry.name}:</span>
-            <span className="font-medium">{entry.value.toLocaleString()}</span>
+            <span className="font-medium">
+              {typeof entry.value === "number" ? entry.value.toLocaleString() : entry.value}
+            </span>
           </div>
         ))}
       </div>
@@ -106,6 +122,7 @@ export function DocumentAnalyticsCard({
   onExport,
   className,
 }: DocumentAnalyticsCardProps) {
+  const { t } = useTranslation();
   // Calculate trends (comparing first half vs second half of data)
   const midPoint = Math.floor(analytics.viewsOverTime.length / 2);
   const firstHalf = analytics.viewsOverTime.slice(0, midPoint);
@@ -155,7 +172,12 @@ export function DocumentAnalyticsCard({
             </DropdownMenu>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-8 w-8"
+                  aria-label={t("accessibility.more_options", "More options")}
+                >
                   <MoreHorizontal className="w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>

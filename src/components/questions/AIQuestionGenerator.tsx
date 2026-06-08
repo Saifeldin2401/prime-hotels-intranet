@@ -231,10 +231,12 @@ export function AIQuestionGenerator({
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i)
                     const textContent = await page.getTextContent()
-                    const pageText = textContent.items
-                        .filter((item) => item.str)
-                        .map((item) => item.str)
-                        .join(' ')
+                    const pageText = textContent.items.reduce((text, item) => {
+                        if ('str' in item && typeof item.str === 'string') {
+                            return `${text}${text ? ' ' : ''}${item.str}`
+                        }
+                        return text
+                    }, '')
                     fullText += pageText + '\n'
                 }
 
@@ -288,7 +290,13 @@ export function AIQuestionGenerator({
             contentToUse = manualContent
         } else if (sourceType === 'sop') {
             // Use the fully fetched article content
-            const cleanedContent = selectedArticle?.content?.replace(/<[^>]*>/g, '') || ''
+                        // Use recursive sanitization to prevent bypass attempts with nested tags
+            let previous: string;
+            let cleanedContent = selectedArticle?.content || '';
+            do {
+              previous = cleanedContent;
+              cleanedContent = previous.replace(/<[^>]*>/g, '');
+            } while (cleanedContent !== previous);
             contentToUse = cleanedContent
             currentSopTitle = selectedArticle?.title
         } else if (sourceType === 'file') {

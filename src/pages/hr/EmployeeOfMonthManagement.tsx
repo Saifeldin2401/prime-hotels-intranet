@@ -447,7 +447,12 @@ export default function EmployeeOfMonthManagement() {
                                         <p className="font-bold text-hotel-charcoal truncate">{selectedEmployee.full_name}</p>
                                         <p className="text-xs text-hotel-gold font-medium uppercase tracking-wider">{selectedEmployee.job_title}</p>
                                     </div>
-                                    <Button variant="ghost" size="icon" onClick={() => setSelectedEmployee(null)}>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => setSelectedEmployee(null)}
+                                        aria-label={t('accessibility.clear_selection', 'Clear Selection')}
+                                    >
                                         <Trash2 className="h-4 w-4 text-destructive" />
                                     </Button>
                                 </m.div>

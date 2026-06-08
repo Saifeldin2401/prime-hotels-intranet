@@ -1,7 +1,8 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
-import { Navigate, Route, useParams } from 'react-router-dom'
+import { Navigate, Route, useLocation, useParams } from 'react-router-dom'
 
 const KnowledgeHome = lazy(() => import('@/pages/knowledge/KnowledgeHome'))
 const KnowledgeViewer = lazy(() => import('@/pages/knowledge/KnowledgeViewer'))
@@ -17,14 +18,15 @@ const SystemWiki = lazy(() => import('@/pages/knowledge/SystemWiki'))
 
 const SOPViewerRedirect = () => {
     const { id } = useParams()
-    return <Navigate to={id ? `/knowledge/${id}` : '/knowledge'} replace />
+    const location = useLocation()
+    return <Navigate to={id ? `/knowledge/${id}${location.search}` : `/knowledge${location.search}`} replace />
 }
 
 export const KnowledgeRoutes = () => (
     <>
         <Route
             path="/sops"
-            element={<Navigate to="/knowledge" replace />}
+            element={<PreserveQueryNavigate to="/knowledge" />}
         />
         <Route
             path="/sops/:id"

@@ -1,0 +1,347 @@
+/**
+ * AuthActionsContext - Authentication actions
+ * 
+ * This context provides:
+ * - signIn, signOut methods
+ * - refreshSession
+ * - verifyMFA
+ * 
+ * IMPORTANT: This context's value reference NEVER changes (stable reference).
+ * All state is accessed via refs or setters from other contexts.
+ */
+
+import type { ReactNode } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { analytics } from '@/services/analyticsService'
+import { auditLog } from '@/lib/auditLog'
+import { classifyAuthError, getErrorMessage } from '@/lib/authErrorUtils'
+import { recordAuthEvent } from '@/lib/authMonitor'
+import { SecurityMiddleware, rateLimitConfig } from '@/lib/security-middleware'
+import {
+  getAccountLockoutStatus,
+  recordLoginAttempt,
+  initializeSessionSecurity,
+  checkPasswordBreach,
+  checkSecurityRequirements,
+  verifyMFACode,
+  logSecurityEvent,
+  getRemainingAttempts,
+} from '@/lib/authSecurityService'
+import { AuthIdentityContext } from './AuthIdentityContext'
+import { AuthSecurityContext } from './AuthSecurityContext'
+import { UserDataContext } from './UserDataContext'
+import { useAuthSession } from './useAuthSession'
+
+// ─── Logger helper ───────────────────────────────────────────────────────────
+const log = {
+  warn: (message: string, ...args: unknown[]) => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.warn(message, ...args)
+    }
+  },
+  error: (message: string, ...args: unknown[]) => {
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.error(message, ...args)
+    }
+  },
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+export interface SignInResult {
+  error: Error | null
+  requiresMFA?: boolean
+  mfaUserId?: string
+  requiresCaptcha?: boolean
+}
+
+export interface AuthActionsContextType {
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<SignInResult>
+  signOut: () => Promise<void>
+  refreshSession: () => Promise<void>
+  verifyMFA: (code: string) => Promise<boolean>
+}
+
+export const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
+
+// ─── Hook ────────────────────────────────────────────────────────────────────
+export function useAuthActions() {
+  const context = useContext(AuthActionsContext)
+  if (context === undefined) {
+    throw new Error('useAuthActions must be used within an AuthActionsProvider')
+  }
+  return context
+}
+
+// ─── Provider ────────────────────────────────────────────────────────────────
+export function AuthActionsProvider({ children }: { children: ReactNode }) {
+  const identityContext = useContext(AuthIdentityContext)
+  const securityContext = useContext(AuthSecurityContext)
+  const userDataContext = useContext(UserDataContext)
+  
+  const { clearLocalSession } = useAuthSession()
+
+  // Use refs to access current state without triggering re-renders
+  const pendingMFAUserIdRef = useRef<string | null>(null)
+
+  // Keep refs in sync with context values
+  if (securityContext) {
+    pendingMFAUserIdRef.current = securityContext.pendingMFAUserId
+  }
+
+  // ── Sign In ───────────────────────────────────────────────────────────────
+  const signIn = useCallback(async (email: string, password: string, captchaToken?: string): Promise<SignInResult> => {
+    const normalizedEmail = email.toLowerCase().trim()
+
+    // Rate limiting check
+    const rateLimitKey = `auth:signin:${normalizedEmail}`
+    if (!SecurityMiddleware.rateLimit(rateLimitKey, rateLimitConfig.auth.maxRequests, rateLimitConfig.auth.windowMs)) {
+      return { error: new Error('Too many sign-in attempts. Please try again later.') }
+    }
+
+    const lockoutStatus = await getAccountLockoutStatus(normalizedEmail)
+    if (lockoutStatus.isLocked && lockoutStatus.lockedUntil) {
+      const remainingMinutes = Math.max(
+        1,
+        Math.ceil((lockoutStatus.lockedUntil.getTime() - Date.now()) / 60000),
+      )
+
+      return {
+        error: new Error(`Account temporarily locked. Please try again in ${remainingMinutes} minutes.`),
+      }
+    }
+
+    // CAPTCHA check removed as requested
+
+
+    try {
+      identityContext?.setLoading(true)
+      userDataContext?.setRolesLoading(true)
+
+      // Check for password breach before attempting sign in (with timeout)
+      void Promise.race([
+        checkPasswordBreach(password),
+        new Promise<{ breached: false }>((resolve) => setTimeout(() => resolve({ breached: false }), 2000))
+      ]).then(async (breachCheck) => {
+        if ('breached' in breachCheck && breachCheck.breached) {
+          await logSecurityEvent('password.breached_detected', {
+            email: normalizedEmail,
+            breachCount: (breachCheck as { count?: number }).count,
+          })
+        }
+      }).catch(() => {
+        // Ignore breach check errors
+      })
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+        options: captchaToken ? { captchaToken } : undefined,
+      })
+
+      if (error) {
+        // Record failed attempt
+        await recordLoginAttempt(normalizedEmail, false)
+        identityContext?.setLoading(false)
+        userDataContext?.setRolesLoading(false)
+
+        // Check for specific error types
+        if (error.message?.includes('Invalid login credentials')) {
+          const remaining = await getRemainingAttempts(normalizedEmail)
+          if (remaining <= 2) {
+            return {
+              error: new Error(`Invalid credentials. ${remaining} attempt${remaining === 1 ? '' : 's'} remaining before temporary lockout.`)
+            }
+          }
+        }
+
+        return { error }
+      }
+
+      if (data.user) {
+        // Record successful attempt (clears counters)
+        await recordLoginAttempt(normalizedEmail, true)
+
+        // Initialize session security (non-blocking)
+        void initializeSessionSecurity().catch((err) => {
+          log.warn('[AuthActions] Session security init failed (non-critical):', err)
+        })
+
+        // Check if MFA is required
+        let requirements = null
+        try {
+          requirements = await checkSecurityRequirements(data.user.id)
+          if (requirements) securityContext?.setSecurityRequirements(requirements)
+        } catch (err) {
+          log.warn('[AuthActions] Security requirements check failed (non-critical):', err)
+          requirements = { mfaRequired: false, mfaEnabled: false, setupComplete: true, passwordRotationRequired: false }
+        }
+
+        if (requirements.mfaRequired && !requirements.mfaEnabled) {
+          // MFA is required but not set up
+          securityContext?.setPendingMFAUserId(data.user.id)
+          identityContext?.setUser(data.user)
+          identityContext?.setLoading(false)
+          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
+        }
+
+        if (requirements.mfaEnabled) {
+          // MFA is enabled - need to verify
+          securityContext?.setPendingMFAUserId(data.user.id)
+          identityContext?.setUser(data.user)
+          securityContext?.setIsMFAVerified(false)
+          identityContext?.setLoading(false)
+          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
+        }
+
+        identityContext?.setUser(data.user)
+        identityContext?.setLoading(false)
+        
+        // Load user data after successful sign-in
+        if (userDataContext) {
+          userDataContext.loadUserData(data.user.id).catch(() => {
+            log.warn('[AuthActions] Error loading user data after sign in.')
+          })
+        }
+
+        // Log successful login
+        await auditLog.login()
+        await logSecurityEvent('login.success', { email: normalizedEmail })
+        await analytics.identify(data.user.id).catch((error) => {
+          log.warn('[AuthActions] Failed to initialize analytics identity:', error)
+        })
+      } else {
+        identityContext?.setLoading(false)
+      }
+
+      return { error: null }
+    } catch (error) {
+      identityContext?.setLoading(false)
+      userDataContext?.setRolesLoading(false)
+      return { error: error as Error }
+    }
+  }, [identityContext, securityContext, userDataContext])
+
+  // ── MFA Verification ──────────────────────────────────────────────────────
+  const verifyMFA = useCallback(async (code: string): Promise<boolean> => {
+    const currentPendingId = pendingMFAUserIdRef.current
+    if (!currentPendingId) return false
+
+    try {
+      const verified = await verifyMFACode(currentPendingId, code)
+      if (!verified) {
+        await logSecurityEvent('mfa.verification_failed', {
+          userId: currentPendingId,
+        })
+        return false
+      }
+
+      securityContext?.setIsMFAVerified(true)
+      securityContext?.setPendingMFAUserId(null)
+
+      // Load user data after MFA verification
+      if (userDataContext) {
+        userDataContext.loadUserData(currentPendingId).catch(() => {
+          log.warn('[AuthActions] Error loading user data after MFA verification.')
+        })
+      }
+
+      await auditLog.login()
+      await logSecurityEvent('login.success_with_mfa', { userId: currentPendingId })
+
+      return true
+    } catch {
+      return false
+    }
+  }, [securityContext, userDataContext])
+
+  // ── Sign Out ──────────────────────────────────────────────────────────────
+  const signOut = useCallback(async () => {
+    localStorage.removeItem('prime_current_property_id')
+
+    await logSecurityEvent('logout.user_initiated', {
+      userId: identityContext?.user?.id,
+    })
+
+    recordAuthEvent({
+      type: 'logout',
+      success: true,
+      details: { reason: 'user_initiated' },
+    })
+
+    await clearLocalSession('User signed out', () => {
+      identityContext?.setUser(null)
+      userDataContext?.resetUserData()
+      securityContext?.resetSecurityState()
+    })
+  }, [clearLocalSession, identityContext, userDataContext, securityContext])
+
+  // ── Refresh Session ───────────────────────────────────────────────────────
+  const refreshSession = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.refreshSession()
+      if (error || !session?.user) {
+        const classification = classifyAuthError(error)
+        recordAuthEvent({
+          type: 'token_refresh',
+          success: false,
+          error: getErrorMessage(error),
+          details: { errorType: classification.type, shouldLogout: classification.shouldLogout },
+        })
+        // Only logout on actual auth expiration, not network/server errors
+        if (classification.shouldLogout) {
+          await clearLocalSession('Session refresh failed - token expired', () => {
+            identityContext?.setUser(null)
+            userDataContext?.resetUserData()
+            securityContext?.resetSecurityState()
+          })
+        } else {
+          log.warn('[AuthActions] Token refresh failed due to transient error, keeping session:', getErrorMessage(error))
+        }
+        return
+      }
+      recordAuthEvent({
+        type: 'token_refresh',
+        success: true,
+        details: { userId: session.user.id },
+      })
+      identityContext?.setUser(session.user)
+      if (userDataContext) {
+        await userDataContext.loadUserData(session.user.id)
+      }
+    } catch (error) {
+      const classification = classifyAuthError(error)
+      log.error('[AuthActions] Unexpected error in refreshSession:', error)
+      recordAuthEvent({
+        type: 'token_refresh',
+        success: false,
+        error: getErrorMessage(error),
+        details: { unexpected: true, errorType: classification.type },
+      })
+      // Don't logout on unexpected/network errors during refresh
+      if (classification.shouldLogout) {
+        await clearLocalSession('Session refresh failed - auth error', () => {
+          identityContext?.setUser(null)
+          userDataContext?.resetUserData()
+          securityContext?.resetSecurityState()
+        })
+      }
+    }
+  }, [clearLocalSession, identityContext, userDataContext, securityContext])
+
+  // Stable context value - reference never changes!
+  const value = useMemo(() => ({
+    signIn,
+    signOut,
+    refreshSession,
+    verifyMFA,
+  }), [signIn, signOut, refreshSession, verifyMFA])
+
+  return (
+    <AuthActionsContext.Provider value={value}>
+      {children}
+    </AuthActionsContext.Provider>
+  )
+}

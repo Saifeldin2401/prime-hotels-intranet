@@ -31,7 +31,23 @@ import { useTranslation } from "react-i18next"
 import { toast } from 'sonner'
 
 interface AnnouncementEditorProps {
-  initialData?: Record<string, unknown>
+  initialData?: {
+    id?: string
+    title?: string
+    content?: string
+    category?: string | null
+    priority?: string | null
+    is_scheduled?: boolean
+    scheduled_at?: string | null
+    expires_at?: string | null
+    send_push_notification?: boolean
+    send_email?: boolean
+    requires_acknowledgment?: boolean
+    is_pinned?: boolean
+    allow_comments?: boolean
+    target_audience?: unknown
+    attachments?: unknown
+  }
   onClose?: () => void
   onSave?: (announcement: Record<string, unknown>) => void
 }
@@ -49,32 +65,115 @@ interface MediaAttachment {
   size?: number
 }
 
+interface AnnouncementFormState {
+  title: string
+  content: string
+  category: string
+  priority: string
+  is_scheduled: boolean
+  scheduled_at: string
+  expires_at: string
+  send_push_notification: boolean
+  send_email: boolean
+  requires_acknowledgment: boolean
+  is_pinned: boolean
+  allow_comments: boolean
+}
+
+interface AnnouncementSubmitData {
+  title: string
+  content: string
+  category: string
+  priority: string
+  pinned: boolean
+  scheduled_at: string | null
+  expires_at: string | null
+  send_push_notification: boolean
+  send_email: boolean
+  requires_acknowledgment: boolean
+  allow_comments: boolean
+  target_audience: TargetAudience
+  attachments: MediaAttachment[]
+}
+
+interface DepartmentWithPropertyRow {
+  id: string
+  name: string
+  property: Array<{ name: string | null }> | null
+}
+
+const DEFAULT_TARGET_AUDIENCE: TargetAudience = { type: 'all', values: [] }
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null
+
+const asString = (value: unknown, fallback = ''): string =>
+  typeof value === 'string' ? value : fallback
+
+const asBoolean = (value: unknown, fallback = false): boolean =>
+  typeof value === 'boolean' ? value : fallback
+
+const isTargetAudience = (value: unknown): value is TargetAudience => {
+  if (!isRecord(value) || !Array.isArray(value.values)) {
+    return false
+  }
+
+  return ['all', 'role', 'department', 'property', 'individual'].includes(asString(value.type))
+    && value.values.every((entry) => typeof entry === 'string')
+}
+
+const isMediaAttachment = (value: unknown): value is MediaAttachment => {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return ['image', 'video', 'document'].includes(asString(value.type))
+    && typeof value.id === 'string'
+    && typeof value.url === 'string'
+    && typeof value.name === 'string'
+    && (value.size === undefined || typeof value.size === 'number')
+}
+
+const parseTargetAudience = (value: unknown): TargetAudience =>
+  isTargetAudience(value) ? value : DEFAULT_TARGET_AUDIENCE
+
+const parseAttachments = (value: unknown): MediaAttachment[] =>
+  Array.isArray(value) ? value.filter(isMediaAttachment) : []
+
+const getAttachmentType = (mimeType: string): MediaAttachment['type'] => {
+  if (mimeType.startsWith('image/')) return 'image'
+  if (mimeType.startsWith('video/')) return 'video'
+  return 'document'
+}
+
+const buildInitialFormState = (initialData?: AnnouncementEditorProps['initialData']): AnnouncementFormState => ({
+  title: asString(initialData?.title),
+  content: asString(initialData?.content),
+  category: asString(initialData?.category, 'general'),
+  priority: asString(initialData?.priority, 'normal'),
+  is_scheduled: asBoolean(initialData?.is_scheduled),
+  scheduled_at: asString(initialData?.scheduled_at),
+  expires_at: asString(initialData?.expires_at),
+  send_push_notification: asBoolean(initialData?.send_push_notification, true),
+  send_email: asBoolean(initialData?.send_email),
+  requires_acknowledgment: asBoolean(initialData?.requires_acknowledgment),
+  is_pinned: asBoolean(initialData?.is_pinned),
+  allow_comments: asBoolean(initialData?.allow_comments, true),
+})
+
 export function AnnouncementEditor({ initialData, onClose, onSave }: AnnouncementEditorProps) {
   const { t } = useTranslation()
   const { user } = useAuth()
   const queryClient = useQueryClient()
 
-  const [formData, setFormData] = useState({
-    title: initialData?.title || '',
-    content: initialData?.content || '',
-    category: initialData?.category || 'general',
-    priority: initialData?.priority || 'normal',
-    is_scheduled: initialData?.is_scheduled || false,
-    scheduled_at: initialData?.scheduled_at || '',
-    expires_at: initialData?.expires_at || '',
-    send_push_notification: initialData?.send_push_notification || true,
-    send_email: initialData?.send_email || false,
-    requires_acknowledgment: initialData?.requires_acknowledgment || false,
-    is_pinned: initialData?.is_pinned || false,
-    allow_comments: initialData?.allow_comments || true
-  })
+  const [formData, setFormData] = useState<AnnouncementFormState>(buildInitialFormState(initialData))
 
   const [targetAudience, setTargetAudience] = useState<TargetAudience>(
-    initialData?.target_audience || { type: 'all', values: [] }
+    parseTargetAudience(initialData?.target_audience)
   )
 
   const [attachments, setAttachments] = useState<MediaAttachment[]>(
-    initialData?.attachments || []
+    parseAttachments(initialData?.attachments)
   )
 
   const [activeTab, setActiveTab] = useState('content')
@@ -88,10 +187,13 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .order('name')
       if (error) throw error
       // Format with property name for disambiguation
-      return (data || []).map((d: { id: string, name: string, property?: { name?: string } | null }) => ({
+      return (data ?? []).map((d: DepartmentWithPropertyRow) => {
+        const propertyName = d.property?.[0]?.name
+        return {
         id: d.id,
-        name: d.property?.name ? `${d.name} (${d.property.name})` : d.name
-      }))
+        name: propertyName ? `${d.name} (${propertyName})` : d.name
+      }
+      })
     }
   })
 
@@ -120,7 +222,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   }))
 
   const createAnnouncementMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
+    mutationFn: async (data: AnnouncementSubmitData) => {
       const { data: result, error } = await supabase
         .from('announcements')
         .insert({
@@ -233,9 +335,9 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   })
 
   const updateAnnouncementMutation = useMutation({
-    mutationFn: async (data: Record<string, unknown>) => {
+    mutationFn: async (data: AnnouncementSubmitData) => {
       // Extract send_push_notification and send_email from data before passing to update
-      const { send_push_notification, send_email, ...updateData } = data;
+      const { send_push_notification, send_email, ...updateData } = data
 
       const { data: result, error } = await supabase
         .from('announcements')
@@ -243,7 +345,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           ...updateData,
 
         })
-        .eq('id', initialData.id)
+        .eq('id', asString(initialData?.id))
         .select()
         .single()
 
@@ -291,7 +393,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           }
         }
 
-        const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
+      const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user?.id)
 
         if (uniqueUserIds.length > 0) {
           try {
@@ -343,8 +445,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
       return {
         id: crypto.randomUUID(),
-        type: file.type.startsWith('image/') ? 'image' :
-          file.type.startsWith('video/') ? 'video' : 'document',
+        type: getAttachmentType(file.type),
         url: publicUrl,
         name: file.name,
         size: file.size
@@ -353,7 +454,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
     try {
       const newAttachments = await Promise.all(uploadPromises)
-      setAttachments([...attachments, ...newAttachments as MediaAttachment[]])
+      setAttachments([...attachments, ...newAttachments])
       toast.success(`Uploaded ${newAttachments.length} file(s)`)
     } catch (error) {
       const errorDetails = getUserFriendlyError(error)
@@ -390,7 +491,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         expires_at: formData.expires_at ? new Date(formData.expires_at).toISOString() : null
       }
 
-      if (initialData?.id) {
+      if (asString(initialData?.id)) {
         updateAnnouncementMutation.mutate(announcementData)
       } else {
         createAnnouncementMutation.mutate(announcementData)
@@ -418,7 +519,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <span>{initialData?.id ? 'Edit Announcement' : 'Create Announcement'}</span>
+          <span>{asString(initialData?.id) ? 'Edit Announcement' : 'Create Announcement'}</span>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
@@ -675,10 +776,10 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
             onClick={handleSubmit}
             disabled={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
             loading={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
-            loadingText={initialData?.id ? 'Updating...' : 'Creating...'}
+            loadingText={asString(initialData?.id) ? 'Updating...' : 'Creating...'}
           >
             <Save className="h-4 w-4 mr-2" />
-            {initialData?.id ? 'Update' : 'Create'} Announcement
+            {asString(initialData?.id) ? 'Update' : 'Create'} Announcement
           </LoadingButton>
         </div>
       </CardContent>

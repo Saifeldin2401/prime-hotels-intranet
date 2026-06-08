@@ -15,6 +15,7 @@ export interface UserShift {
   notes?: string
   created_by?: string
   created_at: string
+  location?: string
   property?: {
     name: string
   }

@@ -120,6 +120,7 @@ export interface KnowledgeArticle {
         name: string
         name_ar?: string
     }
+    category_name?: string
     tags?: KnowledgeTag[]
     related_articles?: RelatedArticle[]
     is_acknowledged?: boolean
@@ -130,8 +131,10 @@ export interface KnowledgeArticle {
 export interface ChecklistItem {
     id: string
     text: string
+    task?: string
     text_ar?: string
     is_required: boolean
+    required?: boolean
     order: number
 }
 
@@ -270,11 +273,15 @@ export interface KnowledgeSearchResult {
 }
 
 export interface RequiredReading {
+    id?: string
     document_id: string
     title: string
     content_type: KnowledgeContentType
     is_acknowledged: boolean
+    acknowledged_at?: string
     due_date?: string
+    is_overdue?: boolean
+    priority?: string
 }
 
 export interface ContextualHelp {

@@ -24,6 +24,12 @@ import {
 import { useTranslation } from "react-i18next"
 import { GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID, isGuestReviewEligiblePropertyId } from "@/lib/reviewsScope"
 
+const SUPPORTED_COLLECTOR_PLATFORMS: Array<{ value: GuestReviewPlatform; label: string }> = [
+  { value: "booking", label: "Booking.com" },
+  { value: "google", label: "Google Maps" },
+  { value: "agoda", label: "Agoda" },
+]
+
 // Format time ago
 function formatTimeAgo(dateString: string | null): string {
   if (!dateString) return 'Never'
@@ -70,7 +76,7 @@ export function OTASourceManager() {
     platform: "booking" as GuestReviewPlatform,
     source_name: "",
     source_url: "",
-    poll_frequency_hours: 6
+    poll_frequency_hours: 1
   })
 
   const { data: properties } = useQuery({
@@ -91,12 +97,13 @@ export function OTASourceManager() {
       let query = supabase
         .from("guest_review_sources")
         .select("*")
-        .eq("is_active", true)
         .neq("property_id", GUEST_REVIEW_HEAD_OFFICE_PROPERTY_ID)
       if (selectedPropertyId !== "all") {
         query = query.eq("property_id", selectedPropertyId)
       }
-      const { data, error } = await query.order("created_at", { ascending: false })
+      const { data, error } = await query
+        .order("is_active", { ascending: false })
+        .order("updated_at", { ascending: false })
       if (error) throw error
       return data as GuestReviewSource[]
     }
@@ -175,7 +182,7 @@ export function OTASourceManager() {
         platform: "booking",
         source_name: "",
         source_url: "",
-        poll_frequency_hours: 6
+        poll_frequency_hours: 1
       })
     },
     onError: (error: any) => {
@@ -191,7 +198,12 @@ export function OTASourceManager() {
     mutationFn: async ({ id, enabled }: { id: string; enabled: boolean }) => {
       const { error } = await supabase
         .from("guest_review_sources")
-        .update({ polling_enabled: enabled, updated_at: new Date().toISOString() })
+        .update({
+          is_active: enabled,
+          polling_enabled: enabled,
+          health_status: enabled ? 'healthy' : 'disabled',
+          updated_at: new Date().toISOString()
+        })
         .eq("id", id)
       if (error) throw error
     },
@@ -286,7 +298,7 @@ export function OTASourceManager() {
           { label: t('sources.totalSources'), value: sources?.length || 0, icon: Activity, detail: t('sources.acrossProperties', { count: visiblePropertyCount }), color: "text-foreground" },
           { label: t('sources.activePolling'), value: sources?.filter(s => s.polling_enabled).length || 0, icon: Zap, detail: t('sources.realTimeScraping'), color: "text-emerald-600" },
           { label: t('sources.sourceHealth'), value: `${Math.round(((sources?.filter(s => s.health_status === 'healthy').length || 0) / (sources?.length || 1)) * 100)}%`, icon: ShieldCheck, detail: t('sources.operationalEfficiency'), color: "text-primary" },
-          { label: t('sources.issuesFound'), value: sources?.filter(s => s.health_status !== 'healthy' && s.health_status !== 'unknown').length || 0, icon: AlertCircle, detail: t('sources.connectionChallenges'), color: "text-orange-600" }
+          { label: t('sources.issuesFound'), value: sources?.filter(s => s.health_status !== 'healthy').length || 0, icon: AlertCircle, detail: t('sources.connectionChallenges'), color: "text-orange-600" }
         ].map((metric, i) => (
           <Card key={i} className="group relative border-none bg-gradient-to-br from-card/80 to-muted/20 backdrop-blur-xl shadow-none overflow-hidden transition-all duration-500 hover:translate-y-[-2px]">
             <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-muted/50 via-primary/10 to-transparent" />
@@ -382,7 +394,7 @@ export function OTASourceManager() {
                       </div>
                     </div>
                     <Switch 
-                      checked={source.polling_enabled} 
+                      checked={source.is_active && source.polling_enabled}
                       className="data-[state=checked]:bg-primary scale-90"
                       onCheckedChange={(checked) => togglePollingMutation.mutate({ id: source.id, enabled: checked })}
                     />
@@ -441,7 +453,11 @@ export function OTASourceManager() {
                     variant="default"
                     size="sm"
                     onClick={() => collectNowMutation.mutate(source.id)}
-                    disabled={collectNowMutation.isPending && collectNowMutation.variables === source.id}
+                    disabled={
+                      !source.is_active ||
+                      !source.polling_enabled ||
+                      (collectNowMutation.isPending && collectNowMutation.variables === source.id)
+                    }
                     className="w-full h-10 font-bold text-[10px] uppercase tracking-widest bg-hotel-navy hover:bg-hotel-navy/90 text-white"
                   >
                     {collectNowMutation.isPending && collectNowMutation.variables === source.id ? (
@@ -473,6 +489,7 @@ export function OTASourceManager() {
                           deleteSourceMutation.mutate(source.id)
                         }
                       }}
+                      aria-label={t('accessibility.disconnect_source', 'Disconnect source')}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
@@ -517,14 +534,16 @@ export function OTASourceManager() {
                     <SelectValue placeholder={t('filters.platform')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="booking">Booking.com</SelectItem>
-                    <SelectItem value="tripadvisor">TripAdvisor</SelectItem>
-                    <SelectItem value="google">Google Maps</SelectItem>
-                    <SelectItem value="expedia">Expedia</SelectItem>
-                    <SelectItem value="airbnb">Airbnb</SelectItem>
-                    <SelectItem value="hotels_com">Hotels.com</SelectItem>
+                    {SUPPORTED_COLLECTOR_PLATFORMS.map((platform) => (
+                      <SelectItem key={platform.value} value={platform.value}>
+                        {platform.label}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  Only platforms with a live collector are available here. Unsupported channels remain archived until a collector exists.
+                </p>
               </div>
             </div>
 
@@ -563,9 +582,9 @@ export function OTASourceManager() {
               <Input 
                 type="number"
                 min={1}
-                max={48}
+                max={24}
                 value={newSource.poll_frequency_hours}
-                onChange={(e) => setNewSource(prev => ({ ...prev, poll_frequency_hours: parseInt(e.target.value) || 6 }))}
+                onChange={(e) => setNewSource(prev => ({ ...prev, poll_frequency_hours: parseInt(e.target.value) || 1 }))}
                 className="h-11 font-medium bg-muted/30 border-none focus-visible:ring-primary/20"
               />
             </div>
