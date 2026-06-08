@@ -467,11 +467,7 @@ export default function PublicHome() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Brand */}
             <div>
-              <div className="mb-4">
-                <span className="text-2xl font-bold text-white tracking-widest uppercase drop-shadow-lg">
-                  Diyafa
-                </span>
-              </div>
+              <img src="/prime-logo-light.png" alt="Prime Hotels" className="h-10 w-auto mb-4" />
               <p className="text-white/60 text-sm leading-relaxed">
                 {t('footer.description')}
               </p>
