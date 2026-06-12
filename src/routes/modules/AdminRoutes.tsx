@@ -21,10 +21,6 @@ const OnboardingTemplates = lazy(() => import('@/pages/onboarding/OnboardingTemp
 const TemplateEditor = lazy(() => import('@/pages/onboarding/TemplateEditor'))
 const RoutingHealth = lazy(() => import('@/pages/admin/RoutingHealth'))
 const DelegationSettings = lazy(() => import('@/pages/admin/DelegationSettings'))
-const FinanceControls = lazy(() => import('@/pages/admin/FinanceControls'))
-const GovernanceControls = lazy(() => import('@/pages/admin/GovernanceControls'))
-const GovernanceRisk = lazy(() => import('@/pages/admin/GovernanceRisk'))
-const GovernanceExecutiveDashboard = lazy(() => import('@/pages/admin/GovernanceExecutiveDashboard'))
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
 const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
@@ -242,46 +238,6 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
                     <AppLayout>
                         <DelegationSettings />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/finance-controls"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <FinanceControls />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/governance-controls"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <GovernanceControls />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/governance-risk"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <GovernanceRisk />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/governance-executive"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <GovernanceExecutiveDashboard />
                     </AppLayout>
                 </ProtectedRoute>
             }
