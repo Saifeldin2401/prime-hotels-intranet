@@ -167,18 +167,20 @@ async function sendEmailNotification(toUserId: string, payload: EmailNotificatio
 export async function createNotification(params: CreateNotificationParams): Promise<void> {
   const { userId, type, title, message, entityType, entityId, metadata, link } = params
 
-  // 1. Create DB Notification
-  const { error } = await supabase.from('notifications').insert({
-    user_id: userId,
-    type,
-    title,
-    message,
-    metadata: {
+  // 1. Create DB Notification via SECURITY DEFINER RPC (bypasses RLS INSERT restriction)
+  const { error } = await supabase.rpc('create_notification', {
+    p_user_id: userId,
+    p_type: type,
+    p_title: title,
+    p_body: message,
+    p_metadata: {
       ...(metadata || {}),
       entity_type: entityType || null,
       entity_id: entityId || null,
-    },
-    link: link || null,
+    } as Record<string, unknown>,
+    p_action_url: link || null,
+    p_related_entity_type: entityType || null,
+    p_related_entity_id: (entityId || null) as string | null,
   })
 
   if (error) {
@@ -219,26 +221,32 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
 
   if (userIds.length === 0) return
 
-  // 1. Create Notifications in Database (if not skipped)
+  // 1. Create Notifications in Database (if not skipped) via SECURITY DEFINER RPC
   if (!skipDbInsert) {
-    const notifications = userIds.map(userId => ({
-      user_id: userId,
-      type,
-      title,
-      message,
-      metadata: {
+    const rpcParams = {
+      p_type: type,
+      p_title: title,
+      p_body: message,
+      p_metadata: {
         ...(metadata || {}),
         entity_type: entityType || null,
         entity_id: entityId || null,
-      },
-      link: link || null,
-    }))
+      } as Record<string, unknown>,
+      p_action_url: link || null,
+      p_related_entity_type: entityType || null,
+      p_related_entity_id: (entityId || null) as string | null,
+    }
 
-    const { error } = await supabase.from('notifications').insert(notifications)
+    const results = await Promise.all(
+      userIds.map(userId =>
+        supabase.rpc('create_notification', { p_user_id: userId, ...rpcParams })
+      )
+    )
 
-    if (error) {
-      console.error('Error creating bulk notifications:', error)
-      throw error
+    const firstError = results.find(r => r.error)?.error
+    if (firstError) {
+      console.error('Error creating bulk notifications:', firstError)
+      throw firstError
     }
   }
 

@@ -83,18 +83,16 @@ export function useAccountActions() {
                     resend_credentials: 'Your access details have been resent. Check your email for the latest login instructions.',
                 }
 
-                await supabase
-                    .from('notifications')
-                    .insert({
-                        user_id,
-                        type: 'system',
-                        title: titleMap[action],
-                        message: messageMap[action],
-                        metadata: {
-                            action,
-                            suspend_until: suspend_until || null,
-                        }
-                    })
+                await supabase.rpc('create_notification', {
+                    p_user_id: user_id,
+                    p_type: 'system',
+                    p_title: titleMap[action],
+                    p_body: messageMap[action],
+                    p_metadata: {
+                        action,
+                        suspend_until: suspend_until || null,
+                    },
+                })
             }
 
             return response.data

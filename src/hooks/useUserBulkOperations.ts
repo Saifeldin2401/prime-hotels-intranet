@@ -134,14 +134,14 @@ export function useUserBulkOperations() {
                     }
 
                     if (notifyUser) {
-                        const { error: notifyError } = await supabase.from('notifications').insert({
-                            user_id: userId,
-                            type: 'system',
-                            title: 'Account Suspended',
-                            message: suspendUntil
+                        const { error: notifyError } = await supabase.rpc('create_notification', {
+                            p_user_id: userId,
+                            p_type: 'system',
+                            p_title: 'Account Suspended',
+                            p_body: suspendUntil
                                 ? `Your account has been suspended until ${new Date(suspendUntil).toLocaleString()}.`
                                 : 'Your account has been suspended by an administrator.',
-                            metadata: { action: 'bulk_deactivate', suspend_until: suspendUntil || null }
+                            p_metadata: { action: 'bulk_deactivate', suspend_until: suspendUntil || null },
                         })
                         if (notifyError) throw notifyError
                     }
@@ -211,12 +211,12 @@ export function useUserBulkOperations() {
                     }
 
                     if (notifyUser) {
-                        const { error: notifyError } = await supabase.from('notifications').insert({
-                            user_id: userId,
-                            type: 'system',
-                            title: 'Account Activated',
-                            message: 'Your account has been activated.',
-                            metadata: { action: 'bulk_activate' }
+                        const { error: notifyError } = await supabase.rpc('create_notification', {
+                            p_user_id: userId,
+                            p_type: 'system',
+                            p_title: 'Account Activated',
+                            p_body: 'Your account has been activated.',
+                            p_metadata: { action: 'bulk_activate' },
                         })
                         if (notifyError) throw notifyError
                     }
@@ -285,12 +285,12 @@ export function useUserBulkOperations() {
                     }
 
                     if (notifyUser) {
-                        const { error: notifyError } = await supabase.from('notifications').insert({
-                            user_id: userId,
-                            type: 'system',
-                            title: 'Password Reset Required',
-                            message: 'Your account requires a password reset. Please update your password to continue.',
-                            metadata: { action: 'bulk_force_password_reset' }
+                        const { error: notifyError } = await supabase.rpc('create_notification', {
+                            p_user_id: userId,
+                            p_type: 'system',
+                            p_title: 'Password Reset Required',
+                            p_body: 'Your account requires a password reset. Please update your password to continue.',
+                            p_metadata: { action: 'bulk_force_password_reset' },
                         })
                         if (notifyError) throw notifyError
                     }
@@ -358,12 +358,12 @@ export function useUserBulkOperations() {
                     }
 
                     if (notifyUser) {
-                        const { error: notifyError } = await supabase.from('notifications').insert({
-                            user_id: userId,
-                            type: 'system',
-                            title: 'Password Reset Cancelled',
-                            message: 'Your account no longer requires a password reset.',
-                            metadata: { action: 'bulk_cancel_password_reset' }
+                        const { error: notifyError } = await supabase.rpc('create_notification', {
+                            p_user_id: userId,
+                            p_type: 'system',
+                            p_title: 'Password Reset Cancelled',
+                            p_body: 'Your account no longer requires a password reset.',
+                            p_metadata: { action: 'bulk_cancel_password_reset' },
                         })
                         if (notifyError) throw notifyError
                     }
