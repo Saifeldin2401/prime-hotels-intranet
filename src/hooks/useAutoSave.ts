@@ -1,5 +1,5 @@
 
-import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { safeLocalStorage } from '@/lib/storage'
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -35,37 +35,27 @@ export function useAutoSave(
 
     // Load initial draft for this key so callers can decide whether to hydrate UI.
     useEffect(() => {
-        let isActive = true
-        const loadDraft = async () => {
-            try {
-                const savedData = await getEncryptedLocalStorage<DraftRecord>(draftStorageKey)
-                if (!isActive) return
+        try {
+            const savedData = safeLocalStorage.getObject<DraftRecord>(draftStorageKey)
 
-                setLoadedDraft(savedData ?? null)
-                if (savedData) {
-                    const loadedSnapshot = buildSnapshot(savedData.content, savedData.metadata)
-                    setSavedSnapshotByKey(prev => ({ ...prev, [uniqueKey]: loadedSnapshot }))
-                } else {
-                    setSavedSnapshotByKey(prev => {
-                        const next = { ...prev }
-                        delete next[uniqueKey]
-                        return next
-                    })
-                }
-            } catch (error) {
-                console.error('Failed to load draft from local storage:', error)
+            setLoadedDraft(savedData ?? null)
+            if (savedData) {
+                const loadedSnapshot = buildSnapshot(savedData.content, savedData.metadata)
+                setSavedSnapshotByKey(prev => ({ ...prev, [uniqueKey]: loadedSnapshot }))
+            } else {
+                setSavedSnapshotByKey(prev => {
+                    const next = { ...prev }
+                    delete next[uniqueKey]
+                    return next
+                })
             }
-        }
-
-        void loadDraft()
-
-        return () => {
-            isActive = false
+        } catch (error) {
+            console.error('Failed to load draft from local storage:', error)
         }
     }, [draftStorageKey, uniqueKey])
 
     // Save function
-    const saveDraft = useCallback(async (): Promise<boolean> => {
+    const saveDraft = useCallback((): boolean => {
         if (!hasContent) return false
 
         const dataToSave = {
@@ -74,7 +64,7 @@ export function useAutoSave(
             timestamp: new Date().toISOString()
         }
 
-        await setEncryptedLocalStorage(draftStorageKey, dataToSave)
+        safeLocalStorage.setObject(draftStorageKey, dataToSave)
         setSavedSnapshotByKey(prev => ({ ...prev, [uniqueKey]: currentSnapshot }))
         setLoadedDraft(dataToSave)
         setLastSavedByKey(prev => ({ ...prev, [uniqueKey]: new Date() }))
@@ -86,18 +76,20 @@ export function useAutoSave(
         if (!hasUnsavedChanges) return
 
         const timer = setInterval(() => {
-            void saveDraft().catch((error) => {
+            try {
+                saveDraft()
+            } catch (error) {
                 console.error('Auto-save failed:', error)
-            })
+            }
         }, interval)
 
         return () => clearInterval(timer)
     }, [interval, hasUnsavedChanges, saveDraft])
 
     // Manual trigger
-    const triggerSave = async () => {
+    const triggerSave = () => {
         try {
-            const didSave = await saveDraft()
+            const didSave = saveDraft()
             if (didSave) {
                 toast.success('Draft saved locally')
             }
@@ -108,7 +100,7 @@ export function useAutoSave(
     }
 
     const clearDraft = useCallback(() => {
-        removeEncryptedLocalStorage(draftStorageKey)
+        safeLocalStorage.removeItem(draftStorageKey)
         setSavedSnapshotByKey(prev => {
             const next = { ...prev }
             delete next[uniqueKey]

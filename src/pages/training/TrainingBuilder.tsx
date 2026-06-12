@@ -21,7 +21,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getUserFriendlyError } from '@/lib/errorMessages'
-import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { safeLocalStorage } from '@/lib/storage'
 import { useFormPersistence } from '@/hooks/useFormPersistence'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
@@ -490,19 +490,19 @@ export function TrainingBuilder() {
   useEffect(() => {
     let isActive = true
 
-    const restoreBuilderLibrary = async () => {
-      const storedBlocks = await getEncryptedLocalStorage<ContentBlockForm[]>(TRAINING_BUILDER_SAVED_BLOCKS_KEY)
+    const restoreBuilderLibrary = () => {
+      const storedBlocks = safeLocalStorage.getObject<ContentBlockForm[]>(TRAINING_BUILDER_SAVED_BLOCKS_KEY)
       if (isActive && Array.isArray(storedBlocks)) {
         setSavedBlocks(storedBlocks)
       }
 
-      const storedUploads = await getEncryptedLocalStorage<RecentUpload[]>(TRAINING_BUILDER_RECENT_UPLOADS_KEY)
+      const storedUploads = safeLocalStorage.getObject<RecentUpload[]>(TRAINING_BUILDER_RECENT_UPLOADS_KEY)
       if (isActive && Array.isArray(storedUploads)) {
         setRecentUploads(storedUploads)
       }
     }
 
-    void restoreBuilderLibrary()
+    restoreBuilderLibrary()
 
     return () => {
       isActive = false
@@ -1083,7 +1083,7 @@ export function TrainingBuilder() {
     setRecentUploads(prev => {
       const next = [upload, ...prev.filter(item => item.url !== upload.url)]
       const trimmed = next.slice(0, 8)
-      void setEncryptedLocalStorage(TRAINING_BUILDER_RECENT_UPLOADS_KEY, trimmed)
+      safeLocalStorage.setObject(TRAINING_BUILDER_RECENT_UPLOADS_KEY, trimmed)
       return trimmed
     })
   }
@@ -1104,9 +1104,9 @@ export function TrainingBuilder() {
     }
     let isActive = true
 
-    const restoreDraft = async () => {
+    const restoreDraft = () => {
       try {
-        const draft = await getEncryptedLocalStorage<BuilderDraftPayload>(draftKey)
+        const draft = safeLocalStorage.getObject<BuilderDraftPayload>(draftKey)
         if (!isActive || !draft) {
           return
         }
@@ -1138,7 +1138,7 @@ export function TrainingBuilder() {
       }
     }
 
-    void restoreDraft()
+    restoreDraft()
 
     return () => {
       isActive = false
@@ -1170,17 +1170,15 @@ export function TrainingBuilder() {
         sections,
         activeSection
       }
-      void (async () => {
-        try {
-          await setEncryptedLocalStorage(draftKey, draftPayload)
-          setAutosaveStatus('saved')
-          setLastAutosaveAt(new Date())
-        } catch (error) {
-          const errorDetails = getUserFriendlyError(error)
-          console.warn('Failed to autosave training draft:', errorDetails.message)
-          setAutosaveStatus('idle')
-        }
-      })()
+      try {
+        safeLocalStorage.setObject(draftKey, draftPayload)
+        setAutosaveStatus('saved')
+        setLastAutosaveAt(new Date())
+      } catch (error) {
+        const errorDetails = getUserFriendlyError(error)
+        console.warn('Failed to autosave training draft:', errorDetails.message)
+        setAutosaveStatus('idle')
+      }
     }, 1200)
 
     return () => {
@@ -1305,7 +1303,7 @@ export function TrainingBuilder() {
 
   const persistSavedBlocks = (blocks: ContentBlockForm[]) => {
     setSavedBlocks(blocks)
-    void setEncryptedLocalStorage(TRAINING_BUILDER_SAVED_BLOCKS_KEY, blocks)
+    safeLocalStorage.setObject(TRAINING_BUILDER_SAVED_BLOCKS_KEY, blocks)
   }
 
   const handleSaveBlockToLibrary = () => {
@@ -1774,7 +1772,7 @@ export function TrainingBuilder() {
 
       setModuleStatus('published')
 
-      removeEncryptedLocalStorage(draftKey)
+      safeLocalStorage.removeItem(draftKey)
 
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       queryClient.invalidateQueries({ queryKey: ['training-modules', 'assignable'] })

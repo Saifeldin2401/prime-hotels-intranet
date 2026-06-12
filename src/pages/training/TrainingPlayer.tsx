@@ -28,7 +28,7 @@ import { createCertificate, type CertificateData } from '@/services/certificateS
 import { awardCertificationPathCertificates } from '@/services/certificationPathService'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { getEncryptedLocalStorage, removeEncryptedLocalStorage, setEncryptedLocalStorage } from '@/lib/secureStorage'
+import { safeLocalStorage } from '@/lib/storage'
 import type { TrainingContentBlock } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
@@ -991,13 +991,13 @@ export default function TrainingPlayer() {
             })
 
             if (storageKey) {
-                removeEncryptedLocalStorage(storageKey)
+                safeLocalStorage.removeItem(storageKey)
             }
         } catch (_error) {
             // Progress persistence failure is non-critical - continue silently.
-            // Keep a local encrypted fallback to preserve learner context.
+            // Keep a local fallback to preserve learner context.
             if (storageKey) {
-                await setEncryptedLocalStorage(storageKey, {
+                safeLocalStorage.setObject(storageKey, {
                     assignment_id: assignmentId || null,
                     content_id: moduleData.module.id,
                     content_type: 'module',
@@ -1169,7 +1169,7 @@ export default function TrainingPlayer() {
         let isActive = true
         const restoreProgress = async () => {
             const localData = storageKey
-                ? await getEncryptedLocalStorage<PersistedModuleProgress>(storageKey)
+                ? safeLocalStorage.getObject<PersistedModuleProgress>(storageKey)
                 : null
 
             if (localData && isActive) {
@@ -1224,7 +1224,7 @@ export default function TrainingPlayer() {
                 }
 
                 if (isResetProgressSnapshot(next) && storageKey) {
-                    removeEncryptedLocalStorage(storageKey)
+                    safeLocalStorage.removeItem(storageKey)
                 }
 
                 applyRestoredProgress(next, moduleData.blocks)
