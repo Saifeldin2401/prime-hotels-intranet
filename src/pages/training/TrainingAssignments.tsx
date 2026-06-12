@@ -1,27 +1,6 @@
 
 import { PageHeader } from '@/components/layout/PageHeader'
-import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
-import { EmployeeProgressTracker } from '@/components/training/EmployeeProgressTracker'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import {
-    DropdownMenu,
-    DropdownMenuCheckboxItem,
-    DropdownMenuContent,
-    DropdownMenuLabel,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { PaginationBar } from '@/components/ui/pagination-bar'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
-import { Switch } from '@/components/ui/switch'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
@@ -31,7 +10,6 @@ import { usePagination } from '@/hooks/usePagination'
 import {
   getLearningAssignmentErrorMessage,
   persistLearningAssignments,
-  type PersistLearningAssignmentsResult
 } from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
 import type { TrainingModule } from '@/lib/types'
@@ -39,151 +17,37 @@ import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
 import type { ModuleAssigneeRosterEntry } from '@/types/learning'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { addDays, format } from 'date-fns'
+import { format } from 'date-fns'
 import {
-    AlertCircle,
-    AlertTriangle,
     BarChart3,
     Bell,
-    BookOpen,
-    Building,
-    Calendar,
-    CheckCircle2,
-    ChevronDown,
-    ChevronRight,
-    Clock,
-    Download,
     Edit,
-    Filter,
-    Grid3X3,
-    LayoutList,
-    Loader2,
-    MapPin,
-    Plus,
-    Search,
-    Settings,
-    SlidersHorizontal,
-    Trash2,
-    TrendingUp,
-    Users,
-    X
+    Settings
 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { AssignmentsTab } from './TrainingAssignments/AssignmentsTab'
+import { CreateAssignmentDialog } from './TrainingAssignments/CreateAssignmentDialog'
+import { ManageAssigneesDialog } from './TrainingAssignments/ManageAssigneesDialog'
+import { OverviewTab } from './TrainingAssignments/OverviewTab'
+import { ProgressDetailDialog } from './TrainingAssignments/ProgressDetailDialog'
+import {
+  describeAssignmentMutationResult,
+  getAssignmentStatus,
+  progressStatusOrder,
+  sortPropertyNames
+} from './TrainingAssignments/helpers'
+import type {
+  EmployeeProgressGroup,
+  EnrichedProgressRecord,
+  LearningAssignment,
+  TrainingAssignmentsPanelProps
+} from './TrainingAssignments/types'
 
 const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
 
-const sortPropertyNames = (a: string, b: string) => {
-  if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1
-  if (!isPriorityPropertyName(a) && isPriorityPropertyName(b)) return 1
-  return a.localeCompare(b)
-}
-
-// Interface for learning_assignments table
-interface LearningAssignment {
-  id: string
-  target_type: 'all' | 'everyone' | 'user' | 'department' | 'property'
-  target_id: string | null
-  content_type: string
-  content_id: string
-  assigned_by: string | null
-  due_date: string | null
-  valid_from: string
-  expires_at?: string | null
-  priority: string
-  instructions?: string | null
-  requires_acknowledgement?: boolean | null
-  notify_on_due?: boolean | null
-  reminder_days_before?: number[] | null
-  created_at: string
-  // Joined data
-  training_modules?: TrainingModule
-  profiles?: { id: string; full_name: string }
-}
-
-type AssignmentStatus = 'active' | 'completed' | 'overdue' | 'due_soon'
-
 const ROSTER_PAGE_SIZE = 10
-
-type EnrichedProgressRecord = LearningProgress & {
-  resolvedDepartmentName: string
-  resolvedModuleTitle: string
-  resolvedProgress: number
-  resolvedPropertyName: string
-  resolvedScore: number | null
-  resolvedUserName: string
-  statusLabel: string
-  userInitials: string
-  lastTouchedAt: string
-  locationLabel: string
-}
-
-interface EmployeeProgressGroup {
-  activeModules: number
-  assignedModules: number
-  attentionCount: number
-  averageProgress: number
-  averageScore: number | null
-  completedModules: number
-  departmentName: string
-  excusedModules: number
-  highlightModule: EnrichedProgressRecord | null
-  inProgressModules: number
-  lastTouchedAt: string | null
-  locationLabel: string
-  overdueModules: number
-  propertyName: string
-  records: EnrichedProgressRecord[]
-  totalModules: number
-  userId: string
-  userInitials: string
-  userName: string
-  avatarUrl?: string
-}
-
-const progressStatusOrder: Record<LearningProgress['status'], number> = {
-  overdue: 0,
-  in_progress: 1,
-  assigned: 2,
-  completed: 3,
-  excused: 4
-}
-
-interface TrainingAssignmentsPanelProps {
-  embedded?: boolean
-  initialTab?: 'overview' | 'assignments'
-  defaultModuleId?: string
-  autoOpen?: boolean
-  hideCreateButton?: boolean
-  hideHeaderActions?: boolean
-}
-
-const describeAssignmentMutationResult = (
-  result: PersistLearningAssignmentsResult,
-  t: ReturnType<typeof useTranslation>['t']
-) => {
-  if (result.inserted === 0 && result.reactivated === 0) {
-    return {
-      title: t('assignmentNoChanges', 'No assignment changes'),
-      description: t(
-        'assignmentNoChangesDesc',
-        'All selected targets already had active assignments for this module.'
-      ),
-    }
-  }
-
-  const summaryParts = [
-    result.inserted > 0 ? t('assignmentInsertedSummary', '{{count}} new', { count: result.inserted }) : null,
-    result.reactivated > 0 ? t('assignmentReactivatedSummary', '{{count}} restored', { count: result.reactivated }) : null,
-    result.skipped > 0 ? t('assignmentSkippedSummary', '{{count}} already active', { count: result.skipped }) : null,
-  ].filter(Boolean)
-
-  return {
-    title: t('assignmentUpdated', 'Assignments updated'),
-    description: summaryParts.join(' | '),
-  }
-}
 
 export function TrainingAssignmentsPanel({
   embedded = false,
@@ -408,8 +272,8 @@ export function TrainingAssignmentsPanel({
       if (error) throw error
       // Format with property name for disambiguation
       return (data || []).map((d) => {
-        const propertyName = Array.isArray(d.property) && d.property.length > 0 
-          ? d.property[0]?.name 
+        const propertyName = Array.isArray(d.property) && d.property.length > 0
+          ? d.property[0]?.name
           : (d.property as { name?: string } | null)?.name
         return {
           id: d.id,
@@ -806,38 +670,6 @@ export function TrainingAssignmentsPanel({
   }, [manageModuleId, reassignEntry, reassignReason, reassignUserId, reassignUserMutation, restoreUserMutation])
 
   // Helpers
-  const getAssignmentStatus = (assignment: LearningAssignment): AssignmentStatus => {
-    if (!assignment.due_date) return 'active'
-    const now = new Date()
-    const deadline = new Date(assignment.due_date)
-    const daysUntil = (deadline.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-    if (daysUntil < 0) return 'overdue'
-    if (daysUntil <= 7) return 'due_soon'
-    return 'active'
-  }
-
-  const getTargetIcon = (type: string) => {
-    switch (type) {
-      case 'all':
-      case 'everyone': return <Users className="w-4 h-4" />
-      case 'user': return <Users className="w-4 h-4" />
-      case 'department': return <Building className="w-4 h-4" />
-      case 'property': return <MapPin className="w-4 h-4" />
-      default: return <Users className="w-4 h-4" />
-    }
-  }
-
-  const getTargetLabel = (type: string) => {
-    switch (type) {
-      case 'all':
-      case 'everyone': return t('allUsers')
-      case 'user': return t('specificUser')
-      case 'department': return t('department')
-      case 'property': return t('property')
-      default: return t('allUsers')
-    }
-  }
-
   const departmentLookup = useMemo(() => {
     return new Map((departments || []).map((dept) => [dept.id, dept]))
   }, [departments])
@@ -880,12 +712,11 @@ export function TrainingAssignmentsPanel({
       case 'user': {
         const user = userLookup.get(assignment.target_id ?? '')
         if (!user) {
-          // User not found - show ID or unknown message
-          return { 
-            label: assignment.target_id 
-              ? `${t('unknownUser', 'Unknown')} (${assignment.target_id.slice(0, 8)}...)` 
-              : t('unknownUser', 'Unknown User'), 
-            meta: undefined 
+          return {
+            label: assignment.target_id
+              ? `${t('unknownUser', 'Unknown')} (${assignment.target_id.slice(0, 8)}...)`
+              : t('unknownUser', 'Unknown User'),
+            meta: undefined
           }
         }
         const name = user.full_name || user.email || t('unknownUser', 'Unknown User')
@@ -1040,7 +871,7 @@ export function TrainingAssignmentsPanel({
           return new Date(b.latestCreatedAt).getTime() - new Date(a.latestCreatedAt).getTime()
         case 'priority': {
           const priorityOrder = { compliance: 0, high: 1, normal: 2 }
-          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) - 
+          return (priorityOrder[a.priority as keyof typeof priorityOrder] || 2) -
                  (priorityOrder[b.priority as keyof typeof priorityOrder] || 2)
         }
         case 'module':
@@ -1640,18 +1471,6 @@ export function TrainingAssignmentsPanel({
     return errors
   }, [formTargetIds.length, formTargetType, moduleSelectValue, t])
 
-  const dueDatePresets = [
-    { label: t('in_1_week', 'In 1 week'), days: 7 },
-    { label: t('in_2_weeks', 'In 2 weeks'), days: 14 },
-    { label: t('in_1_month', 'In 1 month'), days: 30 },
-  ]
-
-  const reminderOptions = [
-    { label: t('reminder_1_day', '1 day before'), value: 1 },
-    { label: t('reminder_3_days', '3 days before'), value: 3 },
-    { label: t('reminder_7_days', '7 days before'), value: 7 }
-  ]
-
   const selectedModuleName = selectedAssignableModule?.title || t('unknownModule')
   const selectedTargetsLabel = formTargetType === 'all'
     ? t('allUsers')
@@ -1788,173 +1607,29 @@ export function TrainingAssignmentsPanel({
           </TabsTrigger>
         </TabsList>
 
-        {/* PROGRESS TAB */}
         <TabsContent value="overview" className="space-y-6">
-          {/* Overview Filters Toolbar */}
-          <div className="flex flex-col md:flex-row gap-3 items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
-            <div className="flex flex-1 items-center gap-3 w-full md:w-auto flex-wrap">
-              <div className="relative w-full md:w-64 min-w-0">
-                <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "right-3" : "left-3")} />
-                <Input
-                  placeholder={t('searchEmployeeOrModule')}
-                  value={overviewSearch}
-                  onChange={(e) => setOverviewSearch(e.target.value)}
-                  className={cn(isRTL ? "pr-9" : "pl-9", "bg-slate-50/50 border-slate-200")}
-                />
-              </div>
-              <GroupedDepartmentSelector
-                departments={departments}
-                properties={properties}
-                value={overviewFilterDept}
-                onValueChange={setOverviewFilterDept}
-                placeholder={t('filterByDept')}
-                generalLabel={t('allDepartments')}
-                generalValue="all"
-                className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200"
-              />
-              <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
-                <SelectTrigger className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200">
-                  <SelectValue placeholder={t('filterByProp')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('allProperties')}</SelectItem>
-                  {properties?.map(p => (
-                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
-                <SelectTrigger className="w-full sm:w-[150px] bg-slate-50/50 border-slate-200">
-                  <SelectValue placeholder={t('filterByStatus')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t('allStatuses')}</SelectItem>
-                  <SelectItem value="completed">{t('completed')}</SelectItem>
-                  <SelectItem value="in_progress">{t('inProgress')}</SelectItem>
-                  <SelectItem value="overdue">{t('overdue')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex gap-2 w-full md:w-auto justify-end">
-              {(overviewSearch || overviewFilterDept !== 'all' || overviewFilterProp !== 'all' || overviewFilterStatus !== 'all') && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setOverviewSearch('')
-                    setOverviewFilterDept('all')
-                    setOverviewFilterProp('all')
-                    setOverviewFilterStatus('all')
-                  }}
-                  className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
-                >
-                  <X className="w-3.5 h-3.5 mr-1.5" />
-                  {t('clearFilters')}
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={handleExport}>
-                <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                {t('export')}
-              </Button>
-            </div>
-          </div>
-          <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
-            <Card className="border-s-4 border-s-hotel-gold">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-50">
-                    <BookOpen className="size-4 text-hotel-gold" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.uniqueModules}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('modules', 'Modules')}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-s-4 border-s-indigo-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-indigo-50">
-                    <Users className="size-4 text-indigo-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{employeeTrackingSummary.employeeCount}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('staff', 'Staff')}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-s-4 border-s-blue-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50">
-                    <TrendingUp className="size-4 text-blue-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.total}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('totalEnrollments', 'Total Enrollments')}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-s-4 border-s-sky-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sky-50">
-                    <Clock className="size-4 text-sky-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.in_progress}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('inProgress')} · {employeeTrackingSummary.averageProgress}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-s-4 border-s-rose-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-rose-50">
-                    <AlertTriangle className="size-4 text-rose-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.overdue}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('overdue')} · {employeeTrackingSummary.employeesNeedingFollowUp} {t('followUpFlag', 'follow-up')}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-s-4 border-s-emerald-500">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-emerald-50">
-                    <CheckCircle2 className="size-4 text-emerald-600" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-2xl font-bold text-slate-900">{progressMetrics.completed}</p>
-                    <p className="truncate text-xs text-muted-foreground">{t('completed')} · {employeeTrackingSummary.completionRate}%</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <EmployeeProgressTracker
-            describeFollowUp={describeFollowUp}
-            followUpQueue={followUpQueue}
-            formatDate={formatDate}
-            formatDuration={formatDuration}
-            getProgressStatusMeta={getProgressStatusMeta}
-            groups={employeeProgressGroups}
-            isLoading={isLoadingProgress}
+          <OverviewTab
             isRTL={isRTL}
-            metrics={progressMetrics}
+            overviewSearch={overviewSearch}
+            onOverviewSearchChange={setOverviewSearch}
+            overviewFilterDept={overviewFilterDept}
+            onOverviewFilterDeptChange={setOverviewFilterDept}
+            overviewFilterProp={overviewFilterProp}
+            onOverviewFilterPropChange={setOverviewFilterProp}
+            overviewFilterStatus={overviewFilterStatus}
+            onOverviewFilterStatusChange={setOverviewFilterStatus}
+            departments={departments}
+            properties={properties}
+            progressMetrics={progressMetrics}
+            employeeTrackingSummary={employeeTrackingSummary}
+            employeeProgressGroups={employeeProgressGroups}
+            followUpQueue={followUpQueue}
             moduleLoadLeaders={moduleLoadLeaders}
+            isLoadingProgress={isLoadingProgress}
             onViewDetails={setSelectedProgressId}
-            summary={employeeTrackingSummary}
-            isAdmin={true}
+            onExport={handleExport}
             onResetProgress={(userId, moduleId) => resetProgressMutation.mutate({ userId, moduleId })}
-            onRevokeCertificate={(userId, moduleId) => {
+            onRevokeCertificate={() => {
               toast({
                 title: t('certificateRevoked', 'Certificate Revoked'),
                 description: t('certificateRevokedDesc', 'The certificate has been revoked successfully.')
@@ -1962,1466 +1637,168 @@ export function TrainingAssignmentsPanel({
             }}
             onExemptUser={(userId, moduleId) => exemptUserMutation.mutate({ moduleId, userId })}
             onRestoreUser={(userId, moduleId) => restoreUserMutation.mutate({ moduleId, userId })}
+            formatDate={formatDate}
+            formatDuration={formatDuration}
+            getProgressStatusMeta={getProgressStatusMeta}
+            describeFollowUp={describeFollowUp}
+            modules={modules}
           />
 
-          <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && setSelectedProgressId(null)}>
-            <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{t('details', 'Details')}</DialogTitle>
-                <DialogDescription>
-                  {selectedProgress?.profiles?.full_name || users?.find((user) => user.id === selectedProgress?.user_id)?.full_name || t('unknownUser')}
-                  {' | '}
-                  {selectedProgress?.training_modules?.title || modules?.find((module) => module.id === selectedProgress?.content_id)?.title || t('unknownModule')}
-                </DialogDescription>
-              </DialogHeader>
+          <ProgressDetailDialog
+            selectedProgressId={selectedProgressId}
+            onClose={() => setSelectedProgressId(null)}
+            selectedProgress={selectedProgress}
+            selectedBlock={selectedBlock}
+            selectedProgressMetadata={selectedProgressMetadata}
+            selectedQuizResults={selectedQuizResults}
+            selectedQuizResultsMessage={selectedQuizResultsMessage}
+            users={users}
+            modules={modules}
+            formatDate={formatDate}
+          />
+        </TabsContent>
 
-              {selectedProgress && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('status')}</p>
-                        <p className="mt-2 font-semibold capitalize">{t(selectedProgress.status)}</p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('progress')}</p>
-                        <p className="mt-2 font-semibold">
-                          {selectedProgress.status === 'completed'
-                            ? selectedProgress.progress_percentage
-                            : Math.min(selectedProgress.progress_percentage, 99)}%
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('score')}</p>
-                        <p className="mt-2 font-semibold">
-                          {selectedProgress.score_percentage !== undefined && selectedProgress.score_percentage !== null
-                            ? `${Number(selectedProgress.score_percentage).toFixed(0)}%`
-                            : '-'}
-                        </p>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="pt-6">
-                        <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('lastAccess')}</p>
-                        <p className="mt-2 font-semibold">{formatDate(selectedProgress.last_accessed_at || selectedProgress.created_at)}</p>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">{t('progress', 'Progress')}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3 text-sm">
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('timeSpent', 'Time spent')}</p>
-                          <p className="mt-1 font-medium">
-                            {selectedProgress.time_spent_seconds
-                              ? `${Math.floor(selectedProgress.time_spent_seconds / 60)}m ${selectedProgress.time_spent_seconds % 60}s`
-                              : '-'}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('currentStep', 'Current step')}</p>
-                          <p className="mt-1 font-medium">
-                            {selectedBlock?.title || (selectedBlock ? `${t('blockTitle', { number: (selectedBlock.order || 0) + 1 })}` : '-')}
-                          </p>
-                          {selectedBlock && (
-                            <p className="text-xs text-muted-foreground capitalize">{selectedBlock.type.replace('_', ' ')}</p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('blocksCompleted', 'Blocks completed')}</p>
-                          <p className="mt-1 font-medium">
-                            {Array.isArray(selectedProgressMetadata.completed_blocks) ? selectedProgressMetadata.completed_blocks.length : 0}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('mediaCompleted', 'Media completed')}</p>
-                          <p className="mt-1 font-medium">
-                            {Array.isArray(selectedProgressMetadata.completed_media_blocks) ? selectedProgressMetadata.completed_media_blocks.length : 0}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('quizParts', 'Quiz parts')}</p>
-                          <p className="mt-1 font-medium">{selectedQuizResults.length}</p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base">{t('quizResults', 'Quiz results')}</CardTitle>
-                      <DialogDescription>
-                        {selectedQuizResultsMessage}
-                      </DialogDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      {selectedQuizResults.length === 0 ? (
-                        <div className="rounded-lg border border-dashed p-4 text-sm text-muted-foreground">
-                          {selectedQuizResultsMessage}
-                        </div>
-                      ) : (
-                        selectedQuizResults.map((quizResult) => (
-                          <div key={quizResult.quizId || quizResult.quiz_id} className="space-y-4 rounded-xl border p-4">
-                            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                              <div>
-                                <h4 className="font-semibold text-slate-900">{quizResult.quizTitle || quizResult.quiz_title || t('knowledgeCheck')}</h4>
-                                <p className="text-xs text-muted-foreground">
-                                  {formatDate(quizResult.completedAt || quizResult.completed_at || selectedProgress.completed_at || selectedProgress.updated_at || selectedProgress.created_at)}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge variant={quizResult.passed ? 'default' : 'destructive'}>
-                                  {quizResult.passed ? t('passed', 'Passed') : t('failed', 'Failed')}
-                                </Badge>
-                                <Badge variant="outline">
-                                  {typeof quizResult.score === 'number' ? `${quizResult.score}%` : '-'}
-                                </Badge>
-                              </div>
-                            </div>
-
-                            <div className="grid gap-3 sm:grid-cols-3 text-sm">
-                              <div>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('correct', 'Correct')}</p>
-                                <p className="mt-1 font-medium">{quizResult.correctCount ?? quizResult.correct_count ?? 0}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('totalQuestions', 'Total questions')}</p>
-                                <p className="mt-1 font-medium">{quizResult.totalQuestions ?? quizResult.total_questions ?? 0}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('score')}</p>
-                                <p className="mt-1 font-medium">{typeof quizResult.score === 'number' ? `${quizResult.score}%` : '-'}</p>
-                              </div>
-                            </div>
-
-                            <div className="space-y-3">
-                              {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem, index: number) => (
-                                <div key={`${quizResult.quizId || quizResult.quiz_id}-${reviewItem.questionId || reviewItem.question_id || index}`} className="rounded-lg border bg-slate-50 p-4">
-                                  <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                      <p className="font-medium text-slate-900">{reviewItem.questionText || reviewItem.question_text || t('question', 'Question')}</p>
-                                      <p className="mt-2 text-sm text-slate-600">
-                                        <span className="font-medium text-slate-800">{t('yourAnswer', 'Your answer')}:</span> {reviewItem.selectedAnswer || reviewItem.selected_answer || '-'}
-                                      </p>
-                                      <p className="mt-1 text-sm text-slate-600">
-                                        <span className="font-medium text-slate-800">{t('correctAnswer', 'Correct answer')}:</span> {reviewItem.correctAnswer || reviewItem.correct_answer || '-'}
-                                      </p>
-                                      {(reviewItem.explanation || reviewItem.feedback) && (
-                                        <p className="mt-2 text-sm text-muted-foreground">{reviewItem.explanation || reviewItem.feedback}</p>
-                                      )}
-                                    </div>
-                                    <Badge variant={reviewItem.correct ? 'default' : 'destructive'}>
-                                      {reviewItem.correct ? t('correct', 'Correct') : t('incorrect', 'Incorrect')}
-                                    </Badge>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </DialogContent>
-          </Dialog>
-        </TabsContent >
-
-        {/* ASSIGNMENTS TAB */}
         <TabsContent value="assignments" className="space-y-6">
-          {/* Quick Stats Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
-            <Card className="border-slate-200">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">{t('totalAssignments', 'Total')}</span>
-                  <span className="text-lg font-bold text-slate-900">{assignmentStats.total}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-rose-200 bg-rose-50/30">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-rose-600">{t('compliancePriority', 'Compliance')}</span>
-                  <span className="text-lg font-bold text-rose-700">{assignmentStats.byPriority.compliance}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-amber-200 bg-amber-50/30">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-amber-600">{t('highPriority', 'High')}</span>
-                  <span className="text-lg font-bold text-amber-700">{assignmentStats.byPriority.high}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-rose-200 bg-rose-50/30">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-rose-600">{t('overdue', 'Overdue')}</span>
-                  <span className="text-lg font-bold text-rose-700">{assignmentStats.overdue}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-blue-200 bg-blue-50/30">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-blue-600">{t('dueSoon', 'Due Soon')}</span>
-                  <span className="text-lg font-bold text-blue-700">{assignmentStats.dueSoon}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <Card className="border-slate-200">
-              <CardContent className="p-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-slate-500">{t('everyone', 'Everyone')}</span>
-                  <span className="text-lg font-bold text-slate-900">{assignmentStats.byTargetType.everyone}</span>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <AssignmentsTab
+            isRTL={isRTL}
+            isLoadingAssignments={isLoadingAssignments}
+            hideCreateButton={hideCreateButton}
+            search={search}
+            onSearchChange={setSearch}
+            assignmentsViewMode={assignmentsViewMode}
+            onAssignmentsViewModeChange={setAssignmentsViewMode}
+            assignmentsSortBy={assignmentsSortBy}
+            onAssignmentsSortByChange={setAssignmentsSortBy}
+            showFilters={showFilters}
+            onShowFiltersChange={setShowFilters}
+            assignmentsFilterPriority={assignmentsFilterPriority}
+            onAssignmentsFilterPriorityChange={setAssignmentsFilterPriority}
+            assignmentsFilterTargetType={assignmentsFilterTargetType}
+            onAssignmentsFilterTargetTypeChange={setAssignmentsFilterTargetType}
+            assignmentsFilterDueStatus={assignmentsFilterDueStatus}
+            onAssignmentsFilterDueStatusChange={setAssignmentsFilterDueStatus}
+            onResetOrganizationState={resetOrganizationState}
+            assignmentStats={assignmentStats}
+            groupedAssignments={groupedAssignments}
+            exemptionCountByModule={exemptionCountByModule}
+            getTargetDetails={getTargetDetails}
+            formatDate={formatDate}
+            onDelete={handleDelete}
+            onOpenManageAssignees={openManageAssignees}
+            onOpenCreateDialog={() => setShowAssignmentDialog(true)}
+          />
+        </TabsContent>
+      </Tabs>
 
-          {/* Enhanced Control Toolbar */}
-          <div className="flex flex-col gap-4 bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-            {/* Top Row: Search and Main Actions */}
-            <div className={cn(
-              "flex flex-col sm:flex-row items-stretch sm:items-center gap-3",
-              hideCreateButton ? "justify-start" : "justify-between"
-            )}>
-              <div className="relative flex-1 max-w-none sm:max-w-md">
-                <div className={cn(
-                  "absolute inset-y-0 flex items-center pointer-events-none",
-                  isRTL ? "right-0 pr-4" : "left-0 pl-4"
-                )}>
-                  <Search className="w-4 h-4 text-slate-400" />
-                </div>
-                <Input
-                  placeholder={t('searchAssignments')}
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className={cn(
-                    "h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-hotel-gold/50 focus:ring-2 focus:ring-hotel-gold/20 transition-all",
-                    isRTL ? "pr-11 text-right" : "pl-11"
-                  )}
-                />
-                {search && (
-                  <button
-                    onClick={() => setSearch('')}
-                    className={cn(
-                      "absolute inset-y-0 flex items-center text-slate-400 hover:text-slate-600 transition-colors",
-                      isRTL ? "left-0 pl-3" : "right-0 pr-3"
-                    )}
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {/* View Mode Toggle */}
-                <div className="flex items-center bg-slate-100 rounded-lg p-1">
-                  <button
-                    onClick={() => setAssignmentsViewMode('grid')}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                      assignmentsViewMode === 'grid' 
-                        ? "bg-white text-slate-900 shadow-sm" 
-                        : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    <Grid3X3 className="w-4 h-4" />
-                    {t('grid', 'Grid')}
-                  </button>
-                  <button
-                    onClick={() => setAssignmentsViewMode('list')}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
-                      assignmentsViewMode === 'list' 
-                        ? "bg-white text-slate-900 shadow-sm" 
-                        : "text-slate-500 hover:text-slate-700"
-                    )}
-                  >
-                    <LayoutList className="w-4 h-4" />
-                    {t('list', 'List')}
-                  </button>
-                </div>
+      <ManageAssigneesDialog
+        manageModuleId={manageModuleId}
+        manageModuleTitle={manageModuleTitle}
+        onClose={closeManageAssignees}
+        moduleRoster={moduleRoster}
+        isLoadingModuleRoster={isLoadingModuleRoster}
+        paginatedActiveRoster={paginatedActiveRoster}
+        paginatedExemptedRoster={paginatedExemptedRoster}
+        activeRosterPagination={activeRosterPagination}
+        exemptedRosterPagination={exemptedRosterPagination}
+        removeReason={removeReason}
+        onRemoveReasonChange={setRemoveReason}
+        reassignEntry={reassignEntry}
+        reassignUserId={reassignUserId}
+        reassignReason={reassignReason}
+        onReassignUserIdChange={setReassignUserId}
+        onReassignReasonChange={setReassignReason}
+        onResetReassignDialog={resetReassignDialog}
+        onSubmitReassign={submitReassign}
+        reassignUserMutationPending={reassignUserMutation.isPending}
+        restoreUserMutationPending={restoreUserMutation.isPending}
+        overrideEntry={overrideEntry}
+        overrideDueDate={overrideDueDate}
+        overridePriority={overridePriority}
+        overrideInstructions={overrideInstructions}
+        onOverrideDueDateChange={setOverrideDueDate}
+        onOverridePriorityChange={setOverridePriority}
+        onOverrideInstructionsChange={setOverrideInstructions}
+        onCloseOverrideDialog={() => setOverrideEntry(null)}
+        onSaveOverride={() => overrideEntry && saveOverrideMutation.mutate({
+          moduleId: manageModuleId!,
+          userId: overrideEntry.user_id,
+          dueDate: overrideDueDate ? new Date(`${overrideDueDate}T00:00:00`).toISOString() : null,
+          priority: overridePriority === 'inherit' ? null : overridePriority,
+          instructions: overrideInstructions || null
+        })}
+        onClearOverride={() => overrideEntry && clearOverrideMutation.mutate({ moduleId: manageModuleId!, userId: overrideEntry.user_id })}
+        saveOverrideMutationPending={saveOverrideMutation.isPending}
+        clearOverrideMutationPending={clearOverrideMutation.isPending}
+        resetProgressMutationPending={resetProgressMutation.isPending}
+        exemptUserMutationPending={exemptUserMutation.isPending}
+        resendNotificationMutationPending={resendNotificationMutation.isPending}
+        users={users}
+        onOpenReassignDialog={openReassignDialog}
+        onOpenOverrideDialog={openOverrideDialog}
+        onResetProgress={(moduleId, userId) => resetProgressMutation.mutate({ moduleId, userId })}
+        onResendNotification={(userId, moduleId, moduleTitle, deadline) => resendNotificationMutation.mutate({ userId, moduleId, moduleTitle, deadline })}
+        onExemptUser={(moduleId, userId, reason) => exemptUserMutation.mutate({ moduleId, userId, reason })}
+        onRestoreUser={(moduleId, userId) => restoreUserMutation.mutate({ moduleId, userId })}
+        formatDate={formatDate}
+      />
 
-                {/* Sort Dropdown */}
-                <Select value={assignmentsSortBy} onValueChange={(v) => setAssignmentsSortBy(v as any)}>
-                  <SelectTrigger className="w-[140px] h-10 bg-slate-50 border-slate-200">
-                    <SlidersHorizontal className="w-4 h-4 mr-2" />
-                    <SelectValue placeholder={t('sortBy', 'Sort by')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="date">{t('dateCreated', 'Date Created')}</SelectItem>
-                    <SelectItem value="priority">{t('priority', 'Priority')}</SelectItem>
-                    <SelectItem value="module">{t('moduleName', 'Module Name')}</SelectItem>
-                    <SelectItem value="dueDate">{t('dueDate', 'Due Date')}</SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {/* Filter Toggle */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className={cn(
-                    "h-10 px-3 transition-all",
-                    showFilters && "bg-slate-100 border-slate-300"
-                  )}
-                >
-                  <Filter className="w-4 h-4 mr-2" />
-                  {t('filters', 'Filters')}
-                  {(assignmentsFilterPriority !== 'all' || assignmentsFilterTargetType !== 'all' || assignmentsFilterDueStatus !== 'all') && (
-                    <span className="ml-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
-                  )}
-                </Button>
-
-                {!hideCreateButton && (
-                  <Button 
-                    onClick={() => setShowAssignmentDialog(true)} 
-                    className="bg-hotel-navy hover:bg-hotel-navy/90 text-white h-10 px-4 shadow-sm hover:shadow transition-all"
-                  >
-                    <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                    {t('create')}
-                  </Button>
-                )}
-              </div>
-            </div>
-
-            {/* Filter Panel */}
-            {showFilters && (
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-3 border-t border-slate-100">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-slate-500 font-medium">{t('filterBy', 'Filter by')}:</span>
-                  
-                  {/* Priority Filter */}
-                  <Select value={assignmentsFilterPriority} onValueChange={setAssignmentsFilterPriority}>
-                    <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
-                      <SelectValue placeholder={t('priority', 'Priority')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('allPriorities', 'All Priorities')}</SelectItem>
-                      <SelectItem value="compliance">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-rose-500" />
-                          {t('compliance', 'Compliance')}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="high">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
-                          {t('high', 'High')}
-                        </span>
-                      </SelectItem>
-                      <SelectItem value="normal">
-                        <span className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-slate-400" />
-                          {t('normal', 'Normal')}
-                        </span>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Target Type Filter */}
-                  <Select value={assignmentsFilterTargetType} onValueChange={setAssignmentsFilterTargetType}>
-                    <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
-                      <SelectValue placeholder={t('targetType', 'Target')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('allTargets', 'All Targets')}</SelectItem>
-                      <SelectItem value="everyone">{t('everyone', 'Everyone')}</SelectItem>
-                      <SelectItem value="user">{t('specificUser', 'Specific User')}</SelectItem>
-                      <SelectItem value="department">{t('department', 'Department')}</SelectItem>
-                      <SelectItem value="property">{t('property', 'Property')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  {/* Due Status Filter */}
-                  <Select value={assignmentsFilterDueStatus} onValueChange={setAssignmentsFilterDueStatus}>
-                    <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
-                      <SelectValue placeholder={t('dueStatus', 'Due Status')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">{t('allStatuses', 'All Statuses')}</SelectItem>
-                      <SelectItem value="active">{t('active', 'Active')}</SelectItem>
-                      <SelectItem value="due_soon">{t('dueSoon', 'Due Soon')}</SelectItem>
-                      <SelectItem value="overdue">{t('overdue', 'Overdue')}</SelectItem>
-                      <SelectItem value="completed">{t('completed', 'Completed')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Clear Filters */}
-                {(assignmentsFilterPriority !== 'all' || assignmentsFilterTargetType !== 'all' || assignmentsFilterDueStatus !== 'all' || search) && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={resetOrganizationState}
-                    className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 ml-auto"
-                  >
-                    <X className="w-3.5 h-3.5 mr-1.5" />
-                    {t('clearAll', 'Clear All')}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Results Count */}
-          <div className="flex items-center justify-between text-sm text-slate-500">
-            <span>
-              {t('showing', 'Showing')} <strong className="text-slate-900">{groupedAssignments.length}</strong> {t('assignmentGroups', 'assignment groups')}
-            </span>
-            {(assignmentsFilterPriority !== 'all' || assignmentsFilterTargetType !== 'all' || assignmentsFilterDueStatus !== 'all') && (
-              <div className="flex items-center gap-2">
-                <span>{t('activeFilters', 'Active filters')}:</span>
-                {assignmentsFilterPriority !== 'all' && (
-                  <Badge variant="outline" className="text-xs bg-slate-50">
-                    {t('priority')}: {t(assignmentsFilterPriority)}
-                    <button onClick={() => setAssignmentsFilterPriority('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
-                  </Badge>
-                )}
-                {assignmentsFilterTargetType !== 'all' && (
-                  <Badge variant="outline" className="text-xs bg-slate-50">
-                    {t('target')}: {t(assignmentsFilterTargetType)}
-                    <button onClick={() => setAssignmentsFilterTargetType('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
-                  </Badge>
-                )}
-                {assignmentsFilterDueStatus !== 'all' && (
-                  <Badge variant="outline" className="text-xs bg-slate-50">
-                    {t('status')}: {t(assignmentsFilterDueStatus)}
-                    <button onClick={() => setAssignmentsFilterDueStatus('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
-                  </Badge>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Assignment Cards Grid/List */}
-          <div className={cn(
-            assignmentsViewMode === 'grid' 
-              ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-              : "flex flex-col gap-3"
-          )}>
-            {isLoadingAssignments ? (
-              <div className="col-span-full flex flex-col items-center justify-center py-16">
-                <div className="relative">
-                  <Loader2 className="w-10 h-10 animate-spin text-hotel-gold" />
-                  <div className="absolute inset-0 w-10 h-10 animate-ping rounded-full bg-hotel-gold/20" />
-                </div>
-                <p className="mt-4 text-sm text-slate-500">{t('loadingAssignments', 'Loading assignments...')}</p>
-              </div>
-            ) : groupedAssignments.length > 0 ? (
-              groupedAssignments.map((group) => {
-                const primaryAssignment = group.assignments[0]
-                const targetType = primaryAssignment.target_type
-                const targetTypeLabel = getTargetLabel(targetType)
-                const exemptedCount = exemptionCountByModule.get(primaryAssignment.content_id) || 0
-                const targets = group.assignments.map((assignment) => ({
-                  assignmentId: assignment.id,
-                  ...getTargetDetails(assignment)
-                }))
-
-                return (
-                  <Card key={group.key} className="group overflow-hidden border-0 bg-white shadow-sm transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5">
-                    {/* Top Accent Bar with Priority Color */}
-                    <div className={cn(
-                      "h-1.5 w-full",
-                      primaryAssignment.priority === 'compliance' && "bg-gradient-to-r from-rose-500 to-rose-600",
-                      primaryAssignment.priority === 'high' && "bg-gradient-to-r from-amber-500 to-orange-500",
-                      (!primaryAssignment.priority || primaryAssignment.priority === 'normal') && "bg-gradient-to-r from-blue-500 to-indigo-500"
-                    )} />
-                    
-                    <CardHeader className="pb-3 pt-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="border-blue-200 bg-blue-50/80 text-blue-700 font-medium text-[11px] px-2 py-0.5">
-                            <BookOpen className="w-3 h-3 mr-1" />
-                            {t('module')}
-                          </Badge>
-                          <Badge 
-                            variant="outline" 
-                            className={cn(
-                              "font-medium text-[11px] px-2 py-0.5",
-                              primaryAssignment.priority === 'compliance' && "border-rose-200 bg-rose-50 text-rose-700",
-                              primaryAssignment.priority === 'high' && "border-amber-200 bg-amber-50 text-amber-700",
-                              (!primaryAssignment.priority || primaryAssignment.priority === 'normal') && "border-slate-200 bg-slate-50 text-slate-700"
-                            )}
-                          >
-                            {t(primaryAssignment.priority || 'normal', primaryAssignment.priority || 'normal')}
-                          </Badge>
-                          {primaryAssignment.requires_acknowledgement && (
-                            <Badge variant="outline" className="border-amber-300 bg-amber-100/50 text-amber-800 font-medium text-[11px] px-2 py-0.5">
-                              <CheckCircle2 className="w-3 h-3 mr-1" />
-                              {t('ackRequired', 'Ack required')}
-                            </Badge>
-                          )}
-                        </div>
-                        <div className="flex gap-1.5">
-                          {targets.length > 1 && (
-                            <Badge variant="outline" className="bg-hotel-gold/10 text-hotel-navy border-hotel-gold/30 font-medium text-[11px]">
-                              <Users className="w-3 h-3 mr-1" />
-                              {targets.length} {t('targets', 'targets')}
-                            </Badge>
-                          )}
-                          {exemptedCount > 0 && (
-                            <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 font-medium text-[11px]">
-                              <X className="w-3 h-3 mr-1" />
-                              {exemptedCount} {t('exempted', 'exempted')}
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <CardTitle className="text-lg font-semibold mt-3 line-clamp-2 leading-snug text-slate-900" title={primaryAssignment.training_modules?.title}>
-                        {primaryAssignment.training_modules?.title || t('unknownModule')}
-                      </CardTitle>
-                    </CardHeader>
-                    
-                    <CardContent className="pt-0">
-                      <div className="space-y-3">
-                        {/* Target Name & Email */}
-                        <div className="space-y-1.5">
-                          {targets.length === 1 ? (
-                            <div className="flex items-start justify-between gap-2">
-                              <div className="space-y-0.5 min-w-0 flex-1">
-                                <div className="text-sm font-medium text-slate-900 truncate">
-                                  {targets[0].label}
-                                </div>
-                                {targets[0].meta && targets[0].meta !== targets[0].label && (
-                                  <div className="text-xs text-slate-500 truncate">
-                                    {targets[0].meta}
-                                  </div>
-                                )}
-                              </div>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                className="h-7 w-7 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-2"
-                                onClick={() => handleDelete(targets[0].assignmentId)}
-                                aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          ) : (
-                            <>
-                              <div className="flex items-center gap-2 text-sm">
-                                <span className="text-slate-500">{getTargetIcon(targetType)}</span>
-                                <span className="text-slate-600">{targetTypeLabel}</span>
-                                <Badge variant="outline" className="text-[10px] px-1.5 h-5 bg-slate-50">
-                                  {targets.length}
-                                </Badge>
-                              </div>
-                              <div className="pl-6 space-y-1">
-                                {targets.slice(0, 3).map((target) => (
-                                  <div key={target.assignmentId} className="flex items-start justify-between gap-2">
-                                    <div className="text-sm text-slate-900 truncate min-w-0 flex-1">
-                                      {target.label}
-                                    </div>
-                                    <Button
-                                      size="icon"
-                                      variant="ghost"
-                                      className="h-6 w-6 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-1"
-                                      onClick={() => handleDelete(target.assignmentId)}
-                                      aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
-                                    >
-                                      <Trash2 className="w-3.5 h-3.5" />
-                                    </Button>
-                                  </div>
-                                ))}
-                                {targets.length > 3 && (
-                                  <div className="text-xs text-slate-500">
-                                    +{targets.length - 3} {t('more', 'more')}
-                                  </div>
-                                )}
-                              </div>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Dates */}
-                        <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 pt-2 border-t border-slate-100">
-                          <span>{formatDate(primaryAssignment.created_at)}</span>
-                          {primaryAssignment.due_date && (
-                            <>
-                              <span className="text-slate-300">|</span>
-                              <span className={cn(
-                                "px-2 py-0.5 rounded-full",
-                                new Date(primaryAssignment.due_date) < new Date() 
-                                  ? "bg-rose-50 text-rose-700" 
-                                  : "bg-blue-50 text-blue-700"
-                              )}>
-                                {t('due')}: {formatDate(primaryAssignment.due_date)}
-                              </span>
-                            </>
-                          )}
-                        </div>
-
-                        {/* Action Button */}
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium h-9"
-                          onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
-                        >
-                          <Users className={cn("h-4 w-4 text-slate-500", isRTL ? "ml-2" : "mr-2")} />
-                          {t('manageAssignees', 'Manage assignees')}
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
-              })
-            ) : (
-              <div className="col-span-full flex flex-col items-center justify-center py-16 px-8">
-                <div className="relative mb-6">
-                  <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center shadow-inner">
-                    <BookOpen className="w-12 h-12 text-slate-300" />
-                  </div>
-                  <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-sm">
-                    <Plus className="w-5 h-5 text-slate-400" />
-                  </div>
-                </div>
-                <h3 className="text-lg font-semibold text-slate-900 text-center">{t('noAssignments')}</h3>
-                <p className="mt-2 text-sm text-slate-500 text-center max-w-md">{t('startAssigning', 'Get started by creating your first training assignment. Assign modules to individuals, departments, or entire properties.')}</p>
-                {!hideCreateButton && (
-                  <Button 
-                    onClick={() => setShowAssignmentDialog(true)}
-                    className="mt-6 bg-hotel-navy hover:bg-hotel-navy/90 text-white px-6 shadow-sm hover:shadow transition-all"
-                  >
-                    <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
-                    {t('createAssignment')}
-                  </Button>
-                )}
-              </div>
-            )}
-          </div>
-        </TabsContent >
-      </Tabs >
-
-      <Dialog open={!!manageModuleId} onOpenChange={(open) => !open && closeManageAssignees()}>
-        <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{t('manageAssignees', 'Manage assignees')}</DialogTitle>
-            <DialogDescription>
-              {manageModuleTitle}
-            </DialogDescription>
-          </DialogHeader>
-
-          {isLoadingModuleRoster ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-hotel-gold" />
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('activeAssignees', 'Active assignees')}</p>
-                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.active.length || 0}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('exempted', 'Exempted')}</p>
-                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.exempted.length || 0}</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="pt-6">
-                    <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('withOverrides', 'With overrides')}</p>
-                    <p className="mt-2 text-3xl font-bold">{moduleRoster?.active.filter((entry) => entry.has_override).length || 0}</p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Tabs defaultValue="active" className="space-y-4">
-                <TabsList>
-                  <TabsTrigger value="active">{t('active', 'Active')}</TabsTrigger>
-                  <TabsTrigger value="exempted">{t('exempted', 'Exempted')}</TabsTrigger>
-                </TabsList>
-
-                <TabsContent value="active" className="space-y-4">
-                  <div className="rounded-xl border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('employee')}</TableHead>
-                          <TableHead>{t('source', 'Source')}</TableHead>
-                          <TableHead>{t('status')}</TableHead>
-                          <TableHead>{t('due')}</TableHead>
-                          <TableHead>{t('score')}</TableHead>
-                          <TableHead className="text-right">{t('actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(moduleRoster?.active || []).length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
-                              {t('noActiveAssignees', 'No active assignees found for this module.')}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedActiveRoster.map((entry) => (
-                            <TableRow key={entry.user_id}>
-                              <TableCell>
-                                <div className="flex items-center gap-3">
-                                  <Avatar className="h-9 w-9">
-                                    <AvatarImage src={entry.avatar_url || ''} />
-                                    <AvatarFallback>{entry.full_name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</AvatarFallback>
-                                  </Avatar>
-                                  <div>
-                                    <div className="font-medium">{entry.full_name}</div>
-                                    <div className="text-xs text-muted-foreground">{entry.email || entry.department_name || t('unknownUser')}</div>
-                                    {(entry.department_name || entry.property_name) && (
-                                      <div className="text-xs text-muted-foreground">
-                                        {[entry.department_name, entry.property_name].filter(Boolean).join(' | ')}
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {entry.sources.map((source) => (
-                                    <Badge key={`${entry.user_id}-${source.assignment_id}`} variant="outline">
-                                      {source.label}
-                                    </Badge>
-                                  ))}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-2">
-                                  <Badge variant={entry.status === 'completed' ? 'default' : 'secondary'}>
-                                    {t(entry.status)}
-                                  </Badge>
-                                  {entry.has_override && (
-                                    <Badge variant="outline" className="bg-amber-50 text-amber-700">
-                                      {t('override', 'Override')}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                {entry.effective_due_date ? formatDate(entry.effective_due_date) : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {entry.score_percentage !== null && entry.score_percentage !== undefined ? `${entry.score_percentage}%` : '-'}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex flex-wrap justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openReassignDialog(entry)}
-                                  >
-                                    {t('reassign', 'Reassign')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openOverrideDialog(entry)}
-                                  >
-                                    {t('override', 'Override')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => resetProgressMutation.mutate({ moduleId: manageModuleId!, userId: entry.user_id })}
-                                    disabled={resetProgressMutation.isPending}
-                                  >
-                                    {t('resetProgress', 'Reset progress & quiz attempts')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => resendNotificationMutation.mutate({
-                                      userId: entry.user_id,
-                                      moduleId: manageModuleId!,
-                                      moduleTitle: manageModuleTitle,
-                                      deadline: entry.effective_due_date || null
-                                    })}
-                                    disabled={resendNotificationMutation.isPending}
-                                  >
-                                    {t('resend', 'Resend')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => exemptUserMutation.mutate({
-                                      moduleId: manageModuleId!,
-                                      userId: entry.user_id,
-                                      reason: removeReason || 'Removed from module'
-                                    })}
-                                    disabled={exemptUserMutation.isPending}
-                                  >
-                                    {t('removeFromModule', 'Remove from module')}
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <PaginationBar pagination={activeRosterPagination} showPageSizeSelector={false} />
-
-                  <div className="space-y-2">
-                    <Label htmlFor="remove-reason">{t('removeReason', 'Removal reason')}</Label>
-                    <Input
-                      id="remove-reason"
-                      value={removeReason}
-                      onChange={(event) => setRemoveReason(event.target.value)}
-                      placeholder={t('removeReasonPlaceholder', 'Optional note for exemption history')}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent value="exempted" className="space-y-4">
-                  <div className="rounded-xl border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>{t('employee')}</TableHead>
-                          <TableHead>{t('reason', 'Reason')}</TableHead>
-                          <TableHead>{t('source', 'Source')}</TableHead>
-                          <TableHead>{t('updated', 'Updated')}</TableHead>
-                          <TableHead className="text-right">{t('actions')}</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {(moduleRoster?.exempted || []).length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={5} className="py-10 text-center text-muted-foreground">
-                              {t('noExemptedAssignees', 'No exempted users for this module.')}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          paginatedExemptedRoster.map((entry) => (
-                            <TableRow key={entry.user_id}>
-                              <TableCell>
-                                <div className="font-medium">{entry.full_name}</div>
-                                <div className="text-xs text-muted-foreground">{entry.email || entry.department_name || t('unknownUser')}</div>
-                              </TableCell>
-                              <TableCell>{entry.exemption?.reason || '-'}</TableCell>
-                              <TableCell>
-                                <div className="flex flex-wrap gap-1">
-                                  {entry.sources.length > 0 ? entry.sources.map((source) => (
-                                    <Badge key={`${entry.user_id}-${source.assignment_id}`} variant="outline">
-                                      {source.label}
-                                    </Badge>
-                                  )) : (
-                                    <span className="text-muted-foreground">-</span>
-                                  )}
-                                </div>
-                              </TableCell>
-                              <TableCell>{entry.exemption?.updated_at ? formatDate(entry.exemption.updated_at) : '-'}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => restoreUserMutation.mutate({ moduleId: manageModuleId!, userId: entry.user_id })}
-                                    disabled={restoreUserMutation.isPending}
-                                  >
-                                    {t('restore', 'Restore')}
-                                  </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => openReassignDialog(entry)}
-                                  >
-                                    {t('reassign', 'Reassign')}
-                                  </Button>
-                                </div>
-                              </TableCell>
-                            </TableRow>
-                          ))
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  <PaginationBar pagination={exemptedRosterPagination} showPageSizeSelector={false} />
-                </TabsContent>
-              </Tabs>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!reassignEntry} onOpenChange={(open) => !open && resetReassignDialog()}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('reassign', 'Reassign')}</DialogTitle>
-            <DialogDescription>
-              {reassignEntry?.full_name} {'->'} {manageModuleTitle}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('selectUser', 'Select user')}</Label>
-              <Select value={reassignUserId} onValueChange={setReassignUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder={t('selectUser', 'Select user')} />
-                </SelectTrigger>
-                <SelectContent>
-                  {(users || [])
-                    .map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {(user.full_name || user.email) + (user.id === reassignEntry?.user_id ? ` ${t('currentAssignee', '(current assignee)')}` : '')}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('reason', 'Reason')}</Label>
-              <Input
-                value={reassignReason}
-                onChange={(event) => setReassignReason(event.target.value)}
-                placeholder={t('reassignReasonPlaceholder', 'Optional reassignment note')}
-              />
-            </div>
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={resetReassignDialog}>
-                {t('cancel', 'Cancel')}
-              </Button>
-              <Button
-                type="button"
-                onClick={submitReassign}
-                disabled={
-                  !reassignUserId ||
-                  reassignUserMutation.isPending ||
-                  restoreUserMutation.isPending ||
-                  (reassignUserId === reassignEntry?.user_id && !reassignEntry?.exemption)
-                }
-              >
-                {(reassignUserMutation.isPending || restoreUserMutation.isPending)
-                  ? t('saving', 'Saving...')
-                  : reassignUserId === reassignEntry?.user_id && !reassignEntry?.exemption
-                    ? t('alreadyAssigned', 'Already assigned')
-                  : reassignUserId === reassignEntry?.user_id && reassignEntry?.exemption
-                    ? t('restore', 'Restore')
-                    : t('confirmReassign', 'Confirm reassign')}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!overrideEntry} onOpenChange={(open) => !open && setOverrideEntry(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>{t('overrideAssignment', 'Override assignment')}</DialogTitle>
-            <DialogDescription>
-              {overrideEntry?.full_name} {'|'} {manageModuleTitle}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('due')}</Label>
-              <Input type="date" value={overrideDueDate} onChange={(event) => setOverrideDueDate(event.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{t('priority')}</Label>
-              <Select value={overridePriority} onValueChange={(value) => setOverridePriority(value as typeof overridePriority)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="inherit">{t('inherit', 'Inherit')}</SelectItem>
-                  <SelectItem value="normal">{t('normal', 'Normal')}</SelectItem>
-                  <SelectItem value="high">{t('high', 'High')}</SelectItem>
-                  <SelectItem value="compliance">{t('compliance', 'Compliance')}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>{t('instructions', 'Instructions')}</Label>
-              <Input value={overrideInstructions} onChange={(event) => setOverrideInstructions(event.target.value)} placeholder={t('overrideInstructionsPlaceholder', 'Optional user-specific instructions')} />
-            </div>
-            <div className="flex justify-between gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => overrideEntry && clearOverrideMutation.mutate({ moduleId: manageModuleId!, userId: overrideEntry.user_id })}
-                disabled={!overrideEntry?.has_override || clearOverrideMutation.isPending}
-              >
-                {t('clearOverride', 'Clear override')}
-              </Button>
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setOverrideEntry(null)}>
-                  {t('cancel', 'Cancel')}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={() => overrideEntry && saveOverrideMutation.mutate({
-                    moduleId: manageModuleId!,
-                    userId: overrideEntry.user_id,
-                    dueDate: overrideDueDate ? new Date(`${overrideDueDate}T00:00:00`).toISOString() : null,
-                    priority: overridePriority === 'inherit' ? null : overridePriority,
-                    instructions: overrideInstructions || null
-                  })}
-                  disabled={saveOverrideMutation.isPending}
-                >
-                  {saveOverrideMutation.isPending ? t('saving', 'Saving...') : t('save', 'Save')}
-                </Button>
-              </div>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* CREATE DIALOG */}
-      {
-        showAssignmentDialog && (
-          <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
-            <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
-              <DialogHeader>
-                <DialogTitle>
-                  {t('createAssignment')}
-                </DialogTitle>
-                <DialogDescription className="text-sm text-gray-500">
-                  {t('createAssignmentDescription')}
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-6">
-                {validationErrors.length > 0 && (
-                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-xs text-red-700">
-                    {validationErrors.map((message) => (
-                      <p key={message}>{message}</p>
-                    ))}
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <Label>{t('selectModule')}</Label>
-                  <select
-                    value={moduleSelectValue}
-                    onChange={(e) => setFormModuleId(e.target.value)}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                  >
-                    <option value="">{t('selectModule')}</option>
-                    {assignableModules.map((module) => (
-                      <option key={module.id} value={module.id}>
-                        {module.title}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label>{t('assignTo')}</Label>
-                  <select
-                    value={formTargetType}
-                    onChange={(e) => {
-                      setFormTargetType(e.target.value as any)
-                      setFormTargetIds([])
-                      setPropertyFilters([])
-                      setTargetSearch('')
-                    }}
-                    className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                  >
-                    <option value="all">{t('allUsers')}</option>
-                    <option value="users">{t('specificEmployees')}</option>
-                    <option value="departments">{t('entireDepartments')}</option>
-                    <option value="properties">{t('entireProperties')}</option>
-                  </select>
-                </div>
-
-                {formTargetType !== 'all' && (
-                  <div className="flex flex-col gap-3">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Label>
-                        {formTargetType === 'users' ? t('selectUsers') :
-                          formTargetType === 'departments' ? t('selectDepartments') :
-                            t('selectProperties')}
-                      </Label>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setFormTargetIds(currentListItems.map(item => item.id))}
-                          disabled={currentListItems.length === 0}
-                        >
-                          {t('selectAll', 'Select all')}
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setFormTargetIds([])}
-                        >
-                          {t('clear', 'Clear')}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                      <div className="flex flex-col sm:flex-row gap-2">
-                        <div className="relative flex-1">
-                          <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
-                          <Input
-                            value={targetSearch}
-                            onChange={(e) => setTargetSearch(e.target.value)}
-                            placeholder={
-                              formTargetType === 'users'
-                                ? t('searchUsers', 'Search users...')
-                                : formTargetType === 'departments'
-                                  ? t('searchDepartments', 'Search departments or properties...')
-                                  : t('searchProperties', 'Search properties...')
-                            }
-                            className={cn(isRTL ? "pr-9 text-right" : "pl-9", "bg-white")}
-                          />
-                        </div>
-
-                        {formTargetType === 'departments' && departmentProperties.length > 0 && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-10">
-                                {t('filterByProperty')}
-                                {propertyFilters.length > 0 && (
-                                  <span className="ms-2 text-xs text-muted-foreground">({propertyFilters.length})</span>
-                                )}
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-64">
-                              <DropdownMenuLabel>{t('filterByProperty')}</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuCheckboxItem
-                                checked={propertyFilters.length === 0}
-                                onCheckedChange={() => setPropertyFilters([])}
-                              >
-                                {t('allProperties')}
-                              </DropdownMenuCheckboxItem>
-                              <DropdownMenuSeparator />
-                              {departmentProperties.map(propertyName => (
-                                <DropdownMenuCheckboxItem
-                                  key={propertyName}
-                                  checked={propertyFilters.includes(propertyName)}
-                                  onCheckedChange={(checked) => togglePropertyFilter(propertyName, Boolean(checked))}
-                                >
-                                  {propertyName}
-                                </DropdownMenuCheckboxItem>
-                              ))}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="max-h-64 overflow-y-auto border rounded-md p-2 bg-gray-50">
-                      {formTargetType === 'departments' ? (
-                        departmentGroups.length > 0 ? (
-                          <div className="flex flex-col gap-3">
-                            {departmentGroups.map((group) => {
-                              const groupIds = group.items.map(item => item.id)
-                              const selectedCount = groupIds.filter(id => formTargetIds.includes(id)).length
-                              const allSelected = selectedCount === group.items.length && group.items.length > 0
-
-                              return (
-                                <div key={group.name} className="rounded-md border bg-white">
-                                  <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-gray-50 px-3 py-2">
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-sm font-semibold text-gray-700">{group.name}</span>
-                                      <span className="text-xs text-gray-500">
-                                        {selectedCount}/{group.items.length}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => toggleGroupSelection(group.items, !allSelected)}
-                                      >
-                                        {allSelected ? t('clear', 'Clear') : t('selectAll', 'Select all')}
-                                      </Button>
-                                    </div>
-                                  </div>
-                                  <div className="flex flex-col gap-1 p-2">
-                                    {group.items.map((item) => (
-                                      <label key={item.id} className="flex items-center gap-2 rounded p-2 hover:bg-gray-50 cursor-pointer">
-                                        <input
-                                          type="checkbox"
-                                          checked={formTargetIds.includes(item.id)}
-                                          onChange={(e) => {
-                                            if (e.target.checked) {
-                                              setFormTargetIds([...formTargetIds, item.id])
-                                            } else {
-                                              setFormTargetIds(formTargetIds.filter(id => id !== item.id))
-                                            }
-                                          }}
-                                          className="h-4 w-4 rounded border-gray-300"
-                                        />
-                                        <span className="text-sm text-gray-700">{item.name}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        ) : (
-                          <p className="text-center py-6 text-gray-500 text-sm">
-                            {t('noItemsFound')}
-                          </p>
-                        )
-                      ) : currentListItems.length > 0 ? (
-                        currentListItems.map((item) => (
-                          <label key={item.id} className="flex items-center gap-2 p-2 hover:bg-white rounded cursor-pointer">
-                            <input
-                              type="checkbox"
-                              checked={formTargetIds.includes(item.id)}
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  setFormTargetIds([...formTargetIds, item.id])
-                                } else {
-                                  setFormTargetIds(formTargetIds.filter(id => id !== item.id))
-                                }
-                              }}
-                              className="h-4 w-4 rounded border-gray-300"
-                            />
-                            <span className="text-sm">{item.name}</span>
-                          </label>
-                        ))
-                      ) : (
-                        <p className="text-center py-4 text-gray-500 text-sm">
-                          {t('noItemsFound')}
-                        </p>
-                      )}
-                    </div>
-                    <p className="text-xs text-gray-500">
-                      {formTargetIds.length} {t('selected')}
-                    </p>
-                  </div>
-                )}
-
-                <Separator />
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>{t('validFrom', 'Valid from')}</Label>
-                    <input
-                      type="date"
-                      value={formValidFrom}
-                      onChange={(e) => setFormValidFrom(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('deadline')} ({t('optional')})</Label>
-                    <input
-                      type="date"
-                      value={formDeadline}
-                      onChange={(e) => setFormDeadline(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                    />
-                    <div className="flex flex-wrap gap-2">
-                      {dueDatePresets.map((preset) => (
-                        <Button
-                          key={preset.label}
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setFormDeadline(format(addDays(new Date(), preset.days), 'yyyy-MM-dd'))}
-                        >
-                          {preset.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('expiresAt', 'Expires at')}</Label>
-                    <input
-                      type="date"
-                      value={formExpiresAt}
-                      onChange={(e) => setFormExpiresAt(e.target.value)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t('priority_label', 'Priority')}</Label>
-                    <select
-                      value={formPriority}
-                      onChange={(e) => setFormPriority(e.target.value as any)}
-                      className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
-                    >
-                      <option value="normal">{t('normal', 'Normal')}</option>
-                      <option value="high">{t('high', 'High')}</option>
-                      <option value="compliance">{t('complianceMandatory')}</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between rounded-md border p-3">
-                  <div>
-                    <p className="text-sm font-medium">{t('sendNotifications', 'Send notifications')}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t('trainingNotifications.toggle_desc', 'Notify recipients when assignments are created.')}
-                    </p>
-                  </div>
-                  <Switch checked={sendNotifications} onCheckedChange={setSendNotifications} />
-                </div>
-
-                <Separator />
-
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm font-medium">{t('assignmentControls', 'Assignment controls')}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {t('assignmentControlsDesc', 'Add safeguards, reminders, and instructions.')}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>{t('instructions', 'Instructions')}</Label>
-                      <textarea
-                        value={formInstructions}
-                        onChange={(e) => setFormInstructions(e.target.value)}
-                        placeholder={t('instructionsPlaceholder', 'Optional notes for assignees...')}
-                        className="w-full min-h-[90px] px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold text-sm"
-                      />
-                    </div>
-                    <div className="space-y-3">
-                      <label className="flex items-center justify-between rounded-md border p-3 text-sm">
-                        <span>{t('requiresAcknowledgement', 'Requires acknowledgement')}</span>
-                        <Switch checked={requiresAcknowledgement} onCheckedChange={setRequiresAcknowledgement} />
-                      </label>
-                      <label className="flex items-center justify-between rounded-md border p-3 text-sm">
-                        <span>{t('notifyOnDue', 'Notify when due')}</span>
-                        <Switch checked={notifyOnDue} onCheckedChange={setNotifyOnDue} />
-                      </label>
-                      <div className="rounded-md border p-3 space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground">{t('reminders', 'Reminders')}</p>
-                        <div className="flex flex-wrap gap-2">
-                          {reminderOptions.map((option) => {
-                            const isSelected = reminderDaysBefore.includes(option.value)
-                            return (
-                              <Button
-                                key={option.value}
-                                type="button"
-                                variant={isSelected ? 'default' : 'outline'}
-                                size="sm"
-                                onClick={() => {
-                                  setReminderDaysBefore((prev) => {
-                                    if (prev.includes(option.value)) {
-                                      return prev.filter((v) => v !== option.value)
-                                    }
-                                    return [...prev, option.value].sort((a, b) => a - b)
-                                  })
-                                }}
-                              >
-                                {option.label}
-                              </Button>
-                            )
-                          })}
-                        </div>
-                        <p className="text-[11px] text-muted-foreground">
-                          {reminderDaysBefore.length > 0
-                            ? t('reminderSummary', '{{count}} reminders selected', { count: reminderDaysBefore.length })
-                            : t('reminderNone', 'No reminders selected')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="rounded-lg border bg-muted/20 p-3 text-xs space-y-2">
-                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                    {t('summary', 'Summary')}
-                  </p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <p className="text-muted-foreground">{t('module')}</p>
-                      <p className="font-medium">{selectedModuleName}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('assignTo')}</p>
-                      <p className="font-medium">{selectedTargetsLabel}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('deadline')}</p>
-                      <p className="font-medium">{formDeadline ? format(new Date(formDeadline), 'PPP') : t('none', 'None')}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('priority_label', 'Priority')}</p>
-                      <p className="font-medium capitalize">{formPriority}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">{t('acknowledgement', 'Acknowledgement')}</p>
-                      <p className="font-medium">{requiresAcknowledgement ? t('required', 'Required') : t('notRequired', 'Not required')}</p>
-                    </div>
-                  </div>
-                  {formValidFrom && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('validFrom', 'Valid from')}: {format(new Date(formValidFrom), 'PPP')}
-                    </p>
-                  )}
-                  {formExpiresAt && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('expiresAt', 'Expires at')}: {format(new Date(formExpiresAt), 'PPP')}
-                    </p>
-                  )}
-                  {formInstructions && (
-                    <p className="text-[11px] text-muted-foreground">
-                      {t('instructions', 'Instructions')}: {formInstructions}
-                    </p>
-                  )}
-                </div>
-
-                <div className={cn("flex justify-end gap-3 pt-4 border-t", isRTL ? "flex-row-reverse" : "")}>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowAssignmentDialog(false)
-                      resetForm()
-                    }}
-                  >
-                    {t('cancel')}
-                  </Button>
-                  <Button
-                    onClick={() => createAssignmentMutation.mutate()}
-                    disabled={validationErrors.length > 0 || createAssignmentMutation.isPending}
-                    className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}
-                  >
-                    {createAssignmentMutation.isPending ? (
-                      <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
-                    ) : null}
-                    {t('create')}
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        )
-      }
-    </div >
+      {showAssignmentDialog && (
+        <CreateAssignmentDialog
+          open={showAssignmentDialog}
+          onOpenChange={setShowAssignmentDialog}
+          isRTL={isRTL}
+          validationErrors={validationErrors}
+          formModuleId={formModuleId}
+          onFormModuleIdChange={setFormModuleId}
+          assignableModules={assignableModules}
+          moduleSelectValue={moduleSelectValue}
+          formTargetType={formTargetType}
+          onFormTargetTypeChange={(value) => {
+            setFormTargetType(value)
+            setFormTargetIds([])
+            setPropertyFilters([])
+            setTargetSearch('')
+          }}
+          formTargetIds={formTargetIds}
+          onFormTargetIdsChange={setFormTargetIds}
+          targetSearch={targetSearch}
+          onTargetSearchChange={setTargetSearch}
+          currentListItems={currentListItems}
+          departmentGroups={departmentGroups}
+          departmentProperties={departmentProperties}
+          propertyFilters={propertyFilters}
+          onTogglePropertyFilter={togglePropertyFilter}
+          onClearPropertyFilters={() => setPropertyFilters([])}
+          onToggleGroupSelection={toggleGroupSelection}
+          formValidFrom={formValidFrom}
+          onFormValidFromChange={setFormValidFrom}
+          formDeadline={formDeadline}
+          onFormDeadlineChange={setFormDeadline}
+          formExpiresAt={formExpiresAt}
+          onFormExpiresAtChange={setFormExpiresAt}
+          formPriority={formPriority}
+          onFormPriorityChange={setFormPriority}
+          sendNotifications={sendNotifications}
+          onSendNotificationsChange={setSendNotifications}
+          formInstructions={formInstructions}
+          onFormInstructionsChange={setFormInstructions}
+          requiresAcknowledgement={requiresAcknowledgement}
+          onRequiresAcknowledgementChange={setRequiresAcknowledgement}
+          notifyOnDue={notifyOnDue}
+          onNotifyOnDueChange={setNotifyOnDue}
+          reminderDaysBefore={reminderDaysBefore}
+          onReminderDaysBeforeChange={setReminderDaysBefore}
+          selectedModuleName={selectedModuleName}
+          selectedTargetsLabel={selectedTargetsLabel}
+          onSubmit={() => createAssignmentMutation.mutate()}
+          onCancel={() => {
+            setShowAssignmentDialog(false)
+            resetForm()
+          }}
+          isSubmitting={createAssignmentMutation.isPending}
+        />
+      )}
+    </div>
   )
 }
 
