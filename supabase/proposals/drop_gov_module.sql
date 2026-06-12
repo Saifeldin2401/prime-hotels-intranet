@@ -1,0 +1,76 @@
+-- =============================================================================
+-- PROPOSAL: Drop the gov_* governance module
+-- STATUS: NOT SAFE TO DROP — DO NOT APPLY
+-- =============================================================================
+--
+-- This file documents the triage findings for the gov_* module.
+-- It is intentionally left as a no-op so it cannot be accidentally applied.
+--
+-- Findings
+-- --------
+-- Task 2 required both conditions to be true before generating DROP statements:
+--   (a) ALL gov_* tables have 0 rows
+--   (b) No frontend code references gov_* identifiers
+--
+-- Condition (a): FAILED — tables with real data found:
+--
+--   gov_role_catalog          : 11 rows   (active role definitions)
+--   gov_legacy_role_map       :  8 rows   (legacy role mappings)
+--   gov_feature_flags         :  4 rows   (feature flag entries)
+--   gov_exec_metric_catalog   : 12 rows   (executive metric definitions)
+--   gov_kpi_catalog           :  8 rows   (KPI catalog entries)
+--
+--   The remaining 23 tables are empty (0 rows), likely because the feature
+--   has been scaffolded but not yet used in production.
+--
+-- Condition (b): FAILED — active frontend references found in:
+--
+--   src/pages/admin/GovernanceRisk.tsx          (gov_incident_reports, gov_authority_delegations,
+--                                                gov_v_active_delegations, gov_v_separation_of_duties_conflicts,
+--                                                gov_v_financial_override_events, gov_control_audit_log,
+--                                                gov_role_catalog; calls gov_revoke_delegation,
+--                                                gov_expire_delegations)
+--   src/pages/admin/GovernanceExecutiveDashboard.tsx (gov_v_property_executive_rollup,
+--                                                gov_v_portfolio_executive_rollup,
+--                                                gov_v_department_accountability_gaps,
+--                                                gov_v_kpi_raci_gaps, gov_exec_metric_catalog,
+--                                                gov_portfolios, gov_exec_metric_facts)
+--   src/pages/admin/GovernanceControls.tsx      (gov_role_catalog, gov_feature_flags,
+--                                                gov_user_role_assignments, gov_ownership_entities,
+--                                                gov_portfolios, gov_property_portfolios,
+--                                                gov_property_clusters, gov_cluster_properties,
+--                                                gov_department_governance; calls gov_set_feature_flag)
+--   src/pages/admin/GovernanceAssignments.tsx   (gov_role_catalog, gov_portfolios,
+--                                                gov_ownership_entities, gov_kpi_catalog,
+--                                                gov_department_kpi_targets, gov_kpi_raci_assignments,
+--                                                gov_portfolio_role_assignments,
+--                                                gov_property_executive_assignments,
+--                                                gov_owner_visibility_grants)
+--   src/pages/admin/FinanceControls.tsx         (gov_role_catalog, gov_budget_cycles,
+--                                                gov_department_budgets, gov_financial_approval_policies,
+--                                                gov_financial_actions_log)
+--
+-- All five pages are guarded by ProtectedRoute with roles
+-- ['corporate_admin', 'regional_admin'] — they are internal admin pages, not
+-- public-facing, but they are actively used.
+--
+-- Views that would also need dropping (7 total):
+--   gov_v_active_delegations
+--   gov_v_department_accountability_gaps
+--   gov_v_financial_override_events
+--   gov_v_kpi_raci_gaps
+--   gov_v_portfolio_executive_rollup
+--   gov_v_property_executive_rollup
+--   gov_v_separation_of_duties_conflicts
+--
+-- Recommendation
+-- --------------
+-- Do NOT drop this module.  The security remediation needed for gov_* is:
+--   1. Ensure RLS is enabled on all gov_* tables (check with is_rls_enabled()).
+--   2. Revoke anon EXECUTE on gov_expire_delegations, gov_revoke_delegation,
+--      gov_set_feature_flag — handled in revoke_anon_secdef_functions.sql.
+--   3. If the gov_* feature is abandoned in future, re-run this triage and
+--      generate a proper DROP migration at that time.
+-- =============================================================================
+
+-- (no SQL statements — this file is intentionally a no-op)
