@@ -32,7 +32,8 @@ export interface UseTrainingModulesPaginatedOptions {
 export interface TrainingModulesPaginatedResult {
   modules: (TrainingModule & {
     profiles?: { full_name: string; email: string }
-    training_content_blocks?: TrainingContentBlock[]
+    // training_content_blocks are now stored in documents (content_type='training_block').
+    // Fetch them separately with: supabase.from('documents').eq('content_type','training_block').eq('training_module_id', id)
     training_quizzes?: TrainingQuiz[]
   })[]
   nextCursor: string | null
@@ -63,18 +64,14 @@ export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginate
             full_name,
             email
           ),
-          training_content_blocks(
-            id,
-            type,
-            order,
-            is_mandatory
-          ),
           training_quizzes(
             id,
             type,
             order
           )
         `)
+        // training_content_blocks removed – now in documents (content_type='training_block').
+        // Fetch per-module blocks separately when needed.
         .order('created_at', { ascending: false })
         .eq('is_deleted', false)
         .limit(limit)
@@ -97,7 +94,6 @@ export function useTrainingModulesPaginated(options?: UseTrainingModulesPaginate
 
       const modules = data as unknown as (TrainingModule & {
         profiles?: { full_name: string; email: string }
-        training_content_blocks?: TrainingContentBlock[]
         training_quizzes?: TrainingQuiz[]
       })[]
 
@@ -143,18 +139,13 @@ export function useTrainingModules(filters?: {
             full_name,
             email
           ),
-          training_content_blocks(
-            id,
-            type,
-            order,
-            is_mandatory
-          ),
           training_quizzes(
             id,
             type,
             order
           )
         `)
+        // training_content_blocks removed – now in documents (content_type='training_block').
         .order('created_at', { ascending: false })
         .eq('is_deleted', false)
 
@@ -171,7 +162,7 @@ export function useTrainingModules(filters?: {
 
       return data as unknown as (TrainingModule & {
         profiles?: { full_name: string; email: string }
-        training_content_blocks?: TrainingContentBlock[]
+        // training_content_blocks now live in documents (content_type='training_block')
         training_quizzes?: TrainingQuiz[]
       })[]
     },
@@ -190,15 +181,13 @@ export function useTrainingModule(moduleId: string) {
             full_name,
             email
           ),
-          training_content_blocks(
-            *,
-            order
-          ),
           training_quizzes(
             *,
             order
           )
         `)
+        // training_content_blocks removed – now in documents (content_type='training_block').
+        // Fetch blocks separately: supabase.from('documents').eq('content_type','training_block').eq('training_module_id', moduleId)
         .eq('id', moduleId)
         .eq('is_deleted', false)
         .single()
@@ -207,7 +196,7 @@ export function useTrainingModule(moduleId: string) {
 
       return data as TrainingModule & {
         profiles?: { full_name: string; email: string }
-        training_content_blocks?: TrainingContentBlock[]
+        // training_content_blocks now in documents with content_type='training_block'
         training_quizzes?: TrainingQuiz[]
       }
     },
@@ -268,14 +257,22 @@ export function useUpdateTrainingModule() {
 }
 
 // Training Content Blocks
+// These are now stored in documents with content_type='training_block'.
+// The block-specific fields map as: type→block_type, order→block_order.
 export function useCreateContentBlock() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (block: Partial<TrainingContentBlock>) => {
+      const { type, order, ...rest } = block as Record<string, unknown>
       const { data, error } = await supabase
-        .from('training_content_blocks')
-        .insert(block)
+        .from('documents')
+        .insert({
+          ...rest,
+          content_type: 'training_block',
+          block_type: type,
+          block_order: order,
+        })
         .select()
         .single()
 
@@ -296,10 +293,15 @@ export function useUpdateContentBlock() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TrainingContentBlock> & { id: string }) => {
+      const { type, order, ...rest } = updates as Record<string, unknown>
+      const mapped: Record<string, unknown> = { ...rest }
+      if (type !== undefined) mapped.block_type = type
+      if (order !== undefined) mapped.block_order = order
       const { data, error } = await supabase
-        .from('training_content_blocks')
-        .update(updates)
+        .from('documents')
+        .update(mapped)
         .eq('id', id)
+        .eq('content_type', 'training_block')
         .select()
         .single()
 
@@ -317,17 +319,19 @@ export function useDeleteContentBlock() {
 
   return useMutation({
     mutationFn: async (blockId: string) => {
-      // First get the block to know which module to invalidate
+      // training_content_blocks consolidated into documents (content_type='training_block').
       const { data: block } = await supabase
-        .from('training_content_blocks')
+        .from('documents')
         .select('training_module_id')
         .eq('id', blockId)
+        .eq('content_type', 'training_block')
         .single()
 
       const { error } = await supabase
-        .from('training_content_blocks')
+        .from('documents')
         .update({ is_deleted: true })
         .eq('id', blockId)
+        .eq('content_type', 'training_block')
 
       if (error) throw error
       return block?.training_module_id

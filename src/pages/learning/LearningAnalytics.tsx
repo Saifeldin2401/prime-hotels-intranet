@@ -347,9 +347,11 @@ export default function LearningAnalytics() {
                 .order('updated_at', { ascending: false })
                 .limit(20)
 
+            // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: moduleBlocks } = await supabase
-                .from('training_content_blocks')
-                .select('id, training_module_id, type, "order"')
+                .from('documents')
+                .select('id, training_module_id, block_type as type, block_order as "order"')
+                .eq('content_type', 'training_block')
 
             const { data: moduleProgress } = await supabase
                 .from('learning_progress')

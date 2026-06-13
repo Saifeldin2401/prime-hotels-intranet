@@ -212,14 +212,17 @@ export async function getArticles(
 
 export async function getArticleById(id: string, userId?: string): Promise<KnowledgeArticle | null> {
     try {
+        // sop_documents consolidated into documents (content_type='sop').
+        // linked_training_id and linked_quiz_id are now direct columns on documents.
         const { data, error } = await supabase
             .from('documents')
             .select(`
                 *,
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
                 last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
-                sop:sop_documents(linked_training_id, linked_quiz_id),
-                department:departments(id, name),\n                category:categories(id, name),\n                document_department_access(department_id, department:departments(id, name))
+                department:departments(id, name),
+                category:categories(id, name),
+                document_department_access(department_id, department:departments(id, name))
             `)
             .eq('id', id)
             .eq('is_deleted', false)

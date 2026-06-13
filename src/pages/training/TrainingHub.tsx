@@ -297,17 +297,19 @@ export default function TrainingHub() {
 
       if (error) throw error
 
-      // Clone content blocks if they exist
+      // Clone content blocks if they exist.
+      // training_content_blocks consolidated into documents (content_type='training_block').
       const { data: contentBlocks } = await supabase
-        .from('training_content_blocks')
+        .from('documents')
         .select('*')
+        .eq('content_type', 'training_block')
         .eq('training_module_id', module.id)
 
       if (contentBlocks && contentBlocks.length > 0) {
         await supabase
-          .from('training_content_blocks')
+          .from('documents')
           .insert(
-            contentBlocks.map(block => ({
+            contentBlocks.map((block: Record<string, unknown>) => ({
               ...block,
               id: undefined,
               training_module_id: cloned.id,

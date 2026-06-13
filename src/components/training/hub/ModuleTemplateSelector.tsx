@@ -51,6 +51,8 @@ export function ModuleTemplateSelector({
   const { data: templates, isLoading, isError } = useQuery({
     queryKey: ['training-templates', selectedCategory],
     queryFn: async () => {
+      // training_content_templates keeps its own table (13 seed rows preserved).
+      // Future: migrate to documents with content_type='training_template'.
       let query = supabase
         .from('training_content_templates')
         .select('*')

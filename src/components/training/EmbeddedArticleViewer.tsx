@@ -156,33 +156,31 @@ const EmbeddedArticleViewerInner = ({
         },
         enabled: !!sopId
     })
-    const shouldTryLegacy = !!sopId && !isDocumentLoading && (!documentData || !!documentError)
-
+    // sop_documents has been consolidated into documents (content_type='sop').
+    // If the primary documents query didn't find the record by UUID, try matching
+    // by sop_code for the legacy "code" lookup pattern.
     const isLikelyUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    const shouldTryBySopCode = !!sopId && !isDocumentLoading && !isLikelyUuid(sopId) && (!documentData || !!documentError)
 
     const { data: legacyDocument, isLoading: isLegacyLoading, error: legacyError } = useQuery({
-        queryKey: ['legacy-sop-document', sopId],
+        queryKey: ['legacy-sop-document-by-code', sopId],
         queryFn: async () => {
-            let query = supabase
-                .from('sop_documents')
-                .select('id, title, description, content, status, updated_at, published_at, code')
-
-            if (isLikelyUuid(sopId)) {
-                query = query.eq('id', sopId)
-            } else {
-                query = query.eq('code', sopId)
-            }
-
-            const { data, error } = await query.maybeSingle()
+            // Look up by sop_code in the unified documents table.
+            const { data, error } = await supabase
+                .from('documents')
+                .select('id, title, description, content, status, updated_at, published_at, sop_code as code')
+                .eq('content_type', 'sop')
+                .eq('sop_code', sopId)
+                .maybeSingle()
 
             if (error) throw error
             return data as LegacySopDocument | null
         },
-        enabled: shouldTryLegacy
+        enabled: shouldTryBySopCode
     })
 
     const document = (documentData || legacyDocument) as LegacySopDocument | null
-    const isLoading = isDocumentLoading || (shouldTryLegacy && isLegacyLoading)
+    const isLoading = isDocumentLoading || (shouldTryBySopCode && isLegacyLoading)
     const resolvedError = document ? null : (documentError || legacyError)
 
     // Translation state

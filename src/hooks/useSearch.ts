@@ -402,19 +402,22 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
         }
 
         if (includeSOPs) {
+          // sop_documents consolidated into documents (content_type='sop').
+          // SOP status values are now mapped to document_status enum (DRAFT/PUBLISHED/etc).
           try {
             const sopLimit = Math.ceil(limit / 4)
             const sopQueries: Array<PromiseLike<{ data: any; error: { message?: string } | null }>> = []
 
             const buildSopQuery = () => {
               let q = supabase
-                .from('sop_documents')
-                .select('id, title, description, category, version, property_id, department_id, status')
-                .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,category.ilike.%${escapedQuery}%`)
+                .from('documents')
+                .select('id, title, description, sop_code as category, current_version as version, property_id, department_id, status')
+                .eq('content_type', 'sop')
+                .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%`)
                 .limit(sopLimit)
 
               if (!canSearchDraftContent) {
-                q = q.eq('status', 'published')
+                q = q.eq('status', 'PUBLISHED')
               }
 
               return q
@@ -431,7 +434,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             const sopResults = await Promise.all(sopQueries)
             const sops = dedupeById(sopResults.flatMap((result) => result.data || []))
 
-            results.push(...sops.map((sop) => ({
+            results.push(...sops.map((sop: { id: string; title: string; description?: string; category?: string; version?: number; status?: string }) => ({
               id: sop.id,
               type: 'sop' as const,
               title: sop.title,
@@ -746,16 +749,18 @@ export function useSearchSuggestions(query: string) {
           })))
 
           if (suggestions.length < 8) {
+            // sop_documents consolidated into documents (content_type='sop').
             const sopQueries: Array<PromiseLike<{ data: any }>> = []
 
             const buildSopSuggestionQuery = () => {
               let q = supabase
-                .from('sop_documents')
+                .from('documents')
                 .select('id, title, status')
+                .eq('content_type', 'sop')
                 .ilike('title', `%${escapedQuery}%`)
                 .limit(3)
 
-              if (!canSearchDraftContent) q = q.eq('status', 'published')
+              if (!canSearchDraftContent) q = q.eq('status', 'PUBLISHED')
               return q
             }
 
@@ -770,7 +775,7 @@ export function useSearchSuggestions(query: string) {
             const sopResults = await Promise.all(sopQueries)
             const sops = dedupeById(sopResults.flatMap((result) => result.data || [])).slice(0, 3)
 
-            suggestions.push(...sops.map((sop) => ({
+            suggestions.push(...sops.map((sop: { id: string; title: string }) => ({
               id: sop.id,
               text: sop.title,
               type: 'document' as const,

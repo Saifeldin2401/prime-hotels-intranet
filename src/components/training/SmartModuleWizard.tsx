@@ -486,7 +486,14 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 }
             })
 
-            await supabase.from('training_content_blocks').insert(contentBlocks)
+            // training_content_blocks consolidated into documents (content_type='training_block').
+            const docBlocks = (contentBlocks as Array<Record<string, unknown>>).map((b) => ({
+                ...b,
+                content_type: 'training_block',
+                block_type: b.type,
+                block_order: b.order,
+            }))
+            await supabase.from('documents').insert(docBlocks)
 
             // Create assignment rules if auto-assign is enabled
             if (courseConfig.assignmentType === 'auto_assign') {
@@ -517,16 +524,19 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
 
             // Link selected documents as resources
             if (selectedDocIds.length > 0) {
+                // training_module_resources consolidated into documents (content_type='training_resource').
                 const resources = selectedDocIds.map((docId, index) => ({
+                    id: docId,
+                    content_type: 'training_resource',
                     training_module_id: module.id,
-                    resource_type: 'document',
-                    resource_id: docId,
-                    title: documents?.find(d => d.id === docId)?.title || 'Document',
-                    display_order: index + 1,
-                    is_required: false
+                    block_order: index + 1,
+                    is_mandatory: false,
+                    title: documents?.find((d: { id: string; title?: string }) => d.id === docId)?.title || 'Document',
+                    status: 'DRAFT',
+                    visibility: 'all_properties',
                 }))
 
-                await supabase.from('training_module_resources').insert(resources)
+                await supabase.from('documents').insert(resources)
             }
 
             onOpenChange(false)
