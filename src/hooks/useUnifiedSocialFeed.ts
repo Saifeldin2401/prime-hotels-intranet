@@ -273,7 +273,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
 
       // 4. My training assignments
       const { data: trainings } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select('*')
         .eq('target_type', 'user')
         .eq('target_id', user.id)

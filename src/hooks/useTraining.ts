@@ -415,7 +415,7 @@ export function useTrainingAssignments(filters?: {
     queryFn: async () => {
       // Use a single query with proper joins to avoid N+1
       let query = supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select(`
           id,
           content_type,
@@ -480,7 +480,7 @@ export function useCreateTrainingAssignment() {
       if (!user) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .insert({
           ...assignment,
           assigned_by: user.id,
@@ -506,7 +506,7 @@ export function useTrainingProgress(userId?: string, trainingId?: string) {
     queryKey: ['training-progress', userId, trainingId],
     queryFn: async () => {
       let query = supabase
-        .from('learning_progress')
+        .from('training_progress')
         .select(`
           id,
           user_id,
@@ -851,7 +851,7 @@ export function useTrainingStats() {
 
       // Get user's assignments
       const { data: assignments } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select('due_date, content_id')
         .eq('target_id', user.id)
         .eq('target_type', 'user')
@@ -904,7 +904,7 @@ export function useMyAssignments() {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'learning_progress', filter: `user_id=eq.${user.id}` },
+        { event: '*', schema: 'public', table: 'training_progress', filter: `user_id=eq.${user.id}` },
         invalidateMyAssignments
       )
       .on(

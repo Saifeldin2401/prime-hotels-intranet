@@ -134,7 +134,7 @@ export default function MyTeam() {
 
             const [progressResult, certResult] = await Promise.all([
                 supabase
-                    .from('learning_progress')
+                    .from('training_progress')
                     .select('user_id, status, score_percentage, updated_at, content_type')
                     .in('user_id', teamMemberIds)
                     .eq('content_type', 'module'),

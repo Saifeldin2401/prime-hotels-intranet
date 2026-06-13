@@ -300,7 +300,7 @@ export default function LearningAnalytics() {
 
             // Team Training Progress (from TrainingDashboard logic)
             const { data: teamProgressData } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select(`
                     id,
                     status,
@@ -352,7 +352,7 @@ export default function LearningAnalytics() {
                 .select('id, training_module_id, type, "order"')
 
             const { data: moduleProgress } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select('training_module_id, content_id, status, progress_percentage, time_spent_seconds')
                 .eq('content_type', 'module')
                 .gte('last_activity_at', dateFilter)

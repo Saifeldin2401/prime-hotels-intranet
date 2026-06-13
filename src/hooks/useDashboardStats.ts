@@ -202,7 +202,7 @@ export function usePropertyManagerStats(options?: { enabled?: boolean }) {
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
@@ -214,7 +214,7 @@ export function usePropertyManagerStats(options?: { enabled?: boolean }) {
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -326,7 +326,7 @@ export function useDepartmentHeadStats() {
                 (async () => {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
@@ -338,7 +338,7 @@ export function useDepartmentHeadStats() {
                 (async () => {
                     if (deptUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -515,7 +515,7 @@ export function useHRStats(options?: { propertyId?: string; enabled?: boolean })
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
@@ -527,7 +527,7 @@ export function useHRStats(options?: { propertyId?: string; enabled?: boolean })
                 (async () => {
                     if (propUserIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -643,7 +643,7 @@ export function useAreaManagerStats(options?: { propertyId?: string; enabled?: b
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
@@ -655,7 +655,7 @@ export function useAreaManagerStats(options?: { propertyId?: string; enabled?: b
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -787,7 +787,7 @@ export function useCorporateStats(options?: { propertyId?: string; enabled?: boo
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('status', 'completed')
                         .eq('content_type', 'module')
@@ -799,7 +799,7 @@ export function useCorporateStats(options?: { propertyId?: string; enabled?: boo
                 (async () => {
                     if (userIds.length === 0) return { count: 0 }
                     return supabase
-                        .from('learning_progress')
+                        .from('training_progress')
                         .select('id', { count: 'exact', head: true })
                         .eq('content_type', 'module')
                         .or('is_deleted.is.null,is_deleted.eq.false')

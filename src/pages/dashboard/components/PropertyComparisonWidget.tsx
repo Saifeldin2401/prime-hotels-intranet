@@ -85,7 +85,7 @@ function usePropertyComparison() {
 
                     if (userIds.length > 0) {
                         const { count: completed } = await supabase
-                            .from('learning_progress')
+                            .from('training_progress')
                             .select('*', { count: 'exact', head: true })
                             .eq('status', 'completed')
                             .eq('content_type', 'module')
@@ -93,7 +93,7 @@ function usePropertyComparison() {
                             .in('user_id', userIds)
 
                         const { count: total } = await supabase
-                            .from('learning_progress')
+                            .from('training_progress')
                             .select('*', { count: 'exact', head: true })
                             .eq('content_type', 'module')
                             .or('is_deleted.is.null,is_deleted.eq.false')

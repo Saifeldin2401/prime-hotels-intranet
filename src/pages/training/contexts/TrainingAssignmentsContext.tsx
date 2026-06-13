@@ -472,7 +472,7 @@ export function TrainingAssignmentsProvider({
     queryKey: ['learning-assignments'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select('*')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')
@@ -618,7 +618,7 @@ export function TrainingAssignmentsProvider({
     queryFn: async () => {
       if (!selectedProgress?.user_id || selectedModuleQuizIds.length === 0) return []
       const { data, error } = await supabase
-        .from('learning_progress')
+        .from('training_progress')
         .select('content_id, score_percentage, passed, completed_at, updated_at, metadata')
         .eq('user_id', selectedProgress.user_id)
         .eq('content_type', 'quiz')
@@ -843,7 +843,7 @@ export function TrainingAssignmentsProvider({
   const deleteAssignmentMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .delete()
         .eq('id', id)
       if (error) throw error

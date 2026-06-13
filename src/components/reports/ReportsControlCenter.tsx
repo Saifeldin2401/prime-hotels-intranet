@@ -79,8 +79,8 @@ async function fetchReportData(reportType: string, dateFrom?: string, dateTo?: s
     }
     case 'training': {
       const [assignments, progress] = await Promise.all([
-        createdAtRange(supabase.from('learning_assignments').select('id,status,due_date,created_at'), 'created_at').limit(500),
-        createdAtRange(supabase.from('learning_progress').select('id,status,completion_percentage,updated_at'), 'updated_at').limit(500)
+        createdAtRange(supabase.from('training_assignment_rules').select('id,status,due_date,created_at'), 'created_at').limit(500),
+        createdAtRange(supabase.from('training_progress').select('id,status,completion_percentage,updated_at'), 'updated_at').limit(500)
       ])
       return {
         learning_assignments: assignments.data || [],

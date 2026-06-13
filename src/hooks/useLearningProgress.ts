@@ -48,7 +48,7 @@ export function useLearningProgress() {
         refetchOnReconnect: true,
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select(`
           *,
           profiles:user_id (

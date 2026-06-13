@@ -160,7 +160,7 @@ export default function TrainingHub() {
     queryKey: ['learning-assignments-module-links'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .select('content_id')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')

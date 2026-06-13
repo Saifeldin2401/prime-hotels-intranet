@@ -315,7 +315,7 @@ export default function TrainingModules() {
   const deleteModuleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error: assignmentError } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .delete()
         .eq('content_type', 'module')
         .eq('content_id', id)
@@ -369,7 +369,7 @@ export default function TrainingModules() {
   const unassignModuleMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
-        .from('learning_assignments')
+        .from('training_assignment_rules')
         .delete()
         .eq('content_type', 'module')
         .eq('content_id', id)

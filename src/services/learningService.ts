@@ -239,7 +239,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
         overridesResult,
     ] = await Promise.all([
         supabase
-            .from('learning_assignments')
+            .from('training_assignment_rules')
             .select('*')
             .eq('content_type', 'module')
             .eq('content_id', moduleId)
@@ -263,7 +263,7 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
             .from('properties')
             .select('id, name'),
         supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('content_type', 'module')
             .eq('content_id', moduleId),
@@ -635,7 +635,7 @@ export const learningService = {
 
     async updateAssignment(id: string, updates: Partial<CreateAssignmentDTO>) {
         const { data, error } = await supabase
-            .from('learning_assignments')
+            .from('training_assignment_rules')
             .update(updates)
             .eq('id', id)
             .select()
@@ -647,7 +647,7 @@ export const learningService = {
 
     async deleteAssignment(id: string) {
         const { error } = await supabase
-            .from('learning_assignments')
+            .from('training_assignment_rules')
             .update({ is_deleted: true })
             .eq('id', id)
 
@@ -656,7 +656,7 @@ export const learningService = {
 
     async getAssignments(targetId?: string, targetType?: string) {
         let query = supabase
-            .from('learning_assignments')
+            .from('training_assignment_rules')
             .select('*')
             .order('created_at', { ascending: false })
             .eq('is_deleted', false)
@@ -728,7 +728,7 @@ export const learningService = {
         })
 
         const { data, error } = await supabase
-            .from('learning_assignments')
+            .from('training_assignment_rules')
             .select('*')
             .or(orSegments.join(','))
             .order('created_at', { ascending: false })
@@ -745,7 +745,7 @@ export const learningService = {
         const [progressResult, exemptionsResult, overridesResult] = contentIds.length > 0
             ? await Promise.all([
                 supabase
-                    .from('learning_progress')
+                    .from('training_progress')
                     .select('*')
                     .eq('user_id', user.id)
                     .in('content_id', contentIds),
@@ -948,7 +948,7 @@ export const learningService = {
         if (exemptionError) throw exemptionError
 
         const { data: progressRow, error: progressSelectError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('user_id', userId)
             .eq('content_type', 'module')
@@ -959,7 +959,7 @@ export const learningService = {
 
         if (progressRow) {
             const { error: progressUpdateError } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .update({
                     status: 'excused',
                     updated_at: timestamp,
@@ -983,7 +983,7 @@ export const learningService = {
         if (restoreError) throw restoreError
 
         const { data: progressRow, error: progressSelectError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('user_id', userId)
             .eq('content_type', 'module')
@@ -1001,7 +1001,7 @@ export const learningService = {
                         : 'assigned'
 
             const { error: progressUpdateError } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .update({
                     status: restoredStatus,
                     updated_at: timestamp,
@@ -1064,7 +1064,7 @@ export const learningService = {
     async resetModuleProgress(moduleId: string, userId: string) {
         const timestamp = new Date().toISOString()
         const { data: existingRow, error: selectError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('user_id', userId)
             .eq('content_type', 'module')
@@ -1095,7 +1095,7 @@ export const learningService = {
         }
 
         const { error } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .upsert(payload, { onConflict: 'user_id,content_type,content_id' })
 
         if (error) throw error
@@ -1122,7 +1122,7 @@ export const learningService = {
         if (quizContentIds.length === 0) return
 
         const { data: existingQuizRows, error: quizRowsError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('user_id', userId)
             .eq('content_type', 'quiz')
@@ -1160,7 +1160,7 @@ export const learningService = {
         })
 
         const { error: quizResetError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .upsert(quizResetPayload, { onConflict: 'user_id,content_type,content_id' })
 
         if (quizResetError) throw quizResetError
@@ -1236,7 +1236,7 @@ export const learningService = {
 
     async getAssignmentProgress(assignmentId: string) {
         const { data, error } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select(`
                 *,
                 user:profiles!learning_progress_user_id_fkey(full_name, job_title)
@@ -1254,7 +1254,7 @@ export const learningService = {
         }
 
         const { data: existingRow, error: existingError } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .select('*')
             .eq('user_id', progress.user_id)
             .eq('content_type', progress.content_type)
@@ -1322,7 +1322,7 @@ export const learningService = {
         }
 
         const { data, error } = await supabase
-            .from('learning_progress')
+            .from('training_progress')
             .upsert(progressData, { onConflict: 'user_id,content_type,content_id' })
             .select()
             .single()

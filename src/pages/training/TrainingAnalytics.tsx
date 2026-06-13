@@ -110,7 +110,7 @@ export default function TrainingAnalytics() {
 
             // Fetch assignments
             let assignmentQuery = supabase
-                .from('learning_assignments')
+                .from('training_assignment_rules')
                 .select('id, content_type, created_at')
 
             if (startDate) {
@@ -122,7 +122,7 @@ export default function TrainingAnalytics() {
 
             // Fetch progress
             let progressQuery = supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select('id, status, score_percentage, completed_at')
 
             if (startDate) {
@@ -193,13 +193,13 @@ export default function TrainingAnalytics() {
 
             for (const module of modules || []) {
                 const { data: assignments } = await supabase
-                    .from('learning_assignments')
+                    .from('training_assignment_rules')
                     .select('id')
                     .eq('content_id', module.id)
                     .eq('content_type', 'module')
 
                 const { data: progress } = await supabase
-                    .from('learning_progress')
+                    .from('training_progress')
                     .select('status, score_percentage')
                     .eq('content_id', module.id)
                     .eq('content_type', 'module')

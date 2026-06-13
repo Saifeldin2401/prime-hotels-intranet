@@ -157,7 +157,7 @@ export async function awardCertificationPathCertificates(
       )
 
       const { data: progressRows, error: progressError } = await supabase
-        .from('learning_progress')
+        .from('training_progress')
         .select('content_id,status,score_percentage')
         .eq('user_id', input.userId)
         .eq('content_type', 'module')

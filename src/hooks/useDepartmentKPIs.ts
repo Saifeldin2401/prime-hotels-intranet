@@ -122,13 +122,13 @@ export function useDepartmentKPIs(propertyId?: string) {
 
                 // Calculate Training Completion Rate
                 const { count: totalTraining } = await supabase
-                    .from('learning_assignments')
+                    .from('training_assignment_rules')
                     .select('*', { count: 'exact', head: true })
                     .eq('target_type', 'user')
                     .in('target_id', userIds)
 
                 const { count: completedTraining } = await supabase
-                    .from('learning_progress')
+                    .from('training_progress')
                     .select('*', { count: 'exact', head: true })
                     .in('user_id', userIds)
                     .eq('status', 'completed')

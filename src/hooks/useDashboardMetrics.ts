@@ -232,7 +232,7 @@ export function useDashboardMetrics(propertyId?: string): DashboardMetrics {
       }
 
       const { data: trainingData, error: trainingError } = await supabase
-        .from('learning_progress')
+        .from('training_progress')
         .select('status, created_at')
         .eq('user_id', user.id)
         .or('is_deleted.is.null,is_deleted.eq.false')

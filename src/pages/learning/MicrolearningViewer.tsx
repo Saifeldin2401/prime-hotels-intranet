@@ -64,7 +64,7 @@ export default function MicrolearningViewer() {
         queryKey: ['learning-progress', id],
         queryFn: async () => {
             const { data } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select('*')
                 .eq('user_id', user?.id)
                 .eq('content_id', id)

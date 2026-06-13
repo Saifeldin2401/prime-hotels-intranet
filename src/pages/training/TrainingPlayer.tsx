@@ -1177,7 +1177,7 @@ export default function TrainingPlayer() {
             }
 
             const { data } = await supabase
-                .from('learning_progress')
+                .from('training_progress')
                 .select('id, status, progress_percentage, score_percentage, passed, completed_at, last_block_index, last_block_id, time_spent_seconds, metadata, updated_at')
                 .eq('user_id', user.id)
                 .eq('content_type', 'module')
@@ -1211,7 +1211,7 @@ export default function TrainingPlayer() {
             .on('postgres_changes', {
                 event: '*',
                 schema: 'public',
-                table: 'learning_progress',
+                table: 'training_progress',
                 filter: `user_id=eq.${user.id}`
             }, (payload) => {
                 const next = payload.new as PersistedModuleProgress & {

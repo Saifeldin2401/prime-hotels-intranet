@@ -484,7 +484,7 @@ export function QuizComponentEnhanced({
 
             if (user?.id) {
                 const { data: progressData } = await supabase
-                    .from('learning_progress')
+                    .from('training_progress')
                     .select('metadata')
                     .eq('user_id', user.id)
                     .eq('content_type', 'quiz')
@@ -535,7 +535,7 @@ export function QuizComponentEnhanced({
             .channel(`quiz-progress-${user.id}-${quiz.id}-${attemptContextKey}`)
             .on(
                 'postgres_changes',
-                { event: '*', schema: 'public', table: 'learning_progress', filter: `user_id=eq.${user.id}` },
+                { event: '*', schema: 'public', table: 'training_progress', filter: `user_id=eq.${user.id}` },
                 (payload) => {
                     const row = (payload.new && typeof payload.new === 'object'
                         ? payload.new

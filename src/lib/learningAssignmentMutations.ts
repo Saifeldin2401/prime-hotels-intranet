@@ -107,7 +107,7 @@ async function fetchExistingAssignments(assignments: LearningAssignmentMutationP
 
   const queries = Array.from(contentIdsByType.entries()).map(([contentType, contentIds]) =>
     supabase
-      .from('learning_assignments')
+      .from('training_assignment_rules')
       .select('id, target_type, target_id, content_type, content_id, is_deleted, created_at')
       .eq('content_type', contentType)
       .in('content_id', Array.from(contentIds))
@@ -128,14 +128,14 @@ async function insertLearningAssignments(assignments: LearningAssignmentMutation
   if (assignments.length === 0) return
 
   const { error } = await supabase
-    .from('learning_assignments')
+    .from('training_assignment_rules')
     .insert(assignments)
 
   if (!error) return
   if (!isLearningAssignmentSchemaColumnMismatchError(error)) throw error
 
   const { error: legacyError } = await supabase
-    .from('learning_assignments')
+    .from('training_assignment_rules')
     .insert(assignments.map(stripUnsupportedColumns))
 
   if (legacyError) throw legacyError
@@ -148,7 +148,7 @@ async function updateLearningAssignment(id: string, payload: LearningAssignmentM
   }
 
   const { error } = await supabase
-    .from('learning_assignments')
+    .from('training_assignment_rules')
     .update(updatePayload)
     .eq('id', id)
 
@@ -156,7 +156,7 @@ async function updateLearningAssignment(id: string, payload: LearningAssignmentM
   if (!isLearningAssignmentSchemaColumnMismatchError(error)) throw error
 
   const { error: legacyError } = await supabase
-    .from('learning_assignments')
+    .from('training_assignment_rules')
     .update(stripUnsupportedColumns(updatePayload))
     .eq('id', id)
 
