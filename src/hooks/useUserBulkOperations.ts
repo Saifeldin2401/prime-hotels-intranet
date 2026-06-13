@@ -66,12 +66,12 @@ export function useUserBulkOperations() {
                     }
 
                     // Audit
-                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('system_events').insert({
+                        event_type: 'audit',
+                        actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
-                        action: 'bulk_role_assign',
-                        user_id: actorId,
-                        details: { new_role: role, bulk_operation: true },
+                        metadata: { action: 'bulk_role_assign', details: { new_role: role, bulk_operation: true } },
                     })
                     if (auditError) throw auditError
 
@@ -146,12 +146,12 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('system_events').insert({
+                        event_type: 'audit',
+                        actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
-                        action: 'bulk_deactivate',
-                        user_id: actorId,
-                        details: { reason, bulk_operation: true, suspend_until: suspendUntil || null },
+                        metadata: { action: 'bulk_deactivate', details: { reason, bulk_operation: true, suspend_until: suspendUntil || null } },
                     })
                     if (auditError) throw auditError
 
@@ -221,12 +221,12 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('system_events').insert({
+                        event_type: 'audit',
+                        actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
-                        action: 'bulk_activate',
-                        user_id: actorId,
-                        details: { bulk_operation: true },
+                        metadata: { action: 'bulk_activate', details: { bulk_operation: true } },
                     })
                     if (auditError) throw auditError
 
@@ -295,12 +295,12 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('system_events').insert({
+                        event_type: 'audit',
+                        actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
-                        action: 'bulk_force_password_reset',
-                        user_id: actorId,
-                        details: { bulk_operation: true },
+                        metadata: { action: 'bulk_force_password_reset', details: { bulk_operation: true } },
                     })
                     if (auditError) throw auditError
 
@@ -368,12 +368,12 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('audit_logs').insert({
+                    const { error: auditError } = await supabase.from('system_events').insert({
+                        event_type: 'audit',
+                        actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
-                        action: 'bulk_cancel_password_reset',
-                        user_id: actorId,
-                        details: { bulk_operation: true },
+                        metadata: { action: 'bulk_cancel_password_reset', details: { bulk_operation: true } },
                     })
                     if (auditError) throw auditError
 

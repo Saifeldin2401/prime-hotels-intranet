@@ -133,12 +133,12 @@ export function useCreateAnnouncement() {
             if (error) throw error
 
             // Audit log
-            supabase.from('audit_logs').insert({
+            supabase.from('system_events').insert({
+                event_type: 'audit',
+                actor_id: user.id,
                 entity_type: 'announcement',
                 entity_id: data.id,
-                action: 'create',
-                user_id: user.id,
-                details: { title: announcement.title, target_audience: announcement.target_audience }
+                metadata: { action: 'create', details: { title: announcement.title, target_audience: announcement.target_audience } }
             }).then(({ error: auditError }) => {
                 if (auditError) console.error('Failed to write audit log:', auditError)
             })

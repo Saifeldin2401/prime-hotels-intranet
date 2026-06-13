@@ -122,18 +122,17 @@ export function useLogApprovalAction() {
 
             if (updateError) throw updateError
 
-            // Log to audit_logs
+            // Log to system_events
             const { error: auditError } = await supabase
-                .from('audit_logs')
+                .from('system_events')
                 .insert({
-                    user_id: user.id,
-                    action: action,
+                    event_type: 'audit',
+                    actor_id: user.id,
                     entity_type: 'approval',
                     entity_id: approvalRequestId,
-                    new_values: {
-                        action,
-                        feedback,
-                        was_delegate: wasDelegate
+                    metadata: {
+                        action: action,
+                        details: { feedback, was_delegate: wasDelegate }
                     }
                 })
 

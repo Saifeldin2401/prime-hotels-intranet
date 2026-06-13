@@ -172,12 +172,12 @@ export function useCreateEvent() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'event',
         entity_id: data.id,
-        action: 'create',
-        user_id: user.id,
-        details: { title: event.title, property_id: data.property_id }
+        metadata: { action: 'create', details: { title: event.title, property_id: data.property_id } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })
@@ -210,12 +210,12 @@ export function useUpdateEvent() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user?.id,
         entity_type: 'event',
         entity_id: data.id,
-        action: 'update',
-        user_id: user?.id,
-        details: { updates: event }
+        metadata: { action: 'update', details: { updates: event } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })
@@ -242,12 +242,12 @@ export function useDeleteEvent() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user?.id,
         entity_type: 'event',
         entity_id: id,
-        action: 'delete',
-        user_id: user?.id,
-        details: { deleted: true }
+        metadata: { action: 'delete', details: { deleted: true } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })

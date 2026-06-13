@@ -102,12 +102,12 @@ export function useQuickCreateEvent() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'event',
         entity_id: data.id,
-        action: 'create',
-        user_id: user.id,
-        details: { title: event.title, property_id: data.property_id }
+        metadata: { action: 'create', details: { title: event.title, property_id: data.property_id } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })
@@ -159,12 +159,12 @@ export function useQuickCreateMaintenanceTicket() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'maintenance_ticket',
         entity_id: result.id,
-        action: 'create',
-        user_id: user.id,
-        details: { title: data.title, property_id: propertyId }
+        metadata: { action: 'create', details: { title: data.title, property_id: propertyId } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })
@@ -227,12 +227,12 @@ export function useQuickCreateAnnouncement() {
       if (error) throw error
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'announcement',
         entity_id: data.id,
-        action: 'create',
-        user_id: user.id,
-        details: { title: announcement.title, target_audience: announcement.target_audience }
+        metadata: { action: 'create', details: { title: announcement.title, target_audience: announcement.target_audience } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError)
       })

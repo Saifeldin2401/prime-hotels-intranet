@@ -66,12 +66,12 @@ export function useDepartments(propertyId?: string) { // Optional filter
       if (error) throw error;
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'department',
         entity_id: data.id,
-        action: 'create',
-        user_id: user.id,
-        details: { name: dept.name, property_id: dept.property_id }
+        metadata: { action: 'create', details: { name: dept.name, property_id: dept.property_id } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError);
       });
@@ -111,12 +111,12 @@ export function useDepartments(propertyId?: string) { // Optional filter
       if (error) throw error;
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'department',
         entity_id: dept.id,
-        action: 'update',
-        user_id: user.id,
-        details: { updates: dept }
+        metadata: { action: 'update', details: { updates: dept } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError);
       });
@@ -149,12 +149,12 @@ export function useDepartments(propertyId?: string) { // Optional filter
       if (error) throw error;
 
       // Audit log
-      supabase.from('audit_logs').insert({
+      supabase.from('system_events').insert({
+        event_type: 'audit',
+        actor_id: user.id,
         entity_type: 'department',
         entity_id: id,
-        action: 'delete',
-        user_id: user.id,
-        details: { deactivated: true }
+        metadata: { action: 'delete', details: { deactivated: true } }
       }).then(({ error: auditError }) => {
         if (auditError) console.error('Failed to write audit log:', auditError);
       });

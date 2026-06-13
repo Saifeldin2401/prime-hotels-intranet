@@ -646,7 +646,7 @@ function OrgChangeHistory() {
         queryKey: ['org-change-history'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('audit_logs')
+                .from('audit_logs_v')
                 .select(`
           id, entity_type, entity_id, action, details, created_at,
           changed_by_profile:profiles!user_id(full_name)
