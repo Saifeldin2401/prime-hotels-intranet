@@ -590,7 +590,7 @@ export function TrainingAssignmentsProvider({
       // training_content_blocks consolidated into documents (content_type='training_block').
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, block_type as type, block_order as "order", content_data')
+        .select('id, title, type:block_type, order:block_order, content_data')
         .eq('content_type', 'training_block')
         .eq('training_module_id', selectedProgress.content_id)
         .eq('is_deleted', false)

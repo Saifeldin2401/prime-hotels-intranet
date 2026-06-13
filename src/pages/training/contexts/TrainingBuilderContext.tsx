@@ -139,7 +139,7 @@ export interface TrainingBuilderContextValue {
   showTitleField: boolean
   setShowTitleField: (v: boolean) => void
   showAdvancedBlockOptions: boolean
-  setShowAdvancedBlockOptions: (v: boolean) => void
+  setShowAdvancedBlockOptions: React.Dispatch<React.SetStateAction<boolean>>
   mediaInputMode: 'upload' | 'link' | 'library'
   setMediaInputMode: (v: 'upload' | 'link' | 'library') => void
   blockValidation: { ok: boolean; message: string }
@@ -444,7 +444,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       if (!moduleId) return []
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, block_type as type, content, block_order as "order", created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id as source_document_id, ai_generated, ai_source_content, duration_seconds, points')
+        .select('id, title, type:block_type, content, order:block_order, created_at, content_url, content_data, is_mandatory, is_deleted, source_document_id:linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
         .eq('content_type', 'training_block')
         .eq('training_module_id', moduleId)
         .order('block_order', { ascending: true })
@@ -1514,7 +1514,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // training_content_blocks has been consolidated into documents (content_type='training_block').
     const { data: existingBlocks, error: fetchError } = await supabase
       .from('documents')
-      .select('id, title, block_type as type, content, block_order as "order", content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
+      .select('id, title, type:block_type, content, order:block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
       .eq('content_type', 'training_block')
       .eq('training_module_id', targetId)
       .order('block_order', { ascending: true })
@@ -1532,12 +1532,15 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     if (blocksToInsert.length === 0) return
 
     // Map TrainingContentBlockInsert fields to the unified documents columns.
-    const docRows = blocksToInsert.map((b) => ({
-      ...(b as Record<string, unknown>),
-      content_type: 'training_block',
-      block_type: (b as Record<string, unknown>).type,
-      block_order: (b as Record<string, unknown>).order,
-    }))
+    const docRows = blocksToInsert.map((b) => {
+      const rec = b as unknown as Record<string, unknown>
+      return {
+        ...rec,
+        content_type: 'training_block',
+        block_type: rec.type,
+        block_order: rec.order,
+      }
+    })
 
     const { error: insertError } = await supabase
       .from('documents')

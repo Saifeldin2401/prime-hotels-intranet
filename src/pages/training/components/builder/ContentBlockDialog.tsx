@@ -464,7 +464,7 @@ export function ContentBlockDialog({
             <div className="rounded-lg border border-slate-200 bg-slate-50/40">
               <button
                 type="button"
-                onClick={() => setShowAdvancedBlockOptions(prev => !prev)}
+                onClick={() => setShowAdvancedBlockOptions(!showAdvancedBlockOptions)}
                 className={cn(
                   "w-full px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500 flex items-center justify-between",
                   isRTL ? "flex-row-reverse text-right" : "text-left"

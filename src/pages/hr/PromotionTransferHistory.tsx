@@ -50,6 +50,9 @@ interface PromotionRecord {
     to_department_id: string | null
     effective_date: string
     notes: string | null
+    // employee_promotions has no status column of its own; status is derived from the
+    // linked request when present, so it is optional on this record shape.
+    status?: 'pending' | 'completed' | 'cancelled' | 'approved' | 'rejected'
     created_at: string
     employee?: { full_name: string }
     approver?: { full_name: string }
@@ -334,7 +337,17 @@ export default function PromotionTransferHistory() {
                                                         <DropdownMenuContent align="end">
                                                             {record.type === 'promotion' ? (
                                                                 <PromoteEmployeeDialog
-                                                                    editRecord={record as PromotionRecord}
+                                                                    editRecord={{
+                                                                        id: record.id,
+                                                                        request_id: record.request_id,
+                                                                        employee_id: record.employee_id,
+                                                                        // Map consolidated employee_promotions columns (to_*) onto the dialog's new_* prop shape.
+                                                                        new_role: record.to_role,
+                                                                        new_job_title: record.to_title,
+                                                                        new_department_id: record.to_department_id,
+                                                                        effective_date: record.effective_date,
+                                                                        notes: record.notes,
+                                                                    }}
                                                                     onSuccess={() => { refetchPromos(); refetchTransfers(); }}
                                                                 >
                                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

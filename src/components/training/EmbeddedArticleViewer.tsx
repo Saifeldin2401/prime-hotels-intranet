@@ -168,7 +168,7 @@ const EmbeddedArticleViewerInner = ({
             // Look up by sop_code in the unified documents table.
             const { data, error } = await supabase
                 .from('documents')
-                .select('id, title, description, content, status, updated_at, published_at, sop_code as code')
+                .select('id, title, description, content, status, updated_at, published_at, code:sop_code')
                 .eq('content_type', 'sop')
                 .eq('sop_code', sopId)
                 .maybeSingle()

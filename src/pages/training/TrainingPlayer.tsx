@@ -573,7 +573,7 @@ export default function TrainingPlayer() {
             // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: blocks, error: blocksError } = await supabase
                 .from('documents')
-                .select('id, title, block_type as type, content, block_order as "order", content_url, content_data, is_mandatory, is_deleted, linked_training_id as source_document_id, ai_generated, ai_source_content, duration_seconds, points')
+                .select('id, training_module_id, created_at, title, type:block_type, content, order:block_order, content_url, content_data, is_mandatory, is_deleted, source_document_id:linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
                 .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .eq('is_deleted', false)
