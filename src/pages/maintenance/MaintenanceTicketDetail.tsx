@@ -207,12 +207,14 @@ export default function MaintenanceTicketDetail() {
             }
 
             if (notifyReporter && ticket.reported_by_id) {
-                await supabase.from('notifications').insert({
-                    user_id: ticket.reported_by_id,
-                    type: 'maintenance_updated',
-                    title: 'Maintenance Ticket Updated',
-                    message: `Your maintenance ticket "${ticket.title}" has been updated.`,
-                    metadata: { ticket_id: ticket.id }
+                await supabase.rpc('create_notification', {
+                    p_user_id: ticket.reported_by_id,
+                    p_type: 'maintenance_updated',
+                    p_title: 'Maintenance Ticket Updated',
+                    p_body: `Your maintenance ticket "${ticket.title}" has been updated.`,
+                    p_metadata: { ticket_id: ticket.id },
+                    p_related_entity_type: 'maintenance_ticket',
+                    p_related_entity_id: ticket.id,
                 })
             }
 

@@ -2714,18 +2714,21 @@ export function useSubmitForApproval() {
 
       if (approvalError) throw approvalError
 
-      const { error: notifyError } = await supabase.from('notifications').insert(
-        approverIds.map(approverId => ({
-          user_id: approverId,
-          type: 'approval_required',
-          title: 'Approval Required',
-          message: `A document "${doc.title || 'Document'}" is awaiting your approval.`,
-          entity_type: 'document',
-          entity_id: documentId,
-          link: '/approvals',
-          metadata: { document_id: documentId }
-        })))
-
+      const notifyResults = await Promise.all(
+        approverIds.map(approverId =>
+          supabase.rpc('create_notification', {
+            p_user_id: approverId,
+            p_type: 'approval_required',
+            p_title: 'Approval Required',
+            p_body: `A document "${doc.title || 'Document'}" is awaiting your approval.`,
+            p_action_url: '/approvals',
+            p_metadata: { document_id: documentId },
+            p_related_entity_type: 'document',
+            p_related_entity_id: documentId,
+          })
+        )
+      )
+      const notifyError = notifyResults.find(r => r.error)?.error
       if (notifyError) throw notifyError
 
       return documentId
