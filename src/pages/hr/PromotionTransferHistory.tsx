@@ -40,29 +40,20 @@ import { useTranslation } from 'react-i18next'
 interface PromotionRecord {
     type: 'promotion'
     id: string
-    // This ID is the promotion ID. We need the REQUEST ID for actions usually, 
-    // but the RPCs I wrote use REQUEST ID. 
-    // Wait, the RPC I wrote takes `request_id`.
-    // BUT the history view lists PROMOTIONS/TRANSFERS.
-    // I need to fetch the associated request_id for each record.
-    // Or update RPC to take entity_id + type (safer given the view).
-    // Let's check my RPC. It takes `request_id`.
-    // I need to join with `requests` table in the query to get `request_id`.
     request_id?: string
     employee_id: string
-    promoted_by: string
-    old_role: string
-    new_role: string
-    old_job_title: string
-    new_job_title: string
-    new_department_id: string | null
+    approved_by: string | null
+    from_role: string | null
+    to_role: string
+    from_title: string | null
+    to_title: string
+    to_department_id: string | null
     effective_date: string
     notes: string | null
-    status: 'pending' | 'completed' | 'cancelled' | 'approved' | 'rejected'
     created_at: string
     employee?: { full_name: string }
-    promoter?: { full_name: string }
-    new_department?: { name: string }
+    approver?: { full_name: string }
+    to_department?: { name: string }
 }
 
 interface TransferRecord {
@@ -140,8 +131,8 @@ export default function PromotionTransferHistory() {
                     notes: meta.notes, // If we added notes to metadata? We probably didn't.
 
                     // Promotion specific
-                    new_role: meta.new_role,
-                    new_job_title: meta.new_job_title, // Did we add this? 
+                    to_role: meta.to_role,
+                    to_title: meta.to_title, // Did we add this?
                     // Check `submit_promotion_request`: 
                     // jsonb_build_object('employee_name', ..., 'new_role', ..., 'effective_date', p_effective_date)
                     // Missing job_title in metadata. 
@@ -187,12 +178,12 @@ export default function PromotionTransferHistory() {
         queryKey: ['promotions-history'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('promotions')
+                .from('employee_promotions')
                 .select(`
                   *,
-                  employee:profiles!promotions_employee_id_fkey(full_name),
-                  promoter:profiles!promotions_promoted_by_fkey(full_name),
-                  new_department:departments!promotions_new_department_id_fkey(name)
+                  employee:profiles!employee_promotions_employee_id_fkey(full_name),
+                  approver:profiles!employee_promotions_approved_by_fkey(full_name),
+                  to_department:departments!employee_promotions_to_department_id_fkey(name)
                 `)
                 .order('created_at', { ascending: false })
 
@@ -206,13 +197,13 @@ export default function PromotionTransferHistory() {
         queryKey: ['transfers-history'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('transfers')
+                .from('employee_transfers')
                 .select(`
                   *,
-                  employee:profiles!transfers_employee_id_fkey(full_name),
-                  from_property:properties!transfers_from_property_id_fkey(name),
-                  to_property:properties!transfers_to_property_id_fkey(name),
-                  to_department:departments!transfers_to_department_id_fkey(name)
+                  employee:profiles!employee_transfers_employee_id_fkey(full_name),
+                  from_property:properties!employee_transfers_from_property_id_fkey(name),
+                  to_property:properties!employee_transfers_to_property_id_fkey(name),
+                  to_department:departments!employee_transfers_to_department_id_fkey(name)
                 `)
                 .order('created_at', { ascending: false })
 
@@ -377,22 +368,22 @@ export default function PromotionTransferHistory() {
                                                         <div className="flex items-center gap-2 text-sm">
                                                             <span className="text-gray-600">{t('history.job_title')}:</span>
                                                             <span className="text-gray-500">
-                                                                {record.old_job_title || 'N/A'}
+                                                                {record.from_title || 'N/A'}
                                                             </span>
                                                             <ArrowRightLeft className={`h-3 w-3 text-gray-400 ${isRTL ? 'rotate-180' : ''}`} />
                                                             <span className="font-medium text-purple-600">
-                                                                {record.new_job_title}
+                                                                {record.to_title}
                                                             </span>
                                                         </div>
-                                                        {(record.old_role && record.new_role) && (
+                                                        {(record.from_role && record.to_role) && (
                                                             <div className="flex items-center gap-2 text-xs text-gray-500">
                                                                 <span>{t('history.role')}:</span>
                                                                 <span>
-                                                                    {t(`roles.${record.old_role}`) || record.old_role}
+                                                                    {t(`roles.${record.from_role}`) || record.from_role}
                                                                 </span>
                                                                 <ArrowRightLeft className="h-2.5 w-2.5" />
                                                                 <span>
-                                                                    {t(`roles.${record.new_role}`) || record.new_role}
+                                                                    {t(`roles.${record.to_role}`) || record.to_role}
                                                                 </span>
                                                             </div>
                                                         )}
@@ -415,10 +406,10 @@ export default function PromotionTransferHistory() {
                                                         <Calendar className="h-4 w-4" />
                                                         {t('history.effective')}: {new Date(record.effective_date).toLocaleDateString(i18n.language)}
                                                     </span>
-                                                    {record.type === 'promotion' && record.promoter && (
+                                                    {record.type === 'promotion' && record.approver && (
                                                         <span className="flex items-center gap-1">
                                                             <User className="h-4 w-4" />
-                                                            {t('history.by')}: {record.promoter.full_name}
+                                                            {t('history.by')}: {record.approver.full_name}
                                                         </span>
                                                     )}
                                                 </div>
