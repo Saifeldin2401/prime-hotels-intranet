@@ -1100,11 +1100,13 @@ export const learningService = {
 
         if (error) throw error
 
+        // training_content_blocks consolidated into documents (content_type='training_block').
         const { data: quizBlocks, error: quizBlocksError } = await supabase
-            .from('training_content_blocks')
+            .from('documents')
             .select('id, content_data')
+            .eq('content_type', 'training_block')
             .eq('training_module_id', moduleId)
-            .eq('type', 'quiz')
+            .eq('block_type', 'quiz')
 
         if (quizBlocksError) throw quizBlocksError
 

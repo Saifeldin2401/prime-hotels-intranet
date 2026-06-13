@@ -18,18 +18,18 @@ export async function checkTrainingPrerequisites(
   moduleId: string
 ): Promise<TrainingPrerequisitesResult> {
   try {
-    // training_module_documents doesn't exist anymore; documents are modeled as resources.
-    // Since training_module_resources.resource_id is polymorphic, we can't rely on PostgREST joins.
+    // training_module_resources consolidated into documents (content_type='training_resource').
+    // Required resources are those with is_mandatory=true linked to this module.
     const { data: requiredResources, error: resourcesError } = await supabase
-      .from('training_module_resources')
-      .select('resource_id, is_required')
+      .from('documents')
+      .select('id')
+      .eq('content_type', 'training_resource')
       .eq('training_module_id', moduleId)
-      .eq('resource_type', 'document')
-      .eq('is_required', true)
+      .eq('is_mandatory', true)
 
     if (resourcesError) throw resourcesError
 
-    const documentIds = (requiredResources || []).map((r) => r.resource_id).filter(Boolean)
+    const documentIds = (requiredResources || []).map((r: { id: string }) => r.id).filter(Boolean)
 
     const { data: docs, error: docsError } = await supabase
       .from('documents')

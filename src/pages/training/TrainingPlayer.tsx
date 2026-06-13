@@ -570,12 +570,14 @@ export default function TrainingPlayer() {
             if (moduleError) throw moduleError
             if (!module) return null
 
+            // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: blocks, error: blocksError } = await supabase
-                .from('training_content_blocks')
-                .select('*')
+                .from('documents')
+                .select('id, title, block_type as type, content, block_order as "order", content_url, content_data, is_mandatory, is_deleted, linked_training_id as source_document_id, ai_generated, ai_source_content, duration_seconds, points')
+                .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .eq('is_deleted', false)
-                .order('order', { ascending: true })
+                .order('block_order', { ascending: true })
 
             if (blocksError) throw blocksError
 
@@ -610,14 +612,10 @@ export default function TrainingPlayer() {
                     .in('id', sopIds)
                 sops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
 
-                const missingSopIds = sopIds.filter(id => !referencedTitles[id])
-                if (missingSopIds.length > 0) {
-                    const { data: legacySops } = await supabase
-                        .from('sop_documents')
-                        .select('id, title')
-                        .in('id', missingSopIds)
-                    legacySops?.forEach(sop => { referencedTitles[sop.id] = sop.title })
-                }
+                // sop_documents has been consolidated into documents (content_type='sop').
+                // All SOP IDs that existed in sop_documents now live in documents.
+                // The initial query above already covers the full documents table (all content types),
+                // so any remaining missing IDs simply don't exist.
             }
 
             if (quizIds.length > 0) {
