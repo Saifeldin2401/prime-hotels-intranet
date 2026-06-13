@@ -821,43 +821,6 @@ export const ROUTES: RouteConfig[] = [
         order: 3.75
     },
     {
-        path: '/admin/finance-controls',
-        title: 'finance_controls',
-        icon: Wallet,
-        description: 'Manage financial approval policies, budgets, and finance audit controls',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 3.78
-    },
-    {
-        path: '/admin/governance-controls',
-        title: 'governance_controls',
-        icon: Shield,
-        description: 'Manage authority model, ownership structure, and department governance settings',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 3.79
-    },
-    {
-        path: '/admin/governance-risk',
-        title: 'governance_risk',
-        icon: Activity,
-        description: 'Operate incident escalation, delegation authority, and compliance audit controls',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 3.80
-    },
-    {
-        path: '/admin/governance-executive',
-        title: 'governance_executive',
-        icon: BarChart3,
-        description: 'Executive governance dashboard with portfolio and property rollups',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 3.81
-    },
-
-    {
         path: '/admin/notifications',
         title: 'notification_batches',
         icon: Bell,
