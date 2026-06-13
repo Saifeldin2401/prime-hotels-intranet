@@ -1879,25 +1879,25 @@ export function TrainingBuilder() {
       const targetId = idToUse || moduleId
       if (!targetId) return
 
-      // Delete existing questions
+      // Delete existing questions from unified_questions (source_domain='training')
       await supabase
-        .from('training_quizzes')
+        .from('unified_questions')
         .delete()
+        .eq('source_domain', 'training')
         .eq('training_module_id', targetId)
 
-      // Insert new questions
+      // Insert new questions into unified_questions
       if (questions.length > 0) {
-        const questionsToInsert = questions.map((question, index) => ({
+        const questionsToInsert = questions.map((question) => ({
+          source_domain: 'training' as const,
           training_module_id: targetId,
-          question: question.question,
-          type: question.type,
-          options: question.type === 'mcq' ? question.options : null,
+          question_text: question.question,
+          question_type: question.type,
           correct_answer: question.correct_answer,
-          order: index
         }))
 
         const { error } = await supabase
-          .from('training_quizzes')
+          .from('unified_questions')
           .insert(questionsToInsert)
         if (error) throw error
       }
@@ -3679,11 +3679,11 @@ export function TrainingBuilder() {
                       throw quizError
                     }
 
-                    // Link the questions to this quiz via the junction table
+                    // Link the questions to this quiz via unified_quiz_questions
                     for (let i = 0; i < ids.length; i++) {
                       const questionId = ids[i]
                       await supabase
-                        .from('learning_quiz_questions')
+                        .from('unified_quiz_questions')
                         .insert({
                           quiz_id: quizData.id,
                           question_id: questionId,
@@ -3877,7 +3877,7 @@ export function TrainingBuilder() {
                   }))
 
                   const { error: linkError } = await supabase
-                    .from('learning_quiz_questions')
+                    .from('unified_quiz_questions')
                     .insert(quizQuestions)
 
                   if (linkError) throw linkError

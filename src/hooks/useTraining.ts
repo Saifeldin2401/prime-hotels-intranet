@@ -343,14 +343,22 @@ export function useDeleteContentBlock() {
 }
 
 // Training Quizzes
+// Write operations target unified_questions (source_domain = 'training').
+// The training_quizzes view provides backward-compatible reads.
 export function useCreateQuiz() {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async (quiz: Partial<TrainingQuiz>) => {
       const { data, error } = await supabase
-        .from('training_quizzes')
-        .insert(quiz)
+        .from('unified_questions')
+        .insert({
+          source_domain: 'training',
+          question_text: quiz.question ?? '',
+          question_type: (quiz.type as string) as Parameters<typeof supabase.from>[0] extends never ? never : 'mcq',
+          correct_answer: quiz.correct_answer,
+          training_module_id: quiz.training_module_id,
+        })
         .select()
         .single()
 
@@ -370,10 +378,18 @@ export function useUpdateQuiz() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<TrainingQuiz> & { id: string }) => {
+      const payload: Record<string, unknown> = {}
+      if (updates.question !== undefined) payload.question_text = updates.question
+      if (updates.type !== undefined) payload.question_type = updates.type
+      if (updates.correct_answer !== undefined) payload.correct_answer = updates.correct_answer
+      if (updates.training_module_id !== undefined) payload.training_module_id = updates.training_module_id
+      payload.updated_at = new Date().toISOString()
+
       const { data, error } = await supabase
-        .from('training_quizzes')
-        .update(updates)
+        .from('unified_questions')
+        .update(payload)
         .eq('id', id)
+        .eq('source_domain', 'training')
         .select()
         .single()
 
@@ -702,6 +718,8 @@ export function useCompleteTraining() {
 }
 
 // Quiz Attempts
+// Write operations use quiz_attempts (domain='training') + unified_questions.
+// The training_quiz_attempts and training_quizzes views provide read compat.
 export function useCreateQuizAttempt() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -713,12 +731,13 @@ export function useCreateQuizAttempt() {
     }) => {
       if (!user) throw new Error('User must be authenticated')
 
-      // Get the quiz questions for this module
+      // Get the quiz questions for this module from the unified table
       const { data: quizzes } = await supabase
-        .from('training_quizzes')
+        .from('unified_questions')
         .select('*')
+        .eq('source_domain', 'training')
         .eq('training_module_id', attempt.moduleId)
-        .order('order')
+        .order('created_at')
 
       if (!quizzes) throw new Error('No quizzes found for this module')
 
@@ -734,33 +753,32 @@ export function useCreateQuizAttempt() {
       const maxScore = quizzes.length
       const passed = (score / maxScore) >= 0.8 // 80% passing threshold
 
-      // Get attempt number
+      // Get attempt number from quiz_attempts (domain='training')
       const { data } = await supabase
-        .from('training_quiz_attempts')
-        .select('attempt_number')
+        .from('quiz_attempts')
+        .select('id')
         .eq('user_id', user.id)
-        .eq('module_id', attempt.moduleId)
-        .order('attempt_number', { ascending: false })
-        .limit(1)
+        .eq('quiz_id', attempt.moduleId)
+        .eq('domain', 'training')
 
-      const nextAttemptNumber = (data?.[0]?.attempt_number || 0) + 1
+      const nextAttemptNumber = (data?.length || 0) + 1
 
-      // Create attempt record
+      // Create attempt record in quiz_attempts with domain discriminator
       const { data: attemptData, error: attemptError } = await supabase
-        .from('training_quiz_attempts')
+        .from('quiz_attempts')
         .insert({
           user_id: user.id,
-          module_id: attempt.moduleId,
+          quiz_id: attempt.moduleId,
+          domain: 'training',
           score,
-          max_score: maxScore,
           passed,
-          attempt_number: nextAttemptNumber,
+          answers: attempt.answers,
         })
         .select()
         .single()
 
       if (attemptError) throw attemptError
-      return attemptData
+      return { ...attemptData, module_id: attempt.moduleId, max_score: maxScore, attempt_number: nextAttemptNumber }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['quiz-attempts'] })
@@ -779,13 +797,15 @@ export function useQuizAttempts(moduleId?: string, userId?: string) {
   return useQuery({
     queryKey: ['quiz-attempts', moduleId, userId],
     queryFn: async () => {
+      // Read from quiz_attempts with domain='training' filter
       let query = supabase
-        .from('training_quiz_attempts')
+        .from('quiz_attempts')
         .select('*')
-        .order('created_at', { ascending: false })
+        .eq('domain', 'training')
+        .order('started_at', { ascending: false })
 
       if (moduleId) {
-        query = query.eq('module_id', moduleId)
+        query = query.eq('quiz_id', moduleId)
       }
       if (userId) {
         query = query.eq('user_id', userId)
@@ -794,7 +814,14 @@ export function useQuizAttempts(moduleId?: string, userId?: string) {
       const { data, error } = await query
       if (error) throw error
 
-      return data as TrainingQuizAttempt[]
+      // Map to TrainingQuizAttempt shape for backward compatibility
+      return (data || []).map(row => ({
+        ...row,
+        module_id: row.quiz_id,
+        max_score: row.score,
+        attempt_number: 1,
+        created_at: row.started_at,
+      })) as TrainingQuizAttempt[]
     },
   })
 }

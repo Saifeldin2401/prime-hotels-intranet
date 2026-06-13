@@ -3,7 +3,7 @@ import type { QuestionStatus } from '@/types/questions'
 
 export async function submitForReview(id: string): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .update({ status: 'pending_review' as QuestionStatus })
         .eq('id', id)
 
@@ -16,7 +16,7 @@ export async function approveQuestion(
     notes?: string
 ): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .update({
             status: 'published' as QuestionStatus,
             reviewed_by: reviewerId,
@@ -34,7 +34,7 @@ export async function rejectQuestion(
     notes: string
 ): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .update({
             status: 'draft' as QuestionStatus,
             reviewed_by: reviewerId,
@@ -48,7 +48,7 @@ export async function rejectQuestion(
 
 export async function archiveQuestion(id: string): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .update({ status: 'archived' as QuestionStatus })
         .eq('id', id)
 

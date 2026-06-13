@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import type { KnowledgeQuestion, QuestionUsage } from '@/types/questions'
 
+// Read via backward-compat view (knowledge_question_usages → unified_question_usages)
 export async function getQuestionsForContext(
     usageType: QuestionUsage['usage_type'],
     entityId: string
@@ -22,6 +23,7 @@ export async function getQuestionsForContext(
     return data?.map(u => u.question).filter(Boolean) || []
 }
 
+// Write directly to unified_question_usages
 export async function linkQuestionToContext(
     questionId: string,
     usageType: QuestionUsage['usage_type'],
@@ -29,7 +31,7 @@ export async function linkQuestionToContext(
     options?: { displayOrder?: number; isRequired?: boolean; weight?: number }
 ): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_question_usages')
+        .from('unified_question_usages')
         .insert({
             question_id: questionId,
             usage_type: usageType,
@@ -42,13 +44,14 @@ export async function linkQuestionToContext(
     if (error) throw error
 }
 
+// Write directly to unified_question_usages
 export async function unlinkQuestionFromContext(
     questionId: string,
     usageType: QuestionUsage['usage_type'],
     entityId: string
 ): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_question_usages')
+        .from('unified_question_usages')
         .delete()
         .eq('question_id', questionId)
         .eq('usage_type', usageType)

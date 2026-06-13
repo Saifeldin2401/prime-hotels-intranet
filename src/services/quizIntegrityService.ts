@@ -505,8 +505,9 @@ async function applyQuestionRepair(payload: RepairPayload) {
     return false
   }
 
+  // Write to unified_questions (source_domain='knowledge')
   const { error: questionError } = await supabase
-    .from('knowledge_questions')
+    .from('unified_questions')
     .update({
       question_text: normalized.question_text,
       question_type: normalized.question_type,
@@ -520,7 +521,7 @@ async function applyQuestionRepair(payload: RepairPayload) {
   if (questionError) throw questionError
 
   const { error: deleteOptionsError } = await supabase
-    .from('knowledge_question_options')
+    .from('unified_question_options')
     .delete()
     .eq('question_id', normalized.question_id)
 
@@ -529,7 +530,7 @@ async function applyQuestionRepair(payload: RepairPayload) {
   const nextOptions = normalized.options || []
   if (nextOptions.length > 0) {
     const { error: insertOptionsError } = await supabase
-      .from('knowledge_question_options')
+      .from('unified_question_options')
       .insert(
         nextOptions.map((option, index) => ({
           question_id: normalized.question_id,
@@ -561,7 +562,7 @@ async function publishQuizAndQuestions(quizId: string, questionIds: string[]) {
 
   if (questionIds.length > 0) {
     const { error: questionError } = await supabase
-      .from('knowledge_questions')
+      .from('unified_questions')
       .update({
         status: 'published',
         updated_at: timestamp
