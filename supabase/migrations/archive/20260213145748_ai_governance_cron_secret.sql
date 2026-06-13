@@ -15,7 +15,7 @@ BEGIN
     $cron$
     select
       net.http_post(
-        url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-metrics-collector',
+        url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-metrics-collector',
         headers:=jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'ai_cron_secret' limit 1)
@@ -34,7 +34,7 @@ BEGIN
     $cron$
     select
       net.http_post(
-        url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-optimizer',
+        url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-optimizer',
         headers:=jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'ai_cron_secret' limit 1)
@@ -53,7 +53,7 @@ BEGIN
     $cron$
     select
       net.http_post(
-        url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-safety-validator',
+        url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-safety-validator',
         headers:=jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'ai_cron_secret' limit 1)
@@ -72,7 +72,7 @@ BEGIN
     $cron$
     select
       net.http_post(
-        url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-policy-applier',
+        url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-policy-applier',
         headers:=jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'ai_cron_secret' limit 1)
@@ -92,7 +92,7 @@ BEGIN
     $cron$
     select
       net.http_post(
-        url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-rollback-engine',
+        url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-rollback-engine',
         headers:=jsonb_build_object(
           'Content-Type', 'application/json',
           'Authorization', 'Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name = 'ai_cron_secret' limit 1)

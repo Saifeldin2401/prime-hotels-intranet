@@ -199,7 +199,7 @@ export default function OperationsDashboard() {
             {
                 reportType: type,
                 title,
-                hotelName: currentProperty?.name || 'Consolidated View (All)',
+                hotelName: currentProperty?.name || t('operations:dashboard.all_properties', 'Consolidated (Cluster)'),
                 hotelCode: isConsolidatedPropertyId(currentProperty?.id) ? 'CONSOLIDATED' : undefined,
                 period: {
                     start: dateRange?.from?.toISOString().split('T')[0] || selectedDate,
@@ -244,11 +244,19 @@ export default function OperationsDashboard() {
             {/* Header */}
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">
-                        {t('operations:dashboard.title', 'Operations Dashboard')}
-                    </h1>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-3xl font-bold tracking-tight">
+                            {t('operations:dashboard.title', 'Operations Dashboard')}
+                        </h1>
+                        {isConsolidatedPropertyId(currentProperty?.id) && (
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 flex items-center gap-1">
+                                <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                {t('operations:dashboard.all_properties', 'Consolidated (Cluster)')}
+                            </Badge>
+                        )}
+                    </div>
                     <p className="text-muted-foreground">
-                        {currentProperty?.name || t('operations:dashboard.all_properties', 'Consolidated View (All)')} - {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+                        {currentProperty?.name || t('operations:dashboard.all_properties', 'Consolidated (Cluster)')} - {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

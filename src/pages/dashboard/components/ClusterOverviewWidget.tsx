@@ -129,7 +129,7 @@ function ClusterGMOverview() {
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-slate-700">
                         {isConsolidatedView
-                            ? t('cluster.consolidated_view', 'Consolidated Cluster View')
+                            ? t('cluster.consolidated_view', 'Consolidated (Cluster)')
                             : t('cluster.property_view', 'Property View: {{name}}', { name: currentProperty?.name })
                         }
                     </p>
@@ -232,7 +232,7 @@ function ClusterHROverview() {
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-slate-700">
                         {isConsolidatedView
-                            ? t('cluster.hr_cluster_view', 'Cluster HR Overview')
+                            ? t('cluster.hr_cluster_view', 'Consolidated (Cluster) HR Overview')
                             : t('cluster.hr_property_view', 'Property HR: {{name}}', { name: currentProperty?.name })
                         }
                     </p>
@@ -644,7 +644,7 @@ function ClusterManagerOverview() {
                 <div className="flex-1">
                     <p className="text-sm font-semibold text-slate-700">
                         {isConsolidatedView
-                            ? t('cluster.my_cluster_view', 'My Cluster View')
+                            ? t('cluster.my_cluster_view', 'Consolidated (Cluster) View')
                             : t('cluster.property_view', 'Property: {{name}}', { name: currentProperty?.name })
                         }
                     </p>

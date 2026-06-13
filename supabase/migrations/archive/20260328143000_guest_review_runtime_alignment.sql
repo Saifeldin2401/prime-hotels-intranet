@@ -115,7 +115,7 @@ BEGIN
     PERFORM cron.unschedule(v_job_id);
   END IF;
 
-  v_url := format('https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/%s', p_function_slug);
+  v_url := format('https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/%s', p_function_slug);
 
   v_command := format(
 $cmd$

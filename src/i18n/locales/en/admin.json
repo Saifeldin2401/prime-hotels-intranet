@@ -426,7 +426,7 @@
     "title": "Organizational Control Center",
     "description": "Manage reporting structures, employee assignments, and organizational hierarchy",
     "search_employees": "Search employees...",
-    "all_properties": "All Properties",
+    "all_properties": "Consolidated (Cluster)",
     "tab_orgchart": "Org Chart",
     "tab_assignments": "Assignments",
     "tab_pending": "Pending Changes",

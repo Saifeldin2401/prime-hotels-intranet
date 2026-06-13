@@ -46,6 +46,31 @@ export default defineConfig([
       'react-hooks/set-state-in-effect': 'warn',
       'react-hooks/static-components': 'warn',
       'react-refresh/only-export-components': 'warn',
+      // Design-system guardrail: keep color out of source. Use tokens from src/index.css
+      // (bg-primary, text-foreground, hsl(var(--hotel-gold)), etc.) so theming + dark mode work.
+      'no-restricted-syntax': ['warn',
+        {
+          selector: 'Literal[value=/#[0-9a-fA-F]{6}\\b/]',
+          message: 'Avoid hardcoded hex colors. Use a design token (bg-primary, text-foreground, hsl(var(--...))) — see src/index.css.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/#[0-9a-fA-F]{6}\\b/]',
+          message: 'Avoid hardcoded hex colors in template strings. Use a design token — see src/index.css.',
+        },
+      ],
+    },
+  },
+  {
+    // Allow hardcoded colors where they are legitimately data, not UI chrome:
+    // decorative confetti, chart series palettes, and theme-token definitions.
+    files: [
+      'src/components/ui/HolidayCelebration.tsx',
+      'src/lib/theme.ts',
+      'src/**/*chart*.{ts,tsx}',
+      'src/**/*Chart*.{ts,tsx}',
+    ],
+    rules: {
+      'no-restricted-syntax': 'off',
     },
   },
 ])

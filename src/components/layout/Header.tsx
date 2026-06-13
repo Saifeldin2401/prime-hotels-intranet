@@ -53,7 +53,7 @@ import {
     Sparkles,
     User
 } from 'lucide-react'
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
@@ -70,6 +70,13 @@ export function Header({
   const { user, profile, primaryRole, signOut } = useAuth()
   const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { t } = useTranslation(['common', 'nav'])
+  const [userStatus, setUserStatus] = useState<'online' | 'away' | 'busy'>('online')
+
+  const statusColors = {
+    online: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
+    away: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
+    busy: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+  }
   const isConsolidatedContext = isConsolidatedPropertyId(currentProperty?.id)
   const consolidatedProperties = availableProperties.filter((property) => isConsolidatedPropertyId(property.id))
   const scopedProperties = availableProperties.filter((property) => !isConsolidatedPropertyId(property.id))
@@ -98,7 +105,12 @@ export function Header({
           </div>
 
           {/* Center Search - Premium Style */}
-          <GlobalSearch />
+          <div className="flex-1 max-w-2xl mx-6 hidden md:flex items-center gap-2">
+            <GlobalSearch className="mx-0 w-full flex-1" />
+            <kbd className="hidden lg:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/50 px-2 font-mono text-[10px] font-medium text-hotel-gold/80" aria-hidden="true">
+              Ctrl+K
+            </kbd>
+          </div>
 
           <div className="flex items-center gap-3">
             {/* Property Switcher for Multi-Property Users */}
@@ -326,7 +338,7 @@ export function Header({
                             : (user?.email?.[0]?.toUpperCase() || 'U')}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="absolute bottom-0 end-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                      <span className={cn("absolute bottom-0 end-0 w-2.5 h-2.5 border-2 border-hotel-navy rounded-full transition-all duration-300", statusColors[userStatus])} />
                     </div>
                     <ChevronDown className="h-4 w-4 text-hotel-gold-light transition-transform duration-300 group-data-[state=open]:rotate-180" />
                   </Button>
@@ -360,22 +372,49 @@ export function Header({
                     <DropdownSub>
                       <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90 m-1">
                         <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
+                          <div className={cn("w-2 h-2 rounded-full", userStatus === 'online' ? 'bg-green-500' : userStatus === 'away' ? 'bg-amber-500' : 'bg-red-500')} />
                           <span>{t('common:status')}</span>
                         </div>
                       </DropdownMenuSubTrigger>
                       <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl min-w-[150px]">
-                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                          <div className="w-2 h-2 rounded-full bg-green-500 me-2" />
-                          Online
+                        <DropdownMenuItem 
+                          onClick={() => setUserStatus('online')}
+                          className={cn(
+                            "focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90 flex items-center justify-between",
+                            userStatus === 'online' && "bg-hotel-navy-light font-semibold"
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-green-500 me-2" />
+                            Online
+                          </div>
+                          {userStatus === 'online' && <Check className="w-3.5 h-3.5 text-hotel-gold" />}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                          <div className="w-2 h-2 rounded-full bg-amber-500 me-2" />
-                          Away
+                        <DropdownMenuItem 
+                          onClick={() => setUserStatus('away')}
+                          className={cn(
+                            "focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90 flex items-center justify-between",
+                            userStatus === 'away' && "bg-hotel-navy-light font-semibold"
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-amber-500 me-2" />
+                            Away
+                          </div>
+                          {userStatus === 'away' && <Check className="w-3.5 h-3.5 text-hotel-gold" />}
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                          <div className="w-2 h-2 rounded-full bg-red-500 me-2" />
-                          Busy
+                        <DropdownMenuItem 
+                          onClick={() => setUserStatus('busy')}
+                          className={cn(
+                            "focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90 flex items-center justify-between",
+                            userStatus === 'busy' && "bg-hotel-navy-light font-semibold"
+                          )}
+                        >
+                          <div className="flex items-center">
+                            <div className="w-2 h-2 rounded-full bg-red-500 me-2" />
+                            Busy
+                          </div>
+                          {userStatus === 'busy' && <Check className="w-3.5 h-3.5 text-hotel-gold" />}
                         </DropdownMenuItem>
                       </DropdownMenuSubContent>
                     </DropdownSub>

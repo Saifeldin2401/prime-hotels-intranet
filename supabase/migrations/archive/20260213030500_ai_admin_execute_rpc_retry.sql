@@ -45,7 +45,7 @@ begin
   end if;
 
   select net.http_post(
-    url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-admin',
+    url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-admin',
     headers:=jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || v_token

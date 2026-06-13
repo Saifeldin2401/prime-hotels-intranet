@@ -74,7 +74,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
 
                 // Add Group-level option for corporate users (also acts as Head Office)
                 const allOption = createPseudoProperty(
-                    'PRIME GROUP (HEAD OFFICE)',
+                    'Consolidated (Cluster)',
                     'Corporate Headquarters & Global Operations'
                 )
 
@@ -102,7 +102,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (uniqueProperties.length > 1) {
                     const clusterNames = uniqueProperties.map((property) => property.name).join(' & ')
                     const clusterOption = createPseudoProperty(
-                        `My Cluster (${uniqueProperties.length})`,
+                        'Consolidated (Cluster)',
                         clusterNames
                     )
                     props = [clusterOption, ...uniqueProperties]

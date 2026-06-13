@@ -10128,7 +10128,7 @@ BEGIN
   IF v_storage_path IS NOT NULL AND length(trim(v_storage_path)) > 0 THEN
     v_host := COALESCE(
       NULLIF((current_setting('request.headers', true)::jsonb ->> 'host'), ''),
-      'htsvjfrofcpkfzvjpwvx.supabase.co'
+      'dhbfaclkfysqwfppuxxa.supabase.co'
     );
 
     RETURN format(
@@ -10152,7 +10152,7 @@ BEGIN
   -- Fallback: construct URL from relative path
   v_host := COALESCE(
     NULLIF((current_setting('request.headers', true)::jsonb ->> 'host'), ''),
-    'htsvjfrofcpkfzvjpwvx.supabase.co'
+    'dhbfaclkfysqwfppuxxa.supabase.co'
   );
 
   RETURN format(

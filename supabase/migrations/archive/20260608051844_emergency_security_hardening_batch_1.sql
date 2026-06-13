@@ -11,7 +11,7 @@ begin
     select jobid
     from cron.job
     where active = true
-      and command like '%https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/%'
+      and command like '%https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/%'
   loop
     perform cron.alter_job(job.jobid, active => false);
   end loop;

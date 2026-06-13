@@ -38,7 +38,7 @@ begin
 
   v_host := coalesce(
     nullif((current_setting('request.headers', true)::jsonb ->> 'host'), ''),
-    'htsvjfrofcpkfzvjpwvx.supabase.co'
+    'dhbfaclkfysqwfppuxxa.supabase.co'
   );
 
   return format(

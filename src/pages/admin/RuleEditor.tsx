@@ -556,7 +556,7 @@ export function RuleEditor({ rule, isOpen, onClose, onSave }: RuleEditorProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="global">Global (All Properties)</SelectItem>
+                    <SelectItem value="global">Consolidated (Cluster)</SelectItem>
                     <SelectItem value="property">Specific Property</SelectItem>
                     <SelectItem value="department">Specific Department</SelectItem>
                   </SelectContent>

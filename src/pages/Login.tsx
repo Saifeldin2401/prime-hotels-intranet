@@ -1,6 +1,6 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { ChevronRight, Clock, Fingerprint, Shield, Sparkles, Users } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -98,31 +98,45 @@ export default function Login() {
   const { t, i18n } = useTranslation('auth')
   const year = new Date().getFullYear()
   const isRTL = i18n.dir() === 'rtl'
+  const prefersReducedMotion = useReducedMotion()
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-  // Mouse parallax effect
+  // Mouse parallax effect — throttled to one update per animation frame so we don't
+  // call setState on every pixel of movement. Disabled entirely under reduced-motion.
   useEffect(() => {
+    if (prefersReducedMotion) return
+
+    let frame = 0
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePosition({
-        x: (e.clientX / window.innerWidth - 0.5) * 20,
-        y: (e.clientY / window.innerHeight - 0.5) * 20,
+      if (frame) return
+      frame = window.requestAnimationFrame(() => {
+        frame = 0
+        setMousePosition({
+          x: (e.clientX / window.innerWidth - 0.5) * 20,
+          y: (e.clientY / window.innerHeight - 0.5) * 20,
+        })
       })
     }
     window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [])
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove)
+      if (frame) window.cancelAnimationFrame(frame)
+    }
+  }, [prefersReducedMotion])
 
-  // Generate particles
+  // Generate particles — kept light (5) for low paint cost; suppressed under reduced-motion.
   const particles = useMemo(
     () =>
-      Array.from({ length: 15 }, (_, i) => ({
-        id: i,
-        delay: i * 0.8,
-        x: `${Math.random() * 100}%`,
-        y: `${Math.random() * 100}%`,
-        size: Math.random() * 4 + 2,
-      })),
-    []
+      prefersReducedMotion
+        ? []
+        : Array.from({ length: 5 }, (_, i) => ({
+            id: i,
+            delay: i * 0.8,
+            x: `${Math.random() * 100}%`,
+            y: `${Math.random() * 100}%`,
+            size: Math.random() * 4 + 2,
+          })),
+    [prefersReducedMotion]
   )
 
   return (

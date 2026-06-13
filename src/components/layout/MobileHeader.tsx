@@ -114,7 +114,7 @@ export function MobileHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 -ml-2 touch-target"
+              className="h-11 w-11 -ms-2 min-h-touch min-w-touch"
               onClick={handleBack}
               aria-label={t('accessibility.go_back', 'Go back')}
             >
@@ -124,7 +124,7 @@ export function MobileHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="h-10 w-10 -ml-2 touch-target"
+              className="h-11 w-11 -ms-2 min-h-touch min-w-touch"
               onClick={onMenuClick}
               aria-label={t('accessibility.open_menu', 'Open menu')}
             >
@@ -172,7 +172,7 @@ export function MobileHeaderAction({
     <Button
       variant={variant}
       size="icon"
-      className="h-10 w-10 touch-target"
+      className="h-11 w-11 min-h-touch min-w-touch"
       onClick={onClick}
       disabled={disabled}
       aria-label={label}
@@ -198,7 +198,7 @@ export function MobileHeaderMenu({
       <Button
         variant="ghost"
         size="icon"
-        className="h-10 w-10 touch-target"
+        className="h-11 w-11 min-h-touch min-w-touch"
         aria-label={t('accessibility.more_options', 'More options')}
       >
         <MoreVertical className="h-5 w-5" />

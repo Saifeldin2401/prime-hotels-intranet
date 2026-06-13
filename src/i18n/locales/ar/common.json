@@ -1,4 +1,40 @@
 {
+    "emptyState": {
+        "noData": {
+            "title": "لا توجد بيانات متاحة",
+            "description": "لا توجد بيانات لعرضها في الوقت الحالي."
+        },
+        "noResults": {
+            "title": "لم يتم العثور على نتائج",
+            "description": "حاول تعديل مصطلحات البحث أو عوامل التصفية.",
+            "clear": "مسح البحث"
+        },
+        "noDocuments": {
+            "title": "لا توجد مستندات بعد",
+            "description": "قم برفع أول مستند للبدء.",
+            "action": "رفع مستند"
+        },
+        "noEvents": {
+            "title": "لا توجد فعاليات قادمة",
+            "description": "لا توجد فعاليات مجدولة لهذه الفترة.",
+            "action": "إنشاء فعالية"
+        },
+        "noUsers": {
+            "title": "لا يوجد أعضاء في الفريق",
+            "description": "قم بدعوة أعضاء الفريق للتعاون.",
+            "action": "دعوة عضو"
+        },
+        "error": {
+            "title": "حدث خطأ ما",
+            "description": "حدث خطأ أثناء تحميل البيانات.",
+            "action": "حاول مرة أخرى"
+        },
+        "networkError": {
+            "title": "خطأ في الاتصال",
+            "description": "تعذّر الاتصال بالخادم. يرجى التحقق من اتصالك بالإنترنت.",
+            "action": "إعادة المحاولة"
+        }
+    },
     "language": {
         "en": "الإنجليزية",
         "ar": "العربية"
@@ -58,7 +94,7 @@
         "please_login": "يرجى تسجيل الدخول للوصول لهذه الصفحة",
         "view_profile": "عرض الملف الشخصي",
         "visibility": {
-            "all_properties": "جميع الفنادق",
+            "all_properties": "موحد (المجموعة)",
             "property_specific": "فندق محدد",
             "department_specific": "قسم محدد",
             "role_specific": "دور محدد"
@@ -372,7 +408,7 @@
         "verifying_access": "جاري التحقق من الوصول..."
     },
     "visibility": {
-        "all_properties": "جميع الفنادق",
+        "all_properties": "موحد (المجموعة)",
         "department_specific": "قسم محدد",
         "property_specific": "فندق محدد",
         "role_specific": "دور محدد"

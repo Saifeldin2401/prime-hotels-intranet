@@ -9,6 +9,7 @@ import {
     Users
 } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EnhancedButton } from './enhanced-button'
 
 interface EmptyStateProps {
@@ -56,9 +57,9 @@ export function EmptyState({
       )}>
         {icon}
       </div>
-      <h3 className="text-lg font-medium text-gray-900 mb-2">{title}</h3>
+      <h3 className="text-lg font-medium text-foreground mb-2">{title}</h3>
       {description && (
-        <p className="text-gray-500 mb-6 max-w-sm">{description}</p>
+        <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
       )}
       {action && (
         <EnhancedButton
@@ -72,26 +73,35 @@ export function EmptyState({
   )
 }
 
-// Preset empty states for common scenarios
-export function NoData({ action }: { action?: EmptyStateProps['action'] }) {
+// Preset empty states for common scenarios.
+// Strings flow through i18n (common:emptyState.*) so they render in EN/AR; callers
+// may still override title/description for context-specific copy.
+interface PresetProps {
+  title?: string
+  description?: string
+}
+
+export function NoData({ action, title, description }: { action?: EmptyStateProps['action'] } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<Inbox className="h-12 w-12" />}
-      title="No data available"
-      description="There's no data to display at the moment."
+      title={title ?? t('emptyState.noData.title')}
+      description={description ?? t('emptyState.noData.description')}
       action={action}
     />
   )
 }
 
-export function NoSearchResults({ onClear }: { onClear?: () => void }) {
+export function NoSearchResults({ onClear, title, description }: { onClear?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<Search className="h-12 w-12" />}
-      title="No results found"
-      description="Try adjusting your search terms or filters."
+      title={title ?? t('emptyState.noResults.title')}
+      description={description ?? t('emptyState.noResults.description')}
       action={onClear ? {
-        label: 'Clear search',
+        label: t('emptyState.noResults.clear'),
         onClick: onClear,
         variant: 'outline'
       } : undefined}
@@ -99,56 +109,60 @@ export function NoSearchResults({ onClear }: { onClear?: () => void }) {
   )
 }
 
-export function NoDocuments({ onUpload }: { onUpload?: () => void }) {
+export function NoDocuments({ onUpload, title, description }: { onUpload?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<FileText className="h-12 w-12" />}
-      title="No documents yet"
-      description="Upload your first document to get started."
+      title={title ?? t('emptyState.noDocuments.title')}
+      description={description ?? t('emptyState.noDocuments.description')}
       action={onUpload ? {
-        label: 'Upload document',
+        label: t('emptyState.noDocuments.action'),
         onClick: onUpload
       } : undefined}
     />
   )
 }
 
-export function NoEvents({ onCreate }: { onCreate?: () => void }) {
+export function NoEvents({ onCreate, title, description }: { onCreate?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<Calendar className="h-12 w-12" />}
-      title="No upcoming events"
-      description="There are no events scheduled for this period."
+      title={title ?? t('emptyState.noEvents.title')}
+      description={description ?? t('emptyState.noEvents.description')}
       action={onCreate ? {
-        label: 'Create event',
+        label: t('emptyState.noEvents.action'),
         onClick: onCreate
       } : undefined}
     />
   )
 }
 
-export function NoUsers({ onInvite }: { onInvite?: () => void }) {
+export function NoUsers({ onInvite, title, description }: { onInvite?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<Users className="h-12 w-12" />}
-      title="No team members"
-      description="Invite team members to collaborate."
+      title={title ?? t('emptyState.noUsers.title')}
+      description={description ?? t('emptyState.noUsers.description')}
       action={onInvite ? {
-        label: 'Invite team member',
+        label: t('emptyState.noUsers.action'),
         onClick: onInvite
       } : undefined}
     />
   )
 }
 
-export function ErrorState({ onRetry }: { onRetry?: () => void }) {
+export function ErrorState({ onRetry, title, description }: { onRetry?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<AlertCircle className="h-12 w-12 text-destructive" />}
-      title="Something went wrong"
-      description="An error occurred while loading the data."
+      title={title ?? t('emptyState.error.title')}
+      description={description ?? t('emptyState.error.description')}
       action={onRetry ? {
-        label: 'Try again',
+        label: t('emptyState.error.action'),
         onClick: onRetry,
         variant: 'outline'
       } : undefined}
@@ -156,14 +170,15 @@ export function ErrorState({ onRetry }: { onRetry?: () => void }) {
   )
 }
 
-export function NetworkError({ onRetry }: { onRetry?: () => void }) {
+export function NetworkError({ onRetry, title, description }: { onRetry?: () => void } & PresetProps) {
+  const { t } = useTranslation('common')
   return (
     <EmptyState
       icon={<RefreshCw className="h-12 w-12 text-destructive" />}
-      title="Connection error"
-      description="Unable to connect to the server. Please check your internet connection."
+      title={title ?? t('emptyState.networkError.title')}
+      description={description ?? t('emptyState.networkError.description')}
       action={onRetry ? {
-        label: 'Retry',
+        label: t('emptyState.networkError.action'),
         onClick: onRetry,
         variant: 'outline'
       } : undefined}

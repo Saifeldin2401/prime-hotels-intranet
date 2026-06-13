@@ -5,18 +5,19 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98] hover:scale-[1.02]",
+  // Tokenized base. Tactile press feedback only (active:scale); hover lift reserved for emphasis variants to preserve hierarchy. Motion is auto-disabled via the global prefers-reduced-motion / .reduced-motion rules.
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:bg-muted disabled:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
   {
     variants: {
       variant: {
-        default: "bg-[#0B1C3E] text-white hover:bg-[#1a3a6e] shadow-sm",
+        default: "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm",
         destructive:
-          "bg-red-600 text-white hover:bg-red-700 shadow-sm",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm", // bg-background is solid white in light mode
+          "border border-input bg-background hover:bg-accent hover:text-accent-foreground shadow-sm",
         secondary:
-          "bg-[#C5A065] text-[#0B1C3E] hover:bg-[#b08d55] shadow-sm",
-        ghost: "bg-muted text-secondary-foreground hover:bg-muted shadow-sm", // Changed from transparent to solid muted
+          "bg-secondary text-secondary-foreground hover:bg-secondary/90 shadow-sm",
+        ghost: "hover:bg-accent hover:text-accent-foreground", // Transparent by default — recedes until hovered (restores visual hierarchy)
         link: "text-primary underline-offset-4 hover:underline",
         gold: "bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm",
         navy: "bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm",

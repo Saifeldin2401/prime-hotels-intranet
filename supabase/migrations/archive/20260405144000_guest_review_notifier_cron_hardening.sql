@@ -18,7 +18,7 @@ SELECT cron.schedule(
   '*/10 * * * *',
   $cmd$
   select net.http_post(
-    url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/guest-review-notifier',
+    url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/guest-review-notifier',
     headers:=jsonb_build_object(
       'Content-Type','application/json',
       'Authorization','Bearer ' || (select decrypted_secret from vault.decrypted_secrets where name='service_role_key' limit 1)

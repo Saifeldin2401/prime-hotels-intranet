@@ -3,6 +3,9 @@
     "welcome": "مرحباً بك، {{name}}",
     "property_overview": "نظرة عامة للمنشأة: {{name}}",
     "widgets": {
+        "time_and_weather": "الوقت والعمليات",
+        "weather": "الطقس المحلي",
+        "prayer_times": "أوقات الصلاة",
         "role": "الدور الحالي",
         "documents": "المستندات الأخيرة",
         "training": "تقدم التدريب",
@@ -1115,6 +1118,15 @@
         "in": "بعد",
         "duhr": "الظهر",
         "fajr": "الفجر",
+        "asr": "العصر",
+        "maghrib": "المغرب",
+        "isha": "العشاء"
+    },
+    "prayer": {
+        "remaining": "بعد",
+        "fajr": "الفجر",
+        "dhuhr": "الظهر",
+        "duhr": "الظهر",
         "asr": "العصر",
         "maghrib": "المغرب",
         "isha": "العشاء"

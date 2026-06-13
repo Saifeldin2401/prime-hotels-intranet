@@ -11,7 +11,7 @@ DECLARE
   v_request_id bigint;
 BEGIN
   SELECT net.http_post(
-    url := 'https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/guest-review-analyzer',
+    url := 'https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/guest-review-analyzer',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer ' || (SELECT decrypted_secret FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1)

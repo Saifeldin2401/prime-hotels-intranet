@@ -113,11 +113,13 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    /* Non-fixed gradient: `background-attachment: fixed` forces a full-viewport
+       repaint on every scroll frame (major mobile jank source). A scroll-anchored
+       gradient gives the same look without the per-frame paint cost. */
     background-image:
       radial-gradient(at 0% 0%, hsla(37, 45%, 58%, 0.15) 0px, transparent 50%),
       radial-gradient(at 100% 0%, hsla(220, 70%, 15%, 0.1) 0px, transparent 50%),
       linear-gradient(to bottom right, hsl(var(--background)), #f0f4f8);
-    background-attachment: fixed;
     overflow-x: hidden;
   }
 
@@ -543,10 +545,6 @@ select:focus-visible {
     @apply bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm transition-all duration-200;
   }
 
-  .btn-primary {
-    @apply bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm transition-all duration-200;
-  }
-
   /* Input styles - Standard */
   .input {
     @apply w-full px-3 py-2 border border-input rounded-md bg-background text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
@@ -633,14 +631,6 @@ select:focus-visible {
 }
 
 @layer utilities {
-
-  /* Text utilities */
-  .text-gradient {
-    background: linear-gradient(135deg, hsl(var(--primary)) 0%, hsl(var(--primary) / 0.6) 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
 
   /* Animation utilities */
   .animate-fade-in {

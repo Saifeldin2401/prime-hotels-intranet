@@ -56,6 +56,8 @@ const SocialFeed = lazy(() => import('@/components/social/SocialFeed').then(m =>
 const DashboardCustomizeModal = lazy(() => import('./components/DashboardCustomizeModal').then(m => ({ default: m.DashboardCustomizeModal })))
 const NotificationsPanel = lazy(() => import('./components/NotificationsPanel').then(m => ({ default: m.NotificationsPanel })))
 import { WelcomeHeader } from './components/WelcomeHeader'
+import { BentoStatsRow } from './components/BentoStatsRow'
+import { WeatherClockPrayerCard } from './components/WeatherClockPrayerCard'
 
 import { useTranslation } from "react-i18next"
 import { useNavigate, useLocation } from 'react-router-dom'
@@ -419,6 +421,9 @@ export function IntegratedDashboard() {
   }
 
   const renderWidget = (widgetId: DashboardWidgetId) => {
+    if (widgetId === 'tasks' || widgetId === 'calendar' || widgetId === 'training') {
+      return null
+    }
     if (widgetId === 'socialFeed') {
       if (!deferredWidgetsReady) {
         return (
@@ -535,7 +540,7 @@ export function IntegratedDashboard() {
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="min-h-screen bg-slate-50 p-4 lg:p-8 space-y-8 font-sans selection:bg-blue-100 selection:text-blue-900">
+      <div className="space-y-6 font-sans selection:bg-blue-100 selection:text-blue-900">
         <WelcomeHeader
           config={{
             title: `${t('welcome_header.welcome') || 'Welcome'}${profile?.full_name ? `, ${profile.full_name}` : ''}`,
@@ -549,6 +554,8 @@ export function IntegratedDashboard() {
           onToggleNotifications={() => setShowNotifications(!showNotifications)}
         />
 
+        <BentoStatsRow />
+
         {showFocusToggle && (
           <div className="flex justify-center mb-6">
             <Tabs value={focusMode} onValueChange={(val) => handleFocusModeChange(val as 'my_work' | 'my_team')} className="w-full max-w-md">
@@ -560,8 +567,6 @@ export function IntegratedDashboard() {
           </div>
         )}
 
-
-
         <m.div
           variants={containerVariants}
           initial="hidden"
@@ -572,20 +577,27 @@ export function IntegratedDashboard() {
           <div className="col-span-12 lg:col-span-8 space-y-6">
             {layoutProfile.mainColumn.map((item, index) => {
               if (Array.isArray(item)) {
-                const rowKey = `row-${item.join('-') || index}`
+                const validWidgets = item.filter(widgetId => widgetId !== 'tasks' && widgetId !== 'calendar' && widgetId !== 'training')
+                if (validWidgets.length === 0) return null
+                const rowKey = `row-${validWidgets.join('-') || index}`
                 return (
                   <div key={rowKey} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {item.map(widgetId => renderWidget(widgetId))}
+                    {validWidgets.map(widgetId => renderWidget(widgetId))}
                   </div>
                 )
               }
+              if (item === 'tasks' || item === 'calendar' || item === 'training') return null
               return renderWidget(item)
             })}
           </div>
 
           {/* Right Column - Sidebar Widgets */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
-            {layoutProfile.sidebar.map(widgetId => renderWidget(widgetId))}
+            <WeatherClockPrayerCard />
+            {layoutProfile.sidebar.map(widgetId => {
+              if (widgetId === 'tasks' || widgetId === 'calendar' || widgetId === 'training') return null
+              return renderWidget(widgetId)
+            })}
           </div>
         </m.div>
 
@@ -599,13 +611,16 @@ export function IntegratedDashboard() {
           >
             {layoutProfile.bottomFullWidth.map((item, index) => {
               if (Array.isArray(item)) {
-                const rowKey = `row-bottom-${item.join('-') || index}`
+                const validWidgets = item.filter(widgetId => widgetId !== 'tasks' && widgetId !== 'calendar' && widgetId !== 'training')
+                if (validWidgets.length === 0) return null
+                const rowKey = `row-bottom-${validWidgets.join('-') || index}`
                 return (
                   <div key={rowKey} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {item.map(widgetId => renderWidget(widgetId))}
+                    {validWidgets.map(widgetId => renderWidget(widgetId))}
                   </div>
                 )
               }
+              if (item === 'tasks' || item === 'calendar' || item === 'training') return null
               return renderWidget(item)
             })}
           </m.div>

@@ -807,9 +807,17 @@ export default function OperationsAnalytics() {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            {t('operations:analytics.title', 'Operations Analytics')}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-3xl font-bold tracking-tight">
+                                {t('operations:analytics.title', 'Operations Analytics')}
+                            </h1>
+                            {isConsolidatedSelection && (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                    {t('operations:dashboard.all_properties', 'Consolidated (Cluster)')}
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground">
                             {t('operations:analytics.subtitle', 'Comprehensive performance analysis')}
                         </p>
@@ -819,7 +827,7 @@ export default function OperationsAnalytics() {
                     <Select value={resolvedSelectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="w-48">
                             <SelectValue
-                                placeholder={canUseConsolidatedView ? "Consolidated View (All)" : "Select Property"}
+                                placeholder={canUseConsolidatedView ? t('operations:dashboard.all_properties', 'Consolidated (Cluster)') : "Select Property"}
                             />
                         </SelectTrigger>
                         <SelectContent>
@@ -943,7 +951,11 @@ export default function OperationsAnalytics() {
                                 {chartData.length > 0 ? (
                                     <SimpleBarChart data={chartData} dataKey="occupancy" color="bg-blue-500" />
                                 ) : (
-                                    <p className="text-muted-foreground text-center py-8">No data available</p>
+                                    <p className="text-muted-foreground text-center py-8">
+                                        {isConsolidatedSelection 
+                                            ? t('operations:analytics.no_cluster_data', 'No data for this cluster scope') 
+                                            : t('operations:no_data', 'No data available')}
+                                    </p>
                                 )}
                             </CardContent>
                         </Card>
@@ -958,7 +970,11 @@ export default function OperationsAnalytics() {
                                 {chartData.length > 0 ? (
                                     <SimpleBarChart data={chartData} dataKey="adr" color="bg-green-500" />
                                 ) : (
-                                    <p className="text-muted-foreground text-center py-8">No data available</p>
+                                    <p className="text-muted-foreground text-center py-8">
+                                        {isConsolidatedSelection 
+                                            ? t('operations:analytics.no_cluster_data', 'No data for this cluster scope') 
+                                            : t('operations:no_data', 'No data available')}
+                                    </p>
                                 )}
                             </CardContent>
                         </Card>
@@ -981,7 +997,11 @@ export default function OperationsAnalytics() {
                                     ]}
                                 />
                             ) : (
-                                <p className="text-muted-foreground text-center py-8">No data available</p>
+                                <p className="text-muted-foreground text-center py-8">
+                                    {isConsolidatedSelection 
+                                        ? t('operations:analytics.no_cluster_data', 'No data for this cluster scope') 
+                                        : t('operations:no_data', 'No data available')}
+                                </p>
                             )}
                         </CardContent>
                     </Card>
@@ -994,8 +1014,8 @@ export default function OperationsAnalytics() {
                             <CardTitle>Property Performance Comparison</CardTitle>
                             <CardDescription>
                                 {isConsolidatedSelection
-                                    ? 'Compare KPIs across all properties for the selected period'
-                                    : 'Switch to consolidated scope to compare KPIs across properties'}
+                                    ? t('operations:analytics.comparison_consolidated_desc', 'Compare KPIs across all properties for the selected period')
+                                    : t('operations:analytics.comparison_property_desc', 'Switch to consolidated scope to compare KPIs across properties')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
@@ -1004,8 +1024,8 @@ export default function OperationsAnalytics() {
                             ) : (
                                 <p className="text-muted-foreground text-center py-8">
                                     {isConsolidatedSelection
-                                        ? 'No comparison data available'
-                                        : 'Consolidated view is required for cross-property comparison'}
+                                        ? t('operations:analytics.no_cluster_data', 'No data for this cluster scope')
+                                        : t('operations:analytics.comparison_consolidated_required', 'Consolidated view is required for cross-property comparison')}
                                 </p>
                             )}
                         </CardContent>
@@ -1034,7 +1054,11 @@ export default function OperationsAnalytics() {
                                 {revenueBreakdown.length > 0 ? (
                                     <SimplePieChart data={revenueBreakdown} />
                                 ) : (
-                                    <p className="text-muted-foreground text-center py-8">No revenue data</p>
+                                    <p className="text-muted-foreground text-center py-8">
+                                        {isConsolidatedSelection 
+                                            ? t('operations:analytics.no_cluster_data', 'No data for this cluster scope') 
+                                            : t('operations:no_data', 'No data available')}
+                                    </p>
                                 )}
                             </CardContent>
                         </Card>

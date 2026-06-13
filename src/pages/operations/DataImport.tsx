@@ -1,4 +1,4 @@
-﻿import { Alert } from '@/components/ui/alert'
+import { Alert } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -31,6 +31,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { toast } from '@/components/ui/use-toast'
 import { useProperty } from '@/contexts/PropertyContext'
+import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { useAuth } from '@/hooks/useAuth'
 import { useCreateImportLog, useDataImportLogs, useDeleteImportLog, useProperties } from '@/hooks/useOperations'
 import i18n from "@/i18n/i18n"
@@ -310,6 +311,7 @@ export default function DataImport() {
     const { t } = useTranslation(['operations', 'common'])
     const { currentProperty } = useProperty()
     const { user, profile } = useAuth()
+    const isConsolidated = isConsolidatedPropertyId(currentProperty?.id)
 
     const handlePrintSummary = async () => {
         const logo = await loadLogoAsDataUrl()
@@ -813,6 +815,50 @@ export default function DataImport() {
                 files: fixedFiles
             })
         })
+    }
+
+    if (isConsolidated) {
+        return (
+            <div className="flex flex-col min-h-[calc(100vh-80px)] bg-slate-50/50">
+                {/* Studio Header (Dashboard Style) */}
+                <div className="border-b bg-white p-6 sticky top-0 z-10 shadow-sm">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div>
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="bg-primary/10 p-1.5 rounded-lg">
+                                    <Zap className="h-5 w-5 text-primary" />
+                                </div>
+                                <h1 className="text-2xl font-bold tracking-tight">{t('data_import.title', { defaultValue: 'Data Import Studio' })}</h1>
+                            </div>
+                            <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                                <Building2 className="h-4 w-4" />
+                                <span>{currentProperty?.name}</span>
+                                <ChevronRight className="h-3 w-3" />
+                                <span className="capitalize">
+                                    {t('data_import.stage', { defaultValue: '{{stage}} Stage', stage: stageLabel })}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 p-6 flex items-center justify-center max-w-[1600px] mx-auto w-full">
+                    <Card className="border-none shadow-sm bg-slate-50/50 max-w-md w-full">
+                        <CardContent className="py-16 text-center">
+                            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                                <Building2 className="h-10 w-10 text-slate-300 animate-pulse" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 mb-2">
+                                {t('operations:data_import.cluster_empty_state.title', { defaultValue: 'Switch to a property to import records' })}
+                            </h3>
+                            <p className="text-slate-500 text-sm max-w-xs mx-auto">
+                                {t('operations:data_import.cluster_empty_state.description', { defaultValue: 'Importing operations and PMS records is property-specific. Please choose a specific property from the header selector to begin uploading reports.' })}
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        )
     }
 
     return (

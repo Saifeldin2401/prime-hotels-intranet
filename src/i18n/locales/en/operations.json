@@ -1,7 +1,7 @@
 {
     "dashboard": {
         "title": "Operations Dashboard",
-        "all_properties": "All Properties"
+        "all_properties": "Consolidated (Cluster)"
     },
     "kpis": {
         "occupancy": "Occupancy Rate",
@@ -42,6 +42,10 @@
     "data_import": {
         "title": "Data Import Studio",
         "stage": "{{stage}} Stage",
+        "cluster_empty_state": {
+            "title": "Switch to a property to import records",
+            "description": "Importing operations and PMS records is property-specific. Please choose a specific property from the header selector to begin uploading reports."
+        },
         "stages": {
             "upload": "Upload",
             "review": "Review",
@@ -206,14 +210,22 @@
     "no_imports": "No import history available",
     "coming_soon": "Coming soon...",
     "flash": {
-        "title": "Flash Report"
+        "title": "Flash Report",
+        "no_cluster_data": "No data for this cluster scope",
+        "no_cluster_data_desc": "We couldn't find any flash report data for the cluster scope on this date. Please ensure PMS data has been imported for this date.",
+        "no_property_data": "No Report Data Found",
+        "no_property_data_desc": "We couldn't find any flash report data for {{date}}. Please ensure PMS data has been imported for this date."
     },
     "analytics": {
         "title": "Analytics",
         "subtitle": "Performance analytics and insights",
         "trends": "Trends",
         "comparison": "Comparison",
-        "segments": "Segments"
+        "segments": "Segments",
+        "no_cluster_data": "No data for this cluster scope",
+        "comparison_consolidated_desc": "Compare KPIs across all properties for the selected period",
+        "comparison_property_desc": "Switch to consolidated scope to compare KPIs across properties",
+        "comparison_consolidated_required": "Consolidated view is required for cross-property comparison"
     },
     "nav": {
         "analytics": "Analytics",

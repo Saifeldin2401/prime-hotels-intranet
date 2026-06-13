@@ -35,7 +35,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/daily-workflows',
+      url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/daily-workflows',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$
@@ -48,7 +48,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/approval-escalation',
+      url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/approval-escalation',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$
@@ -61,7 +61,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-metrics-collector',
+      url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-metrics-collector',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$
@@ -74,7 +74,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-optimizer',
+      url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-optimizer',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$
@@ -87,7 +87,7 @@ select cron.schedule(
   $$
   select
     net.http_post(
-      url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/ai-rollback-engine',
+      url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/ai-rollback-engine',
       headers:='{"Content-Type": "application/json", "Authorization": "Bearer [YOUR_SERVICE_ROLE_KEY]"}'::jsonb
     ) as request_id;
   $$

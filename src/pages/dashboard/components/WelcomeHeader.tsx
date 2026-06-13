@@ -1,52 +1,24 @@
-import { LiveWeather } from '@/components/dashboard/LiveWeather'
 import { QuickCreateMenu } from '@/components/dashboard/QuickCreateMenu'
-import { WeatherBackground } from '@/components/dashboard/WeatherBackground'
 import { Button } from '@/components/ui/button'
-import { Progress } from '@/components/ui/progress'
-import { Sparkline } from '@/components/ui/Sparkline'
 import { useProperty } from '@/contexts/PropertyContext'
-import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useAuth } from '@/hooks/useAuth'
-import { useDashboardStats } from '@/hooks/useDashboardStats'
-import { useEvents } from '@/hooks/useEvents'
 import { useTasks } from '@/hooks/useTasks'
-import { useWeather } from '@/hooks/useWeather'
-import { isRealPropertyId, roleSupportsConsolidatedView } from '@/lib/propertyScope'
+import { isRealPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
-import { format } from 'date-fns'
-import { ar } from 'date-fns/locale'
 import { LazyMotion, domAnimation, m } from 'framer-motion'
 import {
-    Activity,
     AlertCircle,
     ArrowRight,
-    ArrowRightLeft,
     Bell,
-    Briefcase,
-    Building2,
-    Calendar,
-    CalendarClock,
     CheckCircle2,
-    ChevronDown,
-    Layers,
-    MapPin,
-    RefreshCw,
-    Settings,
     Sparkles,
-    TrendingDown,
-    TrendingUp,
-    Users,
     Zap
 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import { useTranslation } from "react-i18next"
 import { useNavigate } from 'react-router-dom'
-import { PrayerTimesWidget } from './PrayerTimesWidget'
 
 interface WelcomeHeaderProps {
-  taskCount?: number
-  meetingCount?: number
-  completionRate?: number
   config: {
     title: string
     subtitle: string
@@ -59,165 +31,46 @@ interface WelcomeHeaderProps {
   onToggleNotifications: () => void
 }
 
-// Live date/time with Hijri support
-function LiveDateTime({ isRTL }: { isRTL: boolean }) {
-  const [time, setTime] = useState(new Date())
-  useEffect(() => {
-    const timer = setInterval(() => setTime(new Date()), 1000)
-    return () => clearInterval(timer)
-  }, [])
-
-  // Force true Hijri date using the explicit Umm al-Qura calendar
-  const hijriDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-  }).format(time) + ' هـ'
-
-  return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-2">
-        <span className="text-slate-500 font-bold text-sm tracking-tight">{format(time, 'EEEE, MMM d', { locale: isRTL ? ar : undefined })}</span>
-        <span className="w-1 h-1 rounded-full bg-slate-200" />
-        <span className="text-slate-400 font-mono text-sm tracking-tight">{format(time, 'HH:mm:ss')}</span>
-      </div>
-      <div className="text-[10px] font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1.5 drop-shadow-sm">
-        <span className="w-4 h-[1px] bg-amber-500/40" />
-        {hijriDate}
-      </div>
-    </div>
-  )
-}
-
-// Infinite scrolling ticker
-function SystemTicker({ items }: { items: string[] }) {
-  if (!items || items.length === 0) return null
-
-  const buildTickerEntries = (baseItems: string[]) => {
-    const occurrences = new Map<string, number>()
-    const entries: Array<{ id: string; text: string }> = []
-
-    baseItems.forEach((item) => {
-      const itemCount = occurrences.get(item) ?? 0
-      occurrences.set(item, itemCount + 1)
-      entries.push({ id: `item-${itemCount}-${item}`, text: item })
-
-      const separator = '\u2022'
-      const separatorCount = occurrences.get(separator) ?? 0
-      occurrences.set(separator, separatorCount + 1)
-      entries.push({ id: `separator-${separatorCount}`, text: separator })
-    })
-
-    return entries
-  }
-
-  const displayItems = buildTickerEntries(items)
-
-  return (
-    <div className="flex items-center overflow-hidden whitespace-nowrap border-b border-slate-200 bg-slate-100 py-1.5 px-4 text-[11px] font-bold text-slate-500 tracking-wider uppercase">
-      <Activity className="w-3 h-3 text-slate-400 mr-3 animate-pulse inline-block flex-shrink-0" />
-      <m.div
-        animate={{ x: [0, -1000] }}
-        transition={{ repeat: Infinity, ease: "linear", duration: Math.max(20, items.length * 10) }}
-        className="flex gap-4"
-      >
-        {displayItems.map((entry) => <span key={`a-${entry.id}`}>{entry.text}</span>)}
-        {displayItems.map((entry) => <span key={`b-${entry.id}`}>{entry.text}</span>)}
-        {displayItems.map((entry) => <span key={`c-${entry.id}`}>{entry.text}</span>)}
-      </m.div>
-    </div>
-  )
-}
-
-function StatBentoCard({
-  icon: Icon,
-  title,
-  value,
-  subtext,
-  trend,
-  accentColor,
-  delay,
-  showPulse
+function UrgentAlertLine({
+  highPriorityTaskCount,
+  unreadCount,
 }: {
-  icon;
-  title: string;
-  value: React.ReactNode;
-  subtext?: React.ReactNode;
-  trend?: 'up' | 'down' | 'neutral';
-  accentColor: string;
-  delay: number;
-  showPulse?: boolean;
+  highPriorityTaskCount: number
+  unreadCount: number
 }) {
+  const { t } = useTranslation('dashboard')
+  if (highPriorityTaskCount === 0 && unreadCount === 0) return null
+
   return (
-    <m.div
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -2 }}
-      transition={{ delay, duration: 0.4, ease: "easeOut" }}
-      className="group relative overflow-hidden rounded-[14px] bg-[#f8fafc] border border-slate-200 p-4 transition-all hover:bg-white/80 hover:shadow-sm flex-1 cursor-default"
-    >
-      <div className="absolute bottom-0 right-0 p-1 opacity-20 transition-opacity group-hover:opacity-40 z-0">
-        <Sparkline
-          data={[30, 45, 32, 50, 40, 60, 40]}
-          color={accentColor.includes('amber') ? '#d97706' : accentColor.includes('emerald') ? '#059669' : accentColor.includes('blue') ? '#2563eb' : '#4f46e5'}
-          width={80}
-          height={30}
-        />
-      </div>
-
-      <div className="relative flex flex-col h-full justify-between gap-3 z-10">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <div className={cn("p-1.5 rounded-lg border border-slate-200 bg-white shadow-sm", accentColor)}>
-                <Icon className="w-4 h-4" />
-              </div>
-              {showPulse && (
-                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
-                </span>
-              )}
-            </div>
-            <span className="text-slate-500 font-bold text-[11px] tracking-wider uppercase">{title}</span>
-          </div>
-          {trend && (
-            <div className={cn(
-              "flex items-center justify-center rounded-full p-1 bg-white border border-slate-100 shadow-sm",
-              trend === 'up' ? "text-emerald-500" : trend === 'down' ? "text-rose-500" : "text-slate-400"
-            )}>
-              {trend === 'up' ? <TrendingUp className="w-3 h-3" /> : trend === 'down' ? <TrendingDown className="w-3 h-3" /> : <TrendingUp className="w-3 h-3" />}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <div className="text-2xl font-bold text-slate-700 tracking-tight leading-none">{value}</div>
-          {subtext && (
-            <div className="mt-2 text-xs text-slate-500 font-medium">
-              {subtext}
-            </div>
-          )}
-        </div>
-      </div>
-    </m.div >
+    <div className="flex items-center gap-2 border-b border-rose-100 bg-rose-50 px-4 py-2.5 text-xs font-semibold text-rose-700 rounded-t-[20px]">
+      <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
+      <span>
+        {highPriorityTaskCount > 0
+          ? t("welcome_header.ticker.action_required", { count: highPriorityTaskCount })
+          : t("welcome_header.action_center.unread", { count: unreadCount })}
+      </span>
+    </div>
   )
 }
 
 export function WelcomeHeader({
   config: _config,
-  onRefresh,
-  isLoading: isLoadingParent,
   unreadCount,
-  onToggleNotifications,
-  taskCount: taskCountProp,
-  meetingCount: meetingCountProp,
-  completionRate: completionRateProp
 }: WelcomeHeaderProps) {
   const { t, i18n } = useTranslation('dashboard')
   const navigate = useNavigate()
-  const isRTL = i18n.dir() === 'rtl'
-  const { user, profile, departments, primaryRole } = useAuth()
+  const { user, profile } = useAuth()
+
+  const { currentProperty, availableProperties, isMultiPropertyUser } = useProperty()
+  const [focusMode, setFocusMode] = useState(false)
+
+  const { data: tasks } = useTasks({
+    statuses: ['open', 'todo', 'in_progress', 'pending'],
+    assignedTo: user?.id,
+    ignorePropertyFilter: true
+  })
+
+  const highPriorityTaskCount = tasks?.filter(t => t.priority === 'high' || t.priority === 'urgent').length || 0
 
   const getGreeting = () => {
     const hour = new Date().getHours()
@@ -235,92 +88,9 @@ export function WelcomeHeader({
     
     return greeting
   }
-  const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
-  const [focusMode, setFocusMode] = useState(false)
-  const [showPropertySwitcher, setShowPropertySwitcher] = useState(false)
-  const clusterSwitcherRef = useRef<HTMLDivElement>(null)
-  const propertySwitcherRef = useRef<HTMLDivElement>(null)
-
-  // Close property switcher when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const clickedOutsideCluster = clusterSwitcherRef.current && !clusterSwitcherRef.current.contains(event.target as Node)
-      const clickedOutsideProperty = propertySwitcherRef.current && !propertySwitcherRef.current.contains(event.target as Node)
-      
-      if (clickedOutsideCluster && clickedOutsideProperty) {
-        setShowPropertySwitcher(false)
-      }
-    }
-    
-    if (showPropertySwitcher) {
-      document.addEventListener('mousedown', handleClickOutside)
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showPropertySwitcher])
-
-  const { data: tasks, isLoading: isLoadingTasks } = useTasks({
-    statuses: ['open', 'todo', 'in_progress', 'pending'],
-    assignedTo: user?.id,
-    ignorePropertyFilter: true
-  })
-
-  const { events: upcomingEvents, isLoading: isLoadingEvents } = useEvents()
-  const { data: dashboardStats, isLoading: isLoadingStats } = useDashboardStats()
-  const { data: announcements } = useAnnouncements({ limit: 3 })
-
-  const realTaskCount = taskCountProp ?? (tasks?.length || 0)
-  const highPriorityTaskCount = tasks?.filter(t => t.priority === 'high' || t.priority === 'urgent').length || 0
-  const realMeetingCount = meetingCountProp ?? (upcomingEvents?.length || 0)
-
-  const now = new Date()
-  const nextMeeting = upcomingEvents
-    ?.filter(e => new Date(e.start_date) > now)
-    .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())[0]
-
-  // Build dynamic ticker items
-  const tickerItems: string[] = []
-
-  // Real data injections
-  if (highPriorityTaskCount > 0) {
-    tickerItems.push(t("welcome_header.ticker.action_required", { count: highPriorityTaskCount }))
-  } else {
-    tickerItems.push(t("welcome_header.ticker.caught_up"))
-  }
-
-  if (nextMeeting) {
-    tickerItems.push(t("welcome_header.ticker.next_meeting", { title: nextMeeting.title, time: format(new Date(nextMeeting.start_date), "h:mm a") }))
-  }
-
-  if (announcements && announcements.length > 0) {
-    announcements.forEach((announcement) => tickerItems.push(t("welcome_header.ticker.announcement", { title: announcement.title })))
-  }
-
-  if (realTaskCount > 0 && highPriorityTaskCount === 0) {
-    tickerItems.push(t("welcome_header.ticker.active_tasks", { count: realTaskCount }))
-  }
-
-  if (dashboardStats?.completedTraining && dashboardStats.completedTraining > 0) {
-    tickerItems.push(t("welcome_header.ticker.milestone", { count: dashboardStats.completedTraining }))
-  }
-
-  if (currentProperty?.name) {
-    tickerItems.push(t("welcome_header.ticker.operational_focus", { name: currentProperty.name }))
-  }
-
-  // Base system status
-  tickerItems.push(t("welcome_header.ticker.system_operational"))
-
-  const totalTraining = (dashboardStats?.completedTraining || 0) + (dashboardStats?.inProgressTraining || 0)
-  const realCompletionRate = completionRateProp ?? (totalTraining > 0
-    ? Math.round((dashboardStats!.completedTraining / totalTraining) * 100)
-    : 0)
-
-  const isLoading = isLoadingParent || isLoadingTasks || isLoadingEvents || isLoadingStats
 
   const rawFirstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Team'
   const firstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase()
-
-  const { data: weatherData } = useWeather()
 
   // Determine scope context
   const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
@@ -334,30 +104,17 @@ export function WelcomeHeader({
         initial={{ opacity: 0, y: -20, scale: 0.99 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="relative rounded-[20px] mx-4 my-4 bg-slate-100 border border-slate-200 overflow-visible"
+        className="relative rounded-[20px] bg-white border border-slate-200 overflow-visible shadow-sm"
       >
-        {weatherData && <WeatherBackground code={weatherData.conditionCode} isDay={weatherData.isDay} />}
-        {/* Ticker Tape Top Bar */}
-        <SystemTicker items={tickerItems} />
+        {/* Urgent Alerts Top Line (replaces marquee, hidden when clear) */}
+        <UrgentAlertLine highPriorityTaskCount={highPriorityTaskCount} unreadCount={unreadCount} />
 
         <div className="relative z-10 p-5 lg:p-7 flex flex-col gap-6">
           {/* Header Action Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-200/50">
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-8">
-                <LiveDateTime isRTL={isRTL} />
-
-                <div className="hidden sm:block h-8 w-[1px] bg-white/20" />
-
-                <m.div
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.5 }}
-                >
-                  <PrayerTimesWidget />
-                </m.div>
-              </div>
-              <LiveWeather />
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-slate-100">
+            <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] tracking-widest uppercase">
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+              {t("welcome_header.dashboard_overview", "DASHBOARD OVERVIEW")}
             </div>
 
             <div className="flex items-center gap-3">
@@ -375,33 +132,16 @@ export function WelcomeHeader({
                 <Zap className={cn("w-3.5 h-3.5 mr-1.5", focusMode && "fill-amber-500 text-amber-500 animate-pulse")} />
                 {focusMode ? t("welcome_header.focus_mode_on", "Focus Mode On") : t("welcome_header.focus_mode", "Focus Mode")}
               </Button>
-
-              <div className="flex items-center gap-1 bg-white rounded-full p-1 border border-slate-200 shadow-sm">
-                <Button variant="ghost" size="icon" onClick={onToggleNotifications} className="relative h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.notifications', 'Notifications')}>
-                  <Bell className="w-3.5 h-3.5" />
-                  {unreadCount > 0 && <span className="absolute top-0 right-0 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-white" />}
-                </Button>
-                <Button variant="ghost" size="icon" onClick={onRefresh} disabled={isLoading} className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.refresh', 'Refresh')}>
-                  <RefreshCw className={cn("w-3.5 h-3.5", isLoading && 'animate-spin')} />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full hover:bg-slate-100 text-slate-500 hover:text-slate-800" aria-label={t('accessibility.settings', 'Settings')}>
-                  <Settings className="w-3.5 h-3.5" />
-                </Button>
-              </div>
             </div>
           </div>
 
           {/* Core Content Area */}
           <div className="flex flex-col lg:flex-row gap-8 lg:items-center justify-between">
             {/* Greeting */}
-            <m.div className="space-y-1 relative" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
-              <div className="flex items-center gap-2 text-slate-500 font-bold text-[11px] tracking-widest uppercase mb-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
-                {t("welcome_header.dashboard_overview", "DASHBOARD OVERVIEW")}
-              </div>
-              <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-slate-700 leading-tight">
-                {getGreeting()} <br className="hidden md:block" />
-                <span className="font-bold text-slate-800">
+            <m.div className="space-y-2 relative" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
+              <h1 className="text-3xl md:text-5xl font-light tracking-tight text-slate-800 leading-tight">
+                {getGreeting()}{' '}
+                <span className="font-bold text-slate-900 block mt-1">
                   {firstName}
                 </span>
               </h1>
@@ -411,7 +151,7 @@ export function WelcomeHeader({
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.8 }}
-                className="mt-5 p-3.5 rounded-2xl bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-md border border-white/50 shadow-sm max-w-sm hidden md:block group hover:shadow-md hover:border-blue-200/50 transition-all cursor-pointer overflow-hidden relative"
+                className="mt-5 p-3.5 rounded-2xl bg-slate-50/50 border border-slate-100 shadow-sm max-w-sm hidden md:block group hover:shadow-md hover:border-blue-200/50 transition-all cursor-pointer overflow-hidden relative"
                 onClick={() => navigate(unreadCount > 0 ? '/notifications' : '/tasks')}
               >
                 <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform">
@@ -442,317 +182,10 @@ export function WelcomeHeader({
                   </div>
                 </div>
               </m.div>
-
-              <div className="flex flex-col gap-3 pt-4 relative">
-                {/* Enhanced Scope Indicator */}
-                <div className="flex items-center gap-3 flex-wrap">
-                  {/* Cluster View Badge - Enhanced */}
-                  {isClusterContext && isConsolidatedView && (
-                    <div ref={clusterSwitcherRef} className="relative group">
-                      <button
-                        onClick={() => setShowPropertySwitcher(!showPropertySwitcher)}
-                        className="flex items-center gap-2 bg-gradient-to-r from-indigo-500 to-blue-600 text-white border-0 px-4 py-2 font-semibold rounded-xl text-sm shadow-lg shadow-indigo-200 hover:shadow-xl hover:scale-[1.02] transition-all"
-                      >
-                        <Layers className="w-4 h-4" />
-                        <span>{t("welcome_header.scope.cluster", "Cluster View")}</span>
-                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs">
-                          {propertyCount} {t("welcome_header.properties", "properties")}
-                        </span>
-                        <ChevronDown className={cn("w-4 h-4 transition-transform", showPropertySwitcher && "rotate-180")} />
-                      </button>
-                      
-                      {/* Property Switcher Dropdown */}
-                      {showPropertySwitcher && (
-                        <m.div
-                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-[9999]"
-                          style={{ minWidth: '320px', maxHeight: '400px', overflow: 'visible' }}
-                        >
-                          <div className="p-3 border-b border-slate-100 bg-slate-50">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                              {t("welcome_header.your_properties", "Your Properties")}
-                            </p>
-                          </div>
-                          <div className="max-h-64 overflow-y-auto p-2">
-                            {/* Consolidated Option */}
-                            <button
-                              onClick={() => {
-                                const consolidatedProp = availableProperties.find(p => !isRealPropertyId(p.id))
-                                if (consolidatedProp) switchProperty(consolidatedProp.id)
-                                setShowPropertySwitcher(false)
-                              }}
-                              className={cn(
-                                "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                                isConsolidatedView
-                                  ? "bg-indigo-50 text-indigo-700"
-                                  : "hover:bg-slate-50 text-slate-700"
-                              )}
-                            >
-                              <div className={cn(
-                                "p-1.5 rounded-lg",
-                                isConsolidatedView ? "bg-indigo-100" : "bg-slate-100"
-                              )}>
-                                <Layers className="w-4 h-4" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">{t("welcome_header.all_properties", "All Properties")}</p>
-                                <p className="text-xs text-slate-500">{t("welcome_header.consolidated_view", "Consolidated view")}</p>
-                              </div>
-                              {isConsolidatedView && <CheckCircle2 className="w-4 h-4 text-indigo-600" />}
-                            </button>
-                            
-                            <div className="h-px bg-slate-100 my-2" />
-                            
-                            {/* Individual Properties */}
-                            {realProperties.map((prop) => (
-                              <button
-                                key={prop.id}
-                                onClick={() => {
-                                  switchProperty(prop.id)
-                                  setShowPropertySwitcher(false)
-                                }}
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                                  currentProperty?.id === prop.id
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "hover:bg-slate-50 text-slate-700"
-                                )}
-                              >
-                                <div className={cn(
-                                  "p-1.5 rounded-lg",
-                                  currentProperty?.id === prop.id ? "bg-emerald-100" : "bg-slate-100"
-                                )}>
-                                  <Building2 className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{prop.name}</p>
-                                  {prop.address && (
-                                    <p className="text-xs text-slate-500 truncate flex items-center gap-1">
-                                      <MapPin className="w-3 h-3" />
-                                      {prop.address}
-                                    </p>
-                                  )}
-                                </div>
-                                {currentProperty?.id === prop.id && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                              </button>
-                            ))}
-                          </div>
-                          
-                          {realProperties.length > 1 && (
-                            <div className="p-2 border-t border-slate-100 bg-slate-50">
-                              <button
-                                onClick={() => {
-                                  navigate('/operations/analytics')
-                                  setShowPropertySwitcher(false)
-                                }}
-                                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                              >
-                                <ArrowRightLeft className="w-4 h-4" />
-                                {t("welcome_header.compare_properties", "Compare Properties")}
-                              </button>
-                            </div>
-                          )}
-                        </m.div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Single Property Badge - Enhanced */}
-                  {isClusterContext && !isConsolidatedView && (
-                    <div ref={propertySwitcherRef} className="relative group">
-                      <button
-                        onClick={() => setShowPropertySwitcher(!showPropertySwitcher)}
-                        className="flex items-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white border-0 px-4 py-2 font-semibold rounded-xl text-sm shadow-lg shadow-emerald-200 hover:shadow-xl hover:scale-[1.02] transition-all"
-                      >
-                        <Building2 className="w-4 h-4" />
-                        <span className="max-w-[200px] truncate">{currentProperty?.name}</span>
-                        <ChevronDown className={cn("w-4 h-4 transition-transform", showPropertySwitcher && "rotate-180")} />
-                      </button>
-                      
-                      {/* Same dropdown as above */}
-                      {showPropertySwitcher && (
-                        <m.div
-                          initial={{ opacity: 0, y: 8, scale: 0.95 }}
-                          animate={{ opacity: 1, y: 0, scale: 1 }}
-                          exit={{ opacity: 0, y: 8, scale: 0.95 }}
-                          transition={{ duration: 0.15 }}
-                          className="absolute top-full left-0 mt-2 w-80 bg-white rounded-xl shadow-2xl border border-slate-200 z-[9999]"
-                          style={{ minWidth: '320px', maxHeight: '400px', overflow: 'visible' }}
-                        >
-                          <div className="p-3 border-b border-slate-100 bg-slate-50">
-                            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-                              {t("welcome_header.switch_property", "Switch Property")}
-                            </p>
-                          </div>
-                          <div className="max-h-64 overflow-y-auto p-2">
-                            <button
-                              onClick={() => {
-                                const consolidatedProp = availableProperties.find(p => !isRealPropertyId(p.id))
-                                if (consolidatedProp) switchProperty(consolidatedProp.id)
-                                setShowPropertySwitcher(false)
-                              }}
-                              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left hover:bg-slate-50 text-slate-700 transition-colors"
-                            >
-                              <div className="p-1.5 rounded-lg bg-slate-100">
-                                <Layers className="w-4 h-4" />
-                              </div>
-                              <div className="flex-1">
-                                <p className="text-sm font-medium">{t("welcome_header.all_properties", "All Properties")}</p>
-                                <p className="text-xs text-slate-500">{t("welcome_header.view_all_properties", "View consolidated data")}</p>
-                              </div>
-                            </button>
-                            
-                            <div className="h-px bg-slate-100 my-2" />
-                            
-                            {realProperties.map((prop) => (
-                              <button
-                                key={prop.id}
-                                onClick={() => {
-                                  switchProperty(prop.id)
-                                  setShowPropertySwitcher(false)
-                                }}
-                                className={cn(
-                                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors",
-                                  currentProperty?.id === prop.id
-                                    ? "bg-emerald-50 text-emerald-700"
-                                    : "hover:bg-slate-50 text-slate-700"
-                                )}
-                              >
-                                <div className={cn(
-                                  "p-1.5 rounded-lg",
-                                  currentProperty?.id === prop.id ? "bg-emerald-100" : "bg-slate-100"
-                                )}>
-                                  <Building2 className="w-4 h-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium truncate">{prop.name}</p>
-                                </div>
-                                {currentProperty?.id === prop.id && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
-                              </button>
-                            ))}
-                          </div>
-                        </m.div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Single Property User - Regular Badge */}
-                  {!isClusterContext && currentProperty?.name && (
-                    <Badge className="bg-slate-200/50 text-slate-600 border border-slate-200 px-3 py-1.5 font-semibold rounded-lg text-xs">
-                      <Building2 className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                      {currentProperty.name}
-                    </Badge>
-                  )}
-                  
-                  {/* Department & Role Badges */}
-                  {departments && departments.length > 0 && (
-                    <Badge className="bg-slate-200/50 text-slate-600 border border-slate-200 px-3 py-1.5 font-semibold rounded-lg text-xs">
-                      <Users className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                      {departments[0].name}
-                    </Badge>
-                  )}
-                  {profile?.job_title && (
-                    <Badge className="bg-slate-200/50 text-slate-600 border border-slate-200 px-3 py-1.5 font-semibold rounded-lg text-xs">
-                      <Briefcase className="w-3.5 h-3.5 mr-2 text-slate-400" />
-                      {profile.job_title}
-                    </Badge>
-                  )}
-                </div>
-                
-                {/* Quick Property Pills for Cluster Users */}
-                {isClusterContext && (
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-slate-400 font-medium">
-                      {isConsolidatedView ? t("welcome_header.quick_access", "Quick access:") : t("welcome_header.other_properties", "Other properties:")}
-                    </span>
-                    {realProperties
-                      .filter(p => isConsolidatedView || p.id !== currentProperty?.id)
-                      .slice(0, 3)
-                      .map((prop) => (
-                        <button
-                          key={prop.id}
-                          onClick={() => switchProperty(prop.id)}
-                          className="text-xs px-2.5 py-1 rounded-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-colors"
-                        >
-                          {prop.name}
-                        </button>
-                      ))}
-                    {realProperties.length > 3 && (
-                      <button
-                        onClick={() => setShowPropertySwitcher(true)}
-                        className="text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition-colors"
-                      >
-                        +{realProperties.length - 3}
-                      </button>
-                    )}
-                  </div>
-                )}
-              </div>
             </m.div>
-
-            {/* Interactive Bento Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3 w-full lg:w-3/5">
-              <StatBentoCard
-                icon={CheckCircle2}
-                title={t("welcome_header.stats.tasks", "Tasks")}
-                value={realTaskCount}
-                trend={realTaskCount > 5 ? 'down' : 'up'}
-                accentColor="text-blue-600"
-                delay={0.2}
-                showPulse={highPriorityTaskCount > 0}
-                subtext={
-                  highPriorityTaskCount > 0 ? (
-                    <span className="flex items-center gap-1 text-rose-600 font-semibold"><AlertCircle className="w-3 h-3" /> {highPriorityTaskCount} urgent</span>
-                  ) : (
-                    <span className="text-slate-400 font-medium">{t("welcome_header.stats.all_caught_up", "All caught up")}</span>
-                  )
-                }
-              />
-              <StatBentoCard
-                icon={Calendar}
-                title={t("welcome_header.stats.agenda", "Agenda")}
-                value={realMeetingCount}
-                accentColor="text-indigo-600"
-                delay={0.3}
-                subtext={
-                  nextMeeting ? (
-                    <span className="flex items-center gap-1 text-indigo-600 font-semibold"><CalendarClock className="w-3 h-3" /> {format(new Date(nextMeeting.start_date), 'h:mm a')}</span>
-                  ) : (
-                    <span className="text-slate-400 font-medium">{t("welcome_header.stats.schedule_clear", "Schedule clear")}</span>
-                  )
-                }
-              />
-              <StatBentoCard
-                icon={TrendingUp}
-                title={t("welcome_header.stats.training", "Training")}
-                value={`${realCompletionRate}%`}
-                trend={realCompletionRate > 50 ? 'up' : 'neutral'}
-                accentColor="text-emerald-600"
-                delay={0.4}
-                subtext={
-                  <div className="flex flex-col gap-1.5 w-full">
-                    <Progress value={realCompletionRate} className="h-1.5 bg-slate-200" />
-                    <span className="text-slate-400 text-[10px] font-semibold">{dashboardStats?.completedTraining || 0} / {totalTraining} {t("welcome_header.stats.done", "done")}</span>
-                  </div>
-                }
-              />
-            </div>
           </div>
         </div>
       </m.div>
     </LazyMotion>
   )
 }
-
-function Badge({ children, className }: { children: React.ReactNode, className?: string }) {
-  return (
-    <div className={cn("inline-flex items-center text-xs transition-colors focus:outline-none", className)}>
-      {children}
-    </div>
-  )
-}
-
-

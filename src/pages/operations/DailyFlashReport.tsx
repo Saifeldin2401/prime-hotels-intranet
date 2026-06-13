@@ -306,7 +306,7 @@ export default function DailyFlashReport() {
         const propertyMap = new Map<string, FlashReportData>()
 
         occupancyData?.forEach(occ => {
-            const pms = pmsData?.find(p => p.property_id === occ.property_id)
+            const pms = (pmsData as any)?.find((p: any) => p.property_id === occ.property_id)
             const report: FlashReportData = {
                 property: {
                     id: occ.property_id,
@@ -423,7 +423,7 @@ export default function DailyFlashReport() {
         const logo = await loadLogoAsDataUrl()
         const selectedProp = availableProperties.find(p => p.id === effectivePropertyId)
         const hotelName = isConsolidatedSelection
-            ? 'Consolidated View (All)'
+            ? t('operations:dashboard.all_properties', 'Consolidated (Cluster)')
             : selectedProp?.name || 'Unknown'
 
         await downloadReport(
@@ -576,9 +576,17 @@ export default function DailyFlashReport() {
                         </Link>
                     </Button>
                     <div>
-                        <h1 className="text-3xl font-bold tracking-tight">
-                            {t('operations:flash.title', 'Daily Flash Report')}
-                        </h1>
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-3xl font-bold tracking-tight">
+                                {t('operations:flash.title', 'Daily Flash Report')}
+                            </h1>
+                            {isConsolidatedSelection && (
+                                <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
+                                    {t('operations:dashboard.all_properties', 'Consolidated (Cluster)')}
+                                </Badge>
+                            )}
+                        </div>
                         <p className="text-muted-foreground">
                             {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
                         </p>
@@ -587,7 +595,7 @@ export default function DailyFlashReport() {
                 <div className="flex items-center gap-2 flex-wrap">
                     <Select value={resolvedSelectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="w-64 bg-background">
-                            <SelectValue placeholder={canUseConsolidatedView ? 'Consolidated View (All)' : 'Select Property'} />
+                            <SelectValue placeholder={canUseConsolidatedView ? t('operations:dashboard.all_properties', 'Consolidated (Cluster)') : 'Select Property'} />
                         </SelectTrigger>
                         <SelectContent>
                             {availableProperties.map(prop => (
@@ -922,14 +930,23 @@ export default function DailyFlashReport() {
                         <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
                             <Calendar className="h-10 w-10 text-slate-300" />
                         </div>
-                        <h3 className="text-xl font-bold text-slate-900 mb-2">No Report Data Found</h3>
+                        <h3 className="text-xl font-bold text-slate-900 mb-2">
+                            {isConsolidatedSelection 
+                                ? t('operations:flash.no_cluster_data', 'No data for this cluster scope') 
+                                : t('operations:flash.no_property_data', 'No Report Data Found')}
+                        </h3>
                         <p className="text-slate-500 max-w-xs mx-auto">
-                            We couldn't find any flash report data for **{format(new Date(selectedDate), 'MMMM d, yyyy')}**.
-                            Please ensure PMS data has been imported for this date.
+                            {isConsolidatedSelection 
+                                ? t('operations:flash.no_cluster_data_desc', "We couldn't find any flash report data for the cluster scope on this date. Please ensure PMS data has been imported for this date.")
+                                : t('operations:flash.no_property_data_desc', { 
+                                    defaultValue: "We couldn't find any flash report data for {{date}}. Please ensure PMS data has been imported for this date.",
+                                    date: format(new Date(selectedDate), 'MMMM d, yyyy')
+                                  })
+                            }
                         </p>
                         <Button variant="outline" className="mt-6" asChild>
                             <Link to="/operations/import">
-                                Import PMS Data
+                                {t('operations:nav.import', 'Import Data')}
                             </Link>
                         </Button>
                     </CardContent>

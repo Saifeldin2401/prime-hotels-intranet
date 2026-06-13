@@ -100,7 +100,7 @@ export function MobileLayout({
                 <MobileHeader
                     title={getPageTitle()}
                     subtitle={headerSubtitle}
-                    showBack={showBack || location.pathname !== '/'}
+                    showBack={showBack || !(location.pathname === '/' || location.pathname === '/dashboard' || location.pathname === '/home')}
                     onMenuClick={() => setSidebarOpen(true)}
                     className="shrink-0"
                 />
@@ -110,8 +110,8 @@ export function MobileLayout({
             <main 
                 className={cn(
                     'flex-1 w-full max-w-none mx-auto',
-                    'px-4 sm:px-6 py-4',
-                    'has-bottom-nav', /* Adds padding for enhanced bottom nav with FAB */
+                    'px-4 sm:px-6 py-4 px-safe', /* Ensure safe area padding boundaries are clean on notched screens */
+                    'has-bottom-nav', /* Adds padding for enhanced bottom nav */
                     'animate-in fade-in duration-300',
                     className
                 )}
@@ -129,9 +129,7 @@ export function MobileLayout({
                     isMobile={true}
                 />
             ) : (
-                <MobileNavigation
-                    onMenuClick={() => setSidebarOpen(true)}
-                />
+                <MobileNavigation />
             )}
 
             {/* Deferred components */}

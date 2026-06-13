@@ -1,4 +1,40 @@
 {
+    "emptyState": {
+        "noData": {
+            "title": "No data available",
+            "description": "There's no data to display at the moment."
+        },
+        "noResults": {
+            "title": "No results found",
+            "description": "Try adjusting your search terms or filters.",
+            "clear": "Clear search"
+        },
+        "noDocuments": {
+            "title": "No documents yet",
+            "description": "Upload your first document to get started.",
+            "action": "Upload document"
+        },
+        "noEvents": {
+            "title": "No upcoming events",
+            "description": "There are no events scheduled for this period.",
+            "action": "Create event"
+        },
+        "noUsers": {
+            "title": "No team members",
+            "description": "Invite team members to collaborate.",
+            "action": "Invite team member"
+        },
+        "error": {
+            "title": "Something went wrong",
+            "description": "An error occurred while loading the data.",
+            "action": "Try again"
+        },
+        "networkError": {
+            "title": "Connection error",
+            "description": "Unable to connect to the server. Please check your internet connection.",
+            "action": "Retry"
+        }
+    },
     "language": {
         "en": "English",
         "ar": "Arabic"
@@ -58,7 +94,7 @@
         "please_login": "Please login to access this page",
         "view_profile": "View Profile",
         "visibility": {
-            "all_properties": "All Properties",
+            "all_properties": "Consolidated (Cluster)",
             "property_specific": "Property Specific",
             "department_specific": "Department Specific",
             "role_specific": "Role Specific"
@@ -372,7 +408,7 @@
         "verifying_access": "Verifying access..."
     },
     "visibility": {
-        "all_properties": "All Properties",
+        "all_properties": "Consolidated (Cluster)",
         "department_specific": "Department Specific",
         "property_specific": "Property Specific",
         "role_specific": "Role Specific"

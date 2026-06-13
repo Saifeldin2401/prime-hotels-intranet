@@ -29,19 +29,7 @@ import {
 } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-  DropdownMenuSub as DropdownSub,
-} from '@/components/ui/dropdown-menu'
-import { ScrollArea } from '@/components/ui/scroll-area'
+
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
@@ -51,16 +39,10 @@ import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
 import {
-  Bell,
   Building,
   ChevronDown,
-  ChevronsUpDown,
   Globe,
-  LayoutDashboard,
   LogOut,
-  Settings,
-  Sparkles,
-  User,
   X
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
@@ -454,7 +436,7 @@ export function SidebarNavigation({
               isMobile && "px-4 py-2 border-b border-white/10"
             )}>
               {isMobile ? (
-                // Mobile: Compact profile row
+                // Mobile: Compact profile row (static)
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 rounded-xl border-2 border-hotel-gold/30">
                     <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
@@ -470,169 +452,37 @@ export function SidebarNavigation({
                       {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => { navigate('/notifications'); onClose(); }}
-                      className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
-                      aria-label={t('accessibility.notifications', 'Notifications')}
-                    >
-                      <Bell className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => { navigate('/settings'); onClose(); }}
-                      className="h-9 w-9 rounded-full bg-white/5 hover:bg-white/10 text-white/70"
-                      aria-label={t('accessibility.settings', 'Settings')}
-                    >
-                      <Settings className="h-4 w-4" />
-                    </Button>
-                  </div>
                 </div>
               ) : (
-                // Desktop: Original dropdown menu
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      className="w-full relative h-auto py-3 px-3 rounded-xl bg-hotel-navy-dark/50 hover:bg-hotel-navy-light border border-white/5 hover:border-hotel-gold/20 shadow-sm transition-all duration-200 group flex items-center gap-3 justify-start"
-                      aria-label={t('nav.user_menu', "User menu")}
-                    >
-                      <div className="relative">
-                        <Avatar className="h-10 w-10 border-2 border-hotel-gold/20 group-hover:border-hotel-gold transition-colors shadow-sm">
-                          <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
-                          <AvatarFallback className="bg-hotel-navy text-hotel-gold font-bold">
-                            {userInitials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
-                      </div>
+                // Desktop: Static profile display
+                <div className="w-full relative py-3 px-3 rounded-xl bg-hotel-navy-dark/30 border border-white/5 shadow-sm flex items-center gap-3 justify-start">
+                  <div className="relative">
+                    <Avatar className="h-10 w-10 border-2 border-hotel-gold/20 shadow-sm">
+                      <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
+                      <AvatarFallback className="bg-hotel-navy text-hotel-gold font-bold">
+                        {userInitials}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                  </div>
 
-                      <div className="flex-1 min-w-0 text-left">
-                        <p className="text-sm font-semibold text-white truncate font-serif tracking-wide group-hover:text-hotel-gold transition-colors">
-                          {profile?.full_name || user?.email?.split('@')[0] || 'User'}
-                        </p>
-                        <div className="flex flex-col gap-0.5">
-                          <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
-                            {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
-                          </p>
-                          {currentProperty && (
-                            <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">
-                              {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
-                              <span>{currentProperty.name}</span>
-                            </div>
-                          )}
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="text-sm font-semibold text-white truncate font-serif tracking-wide">
+                      {profile?.full_name || user?.email?.split('@')[0] || 'User'}
+                    </p>
+                    <div className="flex flex-col gap-0.5">
+                      <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
+                        {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
+                      </p>
+                      {currentProperty && (
+                        <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">
+                          {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
+                          <span>{currentProperty.name}</span>
                         </div>
-                      </div>
-                      <ChevronsUpDown className="h-4 w-4 text-white/40 group-hover:text-white transition-colors" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    className="w-[240px] bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-xl"
-                    align="start"
-                    side="right"
-                    sideOffset={8}
-                  >
-                    <DropdownMenuLabel className="font-normal">
-                      <div className="flex flex-col space-y-1">
-                        <p className="text-sm font-medium leading-none text-hotel-gold">{profile?.full_name}</p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {profile?.email}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuGroup>
-                      <DropdownSub>
-                        <DropdownMenuSubTrigger className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90">
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full bg-green-500 shadow-[0_0_5px_rgba(34,197,94,0.5)]" />
-                            <span>{t('common:status_label', 'Status')}</span>
-                          </div>
-                        </DropdownMenuSubTrigger>
-                        <DropdownMenuSubContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white shadow-2xl">
-                          <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                            <div className="w-2 h-2 rounded-full bg-green-500 me-2" />
-                            Online
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                            <div className="w-2 h-2 rounded-full bg-amber-500 me-2" />
-                            Away
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="focus:bg-hotel-navy-light focus:text-white cursor-pointer text-white/90">
-                            <div className="w-2 h-2 rounded-full bg-red-500 me-2" />
-                            Busy
-                          </DropdownMenuItem>
-                        </DropdownMenuSubContent>
-                      </DropdownSub>
-                      <DropdownMenuItem
-                        className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
-                        onSelect={() => navigate('/profile')}
-                      >
-                        <User className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
-                        <span>{t('nav.my_profile', 'My Profile')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
-                        onSelect={() => navigate('/settings')}
-                      >
-                        <Settings className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
-                        <span>{t('nav.settings', 'Settings')}</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
-                        onSelect={() => navigate('/notifications')}
-                      >
-                        <Bell className="me-2 h-4 w-4 text-white/60 group-hover:text-hotel-gold" />
-                        <span>{t('common:notifications_label', 'Notifications')}</span>
-                        <Badge className="ms-auto h-4 px-1 bg-hotel-gold text-hotel-navy text-[10px]">New</Badge>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem
-                        className="focus:bg-hotel-navy-light focus:text-white cursor-pointer group text-white/90"
-                        onSelect={() => navigate('/training/certificates')}
-                      >
-                        <Sparkles className="me-2 h-4 w-4 text-hotel-gold" />
-                        <span>{t('my_awards', 'My Awards')}</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                    <DropdownMenuSeparator className="bg-white/10" />
-                    <AlertDialogRoot>
-                      <AlertDialogTriggerRoot asChild>
-                        <DropdownMenuItem
-                          className="focus:bg-red-900/30 focus:text-red-400 text-red-400 cursor-pointer"
-                          onSelect={(e) => e.preventDefault()}
-                        >
-                          <LogOut className="me-2 h-4 w-4" />
-                          <span>{t('nav.logout', 'Sign out')}</span>
-                        </DropdownMenuItem>
-                      </AlertDialogTriggerRoot>
-                      <AlertDialogContent className="bg-hotel-navy-dark border-hotel-gold/20 text-white">
-                        <AlertDialogHeader>
-                          <AlertDialogTitle className="text-hotel-gold font-serif">{t('common:auth.confirm_signout', 'Confirm Sign Out')}</AlertDialogTitle>
-                          <AlertDialogDescription className="text-white/70">
-                            {t('common:auth.signout_message', 'Are you sure you want to sign out of PRIME Connect? You will need to log back in to access your dashboard.')}
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel className="bg-white/5 border-white/10 text-white hover:bg-white/10 hover:text-white">
-                            {t('common:cancel', 'Cancel')}
-                          </AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={handleSignOut}
-                            className="bg-red-600 text-white hover:bg-red-700 border-none"
-                          >
-                            {t('nav.logout', 'Sign out')}
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialogRoot>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
             </div>
           )}

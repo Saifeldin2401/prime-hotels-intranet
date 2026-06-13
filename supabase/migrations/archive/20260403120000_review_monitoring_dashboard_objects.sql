@@ -168,7 +168,7 @@ SET search_path = public
 AS $$
 DECLARE
   v_service_key text;
-  v_url text := 'https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/guest-review-collector';
+  v_url text := 'https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/guest-review-collector';
 BEGIN
   SELECT decrypted_secret INTO v_service_key
   FROM vault.decrypted_secrets WHERE name = 'service_role_key' LIMIT 1;

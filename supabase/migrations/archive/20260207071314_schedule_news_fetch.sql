@@ -8,7 +8,7 @@ SELECT cron.schedule(
     $$
     SELECT
         net.http_post(
-            url:='https://htsvjfrofcpkfzvjpwvx.supabase.co/functions/v1/fetch-news',
+            url:='https://dhbfaclkfysqwfppuxxa.supabase.co/functions/v1/fetch-news',
             headers:='{"Content-Type": "application/json"}'::jsonb,
             body:='{}'::jsonb
         ) as request_id;

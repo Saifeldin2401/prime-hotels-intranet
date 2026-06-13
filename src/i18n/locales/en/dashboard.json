@@ -1,8 +1,11 @@
-﻿{
+{
     "title": "Dashboard",
     "welcome": "Welcome back, {{name}}",
     "property_overview": "Property overview for {{name}}",
     "widgets": {
+        "time_and_weather": "Time & Operations",
+        "weather": "Local Weather",
+        "prayer_times": "Prayer Times",
         "role": "Current Role",
         "documents": "Recent Documents",
         "training": "Training Progress",
@@ -886,5 +889,26 @@
         "task_completion": "Task Completion",
         "training_progress": "Training Progress",
         "response_time": "Response Time"
+    },
+    "prayer": {
+        "remaining": "In",
+        "fajr": "Fajr",
+        "dhuhr": "Dhuhr",
+        "duhr": "Dhuhr",
+        "asr": "Asr",
+        "maghrib": "Maghrib",
+        "isha": "Isha"
+    },
+    "weather": {
+        "cloudy": "Cloudy",
+        "sunny": "Sunny",
+        "rainy": "Rainy",
+        "clear": "Clear",
+        "partly_cloudy": "Partly Cloudy"
+    },
+    "time_remaining": {
+        "in": "In",
+        "h": "h",
+        "m": "m"
     }
 }
