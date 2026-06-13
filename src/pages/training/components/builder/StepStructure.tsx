@@ -1,0 +1,114 @@
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { cn } from '@/lib/utils'
+import { Plus } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
+import type { TrainingSection } from './trainingBuilderTypes'
+
+interface StepStructureProps {
+  sections: TrainingSection[]
+  addSection: () => void
+  deleteSection: (id: string) => void
+  handleRenameSection: (id: string, value: string) => void
+  moveSection: (index: number, direction: number) => void
+  isRTL: boolean
+}
+
+export function StepStructure({
+  sections,
+  addSection,
+  deleteSection,
+  handleRenameSection,
+  moveSection,
+  isRTL,
+}: StepStructureProps) {
+  const { t } = useTranslation('training')
+
+  return (
+    <div className="p-6">
+      <div className="max-w-4xl mx-auto space-y-5">
+        <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+          <div>
+            <h3 className="text-lg font-semibold text-slate-800">{t('builder.structureTitle')}</h3>
+            <p className="text-sm text-muted-foreground">{t('builder.structureDesc')}</p>
+          </div>
+          <Button onClick={addSection} className={cn("bg-hotel-gold hover:bg-hotel-gold-dark text-white", isRTL ? "flex-row-reverse" : "")}>
+            <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            {t('builder.addSection')}
+          </Button>
+        </div>
+
+        {sections.length === 0 ? (
+          <Card className="border-dashed border-2 bg-slate-50/50">
+            <CardContent className="text-center py-16 flex flex-col items-center">
+              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+                <Plus className="w-8 h-8 text-slate-300" />
+              </div>
+              <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startStructure')}</h4>
+              <p className="text-slate-500 mb-6 max-w-sm">{t('builder.startStructureDesc')}</p>
+              <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
+                <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                {t('builder.addSection')}
+              </Button>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {sections.map((section, index) => (
+              <Card key={section.id} className="border-slate-200 shadow-sm">
+                <CardContent className="py-4 space-y-3">
+                  <div className={cn("flex items-center justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
+                    <div className="flex-1 space-y-2">
+                      <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
+                        {t('builder.sectionLabel', { number: index + 1 })}
+                      </Label>
+                      <Input
+                        value={section.title}
+                        onChange={(e) => handleRenameSection(section.id, e.target.value)}
+                        className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                      />
+                    </div>
+                    <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                      <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal">
+                        {section.items.length} {t('builder.items')}
+                      </Badge>
+                      <div className={cn("flex items-center gap-1", isRTL ? "flex-row-reverse" : "")}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveSection(index, -1)}
+                          disabled={index === 0}
+                        >
+                          {t('builder.moveUp')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => moveSection(index, 1)}
+                          disabled={index === sections.length - 1}
+                        >
+                          {t('builder.moveDown')}
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-red-500 hover:text-red-600"
+                          onClick={() => deleteSection(section.id)}
+                        >
+                          {t('delete')}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
