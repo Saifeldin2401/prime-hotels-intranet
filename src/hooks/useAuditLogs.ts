@@ -22,7 +22,7 @@ export function useRecentAuditLogs(limit = 10) {
         queryKey: ['recent-audit-logs', limit],
         queryFn: async (): Promise<AuditLog[]> => {
             const { data, error } = await supabase
-                .from('audit_logs')
+                .from('audit_logs_v')
                 .select(`
                     *,
                     profile:profiles!user_id(full_name, avatar_url)

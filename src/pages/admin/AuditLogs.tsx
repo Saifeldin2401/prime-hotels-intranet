@@ -60,7 +60,7 @@ export default function AuditLogs() {
     queryKey: ['audit-logs', searchTerm, actionFilter, targetFilter, dateRange, page, pageSize],
     queryFn: async () => {
       let query = supabase
-        .from('audit_logs')
+        .from('audit_logs_v')
         .select(`
           *,
           user:profiles!user_id(full_name, email)
@@ -132,7 +132,7 @@ export default function AuditLogs() {
       // We will just fetch counts for card display based on date range.
 
       const getCount = async (filter) => {
-        let q = supabase.from('audit_logs').select('id', { count: 'exact', head: true })
+        let q = supabase.from('audit_logs_v').select('id', { count: 'exact', head: true })
 
         // Apply date range
         if (dateRange !== 'all') {
@@ -173,7 +173,7 @@ export default function AuditLogs() {
     // Limit to reasonable amount (e.g. 1000) to prevent crash
     try {
       let query = supabase
-        .from('audit_logs')
+        .from('audit_logs_v')
         .select(`
             *,
             user:profiles!user_id(full_name, email)
