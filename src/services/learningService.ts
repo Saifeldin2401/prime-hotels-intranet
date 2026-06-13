@@ -543,16 +543,16 @@ export const learningService = {
 
         // If publishing the quiz, also publish all linked questions to ensure visibility
         if (updates.status === 'published') {
-            // Find all questions linked to this quiz
+            // Find all questions linked to this quiz via unified_quiz_questions
             const { data: links } = await supabase
-                .from('learning_quiz_questions')
+                .from('unified_quiz_questions')
                 .select('question_id')
                 .eq('quiz_id', id)
 
             if (links && links.length > 0) {
                 const questionIds = links.map(l => l.question_id)
                 await supabase
-                    .from('knowledge_questions')
+                    .from('unified_questions')
                     .update({ status: 'published' })
                     .in('id', questionIds)
             }
@@ -575,8 +575,9 @@ export const learningService = {
     // ==========================================
 
     async addQuestionToQuiz(quizId: string, questionId: string, order: number) {
+        // Write to unified_quiz_questions; learning_quiz_questions view provides read compat
         const { data, error } = await supabase
-            .from('learning_quiz_questions')
+            .from('unified_quiz_questions')
             .insert({
                 quiz_id: quizId,
                 question_id: questionId,
@@ -591,7 +592,7 @@ export const learningService = {
 
     async removeQuestionFromQuiz(quizId: string, questionId: string) {
         const { error } = await supabase
-            .from('learning_quiz_questions')
+            .from('unified_quiz_questions')
             .delete()
             .eq('quiz_id', quizId)
             .eq('question_id', questionId)
@@ -600,7 +601,6 @@ export const learningService = {
     },
 
     async reorderQuizQuestions(quizId: string, questionIds: string[]) {
-        // Upsert all with new orders
         const updates = questionIds.map((qId, index) => ({
             quiz_id: quizId,
             question_id: qId,
@@ -608,7 +608,7 @@ export const learningService = {
         }))
 
         const { error } = await supabase
-            .from('learning_quiz_questions')
+            .from('unified_quiz_questions')
             .upsert(updates, { onConflict: 'quiz_id,question_id' })
 
         if (error) throw error

@@ -58,16 +58,16 @@ export async function recordAttempt(
         }
     }
 
-    // Get attempt number
+    // Get attempt number from unified_question_attempts
     const { count } = await supabase
-        .from('knowledge_question_attempts')
+        .from('unified_question_attempts')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('question_id', submission.question_id)
 
-    // Record the attempt
+    // Record the attempt in unified_question_attempts
     const { error } = await supabase
-        .from('knowledge_question_attempts')
+        .from('unified_question_attempts')
         .insert({
             user_id: userId,
             question_id: submission.question_id,
@@ -95,6 +95,7 @@ export async function getUserAttempts(
     questionId?: string,
     limit = 50
 ): Promise<QuestionAttempt[]> {
+    // Read via backward-compat view (knowledge_question_attempts → unified_question_attempts)
     let query = supabase
         .from('knowledge_question_attempts')
         .select(`
@@ -120,8 +121,9 @@ export async function startQuizSession(
     entityId?: string,
     settings?: { timeLimit?: number; passingScore?: number }
 ): Promise<QuizSession> {
+    // Write directly to unified_quiz_sessions
     const { data, error } = await supabase
-        .from('knowledge_quiz_sessions')
+        .from('unified_quiz_sessions')
         .insert({
             user_id: userId,
             quiz_type: quizType,
@@ -149,9 +151,9 @@ export async function completeQuizSession(
         ? (results.earnedPoints / results.totalPoints) * 100
         : 0
 
-    // Get session to check passing score
+    // Get session to check passing score from unified_quiz_sessions
     const { data: session } = await supabase
-        .from('knowledge_quiz_sessions')
+        .from('unified_quiz_sessions')
         .select('passing_score')
         .eq('id', sessionId)
         .single()
@@ -161,7 +163,7 @@ export async function completeQuizSession(
         : scorePercentage >= 70
 
     const { data, error } = await supabase
-        .from('knowledge_quiz_sessions')
+        .from('unified_quiz_sessions')
         .update({
             completed_at: new Date().toISOString(),
             total_questions: results.totalQuestions,

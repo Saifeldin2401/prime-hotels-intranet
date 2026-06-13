@@ -8,7 +8,7 @@ export async function getQuestionAnalytics(questionId: string): Promise<{
     hintUsageRate: number
 }> {
     const { data, error } = await supabase
-        .from('knowledge_question_attempts')
+        .from('unified_question_attempts')
         .select('is_correct, time_spent_seconds, hint_used')
         .eq('question_id', questionId)
 
@@ -36,7 +36,7 @@ export async function getUserQuestionStats(userId: string): Promise<{
     recentStreak: number
 }> {
     const { data, error } = await supabase
-        .from('knowledge_question_attempts')
+        .from('unified_question_attempts')
         .select('is_correct, created_at')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
@@ -98,7 +98,7 @@ export async function getDailyChallengeStatus(userId: string): Promise<{ complet
 
     // Check for attempts with context 'daily_challenge' created today
     const { count, error } = await supabase
-        .from('knowledge_question_attempts')
+        .from('unified_question_attempts')
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
         .eq('context_type', 'daily_challenge')

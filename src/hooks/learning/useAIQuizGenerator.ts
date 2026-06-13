@@ -77,21 +77,20 @@ export const useAIQuizGenerator = () => {
             const questionIds: string[] = []
 
             for (const q of generatedQuestions) {
-                // Create Question Record
+                // Create Question Record in unified_questions (source_domain='knowledge')
                 const { data: qRecord, error: qError } = await supabase
-                    .from('knowledge_questions')
+                    .from('unified_questions')
                     .insert({
+                        source_domain: 'knowledge',
                         question_text: q.question_text,
                         question_type: q.question_type,
-                        options: q.options,
                         correct_answer: q.correct_answer,
                         points: q.points,
                         explanation: q.explanation ?? null,
                         hint: q.hint ?? null,
-                        linked_sop_id: sopId, // Storing document ID here too.
+                        linked_sop_id: sopId,
                         difficulty: options.difficulty ?? 'medium',
                         status: 'draft',
-                        usage_type: 'quiz',
                         created_by: (await supabase.auth.getUser()).data.user?.id
                     })
                     .select('id')

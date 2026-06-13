@@ -1396,22 +1396,24 @@ export function TrainingBuilder() {
       if (!targetId) return
 
       await supabase
-        .from('training_quizzes')
+        .from('unified_questions')
         .delete()
-        .eq('training_module_id', targetId)
+        .eq('source_domain', 'training')
+        .eq('source_id', targetId)
 
       if (questions.length > 0) {
         const questionsToInsert = questions.map((question, index) => ({
-          training_module_id: targetId,
-          question: question.question,
-          type: question.type,
+          source_domain: 'training',
+          source_id: targetId,
+          question_text: question.question,
+          question_type: question.type,
           options: question.type === 'mcq' ? question.options : null,
           correct_answer: question.correct_answer,
-          order: index
+          order_index: index
         }))
 
         const { error } = await supabase
-          .from('training_quizzes')
+          .from('unified_questions')
           .insert(questionsToInsert)
         if (error) throw error
       }

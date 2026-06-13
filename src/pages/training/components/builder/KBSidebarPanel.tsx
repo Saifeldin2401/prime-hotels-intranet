@@ -145,7 +145,7 @@ export function KBSidebarPanel({
             }))
 
             const { error: linkError } = await supabase
-              .from('learning_quiz_questions')
+              .from('unified_quiz_questions')
               .insert(quizQuestions)
 
             if (linkError) throw linkError

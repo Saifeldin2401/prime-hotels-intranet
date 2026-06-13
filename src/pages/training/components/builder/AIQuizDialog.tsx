@@ -116,7 +116,7 @@ export function AIQuizDialog({
                   for (let i = 0; i < ids.length; i++) {
                     const questionId = ids[i]
                     await supabase
-                      .from('learning_quiz_questions')
+                      .from('unified_quiz_questions')
                       .insert({
                         quiz_id: quizData.id,
                         question_id: questionId,

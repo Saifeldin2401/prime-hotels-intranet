@@ -564,12 +564,14 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                     const q = aiQuestions[i]
                     const correctOption = q.options?.find(o => o.is_correct)
                     
+                    // Write to unified_questions (source_domain='knowledge')
                     const { data: question } = await supabase
-                        .from('knowledge_questions')
+                        .from('unified_questions')
                         .insert({
+                            source_domain: 'knowledge',
                             question_text: q.question_text,
                             question_type: q.question_type,
-                            difficulty_level: difficulty,
+                            difficulty: difficulty,
                             correct_answer: correctOption?.text || q.correct_answer || '',
                             explanation: q.explanation,
                             hint: q.hint,
@@ -590,9 +592,11 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                             is_correct: opt.is_correct,
                             display_order: idx + 1
                         }))
-                        await supabase.from('knowledge_question_options').insert(options)
+                        // Write to unified_question_options
+                        await supabase.from('unified_question_options').insert(options)
 
-                        await supabase.from('learning_quiz_questions').insert({
+                        // Write to unified_quiz_questions
+                        await supabase.from('unified_quiz_questions').insert({
                             quiz_id: quizId,
                             question_id: question.id,
                             display_order: i + 1,

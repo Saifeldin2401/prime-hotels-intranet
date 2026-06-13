@@ -18,6 +18,7 @@ export interface QuestionFilters {
     tags?: string[]
 }
 
+// Read via backward-compat view (knowledge_questions → unified_questions WHERE source_domain='knowledge')
 export async function getQuestions(
     filters: QuestionFilters = {},
     page = 1,
@@ -29,7 +30,7 @@ export async function getQuestions(
       *,
       options:knowledge_question_options(*),
       linked_sop:documents(id, title),
-      created_by_profile:profiles!knowledge_questions_created_by_fkey(id, full_name)
+      created_by_profile:profiles!unified_questions_created_by_fkey(id, full_name)
     `, { count: 'exact' })
 
     // Apply filters
@@ -58,6 +59,7 @@ export async function getQuestions(
     }
 }
 
+// Read via backward-compat view
 export async function getQuestionById(id: string): Promise<KnowledgeQuestion | null> {
     const { data, error } = await supabase
         .from('knowledge_questions')
@@ -65,8 +67,8 @@ export async function getQuestionById(id: string): Promise<KnowledgeQuestion | n
       *,
       options:knowledge_question_options(*),
       linked_sop:documents(id, title),
-      created_by_profile:profiles!knowledge_questions_created_by_fkey(id, full_name),
-      reviewed_by_profile:profiles!knowledge_questions_reviewed_by_fkey(id, full_name)
+      created_by_profile:profiles!unified_questions_created_by_fkey(id, full_name),
+      reviewed_by_profile:profiles!unified_questions_reviewed_by_fkey(id, full_name)
     `)
         .eq('id', id)
         .single()
@@ -75,6 +77,7 @@ export async function getQuestionById(id: string): Promise<KnowledgeQuestion | n
     return data
 }
 
+// Write directly to unified_questions (source_domain='knowledge')
 export async function createQuestion(
     formData: QuestionFormData,
     userId: string,
@@ -82,11 +85,12 @@ export async function createQuestion(
 ): Promise<KnowledgeQuestion> {
     const { options, ...questionData } = formData
 
-    // Insert question
+    // Insert question into unified_questions
     const { data: question, error: qError } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .insert({
             ...questionData,
+            source_domain: 'knowledge',
             created_by: userId,
             ai_generated: aiGenerated,
             status: 'draft' as QuestionStatus
@@ -96,7 +100,7 @@ export async function createQuestion(
 
     if (qError) throw qError
 
-    // Insert options if MCQ
+    // Insert options if MCQ into unified_question_options
     if (options.length > 0 && (formData.question_type === 'mcq' || formData.question_type === 'mcq_multi')) {
         const optionsWithQuestionId = options.map((opt, idx) => ({
             ...opt,
@@ -105,7 +109,7 @@ export async function createQuestion(
         }))
 
         const { error: optError } = await supabase
-            .from('knowledge_question_options')
+            .from('unified_question_options')
             .insert(optionsWithQuestionId)
 
         if (optError) throw optError
@@ -114,6 +118,7 @@ export async function createQuestion(
     return question
 }
 
+// Write directly to unified_questions
 export async function updateQuestion(
     id: string,
     formData: Partial<QuestionFormData>,
@@ -123,7 +128,7 @@ export async function updateQuestion(
 
     // Update question
     const { data: question, error: qError } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .update({
             ...questionData,
             updated_at: new Date().toISOString()
@@ -138,7 +143,7 @@ export async function updateQuestion(
     if (options !== undefined) {
         // Delete existing options
         await supabase
-            .from('knowledge_question_options')
+            .from('unified_question_options')
             .delete()
             .eq('question_id', id)
 
@@ -151,7 +156,7 @@ export async function updateQuestion(
             }))
 
             const { error: optError } = await supabase
-                .from('knowledge_question_options')
+                .from('unified_question_options')
                 .insert(optionsWithQuestionId)
 
             if (optError) throw optError
@@ -161,9 +166,10 @@ export async function updateQuestion(
     return question
 }
 
+// Write directly to unified_questions
 export async function deleteQuestion(id: string): Promise<void> {
     const { error } = await supabase
-        .from('knowledge_questions')
+        .from('unified_questions')
         .delete()
         .eq('id', id)
 
