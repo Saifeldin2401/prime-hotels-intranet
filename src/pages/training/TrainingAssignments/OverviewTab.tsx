@@ -4,12 +4,9 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import type { LearningProgress } from '@/hooks/useLearningProgress'
-import type { TrainingModule } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import {
     AlertTriangle,
-    BarChart3,
     BookOpen,
     CheckCircle2,
     Clock,
@@ -20,86 +17,40 @@ import {
     X
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { EmployeeProgressGroup } from './types'
+import { useTrainingAssignmentsContext } from '../contexts/TrainingAssignmentsContext'
 
-interface OverviewTabProps {
-  isRTL: boolean
-  overviewSearch: string
-  onOverviewSearchChange: (value: string) => void
-  overviewFilterDept: string
-  onOverviewFilterDeptChange: (value: string) => void
-  overviewFilterProp: string
-  onOverviewFilterPropChange: (value: string) => void
-  overviewFilterStatus: string
-  onOverviewFilterStatusChange: (value: string) => void
-  departments: Array<{ id: string; name: string; propertyName?: string; rawName?: string }> | undefined
-  properties: Array<{ id: string; name: string }> | undefined
-  progressMetrics: {
-    total: number
-    completed: number
-    in_progress: number
-    overdue: number
-    uniqueModules: number
-  }
-  employeeTrackingSummary: {
-    averageModulesPerEmployee: number
-    averageProgress: number
-    averageScore: number | null
-    completionRate: number
-    employeeCount: number
-    employeesNeedingFollowUp: number
-    heavyLoadEmployees: number
-  }
-  employeeProgressGroups: EmployeeProgressGroup[]
-  followUpQueue: EmployeeProgressGroup[]
-  moduleLoadLeaders: EmployeeProgressGroup[]
-  isLoadingProgress: boolean
-  onViewDetails: (id: string) => void
-  onExport: () => void
-  onResetProgress: (userId: string, moduleId: string) => void
-  onRevokeCertificate: (userId: string, moduleId: string) => void
-  onExemptUser: (userId: string, moduleId: string) => void
-  onRestoreUser: (userId: string, moduleId: string) => void
-  formatDate: (dateStr: string) => string
-  formatDuration: (seconds?: number | null) => string
-  getProgressStatusMeta: (status: LearningProgress['status']) => {
-    badgeClass: string
-    label: string
-    progressClass: string
-  }
-  describeFollowUp: (group: EmployeeProgressGroup) => string
-  modules: TrainingModule[] | undefined
-}
+export function OverviewTab() {
+  const {
+    isRTL,
+    overviewSearch,
+    setOverviewSearch,
+    overviewFilterDept,
+    setOverviewFilterDept,
+    overviewFilterProp,
+    setOverviewFilterProp,
+    overviewFilterStatus,
+    setOverviewFilterStatus,
+    departments,
+    properties,
+    progressMetrics,
+    employeeTrackingSummary,
+    employeeProgressGroups,
+    followUpQueue,
+    moduleLoadLeaders,
+    isLoadingProgress,
+    setSelectedProgressId,
+    handleExport,
+    submitResetProgress,
+    submitExemptUser,
+    submitRestoreUser,
+    formatDate,
+    formatDuration,
+    getProgressStatusMeta,
+    describeFollowUp,
+    toast,
+    t: tCtx,
+  } = useTrainingAssignmentsContext()
 
-export function OverviewTab({
-  isRTL,
-  overviewSearch,
-  onOverviewSearchChange,
-  overviewFilterDept,
-  onOverviewFilterDeptChange,
-  overviewFilterProp,
-  onOverviewFilterPropChange,
-  overviewFilterStatus,
-  onOverviewFilterStatusChange,
-  departments,
-  properties,
-  progressMetrics,
-  employeeTrackingSummary,
-  employeeProgressGroups,
-  followUpQueue,
-  moduleLoadLeaders,
-  isLoadingProgress,
-  onViewDetails,
-  onExport,
-  onResetProgress,
-  onRevokeCertificate,
-  onExemptUser,
-  onRestoreUser,
-  formatDate,
-  formatDuration,
-  getProgressStatusMeta,
-  describeFollowUp,
-}: OverviewTabProps) {
   const { t } = useTranslation('training')
 
   return (
@@ -111,7 +62,7 @@ export function OverviewTab({
             <Input
               placeholder={t('searchEmployeeOrModule')}
               value={overviewSearch}
-              onChange={(e) => onOverviewSearchChange(e.target.value)}
+              onChange={(e) => setOverviewSearch(e.target.value)}
               className={cn(isRTL ? "pr-9" : "pl-9", "bg-slate-50/50 border-slate-200")}
             />
           </div>
@@ -119,13 +70,13 @@ export function OverviewTab({
             departments={departments}
             properties={properties}
             value={overviewFilterDept}
-            onValueChange={onOverviewFilterDeptChange}
+            onValueChange={setOverviewFilterDept}
             placeholder={t('filterByDept')}
             generalLabel={t('allDepartments')}
             generalValue="all"
             className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200"
           />
-          <Select value={overviewFilterProp} onValueChange={onOverviewFilterPropChange}>
+          <Select value={overviewFilterProp} onValueChange={setOverviewFilterProp}>
             <SelectTrigger className="w-full sm:w-[180px] bg-slate-50/50 border-slate-200">
               <SelectValue placeholder={t('filterByProp')} />
             </SelectTrigger>
@@ -136,7 +87,7 @@ export function OverviewTab({
               ))}
             </SelectContent>
           </Select>
-          <Select value={overviewFilterStatus} onValueChange={onOverviewFilterStatusChange}>
+          <Select value={overviewFilterStatus} onValueChange={setOverviewFilterStatus}>
             <SelectTrigger className="w-full sm:w-[150px] bg-slate-50/50 border-slate-200">
               <SelectValue placeholder={t('filterByStatus')} />
             </SelectTrigger>
@@ -154,10 +105,10 @@ export function OverviewTab({
             <Button
               variant="ghost"
               onClick={() => {
-                onOverviewSearchChange('')
-                onOverviewFilterDeptChange('all')
-                onOverviewFilterPropChange('all')
-                onOverviewFilterStatusChange('all')
+                setOverviewSearch('')
+                setOverviewFilterDept('all')
+                setOverviewFilterProp('all')
+                setOverviewFilterStatus('all')
               }}
               className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
             >
@@ -165,7 +116,7 @@ export function OverviewTab({
               {t('clearFilters')}
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={onExport}>
+          <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
             {t('export')}
           </Button>
@@ -264,13 +215,18 @@ export function OverviewTab({
         isRTL={isRTL}
         metrics={progressMetrics}
         moduleLoadLeaders={moduleLoadLeaders}
-        onViewDetails={onViewDetails}
+        onViewDetails={setSelectedProgressId}
         summary={employeeTrackingSummary}
         isAdmin={true}
-        onResetProgress={(userId, moduleId) => onResetProgress(userId, moduleId)}
-        onRevokeCertificate={(userId, moduleId) => onRevokeCertificate(userId, moduleId)}
-        onExemptUser={(userId, moduleId) => onExemptUser(userId, moduleId)}
-        onRestoreUser={(userId, moduleId) => onRestoreUser(userId, moduleId)}
+        onResetProgress={(userId, moduleId) => submitResetProgress(moduleId, userId)}
+        onRevokeCertificate={(userId, moduleId) => {
+          toast({
+            title: tCtx('certificateRevoked', 'Certificate Revoked'),
+            description: tCtx('certificateRevokedDesc', 'The certificate has been revoked successfully.')
+          })
+        }}
+        onExemptUser={(userId, moduleId) => submitExemptUser(moduleId, userId)}
+        onRestoreUser={(userId, moduleId) => submitRestoreUser(moduleId, userId)}
       />
     </div>
   )

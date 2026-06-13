@@ -12,110 +12,60 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
-import type { TrainingModule } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { addDays, format } from 'date-fns'
 import { Loader2, Search } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useTrainingAssignmentsContext } from '../contexts/TrainingAssignmentsContext'
 
-interface DepartmentGroup {
-  name: string
-  items: Array<{ id: string; name: string }>
-}
+export function CreateAssignmentDialog() {
+  const {
+    showAssignmentDialog,
+    setShowAssignmentDialog,
+    isRTL,
+    validationErrors,
+    formModuleId,
+    setFormModuleId,
+    assignableModules,
+    moduleSelectValue,
+    formTargetType,
+    setFormTargetType,
+    formTargetIds,
+    setFormTargetIds,
+    targetSearch,
+    setTargetSearch,
+    currentListItems,
+    departmentGroups,
+    departmentProperties,
+    propertyFilters,
+    togglePropertyFilter,
+    setPropertyFilters,
+    toggleGroupSelection,
+    formValidFrom,
+    setFormValidFrom,
+    formDeadline,
+    setFormDeadline,
+    formExpiresAt,
+    setFormExpiresAt,
+    formPriority,
+    setFormPriority,
+    sendNotifications,
+    setSendNotifications,
+    formInstructions,
+    setFormInstructions,
+    requiresAcknowledgement,
+    setRequiresAcknowledgement,
+    notifyOnDue,
+    setNotifyOnDue,
+    reminderDaysBefore,
+    setReminderDaysBefore,
+    selectedModuleName,
+    selectedTargetsLabel,
+    submitCreateAssignment,
+    resetForm,
+    createAssignmentMutationPending,
+  } = useTrainingAssignmentsContext()
 
-interface CreateAssignmentDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  isRTL: boolean
-  validationErrors: string[]
-  formModuleId: string
-  onFormModuleIdChange: (value: string) => void
-  assignableModules: TrainingModule[]
-  moduleSelectValue: string
-  formTargetType: 'all' | 'users' | 'departments' | 'properties'
-  onFormTargetTypeChange: (value: 'all' | 'users' | 'departments' | 'properties') => void
-  formTargetIds: string[]
-  onFormTargetIdsChange: (ids: string[]) => void
-  targetSearch: string
-  onTargetSearchChange: (value: string) => void
-  currentListItems: Array<{ id: string; name: string; details?: string }>
-  departmentGroups: DepartmentGroup[]
-  departmentProperties: string[]
-  propertyFilters: string[]
-  onTogglePropertyFilter: (name: string, enabled: boolean) => void
-  onClearPropertyFilters: () => void
-  onToggleGroupSelection: (items: Array<{ id: string }>, shouldSelect: boolean) => void
-  formValidFrom: string
-  onFormValidFromChange: (value: string) => void
-  formDeadline: string
-  onFormDeadlineChange: (value: string) => void
-  formExpiresAt: string
-  onFormExpiresAtChange: (value: string) => void
-  formPriority: 'normal' | 'high' | 'compliance'
-  onFormPriorityChange: (value: 'normal' | 'high' | 'compliance') => void
-  sendNotifications: boolean
-  onSendNotificationsChange: (value: boolean) => void
-  formInstructions: string
-  onFormInstructionsChange: (value: string) => void
-  requiresAcknowledgement: boolean
-  onRequiresAcknowledgementChange: (value: boolean) => void
-  notifyOnDue: boolean
-  onNotifyOnDueChange: (value: boolean) => void
-  reminderDaysBefore: number[]
-  onReminderDaysBeforeChange: (updater: (prev: number[]) => number[]) => void
-  selectedModuleName: string
-  selectedTargetsLabel: string
-  onSubmit: () => void
-  onCancel: () => void
-  isSubmitting: boolean
-}
-
-export function CreateAssignmentDialog({
-  open,
-  onOpenChange,
-  isRTL,
-  validationErrors,
-  formModuleId,
-  onFormModuleIdChange,
-  assignableModules,
-  moduleSelectValue,
-  formTargetType,
-  onFormTargetTypeChange,
-  formTargetIds,
-  onFormTargetIdsChange,
-  targetSearch,
-  onTargetSearchChange,
-  currentListItems,
-  departmentGroups,
-  departmentProperties,
-  propertyFilters,
-  onTogglePropertyFilter,
-  onClearPropertyFilters,
-  onToggleGroupSelection,
-  formValidFrom,
-  onFormValidFromChange,
-  formDeadline,
-  onFormDeadlineChange,
-  formExpiresAt,
-  onFormExpiresAtChange,
-  formPriority,
-  onFormPriorityChange,
-  sendNotifications,
-  onSendNotificationsChange,
-  formInstructions,
-  onFormInstructionsChange,
-  requiresAcknowledgement,
-  onRequiresAcknowledgementChange,
-  notifyOnDue,
-  onNotifyOnDueChange,
-  reminderDaysBefore,
-  onReminderDaysBeforeChange,
-  selectedModuleName,
-  selectedTargetsLabel,
-  onSubmit,
-  onCancel,
-  isSubmitting,
-}: CreateAssignmentDialogProps) {
   const { t } = useTranslation('training')
 
   const dueDatePresets = [
@@ -131,7 +81,7 @@ export function CreateAssignmentDialog({
   ]
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={showAssignmentDialog} onOpenChange={setShowAssignmentDialog}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto bg-white">
         <DialogHeader>
           <DialogTitle>
@@ -154,7 +104,7 @@ export function CreateAssignmentDialog({
             <Label>{t('selectModule')}</Label>
             <select
               value={moduleSelectValue}
-              onChange={(e) => onFormModuleIdChange(e.target.value)}
+              onChange={(e) => setFormModuleId(e.target.value)}
               className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
             >
               <option value="">{t('selectModule')}</option>
@@ -173,9 +123,9 @@ export function CreateAssignmentDialog({
             <select
               value={formTargetType}
               onChange={(e) => {
-                onFormTargetTypeChange(e.target.value as 'all' | 'users' | 'departments' | 'properties')
-                onFormTargetIdsChange([])
-                onTargetSearchChange('')
+                setFormTargetType(e.target.value as 'all' | 'users' | 'departments' | 'properties')
+                setFormTargetIds([])
+                setTargetSearch('')
               }}
               className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
             >
@@ -199,7 +149,7 @@ export function CreateAssignmentDialog({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => onFormTargetIdsChange(currentListItems.map(item => item.id))}
+                    onClick={() => setFormTargetIds(currentListItems.map(item => item.id))}
                     disabled={currentListItems.length === 0}
                   >
                     {t('selectAll', 'Select all')}
@@ -208,7 +158,7 @@ export function CreateAssignmentDialog({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => onFormTargetIdsChange([])}
+                    onClick={() => setFormTargetIds([])}
                   >
                     {t('clear', 'Clear')}
                   </Button>
@@ -221,7 +171,7 @@ export function CreateAssignmentDialog({
                     <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
                     <Input
                       value={targetSearch}
-                      onChange={(e) => onTargetSearchChange(e.target.value)}
+                      onChange={(e) => setTargetSearch(e.target.value)}
                       placeholder={
                         formTargetType === 'users'
                           ? t('searchUsers', 'Search users...')
@@ -248,7 +198,7 @@ export function CreateAssignmentDialog({
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
                           checked={propertyFilters.length === 0}
-                          onCheckedChange={() => onClearPropertyFilters()}
+                          onCheckedChange={() => setPropertyFilters(() => [])}
                         >
                           {t('allProperties')}
                         </DropdownMenuCheckboxItem>
@@ -257,7 +207,7 @@ export function CreateAssignmentDialog({
                           <DropdownMenuCheckboxItem
                             key={propertyName}
                             checked={propertyFilters.includes(propertyName)}
-                            onCheckedChange={(checked) => onTogglePropertyFilter(propertyName, Boolean(checked))}
+                            onCheckedChange={(checked) => togglePropertyFilter(propertyName, Boolean(checked))}
                           >
                             {propertyName}
                           </DropdownMenuCheckboxItem>
@@ -291,7 +241,7 @@ export function CreateAssignmentDialog({
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => onToggleGroupSelection(group.items, !allSelected)}
+                                  onClick={() => toggleGroupSelection(group.items, !allSelected)}
                                 >
                                   {allSelected ? t('clear', 'Clear') : t('selectAll', 'Select all')}
                                 </Button>
@@ -305,9 +255,9 @@ export function CreateAssignmentDialog({
                                     checked={formTargetIds.includes(item.id)}
                                     onChange={(e) => {
                                       if (e.target.checked) {
-                                        onFormTargetIdsChange([...formTargetIds, item.id])
+                                        setFormTargetIds([...formTargetIds, item.id])
                                       } else {
-                                        onFormTargetIdsChange(formTargetIds.filter(id => id !== item.id))
+                                        setFormTargetIds(formTargetIds.filter(id => id !== item.id))
                                       }
                                     }}
                                     className="h-4 w-4 rounded border-gray-300"
@@ -333,9 +283,9 @@ export function CreateAssignmentDialog({
                         checked={formTargetIds.includes(item.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            onFormTargetIdsChange([...formTargetIds, item.id])
+                            setFormTargetIds([...formTargetIds, item.id])
                           } else {
-                            onFormTargetIdsChange(formTargetIds.filter(id => id !== item.id))
+                            setFormTargetIds(formTargetIds.filter(id => id !== item.id))
                           }
                         }}
                         className="h-4 w-4 rounded border-gray-300"
@@ -363,7 +313,7 @@ export function CreateAssignmentDialog({
               <input
                 type="date"
                 value={formValidFrom}
-                onChange={(e) => onFormValidFromChange(e.target.value)}
+                onChange={(e) => setFormValidFrom(e.target.value)}
                 className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
               />
             </div>
@@ -372,7 +322,7 @@ export function CreateAssignmentDialog({
               <input
                 type="date"
                 value={formDeadline}
-                onChange={(e) => onFormDeadlineChange(e.target.value)}
+                onChange={(e) => setFormDeadline(e.target.value)}
                 className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
               />
               <div className="flex flex-wrap gap-2">
@@ -382,7 +332,7 @@ export function CreateAssignmentDialog({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={() => onFormDeadlineChange(format(addDays(new Date(), preset.days), 'yyyy-MM-dd'))}
+                    onClick={() => setFormDeadline(format(addDays(new Date(), preset.days), 'yyyy-MM-dd'))}
                   >
                     {preset.label}
                   </Button>
@@ -394,7 +344,7 @@ export function CreateAssignmentDialog({
               <input
                 type="date"
                 value={formExpiresAt}
-                onChange={(e) => onFormExpiresAtChange(e.target.value)}
+                onChange={(e) => setFormExpiresAt(e.target.value)}
                 className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
               />
             </div>
@@ -402,7 +352,7 @@ export function CreateAssignmentDialog({
               <Label>{t('priority_label', 'Priority')}</Label>
               <select
                 value={formPriority}
-                onChange={(e) => onFormPriorityChange(e.target.value as 'normal' | 'high' | 'compliance')}
+                onChange={(e) => setFormPriority(e.target.value as 'normal' | 'high' | 'compliance')}
                 className="w-full h-10 px-3 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold"
               >
                 <option value="normal">{t('normal', 'Normal')}</option>
@@ -419,7 +369,7 @@ export function CreateAssignmentDialog({
                 {t('trainingNotifications.toggle_desc', 'Notify recipients when assignments are created.')}
               </p>
             </div>
-            <Switch checked={sendNotifications} onCheckedChange={onSendNotificationsChange} />
+            <Switch checked={sendNotifications} onCheckedChange={setSendNotifications} />
           </div>
 
           <Separator />
@@ -436,7 +386,7 @@ export function CreateAssignmentDialog({
                 <Label>{t('instructions', 'Instructions')}</Label>
                 <textarea
                   value={formInstructions}
-                  onChange={(e) => onFormInstructionsChange(e.target.value)}
+                  onChange={(e) => setFormInstructions(e.target.value)}
                   placeholder={t('instructionsPlaceholder', 'Optional notes for assignees...')}
                   className="w-full min-h-[90px] px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-hotel-gold text-sm"
                 />
@@ -444,11 +394,11 @@ export function CreateAssignmentDialog({
               <div className="space-y-3">
                 <label className="flex items-center justify-between rounded-md border p-3 text-sm">
                   <span>{t('requiresAcknowledgement', 'Requires acknowledgement')}</span>
-                  <Switch checked={requiresAcknowledgement} onCheckedChange={onRequiresAcknowledgementChange} />
+                  <Switch checked={requiresAcknowledgement} onCheckedChange={setRequiresAcknowledgement} />
                 </label>
                 <label className="flex items-center justify-between rounded-md border p-3 text-sm">
                   <span>{t('notifyOnDue', 'Notify when due')}</span>
-                  <Switch checked={notifyOnDue} onCheckedChange={onNotifyOnDueChange} />
+                  <Switch checked={notifyOnDue} onCheckedChange={setNotifyOnDue} />
                 </label>
                 <div className="rounded-md border p-3 space-y-2">
                   <p className="text-xs font-medium text-muted-foreground">{t('reminders', 'Reminders')}</p>
@@ -462,7 +412,7 @@ export function CreateAssignmentDialog({
                           variant={isSelected ? 'default' : 'outline'}
                           size="sm"
                           onClick={() => {
-                            onReminderDaysBeforeChange((prev) => {
+                            setReminderDaysBefore((prev) => {
                               if (prev.includes(option.value)) {
                                 return prev.filter((v) => v !== option.value)
                               }
@@ -533,16 +483,19 @@ export function CreateAssignmentDialog({
           <div className={cn("flex justify-end gap-3 pt-4 border-t", isRTL ? "flex-row-reverse" : "")}>
             <Button
               variant="outline"
-              onClick={onCancel}
+              onClick={() => {
+                setShowAssignmentDialog(false)
+                resetForm()
+              }}
             >
               {t('cancel')}
             </Button>
             <Button
-              onClick={onSubmit}
-              disabled={validationErrors.length > 0 || isSubmitting}
+              onClick={submitCreateAssignment}
+              disabled={validationErrors.length > 0 || createAssignmentMutationPending}
               className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}
             >
-              {isSubmitting ? (
+              {createAssignmentMutationPending ? (
                 <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
               ) : null}
               {t('create')}

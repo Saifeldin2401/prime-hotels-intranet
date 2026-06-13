@@ -21,82 +21,38 @@ import {
     Building
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { LearningAssignment } from './types'
+import { useTrainingAssignmentsContext } from '../contexts/TrainingAssignmentsContext'
 
-interface AssignmentGroup {
-  key: string
-  assignments: LearningAssignment[]
-  latestCreatedAt: string
-  moduleTitle: string
-  priority: string
-  dueDate: string | null
-}
+export function AssignmentsTab() {
+  const {
+    isRTL,
+    isLoadingAssignments,
+    hideCreateButton,
+    search,
+    setSearch,
+    assignmentsViewMode,
+    setAssignmentsViewMode,
+    assignmentsSortBy,
+    setAssignmentsSortBy,
+    showFilters,
+    setShowFilters,
+    assignmentsFilterPriority,
+    setAssignmentsFilterPriority,
+    assignmentsFilterTargetType,
+    setAssignmentsFilterTargetType,
+    assignmentsFilterDueStatus,
+    setAssignmentsFilterDueStatus,
+    resetOrganizationState,
+    assignmentStats,
+    groupedAssignments,
+    exemptionCountByModule,
+    getTargetDetails,
+    formatDate,
+    handleDelete,
+    openManageAssignees,
+    setShowAssignmentDialog,
+  } = useTrainingAssignmentsContext()
 
-interface AssignmentStats {
-  total: number
-  byPriority: { compliance: number; high: number; normal: number }
-  byTargetType: { everyone: number; user: number; department: number; property: number }
-  overdue: number
-  dueSoon: number
-}
-
-interface AssignmentsTabProps {
-  isRTL: boolean
-  isLoadingAssignments: boolean
-  hideCreateButton: boolean
-  search: string
-  onSearchChange: (value: string) => void
-  assignmentsViewMode: 'grid' | 'list'
-  onAssignmentsViewModeChange: (mode: 'grid' | 'list') => void
-  assignmentsSortBy: 'date' | 'priority' | 'module' | 'dueDate'
-  onAssignmentsSortByChange: (value: 'date' | 'priority' | 'module' | 'dueDate') => void
-  showFilters: boolean
-  onShowFiltersChange: (show: boolean) => void
-  assignmentsFilterPriority: string
-  onAssignmentsFilterPriorityChange: (value: string) => void
-  assignmentsFilterTargetType: string
-  onAssignmentsFilterTargetTypeChange: (value: string) => void
-  assignmentsFilterDueStatus: string
-  onAssignmentsFilterDueStatusChange: (value: string) => void
-  onResetOrganizationState: () => void
-  assignmentStats: AssignmentStats
-  groupedAssignments: AssignmentGroup[]
-  exemptionCountByModule: Map<string, number>
-  getTargetDetails: (assignment: LearningAssignment) => { label: string; meta?: string }
-  formatDate: (dateStr: string) => string
-  onDelete: (id: string) => void
-  onOpenManageAssignees: (moduleId: string, moduleTitle?: string) => void
-  onOpenCreateDialog: () => void
-}
-
-export function AssignmentsTab({
-  isRTL,
-  isLoadingAssignments,
-  hideCreateButton,
-  search,
-  onSearchChange,
-  assignmentsViewMode,
-  onAssignmentsViewModeChange,
-  assignmentsSortBy,
-  onAssignmentsSortByChange,
-  showFilters,
-  onShowFiltersChange,
-  assignmentsFilterPriority,
-  onAssignmentsFilterPriorityChange,
-  assignmentsFilterTargetType,
-  onAssignmentsFilterTargetTypeChange,
-  assignmentsFilterDueStatus,
-  onAssignmentsFilterDueStatusChange,
-  onResetOrganizationState,
-  assignmentStats,
-  groupedAssignments,
-  exemptionCountByModule,
-  getTargetDetails,
-  formatDate,
-  onDelete,
-  onOpenManageAssignees,
-  onOpenCreateDialog,
-}: AssignmentsTabProps) {
   const { t } = useTranslation('training')
 
   const getTargetIcon = (type: string) => {
@@ -189,7 +145,7 @@ export function AssignmentsTab({
             <Input
               placeholder={t('searchAssignments')}
               value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              onChange={(e) => setSearch(e.target.value)}
               className={cn(
                 "h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-hotel-gold/50 focus:ring-2 focus:ring-hotel-gold/20 transition-all",
                 isRTL ? "pr-11 text-right" : "pl-11"
@@ -197,7 +153,7 @@ export function AssignmentsTab({
             />
             {search && (
               <button
-                onClick={() => onSearchChange('')}
+                onClick={() => setSearch('')}
                 className={cn(
                   "absolute inset-y-0 flex items-center text-slate-400 hover:text-slate-600 transition-colors",
                   isRTL ? "left-0 pl-3" : "right-0 pr-3"
@@ -211,7 +167,7 @@ export function AssignmentsTab({
           <div className="flex items-center gap-2">
             <div className="flex items-center bg-slate-100 rounded-lg p-1">
               <button
-                onClick={() => onAssignmentsViewModeChange('grid')}
+                onClick={() => setAssignmentsViewMode('grid')}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                   assignmentsViewMode === 'grid'
@@ -223,7 +179,7 @@ export function AssignmentsTab({
                 {t('grid', 'Grid')}
               </button>
               <button
-                onClick={() => onAssignmentsViewModeChange('list')}
+                onClick={() => setAssignmentsViewMode('list')}
                 className={cn(
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all",
                   assignmentsViewMode === 'list'
@@ -236,7 +192,7 @@ export function AssignmentsTab({
               </button>
             </div>
 
-            <Select value={assignmentsSortBy} onValueChange={(v) => onAssignmentsSortByChange(v as 'date' | 'priority' | 'module' | 'dueDate')}>
+            <Select value={assignmentsSortBy} onValueChange={(v) => setAssignmentsSortBy(v as 'date' | 'priority' | 'module' | 'dueDate')}>
               <SelectTrigger className="w-[140px] h-10 bg-slate-50 border-slate-200">
                 <SlidersHorizontal className="w-4 h-4 mr-2" />
                 <SelectValue placeholder={t('sortBy', 'Sort by')} />
@@ -252,7 +208,7 @@ export function AssignmentsTab({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => onShowFiltersChange(!showFilters)}
+              onClick={() => setShowFilters(!showFilters)}
               className={cn(
                 "h-10 px-3 transition-all",
                 showFilters && "bg-slate-100 border-slate-300"
@@ -267,7 +223,7 @@ export function AssignmentsTab({
 
             {!hideCreateButton && (
               <Button
-                onClick={onOpenCreateDialog}
+                onClick={() => setShowAssignmentDialog(true)}
                 className="bg-hotel-navy hover:bg-hotel-navy/90 text-white h-10 px-4 shadow-sm hover:shadow transition-all"
               >
                 <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
@@ -282,7 +238,7 @@ export function AssignmentsTab({
             <div className="flex items-center gap-2 flex-wrap">
               <span className="text-sm text-slate-500 font-medium">{t('filterBy', 'Filter by')}:</span>
 
-              <Select value={assignmentsFilterPriority} onValueChange={onAssignmentsFilterPriorityChange}>
+              <Select value={assignmentsFilterPriority} onValueChange={setAssignmentsFilterPriority}>
                 <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
                   <SelectValue placeholder={t('priority', 'Priority')} />
                 </SelectTrigger>
@@ -309,7 +265,7 @@ export function AssignmentsTab({
                 </SelectContent>
               </Select>
 
-              <Select value={assignmentsFilterTargetType} onValueChange={onAssignmentsFilterTargetTypeChange}>
+              <Select value={assignmentsFilterTargetType} onValueChange={setAssignmentsFilterTargetType}>
                 <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
                   <SelectValue placeholder={t('targetType', 'Target')} />
                 </SelectTrigger>
@@ -322,7 +278,7 @@ export function AssignmentsTab({
                 </SelectContent>
               </Select>
 
-              <Select value={assignmentsFilterDueStatus} onValueChange={onAssignmentsFilterDueStatusChange}>
+              <Select value={assignmentsFilterDueStatus} onValueChange={setAssignmentsFilterDueStatus}>
                 <SelectTrigger className="w-[130px] h-9 bg-slate-50 border-slate-200 text-sm">
                   <SelectValue placeholder={t('dueStatus', 'Due Status')} />
                 </SelectTrigger>
@@ -340,7 +296,7 @@ export function AssignmentsTab({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={onResetOrganizationState}
+                onClick={resetOrganizationState}
                 className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 ml-auto"
               >
                 <X className="w-3.5 h-3.5 mr-1.5" />
@@ -361,19 +317,19 @@ export function AssignmentsTab({
             {assignmentsFilterPriority !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('priority')}: {t(assignmentsFilterPriority)}
-                <button onClick={() => onAssignmentsFilterPriorityChange('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterPriority('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
             {assignmentsFilterTargetType !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('target')}: {t(assignmentsFilterTargetType)}
-                <button onClick={() => onAssignmentsFilterTargetTypeChange('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterTargetType('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
             {assignmentsFilterDueStatus !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('status')}: {t(assignmentsFilterDueStatus)}
-                <button onClick={() => onAssignmentsFilterDueStatusChange('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterDueStatus('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
           </div>
@@ -477,7 +433,7 @@ export function AssignmentsTab({
                             size="icon"
                             variant="ghost"
                             className="h-7 w-7 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-2"
-                            onClick={() => onDelete(targets[0].assignmentId)}
+                            onClick={() => handleDelete(targets[0].assignmentId)}
                             aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                           >
                             <Trash2 className="w-4 h-4" />
@@ -502,7 +458,7 @@ export function AssignmentsTab({
                                   size="icon"
                                   variant="ghost"
                                   className="h-6 w-6 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-1"
-                                  onClick={() => onDelete(target.assignmentId)}
+                                  onClick={() => handleDelete(target.assignmentId)}
                                   aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -540,7 +496,7 @@ export function AssignmentsTab({
                       type="button"
                       variant="outline"
                       className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium h-9"
-                      onClick={() => onOpenManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
+                      onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
                     >
                       <Users className={cn("h-4 w-4 text-slate-500", isRTL ? "ml-2" : "mr-2")} />
                       {t('manageAssignees', 'Manage assignees')}
@@ -564,7 +520,7 @@ export function AssignmentsTab({
             <p className="mt-2 text-sm text-slate-500 text-center max-w-md">{t('startAssigning', 'Get started by creating your first training assignment. Assign modules to individuals, departments, or entire properties.')}</p>
             {!hideCreateButton && (
               <Button
-                onClick={onOpenCreateDialog}
+                onClick={() => setShowAssignmentDialog(true)}
                 className="mt-6 bg-hotel-navy hover:bg-hotel-navy/90 text-white px-6 shadow-sm hover:shadow transition-all"
               >
                 <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />

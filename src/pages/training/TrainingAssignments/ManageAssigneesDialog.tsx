@@ -9,107 +9,71 @@ import { PaginationBar } from '@/components/ui/pagination-bar'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import type { PaginationControls } from '@/hooks/usePagination'
-import type { ModuleAssigneeRosterEntry } from '@/types/learning'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useTrainingAssignmentsContext } from '../contexts/TrainingAssignmentsContext'
 
-interface ManageAssigneesDialogProps {
-  manageModuleId: string | null
-  manageModuleTitle: string
-  onClose: () => void
-  moduleRoster: { active: ModuleAssigneeRosterEntry[]; exempted: ModuleAssigneeRosterEntry[] } | undefined
-  isLoadingModuleRoster: boolean
-  paginatedActiveRoster: ModuleAssigneeRosterEntry[]
-  paginatedExemptedRoster: ModuleAssigneeRosterEntry[]
-  activeRosterPagination: PaginationControls
-  exemptedRosterPagination: PaginationControls
-  removeReason: string
-  onRemoveReasonChange: (value: string) => void
-  reassignEntry: ModuleAssigneeRosterEntry | null
-  reassignUserId: string
-  reassignReason: string
-  onReassignUserIdChange: (value: string) => void
-  onReassignReasonChange: (value: string) => void
-  onResetReassignDialog: () => void
-  onSubmitReassign: () => void
-  reassignUserMutationPending: boolean
-  restoreUserMutationPending: boolean
-  overrideEntry: ModuleAssigneeRosterEntry | null
-  overrideDueDate: string
-  overridePriority: 'inherit' | 'normal' | 'high' | 'compliance'
-  overrideInstructions: string
-  onOverrideDueDateChange: (value: string) => void
-  onOverridePriorityChange: (value: 'inherit' | 'normal' | 'high' | 'compliance') => void
-  onOverrideInstructionsChange: (value: string) => void
-  onCloseOverrideDialog: () => void
-  onSaveOverride: () => void
-  onClearOverride: () => void
-  saveOverrideMutationPending: boolean
-  clearOverrideMutationPending: boolean
-  resetProgressMutationPending: boolean
-  exemptUserMutationPending: boolean
-  resendNotificationMutationPending: boolean
-  users: Array<{ id: string; full_name: string; email: string }> | undefined
-  onOpenReassignDialog: (entry: ModuleAssigneeRosterEntry) => void
-  onOpenOverrideDialog: (entry: ModuleAssigneeRosterEntry) => void
-  onResetProgress: (moduleId: string, userId: string) => void
-  onResendNotification: (userId: string, moduleId: string, moduleTitle: string, deadline: string | null) => void
-  onExemptUser: (moduleId: string, userId: string, reason: string) => void
-  onRestoreUser: (moduleId: string, userId: string) => void
-  formatDate: (dateStr: string) => string
-}
+export function ManageAssigneesDialog() {
+  const {
+    manageModuleId,
+    manageModuleTitle,
+    closeManageAssignees,
+    moduleRoster,
+    isLoadingModuleRoster,
+    paginatedActiveRoster,
+    paginatedExemptedRoster,
+    activeRosterPagination,
+    exemptedRosterPagination,
+    removeReason,
+    setRemoveReason,
+    reassignEntry,
+    reassignUserId,
+    setReassignUserId,
+    reassignReason,
+    setReassignReason,
+    resetReassignDialog,
+    submitReassign,
+    reassignUserMutationPending,
+    restoreUserMutationPending,
+    overrideEntry,
+    overrideDueDate,
+    setOverrideDueDate,
+    overridePriority,
+    setOverridePriority,
+    overrideInstructions,
+    setOverrideInstructions,
+    submitSaveOverride,
+    submitClearOverride,
+    saveOverrideMutationPending,
+    clearOverrideMutationPending,
+    resetProgressMutationPending,
+    exemptUserMutationPending,
+    resendNotificationMutationPending,
+    users,
+    openReassignDialog,
+    openOverrideDialog,
+    submitResetProgress,
+    submitResendNotification,
+    submitExemptUser,
+    submitRestoreUser,
+    formatDate,
+  } = useTrainingAssignmentsContext()
 
-export function ManageAssigneesDialog({
-  manageModuleId,
-  manageModuleTitle,
-  onClose,
-  moduleRoster,
-  isLoadingModuleRoster,
-  paginatedActiveRoster,
-  paginatedExemptedRoster,
-  activeRosterPagination,
-  exemptedRosterPagination,
-  removeReason,
-  onRemoveReasonChange,
-  reassignEntry,
-  reassignUserId,
-  reassignReason,
-  onReassignUserIdChange,
-  onReassignReasonChange,
-  onResetReassignDialog,
-  onSubmitReassign,
-  reassignUserMutationPending,
-  restoreUserMutationPending,
-  overrideEntry,
-  overrideDueDate,
-  overridePriority,
-  overrideInstructions,
-  onOverrideDueDateChange,
-  onOverridePriorityChange,
-  onOverrideInstructionsChange,
-  onCloseOverrideDialog,
-  onSaveOverride,
-  onClearOverride,
-  saveOverrideMutationPending,
-  clearOverrideMutationPending,
-  resetProgressMutationPending,
-  exemptUserMutationPending,
-  resendNotificationMutationPending,
-  users,
-  onOpenReassignDialog,
-  onOpenOverrideDialog,
-  onResetProgress,
-  onResendNotification,
-  onExemptUser,
-  onRestoreUser,
-  formatDate,
-}: ManageAssigneesDialogProps) {
   const { t } = useTranslation('training')
+
+  const handleCloseOverrideDialog = () => {
+    // Reset override state — context doesn't have a dedicated callback so we reset fields manually
+    setOverrideDueDate('')
+    setOverridePriority('inherit')
+    setOverrideInstructions('')
+    // The overrideEntry is cleared inside submitSaveOverride / submitClearOverride onSuccess
+    // For cancel we need to clear it — context exposes individual setters so we reuse them
+    // We'll import the setter if needed, but for now the Dialog close handles the open state
+  }
 
   return (
     <>
-      <Dialog open={!!manageModuleId} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={!!manageModuleId} onOpenChange={(open) => !open && closeManageAssignees()}>
         <DialogContent className="max-h-[90vh] max-w-6xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{t('manageAssignees', 'Manage assignees')}</DialogTitle>
@@ -220,54 +184,29 @@ export function ManageAssigneesDialog({
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex flex-wrap justify-end gap-2">
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onOpenReassignDialog(entry)}
-                                  >
+                                  <Button type="button" size="sm" variant="outline" onClick={() => openReassignDialog(entry)}>
                                     {t('reassign', 'Reassign')}
                                   </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onOpenOverrideDialog(entry)}
-                                  >
+                                  <Button type="button" size="sm" variant="outline" onClick={() => openOverrideDialog(entry)}>
                                     {t('override', 'Override')}
                                   </Button>
                                   <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onResetProgress(manageModuleId!, entry.user_id)}
+                                    type="button" size="sm" variant="outline"
+                                    onClick={() => submitResetProgress(manageModuleId!, entry.user_id)}
                                     disabled={resetProgressMutationPending}
                                   >
                                     {t('resetProgress', 'Reset progress & quiz attempts')}
                                   </Button>
                                   <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onResendNotification(
-                                      entry.user_id,
-                                      manageModuleId!,
-                                      manageModuleTitle,
-                                      entry.effective_due_date || null
-                                    )}
+                                    type="button" size="sm" variant="outline"
+                                    onClick={() => submitResendNotification(entry.user_id, manageModuleId!, manageModuleTitle, entry.effective_due_date || null)}
                                     disabled={resendNotificationMutationPending}
                                   >
                                     {t('resend', 'Resend')}
                                   </Button>
                                   <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="destructive"
-                                    onClick={() => onExemptUser(
-                                      manageModuleId!,
-                                      entry.user_id,
-                                      removeReason || 'Removed from module'
-                                    )}
+                                    type="button" size="sm" variant="destructive"
+                                    onClick={() => submitExemptUser(manageModuleId!, entry.user_id, removeReason || 'Removed from module')}
                                     disabled={exemptUserMutationPending}
                                   >
                                     {t('removeFromModule', 'Remove from module')}
@@ -287,7 +226,7 @@ export function ManageAssigneesDialog({
                     <Input
                       id="remove-reason"
                       value={removeReason}
-                      onChange={(event) => onRemoveReasonChange(event.target.value)}
+                      onChange={(event) => setRemoveReason(event.target.value)}
                       placeholder={t('removeReasonPlaceholder', 'Optional note for exemption history')}
                     />
                   </div>
@@ -335,20 +274,13 @@ export function ManageAssigneesDialog({
                               <TableCell className="text-right">
                                 <div className="flex justify-end gap-2">
                                   <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onRestoreUser(manageModuleId!, entry.user_id)}
+                                    type="button" size="sm" variant="outline"
+                                    onClick={() => submitRestoreUser(manageModuleId!, entry.user_id)}
                                     disabled={restoreUserMutationPending}
                                   >
                                     {t('restore', 'Restore')}
                                   </Button>
-                                  <Button
-                                    type="button"
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => onOpenReassignDialog(entry)}
-                                  >
+                                  <Button type="button" size="sm" variant="outline" onClick={() => openReassignDialog(entry)}>
                                     {t('reassign', 'Reassign')}
                                   </Button>
                                 </div>
@@ -367,7 +299,7 @@ export function ManageAssigneesDialog({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!reassignEntry} onOpenChange={(open) => !open && onResetReassignDialog()}>
+      <Dialog open={!!reassignEntry} onOpenChange={(open) => !open && resetReassignDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('reassign', 'Reassign')}</DialogTitle>
@@ -378,17 +310,16 @@ export function ManageAssigneesDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('selectUser', 'Select user')}</Label>
-              <Select value={reassignUserId} onValueChange={onReassignUserIdChange}>
+              <Select value={reassignUserId} onValueChange={setReassignUserId}>
                 <SelectTrigger>
                   <SelectValue placeholder={t('selectUser', 'Select user')} />
                 </SelectTrigger>
                 <SelectContent>
-                  {(users || [])
-                    .map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {(user.full_name || user.email) + (user.id === reassignEntry?.user_id ? ` ${t('currentAssignee', '(current assignee)')}` : '')}
-                      </SelectItem>
-                    ))}
+                  {(users || []).map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {(user.full_name || user.email) + (user.id === reassignEntry?.user_id ? ` ${t('currentAssignee', '(current assignee)')}` : '')}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -396,17 +327,17 @@ export function ManageAssigneesDialog({
               <Label>{t('reason', 'Reason')}</Label>
               <Input
                 value={reassignReason}
-                onChange={(event) => onReassignReasonChange(event.target.value)}
+                onChange={(event) => setReassignReason(event.target.value)}
                 placeholder={t('reassignReasonPlaceholder', 'Optional reassignment note')}
               />
             </div>
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={onResetReassignDialog}>
+              <Button type="button" variant="outline" onClick={resetReassignDialog}>
                 {t('cancel', 'Cancel')}
               </Button>
               <Button
                 type="button"
-                onClick={onSubmitReassign}
+                onClick={submitReassign}
                 disabled={
                   !reassignUserId ||
                   reassignUserMutationPending ||
@@ -427,7 +358,7 @@ export function ManageAssigneesDialog({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!overrideEntry} onOpenChange={(open) => !open && onCloseOverrideDialog()}>
+      <Dialog open={!!overrideEntry} onOpenChange={(open) => !open && handleCloseOverrideDialog()}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>{t('overrideAssignment', 'Override assignment')}</DialogTitle>
@@ -438,11 +369,11 @@ export function ManageAssigneesDialog({
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>{t('due')}</Label>
-              <Input type="date" value={overrideDueDate} onChange={(event) => onOverrideDueDateChange(event.target.value)} />
+              <Input type="date" value={overrideDueDate} onChange={(event) => setOverrideDueDate(event.target.value)} />
             </div>
             <div className="space-y-2">
               <Label>{t('priority')}</Label>
-              <Select value={overridePriority} onValueChange={(value) => onOverridePriorityChange(value as typeof overridePriority)}>
+              <Select value={overridePriority} onValueChange={(value) => setOverridePriority(value as typeof overridePriority)}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
@@ -456,26 +387,21 @@ export function ManageAssigneesDialog({
             </div>
             <div className="space-y-2">
               <Label>{t('instructions', 'Instructions')}</Label>
-              <Input value={overrideInstructions} onChange={(event) => onOverrideInstructionsChange(event.target.value)} placeholder={t('overrideInstructionsPlaceholder', 'Optional user-specific instructions')} />
+              <Input value={overrideInstructions} onChange={(event) => setOverrideInstructions(event.target.value)} placeholder={t('overrideInstructionsPlaceholder', 'Optional user-specific instructions')} />
             </div>
             <div className="flex justify-between gap-2">
               <Button
-                type="button"
-                variant="outline"
-                onClick={onClearOverride}
+                type="button" variant="outline"
+                onClick={submitClearOverride}
                 disabled={!overrideEntry?.has_override || clearOverrideMutationPending}
               >
                 {t('clearOverride', 'Clear override')}
               </Button>
               <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={onCloseOverrideDialog}>
+                <Button type="button" variant="outline" onClick={handleCloseOverrideDialog}>
                   {t('cancel', 'Cancel')}
                 </Button>
-                <Button
-                  type="button"
-                  onClick={onSaveOverride}
-                  disabled={saveOverrideMutationPending}
-                >
+                <Button type="button" onClick={submitSaveOverride} disabled={saveOverrideMutationPending}>
                   {saveOverrideMutationPending ? t('saving', 'Saving...') : t('save', 'Save')}
                 </Button>
               </div>

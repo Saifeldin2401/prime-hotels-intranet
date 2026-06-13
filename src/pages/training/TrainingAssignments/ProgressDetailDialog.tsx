@@ -1,78 +1,27 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import type { LearningProgress } from '@/hooks/useLearningProgress'
-import type { TrainingModule } from '@/lib/types'
 import { useTranslation } from 'react-i18next'
+import { useTrainingAssignmentsContext } from '../contexts/TrainingAssignmentsContext'
 
-interface ContentBlock {
-  id: string
-  title: string
-  type: string
-  order: number
-  content_data: Record<string, unknown> | null | undefined
-}
+export function ProgressDetailDialog() {
+  const {
+    selectedProgressId,
+    setSelectedProgressId,
+    selectedProgress,
+    selectedBlock,
+    selectedProgressMetadata,
+    selectedQuizResults,
+    selectedQuizResultsMessage,
+    users,
+    modules,
+    formatDate,
+  } = useTrainingAssignmentsContext()
 
-interface QuizResult {
-  quizId?: string
-  quiz_id?: string
-  quizTitle?: string
-  quiz_title?: string
-  passed?: boolean
-  score?: number
-  correctCount?: number
-  correct_count?: number
-  totalQuestions?: number
-  total_questions?: number
-  completedAt?: string
-  completed_at?: string
-  reviewItems?: ReviewItem[]
-  review_items?: ReviewItem[]
-}
-
-interface ReviewItem {
-  questionId?: string
-  question_id?: string
-  questionText?: string
-  question_text?: string
-  selectedAnswer?: string
-  selected_answer?: string
-  correctAnswer?: string
-  correct_answer?: string
-  explanation?: string
-  feedback?: string
-  correct?: boolean
-}
-
-interface ProgressDetailDialogProps {
-  selectedProgressId: string | null
-  onClose: () => void
-  selectedProgress: LearningProgress | null
-  selectedBlock: ContentBlock | null
-  selectedProgressMetadata: Record<string, unknown>
-  selectedQuizResults: QuizResult[]
-  selectedQuizResultsMessage: string
-  users: Array<{ id: string; full_name: string; email: string }> | undefined
-  modules: TrainingModule[] | undefined
-  formatDate: (dateStr: string) => string
-}
-
-export function ProgressDetailDialog({
-  selectedProgressId,
-  onClose,
-  selectedProgress,
-  selectedBlock,
-  selectedProgressMetadata,
-  selectedQuizResults,
-  selectedQuizResultsMessage,
-  users,
-  modules,
-  formatDate,
-}: ProgressDetailDialogProps) {
   const { t } = useTranslation('training')
 
   return (
-    <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={!!selectedProgressId} onOpenChange={(open) => !open && setSelectedProgressId(null)}>
       <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{t('details', 'Details')}</DialogTitle>
@@ -213,7 +162,7 @@ export function ProgressDetailDialog({
                       </div>
 
                       <div className="space-y-3">
-                        {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem, index: number) => (
+                        {(quizResult.reviewItems || quizResult.review_items || []).map((reviewItem: any, index: number) => (
                           <div key={`${quizResult.quizId || quizResult.quiz_id}-${reviewItem.questionId || reviewItem.question_id || index}`} className="rounded-lg border bg-slate-50 p-4">
                             <div className="flex items-start justify-between gap-3">
                               <div>
