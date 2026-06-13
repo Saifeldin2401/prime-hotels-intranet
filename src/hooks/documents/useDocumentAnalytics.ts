@@ -29,23 +29,27 @@ export function useDocumentAnalytics(documentId: string) {
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
       const { data: viewsData, error: viewsError } = await supabase
-        .from('document_views')
-        .select('viewed_at')
-        .eq('document_id', documentId)
-        .gte('viewed_at', thirtyDaysAgo.toISOString())
+        .from('system_events')
+        .select('created_at')
+        .eq('event_type', 'doc_view')
+        .eq('entity_type', 'document')
+        .eq('entity_id', documentId)
+        .gte('created_at', thirtyDaysAgo.toISOString())
 
       if (viewsError) throw viewsError
 
       const viewsOverTime: Record<string, number> = {}
       viewsData?.forEach(view => {
-        const date = new Date(view.viewed_at).toISOString().split('T')[0]
+        const date = new Date(view.created_at).toISOString().split('T')[0]
         viewsOverTime[date] = (viewsOverTime[date] || 0) + 1
       })
 
       const { data: uniqueViewers, error: uniqueError } = await supabase
-        .from('document_views')
-        .select('user_id', { count: 'exact' })
-        .eq('document_id', documentId)
+        .from('system_events')
+        .select('actor_id', { count: 'exact' })
+        .eq('event_type', 'doc_view')
+        .eq('entity_type', 'document')
+        .eq('entity_id', documentId)
 
       if (uniqueError) throw uniqueError
 
@@ -93,11 +97,12 @@ export function useRecordDocumentView() {
 
       if (rpcError) {
         const { error } = await supabase
-          .from('document_views')
+          .from('system_events')
           .insert({
-            document_id: documentId,
-            user_id: user.id,
-            viewed_at: new Date().toISOString(),
+            event_type: 'doc_view',
+            entity_type: 'document',
+            entity_id: documentId,
+            actor_id: user.id,
           })
 
         if (error && !error.message.toLowerCase().includes('duplicate')) {

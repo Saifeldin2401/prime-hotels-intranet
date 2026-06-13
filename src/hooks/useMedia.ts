@@ -569,15 +569,16 @@ export function useMedia(options: UseMediaOptions = {}) {
           return null;
         }
 
-        // Log access (async, don't wait)
+        // Log access into unified system_events table (async, don't wait)
         void (async () => {
           try {
             await supabase
-              .from('media_access_logs')
+              .from('system_events')
               .insert({
-                media_asset_id: assetId,
-                accessed_at: new Date().toISOString(),
-                access_type: 'download',
+                event_type: 'media_access',
+                entity_type: 'media',
+                entity_id: assetId,
+                metadata: { access_type: 'download', extra: {} },
               });
           } catch (err) {
             console.error('Failed to log access:', err);
