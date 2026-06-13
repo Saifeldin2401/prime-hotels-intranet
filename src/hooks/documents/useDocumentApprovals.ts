@@ -1,5 +1,6 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import { createNotification } from '@/services/notificationService'
 import type { Document, DocumentApproval } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -86,20 +87,18 @@ export function useSubmitForApproval() {
 
       if (approvalError) throw approvalError
 
-      // TODO: migrate to create_notification RPC
-      const { error: notifyError } = await supabase.from('notifications').insert(
-        approverIds.map(approverId => ({
-          user_id: approverId,
+      await Promise.all(approverIds.map(approverId =>
+        createNotification({
+          userId: approverId,
           type: 'approval_required',
           title: 'Approval Required',
           message: `A document "${doc.title || 'Document'}" is awaiting your approval.`,
-          entity_type: 'document',
-          entity_id: documentId,
+          entityType: 'document',
+          entityId: documentId,
           link: '/approvals',
-          metadata: { document_id: documentId }
-        })))
-
-      if (notifyError) throw notifyError
+          metadata: { document_id: documentId },
+        })
+      ))
 
       return documentId
     },
