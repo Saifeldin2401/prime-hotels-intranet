@@ -429,12 +429,12 @@ export default function DataImport() {
 
                 const extracted = finalizeExtractedData(extractDataFromRows(rows, properties, item.file.name))
                 if (extracted.records.length > 0) {
-                    const { data: existing } = await supabase.from('daily_occupancy').select('id').eq('property_id', currentProperty?.id).eq('business_date', extracted.dateRange.start).limit(1)
+                    // Duplicate check removed: daily_occupancy table dropped
                     setFileQueue(prev => prev.map(f => f.id === item.id ? {
                         ...f,
                         status: 'success',
                         extractedData: extracted,
-                        duplicateWarning: !!existing?.length
+                        duplicateWarning: false
                     } as FileQueueItem : f))
                 } else {
                     setFileQueue(prev => prev.map(f => f.id === item.id ? {
@@ -529,79 +529,12 @@ export default function DataImport() {
                     })
                     importLogId = importLog.id
 
-                    // Batch records for efficient database operations
-                    const occupancyBatch = []
-                    const revenueBatch = []
-                    
-                    for (const record of propertyRecords) {
-                        if (extracted.detectedFormat === 'pms_daily') {
-                            occupancyBatch.push({ 
-                                property_id: pid, 
-                                business_date: record.business_date, 
-                                source_import_id: importLogId, 
-                                rooms_available: parseInt(String(record.rooms_available)) || null, 
-                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
-                                rooms_ooo: 0, adults: 0, children: 0, no_shows: 0, cancellations: 0, walk_ins: 0 
-                            })
-                            revenueBatch.push({ 
-                                property_id: pid, 
-                                business_date: record.business_date, 
-                                source_import_id: importLogId, 
-                                room_revenue: parseFloat(String(record.room_revenue)) || 0, 
-                                fb_revenue: parseFloat(String(record.fb_revenue)) || 0, 
-                                spa_revenue: 0, other_revenue: 0, 
-                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
-                                cash_collections: 0, credit_collections: 0, ar_collections: 0 
-                            })
-                        } else if (extracted.detectedFormat === 'occupancy') {
-                            occupancyBatch.push({ 
-                                property_id: pid, 
-                                business_date: record.business_date, 
-                                source_import_id: importLogId, 
-                                rooms_available: parseInt(String(record.rooms_available)) || null, 
-                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
-                                rooms_ooo: parseInt(String(record.rooms_ooo)) || 0, 
-                                adults: parseInt(String(record.adults)) || 0, 
-                                children: parseInt(String(record.children)) || 0 
-                            })
-                        } else if (extracted.detectedFormat === 'revenue') {
-                            revenueBatch.push({ 
-                                property_id: pid, 
-                                business_date: record.business_date, 
-                                source_import_id: importLogId, 
-                                room_revenue: parseFloat(String(record.room_revenue)) || 0, 
-                                fb_revenue: parseFloat(String(record.fb_revenue)) || 0, 
-                                spa_revenue: parseFloat(String(record.spa_revenue)) || 0, 
-                                other_revenue: parseFloat(String(record.other_revenue)) || 0, 
-                                rooms_sold: parseInt(String(record.rooms_sold)) || 0, 
-                                cash_collections: parseFloat(String(record.cash_collections)) || 0, 
-                                credit_collections: parseFloat(String(record.credit_collections)) || 0, 
-                                ar_collections: parseFloat(String(record.ar_collections)) || 0 
-                            })
-                        }
+                    // Count records for progress tracking (PMS data tables removed)
+                    for (const _record of propertyRecords) {
                         total++;
                     }
-                    
-                    // Execute batch operations in parallel
-                    const batchPromises = []
-                    if (occupancyBatch.length > 0) {
-                        batchPromises.push(
-                            supabase.from('daily_occupancy').upsert(occupancyBatch, { onConflict: 'property_id,business_date' })
-                        )
-                    }
-                    if (revenueBatch.length > 0) {
-                        batchPromises.push(
-                            supabase.from('daily_revenue').upsert(revenueBatch, { onConflict: 'property_id,business_date' })
-                        )
-                    }
-                    
-                    const results = await Promise.all(batchPromises)
-                    const batchErrors = results.filter(r => r.error)
-                    if (batchErrors.length > 0) {
-                        throw new Error(`Batch insert failed: ${batchErrors[0].error?.message}`)
-                    }
-                    
-                    // Update progress after batch completes
+
+                    // Update progress after counting records
                     if (sessionStats.totalRecords > 0) {
                         setImportProgress(Math.min(99, Math.round((total / sessionStats.totalRecords) * 100)))
                     }
@@ -636,7 +569,7 @@ export default function DataImport() {
                 }
             }
         }
-        queryClient.invalidateQueries({ queryKey: ['daily-occupancy'] }); queryClient.invalidateQueries({ queryKey: ['daily-revenue'] }); queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
+        queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
         setImportProgress(100)
         setCurrentStep('complete')
         toast({

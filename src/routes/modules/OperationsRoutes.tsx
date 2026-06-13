@@ -8,7 +8,6 @@ const OperationsDashboard = lazy(() => import('@/pages/operations/OperationsDash
 const DataImport = lazy(() => import('@/pages/operations/DataImport'))
 const OperationsAnalytics = lazy(() => import('@/pages/operations/OperationsAnalytics'))
 const DailyFlashReport = lazy(() => import('@/pages/operations/DailyFlashReport'))
-const PMSConfiguration = lazy(() => import('@/pages/operations/PMSConfiguration'))
 
 export const OperationsRoutes = () => (
     <>
@@ -55,18 +54,6 @@ export const OperationsRoutes = () => (
                     <AppLayout>
                         <MotionWrapper>
                             <DailyFlashReport />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/operations/pms-config"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <PMSConfiguration />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

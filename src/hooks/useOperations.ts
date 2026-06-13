@@ -8,7 +8,6 @@ import type {
     DataImportLog,
     MarketSegment,
     OperationsKPIs,
-    PMSSystem,
     RoomInventory
 } from '@/types/operations'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -34,233 +33,95 @@ export function useProperties() {
 }
 
 // ============================================================================
-// PMS SYSTEMS
+// PMS SYSTEMS — removed: pms_systems table dropped
 // ============================================================================
 
-export function usePMSSystems(options?: { includeInactive?: boolean }) {
-    const { currentProperty } = useProperty()
-    const includeInactive = options?.includeInactive ?? false
-
+/** @deprecated PMS module has been removed. Always returns an empty array. */
+export function usePMSSystems(_options?: { includeInactive?: boolean }) {
     return useQuery({
-        queryKey: ['pms-systems', currentProperty?.id, includeInactive],
-        queryFn: async () => {
-            let query = supabase
-                .from('pms_systems')
-                .select(`
-          *,
-          property:properties(id, name)
-        `)
-                .order('created_at', { ascending: false })
-
-            if (!includeInactive) {
-                query = query.eq('is_active', true)
-            }
-
-            const propertyId = currentProperty?.id
-            if (isRealPropertyId(propertyId)) {
-                query = query.eq('property_id', propertyId)
-            }
-
-            const { data, error } = await query
-            if (error) throw error
-            return data as PMSSystem[]
-        }
+        queryKey: ['pms-systems-removed'],
+        queryFn: async () => [] as never[],
+        staleTime: Infinity,
     })
 }
 
 // ============================================================================
-// DAILY OCCUPANCY
+// DAILY OCCUPANCY — removed: daily_occupancy table dropped
 // ============================================================================
 
-export function useDailyOccupancy(filters?: {
+/** @deprecated PMS module has been removed. Always returns an empty array. */
+export function useDailyOccupancy(_filters?: {
     propertyId?: string
     startDate?: string
     endDate?: string
 }) {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['daily-occupancy', filters, currentProperty?.id],
-        queryFn: async () => {
-            let query = supabase
-                .from('daily_occupancy')
-                .select(`
-          *,
-          property:properties(id, name)
-        `)
-                .order('business_date', { ascending: false })
-
-            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (isRealPropertyId(propertyId)) {
-                query = query.eq('property_id', propertyId)
-            }
-
-            if (filters?.startDate) {
-                query = query.gte('business_date', filters.startDate)
-            }
-            if (filters?.endDate) {
-                query = query.lte('business_date', filters.endDate)
-            }
-
-            const { data, error } = await query.limit(90) // Last 90 days max
-            if (error) throw error
-            return data as DailyOccupancy[]
-        }
+        queryKey: ['daily-occupancy-removed'],
+        queryFn: async () => [] as DailyOccupancy[],
+        staleTime: Infinity,
     })
 }
 
+/** @deprecated PMS module has been removed. Mutation is a no-op. */
 export function useUpsertOccupancy() {
-    const queryClient = useQueryClient()
-
     return useMutation({
-        mutationFn: async (data: Partial<DailyOccupancy>) => {
-            const { data: result, error } = await supabase
-                .from('daily_occupancy')
-                .upsert(data, { onConflict: 'property_id,business_date' })
-                .select()
-                .single()
-
-            if (error) throw error
-            return result
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['daily-occupancy'] })
-            queryClient.invalidateQueries({ queryKey: ['operations-kpis'] })
-            crudToasts.update.success('Occupancy data')
-        },
-        onError: () => crudToasts.update.error('occupancy data')
+        mutationFn: async (_data: Partial<DailyOccupancy>) => null,
     })
 }
 
 // ============================================================================
-// DAILY REVENUE
+// DAILY REVENUE — removed: daily_revenue table dropped
 // ============================================================================
 
-export function useDailyRevenue(filters?: {
+/** @deprecated PMS module has been removed. Always returns an empty array. */
+export function useDailyRevenue(_filters?: {
     propertyId?: string
     startDate?: string
     endDate?: string
 }) {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['daily-revenue', filters, currentProperty?.id],
-        queryFn: async () => {
-            let query = supabase
-                .from('daily_revenue')
-                .select(`
-          *,
-          property:properties(id, name)
-        `)
-                .order('business_date', { ascending: false })
-
-            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (isRealPropertyId(propertyId)) {
-                query = query.eq('property_id', propertyId)
-            }
-
-            if (filters?.startDate) {
-                query = query.gte('business_date', filters.startDate)
-            }
-            if (filters?.endDate) {
-                query = query.lte('business_date', filters.endDate)
-            }
-
-            const { data, error } = await query.limit(90)
-            if (error) throw error
-            return data as DailyRevenue[]
-        }
+        queryKey: ['daily-revenue-removed'],
+        queryFn: async () => [] as DailyRevenue[],
+        staleTime: Infinity,
     })
 }
 
+/** @deprecated PMS module has been removed. Mutation is a no-op. */
 export function useUpsertRevenue() {
-    const queryClient = useQueryClient()
-
     return useMutation({
-        mutationFn: async (data: Partial<DailyRevenue>) => {
-            const { data: result, error } = await supabase
-                .from('daily_revenue')
-                .upsert(data, { onConflict: 'property_id,business_date' })
-                .select()
-                .single()
-
-            if (error) throw error
-            return result
-        },
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['daily-revenue'] })
-            queryClient.invalidateQueries({ queryKey: ['operations-kpis'] })
-            crudToasts.update.success('Revenue data')
-        },
-        onError: () => crudToasts.update.error('revenue data')
+        mutationFn: async (_data: Partial<DailyRevenue>) => null,
     })
 }
 
 // ============================================================================
-// MARKET SEGMENTS
+// MARKET SEGMENTS — removed: market_segments table dropped
 // ============================================================================
 
-export function useMarketSegments(filters?: {
+/** @deprecated PMS module has been removed. Always returns an empty array. */
+export function useMarketSegments(_filters?: {
     propertyId?: string
     businessDate?: string
 }) {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['market-segments', filters, currentProperty?.id],
-        queryFn: async () => {
-            let query = supabase
-                .from('market_segments')
-                .select('*')
-                .order('revenue', { ascending: false })
-
-            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            if (isRealPropertyId(propertyId)) {
-                query = query.eq('property_id', propertyId)
-            }
-
-            if (filters?.businessDate) {
-                query = query.eq('business_date', filters.businessDate)
-            }
-
-            const { data, error } = await query
-            if (error) throw error
-            return data as MarketSegment[]
-        }
+        queryKey: ['market-segments-removed'],
+        queryFn: async () => [] as MarketSegment[],
+        staleTime: Infinity,
     })
 }
 
 // ============================================================================
-// ROOM INVENTORY
+// ROOM INVENTORY — removed: room_inventory table dropped
 // ============================================================================
 
-export function useRoomInventory(filters?: {
+/** @deprecated PMS module has been removed. Always returns an empty array. */
+export function useRoomInventory(_filters?: {
     propertyId?: string
     businessDate?: string
 }) {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['room-inventory', filters, currentProperty?.id],
-        queryFn: async () => {
-            let query = supabase
-                .from('room_inventory')
-                .select('*')
-                .order('room_type', { ascending: true })
-
-            const propertyId = filters?.propertyId || currentProperty?.id
-            if (isRealPropertyId(propertyId)) {
-                query = query.eq('property_id', propertyId)
-            }
-
-            if (filters?.businessDate) {
-                query = query.eq('business_date', filters.businessDate)
-            }
-
-            const { data, error } = await query
-            if (error) throw error
-            return data as RoomInventory[]
-        }
+        queryKey: ['room-inventory-removed'],
+        queryFn: async () => [] as RoomInventory[],
+        staleTime: Infinity,
     })
 }
 
@@ -340,69 +201,26 @@ export function useDeleteImportLog() {
 }
 
 // ============================================================================
-// OPERATIONS KPIs
+// OPERATIONS KPIs — removed: underlying PMS tables dropped
 // ============================================================================
 
-export function useOperationsKPIs(filters?: {
+/** @deprecated PMS module has been removed. Always returns zero-value KPIs. */
+export function useOperationsKPIs(_filters?: {
     propertyId?: string
     businessDate?: string
 }) {
-    const { currentProperty } = useProperty()
-
     return useQuery({
-        queryKey: ['operations-kpis', filters, currentProperty?.id],
-        queryFn: async () => {
-            const propertyId = filters?.propertyId !== undefined ? filters.propertyId : currentProperty?.id
-            const businessDate = filters?.businessDate || new Date().toISOString().split('T')[0]
-
-            // Fetch occupancy
-            let occQuery = supabase
-                .from('daily_occupancy')
-                .select('rooms_available, rooms_sold, occupancy_rate')
-                .eq('business_date', businessDate)
-
-            if (isRealPropertyId(propertyId)) {
-                occQuery = occQuery.eq('property_id', propertyId)
-            }
-
-            const { data: occData } = await occQuery
-
-            // Fetch revenue
-            let revQuery = supabase
-                .from('daily_revenue')
-                .select('room_revenue, fb_revenue, spa_revenue, other_revenue, total_revenue, adr, revpar')
-                .eq('business_date', businessDate)
-
-            if (isRealPropertyId(propertyId)) {
-                revQuery = revQuery.eq('property_id', propertyId)
-            }
-
-            const { data: revData } = await revQuery
-
-            // Aggregate KPIs
-            const kpis: OperationsKPIs = {
-                totalRooms: occData?.reduce((sum, o) => sum + (o.rooms_available || 0), 0) || 0,
-                roomsSold: occData?.reduce((sum, o) => sum + (o.rooms_sold || 0), 0) || 0,
-                occupancyRate: 0,
-                adr: 0,
-                revpar: 0,
-                totalRevenue: revData?.reduce((sum, r) => sum + (r.total_revenue || 0), 0) || 0,
-                roomRevenue: revData?.reduce((sum, r) => sum + (r.room_revenue || 0), 0) || 0,
-                fbRevenue: revData?.reduce((sum, r) => sum + (r.fb_revenue || 0), 0) || 0
-            }
-
-            // Calculate aggregated rates
-            if (kpis.totalRooms > 0) {
-                kpis.occupancyRate = Math.round((kpis.roomsSold / kpis.totalRooms) * 100 * 10) / 10
-            }
-            if (kpis.roomsSold > 0) {
-                kpis.adr = Math.round((kpis.roomRevenue / kpis.roomsSold) * 100) / 100
-            }
-            if (kpis.totalRooms > 0) {
-                kpis.revpar = Math.round((kpis.roomRevenue / kpis.totalRooms) * 100) / 100
-            }
-
-            return kpis
-        }
+        queryKey: ['operations-kpis-removed'],
+        queryFn: async (): Promise<OperationsKPIs> => ({
+            totalRooms: 0,
+            roomsSold: 0,
+            occupancyRate: 0,
+            adr: 0,
+            revpar: 0,
+            totalRevenue: 0,
+            roomRevenue: 0,
+            fbRevenue: 0,
+        }),
+        staleTime: Infinity,
     })
 }
