@@ -219,6 +219,7 @@ export default function PropertyManagement() {
             const { data, error } = await supabase
                 .from('properties')
                 .select('*')
+                .eq('is_deleted', false)
                 .order('name')
 
             if (error) throw error
@@ -230,7 +231,7 @@ export default function PropertyManagement() {
         mutationFn: async (propertyId: string) => {
             const { error } = await supabase
                 .from('properties')
-                .delete()
+                .update({ is_deleted: true, is_active: false })
                 .eq('id', propertyId)
 
             if (error) throw error
