@@ -104,11 +104,6 @@ interface AnalyticsData {
 
 type TimeRange = '7d' | '30d' | '90d' | 'all'
 
-type QuizAttemptSummary = {
-    score: number | null
-    passed: boolean | null
-}
-
 type DepartmentUsersRow = {
     id: string
     name: string
@@ -119,27 +114,6 @@ type QuizProfile = {
     id: string
     first_name: string | null
     last_name: string | null
-}
-
-type QuizStatsRow = {
-    id: string
-    title: string
-    attempts: QuizAttemptSummary[] | null
-}
-
-type RecentAttemptRow = {
-    id: string
-    score: number | null
-    completed_at: string | null
-    user: QuizProfile | QuizProfile[] | null
-    quiz: { title: string | null } | Array<{ title: string | null }> | null
-}
-
-type TopUserRow = {
-    id: string
-    first_name: string | null
-    last_name: string | null
-    attempts: { score: number | null }[] | null
 }
 
 type TeamProgressRow = {
@@ -181,41 +155,50 @@ export default function LearningAnalytics() {
                 .select('id', { count: 'exact', head: true })
                 .eq('status', 'published')
 
-            const { data: attempts } = await supabase
-                .from('quiz_attempts')
-                .select('score, passed')
-                .gte('completed_at', dateFilter)
+            // Single source of truth for quiz attempts: unified_quiz_sessions.
+            // quiz_entity_id has no embeddable FK, so we fetch once and aggregate in JS.
+            const { data: allQuizSessions } = await supabase
+                .from('unified_quiz_sessions')
+                .select('id, user_id, quiz_entity_id, correct_answers, total_questions, score_percentage, passed, started_at, completed_at')
+                .order('completed_at', { ascending: false })
 
-            const totalCompletions = attempts?.length || 0
-            const avgScore = attempts?.length
-                ? Math.round(attempts.reduce((sum, a) => sum + (a.score || 0), 0) / attempts.length)
+            const sessionsInRange = (allQuizSessions || []).filter(
+                s => s.completed_at && s.completed_at >= dateFilter
+            )
+            const totalCompletions = sessionsInRange.length
+            const avgScore = sessionsInRange.length
+                ? Math.round(sessionsInRange.reduce((sum, s) => sum + (s.score_percentage || 0), 0) / sessionsInRange.length)
                 : 0
-            const passedCount = attempts?.filter(a => a.passed).length || 0
+            const passedCount = sessionsInRange.filter(s => s.passed).length
 
             const { count: totalLearners } = await supabase
                 .from('profiles')
                 .select('id', { count: 'exact', head: true })
                 .eq('is_active', true)
 
-            // Quiz performance
-            const { data: quizStats } = await supabase
+            // Quiz performance — aggregate sessions by quiz in JS
+            const { data: publishedQuizzes } = await supabase
                 .from('learning_quizzes')
-                .select(`
-                    id,
-                    title,
-                    attempts:quiz_attempts(score, passed)
-                `)
+                .select('id, title')
                 .eq('status', 'published')
                 .limit(10)
 
-            const quizPerformance = ((quizStats as QuizStatsRow[] | null) || []).map(q => {
-                const attempts = q.attempts || []
+            const sessionsByQuiz = new Map<string, Array<{ score_percentage: number | null; passed: boolean | null }>>()
+            for (const s of allQuizSessions || []) {
+                if (!s.quiz_entity_id) continue
+                const list = sessionsByQuiz.get(s.quiz_entity_id) || []
+                list.push({ score_percentage: s.score_percentage, passed: s.passed })
+                sessionsByQuiz.set(s.quiz_entity_id, list)
+            }
+
+            const quizPerformance = (publishedQuizzes || []).map(q => {
+                const attempts = sessionsByQuiz.get(q.id) || []
                 return {
                     quiz_id: q.id,
                     title: q.title,
                     attempts: attempts.length,
                     avg_score: attempts.length
-                        ? Math.round(attempts.reduce((sum, a) => sum + (a.score || 0), 0) / attempts.length)
+                        ? Math.round(attempts.reduce((sum, a) => sum + (a.score_percentage || 0), 0) / attempts.length)
                         : 0,
                     pass_rate: attempts.length
                         ? Math.round(attempts.filter((a) => a.passed).length / attempts.length * 100)
@@ -240,57 +223,53 @@ export default function LearningAnalytics() {
                 avg_score: 0
             }))
 
-            // Recent activity
-            const buildRecentAttemptsQuery = () => supabase
-                .from('quiz_attempts')
-                .select(`
-                    id,
-                    score,
-                    completed_at,
-                    user:profiles!quiz_attempts_user_id_fkey(id, first_name, last_name),
-                    quiz:learning_quizzes!quiz_attempts_quiz_id_fkey(title)
-                `)
-                .limit(10)
+            // Recent activity — resolve user + quiz names via lookup maps
+            const recentSessions = (allQuizSessions || []).slice(0, 10)
+            const recentUserIds = Array.from(new Set(recentSessions.map(s => s.user_id).filter(Boolean)))
+            const recentQuizIds = Array.from(new Set(recentSessions.map(s => s.quiz_entity_id).filter(Boolean)))
 
-            const initialRecentAttemptsResponse = await buildRecentAttemptsQuery()
-                .order('completed_at', { ascending: false })
-            let recentAttempts = initialRecentAttemptsResponse.data
+            const { data: recentUsers } = recentUserIds.length > 0
+                ? await supabase.from('profiles').select('id, first_name, last_name').in('id', recentUserIds)
+                : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> }
+            const { data: recentQuizzes } = recentQuizIds.length > 0
+                ? await supabase.from('learning_quizzes').select('id, title').in('id', recentQuizIds)
+                : { data: [] as Array<{ id: string; title: string | null }> }
 
-            if (initialRecentAttemptsResponse.error) {
-                const fallback = await buildRecentAttemptsQuery().order('created_at', { ascending: false })
-                if (!fallback.error) {
-                    recentAttempts = fallback.data
-                }
-            }
+            const userNameMap = new Map((recentUsers || []).map(u => [u.id, `${u.first_name || ''} ${u.last_name || ''}`.trim()]))
+            const quizTitleMap = new Map((recentQuizzes || []).map(q => [q.id, q.title || '']))
 
-            const recentActivity = ((recentAttempts as RecentAttemptRow[] | null) || []).map(a => ({
-                user_id: (Array.isArray(a.user) ? a.user[0]?.id : a.user?.id) || '',
-                user_name: `${Array.isArray(a.user) ? a.user[0]?.first_name || '' : a.user?.first_name || ''} ${Array.isArray(a.user) ? a.user[0]?.last_name || '' : a.user?.last_name || ''}`.trim(),
-                quiz_title: (Array.isArray(a.quiz) ? a.quiz[0]?.title : a.quiz?.title) || '',
-                score: a.score || 0,
-                completed_at: a.completed_at || ''
+            const recentActivity = recentSessions.map(s => ({
+                user_id: s.user_id || '',
+                user_name: userNameMap.get(s.user_id) || '',
+                quiz_title: quizTitleMap.get(s.quiz_entity_id) || '',
+                score: s.score_percentage || 0,
+                completed_at: s.completed_at || ''
             }))
 
-            // Top performers
-            const { data: topUsers } = await supabase
-                .from('profiles')
-                .select(`
-                    id,
-                    first_name,
-                    last_name,
-                    attempts:quiz_attempts(score)
-                `)
-                .limit(10)
+            // Top performers — aggregate sessions by user
+            const sessionsByUser = new Map<string, Array<{ score_percentage: number | null }>>()
+            for (const s of allQuizSessions || []) {
+                if (!s.user_id) continue
+                const list = sessionsByUser.get(s.user_id) || []
+                list.push({ score_percentage: s.score_percentage })
+                sessionsByUser.set(s.user_id, list)
+            }
 
-            const topPerformers = ((topUsers as TopUserRow[] | null) || [])
-                .map(u => {
-                    const attempts = u.attempts || []
+            const topUserIds = Array.from(sessionsByUser.keys())
+            const { data: topUsers } = topUserIds.length > 0
+                ? await supabase.from('profiles').select('id, first_name, last_name').in('id', topUserIds)
+                : { data: [] as Array<{ id: string; first_name: string | null; last_name: string | null }> }
+            const topUserNameMap = new Map((topUsers || []).map(u => [u.id, `${u.first_name || ''} ${u.last_name || ''}`.trim()]))
+
+            const topPerformers = topUserIds
+                .map(uid => {
+                    const attempts = sessionsByUser.get(uid) || []
                     return {
-                        user_id: u.id,
-                        user_name: `${u.first_name || ''} ${u.last_name || ''}`.trim(),
+                        user_id: uid,
+                        user_name: topUserNameMap.get(uid) || '',
                         quizzes_completed: attempts.length,
                         avg_score: attempts.length
-                            ? Math.round(attempts.reduce((sum, a) => sum + (a.score || 0), 0) / attempts.length)
+                            ? Math.round(attempts.reduce((sum, a) => sum + (a.score_percentage || 0), 0) / attempts.length)
                             : 0
                     }
                 })

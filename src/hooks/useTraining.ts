@@ -722,8 +722,9 @@ export function useCompleteTraining() {
 }
 
 // Quiz Attempts
-// Write operations use quiz_attempts (domain='training') + unified_questions.
-// The training_quiz_attempts and training_quizzes views provide read compat.
+// Canonical storage: unified_quiz_sessions (one row per attempt) +
+// unified_question_attempts (one row per answered question). Questions come from
+// unified_questions. The legacy quizzes/quiz_attempts tables have been removed.
 export function useCreateQuizAttempt() {
   const queryClient = useQueryClient()
   const { user } = useAuth()
@@ -736,53 +737,73 @@ export function useCreateQuizAttempt() {
       if (!user) throw new Error('User must be authenticated')
 
       // Get the quiz questions for this module from the unified table
-      const { data: quizzes } = await supabase
+      const { data: questions } = await supabase
         .from('unified_questions')
         .select('*')
         .eq('source_domain', 'training')
         .eq('training_module_id', attempt.moduleId)
         .order('created_at')
 
-      if (!quizzes) throw new Error('No quizzes found for this module')
+      if (!questions) throw new Error('No quizzes found for this module')
 
       // Calculate score
       let correctCount = 0
-      quizzes.forEach((quiz) => {
-        if (attempt.answers[quiz.id] === quiz.correct_answer) {
+      questions.forEach((question) => {
+        if (attempt.answers[question.id] === question.correct_answer) {
           correctCount++
         }
       })
 
       const score = correctCount
-      const maxScore = quizzes.length
-      const passed = (score / maxScore) >= 0.8 // 80% passing threshold
+      const maxScore = questions.length
+      const passed = maxScore > 0 ? (score / maxScore) >= 0.8 : false // 80% passing threshold
+      const nowIso = new Date().toISOString()
 
-      // Get attempt number from quiz_attempts (domain='training')
-      const { data } = await supabase
-        .from('quiz_attempts')
+      // Attempt number = prior training sessions for this module + 1
+      const { data: priorSessions } = await supabase
+        .from('unified_quiz_sessions')
         .select('id')
         .eq('user_id', user.id)
-        .eq('quiz_id', attempt.moduleId)
-        .eq('domain', 'training')
+        .eq('quiz_type', 'training')
+        .eq('quiz_entity_id', attempt.moduleId)
 
-      const nextAttemptNumber = (data?.length || 0) + 1
+      const nextAttemptNumber = (priorSessions?.length || 0) + 1
 
-      // Create attempt record in quiz_attempts with domain discriminator
-      const { data: attemptData, error: attemptError } = await supabase
-        .from('quiz_attempts')
+      // Create the session (one row per quiz attempt)
+      const { data: session, error: sessionError } = await supabase
+        .from('unified_quiz_sessions')
         .insert({
           user_id: user.id,
-          quiz_id: attempt.moduleId,
-          domain: 'training',
-          score,
+          quiz_type: 'training',
+          quiz_entity_id: attempt.moduleId,
+          started_at: nowIso,
+          completed_at: nowIso,
+          total_questions: maxScore,
+          correct_answers: score,
+          score_percentage: maxScore > 0 ? Math.round((score / maxScore) * 100) : 0,
           passed,
-          answers: attempt.answers,
         })
         .select()
         .single()
 
-      if (attemptError) throw attemptError
-      return { ...attemptData, module_id: attempt.moduleId, max_score: maxScore, attempt_number: nextAttemptNumber }
+      if (sessionError) throw sessionError
+
+      // Persist per-question answers (canonical attempt records)
+      if (questions.length > 0) {
+        const attemptRows = questions.map((question) => ({
+          user_id: user.id,
+          question_id: question.id,
+          session_id: session.id,
+          selected_answer: attempt.answers[question.id] ?? null,
+          is_correct: attempt.answers[question.id] === question.correct_answer,
+          context_type: 'training',
+          context_entity_id: attempt.moduleId,
+          attempt_number: nextAttemptNumber,
+        }))
+        await supabase.from('unified_question_attempts').insert(attemptRows)
+      }
+
+      return { ...session, module_id: attempt.moduleId, score, max_score: maxScore, passed, attempt_number: nextAttemptNumber }
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['quiz-attempts'] })
@@ -801,15 +822,15 @@ export function useQuizAttempts(moduleId?: string, userId?: string) {
   return useQuery({
     queryKey: ['quiz-attempts', moduleId, userId],
     queryFn: async () => {
-      // Read from quiz_attempts with domain='training' filter
+      // Read training attempts from unified_quiz_sessions (quiz_type='training')
       let query = supabase
-        .from('quiz_attempts')
+        .from('unified_quiz_sessions')
         .select('*')
-        .eq('domain', 'training')
+        .eq('quiz_type', 'training')
         .order('started_at', { ascending: false })
 
       if (moduleId) {
-        query = query.eq('quiz_id', moduleId)
+        query = query.eq('quiz_entity_id', moduleId)
       }
       if (userId) {
         query = query.eq('user_id', userId)
@@ -818,13 +839,18 @@ export function useQuizAttempts(moduleId?: string, userId?: string) {
       const { data, error } = await query
       if (error) throw error
 
-      // Map to TrainingQuizAttempt shape for backward compatibility
+      // Map session rows to the TrainingQuizAttempt shape consumers expect
       return (data || []).map(row => ({
-        ...row,
-        module_id: row.quiz_id,
-        max_score: row.score,
+        id: row.id,
+        user_id: row.user_id,
+        module_id: row.quiz_entity_id,
+        score: row.correct_answers ?? 0,
+        max_score: row.total_questions ?? 0,
+        passed: row.passed ?? false,
         attempt_number: 1,
-        created_at: row.started_at,
+        started_at: row.started_at,
+        completed_at: row.completed_at,
+        answers: null,
       })) as TrainingQuizAttempt[]
     },
   })

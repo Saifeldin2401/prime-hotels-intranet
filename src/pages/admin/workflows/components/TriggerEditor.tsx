@@ -42,8 +42,9 @@ export function TriggerEditor({ trigger, onClose }: TriggerEditorProps) {
         queryKey: ['quizzes-list'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('quizzes')
+                .from('learning_quizzes')
                 .select('id, title, status')
+                .eq('is_deleted', false)
                 .order('title')
             if (error) throw error
             return data?.filter(q => q.status === 'published') || []

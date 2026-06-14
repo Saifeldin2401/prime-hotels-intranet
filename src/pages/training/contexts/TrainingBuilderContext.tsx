@@ -271,9 +271,9 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     queryKey: ['available-quizzes'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('quizzes')
+        .from('learning_quizzes')
         .select('*')
-        .eq('domain', 'learning')
+        .eq('is_deleted', false)
         .order('title')
       if (error) throw error
       return data as LearningQuiz[]
