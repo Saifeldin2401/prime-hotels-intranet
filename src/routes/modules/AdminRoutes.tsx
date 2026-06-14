@@ -14,8 +14,6 @@ const PIIAuditViewer = lazy(() => import('@/pages/admin/PIIIAuditViewer').then(m
 const EscalationRules = lazy(() => import('@/pages/admin/EscalationRules'))
 const WorkflowDashboard = lazy(() => import('@/pages/admin/workflows/WorkflowDashboard'))
 const NotificationBatches = lazy(() => import('@/pages/admin/notifications/NotificationBatches'))
-const AIToolsPage = lazy(() => import('@/pages/admin/AIToolsPage'))
-const AIGovernance = lazy(() => import('@/pages/admin/AIGovernance'))
 const AdminAnalyticsDashboard = lazy(() => import('@/pages/admin/AdminAnalyticsDashboard'))
 const OnboardingTemplates = lazy(() => import('@/pages/onboarding/OnboardingTemplates'))
 const TemplateEditor = lazy(() => import('@/pages/onboarding/TemplateEditor'))
@@ -27,12 +25,9 @@ const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertif
 const EmailWriter = lazy(() => import('@/pages/admin/EmailWriter'))
 const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
 const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
-const SIEMIntegrations = lazy(() => import('@/pages/admin/SIEMIntegrations'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
-const AutomationControlCenter = lazy(() => import('@/pages/admin/AutomationControlCenter'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
-const SlackIntegrationPanel = lazy(() => import('@/pages/admin/SlackIntegrationPanel').then(m => ({ default: m.SlackIntegrationPanel })))
 
 export const AdminRoutes = () => (
     <>
@@ -179,30 +174,6 @@ export const AdminRoutes = () => (
             }
         />
         <Route
-            path="/admin/ai-tools"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AIToolsPage />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/ai-governance"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AIGovernance />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/admin/onboarding/templates"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
@@ -285,18 +256,6 @@ export const AdminRoutes = () => (
             }
         />
         <Route
-            path="/admin/siem-config"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <SIEMIntegrations />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/admin/retention-policies"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin']}>
@@ -321,31 +280,11 @@ export const AdminRoutes = () => (
             }
         />
         <Route
-            path="/admin/automation"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <AutomationControlCenter />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/admin/invitations"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <UserInvitations />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/admin/slack"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
-                    <AppLayout>
-                        <SlackIntegrationPanel />
                     </AppLayout>
                 </ProtectedRoute>
             }

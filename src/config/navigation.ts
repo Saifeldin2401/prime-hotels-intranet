@@ -776,15 +776,6 @@ export const ROUTES: RouteConfig[] = [
         order: 3.51
     },
     {
-        path: '/admin/siem-config',
-        title: 'siem_integrations',
-        icon: Shield,
-        description: 'Configure external SIEM webhooks',
-        allowedRoles: ['corporate_admin'],
-        group: 'administration',
-        order: 3.52
-    },
-    {
         path: '/admin/retention-policies',
         title: 'retention_policies',
         icon: Clock,
@@ -801,24 +792,6 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 3.54
-    },
-    {
-        path: '/admin/ai-tools',
-        title: 'ai_tools',
-        icon: Brain,
-        description: 'AI-powered HR tools and analytics',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'administration',
-        order: 3.7
-    },
-    {
-        path: '/admin/ai-governance',
-        title: 'ai_governance',
-        icon: Brain,
-        description: 'Autonomous AI governance controls and telemetry',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'administration',
-        order: 3.75
     },
     {
         path: '/admin/notifications',
@@ -909,15 +882,6 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'administration',
         order: 7.5
-    },
-    {
-        path: '/admin/automation',
-        title: 'automation_center',
-        icon: Zap,
-        description: 'Manage system automations, rules, and workflows',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 7.8
     },
     {
         path: '/admin/settings',
