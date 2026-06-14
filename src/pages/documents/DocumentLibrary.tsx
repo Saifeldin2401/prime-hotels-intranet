@@ -9,7 +9,7 @@ import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -44,7 +44,7 @@ import { DocumentConfidentialityBadge } from '@/components/documents/DocumentCon
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { EnhancedBadge } from '@/components/ui/enhanced-badge'
+import { Badge } from '@/components/ui/badge'
 import { Label } from '@/components/ui/label'
 import { LoadingTransition, TableSkeleton } from '@/components/ui/loading-system'
 import { Progress } from '@/components/ui/progress'
@@ -691,9 +691,9 @@ export default function DocumentLibrary() {
               <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
             </div>
             <div className="flex flex-wrap items-center gap-2 mt-1">
-              <EnhancedBadge variant="outline" className="text-xs">
+              <Badge variant="outline" className="text-xs">
                 {doc.file_extension?.toUpperCase() || 'FILE'}
-              </EnhancedBadge>
+              </Badge>
               <span className="text-xs text-gray-500">{formatFileSize(doc.file_size || 0)}</span>
               <span className="text-xs text-gray-500">{formatRelativeTime(doc.created_at)}</span>
               {doc.expires_at && (
@@ -845,7 +845,7 @@ export default function DocumentLibrary() {
       />
 
       {/* Storage Stats Card */}
-      <EnhancedCard variant="gold" className="bg-gradient-to-r from-hotel-gold/10 to-hotel-cream/30 border-hotel-gold/20">
+      <Card variant="gold" className="bg-gradient-to-r from-hotel-gold/10 to-hotel-cream/30 border-hotel-gold/20">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="flex items-center gap-3">
@@ -859,19 +859,19 @@ export default function DocumentLibrary() {
             </div>
             <div className="flex items-center gap-2">
               {stats?.expiringSoon ? (
-                <EnhancedBadge variant="warning" className="text-xs">
+                <Badge variant="warning" className="text-xs">
                   <AlertTriangle className="w-3 h-3 mr-1" />
                   {t('storage.expiring_soon_badge', { count: stats.expiringSoon })}
-                </EnhancedBadge>
+                </Badge>
               ) : null}
-              <EnhancedBadge variant="gold" className="text-xs">
+              <Badge variant="gold" className="text-xs">
                 {storageStats.used} GB / {storageStats.total} GB
-              </EnhancedBadge>
+              </Badge>
             </div>
           </div>
           <Progress value={(storageStats.used / storageStats.total) * 100} className="h-2 bg-hotel-gold/20" />
         </div>
-      </EnhancedCard>
+      </Card>
 
       {/* Advanced Filters */}
       {showFilters && (
@@ -977,7 +977,7 @@ export default function DocumentLibrary() {
         {/* Sidebar */}
         <div className="lg:col-span-1 space-y-4">
           {/* Folder Tree */}
-          <EnhancedCard className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm">
             <div className="p-4">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-semibold text-hotel-navy flex items-center gap-2">
@@ -994,10 +994,10 @@ export default function DocumentLibrary() {
                 onSelectFolder={(id) => setFilters(prev => ({ ...prev, folderId: id }))}
               />
             </div>
-          </EnhancedCard>
+          </Card>
 
           {/* Tags Cloud */}
-          <EnhancedCard className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm">
             <div className="p-4">
               <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
                 <Tag className="w-4 h-4" />
@@ -1030,10 +1030,10 @@ export default function DocumentLibrary() {
                 ))}
               </div>
             </div>
-          </EnhancedCard>
+          </Card>
 
           {/* Quick Stats */}
-          <EnhancedCard className="border-0 shadow-sm">
+          <Card className="border-0 shadow-sm">
             <div className="p-4">
               <h3 className="font-semibold text-hotel-navy flex items-center gap-2 mb-4">
                 <BarChart3 className="w-4 h-4" />
@@ -1058,7 +1058,7 @@ export default function DocumentLibrary() {
                 </div>
               </div>
             </div>
-          </EnhancedCard>
+          </Card>
         </div>
 
         {/* Main Document List */}
@@ -1074,7 +1074,7 @@ export default function DocumentLibrary() {
             </TabsList>
 
             <TabsContent value="documents" className="space-y-4">
-              <EnhancedCard className="border-0 shadow-lg" padding="none">
+              <Card className="border-0 shadow-lg" padding="none">
                   <div className="p-4 border-b border-gray-100 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <input
@@ -1153,11 +1153,11 @@ export default function DocumentLibrary() {
                       )}
                     </LoadingTransition>
                   </div>
-                </EnhancedCard>
+                </Card>
             </TabsContent>
 
             <TabsContent value="folders">
-              <EnhancedCard className="border-0 shadow-lg" padding="none">
+              <Card className="border-0 shadow-lg" padding="none">
                 <div className="p-6">
                   <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                     {folders.map(folder => (
@@ -1176,31 +1176,31 @@ export default function DocumentLibrary() {
                     ))}
                   </div>
                 </div>
-              </EnhancedCard>
+              </Card>
             </TabsContent>
 
             <TabsContent value="recent">
-              <EnhancedCard className="border-0 shadow-lg" padding="none">
+              <Card className="border-0 shadow-lg" padding="none">
                 <div className="p-6">
                   <div className="space-y-2">
                     {documents.slice(0, 20).map(renderDocumentRow)}
                   </div>
                 </div>
-              </EnhancedCard>
+              </Card>
             </TabsContent>
 
             <TabsContent value="favorites">
-              <EnhancedCard className="border-0 shadow-lg" padding="none">
+              <Card className="border-0 shadow-lg" padding="none">
                 <div className="p-6">
                   <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" : "space-y-2"}>
                     {documents.filter(d => favoritesSet.has(d.id)).map(viewMode === 'grid' ? renderDocumentCard : renderDocumentRow)}
                   </div>
                 </div>
-              </EnhancedCard>
+              </Card>
             </TabsContent>
 
             <TabsContent value="expiring">
-              <EnhancedCard className="border-0 shadow-lg" padding="none">
+              <Card className="border-0 shadow-lg" padding="none">
                 <div className="p-6">
                   <DocumentExpiryBanner 
                     documents={documents
@@ -1215,7 +1215,7 @@ export default function DocumentLibrary() {
                       .map(renderDocumentRow)}
                   </div>
                 </div>
-              </EnhancedCard>
+              </Card>
             </TabsContent>
 
             <TabsContent value="trash">

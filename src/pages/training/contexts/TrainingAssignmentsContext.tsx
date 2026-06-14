@@ -590,7 +590,7 @@ export function TrainingAssignmentsProvider({
       // training_content_blocks consolidated into documents (content_type='training_block').
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, type:block_type, order:block_order, content_data')
+        .select('id, title, block_type, block_order, content_data')
         .eq('content_type', 'training_block')
         .eq('training_module_id', selectedProgress.content_id)
         .eq('is_deleted', false)
@@ -604,7 +604,7 @@ export function TrainingAssignmentsProvider({
   const selectedModuleQuizIds = useMemo(() => (
     Array.from(new Set(
       (selectedModuleBlocks || [])
-        .filter((block) => block.type === 'quiz')
+        .filter((block) => block.block_type === 'quiz')
         .map((block) => {
           const contentData = block.content_data as Record<string, unknown> | null | undefined
           return typeof contentData?.quiz_id === 'string' && contentData.quiz_id.length > 0
@@ -1364,7 +1364,9 @@ export function TrainingAssignmentsProvider({
 
   const selectedBlock = useMemo(() => {
     if (!selectedBlockId) return null
-    return selectedModuleBlocks?.find((block) => block.id === selectedBlockId) || null
+    const found = selectedModuleBlocks?.find((block) => block.id === selectedBlockId)
+    if (!found) return null
+    return { id: found.id, title: found.title, type: found.block_type, order: found.block_order }
   }, [selectedBlockId, selectedModuleBlocks])
 
   const parseOptionalNumber = useCallback((value: unknown) => {

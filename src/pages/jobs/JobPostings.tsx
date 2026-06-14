@@ -4,8 +4,8 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Button } from '@/components/ui/button'
-import { EnhancedBadge } from '@/components/ui/enhanced-badge'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
+import { Badge } from '@/components/ui/badge'
+import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
@@ -221,7 +221,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                     >
-                        <EnhancedCard variant="default" className="hover:shadow-lg hover:border-hotel-navy/20 transition-all duration-300">
+                        <Card variant="default" className="hover:shadow-lg hover:border-hotel-navy/20 transition-all duration-300">
                             <div className="p-3 sm:p-4">
                                 <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                                     <div className="p-2.5 sm:p-3 bg-hotel-navy/5 rounded-lg border border-hotel-navy/10 self-start">
@@ -232,12 +232,12 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                                         <div className="flex flex-wrap items-start gap-2 mb-2">
                                             <h3 className="text-base sm:text-lg font-semibold text-hotel-navy">{job.title}</h3>
                                             <div className="flex flex-wrap gap-1">
-                                                <EnhancedBadge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'} className="text-xs">
+                                                <Badge variant={job.status === 'open' ? 'success' : job.status === 'filled' ? 'navy' : 'secondary'} className="text-xs">
                                                     {t(`status.${job.status}`)}
-                                                </EnhancedBadge>
-                                                <EnhancedBadge variant="gold" dot className="text-xs">
+                                                </Badge>
+                                                <Badge variant="gold" dot className="text-xs">
                                                     {t(`seniority.${job.seniority_level}`)}
-                                                </EnhancedBadge>
+                                                </Badge>
                                             </div>
                                         </div>
 
@@ -330,7 +330,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                                     </div>
                                 </div>
                             </div>
-                        </EnhancedCard>
+                        </Card>
                     </m.div>
                 ))}
 

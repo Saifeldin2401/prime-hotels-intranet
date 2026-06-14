@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useProperty } from '@/contexts/PropertyContext'
@@ -98,7 +97,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
           <div className="text-sm text-muted-foreground">{t('department_control.loading')}</div>
         )}
         {departments.map((dept) => (
-          <EnhancedCard key={dept.id} padding="lg">
+          <Card key={dept.id} padding="lg">
             <div className="flex items-start justify-between gap-3">
               <div className="space-y-2 flex-1">
                 {editingId === dept.id ? (
@@ -142,7 +141,7 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
                 )}
               </div>
             </div>
-          </EnhancedCard>
+          </Card>
         ))}
       </div>
     </div>

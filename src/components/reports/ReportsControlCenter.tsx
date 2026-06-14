@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -304,7 +303,7 @@ export function ReportsControlCenter() {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {reports.map((report) => (
-          <EnhancedCard key={report.id} padding="lg">
+          <Card key={report.id} padding="lg">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-base font-semibold">{report.name}</p>
@@ -352,7 +351,7 @@ export function ReportsControlCenter() {
                 </Button>
               </div>
             </div>
-          </EnhancedCard>
+          </Card>
         ))}
       </div>
 

@@ -5,7 +5,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { EnhancedButton } from '@/components/ui/enhanced-button'
+import { Button } from '@/components/ui/button'
 import { useTheme } from '@/contexts/ThemeContext'
 import {
     Check,
@@ -38,7 +38,7 @@ export function ThemeToggle() {
   return (
     <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
-        <EnhancedButton
+        <Button
           variant="ghost"
           size="sm"
           className="h-9 w-9 p-0 relative group"
@@ -50,7 +50,7 @@ export function ThemeToggle() {
             <Monitor className="absolute h-4 w-4 rotate-0 scale-0 transition-all duration-300 opacity-50" />
           </div>
           <div className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-hotel-gold transition-all duration-300 scale-0 group-hover:scale-100" />
-        </EnhancedButton>
+        </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"

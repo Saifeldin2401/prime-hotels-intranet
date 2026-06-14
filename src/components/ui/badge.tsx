@@ -18,6 +18,8 @@ const badgeVariants = cva(
         gold: "border-transparent bg-hotel-gold text-white hover:bg-hotel-gold-dark",
         navy: "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light",
         "outline-gold": "text-hotel-gold border-hotel-gold hover:bg-hotel-gold/10",
+        success: "border-transparent bg-success text-success-foreground",
+        warning: "border-transparent bg-warning text-warning-foreground",
       },
     },
     defaultVariants: {
@@ -26,11 +28,30 @@ const badgeVariants = cva(
   }
 )
 
+const dotColorMap: Record<NonNullable<VariantProps<typeof badgeVariants>['variant']>, string> = {
+  default: "bg-hotel-navy",
+  secondary: "bg-secondary",
+  destructive: "bg-destructive",
+  outline: "border border-input bg-transparent",
+  gold: "bg-hotel-gold",
+  navy: "bg-hotel-navy",
+  "outline-gold": "bg-hotel-gold",
+  success: "bg-success",
+  warning: "bg-warning",
+}
+
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-  VariantProps<typeof badgeVariants> { }
+  VariantProps<typeof badgeVariants> {
+  dot?: boolean
+}
 
-function Badge({ className, variant, ...props }: BadgeProps) {
+function Badge({ className, variant, dot, ...props }: BadgeProps) {
+  if (dot) {
+    return (
+      <div className={cn("h-2.5 w-2.5 rounded-full", dotColorMap[variant ?? 'default'], className)} />
+    )
+  }
   return (
     <div className={cn(badgeVariants({ variant }), className)} {...props} />
   )

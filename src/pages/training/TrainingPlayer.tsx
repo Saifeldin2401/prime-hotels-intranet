@@ -573,7 +573,7 @@ export default function TrainingPlayer() {
             // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: blocks, error: blocksError } = await supabase
                 .from('documents')
-                .select('id, training_module_id, created_at, title, type:block_type, content, order:block_order, content_url, content_data, is_mandatory, is_deleted, source_document_id:linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
+                .select('id, training_module_id, created_at, title, block_type, content, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
                 .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .eq('is_deleted', false)
@@ -588,18 +588,26 @@ export default function TrainingPlayer() {
                 .eq('status', 'published')
                 .limit(1)
 
+            // Map raw DB column names to TrainingContentBlock shape
+            const mappedBlocks = (blocks || []).map(b => ({
+                ...b,
+                type: b.block_type,
+                order: b.block_order,
+                source_document_id: b.linked_training_id,
+            })) as TrainingContentBlock[]
+
             // Fetch referenced content titles (SOPs, Quizzes) to show in sidebar
-            const sopIds = blocks
+            const sopIds = mappedBlocks
                 .filter(b => b.type === 'sop_reference')
                 .map(b => {
                     const contentData = b.content_data as Record<string, unknown> | null
                     const inlineId = contentData?.sop_id as string | undefined
                     const legacyDocId = contentData?.document_id as string | undefined
-                    return inlineId || (b as TrainingContentBlock).source_document_id || legacyDocId
+                    return inlineId || b.source_document_id || legacyDocId
                 })
                 .filter(Boolean) as string[]
 
-            const quizIds = blocks
+            const quizIds = mappedBlocks
                 .filter(b => b.type === 'quiz' && b.content_data?.quiz_id)
                 .map(b => b.content_data!.quiz_id as string)
 
@@ -628,7 +636,7 @@ export default function TrainingPlayer() {
 
             return {
                 module,
-                blocks: blocks as TrainingContentBlock[],
+                blocks: mappedBlocks,
                 linkedQuizId: linkedQuizzes?.[0]?.id,
                 referencedTitles
             }

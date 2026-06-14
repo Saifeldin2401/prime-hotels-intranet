@@ -1,14 +1,15 @@
 import { Header } from '@/components/layout/Header'
+import { MobileHeader } from '@/components/layout/MobileHeader'
+import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
-import { MobileLayout } from '@/layouts/MobileLayout'
 import { cn } from '@/lib/utils'
 import { AnimatePresence } from 'framer-motion'
 import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProperty } from '@/contexts/PropertyContext'
-import { PageLoading } from '@/components/common/LoadingStates'
 import { SidebarNavigation } from './SidebarNavigation'
+import { useLocation } from 'react-router-dom'
 
 const CommandPalette = lazy(() =>
   import('@/components/common/CommandPalette').then((module) => ({ default: module.CommandPalette }))
@@ -24,16 +25,38 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
+const ROOT_PATHS = new Set(['/', '/dashboard', '/home'])
+
+const DETAIL_LABEL: Record<string, string> = {
+  knowledge: 'Article',
+  documents: 'Document',
+  training: 'Training',
+  quizzes: 'Quiz',
+  tasks: 'Task',
+  profile: 'Profile',
+  questions: 'Question',
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+function titleFromPath(pathname: string): string {
+  const segments = pathname.split('/').filter(Boolean)
+  if (segments.length === 0) return ''
+  const last = segments[segments.length - 1]
+  if (UUID_RE.test(last)) {
+    const parent = segments[segments.length - 2]
+    return (parent && DETAIL_LABEL[parent]) ?? 'Details'
+  }
+  return last.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
+}
+
 export function AppLayout({ children }: AppLayoutProps) {
-  const { t } = useTranslation('common')
   const { t: t_ext } = useTranslation('extracted')
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
-  const [isMobileView, setIsMobileView] = useState(
-    () => (typeof window !== 'undefined' ? window.matchMedia('(max-width: 1023px)').matches : false)
-  )
+  const location = useLocation()
 
   const handleSidebarClose = useCallback(() => setSidebarOpen(false), [])
   const handleSidebarToggle = useCallback(() => setSidebarCollapsed((prev) => !prev), [])
@@ -42,57 +65,30 @@ export function AppLayout({ children }: AppLayoutProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
-
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         setCommandPaletteOpen((prev) => !prev)
       }
-
       if (e.key === '/') {
         e.preventDefault()
         setCommandPaletteOpen(true)
       }
     }
-
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      setDeferredChromeReady(true)
-    }, 500)
-
-    return () => {
-      window.clearTimeout(timeoutId)
-    }
+    const timeoutId = window.setTimeout(() => setDeferredChromeReady(true), 500)
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(max-width: 1023px)')
-    const handleMediaChange = (e: MediaQueryListEvent) => {
-      setIsMobileView(e.matches)
-    }
-
-    mediaQuery.addEventListener('change', handleMediaChange)
-    return () => mediaQuery.removeEventListener('change', handleMediaChange)
-  }, [])
-
-  // Get property context - this will throw if outside PropertyProvider
-  // This is called unconditionally to comply with React Hooks rules
-  const { currentProperty } = useProperty()
-  const hasPropertyContext = !!currentProperty
-
-  if (isMobileView) {
-    return (
-      <>
-        <HolidayCelebration />
-        <MobileLayout>{children}</MobileLayout>
-      </>
-    )
-  }
+  // Required: keep PropertyContext available to children via this call
+  useProperty()
 
   const shouldRenderDeferredChrome = deferredChromeReady || commandPaletteOpen
+  const pageTitle = titleFromPath(location.pathname)
+  const showBack = !ROOT_PATHS.has(location.pathname)
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col no-horizontal-scroll">
@@ -100,12 +96,26 @@ export function AppLayout({ children }: AppLayoutProps) {
         {t_ext('skip_to_main_content', 'Skip to main content')}
       </a>
 
-      <SidebarNavigation
-        isOpen={sidebarOpen}
-        collapsed={sidebarCollapsed}
-        onClose={handleSidebarClose}
-        onToggleCollapse={handleSidebarToggle}
-      />
+      {/* Desktop: permanent sidebar — CSS hides it below lg breakpoint */}
+      <div className="hidden lg:block">
+        <SidebarNavigation
+          isOpen={sidebarOpen}
+          collapsed={sidebarCollapsed}
+          onClose={handleSidebarClose}
+          onToggleCollapse={handleSidebarToggle}
+        />
+      </div>
+
+      {/* Mobile: overlay drawer — only mounted when the user opens it */}
+      {sidebarOpen && (
+        <div className="lg:hidden">
+          <SidebarNavigation
+            isOpen={true}
+            onClose={handleSidebarClose}
+            isMobile={true}
+          />
+        </div>
+      )}
 
       <div
         className={cn(
@@ -114,6 +124,17 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
       >
         <HolidayCelebration />
+
+        {/* Mobile header — hidden on desktop */}
+        <div className="lg:hidden">
+          <MobileHeader
+            title={pageTitle}
+            showBack={showBack}
+            onMenuClick={() => setSidebarOpen(true)}
+          />
+        </div>
+
+        {/* Desktop header — hidden on mobile */}
         <div className="hidden lg:block">
           <Header
             sidebarCollapsed={sidebarCollapsed}
@@ -130,6 +151,11 @@ export function AppLayout({ children }: AppLayoutProps) {
             </AnimatePresence>
           </div>
         </main>
+      </div>
+
+      {/* Mobile bottom nav — hidden on desktop (fixed-positioned internally) */}
+      <div className="lg:hidden">
+        <MobileNavigation />
       </div>
 
       <Suspense fallback={null}>

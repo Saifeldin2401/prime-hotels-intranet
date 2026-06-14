@@ -444,7 +444,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       if (!moduleId) return []
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, type:block_type, content, order:block_order, created_at, content_url, content_data, is_mandatory, is_deleted, source_document_id:linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
+        .select('id, title, block_type, content, block_order, created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
         .eq('content_type', 'training_block')
         .eq('training_module_id', moduleId)
         .order('block_order', { ascending: true })
@@ -463,7 +463,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     if (contentBlocksData && contentBlocksData.length > 0 && !isLoadedRef.current) {
       const blocks: ContentBlockForm[] = contentBlocksData.map((block, index) => ({
         id: block.id,
-        type: block.type as ContentType,
+        type: block.block_type as ContentType,
         title: block.title || '',
         content: block.content || '',
         content_url: block.content_url || '',
@@ -471,7 +471,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         is_mandatory: block.is_mandatory ?? true,
         duration: normalizeDurationMinutes(block.duration_seconds),
         points: block.points,
-        order: block.order || index
+        order: block.block_order || index
       }))
 
       setSections([{
@@ -1514,7 +1514,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // training_content_blocks has been consolidated into documents (content_type='training_block').
     const { data: existingBlocks, error: fetchError } = await supabase
       .from('documents')
-      .select('id, title, type:block_type, content, order:block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
+      .select('id, title, block_type, content, block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
       .eq('content_type', 'training_block')
       .eq('training_module_id', targetId)
       .order('block_order', { ascending: true })

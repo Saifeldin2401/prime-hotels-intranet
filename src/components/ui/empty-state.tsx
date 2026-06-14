@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { EnhancedButton } from './enhanced-button'
+import { Button } from './button'
 
 interface EmptyStateProps {
   icon?: ReactNode
@@ -19,7 +19,7 @@ interface EmptyStateProps {
   action?: {
     label: string
     onClick: () => void
-    variant?: 'primary' | 'secondary' | 'outline'
+    variant?: 'default' | 'secondary' | 'outline'
   }
   className?: string
   size?: 'sm' | 'md' | 'lg'
@@ -62,12 +62,12 @@ export function EmptyState({
         <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
       )}
       {action && (
-        <EnhancedButton
-          variant={action.variant || 'primary'}
+        <Button
+          variant={action.variant ?? 'default'}
           onClick={action.onClick}
         >
           {action.label}
-        </EnhancedButton>
+        </Button>
       )}
     </div>
   )

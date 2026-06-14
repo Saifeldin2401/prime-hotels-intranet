@@ -2,19 +2,41 @@ import * as React from "react"
 
 import { cn } from "@/lib/utils"
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-xl border bg-card text-card-foreground shadow-sm transition-all duration-200 hover:shadow-md hover:-translate-y-1",
-      className
-    )}
-    {...props}
-  />
-))
+const cardVariantClasses = {
+  default: "border bg-card text-card-foreground shadow-sm hover:shadow-md hover:-translate-y-1",
+  glass: "glass-card",
+  gold: "card-gold",
+  navy: "bg-hotel-navy text-white border border-hotel-navy-light shadow-lg",
+  elevated: "bg-card border border-border shadow-xl ring-1 ring-black/5",
+  premium: "bg-hotel-cream border border-hotel-gold/30 shadow-2xl relative overflow-hidden after:absolute after:inset-0 after:bg-gradient-to-br after:from-hotel-gold/5 after:to-transparent after:pointer-events-none",
+} as const
+
+const cardPaddingClasses = {
+  none: "",
+  sm: "p-4",
+  md: "p-6",
+  lg: "p-8",
+} as const
+
+interface CardBaseProps extends React.HTMLAttributes<HTMLDivElement> {
+  variant?: keyof typeof cardVariantClasses
+  padding?: keyof typeof cardPaddingClasses
+}
+
+const Card = React.forwardRef<HTMLDivElement, CardBaseProps>(
+  ({ className, variant, padding, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-xl transition-all duration-200",
+        cardVariantClasses[variant ?? 'default'],
+        padding && cardPaddingClasses[padding],
+        className
+      )}
+      {...props}
+    />
+  )
+)
 Card.displayName = "Card"
 
 const CardHeader = React.forwardRef<

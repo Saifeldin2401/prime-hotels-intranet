@@ -2,7 +2,6 @@ import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -296,7 +295,7 @@ export function AuditsControlCenter() {
           </CardContent>
         </Card>
 
-        <EnhancedCard padding="lg">
+        <Card padding="lg">
           <div className="flex items-center justify-between mb-3">
             <div>
               <h4 className="text-base font-semibold">Template Items</h4>
@@ -369,7 +368,7 @@ export function AuditsControlCenter() {
               )}
             </div>
           )}
-        </EnhancedCard>
+        </Card>
       </div>
 
       <Card>

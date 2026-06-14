@@ -12,7 +12,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
-import { EnhancedBadge } from '@/components/ui/enhanced-badge'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
@@ -283,10 +282,10 @@ export default function DocumentDetail() {
                     <StatusBadge status={document.status} />
                     <DocumentConfidentialityBadge level={document.confidentiality_level} />
                     {document.featured && (
-                      <EnhancedBadge variant="gold">
+                      <Badge variant="gold">
                         <Sparkles className="w-3 h-3 mr-1" />
                         Featured
-                      </EnhancedBadge>
+                      </Badge>
                     )}
                   </div>
                   <CardTitle className="text-2xl sm:text-3xl">{document.title}</CardTitle>

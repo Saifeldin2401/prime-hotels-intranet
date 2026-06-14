@@ -1,7 +1,6 @@
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { EnhancedCard } from '@/components/ui/enhanced-card'
 import { Progress } from '@/components/ui/progress'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
@@ -35,7 +34,7 @@ export function OperationsControlCenter() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <EnhancedCard padding="lg">
+        <Card padding="lg">
           <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.task_control')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">{t('operations_center.pending_tasks')}</span>
@@ -48,9 +47,9 @@ export function OperationsControlCenter() {
           <Button variant="outline" size="sm" className="w-full" onClick={() => (navigate('/tasks'))}>
             {t('operations_center.review_tasks')}
           </Button>
-        </EnhancedCard>
+        </Card>
 
-        <EnhancedCard padding="lg">
+        <Card padding="lg">
           <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.maintenance_health')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">{t('operations_center.open_tickets')}</span>
@@ -67,9 +66,9 @@ export function OperationsControlCenter() {
           <Button variant="outline" size="sm" className="w-full" onClick={() => (navigate('/maintenance'))}>
             {t('operations_center.review_maintenance')}
           </Button>
-        </EnhancedCard>
+        </Card>
 
-        <EnhancedCard padding="lg">
+        <Card padding="lg">
           <h4 className="text-sm font-semibold text-foreground mb-2">{t('operations_center.department_coverage')}</h4>
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-muted-foreground">{t('operations_center.departments_active')}</span>
@@ -79,7 +78,7 @@ export function OperationsControlCenter() {
           <Button variant="outline" size="sm" className="w-full mt-3" onClick={() => (navigate('/directory'))}>
             {t('operations_center.manage_teams')}
           </Button>
-        </EnhancedCard>
+        </Card>
       </div>
 
       <Card>

@@ -350,7 +350,7 @@ export default function LearningAnalytics() {
             // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: moduleBlocks } = await supabase
                 .from('documents')
-                .select('id, training_module_id, type:block_type, order:block_order')
+                .select('id, training_module_id, block_type, block_order')
                 .eq('content_type', 'training_block')
 
             const { data: moduleProgress } = await supabase
@@ -410,8 +410,8 @@ export default function LearningAnalytics() {
                 blockMetaMap.set(b.id, {
                     moduleId: b.training_module_id,
                     moduleTitle,
-                    type: b.type,
-                    order: b.order
+                    type: b.block_type,
+                    order: b.block_order
                 })
             })
 
