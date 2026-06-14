@@ -317,7 +317,7 @@ export async function getRecentArticles(limit = 10, propertyId?: string): Promis
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
                 last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 department:departments(id, name),
-                category:categories(id, name)
+                category:categories!documents_category_id_fkey(id, name)
             `)
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)

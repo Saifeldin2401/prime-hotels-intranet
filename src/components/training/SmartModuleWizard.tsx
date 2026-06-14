@@ -625,38 +625,9 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
         return
     }
 
-    const createAutomationRules = async (moduleId: string) => {
-        // Create reminder rules
-        for (const days of courseConfig.reminderDays) {
-            await supabase.from('training_automation_rules').insert({
-                module_id: moduleId,
-                trigger_type: 'reminder',
-                trigger_condition: `due_date_minus_${days}_days`,
-                action_type: 'send_notification',
-                action_config: {
-                    message: `Reminder: Complete "${outline?.title}" - Due in ${days} days`,
-                    channels: ['email', 'in_app']
-                },
-                is_active: true,
-                created_by: profile?.id
-            })
-        }
-
-        // Create escalation rule if enabled
-        if (courseConfig.autoEscalate) {
-            await supabase.from('training_automation_rules').insert({
-                module_id: moduleId,
-                trigger_type: 'overdue',
-                trigger_condition: `overdue_by_${courseConfig.escalationDays}_days`,
-                action_type: 'notify_manager',
-                action_config: {
-                    message: `Training overdue: "${outline?.title}" - Employee has not completed within required timeframe`,
-                    escalate_to: 'direct_manager'
-                },
-                is_active: true,
-                created_by: profile?.id
-            })
-        }
+    const createAutomationRules = async (_moduleId: string) => {
+        // Automation rules removed — use workflow definitions instead
+        return
     }
 
     const createCertificateSettings = async (moduleId: string) => {

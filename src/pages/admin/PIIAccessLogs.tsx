@@ -30,7 +30,7 @@ export default function PIIAccessLogs() {
       const to = from + pageSize - 1
 
       const { data, error, count } = await supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
         .range(from, to)

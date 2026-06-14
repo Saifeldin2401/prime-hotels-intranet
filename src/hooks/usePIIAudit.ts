@@ -16,7 +16,7 @@ export function usePIIAccessLogs(filters?: {
     queryKey: ['pii-access-logs', filters],
     queryFn: async () => {
       let query = supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .select(`
           *,
           accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email),
@@ -60,7 +60,7 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
     queryKey: ['pii-access-summary', dateRange],
     queryFn: async (): Promise<PIIAccessSummary> => {
       let query = supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .select('id, accessed_by, pii_fields, access_type, resource_type')
 
       if (dateRange?.from) {
@@ -117,7 +117,7 @@ export function useCreatePIIAccessLog() {
   return useMutation({
     mutationFn: async (logData: Omit<PIIAccessLog, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .insert(logData)
         .select()
         .single()
@@ -142,7 +142,7 @@ export function useApprovePIIAccess() {
       justification: string
     }) => {
       const { data, error } = await supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .update({
           approved_by: approvedBy,
           justification
@@ -167,7 +167,7 @@ export function useDeletePIIAccessLog() {
   return useMutation({
     mutationFn: async (logId: string) => {
       const { error } = await supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .delete()
         .eq('id', logId)
 
@@ -190,7 +190,7 @@ export function useExportPIIAccessLogs() {
       date_to?: string
     }) => {
       let query = supabase
-        .from('pii_access_logs')
+        .from('pii_access_logs_v')
         .select(`
           *,
           accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email)

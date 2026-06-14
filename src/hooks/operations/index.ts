@@ -3,8 +3,6 @@ export * from '../useMaintenanceSchedules'
 export * from '../useMaintenanceStats'
 export * from '../useMaintenanceTickets'
 export * from '../useOperations'
-export * from '../useOperationsSla'
-export * from '../useShiftHandover'
 export {
   useShifts,
   useCreateShift,

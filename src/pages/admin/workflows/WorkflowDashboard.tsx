@@ -2,10 +2,8 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useState } from 'react'
-import { AutomationSettings } from './components/AutomationSettings'
 import { TaskTemplateList } from './components/TaskTemplateList'
 import { TrainingRulesList } from './components/TrainingRulesList'
-import { TriggerList } from './components/TriggerList'
 import { WorkflowExecutions } from './components/WorkflowExecutions'
 import { WorkflowList } from './components/WorkflowList'
 import { WorkflowStatsCards } from './components/WorkflowStatsCards'
@@ -19,19 +17,9 @@ export default function WorkflowDashboard() {
             description: 'Create and manage workflow definitions.'
         },
         {
-            value: 'triggers',
-            title: 'Trigger Rules',
-            description: 'Connect events to workflows and actions.'
-        },
-        {
             value: 'autonomous',
             title: 'Autonomous Rules',
             description: 'Manage training rules and task templates.'
-        },
-        {
-            value: 'settings',
-            title: 'Automation Settings',
-            description: 'Configure scheduling and system behavior.'
         },
         {
             value: 'executions',
@@ -93,24 +81,16 @@ export default function WorkflowDashboard() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
                 <TabsList className="w-full flex flex-wrap justify-start bg-muted/40 p-1 rounded-lg">
                     <TabsTrigger value="definitions">Workflows</TabsTrigger>
-                    <TabsTrigger value="triggers">Trigger Rules</TabsTrigger>
                     <TabsTrigger value="autonomous">Autonomous Rules</TabsTrigger>
-                    <TabsTrigger value="settings">Automation Settings</TabsTrigger>
                     <TabsTrigger value="executions">Execution Logs</TabsTrigger>
                 </TabsList>
                 <TabsContent value="definitions" className="space-y-4 rounded-lg border bg-card p-4">
                     <WorkflowList />
                 </TabsContent>
-                <TabsContent value="triggers" className="space-y-4 rounded-lg border bg-card p-4">
-                    <TriggerList />
-                </TabsContent>
                 <TabsContent value="autonomous" className="space-y-6 rounded-lg border bg-card p-4">
                     <TrainingRulesList />
                     <Separator />
                     <TaskTemplateList />
-                </TabsContent>
-                <TabsContent value="settings" className="space-y-4 rounded-lg border bg-card p-4">
-                    <AutomationSettings />
                 </TabsContent>
                 <TabsContent value="executions" className="space-y-4 rounded-lg border bg-card p-4">
                     <WorkflowExecutions />

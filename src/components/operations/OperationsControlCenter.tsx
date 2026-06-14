@@ -5,7 +5,6 @@ import { Progress } from '@/components/ui/progress'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useMaintenanceStats } from '@/hooks/useMaintenanceStats'
-import { useOperationsSlaBreaches } from '@/hooks/useOperationsSla'
 import { useTasks } from '@/hooks/useTasks'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -17,8 +16,6 @@ export function OperationsControlCenter() {
   const { data: tasks = [] } = useTasks({ status: 'todo' })
   const { data: maintenanceStats } = useMaintenanceStats()
   const { departments } = useDepartments(currentProperty?.id)
-  const { data: slaBreaches = [] } = useOperationsSlaBreaches()
-
   const pendingTasks = tasks.filter(t => t.status !== 'completed' && t.status !== 'cancelled')
   const highPriorityTasks = pendingTasks.filter(t => ['urgent', 'critical', 'high'].includes(t.priority))
 
@@ -28,8 +25,6 @@ export function OperationsControlCenter() {
     overdueCount: 0,
     avgResolutionTime: 0
   }
-
-  const activeBreaches = slaBreaches.filter(b => !b.resolved_at)
 
   return (
     <div className="space-y-4">
@@ -80,29 +75,6 @@ export function OperationsControlCenter() {
           </Button>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">{t('operations_center.sla_breaches')}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          {activeBreaches.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t('operations_center.no_active_breaches')}</p>
-          ) : (
-            activeBreaches.slice(0, 6).map((breach) => (
-              <div key={breach.id} className="flex items-center justify-between text-sm border rounded-md p-2">
-                <div>
-                  <p className="font-medium">{breach.entity_type} {breach.entity_id.slice(0, 6)}</p>
-                  <p className="text-xs text-muted-foreground">{new Date(breach.breached_at).toLocaleString()}</p>
-                </div>
-                <Badge variant={breach.severity === 'critical' ? 'destructive' : 'secondary'}>
-                  {breach.severity ? t(`analytics.${breach.severity}`, breach.severity) : t('operations_center.overdue')}
-                </Badge>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>

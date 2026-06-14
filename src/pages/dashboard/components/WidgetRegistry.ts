@@ -58,7 +58,6 @@ const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'Pinne
 const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
 const ClusterOverviewWidget = lazyWidget(() => import('./ClusterOverviewWidget'), 'ClusterOverviewWidget')
 const PropertyComparisonWidget = lazyWidget(() => import('./PropertyComparisonWidget'), 'PropertyComparisonWidget')
-const ShiftHandoverWidget = lazyWidget(() => import('./ShiftHandoverWidget'), 'ShiftHandoverWidget')
 const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
 
 /**
@@ -212,14 +211,6 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         sensitivity: 'low',
         gridSize: { w: 2, h: 2 }
     },
-    shiftHandover: {
-        id: 'shiftHandover',
-        component: ShiftHandoverWidget,
-        title: 'Shift Handover',
-        requiredRoles: ['property_manager', 'department_head', 'manager', 'corporate_admin'],
-        defaultVisible: true,
-        sensitivity: 'medium'
-    },
     eliteSpotlight: {
         id: 'eliteSpotlight',
         component: EliteSpotlightWidget,
@@ -310,7 +301,6 @@ export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staf
             'quickInsights',
             'roleAwareInsights',
             ['tasks', 'calendar'],
-            'shiftHandover',
             'quickActions',
             'hospitalityNews'
         ],
