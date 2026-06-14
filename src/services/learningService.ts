@@ -678,7 +678,7 @@ export const learningService = {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
 
-        const [rolesResult, departmentsResult, propertiesResult] = await Promise.all([
+        const [rolesResult, departmentsResult] = await Promise.all([
             supabase
                 .from('user_roles')
                 .select('role')
@@ -686,16 +686,11 @@ export const learningService = {
             supabase
                 .from('user_departments')
                 .select('department_id')
-                .eq('user_id', user.id),
-            supabase
-                .from('user_properties')
-                .select('property_id')
                 .eq('user_id', user.id)
         ])
 
         if (rolesResult.error) throw rolesResult.error
         if (departmentsResult.error) throw departmentsResult.error
-        if (propertiesResult.error) throw propertiesResult.error
 
         const roleIds = (rolesResult.data || [])
             .map((row: { role?: string | null }) => row.role)
@@ -705,70 +700,46 @@ export const learningService = {
             .map((row: { department_id?: string | null }) => row.department_id)
             .filter((id): id is string => typeof id === 'string' && id.length > 0)
 
-        const propertyIds = (propertiesResult.data || [])
-            .map((row: { property_id?: string | null }) => row.property_id)
-            .filter((id): id is string => typeof id === 'string' && id.length > 0)
-
-        const notDeletedFilter = 'or(is_deleted.is.null,is_deleted.eq.false)'
+        // training_assignment_rules targeting model:
+        //   assignment_type='explicit' -> targets a single user (user_id)
+        //   assignment_type='rule'     -> broadcasts by target_role or target_department_id
         const orSegments: string[] = []
-
-        orSegments.push(`and(target_type.eq.everyone,${notDeletedFilter})`)
-        orSegments.push(`and(target_type.eq.user,target_id.eq.${user.id},${notDeletedFilter})`)
-
+        orSegments.push(`and(assignment_type.eq.explicit,user_id.eq.${user.id})`)
         roleIds.forEach((role) => {
-            orSegments.push(`and(target_type.eq.role,target_id.eq.${role},${notDeletedFilter})`)
+            orSegments.push(`and(assignment_type.eq.rule,target_role.eq.${role})`)
         })
-
         departmentIds.forEach((departmentId) => {
-            orSegments.push(`and(target_type.eq.department,target_id.eq.${departmentId},${notDeletedFilter})`)
-        })
-
-        propertyIds.forEach((propertyId) => {
-            orSegments.push(`and(target_type.eq.property,target_id.eq.${propertyId},${notDeletedFilter})`)
+            orSegments.push(`and(assignment_type.eq.rule,target_department_id.eq.${departmentId})`)
         })
 
         const { data, error } = await supabase
             .from('training_assignment_rules')
             .select('*')
+            .or('is_deleted.is.null,is_deleted.eq.false')
             .or(orSegments.join(','))
             .order('created_at', { ascending: false })
 
         if (error) throw error
 
-        const assignments = (data || []) as AssignmentRow[]
+        // Normalize the LMS column names (la_content_type / la_priority) and resolve
+        // content_id (rule rows reference the module via training_module_id).
+        const assignments = ((data || []) as Array<Record<string, unknown>>).map((row) => ({
+            ...row,
+            content_type: (row.la_content_type ?? 'module') as LearningContentType,
+            content_id: (row.content_id ?? row.training_module_id) as string,
+            priority: (row.la_priority ?? 'normal') as AssignmentPriority,
+        })) as unknown as AssignmentRow[]
         const contentIds = Array.from(new Set(assignments.map(a => a.content_id).filter(Boolean)))
-        const assignmentKeys = new Set(assignments.map((assignment) => buildContentKey(
-            assignment.content_type as LearningContentType,
-            assignment.content_id
-        )))
 
-        const [progressResult, exemptionsResult, overridesResult] = contentIds.length > 0
-            ? await Promise.all([
-                supabase
-                    .from('training_progress')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .in('content_id', contentIds),
-                supabase
-                    .from('learning_assignment_exemptions')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .in('content_id', contentIds),
-                supabase
-                    .from('learning_assignment_user_overrides')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .in('content_id', contentIds),
-            ])
-            : [
-                { data: [], error: null },
-                { data: [], error: null },
-                { data: [], error: null },
-            ]
+        const progressResult = contentIds.length > 0
+            ? await supabase
+                .from('training_progress')
+                .select('*')
+                .eq('user_id', user.id)
+                .in('content_id', contentIds)
+            : { data: [], error: null }
 
         if (progressResult.error) throw progressResult.error
-        if (exemptionsResult.error) throw exemptionsResult.error
-        if (overridesResult.error) throw overridesResult.error
 
         const progressByContent = new Map(
             (progressResult.data || []).map((progress: LearningProgress) => [
@@ -777,34 +748,19 @@ export const learningService = {
             ])
         )
 
-        const exemptedContentKeys = new Set(
-            (exemptionsResult.data || [])
-                .map((row: LearningAssignmentExemption) => buildContentKey(row.content_type, row.content_id))
-                .filter((key) => assignmentKeys.has(key))
-        )
-
-        const overridesByContent = new Map(
-            (overridesResult.data || []).map((override: LearningAssignmentUserOverride) => [
-                buildContentKey(override.content_type, override.content_id),
-                override,
-            ])
-        )
-
         const filteredAssignments = assignments
             .filter((assignment) => {
                 const key = buildContentKey(assignment.content_type as LearningContentType, assignment.content_id)
                 const progress = progressByContent.get(key)
-                if (exemptedContentKeys.has(key)) return false
                 if (progress?.status === 'excused') return false
                 return true
             })
             .map((assignment) => {
                 const key = buildContentKey(assignment.content_type as LearningContentType, assignment.content_id)
-                const override = overridesByContent.get(key)
                 return {
                     ...assignment,
-                    due_date: override ? (override.due_date ?? null) : (assignment.due_date ?? null),
-                    priority: (override?.priority ?? assignment.priority ?? 'normal') as AssignmentPriority,
+                    due_date: assignment.due_date ?? null,
+                    priority: (assignment.priority ?? 'normal') as AssignmentPriority,
                     progress: progressByContent.get(key) || null,
                 } as LearningAssignment
             })
