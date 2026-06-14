@@ -300,12 +300,12 @@ export default function MessagingDashboard() {
               </Button>
             </div>
             <div className="mt-3 relative">
-              <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "right-3" : "left-3")} />
+              <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "end-3" : "start-3")} />
               <Input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder={t('search_conversations')}
-                className={cn("h-10 bg-white border-gray-200 rounded-lg", isRTL ? "pr-9" : "pl-9")}
+                className={cn("h-10 bg-white border-gray-200 rounded-lg", isRTL ? "pe-9" : "ps-9")}
               />
             </div>
           </div>
@@ -627,12 +627,12 @@ export default function MessagingDashboard() {
           </DialogHeader>
           <div className="space-y-3">
             <div className="relative">
-              <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "right-3" : "left-3")} />
+              <Search className={cn("absolute top-2.5 h-4 w-4 text-muted-foreground", isRTL ? "end-3" : "start-3")} />
               <Input
                 value={userSearch}
                 onChange={(e) => setUserSearch(e.target.value)}
                 placeholder={t('search_people')}
-                className={cn("h-10", isRTL ? "pr-9" : "pl-9")}
+                className={cn("h-10", isRTL ? "pe-9" : "ps-9")}
               />
             </div>
             <ScrollArea className="h-[360px]">

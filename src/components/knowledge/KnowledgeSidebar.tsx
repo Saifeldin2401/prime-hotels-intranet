@@ -133,10 +133,10 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                 </div>
                 <Link to="/knowledge/search" className="block">
                     <div className="relative group">
-                        <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                        <div className="absolute inset-y-0 start-3 flex items-center pointer-events-none">
                             <Search className="h-4 w-4 text-gray-400 group-hover:text-hotel-navy transition-colors" />
                         </div>
-                        <div className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 pl-10 pr-4 text-sm text-gray-400 group-hover:bg-white group-hover:border-hotel-gold/30 group-hover:shadow-sm transition-all">
+                        <div className="w-full bg-gray-50 border border-gray-100 rounded-lg py-2 ps-10 pe-4 text-sm text-gray-400 group-hover:bg-white group-hover:border-hotel-gold/30 group-hover:shadow-sm transition-all">
                             {t('library.quick_search', 'Quick Search...')}
                         </div>
                     </div>

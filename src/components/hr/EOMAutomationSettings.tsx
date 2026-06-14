@@ -401,7 +401,7 @@ export function EOMAutomationSettings({ onRunCalculation }: EOMAutomationSetting
                                     <Target className="h-4 w-4 text-hotel-gold" />
                                     <h4 className="font-semibold text-hotel-charcoal">Scoring Weights</h4>
                                     <span className={cn(
-                                        "text-xs px-2 py-0.5 rounded-full ml-auto",
+                                        "text-xs px-2 py-0.5 rounded-full ms-auto",
                                         isWeightValid ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
                                     )}>
                                         Total: {totalWeight}%
@@ -577,7 +577,7 @@ export function EOMAutomationSettings({ onRunCalculation }: EOMAutomationSetting
                                     </div>
 
                                     {config.exclude_recent_winners && (
-                                        <div className="space-y-2 pl-4 border-l-2 border-hotel-gold/20">
+                                        <div className="space-y-2 ps-4 border-l-2 border-hotel-gold/20">
                                             <Label className="text-sm">Exclusion Period (months)</Label>
                                             <Input
                                                 type="number"
@@ -663,7 +663,7 @@ export function EOMAutomationSettings({ onRunCalculation }: EOMAutomationSetting
                                     disabled={runningCalculation}
                                     className="border-hotel-gold/30 text-hotel-gold hover:bg-hotel-gold/10"
                                 >
-                                    <Play className="h-4 w-4 mr-2" />
+                                    <Play className="h-4 w-4 me-2" />
                                     {runningCalculation ? 'Running...' : 'Test Calculation'}
                                 </Button>
                             </div>

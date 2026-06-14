@@ -1217,11 +1217,11 @@ Return ONLY valid JSON:
         actions={
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={handleAIDraft} disabled={isDrafting}>
-              {isDrafting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {isDrafting ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Sparkles className="w-4 h-4 me-2" />}
               {t('email_writer.ai_draft', { ns: 'admin', defaultValue: 'AI Draft' })}
             </Button>
             <Button variant="outline" onClick={handleAIImprove} disabled={isImproving}>
-              {isImproving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {isImproving ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Sparkles className="w-4 h-4 me-2" />}
               {t('email_writer.ai_improve', { ns: 'admin', defaultValue: 'AI Improve' })}
             </Button>
             <Button
@@ -1229,7 +1229,7 @@ Return ONLY valid JSON:
               onClick={() => handleAITranslate('ar')}
               disabled={isTranslating === 'ar'}
             >
-              {isTranslating === 'ar' ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {isTranslating === 'ar' ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Sparkles className="w-4 h-4 me-2" />}
               {t('email_writer.translate_ar', { ns: 'admin', defaultValue: 'Translate AR' })}
             </Button>
             <Button
@@ -1237,11 +1237,11 @@ Return ONLY valid JSON:
               onClick={handleAIGenerateHtml}
               disabled={isGeneratingHtml}
             >
-              {isGeneratingHtml ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {isGeneratingHtml ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Sparkles className="w-4 h-4 me-2" />}
               {t('email_writer.ai_html', { ns: 'admin', defaultValue: 'AI HTML' })}
             </Button>
             <Button onClick={handleSend} disabled={!canSend || isCreatingBatch}>
-              {isCreatingBatch ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+              {isCreatingBatch ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <Send className="w-4 h-4 me-2" />}
               {t('email_writer.send', { ns: 'admin', defaultValue: 'Send' })}
             </Button>
           </div>

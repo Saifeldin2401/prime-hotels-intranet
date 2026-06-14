@@ -5,7 +5,7 @@ export function FloatingShapes() {
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
       {/* Floating circles */}
       <motion.div
-        className="absolute top-20 left-10 w-64 h-64 rounded-full bg-gradient-to-br from-hotel-gold/10 to-transparent blur-3xl"
+        className="absolute top-20 start-10 w-64 h-64 rounded-full bg-gradient-to-br from-hotel-gold/10 to-transparent blur-3xl"
         animate={{
           y: [0, -30, 0],
           scale: [1, 1.1, 1],
@@ -17,7 +17,7 @@ export function FloatingShapes() {
         }}
       />
       <motion.div
-        className="absolute bottom-20 right-10 w-96 h-96 rounded-full bg-gradient-to-tl from-hotel-navy/10 to-transparent blur-3xl"
+        className="absolute bottom-20 end-10 w-96 h-96 rounded-full bg-gradient-to-tl from-hotel-navy/10 to-transparent blur-3xl"
         animate={{
           y: [0, 30, 0],
           scale: [1, 1.05, 1],
@@ -30,7 +30,7 @@ export function FloatingShapes() {
         }}
       />
       <motion.div
-        className="absolute top-1/2 left-1/3 w-48 h-48 rounded-full bg-gradient-to-tr from-hotel-gold/5 to-transparent blur-2xl"
+        className="absolute top-1/2 start-1/3 w-48 h-48 rounded-full bg-gradient-to-tr from-hotel-gold/5 to-transparent blur-2xl"
         animate={{
           x: [0, 20, 0],
           y: [0, -20, 0],

@@ -445,12 +445,12 @@ export function CreateReferralDialog({
                         <Button type="submit" disabled={success || uploading}>
                             {uploading ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                     Uploading...
                                 </>
                             ) : success ? (
                                 <>
-                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    <CheckCircle className="me-2 h-4 w-4" />
                                     Submitted
                                 </>
                             ) : (

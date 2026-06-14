@@ -279,13 +279,13 @@ export default function PromotionTransferHistory() {
             <div className="prime-card">
                 <div className="prime-card-body">
                     <div className="relative max-w-md">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
                             type="text"
                             placeholder={t('common:common.search')}
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className={isRTL ? "pr-9" : "pl-9"}
+                            className={isRTL ? "pe-9" : "ps-9"}
                         />
                     </div>
                 </div>
@@ -351,7 +351,7 @@ export default function PromotionTransferHistory() {
                                                                     onSuccess={() => { refetchPromos(); refetchTransfers(); }}
                                                                 >
                                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                                        <Edit className="mr-2 h-4 w-4" /> {t('common:common.edit')}
+                                                                        <Edit className="me-2 h-4 w-4" /> {t('common:common.edit')}
                                                                     </DropdownMenuItem>
                                                                 </PromoteEmployeeDialog>
                                                             ) : (
@@ -360,7 +360,7 @@ export default function PromotionTransferHistory() {
                                                                     onSuccess={() => { refetchPromos(); refetchTransfers(); }}
                                                                 >
                                                                     <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
-                                                                        <Edit className="mr-2 h-4 w-4" /> {t('common:common.edit')}
+                                                                        <Edit className="me-2 h-4 w-4" /> {t('common:common.edit')}
                                                                     </DropdownMenuItem>
                                                                 </TransferEmployeeDialog>
                                                             )}
@@ -368,7 +368,7 @@ export default function PromotionTransferHistory() {
                                                                 className="text-red-600 focus:text-red-600"
                                                                 onClick={() => setRecordToCancel(record as HistoryRecord)}
                                                             >
-                                                                <XCircle className="mr-2 h-4 w-4" /> {t('history.cancel_action')}
+                                                                <XCircle className="me-2 h-4 w-4" /> {t('history.cancel_action')}
                                                             </DropdownMenuItem>
                                                         </DropdownMenuContent>
                                                     </DropdownMenu>

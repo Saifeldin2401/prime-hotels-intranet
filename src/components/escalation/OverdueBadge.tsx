@@ -23,7 +23,7 @@ export function OverdueBadge({ type = 'total', showIcon = true, className }: Ove
     return (
         <Badge
             className={cn(
-                'ml-2 px-2 py-0.5 text-xs font-medium',
+                'ms-2 px-2 py-0.5 text-xs font-medium',
                 urgency === 'critical' && 'bg-red-600 text-white animate-pulse',
                 urgency === 'high' && 'bg-orange-500 text-white',
                 urgency === 'medium' && 'bg-yellow-500 text-white',
@@ -31,7 +31,7 @@ export function OverdueBadge({ type = 'total', showIcon = true, className }: Ove
             )}
         >
             {showIcon && (
-                <AlertTriangle className="h-3 w-3 mr-1" />
+                <AlertTriangle className="h-3 w-3 me-1" />
             )}
             {count} overdue
         </Badge>

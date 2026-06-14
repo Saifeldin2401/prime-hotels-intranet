@@ -346,7 +346,7 @@ export default function SubmitTicket() {
                         onClick={() => document.getElementById('file-upload')?.click()}
                         className="w-full md:w-auto"
                       >
-                        <Upload className="w-4 h-4 mr-2" />
+                        <Upload className="w-4 h-4 me-2" />
                         {t('submit_ticket.upload_files', { defaultValue: 'Upload Files' })}
                       </Button>
                       <Input
@@ -488,7 +488,7 @@ export default function SubmitTicket() {
                       ? t('submit_ticket.uploading')
                       : t('submit_ticket.submitting')}
                   >
-                    <Upload className="mr-2 h-4 w-4" />
+                    <Upload className="me-2 h-4 w-4" />
                     {selectedFiles.length > 0
                       ? t('submit_ticket.submit_with_files')
                       : t('submit_ticket.submit')}

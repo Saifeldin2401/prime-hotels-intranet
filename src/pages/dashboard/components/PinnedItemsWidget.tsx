@@ -80,7 +80,7 @@ function PinnedItemCard({ item, onRemove, isRTL }: PinnedItemCardProps) {
           variant="ghost"
           size="icon-sm"
           className={cn(
-            "absolute -top-2 -right-2 h-6 w-6 rounded-full bg-white border shadow-sm",
+            "absolute -top-2 -end-2 h-6 w-6 rounded-full bg-white border shadow-sm",
             "opacity-0 group-hover:opacity-100 transition-opacity",
             "text-slate-400 hover:text-red-500 hover:border-red-200 z-10"
           )}
@@ -336,7 +336,7 @@ export function PinnedItemsWidget() {
             </DialogDescription>
           </DialogHeader>
           
-          <ScrollArea className="h-[50vh] pr-4">
+          <ScrollArea className="h-[50vh] pe-4">
             <div className="space-y-2 py-2">
               <AnimatePresence mode="popLayout">
                 {pins?.map((item) => (

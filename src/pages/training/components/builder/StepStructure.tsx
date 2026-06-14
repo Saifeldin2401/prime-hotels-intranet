@@ -36,7 +36,7 @@ export function StepStructure({
             <p className="text-sm text-muted-foreground">{t('builder.structureDesc')}</p>
           </div>
           <Button onClick={addSection} className={cn("bg-hotel-gold hover:bg-hotel-gold-dark text-white", isRTL ? "flex-row-reverse" : "")}>
-            <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
             {t('builder.addSection')}
           </Button>
         </div>
@@ -50,7 +50,7 @@ export function StepStructure({
               <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startStructure')}</h4>
               <p className="text-slate-500 mb-6 max-w-sm">{t('builder.startStructureDesc')}</p>
               <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
-                <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                 {t('builder.addSection')}
               </Button>
             </CardContent>

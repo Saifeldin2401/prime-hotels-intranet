@@ -168,7 +168,7 @@ export function CreateAssignmentDialog() {
               <div className="flex flex-col gap-2">
                 <div className="flex flex-col sm:flex-row gap-2">
                   <div className="relative flex-1">
-                    <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
+                    <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "end-3" : "start-3")} />
                     <Input
                       value={targetSearch}
                       onChange={(e) => setTargetSearch(e.target.value)}
@@ -179,7 +179,7 @@ export function CreateAssignmentDialog() {
                             ? t('searchDepartments', 'Search departments or properties...')
                             : t('searchProperties', 'Search properties...')
                       }
-                      className={cn(isRTL ? "pr-9 text-right" : "pl-9", "bg-white")}
+                      className={cn(isRTL ? "pe-9 text-right" : "ps-9", "bg-white")}
                     />
                   </div>
 
@@ -496,7 +496,7 @@ export function CreateAssignmentDialog() {
               className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}
             >
               {createAssignmentMutationPending ? (
-                <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
+                <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ms-2" : "me-2")} />
               ) : null}
               {t('create')}
             </Button>

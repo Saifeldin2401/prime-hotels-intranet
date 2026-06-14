@@ -60,7 +60,7 @@ export default function ReportsDashboard() {
                 description="Overview of system activity, tasks, maintenance, and communications."
                 actions={
                     <Button onClick={() => handleExport('overview')}>
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="w-4 h-4 me-2" />
                         Export Overview
                     </Button>
                 }
@@ -135,7 +135,7 @@ export default function ReportsDashboard() {
                             <CardHeader>
                                 <CardTitle>Maintenance Requests (Last 7 Days)</CardTitle>
                             </CardHeader>
-                            <CardContent className="pl-2">
+                            <CardContent className="ps-2">
                                 <div className="h-[200px] flex items-end justify-between px-4 pb-4 border-b">
                                     {/* Simple visual bar chart since we don't have recharts installed */}
                                     {maintenanceTrends?.map((trend, index) => (
@@ -164,27 +164,27 @@ export default function ReportsDashboard() {
                             <CardContent>
                                 <div className="space-y-4">
                                     <div className="flex items-center">
-                                        <AlertTriangle className="mr-2 h-4 w-4 text-red-500" />
+                                        <AlertTriangle className="me-2 h-4 w-4 text-red-500" />
                                         <div className="flex-1 space-y-1">
                                             <p className="text-sm font-medium leading-none">Critical</p>
                                             <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                                                 <div className="h-full bg-red-500" style={{ width: `${(maintenanceStats?.critical || 0) / (maintenanceStats?.total || 1) * 100}%` }}></div>
                                             </div>
                                         </div>
-                                        <div className="ml-4 font-medium">{maintenanceStats?.critical || 0}</div>
+                                        <div className="ms-4 font-medium">{maintenanceStats?.critical || 0}</div>
                                     </div>
                                     <div className="flex items-center">
-                                        <AlertTriangle className="mr-2 h-4 w-4 text-orange-500" />
+                                        <AlertTriangle className="me-2 h-4 w-4 text-orange-500" />
                                         <div className="flex-1 space-y-1">
                                             <p className="text-sm font-medium leading-none">Urgent</p>
                                             <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
                                                 <div className="h-full bg-orange-500" style={{ width: `${(maintenanceStats?.urgent || 0) / (maintenanceStats?.total || 1) * 100}%` }}></div>
                                             </div>
                                         </div>
-                                        <div className="ml-4 font-medium">{maintenanceStats?.urgent || 0}</div>
+                                        <div className="ms-4 font-medium">{maintenanceStats?.urgent || 0}</div>
                                     </div>
                                     <div className="flex items-center">
-                                        <Activity className="mr-2 h-4 w-4 text-blue-500" />
+                                        <Activity className="me-2 h-4 w-4 text-blue-500" />
                                         <div className="flex-1 space-y-1">
                                             <p className="text-sm font-medium leading-none">Normal</p>
                                             <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
@@ -192,14 +192,14 @@ export default function ReportsDashboard() {
                                                 <div className="h-full bg-blue-500" style={{ width: `${((maintenanceStats?.high || 0) + (maintenanceStats?.medium || 0) + (maintenanceStats?.low || 0)) / (maintenanceStats?.total || 1) * 100}%` }}></div>
                                             </div>
                                         </div>
-                                        <div className="ml-4 font-medium">{(maintenanceStats?.high || 0) + (maintenanceStats?.medium || 0) + (maintenanceStats?.low || 0)}</div>
+                                        <div className="ms-4 font-medium">{(maintenanceStats?.high || 0) + (maintenanceStats?.medium || 0) + (maintenanceStats?.low || 0)}</div>
                                     </div>
                                 </div>
 
                                 <div className="mt-6 pt-6 border-t">
                                     <div className="flex items-center justify-between">
                                         <div className="text-sm text-muted-foreground flex items-center">
-                                            <Clock className="w-4 h-4 mr-1" /> Avg Resolution Time
+                                            <Clock className="w-4 h-4 me-1" /> Avg Resolution Time
                                         </div>
                                         <div className="font-bold">{maintenanceStats?.avgResolutionTime || 0} days</div>
                                     </div>
@@ -247,7 +247,7 @@ export default function ReportsDashboard() {
                                 </div>
                                 <div className="mt-4 flex justify-between items-center border-t pt-4">
                                     <span className="text-sm text-red-600 flex items-center font-medium">
-                                        <AlertTriangle className="w-4 h-4 mr-1" /> Overdue
+                                        <AlertTriangle className="w-4 h-4 me-1" /> Overdue
                                     </span>
                                     <span className="font-bold text-red-600">{taskStats?.overdue_tasks || 0}</span>
                                 </div>

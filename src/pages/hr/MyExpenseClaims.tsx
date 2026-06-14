@@ -109,7 +109,7 @@ export default function MyExpenseClaims() {
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4 me-2" />
                 New Claim
               </Button>
             </DialogTrigger>
@@ -200,7 +200,7 @@ export default function MyExpenseClaims() {
                     Cancel
                   </Button>
                   <Button type="submit" disabled={submitMutation.isPending || !amount}>
-                    {submitMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                    {submitMutation.isPending && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
                     Submit Claim
                   </Button>
                 </DialogFooter>
@@ -260,7 +260,7 @@ export default function MyExpenseClaims() {
                         size="sm"
                         onClick={() => navigate(`/hr/request/${claim.workflow_request_id}`)}
                       >
-                        <Eye className="w-4 h-4 mr-1" />
+                        <Eye className="w-4 h-4 me-1" />
                         Workflow
                       </Button>
                     )}
@@ -270,7 +270,7 @@ export default function MyExpenseClaims() {
                         size="sm"
                         onClick={() => openReceipt(claim)}
                       >
-                        <FileText className="w-4 h-4 mr-1" />
+                        <FileText className="w-4 h-4 me-1" />
                         Receipt
                       </Button>
                     )}

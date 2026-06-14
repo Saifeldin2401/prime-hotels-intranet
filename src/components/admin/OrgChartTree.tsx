@@ -124,7 +124,7 @@ function OrgTreeNodeItem({
                         </span>
                         {hasChildren && (
                             <Badge variant="outline" className="text-xs px-1.5 py-0">
-                                <Users className="h-3 w-3 mr-1" />
+                                <Users className="h-3 w-3 me-1" />
                                 {node.children.length}
                             </Badge>
                         )}
@@ -150,11 +150,11 @@ function OrgTreeNodeItem({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => onNodeClick?.(node)}>
-                            <Eye className="h-4 w-4 mr-2" />
+                            <Eye className="h-4 w-4 me-2" />
                             {t('organization.view_details', 'View Details')}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => onEditNode?.(node)}>
-                            <Edit className="h-4 w-4 mr-2" />
+                            <Edit className="h-4 w-4 me-2" />
                             {t('organization.edit_reporting', 'Edit Reporting Line')}
                         </DropdownMenuItem>
                     </DropdownMenuContent>

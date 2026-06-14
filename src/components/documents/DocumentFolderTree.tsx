@@ -143,7 +143,7 @@ const FolderNode: React.FC<FolderNodeProps> = ({
           isSelected && "bg-[#0B1C3E] text-white hover:bg-[#1a3a6e]",
           isDragging && "opacity-50",
           isDragOver && "bg-hotel-gold/20 ring-2 ring-hotel-gold ring-inset",
-          level > 0 && "ml-4"
+          level > 0 && "ms-4"
         )}
         style={{ paddingLeft: `${level * 12 + 8}px` }}
       >
@@ -237,18 +237,18 @@ const FolderNode: React.FC<FolderNodeProps> = ({
               <DropdownMenuItem
                 onClick={() => onStartInlineEdit(folder.id, folder.name)}
               >
-                <Edit3 className="w-4 h-4 mr-2" />
+                <Edit3 className="w-4 h-4 me-2" />
                 Rename
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onCreateSubfolder(folder.id)}>
-                <Plus className="w-4 h-4 mr-2" />
+                <Plus className="w-4 h-4 me-2" />
                 New Subfolder
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDelete(folder.id)}
                 className="text-destructive focus:text-destructive"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -259,7 +259,7 @@ const FolderNode: React.FC<FolderNodeProps> = ({
       {/* Inline Create Input */}
       {isCreatingHere && (
         <div
-          className="flex items-center gap-2 py-1.5 px-2 ml-4"
+          className="flex items-center gap-2 py-1.5 px-2 ms-4"
           style={{ paddingLeft: `${(level + 1) * 12 + 8}px` }}
         >
           <Folder className="w-5 h-5 text-hotel-gold shrink-0" />

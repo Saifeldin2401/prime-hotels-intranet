@@ -184,7 +184,7 @@ export default function MyLearning() {
                                                                 navigate('/onboarding');
                                                             }}
                                                         >
-                                                            <Sparkles className="h-3 w-3 mr-1" />
+                                                            <Sparkles className="h-3 w-3 me-1" />
                                                             Onboarding Required
                                                         </Badge>
                                                     )}
@@ -210,12 +210,12 @@ export default function MyLearning() {
 
                                             <Button
                                                 onClick={() => handleStart(item)}
-                                                className={cn("w-full sm:w-auto sm:ml-4", isRTL ? 'flex-row-reverse' : '')}
+                                                className={cn("w-full sm:w-auto sm:ms-4", isRTL ? 'flex-row-reverse' : '')}
                                             >
                                                 {item.progress?.status === 'in_progress' ? (
                                                     <>{t('continue')}</>
                                                 ) : (
-                                                    <><Play className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} /> {t('start')}</>
+                                                    <><Play className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} /> {t('start')}</>
                                                 )}
                                             </Button>
                                         </div>
@@ -261,7 +261,7 @@ export default function MyLearning() {
                                             </td>
                                             <td className="px-4 py-3">
                                                 <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
-                                                    <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                                    <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ms-2' : 'me-2'}`} />
                                                     {t('certificate')}
                                                 </Button>
                                             </td>
@@ -307,7 +307,7 @@ export default function MyLearning() {
                                             className={cn("w-full", isRTL ? "flex-row-reverse" : "")}
                                             onClick={() => navigate('/training/certificates')}
                                         >
-                                            <Award className={cn("h-4 w-4 text-purple-600", isRTL ? "ml-2" : "mr-2")} />
+                                            <Award className={cn("h-4 w-4 text-purple-600", isRTL ? "ms-2" : "me-2")} />
                                             {t('certificate')}
                                         </Button>
                                     </div>

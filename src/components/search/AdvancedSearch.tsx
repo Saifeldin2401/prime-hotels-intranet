@@ -173,7 +173,7 @@ export function AdvancedSearch({
       {/* Search Input */}
       <div className="relative">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+          <Search className="absolute start-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
           <Input
             ref={inputRef}
             type="text"
@@ -190,9 +190,9 @@ export function AdvancedSearch({
               }
             }}
             placeholder={placeholder}
-            className="pl-10 pr-20 h-11 border border-border shadow-sm bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200"
+            className="ps-10 pe-20 h-11 border border-border shadow-sm bg-background focus:ring-2 focus:ring-primary/20 transition-all duration-200"
           />
-          <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
+          <div className="absolute end-2 top-1/2 transform -translate-y-1/2 flex items-center gap-1">
             {query && (
               <Button
                 variant="ghost"
@@ -215,7 +215,7 @@ export function AdvancedSearch({
               >
                 <Filter className="w-3 h-3" />
                 {activeFilterCount > 0 && (
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -end-1 w-3 h-3 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center">
                     {activeFilterCount}
                   </span>
                 )}
@@ -233,7 +233,7 @@ export function AdvancedSearch({
 
       {/* Suggestions Dropdown */}
       {isOpen && (filteredSuggestions.length > 0 || recentSearches.length > 0) && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-50 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
+        <Card className="absolute top-full start-0 end-0 mt-2 z-50 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
           <CardContent className="p-0">
             {/* Recent Searches */}
             {recentSearches.length > 0 && query === '' && (
@@ -298,7 +298,7 @@ export function AdvancedSearch({
 
       {/* Filters Panel */}
       {showFiltersPanel && showFilters && (
-        <Card className="absolute top-full left-0 right-0 mt-2 z-40 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
+        <Card className="absolute top-full start-0 end-0 mt-2 z-40 border border-border shadow-lg animate-fade-in bg-white dark:bg-slate-950">
           <CardContent className="p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-sm">{t_ext('filters', 'Filters')}</h3>

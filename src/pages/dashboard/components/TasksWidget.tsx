@@ -109,7 +109,7 @@ export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFo
                     <CheckCircle className="w-8 h-8 text-blue-500" />
                   </div>
                   <p className="text-slate-800 font-bold text-lg">{t('widgets.pending_widget.all_caught_up', 'All caught up!')}</p>
-                  <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">{t('staff.no_tasks', "You don't have any pending tasks right now. Great job!")}</p>
+                  <p className="text-sm text-slate-500 font-medium mt-1 pe-4 ps-4">{t('staff.no_tasks', "You don't have any pending tasks right now. Great job!")}</p>
                 </m.div>
               ) : (
                 tasks?.map((task, index: number) => {
@@ -149,7 +149,7 @@ export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFo
                               )}>
                                 <Clock className="w-3.5 h-3.5" />
                                 {formatDueDate(task.due_date)}
-                                {isOverdue && <span className="ml-0.5">(Overdue)</span>}
+                                {isOverdue && <span className="ms-0.5">(Overdue)</span>}
                               </span>
                             ) : (
                               <span className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-slate-50 text-slate-400 border border-slate-100">
@@ -166,7 +166,7 @@ export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFo
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-6 px-2 text-xs gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-6 px-2 text-xs gap-1 text-green-600 hover:text-green-700 hover:bg-green-50 ms-auto opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={(e) => {
                                 e.preventDefault()
                                 e.stopPropagation()

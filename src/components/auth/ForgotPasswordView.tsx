@@ -184,7 +184,7 @@ function ForgotPasswordViewComponent({
         >
           <ArrowRight
             className={cn(
-              'h-4 w-4 mr-2 rotate-180',
+              'h-4 w-4 me-2 rotate-180',
               isRTL && 'rotate-0'
             )}
             aria-hidden="true"

@@ -97,7 +97,7 @@ export function QuestionReview() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
                     <Button variant="ghost" onClick={() => navigate('/questions')}>
-                        <ArrowLeft className="h-4 w-4 mr-2" />
+                        <ArrowLeft className="h-4 w-4 me-2" />
                         {t('common:common.back')}
                     </Button>
                     <div>
@@ -116,7 +116,7 @@ export function QuestionReview() {
                 <div className="flex items-center gap-2">
                     <Button variant="outline" asChild>
                         <Link to={`/questions/${question.id}/edit`}>
-                            <FileEdit className="h-4 w-4 mr-2" />
+                            <FileEdit className="h-4 w-4 me-2" />
                             {t('common:common.edit')}
                         </Link>
                     </Button>
@@ -126,7 +126,7 @@ export function QuestionReview() {
                             <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                                        <XCircle className="h-4 w-4 mr-2" />
+                                        <XCircle className="h-4 w-4 me-2" />
                                         {t('question_review.reject')}
                                     </Button>
                                 </DialogTrigger>
@@ -150,7 +150,7 @@ export function QuestionReview() {
                                             onClick={handleReject}
                                             disabled={!rejectNotes.trim() || rejectQuestion.isPending}
                                         >
-                                            {rejectQuestion.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                                            {rejectQuestion.isPending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                                             {t('question_review.return_question')}
                                         </Button>
                                     </DialogFooter>
@@ -163,9 +163,9 @@ export function QuestionReview() {
                                 disabled={approveQuestion.isPending}
                             >
                                 {approveQuestion.isPending ? (
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                                 ) : (
-                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    <CheckCircle className="h-4 w-4 me-2" />
                                 )}
                                 {t('question_review.approve_publish')}
                             </Button>
@@ -190,7 +190,7 @@ export function QuestionReview() {
                                     </Badge>
                                     {question.ai_generated && (
                                         <Badge className="bg-purple-100 text-purple-700">
-                                            <Sparkles className="h-3 w-3 mr-1" />
+                                            <Sparkles className="h-3 w-3 me-1" />
                                             AI Generated
                                         </Badge>
                                     )}

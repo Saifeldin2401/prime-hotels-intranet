@@ -144,7 +144,7 @@ export function ModuleSkillsEditor({ moduleId, readonly = false }: ModuleSkillsE
                     <Dialog open={isAdding} onOpenChange={setIsAdding}>
                         <DialogTrigger asChild>
                             <Button variant="outline" size="sm" className={`h-8 ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                <Plus className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+                                <Plus className={cn("h-3 w-3", isRTL ? "ms-1" : "me-1")} />
                                 {t('skillsManagement.addSkill')}
                             </Button>
                         </DialogTrigger>

@@ -73,7 +73,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader className="flex flex-row items-center justify-between shrink-0">
-          <DialogTitle className="truncate pr-4 text-xl">{document.title}</DialogTitle>
+          <DialogTitle className="truncate pe-4 text-xl">{document.title}</DialogTitle>
           <DialogDescription className="sr-only">
             Document viewer for {document.title}
           </DialogDescription>
@@ -111,7 +111,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                 This PDF document cannot be previewed inline due to security restrictions.
               </p>
               <Button onClick={handleDownload}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 me-2" />
                 Open PDF in New Tab
               </Button>
             </div>
@@ -139,7 +139,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
                 This document cannot be previewed inline. Please download it to view.
               </p>
               <Button onClick={handleDownload}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 me-2" />
                 Download Document
               </Button>
             </div>
@@ -148,7 +148,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
           {fileType === 'article' && (
             <div className="prose prose-sm sm:prose max-w-none p-6 bg-white rounded-lg">
               {document.description && (
-                <p className="text-lg text-gray-600 mb-6 italic border-l-4 border-gray-200 pl-4">
+                <p className="text-lg text-gray-600 mb-6 italic border-l-4 border-gray-200 ps-4">
                   {document.description}
                 </p>
               )}
@@ -171,7 +171,7 @@ export function DocumentViewer({ open, onOpenChange, document }: DocumentViewerP
               </p>
               {activeUrl && (
                 <Button onClick={handleDownload}>
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="w-4 h-4 me-2" />
                   Download
                 </Button>
               )}

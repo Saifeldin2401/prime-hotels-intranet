@@ -150,21 +150,21 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
       transition={{ type: "spring", damping: 25, stiffness: 200 }}
       className={cn(
         "fixed top-0 h-full w-full sm:w-[420px] z-50",
-        isRTL ? "left-0" : "right-0"
+        isRTL ? "start-0" : "end-0"
       )}
     >
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
 
       <Card className={cn(
         "absolute top-0 h-full w-full border-0 shadow-2xl overflow-hidden bg-white z-10",
-        isRTL ? "left-0 rounded-none sm:rounded-r-2xl" : "right-0 rounded-none sm:rounded-l-2xl"
+        isRTL ? "start-0 rounded-none sm:rounded-r-2xl" : "end-0 rounded-none sm:rounded-l-2xl"
       )}>
         <CardHeader className="flex flex-row items-center justify-between pb-4 border-b bg-slate-50/50">
           <div className="flex items-center gap-3">
             <div className="relative">
               <Bell className="w-5 h-5" />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                <span className="absolute -top-1 -end-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               )}
             </div>
             <div>
@@ -206,11 +206,11 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                   onClick={handleMarkAllRead}
                   disabled={markAllRead.isPending || unreadCount === 0}
                 >
-                  <CheckCheck className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
+                  <CheckCheck className={cn("w-3 h-3", isRTL ? "ms-1" : "me-1")} />
                   {t('dashboardNotifications.mark_all_read') || 'Mark all read'}
                 </Button>
                 <Button variant="ghost" size="sm" className="h-8 text-xs text-red-600 hover:text-red-700">
-                  <Trash2 className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
+                  <Trash2 className={cn("w-3 h-3", isRTL ? "ms-1" : "me-1")} />
                   {t('dashboardNotifications.clear_all') || 'Clear all'}
                 </Button>
               </div>
@@ -300,7 +300,7 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                                         />
                                       ) : (
                                         <>
-                                          <action.icon className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
+                                          <action.icon className={cn("w-3 h-3", isRTL ? "ms-1" : "me-1")} />
                                           {action.label}
                                         </>
                                       )}
@@ -315,8 +315,8 @@ export function NotificationsPanel({ onClose }: NotificationsPanelProps) {
                                     disabled={processing}
                                     className={cn(
                                       "h-7 text-xs px-2 text-slate-400 hover:text-red-600 hover:bg-red-50",
-                                      !isRTL && "ml-auto",
-                                      isRTL && "mr-auto"
+                                      !isRTL && "ms-auto",
+                                      isRTL && "me-auto"
                                     )}
                                   >
                                     <Trash2 className="w-3 h-3" />

@@ -80,7 +80,7 @@ export function TrainingProgress() {
                     <GraduationCap className="w-8 h-8 text-emerald-500" />
                   </div>
                   <p className="text-slate-800 font-bold text-lg">{t('widgets.no_active_courses', 'No active courses')}</p>
-                  <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">{t('widgets.browse_training', 'Browse available training to get started')}</p>
+                  <p className="text-sm text-slate-500 font-medium mt-1 pe-4 ps-4">{t('widgets.browse_training', 'Browse available training to get started')}</p>
                 </m.div>
               ) : (
                 modules?.map((module, index: number) => {
@@ -97,7 +97,7 @@ export function TrainingProgress() {
                     >
                       <div className="flex flex-col gap-3 p-4 rounded-2xl bg-white border border-slate-100 shadow-[0_2px_8px_rgb(0,0,0,0.02)] hover:border-slate-300 hover:shadow-[0_8px_16px_rgb(0,0,0,0.04)] transition-all ease-out hover:-translate-y-0.5">
                         <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0 pr-8">
+                          <div className="flex-1 min-w-0 pe-8">
                             <div className="flex items-center gap-2 mb-1">
                               <h4 className="font-bold text-[15px] text-slate-800 line-clamp-1 group-hover:text-emerald-600 transition-colors leading-tight">
                                 {module.title}
@@ -119,7 +119,7 @@ export function TrainingProgress() {
                               )}
                             >
                               {inProgress ? t('action.continue', 'Continue') : isCompleted ? 'Review' : t('widgets.start', 'Start')}
-                              <Play className={cn("w-3.5 h-3.5", i18n.dir() === 'rtl' ? "mr-1.5" : "ml-1.5")} />
+                              <Play className={cn("w-3.5 h-3.5", i18n.dir() === 'rtl' ? "me-1.5" : "ms-1.5")} />
                             </Button>
                           </Link>
                         </div>
@@ -146,7 +146,7 @@ export function TrainingProgress() {
                         </div>
                       </div>
                       {/* Pin button */}
-                      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="absolute top-2 end-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <PinButtonCompact
                           itemType="training"
                           itemId={module.id}

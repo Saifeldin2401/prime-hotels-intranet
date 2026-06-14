@@ -104,7 +104,7 @@ function KPICard({
                         "text-xs mt-2 flex items-center",
                         trend.positive ? "text-green-600" : "text-red-600"
                     )}>
-                        <TrendingUp className={cn("h-3 w-3 mr-1", !trend.positive && "rotate-180")} />
+                        <TrendingUp className={cn("h-3 w-3 me-1", !trend.positive && "rotate-180")} />
                         {trend.value}% vs yesterday
                     </div>
                 )}
@@ -261,12 +261,12 @@ export default function OperationsDashboard() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => refetchKpis()}>
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                        <RefreshCw className="h-4 w-4 me-2" />
                         {t('common:refresh', 'Refresh')}
                     </Button>
                     <Button size="sm" asChild>
                         <Link to="/operations/import">
-                            <Upload className="h-4 w-4 mr-2" />
+                            <Upload className="h-4 w-4 me-2" />
                             {t('operations:import.upload_data', 'Upload Data')}
                         </Link>
                     </Button>
@@ -468,7 +468,7 @@ export default function OperationsDashboard() {
                                 </div>
                                 <p className="text-2xl font-bold">
                                     {occupancyData?.length ? Math.round(occupancyData.reduce((s, d) => s + (d.adults || 0) + (d.children || 0), 0) / occupancyData.length) : 0}
-                                    <span className="text-sm font-normal text-muted-foreground ml-1">per day</span>
+                                    <span className="text-sm font-normal text-muted-foreground ms-1">per day</span>
                                 </p>
                             </CardContent>
                         </Card>
@@ -542,7 +542,7 @@ export default function OperationsDashboard() {
                                 disabled={!canExportOperations}
                                 title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
                             >
-                                <Printer className="h-4 w-4 mr-2" />
+                                <Printer className="h-4 w-4 me-2" />
                                 Export PDF
                             </Button>
                         </CardHeader>
@@ -745,7 +745,7 @@ export default function OperationsDashboard() {
                                 disabled={!canExportOperations}
                                 title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
                             >
-                                <Printer className="h-4 w-4 mr-2" />
+                                <Printer className="h-4 w-4 me-2" />
                                 Export PDF
                             </Button>
                         </CardHeader>
@@ -909,9 +909,9 @@ export default function OperationsDashboard() {
                                     className="bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200"
                                 >
                                     {deleteImportLog.isPending ? (
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                        <Loader2 className="h-4 w-4 me-2 animate-spin" />
                                     ) : (
-                                        <Trash2 className="h-4 w-4 mr-2" />
+                                        <Trash2 className="h-4 w-4 me-2" />
                                     )}
                                     Delete Forever
                                 </Button>

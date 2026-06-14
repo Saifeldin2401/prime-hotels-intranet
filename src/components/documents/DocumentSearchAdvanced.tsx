@@ -214,7 +214,7 @@ export function DocumentSearchAdvanced({
       {/* Main Search Bar */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Search documents..."
             value={queryInput}
@@ -226,13 +226,13 @@ export function DocumentSearchAdvanced({
                 onSearch();
               }
             }}
-            className="pl-10"
+            className="ps-10"
           />
           {queryInput && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+              className="absolute end-1 top-1/2 -translate-y-1/2 h-7 w-7"
               onClick={() => {
                 setQueryInput("");
                 onFiltersChange({ ...filters, query: undefined });
@@ -251,7 +251,7 @@ export function DocumentSearchAdvanced({
           <Filter className="w-4 h-4" />
           Filters
           {hasActiveFilters && (
-            <Badge variant="secondary" className="ml-1">
+            <Badge variant="secondary" className="ms-1">
               {activeFiltersCount}
             </Badge>
           )}
@@ -266,7 +266,7 @@ export function DocumentSearchAdvanced({
           className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
           onClick={onSearch}
         >
-          <Search className="w-4 h-4 mr-2" />
+          <Search className="w-4 h-4 me-2" />
           Search
         </Button>
       </div>
@@ -287,7 +287,7 @@ export function DocumentSearchAdvanced({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-1 hover:bg-muted"
+                className="h-4 w-4 ms-1 hover:bg-muted"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDeleteSavedSearch?.(saved.id);
@@ -312,7 +312,7 @@ export function DocumentSearchAdvanced({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-1 hover:bg-muted"
+                className="h-4 w-4 ms-1 hover:bg-muted"
                 onClick={() => updateFilter("dateFrom", undefined)}
                 aria-label={t("accessibility.remove_date_from_filter", "Remove date from filter")}
               >
@@ -327,7 +327,7 @@ export function DocumentSearchAdvanced({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-1 hover:bg-muted"
+                className="h-4 w-4 ms-1 hover:bg-muted"
                 onClick={() => updateFilter("dateTo", undefined)}
                 aria-label={t("accessibility.remove_date_to_filter", "Remove date to filter")}
               >
@@ -342,7 +342,7 @@ export function DocumentSearchAdvanced({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-1 hover:bg-muted"
+                className="h-4 w-4 ms-1 hover:bg-muted"
                 onClick={() => toggleArrayFilter("fileTypes", type)}
               >
                 <X className="w-3 h-3" />
@@ -356,7 +356,7 @@ export function DocumentSearchAdvanced({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-4 w-4 ml-1 hover:bg-muted"
+                className="h-4 w-4 ms-1 hover:bg-muted"
                 onClick={() => toggleArrayFilter("confidentiality", level)}
               >
                 <X className="w-3 h-3" />
@@ -381,7 +381,7 @@ export function DocumentSearchAdvanced({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-4 w-4 ml-1 hover:bg-black/10"
+                  className="h-4 w-4 ms-1 hover:bg-black/10"
                   onClick={() => toggleArrayFilter("tagIds", tagId)}
                 >
                   <X className="w-3 h-3" />
@@ -518,7 +518,7 @@ export function DocumentSearchAdvanced({
                     <Badge variant="outline" className={cn("text-xs", option.color)}>
                       {option.label}
                     </Badge>
-                    <span className="text-xs text-muted-foreground ml-auto">
+                    <span className="text-xs text-muted-foreground ms-auto">
                       {option.description}
                     </span>
                   </button>
@@ -639,7 +639,7 @@ export function DocumentSearchAdvanced({
               disabled={!saveName.trim()}
               className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             >
-              <Save className="w-4 h-4 mr-2" />
+              <Save className="w-4 h-4 me-2" />
               Save Search
             </Button>
           </DialogFooter>

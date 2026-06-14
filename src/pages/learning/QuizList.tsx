@@ -155,7 +155,7 @@ export default function QuizList() {
                         {generating ? t('quizzes.generating', 'Generating...') : t('quizzes.generate_from_document')}
                     </Button>
                     <Button onClick={() => navigate('/learning/quizzes/new')}>
-                        <Plus className="mr-2 h-4 w-4" />
+                        <Plus className="me-2 h-4 w-4" />
                         {t('quizzes.create_quiz')}
                     </Button>
                 </div>
@@ -163,17 +163,17 @@ export default function QuizList() {
 
             <div className="flex gap-4 items-center bg-white p-4 rounded-lg border shadow-sm">
                 <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder={t('quizzes.search_placeholder')}
-                        className="pl-8"
+                        className="ps-8"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger className="w-[180px]">
-                        <Filter className="mr-2 h-4 w-4" />
+                        <Filter className="me-2 h-4 w-4" />
                         <SelectValue placeholder={t('quizzes.filter_status', 'Filter by status')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -230,15 +230,15 @@ export default function QuizList() {
                             <div className="space-y-4 pt-4 border-t">
                                 <div className="flex justify-between text-sm text-muted-foreground">
                                     <div className="flex items-center">
-                                        <CheckCircle2 className="mr-1 h-3 w-3" />
+                                        <CheckCircle2 className="me-1 h-3 w-3" />
                                         {t('quizzes.questions_count', { count: quiz.question_count || 0 })}
                                     </div>
                                     <div className="flex items-center">
-                                        <Clock className="mr-1 h-3 w-3" />
+                                        <Clock className="me-1 h-3 w-3" />
                                         {quiz.time_limit_minutes ? t('quizzes.duration_minutes', { count: quiz.time_limit_minutes }) : t('quizzes.no_limit', 'No limit')}
                                     </div>
                                     <div className="flex items-center">
-                                        <AlertCircle className="mr-1 h-3 w-3" />
+                                        <AlertCircle className="me-1 h-3 w-3" />
                                         {t('quizzes.pass_percentage', { percent: quiz.passing_score_percentage })}
                                     </div>
                                 </div>
@@ -452,12 +452,12 @@ export default function QuizList() {
                         >
                             {generating ? (
                                 <>
-                                    <Sparkles className="mr-2 h-4 w-4 animate-spin" />
+                                    <Sparkles className="me-2 h-4 w-4 animate-spin" />
                                     {t('quizzes.analyzing', 'Analyzing...')}
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    <Sparkles className="me-2 h-4 w-4" />
                                     {t('quizzes.generate_button', 'Generate Quiz')}
                                 </>
                             )}

@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
+import { PageSkeleton } from '@/components/ui/loading-skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useDashboardFocus } from '@/hooks/useDashboardFocus'
@@ -132,7 +133,7 @@ function RegistryWidgetRenderer({
         <Button
           variant="ghost"
           size="icon"
-          className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+          className="absolute top-2 end-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
           onClick={() => onRemoveWidget(id)}
           aria-label={t('accessibility.remove_widget', 'Remove widget')}
         >
@@ -398,14 +399,7 @@ export function IntegratedDashboard() {
   // Don't block on missing profile — render with fallback data to avoid infinite skeleton.
   // Don't block on rolesLoading if we already have a role resolved.
   if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-slate-50">
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="w-[800px] h-[600px] rounded-2xl" />
-          <p className="text-slate-400 font-medium animate-pulse">Loading specialized dashboard...</p>
-        </div>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   const showFocusToggle = ['corporate_admin', 'regional_admin', 'property_manager', 'property_hr', 'department_head'].includes(effectiveRole)
@@ -444,7 +438,7 @@ export function IntegratedDashboard() {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-4 right-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/10 hover:bg-white/20 text-white shadow-none border border-white/10 backdrop-blur-sm rounded-full"
+            className="absolute top-4 end-4 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity z-20 bg-white/10 hover:bg-white/20 text-white shadow-none border border-white/10 backdrop-blur-sm rounded-full"
             onClick={() => handleRemoveWidget('socialFeed')}
             aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
@@ -500,7 +494,7 @@ export function IntegratedDashboard() {
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
+            className="absolute top-2 end-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/80 hover:bg-white shadow-sm"
             onClick={() => handleRemoveWidget('quickActions')}
             aria-label={t('accessibility.remove_widget', 'Remove widget')}
           >
@@ -517,7 +511,7 @@ export function IntegratedDashboard() {
               className="text-muted-foreground"
               onClick={() => setShowCustomize(true)}
             >
-              {t('actions.view_all')} <ChevronRight className="w-4 h-4 ml-1" />
+              {t('actions.view_all')} <ChevronRight className="w-4 h-4 ms-1" />
             </Button>
           </div>
           <RegistryWidgetRenderer

@@ -74,11 +74,11 @@ export default function ComplianceDashboard() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={() => setActiveTab('exports')}>
-              <FileText className="mr-2 h-4 w-4" />
+              <FileText className="me-2 h-4 w-4" />
               {t('view_exports')}
             </Button>
             <Button onClick={() => setIsExportDialogOpen(true)}>
-              <Download className="mr-2 h-4 w-4" />
+              <Download className="me-2 h-4 w-4" />
               {t('new_export')}
             </Button>
           </div>
@@ -210,7 +210,7 @@ export default function ComplianceDashboard() {
                   <CardDescription>{t('exports.manage_description')}</CardDescription>
                 </div>
                 <Button onClick={() => setIsExportDialogOpen(true)}>
-                  <Download className="mr-2 h-4 w-4" />
+                  <Download className="me-2 h-4 w-4" />
                   {t('new_export')}
                 </Button>
               </CardHeader>

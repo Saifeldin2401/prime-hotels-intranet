@@ -253,7 +253,7 @@ export function AssignmentDialog({
                             <div className="flex flex-col gap-2">
                                 <div className="flex flex-col sm:flex-row gap-2">
                                     <div className="relative flex-1">
-                                        <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 ${isRTL ? 'right-3' : 'left-3'}`} />
+                                        <Search className={`absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 ${isRTL ? 'end-3' : 'start-3'}`} />
                                         <Input
                                             value={targetSearch}
                                             onChange={(e) => setTargetSearch(e.target.value)}
@@ -264,7 +264,7 @@ export function AssignmentDialog({
                                                         ? t('searchDepartments', 'Search departments or properties...')
                                                         : t('searchProperties', 'Search properties...')
                                             }
-                                            className={`${isRTL ? 'pr-9 text-right' : 'pl-9'} bg-white`}
+                                            className={`${isRTL ? 'pe-9 text-right' : 'ps-9'} bg-white`}
                                         />
                                     </div>
 
@@ -340,7 +340,7 @@ export function AssignmentDialog({
                                                                         type="checkbox"
                                                                         checked={selectedIds.includes(item.id)}
                                                                         onChange={() => handleToggle(item.id)}
-                                                                        className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ml-3' : 'mr-3'}`}
+                                                                        className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ms-3' : 'me-3'}`}
                                                                     />
                                                                     <span className="text-sm text-gray-700">{item.name}</span>
                                                                 </label>
@@ -364,7 +364,7 @@ export function AssignmentDialog({
                                                     type="checkbox"
                                                     checked={selectedIds.includes(item.id)}
                                                     onChange={() => handleToggle(item.id)}
-                                                    className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ml-3' : 'mr-3'}`}
+                                                    className={`h-4 w-4 rounded border-gray-300 text-hotel-gold focus:ring-hotel-gold ${isRTL ? 'ms-3' : 'me-3'}`}
                                                 />
                                                 <div className="flex-1">
                                                     <span className="text-sm font-medium text-gray-700">

@@ -292,7 +292,7 @@ export function ApprovalWorkflow({
                       <div className="text-sm text-muted-foreground capitalize">{step.assignee_role}</div>
                       {step.comment && (
                         <div className="text-sm text-muted-foreground mt-1">
-                          <MessageSquare className="inline h-3 w-3 mr-1" />
+                          <MessageSquare className="inline h-3 w-3 me-1" />
                           {step.comment}
                         </div>
                       )}
@@ -343,7 +343,7 @@ export function ApprovalWorkflow({
                   disabled={applyActionMutation.isPending}
                   className="flex-1"
                 >
-                  <CheckCircle className="w-4 h-4 mr-2" />
+                  <CheckCircle className="w-4 h-4 me-2" />
                   Approve
                 </Button>
                 <Button
@@ -353,7 +353,7 @@ export function ApprovalWorkflow({
                   className="flex-1"
                   title={requiresDecisionComment ? 'Comment required to return' : undefined}
                 >
-                  <RotateCcw className="w-4 h-4 mr-2" />
+                  <RotateCcw className="w-4 h-4 me-2" />
                   Return
                 </Button>
                 <Button
@@ -363,7 +363,7 @@ export function ApprovalWorkflow({
                   className="flex-1"
                   title={requiresDecisionComment ? 'Comment required to reject' : undefined}
                 >
-                  <XCircle className="w-4 h-4 mr-2" />
+                  <XCircle className="w-4 h-4 me-2" />
                   Reject
                 </Button>
               </div>
@@ -385,7 +385,7 @@ export function ApprovalWorkflow({
                 disabled={applyActionMutation.isPending || !comment.trim()}
                 variant="outline"
               >
-                <MessageSquare className="w-4 h-4 mr-2" />
+                <MessageSquare className="w-4 h-4 me-2" />
                 Add Comment
               </Button>
             </div>

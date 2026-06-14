@@ -212,7 +212,7 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                                     {formData.title
                                         ? jobTitlesList?.find((t) => t.title === formData.title)?.title || formData.title
                                         : t('form.position_placeholder') || "Select job title"}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[400px] p-0" align="start">
@@ -306,13 +306,13 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
                                                     >
                                                         <Check
                                                             className={cn(
-                                                                "mr-2 h-4 w-4",
+                                                                "me-2 h-4 w-4",
                                                                 item.title === formData.title
                                                                     ? "opacity-100"
                                                                     : "opacity-0"
                                                             )}
                                                         />
-                                                        {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                        {item.title} <span className="ms-auto text-xs text-muted-foreground">{item.category}</span>
                                                     </div>
                                                 </CommandItem>
                                             ))}

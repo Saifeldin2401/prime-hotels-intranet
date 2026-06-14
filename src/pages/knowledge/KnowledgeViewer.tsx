@@ -802,7 +802,7 @@ export default function KnowledgeViewer() {
                 <h1 className="text-2xl font-bold mb-2">{t('viewer.not_found_title')}</h1>
                 <p className="text-gray-600 mb-4">{t('viewer.not_found_desc')}</p>
                 <Button onClick={() => navigate('/knowledge')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="h-4 w-4 me-2" />
                     {t('viewer.back_to_home')}
                 </Button>
             </div>
@@ -1061,7 +1061,7 @@ export default function KnowledgeViewer() {
                 }
             `}</style>
             {/* Reading Progress Bar */}
-            <div className="fixed top-0 left-0 w-full h-1 z-50 pointer-events-none print:hidden">
+            <div className="fixed top-0 start-0 w-full h-1 z-50 pointer-events-none print:hidden">
                 <div
                     className="h-full bg-hotel-gold transition-all duration-150"
                     style={{ width: `${readingProgress}%` }}
@@ -1082,7 +1082,7 @@ export default function KnowledgeViewer() {
                                 onClick={() => navigate(-1)}
                                 className="hover:bg-gray-100 rounded-full h-9 w-9 p-0 md:h-9 md:w-auto md:px-3"
                             >
-                                <ArrowLeft className="h-4 w-4 md:mr-2" />
+                                <ArrowLeft className="h-4 w-4 md:me-2" />
                                 <span className="hidden md:inline">{t('viewer.back')}</span>
                             </Button>
                             <Separator orientation="vertical" className="h-6 mx-1" />
@@ -1098,7 +1098,7 @@ export default function KnowledgeViewer() {
 
                         <div className="flex items-center gap-1 sm:gap-2 overflow-x-auto">
                             {(canEdit || canDelete) && (
-                                <div className="flex items-center gap-1 sm:gap-2 mr-1 sm:mr-2">
+                                <div className="flex items-center gap-1 sm:gap-2 me-1 sm:me-2">
                                     {canEdit && (
                                         <Button
                                             variant="outline"
@@ -1106,7 +1106,7 @@ export default function KnowledgeViewer() {
                                             onClick={() => navigate(`/knowledge/${id}/edit`)}
                                             className="h-9 px-2 sm:px-3 border-slate-200 hover:border-indigo-300 hover:text-indigo-600 rounded-lg group transition-all"
                                         >
-                                            <Pencil className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
+                                            <Pencil className="h-3.5 w-3.5 sm:me-2 group-hover:scale-110 transition-transform" />
                                             <span className="hidden sm:inline">{t('viewer.edit')}</span>
                                         </Button>
                                     )}
@@ -1119,7 +1119,7 @@ export default function KnowledgeViewer() {
                                                     size="sm"
                                                     className="h-9 px-2 sm:px-3 text-red-600 hover:text-red-700 hover:bg-red-50 hover:border-red-200 rounded-lg group"
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5 sm:mr-2 group-hover:scale-110 transition-transform" />
+                                                    <Trash2 className="h-3.5 w-3.5 sm:me-2 group-hover:scale-110 transition-transform" />
                                                     <span className="hidden sm:inline">{t('viewer.delete')}</span>
                                                 </Button>
                                             </AlertDialogTrigger>
@@ -1183,12 +1183,12 @@ export default function KnowledgeViewer() {
                                     ) : (
                                         <>
                                             <DropdownMenuItem onClick={() => setShowBilingual(!showBilingual)}>
-                                                <Maximize2 className="h-4 w-4 mr-2" />
+                                                <Maximize2 className="h-4 w-4 me-2" />
                                                 {showBilingual ? t('viewer.show_single', 'Show Single') : t('viewer.show_bilingual', 'Show Bilingual')}
                                             </DropdownMenuItem>
                                             {translationTarget && translationDiagnostics?.partialFailures ? (
                                                 <DropdownMenuItem onClick={() => handleAITranslate(translationTarget, { force: true })}>
-                                                    <Sparkles className="h-4 w-4 mr-2 text-amber-600" />
+                                                    <Sparkles className="h-4 w-4 me-2 text-amber-600" />
                                                     {t('viewer.retry_translation', 'Retry Translation')}
                                                 </DropdownMenuItem>
                                             ) : null}
@@ -1208,7 +1208,7 @@ export default function KnowledgeViewer() {
                                                 setShowBilingual(false)
                                                 setTranslationTarget(null)
                                             }}>
-                                                <Trash2 className="h-4 w-4 mr-2 text-red-500" />
+                                                <Trash2 className="h-4 w-4 me-2 text-red-500" />
                                                 {t('viewer.clear_translation', 'Clear')}
                                             </DropdownMenuItem>
                                         </>
@@ -1216,7 +1216,7 @@ export default function KnowledgeViewer() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <div className="flex items-center ml-1 space-x-0.5">
+                            <div className="flex items-center ms-1 space-x-0.5">
                                 <Button
                                     variant="ghost"
                                     size="sm"
@@ -1269,7 +1269,7 @@ export default function KnowledgeViewer() {
                             onClick={() => handleAITranslate(translationTarget, { force: true })}
                             disabled={isTranslating}
                         >
-                            {isTranslating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                            {isTranslating ? <Loader2 className="h-4 w-4 me-2 animate-spin" /> : <Sparkles className="h-4 w-4 me-2" />}
                             {t('viewer.retry_translation', 'Retry Translation')}
                         </Button>
                     </div>
@@ -1330,7 +1330,7 @@ export default function KnowledgeViewer() {
                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                     className={cn(
                                         "text-2xl md:text-4xl font-bold text-indigo-500/80 leading-snug",
-                                        isRtlTarget ? "font-arabic pr-6 border-r-4 border-indigo-200" : "pl-6 border-l-4 border-indigo-200"
+                                        isRtlTarget ? "font-arabic pe-6 border-r-4 border-indigo-200" : "ps-6 border-l-4 border-indigo-200"
                                     )}
                                 >
                                     {translatedData.title}
@@ -1442,7 +1442,7 @@ export default function KnowledgeViewer() {
                                         {tocItems.map(item => (
                                             <DropdownMenuItem key={item.id} onClick={() => scrollToSection(item.id)}>
                                                 <div className={cn(
-                                                    "w-1.5 h-1.5 rounded-full mr-2",
+                                                    "w-1.5 h-1.5 rounded-full me-2",
                                                     activeSection === item.id ? "bg-indigo-600" : "bg-slate-200"
                                                 )} />
                                                 {item.text}
@@ -1457,7 +1457,7 @@ export default function KnowledgeViewer() {
                         {article.summary && (
                             <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent">
                                 <div className="bg-white rounded-[15px] p-6 shadow-sm overflow-hidden relative">
-                                    <div className="absolute -top-4 -right-4 h-24 w-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700" />
+                                    <div className="absolute -top-4 -end-4 h-24 w-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-110 transition-transform duration-700" />
                                     <h3 className="text-[11px] font-black text-indigo-600 uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
                                         <Zap className="h-3.5 w-3.5 fill-indigo-600" />
                                         {t('viewer.tldr', 'Quick Summary')}
@@ -1465,7 +1465,7 @@ export default function KnowledgeViewer() {
                                     <p className="relative z-10 text-slate-700 text-lg font-medium leading-relaxed italic">
                                         {showBilingual && translatedData ? (
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="border-r border-slate-100 pr-6">"{article.summary}"</div>
+                                                <div className="border-r border-slate-100 pe-6">"{article.summary}"</div>
                                                 <div
                                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                                     className={cn(
@@ -1498,11 +1498,11 @@ export default function KnowledgeViewer() {
                                 </div>
                                 <div className="flex w-full sm:w-auto gap-2">
                                     <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white" onClick={() => window.open(article.file_url, '_blank')}>
-                                        <Eye className="h-4 w-4 mr-2" />
+                                        <Eye className="h-4 w-4 me-2" />
                                         {t('viewer.view')}
                                     </Button>
                                     <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white" onClick={() => window.open(article.file_url, '_blank')}>
-                                        <Download className="h-4 w-4 mr-2" />
+                                        <Download className="h-4 w-4 me-2" />
                                         {t('viewer.download')}
                                     </Button>
                                 </div>
@@ -1548,8 +1548,8 @@ export default function KnowledgeViewer() {
                                                     className={cn(
                                                         "prose max-w-none transition-all duration-300",
                                                         shouldUseRtl
-                                                            ? "border-r-2 border-indigo-100 pr-10 text-right font-arabic"
-                                                            : "border-l-2 border-indigo-100 pl-10",
+                                                            ? "border-r-2 border-indigo-100 pe-10 text-right font-arabic"
+                                                            : "border-l-2 border-indigo-100 ps-10",
                                                         fontSize === 'sm' && "text-kb-sm",
                                                         fontSize === 'base' && "text-kb-base",
                                                         fontSize === 'lg' && "text-kb-lg",
@@ -1646,7 +1646,7 @@ export default function KnowledgeViewer() {
                                     article.is_acknowledged ? "bg-emerald-50/50" : "bg-indigo-50/50"
                                 )}>
                                     <div className={cn(
-                                        "absolute top-0 left-0 w-1 h-full",
+                                        "absolute top-0 start-0 w-1 h-full",
                                         article.is_acknowledged ? "bg-emerald-500" : "bg-indigo-500"
                                     )} />
                                     <CardContent className="p-6">
@@ -1675,7 +1675,7 @@ export default function KnowledgeViewer() {
                                                     onClick={() => acknowledgeArticle.mutate(id!)}
                                                     disabled={acknowledgeArticle.isPending}
                                                 >
-                                                    {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Zap className="h-4 w-4 mr-2" />}
+                                                    {acknowledgeArticle.isPending ? <Loader2 className="h-4 w-4 animate-spin me-2" /> : <Zap className="h-4 w-4 me-2" />}
                                                     {t('viewer.i_acknowledge')}
                                                 </Button>
                                             )}
@@ -1719,7 +1719,7 @@ export default function KnowledgeViewer() {
                                                 onClick={() => submitFeedback.mutate({ documentId: id!, helpful: feedbackHelpful, feedbackText })}
                                                 disabled={submitFeedback.isPending}
                                             >
-                                                {submitFeedback.isPending && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+                                                {submitFeedback.isPending && <Loader2 className="h-4 w-4 animate-spin me-2" />}
                                                 {t('viewer.submit_feedback')}
                                             </Button>
                                         </div>
@@ -1767,7 +1767,7 @@ export default function KnowledgeViewer() {
                                     <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
                                         <MessageSquare className="h-5 w-5 text-indigo-500" />
                                         {t('viewer.discussion')}
-                                        <span className="text-sm font-normal text-slate-400 ml-1">({comments?.length || 0})</span>
+                                        <span className="text-sm font-normal text-slate-400 ms-1">({comments?.length || 0})</span>
                                     </CardTitle>
                                     <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => setShowComments(!showComments)} aria-label={showComments ? t('accessibility.collapse_comments', 'Collapse comments') : t('accessibility.expand_comments', 'Expand comments')}>
                                         {showComments ? <ChevronUp className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
@@ -1785,7 +1785,7 @@ export default function KnowledgeViewer() {
                                         />
                                         <div className="flex justify-end pt-2 border-t border-slate-50">
                                             <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-indigo-600 hover:bg-indigo-700">
-                                                <Send className="h-3.5 w-3.5 mr-2" /> {t('viewer.post')}
+                                                <Send className="h-3.5 w-3.5 me-2" /> {t('viewer.post')}
                                             </Button>
                                         </div>
                                     </div>
@@ -1889,7 +1889,7 @@ export default function KnowledgeViewer() {
                                                         className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 rounded-xl"
                                                         onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
                                                     >
-                                                        <PlayCircle className="h-4 w-4 mr-2" />
+                                                        <PlayCircle className="h-4 w-4 me-2" />
                                                         {t('viewer.start_training')}
                                                     </Button>
                                                 </div>
@@ -1904,7 +1904,7 @@ export default function KnowledgeViewer() {
                                                         className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl"
                                                         onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
                                                     >
-                                                        <Lightbulb className="h-4 w-4 mr-2" />
+                                                        <Lightbulb className="h-4 w-4 me-2" />
                                                         {t('viewer.take_quiz')}
                                                     </Button>
                                                 </div>
@@ -1937,7 +1937,7 @@ export default function KnowledgeViewer() {
 
             {/* Premium Floating Readability Toolbar */}
             <div className={cn(
-                "kb-floating-toolbar fixed bottom-[max(4.5rem,calc(env(safe-area-inset-bottom)+1rem))] md:bottom-8 left-1/2 -translate-x-1/2 h-14 max-w-[calc(100vw-1rem)] flex items-center px-1 py-1 rounded-2xl print:hidden z-50 transition-all duration-500 ease-out",
+                "kb-floating-toolbar fixed bottom-[max(4.5rem,calc(env(safe-area-inset-bottom)+1rem))] md:bottom-8 start-1/2 -translate-x-1/2 h-14 max-w-[calc(100vw-1rem)] flex items-center px-1 py-1 rounded-2xl print:hidden z-50 transition-all duration-500 ease-out",
                 isFocusMode ? "ring-2 ring-indigo-500 ring-offset-4 ring-offset-slate-50" : "bg-white/80"
             )}>
                 <div className="flex items-center">

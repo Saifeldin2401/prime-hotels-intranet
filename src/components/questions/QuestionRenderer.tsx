@@ -313,7 +313,7 @@ export function QuestionRenderer({
                         onClick={handleShowHint}
                         className="mt-4 text-amber-600 hover:text-amber-700"
                     >
-                        <Lightbulb className="h-4 w-4 mr-2" />
+                        <Lightbulb className="h-4 w-4 me-2" />
                         Show Hint
                     </Button>
                 )}
@@ -369,7 +369,7 @@ export function QuestionRenderer({
                                     asChild
                                 >
                                     <a href={`/knowledge/${question.linked_sop_id}`}>
-                                        <BookOpen className="h-4 w-4 mr-1" />
+                                        <BookOpen className="h-4 w-4 me-1" />
                                         Read more in: {question.linked_sop.title}
                                     </a>
                                 </Button>
@@ -398,7 +398,7 @@ export function QuestionRenderer({
                         </Button>
                     ) : onNext && (
                         <Button onClick={onNext}>
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
+                            Next <ChevronRight className="h-4 w-4 ms-1" />
                         </Button>
                     )}
                 </div>

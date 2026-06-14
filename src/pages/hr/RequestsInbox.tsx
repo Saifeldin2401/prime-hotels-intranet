@@ -189,7 +189,7 @@ export default function RequestsInbox() {
     return (
       <Badge className={cn(config.color, "rounded-md")}>
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{t(config.label)}</span>
+        <span className={cn("ms-1", isRTL && "me-1 ms-0")}>{t(config.label)}</span>
       </Badge>
     )
   }
@@ -199,7 +199,7 @@ export default function RequestsInbox() {
     return (
       <Badge variant="outline" className="rounded-md">
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{t(config.label)}</span>
+        <span className={cn("ms-1", isRTL && "me-1 ms-0")}>{t(config.label)}</span>
       </Badge>
     )
   }
@@ -209,7 +209,7 @@ export default function RequestsInbox() {
     return (
       <Badge className={cn(config.color, "rounded-md")}>
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>
+        <span className={cn("ms-1", isRTL && "me-1 ms-0")}>
           {t(config.label, { defaultValue: priority })}
         </span>
       </Badge>
@@ -327,7 +327,7 @@ export default function RequestsInbox() {
                 <Filter className="w-4 h-4" />
                 {t('filters')}
                 {selectedStatuses.length > 0 || selectedPriorities.length > 0 || selectedEmployee || dateRange ? (
-                  <Badge variant="secondary" className="ml-1">
+                  <Badge variant="secondary" className="ms-1">
                     {selectedStatuses.length + selectedPriorities.length + (selectedEmployee ? 1 : 0) + (dateRange ? 1 : 0)}
                   </Badge>
                 ) : null}
@@ -394,7 +394,7 @@ export default function RequestsInbox() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="me-2 h-4 w-4" />
                       {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : t('pick_date')}
                     </Button>
                   </PopoverTrigger>
@@ -413,7 +413,7 @@ export default function RequestsInbox() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="me-2 h-4 w-4" />
                       {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : t('pick_date')}
                     </Button>
                   </PopoverTrigger>
@@ -442,7 +442,7 @@ export default function RequestsInbox() {
             onClick={() => setQuickView(view.key)}
           >
             <span>{view.label}</span>
-            <Badge variant="secondary" className="ml-1 bg-white/80 text-slate-700">
+            <Badge variant="secondary" className="ms-1 bg-white/80 text-slate-700">
               {view.count}
             </Badge>
           </Button>

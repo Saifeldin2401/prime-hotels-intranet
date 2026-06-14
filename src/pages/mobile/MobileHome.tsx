@@ -33,13 +33,13 @@ export function MobileHome() {
                             {firstName[0]}
                         </AvatarFallback>
                     </Avatar>
-                    <span className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
+                    <span className="absolute bottom-0 end-0 h-3 w-3 rounded-full bg-green-500 border-2 border-white"></span>
                 </div>
             </section>
 
             {/* Context / Status Card */}
             <Card className="bg-gradient-to-r from-hotel-navy to-hotel-navy-light text-white border-none p-4 shadow-card-sm relative overflow-hidden">
-                <div className="absolute top-0 right-0 -mt-2 -mr-2 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
+                <div className="absolute top-0 end-0 -mt-2 -me-2 w-20 h-20 bg-white/5 rounded-full blur-xl"></div>
                 <div className="relative z-10 flex justify-between items-center">
                     <div>
                         <p className="text-xs text-white/70 uppercase tracking-wider mb-1">Current Status</p>

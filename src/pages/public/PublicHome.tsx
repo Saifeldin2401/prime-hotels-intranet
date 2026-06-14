@@ -163,7 +163,7 @@ export default function PublicHome() {
                 )
               }}
             >
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="me-2 h-4 w-4" />
               Retry Secure Link
             </Button>
             <Button variant="outline" className="w-full" onClick={() => navigate('/login')}>
@@ -300,7 +300,7 @@ export default function PublicHome() {
                 onClick={() => navigate('/login')}
               >
                 {t('login_button')}
-                <ArrowRight className={`w-4 h-4 ${isRTL ? 'mr-2 rotate-180' : 'ml-2'}`} />
+                <ArrowRight className={`w-4 h-4 ${isRTL ? 'me-2 rotate-180' : 'ms-2'}`} />
               </Button>
 
               <Button
@@ -353,7 +353,7 @@ export default function PublicHome() {
                   loading="lazy"
                   className="w-full h-[400px] object-cover"
                 />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-6">
+                <div className="absolute bottom-0 start-0 end-0 bg-gradient-to-t from-black/60 to-transparent p-6">
                   <div className="flex items-center gap-3">
                     <Award className="w-8 h-8 text-hotel-gold" />
                     <div>
@@ -429,7 +429,7 @@ export default function PublicHome() {
                   <div className="w-16 h-16 bg-hotel-gold/10 rounded-full flex items-center justify-center">
                     <step.icon className="w-7 h-7 text-hotel-gold" />
                   </div>
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-hotel-navy rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  <div className="absolute -top-1 -end-1 w-6 h-6 bg-hotel-navy rounded-full flex items-center justify-center text-white text-xs font-bold">
                     {step.step}
                   </div>
                 </div>
@@ -456,7 +456,7 @@ export default function PublicHome() {
             onClick={() => navigate('/login')}
           >
             {t('cta.button_primary')}
-            <ArrowRight className={`w-4 h-4 ${isRTL ? 'mr-2 rotate-180' : 'ml-2'}`} />
+            <ArrowRight className={`w-4 h-4 ${isRTL ? 'me-2 rotate-180' : 'ms-2'}`} />
           </Button>
         </div>
       </section>

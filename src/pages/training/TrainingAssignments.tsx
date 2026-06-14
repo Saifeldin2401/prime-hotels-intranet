@@ -45,7 +45,7 @@ function TrainingAssignmentsPanelInner() {
                   onClick={() => navigate('/admin/notifications')}
                   className="hidden md:flex"
                 >
-                  <Bell className={cn('w-4 h-4', isRTL ? 'ml-2' : 'mr-2')} />
+                  <Bell className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
                   {t('batchStatus')}
                 </Button>
                 <Button
@@ -53,7 +53,7 @@ function TrainingAssignmentsPanelInner() {
                   onClick={() => navigate('/training/assignments/rules')}
                   className="hidden md:flex"
                 >
-                  <Settings className={cn('w-4 h-4', isRTL ? 'ml-2' : 'mr-2')} />
+                  <Settings className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
                   {t('autoAssignRules')}
                 </Button>
               </div>
@@ -72,14 +72,14 @@ function TrainingAssignmentsPanelInner() {
             value="overview"
             className="flex-1 sm:flex-none data-[state=active]:bg-hotel-navy data-[state=active]:text-white"
           >
-            <BarChart3 className={cn('w-4 h-4', isRTL ? 'ml-2' : 'mr-2')} />
+            <BarChart3 className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
             {t('overview')}
           </TabsTrigger>
           <TabsTrigger
             value="assignments"
             className="flex-1 sm:flex-none data-[state=active]:bg-hotel-navy data-[state=active]:text-white"
           >
-            <Edit className={cn('w-4 h-4', isRTL ? 'ml-2' : 'mr-2')} />
+            <Edit className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
             {t('manageAssignments')}
           </TabsTrigger>
         </TabsList>

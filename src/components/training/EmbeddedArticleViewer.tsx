@@ -107,7 +107,7 @@ const EmbeddedHtmlContent = ({
 
             {/* Original View (if Bilingual) */}
             {showBilingual && translationTarget && (
-                <div dir="auto" className="border-l pl-6 border-slate-100">
+                <div dir="auto" className="border-l ps-6 border-slate-100">
                     <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
                         {t('original', 'Original')}
                     </div>
@@ -455,21 +455,21 @@ const EmbeddedArticleViewerInner = ({
                                 onClick={handleRetryTranslation}
                                 disabled={isTranslating}
                             >
-                                {isTranslating ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                {isTranslating ? <Loader2 className="me-2 h-4 w-4 animate-spin" /> : null}
                                 {t('retryTranslation', 'Retry Translation')}
                             </Button>
                         ) : null}
                         {document.file_url && (
                             <Button variant="outline" size="sm" asChild className="h-9">
                                 <a href={document.file_url} target="_blank" rel="noreferrer">
-                                    <Download className="mr-2 h-4 w-4" />
+                                    <Download className="me-2 h-4 w-4" />
                                     {t('download', 'Download')}
                                 </a>
                             </Button>
                         )}
                         <Button variant="ghost" size="sm" asChild className="h-9 text-slate-500 hover:text-hotel-navy">
                             <a href={openInNewTabHref} target="_blank" rel="noreferrer">
-                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <ExternalLink className="me-2 h-4 w-4" />
                                 {t('openInNewTab', 'Open in New Tab')}
                             </a>
                         </Button>
@@ -524,7 +524,7 @@ const EmbeddedArticleViewerInner = ({
                             {document.file_url && (
                                 <Button asChild>
                                     <a href={document.file_url} target="_blank" rel="noreferrer">
-                                        <Download className="mr-2 h-4 w-4" />
+                                        <Download className="me-2 h-4 w-4" />
                                         {t('downloadToView', 'Download to View')}
                                     </a>
                                 </Button>

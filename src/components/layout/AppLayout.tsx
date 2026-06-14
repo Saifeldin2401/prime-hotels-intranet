@@ -139,6 +139,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <Header
             sidebarCollapsed={sidebarCollapsed}
             setSidebarCollapsed={setSidebarCollapsed}
+            setCommandPaletteOpen={setCommandPaletteOpen}
           />
         </div>
 

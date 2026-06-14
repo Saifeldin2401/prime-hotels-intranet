@@ -47,12 +47,12 @@ export function SwipeableItem({
             {/* Background Actions */}
             <div className="absolute inset-0 flex">
                 {onSwipeLeft && (
-                    <div className={`flex-1 flex items-center justify-start pl-6 ${leftActionColor}`}>
+                    <div className={`flex-1 flex items-center justify-start ps-6 ${leftActionColor}`}>
                         {leftIcon}
                     </div>
                 )}
                 {onSwipeRight && (
-                    <div className={`flex-1 flex items-center justify-end pr-6 ${rightActionColor}`}>
+                    <div className={`flex-1 flex items-center justify-end pe-6 ${rightActionColor}`}>
                         {rightIcon}
                     </div>
                 )}

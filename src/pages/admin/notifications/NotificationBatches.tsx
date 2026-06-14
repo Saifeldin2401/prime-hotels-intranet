@@ -62,7 +62,7 @@ export default function NotificationBatches() {
                         variant="outline"
                         onClick={() => queryClient.invalidateQueries({ queryKey: ['notification-batches'] })}
                     >
-                        <RefreshCw className="w-4 h-4 mr-2" />
+                        <RefreshCw className="w-4 h-4 me-2" />
                         {t('notification_batches.refresh_button', { ns: 'admin' })}
                     </Button>
                 }
@@ -138,7 +138,7 @@ export default function NotificationBatches() {
                                                     onClick={() => handleProcess(batch.id)}
                                                     disabled={isProcessing}
                                                 >
-                                                    <Play className="w-3 h-3 mr-1" />
+                                                    <Play className="w-3 h-3 me-1" />
                                                     {t('notification_batches.process_button', { ns: 'admin' })}
                                                 </Button>
                                             )}

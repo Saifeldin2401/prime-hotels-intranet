@@ -334,7 +334,7 @@ export function DocumentBulkActionsBar({
               >
                 <FileText className="w-5 h-5" />
                 <span className="font-medium">All Documents (Root)</span>
-                {selectedFolderId === null && <Check className="w-4 h-4 ml-auto" />}
+                {selectedFolderId === null && <Check className="w-4 h-4 ms-auto" />}
               </button>
 
               {flatFolders.map((folder) => (
@@ -352,7 +352,7 @@ export function DocumentBulkActionsBar({
                 >
                   <FolderInput className="w-4 h-4" />
                   <span className="font-medium">{folder.name}</span>
-                  <Badge variant="outline" className="ml-auto text-xs">
+                  <Badge variant="outline" className="ms-auto text-xs">
                     {folder.document_count || 0}
                   </Badge>
                   {selectedFolderId === folder.id && (
@@ -372,9 +372,9 @@ export function DocumentBulkActionsBar({
               disabled={isProcessing}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 me-2 animate-spin" />
               ) : (
-                <FolderInput className="w-4 h-4 mr-2" />
+                <FolderInput className="w-4 h-4 me-2" />
               )}
               Move {selectedCount} Document{selectedCount !== 1 ? "s" : ""}
             </Button>
@@ -441,7 +441,7 @@ export function DocumentBulkActionsBar({
                       style={{ backgroundColor: tag.color }}
                     />
                     <span className="font-medium">{tag.name}</span>
-                    <Badge variant="outline" className="ml-auto text-xs">
+                    <Badge variant="outline" className="ms-auto text-xs">
                       {tag.documentCount || 0}
                     </Badge>
                   </button>
@@ -459,9 +459,9 @@ export function DocumentBulkActionsBar({
               disabled={selectedTagIds.length === 0 || isProcessing}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 me-2 animate-spin" />
               ) : (
-                <Tags className="w-4 h-4 mr-2" />
+                <Tags className="w-4 h-4 me-2" />
               )}
               Add {selectedTagIds.length} Tag
               {selectedTagIds.length !== 1 ? "s" : ""}
@@ -506,9 +506,9 @@ export function DocumentBulkActionsBar({
             </Button>
             <Button onClick={handleArchive} disabled={isProcessing}>
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 me-2 animate-spin" />
               ) : (
-                <Archive className="w-4 h-4 mr-2" />
+                <Archive className="w-4 h-4 me-2" />
               )}
               Archive {selectedCount} Document{selectedCount !== 1 ? "s" : ""}
             </Button>
@@ -560,9 +560,9 @@ export function DocumentBulkActionsBar({
               disabled={isProcessing}
             >
               {isProcessing ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 me-2 animate-spin" />
               ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
               )}
               Delete {selectedCount} Document{selectedCount !== 1 ? "s" : ""}
             </Button>

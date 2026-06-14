@@ -88,7 +88,7 @@ export function GroupedDepartmentSelector({
                         {groupedDepartments[propertyName]
                             .sort((a, b) => a.name.localeCompare(b.name))
                             .map(dept => (
-                                <SelectItem key={dept.id} value={dept.id} className="pl-10">
+                                <SelectItem key={dept.id} value={dept.id} className="ps-10">
                                     {dept.name}
                                 </SelectItem>
                             ))}

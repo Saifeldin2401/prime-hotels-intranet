@@ -201,7 +201,7 @@ export function ModuleFormDialog({
                                 <FormItem>
                                     <FormLabel className="text-hotel-navy font-medium">
                                         {t('duration')}
-                                        <span className="text-red-500 ml-1">*</span>
+                                        <span className="text-red-500 ms-1">*</span>
                                     </FormLabel>
                                     <Select onValueChange={field.onChange} value={field.value}>
                                         <FormControl>

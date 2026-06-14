@@ -140,10 +140,10 @@ export default function ApprovalsDashboard() {
 
                 <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
                     <div className="relative flex-1 sm:w-80">
-                        <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
+                        <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "end-3" : "start-3")} />
                         <Input
                             placeholder={t('search_placeholder', 'Search by title, requester...')}
-                            className={cn("pl-10 h-10 bg-white", isRTL && "pr-10 pl-3")}
+                            className={cn("ps-10 h-10 bg-white", isRTL && "pe-10 ps-3")}
                             value={searchTerm}
                             onChange={e => setSearchTerm(e.target.value)}
                         />
@@ -190,39 +190,39 @@ export default function ApprovalsDashboard() {
             <Tabs defaultValue="all" className="w-full">
                 <TabsList className="w-full justify-start overflow-x-auto scrollbar-hide h-14 p-1 bg-white border rounded-xl shadow-sm mb-6 gap-2">
                     <TabsTrigger value="all" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <ListTodo className="w-4 h-4 mr-2" />
+                        <ListTodo className="w-4 h-4 me-2" />
                         {t('all', 'All')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{filteredApprovals.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{filteredApprovals.length}</Badge>
                     </TabsTrigger>
 
                     <TabsTrigger value="requests" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <Inbox className="w-4 h-4 mr-2" />
+                        <Inbox className="w-4 h-4 me-2" />
                         {t('unified_tab', 'HR Requests')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{requests.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{requests.length}</Badge>
                     </TabsTrigger>
 
                     <TabsTrigger value="expenses" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <FileText className="w-4 h-4 mr-2" />
+                        <FileText className="w-4 h-4 me-2" />
                         {t('expenses_tab', 'Expenses')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{expenses.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{expenses.length}</Badge>
                     </TabsTrigger>
 
                     <TabsTrigger value="documents" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <FileText className="w-4 h-4 mr-2" />
+                        <FileText className="w-4 h-4 me-2" />
                         {t('documents_tab', 'Documents')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{documents.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{documents.length}</Badge>
                     </TabsTrigger>
 
                     <TabsTrigger value="leaves" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <Calendar className="w-4 h-4 mr-2" />
+                        <Calendar className="w-4 h-4 me-2" />
                         {t('leaves_tab', 'Leaves')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{leaves.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{leaves.length}</Badge>
                     </TabsTrigger>
 
                     <TabsTrigger value="maintenance" className="rounded-lg px-4 h-10 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none">
-                        <Wrench className="w-4 h-4 mr-2" />
+                        <Wrench className="w-4 h-4 me-2" />
                         {t('maintenance_tab', 'Maintenance')}
-                        <Badge variant="secondary" className="ml-2 bg-gray-100">{maintenance.length}</Badge>
+                        <Badge variant="secondary" className="ms-2 bg-gray-100">{maintenance.length}</Badge>
                     </TabsTrigger>
                 </TabsList>
 

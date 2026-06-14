@@ -84,7 +84,7 @@ interface RequiredIndicatorProps {
  */
 export function RequiredIndicator({ className }: RequiredIndicatorProps) {
     return (
-        <span className={cn("text-red-500 ml-1", className)} aria-label="required">
+        <span className={cn("text-red-500 ms-1", className)} aria-label="required">
             *
         </span>
     )

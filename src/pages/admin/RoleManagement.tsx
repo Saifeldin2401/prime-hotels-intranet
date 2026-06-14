@@ -220,7 +220,7 @@ export default function RoleManagement() {
                       placeholder={t('roles.search')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 w-64 rtl:pl-3 rtl:pr-10"
+                      className="ps-10 w-64 rtl:ps-3 rtl:pe-10"
                     />
                   </div>
                 </div>

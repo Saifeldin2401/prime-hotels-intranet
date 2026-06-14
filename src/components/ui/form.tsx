@@ -232,7 +232,7 @@ const FormSubmitButton = forwardRef<HTMLButtonElement, FormSubmitButtonProps>(
       >
         {currentlySubmitting ? (
           <>
-            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
+            <div className="me-2 h-4 w-4 animate-spin rounded-full border-2 border-transparent border-t-current" />
             {submittingText}
           </>
         ) : (

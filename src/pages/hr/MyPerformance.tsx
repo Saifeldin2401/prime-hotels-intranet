@@ -109,7 +109,7 @@ export default function MyPerformance() {
                             <CardDescription>{t('performance.past_evaluations')}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ScrollArea className="h-[500px] w-full pr-4">
+                            <ScrollArea className="h-[500px] w-full pe-4">
                                 {isLoading ? (
                                     <div className="flex justify-center py-8">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>

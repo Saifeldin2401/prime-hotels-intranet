@@ -273,12 +273,12 @@ export default function MFAVerifyPage() {
               >
                 {isVerifying ? (
                   <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                     {t('mfa.verifying', { defaultValue: 'Verifying...' })}
                   </>
                 ) : (
                   <>
-                    <Lock className="h-4 w-4 mr-2" />
+                    <Lock className="h-4 w-4 me-2" />
                     {t('mfa.verify', { defaultValue: 'Verify' })}
                   </>
                 )}
@@ -290,7 +290,7 @@ export default function MFAVerifyPage() {
                 className="w-full"
                 disabled={isVerifying}
               >
-                <ArrowLeft className="h-4 w-4 mr-2" />
+                <ArrowLeft className="h-4 w-4 me-2" />
                 {t('mfa.back_to_login', { defaultValue: 'Back to Login' })}
               </Button>
             </div>

@@ -357,7 +357,7 @@ export default function AuditLogs() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle>{t('audit_logs.audit_trail')}</CardTitle>
-          <div className="text-xs text-muted-foreground mr-2">
+          <div className="text-xs text-muted-foreground me-2">
             Total Records: {totalCount}
           </div>
         </CardHeader>
@@ -478,7 +478,7 @@ export default function AuditLogs() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 mr-2">
+                    <span className="text-sm text-gray-500 me-2">
                       Page {page} of {totalPages}
                     </span>
                     <div className="flex gap-1">

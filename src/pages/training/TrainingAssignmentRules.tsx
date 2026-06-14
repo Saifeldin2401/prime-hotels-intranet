@@ -142,7 +142,7 @@ export default function TrainingAssignmentRules() {
                 >
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                            <Plus className="w-4 h-4 mr-2" />
+                            <Plus className="w-4 h-4 me-2" />
                             {t('rules.new_rule')}
                         </Button>
                     </DialogTrigger>
@@ -201,7 +201,7 @@ export default function TrainingAssignmentRules() {
                                             {jobTitles?.map(jt => (
                                                 <SelectItem key={jt.id} value={jt.id}>
                                                     {jt.title}
-                                                    {jt.category && <span className="ml-2 text-xs text-muted-foreground">({jt.category})</span>}
+                                                    {jt.category && <span className="ms-2 text-xs text-muted-foreground">({jt.category})</span>}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>

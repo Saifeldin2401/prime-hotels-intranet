@@ -40,14 +40,14 @@ export function FillBlankQuestion({
                     placeholder={placeholder}
                     maxLength={maxLength}
                     className={cn(
-                        'text-lg py-6 pr-12 transition-all',
+                        'text-lg py-6 pe-12 transition-all',
                         showFeedback && isCorrect && 'border-green-500 bg-green-50 text-green-800',
                         showFeedback && !isCorrect && 'border-red-500 bg-red-50 text-red-800'
                     )}
                 />
 
                 {showFeedback && (
-                    <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    <div className="absolute end-3 top-1/2 -translate-y-1/2">
                         {isCorrect ? (
                             <CheckCircle className="h-6 w-6 text-green-600" />
                         ) : (

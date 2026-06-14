@@ -196,7 +196,7 @@ export default function MyLeaveRequests() {
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="bg-hotel-navy hover:bg-hotel-navy-light w-full sm:w-auto h-11">
-              <Plus className={`w-4 h-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+              <Plus className={`w-4 h-4 ${isRTL ? 'ms-2' : 'me-2'}`} />
               {t('leave_requests.new_request')}
             </Button>
           </DialogTrigger>

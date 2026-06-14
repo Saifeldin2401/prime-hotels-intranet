@@ -620,7 +620,7 @@ export function DelegateApprovalDialog({
                         disabled={validationErrors.length > 0 || delegateMutation.isPending}
                     >
                         {delegateMutation.isPending && (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 me-2 animate-spin" />
                         )}
                         {t('delegate.confirm', { defaultValue: 'Delegate' })}
                     </Button>
@@ -649,7 +649,7 @@ export function DelegateButton({ approvalId, approvalType, className }: Delegate
                 onClick={() => setOpen(true)}
                 className={className}
             >
-                <UserPlus className="h-4 w-4 mr-1" />
+                <UserPlus className="h-4 w-4 me-1" />
                 {t('delegate.button', { defaultValue: 'Delegate' })}
             </Button>
             <DelegateApprovalDialog

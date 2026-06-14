@@ -294,7 +294,7 @@ export default function JobTitles() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align={isRTL ? "start" : "end"}>
                                 <DropdownMenuItem onClick={() => handleEdit(job)}>
-                                    <Pencil className="h-4 w-4 mr-2" />
+                                    <Pencil className="h-4 w-4 me-2" />
                                     {t('job_titles.edit')}
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
@@ -305,7 +305,7 @@ export default function JobTitles() {
                                         }
                                     }}
                                 >
-                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    <Trash2 className="h-4 w-4 me-2" />
                                     {t('job_titles.delete')}
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -333,7 +333,7 @@ export default function JobTitles() {
                 }}>
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy">
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-4 w-4 me-2" />
                             {t('job_titles.add_title')}
                         </Button>
                     </DialogTrigger>
@@ -403,7 +403,7 @@ export default function JobTitles() {
                                 </Button>
                                 <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                                     {(createMutation.isPending || updateMutation.isPending) && (
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                     )}
                                     {editingTitle ? t('common.save') : t('job_titles.add_title')}
                                 </Button>
@@ -416,7 +416,7 @@ export default function JobTitles() {
             <div className="bg-white rounded-lg border border-gray-100 shadow-sm p-4">
                 {isLoading ? (
                     <div className="flex items-center justify-center py-12 text-muted-foreground">
-                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <Loader2 className="h-5 w-5 animate-spin me-2" />
                         {t('job_titles.loading')}
                     </div>
                 ) : !jobTitles?.length ? (

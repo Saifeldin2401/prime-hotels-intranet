@@ -87,7 +87,7 @@ export default function PIIAccessLogs() {
                         </p>
                         {log.justification && (
                           <div className="mt-2 text-sm bg-blue-50 text-blue-800 p-2 rounded-md inline-block">
-                            <span className="font-medium mr-1">{t('pii_audit.reason_label', { defaultValue: 'Reason:' })}</span>
+                            <span className="font-medium me-1">{t('pii_audit.reason_label', { defaultValue: 'Reason:' })}</span>
                             {log.justification}
                           </div>
                         )}
@@ -129,7 +129,7 @@ export default function PIIAccessLogs() {
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-500 mr-2">
+                    <span className="text-sm text-gray-500 me-2">
                       Page {page} of {totalPages}
                     </span>
                     <div className="flex gap-1">

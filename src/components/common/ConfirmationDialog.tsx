@@ -87,7 +87,7 @@ export function ConfirmationDialog({
                         disabled={isProcessing}
                         className={buttonClasses[variant]}
                     >
-                        {isProcessing && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                        {isProcessing && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                         {confirmLabel}
                     </Button>
                 </AlertDialogFooter>

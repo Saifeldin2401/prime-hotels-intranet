@@ -132,7 +132,7 @@ export function PerformanceChart({ fullWidth = false }: PerformanceChartProps) {
               </TabsList>
             </Tabs>
             <Button variant="outline" size="sm" onClick={handleExport} className="h-8">
-              <Download className="h-4 w-4 mr-1" />
+              <Download className="h-4 w-4 me-1" />
               {t('actions.export', 'Export')}
             </Button>
           </div>

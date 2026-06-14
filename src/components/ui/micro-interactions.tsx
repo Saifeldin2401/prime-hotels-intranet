@@ -143,10 +143,10 @@ export const FloatingActionButton = forwardRef<HTMLButtonElement, FloatingAction
     const preferences = useAnimationPreferences()
 
     const positionClasses = {
-      'bottom-right': 'bottom-4 right-4',
-      'bottom-left': 'bottom-4 left-4',
-      'top-right': 'top-4 right-4',
-      'top-left': 'top-4 left-4',
+      'bottom-right': 'bottom-4 end-4',
+      'bottom-left': 'bottom-4 start-4',
+      'top-right': 'top-4 end-4',
+      'top-left': 'top-4 start-4',
     }
 
     const baseClasses = cn(
@@ -350,17 +350,17 @@ export const Tooltip: React.FC<TooltipProps> = ({
   }
 
   const positionClasses = {
-    top: 'bottom-full left-1/2 transform -translate-x-1/2 mb-2',
-    bottom: 'top-full left-1/2 transform -translate-x-1/2 mt-2',
-    left: 'right-full top-1/2 transform -translate-y-1/2 mr-2',
-    right: 'left-full top-1/2 transform -translate-y-1/2 ml-2'
+    top: 'bottom-full start-1/2 transform -translate-x-1/2 mb-2',
+    bottom: 'top-full start-1/2 transform -translate-x-1/2 mt-2',
+    left: 'end-full top-1/2 transform -translate-y-1/2 me-2',
+    right: 'start-full top-1/2 transform -translate-y-1/2 ms-2'
   }
 
   const arrowClasses = {
-    top: 'top-full left-1/2 transform -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-current',
-    bottom: 'bottom-full left-1/2 transform -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-current',
-    left: 'left-full top-1/2 transform -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-current',
-    right: 'right-full top-1/2 transform -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-current'
+    top: 'top-full start-1/2 transform -translate-x-1/2 border-l-transparent border-r-transparent border-b-transparent border-t-current',
+    bottom: 'bottom-full start-1/2 transform -translate-x-1/2 border-l-transparent border-r-transparent border-t-transparent border-b-current',
+    left: 'start-full top-1/2 transform -translate-y-1/2 border-t-transparent border-b-transparent border-r-transparent border-l-current',
+    right: 'end-full top-1/2 transform -translate-y-1/2 border-t-transparent border-b-transparent border-l-transparent border-r-current'
   }
 
   return (
@@ -549,9 +549,9 @@ export const FloatingLabelInput: React.FC<FloatingLabelInputProps> = ({
   const hasValue = value && value.toString().length > 0
 
   const labelClasses = cn(
-    'absolute left-3 transition-all duration-200 pointer-events-none',
+    'absolute start-3 transition-all duration-200 pointer-events-none',
     isFocused || hasValue
-      ? 'text-xs -top-2 left-2 bg-background px-1 text-primary'
+      ? 'text-xs -top-2 start-2 bg-background px-1 text-primary'
       : 'text-sm top-1/2 transform -translate-y-1/2 text-muted-foreground'
   )
 

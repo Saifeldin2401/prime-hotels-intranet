@@ -98,7 +98,7 @@ export function OnlineUsersWidget() {
                 <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
                   <Users className="w-5 h-5" />
                 </div>
-                <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">
+                <span className="absolute -top-0.5 -end-0.5 flex h-3 w-3">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 border-2 border-white" />
                 </span>
@@ -115,7 +115,7 @@ export function OnlineUsersWidget() {
 
             {totalOnline > 0 && (
               <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold px-2.5 shadow-sm text-sm">
-                <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 mr-1.5" />
+                <Circle className="w-2 h-2 fill-emerald-500 text-emerald-500 me-1.5" />
                 {totalOnline}
               </Badge>
             )}
@@ -126,7 +126,7 @@ export function OnlineUsersWidget() {
             <div className="relative mt-4">
               <Search className={cn(
                 "absolute top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600/50",
-                isRTL ? "right-3" : "left-3"
+                isRTL ? "end-3" : "start-3"
               )} />
               <Input
                 placeholder={t('online_users.search_placeholder', 'Search team members...')}
@@ -134,14 +134,14 @@ export function OnlineUsersWidget() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className={cn(
                   "h-10 text-[14px] font-medium bg-emerald-50/50 border-emerald-100/50 focus:bg-white focus:border-emerald-300 focus:ring-emerald-200/50 shadow-inner rounded-xl transition-all",
-                  isRTL ? "pr-10" : "pl-10"
+                  isRTL ? "pe-10" : "ps-10"
                 )}
               />
               {searchQuery && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="absolute top-1/2 -translate-y-1/2 right-1 h-8 w-8 text-slate-400 hover:text-slate-600 rounded-lg"
+                  className="absolute top-1/2 -translate-y-1/2 end-1 h-8 w-8 text-slate-400 hover:text-slate-600 rounded-lg"
                   onClick={() => setSearchQuery('')}
                   aria-label={t('accessibility.clear_search', 'Clear search')}
                 >
@@ -191,7 +191,7 @@ export function OnlineUsersWidget() {
                               {getInitials(onlineUser.full_name || onlineUser.email || 'User')}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+                          <span className="absolute -bottom-0.5 -end-0.5 flex h-3.5 w-3.5">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                             <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500 border-2 border-white" />
                           </span>

@@ -733,7 +733,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
         title={user ? t('form.edit_user') : t('form.create_user')}
         actions={
           <Button variant="ghost" onClick={onClose}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4 me-2" />
             {tCommon('common.back')}
           </Button>
         }
@@ -779,7 +779,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                   </div>
                 ) : (
                   <div className="flex items-center h-10 px-3 rounded-md border border-dashed bg-green-50 text-green-700 text-sm">
-                    <span className="mr-2">✨</span>
+                    <span className="me-2">✨</span>
                     {t('form.staff_id_auto', 'Auto-generated on creation')}
                   </div>
                 )}
@@ -881,7 +881,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     className="w-full justify-between font-normal text-left"
                   >
                     {jobTitle || t('form.select_job_title')}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
@@ -917,11 +917,11 @@ export function UserForm({ user, onClose }: UserFormProps) {
                             >
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "me-2 h-4 w-4",
                                   jobTitle === item.title ? "opacity-100" : "opacity-0"
                                 )}
                               />
-                              {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                              {item.title} <span className="ms-auto text-xs text-muted-foreground">{item.category}</span>
                             </div>
                           </CommandItem>
                         ))}
@@ -1068,7 +1068,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                     {reportingTo
                       ? selectedManager?.full_name || reportingToProfile?.full_name || t('form.selected_manager')
                       : t('form.select_manager')}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
@@ -1117,7 +1117,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
                           >
                             <Check
                               className={cn(
-                                "mr-2 h-4 w-4",
+                                "me-2 h-4 w-4",
                                 !reportingTo ? "opacity-100" : "opacity-0"
                               )}
                             />
@@ -1155,19 +1155,19 @@ export function UserForm({ user, onClose }: UserFormProps) {
                             >
                               <Check
                                 className={cn(
-                                  "mr-2 h-4 w-4",
+                                  "me-2 h-4 w-4",
                                   reportingTo === manager.id ? "opacity-100" : "opacity-0"
                                 )}
                               />
                               <span>{manager.full_name}</span>
-                              <span className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
+                              <span className="ms-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
                                 {manager.staff_id || 'no-id'}
                               </span>
-                              <span className="ml-auto text-xs text-muted-foreground">
+                              <span className="ms-auto text-xs text-muted-foreground">
                                 {manager.job_title || manager.roles?.join(', ')}
                               </span>
                               {manager.isDeptHead && (
-                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                                <span className="ms-2 text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
                                   {t('form.dept_head')}
                                 </span>
                               )}
@@ -1210,15 +1210,15 @@ export function UserForm({ user, onClose }: UserFormProps) {
                                 >
                                   <Check
                                     className={cn(
-                                      "mr-2 h-4 w-4",
+                                      "me-2 h-4 w-4",
                                       reportingTo === manager.id ? "opacity-100" : "opacity-0"
                                     )}
                                   />
                                   <span>{manager.full_name}</span>
-                                  <span className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
+                                  <span className="ms-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
                                     {manager.staff_id || 'no-id'}
                                   </span>
-                                  <span className="ml-auto text-xs text-muted-foreground">
+                                  <span className="ms-auto text-xs text-muted-foreground">
                                     {manager.job_title || manager.roles?.join(', ')}
                                   </span>
                                 </div>

@@ -109,7 +109,7 @@ export function TableSkeleton({ rows = 5, cols = 4, className }: { rows?: number
                                 key={ci}
                                 className={cn(
                                     "h-4",
-                                    ci === 0 ? "w-40" : ci === cols - 1 ? "w-16 ml-auto" : "flex-1"
+                                    ci === 0 ? "w-40" : ci === cols - 1 ? "w-16 ms-auto" : "flex-1"
                                 )}
                             />
                         ))}

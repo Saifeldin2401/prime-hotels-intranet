@@ -115,12 +115,12 @@ export function RequestContentDialog({ isOpen, onClose, searchQuery = '' }: Requ
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                    <Loader2 className="w-4 h-4 me-2 animate-spin" />
                                     {t('request_content.submitting', 'Submitting...')}
                                 </>
                             ) : (
                                 <>
-                                    <Send className="w-4 h-4 mr-2" />
+                                    <Send className="w-4 h-4 me-2" />
                                     {t('request_content.submit', 'Submit Request')}
                                 </>
                             )}

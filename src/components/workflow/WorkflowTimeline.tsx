@@ -61,7 +61,7 @@ export function WorkflowTimeline({
     return (
         <div className={cn("relative", className)}>
             {/* Timeline line */}
-            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200" aria-hidden="true" />
+            <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-gray-200" aria-hidden="true" />
 
             <ul className="space-y-4">
                 {events.map((event) => {

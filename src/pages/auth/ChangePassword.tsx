@@ -201,7 +201,7 @@ export default function ChangePassword() {
                                         type="button"
                                         variant="ghost"
                                         size="sm"
-                                        className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                        className="absolute end-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                                         onClick={() => setShowCurrentPassword(!showCurrentPassword)}
                                     >
                                         {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -226,7 +226,7 @@ export default function ChangePassword() {
                                     type="button"
                                     variant="ghost"
                                     size="sm"
-                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    className="absolute end-0 top-0 h-full px-3 py-2 hover:bg-transparent"
                                     onClick={() => setShowNewPassword(!showNewPassword)}
                                 >
                                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -271,12 +271,12 @@ export default function ChangePassword() {
                         >
                             {isLoading ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                     Updating Password...
                                 </>
                             ) : (
                                 <>
-                                    <Lock className="mr-2 h-4 w-4" />
+                                    <Lock className="me-2 h-4 w-4" />
                                     Set New Password
                                 </>
                             )}

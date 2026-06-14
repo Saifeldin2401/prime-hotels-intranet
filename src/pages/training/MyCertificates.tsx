@@ -205,11 +205,11 @@ const getTypeLabel = (type: string, t) => {
 const getStatusBadge = (status: string, t) => {
     switch (status) {
         case 'active':
-            return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 mr-1" />{t('active')}</Badge>
+            return <Badge className="bg-green-100 text-green-800"><CheckCircle className="w-3 h-3 me-1" />{t('active')}</Badge>
         case 'expired':
-            return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle className="w-3 h-3 mr-1" />{t('expired')}</Badge>
+            return <Badge className="bg-yellow-100 text-yellow-800"><AlertCircle className="w-3 h-3 me-1" />{t('expired')}</Badge>
         case 'revoked':
-            return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 mr-1" />{t('revoked')}</Badge>
+            return <Badge className="bg-red-100 text-red-800"><XCircle className="w-3 h-3 me-1" />{t('revoked')}</Badge>
         default:
             return <Badge variant="secondary">{status}</Badge>
     }
@@ -246,7 +246,7 @@ const CertificateCard = ({ certificate, onDownload, isDownloading, t }: Certific
                     <span className="text-gray-600">{t('score')}: </span>
                     <span className="font-semibold text-blue-600">{certificate.score}%</span>
                     {certificate.passingScore && (
-                        <span className="text-gray-400 ml-1">/ {certificate.passingScore}% {t('required')}</span>
+                        <span className="text-gray-400 ms-1">/ {certificate.passingScore}% {t('required')}</span>
                     )}
                 </div>
             )}
@@ -267,9 +267,9 @@ const CertificateCard = ({ certificate, onDownload, isDownloading, t }: Certific
                     disabled={isDownloading || certificate.status !== 'active'}
                 >
                     {isDownloading ? (
-                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        <Loader2 className="w-4 h-4 me-2 animate-spin" />
                     ) : (
-                        <Download className="w-4 h-4 mr-2 transition-transform duration-300 group-hover:translate-y-1" />
+                        <Download className="w-4 h-4 me-2 transition-transform duration-300 group-hover:translate-y-1" />
                     )}
                     {t('downloadPdf')}
                 </Button>

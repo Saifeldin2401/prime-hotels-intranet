@@ -131,7 +131,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                         className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700"
                     >
                         {t('startChallenge')}
-                        <ChevronRight className="h-4 w-4 ml-2" />
+                        <ChevronRight className="h-4 w-4 ms-2" />
                     </Button>
                 </CardContent>
             </Card>

@@ -281,7 +281,7 @@ export function MobileDashboard() {
                                             {profile?.full_name?.[0] || user?.email?.[0] || 'U'}
                                         </AvatarFallback>
                                     </Avatar>
-                                    <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background" />
+                                    <span className="absolute -bottom-0.5 -end-0.5 w-3 h-3 bg-green-500 rounded-full ring-2 ring-background" />
                                 </button>
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">{shortDate}</p>
@@ -297,7 +297,7 @@ export function MobileDashboard() {
                             >
                                 <Bell className="h-5 w-5" />
                                 {unreadCount > 0 && (
-                                    <span className="absolute top-1 right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                    <span className="absolute top-1 end-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
                                         {unreadCount > 9 ? '9+' : unreadCount}
                                     </span>
                                 )}
@@ -322,7 +322,7 @@ export function MobileDashboard() {
                                     Overview
                                 </h2>
                                 <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/reports')}>
-                                    View All <ChevronRight className="h-3 w-3 ml-1" />
+                                    View All <ChevronRight className="h-3 w-3 ms-1" />
                                 </Button>
                             </div>
                             <div className="flex gap-3 overflow-x-auto pb-2 px-4 scrollbar-hide snap-x">
@@ -360,7 +360,7 @@ export function MobileDashboard() {
                                     Today&apos;s Schedule
                                 </h2>
                                 <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/hr/scheduling')}>
-                                    Calendar <ChevronRight className="h-3 w-3 ml-1" />
+                                    Calendar <ChevronRight className="h-3 w-3 ms-1" />
                                 </Button>
                             </div>
                             <Card className="border-0 shadow-md bg-gradient-to-br from-card to-muted/50">
@@ -539,7 +539,7 @@ export function MobileDashboard() {
                                     Activity Feed
                                 </h2>
                                 <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => navigate('/announcements')}>
-                                    View All <ChevronRight className="h-3 w-3 ml-1" />
+                                    View All <ChevronRight className="h-3 w-3 ms-1" />
                                 </Button>
                             </div>
                             
@@ -602,7 +602,7 @@ export function MobileDashboard() {
                                                                 )}
                                                                 {item.type === 'achievement' && (
                                                                     <Badge variant="default" className="mt-2 text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
-                                                                        <Sparkles className="h-3 w-3 mr-1" />
+                                                                        <Sparkles className="h-3 w-3 me-1" />
                                                                         Achievement
                                                                     </Badge>
                                                                 )}
@@ -623,7 +623,7 @@ export function MobileDashboard() {
                         <section className="px-4 mb-6">
                             <Card className="border-0 shadow-lg bg-gradient-to-br from-indigo-500 to-purple-600 text-white overflow-hidden">
                                 <CardContent className="p-4 relative">
-                                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+                                    <div className="absolute top-0 end-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
                                     <div className="relative">
                                         <div className="flex items-start justify-between mb-3">
                                             <div>
@@ -752,7 +752,7 @@ export function MobileDashboard() {
                                 className="w-full justify-start h-11"
                                 onClick={() => { setShowProfile(false); navigate('/profile') }}
                             >
-                                <User className="h-4 w-4 mr-3" />
+                                <User className="h-4 w-4 me-3" />
                                 View Full Profile
                             </Button>
                             <Button
@@ -760,7 +760,7 @@ export function MobileDashboard() {
                                 className="w-full justify-start h-11"
                                 onClick={() => { setShowProfile(false); navigate('/settings') }}
                             >
-                                <Settings className="h-4 w-4 mr-3" />
+                                <Settings className="h-4 w-4 me-3" />
                                 Settings
                             </Button>
                             <Button
@@ -768,7 +768,7 @@ export function MobileDashboard() {
                                 className="w-full justify-start h-11"
                                 onClick={handleSignOut}
                             >
-                                <LogOut className="h-4 w-4 mr-3" />
+                                <LogOut className="h-4 w-4 me-3" />
                                 Sign Out
                             </Button>
                         </div>

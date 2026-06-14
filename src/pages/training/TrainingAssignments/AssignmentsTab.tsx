@@ -138,7 +138,7 @@ export function AssignmentsTab() {
           <div className="relative flex-1 max-w-none sm:max-w-md">
             <div className={cn(
               "absolute inset-y-0 flex items-center pointer-events-none",
-              isRTL ? "right-0 pr-4" : "left-0 pl-4"
+              isRTL ? "end-0 pe-4" : "start-0 ps-4"
             )}>
               <Search className="w-4 h-4 text-slate-400" />
             </div>
@@ -148,7 +148,7 @@ export function AssignmentsTab() {
               onChange={(e) => setSearch(e.target.value)}
               className={cn(
                 "h-10 bg-slate-50 border-slate-200 focus:bg-white focus:border-hotel-gold/50 focus:ring-2 focus:ring-hotel-gold/20 transition-all",
-                isRTL ? "pr-11 text-right" : "pl-11"
+                isRTL ? "pe-11 text-right" : "ps-11"
               )}
             />
             {search && (
@@ -156,7 +156,7 @@ export function AssignmentsTab() {
                 onClick={() => setSearch('')}
                 className={cn(
                   "absolute inset-y-0 flex items-center text-slate-400 hover:text-slate-600 transition-colors",
-                  isRTL ? "left-0 pl-3" : "right-0 pr-3"
+                  isRTL ? "start-0 ps-3" : "end-0 pe-3"
                 )}
               >
                 <X className="w-4 h-4" />
@@ -194,7 +194,7 @@ export function AssignmentsTab() {
 
             <Select value={assignmentsSortBy} onValueChange={(v) => setAssignmentsSortBy(v as 'date' | 'priority' | 'module' | 'dueDate')}>
               <SelectTrigger className="w-[140px] h-10 bg-slate-50 border-slate-200">
-                <SlidersHorizontal className="w-4 h-4 mr-2" />
+                <SlidersHorizontal className="w-4 h-4 me-2" />
                 <SelectValue placeholder={t('sortBy', 'Sort by')} />
               </SelectTrigger>
               <SelectContent>
@@ -214,10 +214,10 @@ export function AssignmentsTab() {
                 showFilters && "bg-slate-100 border-slate-300"
               )}
             >
-              <Filter className="w-4 h-4 mr-2" />
+              <Filter className="w-4 h-4 me-2" />
               {t('filters', 'Filters')}
               {(assignmentsFilterPriority !== 'all' || assignmentsFilterTargetType !== 'all' || assignmentsFilterDueStatus !== 'all') && (
-                <span className="ml-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
+                <span className="ms-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
               )}
             </Button>
 
@@ -226,7 +226,7 @@ export function AssignmentsTab() {
                 onClick={() => setShowAssignmentDialog(true)}
                 className="bg-hotel-navy hover:bg-hotel-navy/90 text-white h-10 px-4 shadow-sm hover:shadow transition-all"
               >
-                <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('create')}
               </Button>
             )}
@@ -297,9 +297,9 @@ export function AssignmentsTab() {
                 variant="ghost"
                 size="sm"
                 onClick={resetOrganizationState}
-                className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 ml-auto"
+                className="text-slate-500 hover:text-rose-600 hover:bg-rose-50 ms-auto"
               >
-                <X className="w-3.5 h-3.5 mr-1.5" />
+                <X className="w-3.5 h-3.5 me-1.5" />
                 {t('clearAll', 'Clear All')}
               </Button>
             )}
@@ -317,19 +317,19 @@ export function AssignmentsTab() {
             {assignmentsFilterPriority !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('priority')}: {t(assignmentsFilterPriority)}
-                <button onClick={() => setAssignmentsFilterPriority('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterPriority('all')} className="ms-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
             {assignmentsFilterTargetType !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('target')}: {t(assignmentsFilterTargetType)}
-                <button onClick={() => setAssignmentsFilterTargetType('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterTargetType('all')} className="ms-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
             {assignmentsFilterDueStatus !== 'all' && (
               <Badge variant="outline" className="text-xs bg-slate-50">
                 {t('status')}: {t(assignmentsFilterDueStatus)}
-                <button onClick={() => setAssignmentsFilterDueStatus('all')} className="ml-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
+                <button onClick={() => setAssignmentsFilterDueStatus('all')} className="ms-1 hover:text-rose-600"><X className="w-3 h-3" /></button>
               </Badge>
             )}
           </div>
@@ -373,7 +373,7 @@ export function AssignmentsTab() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="outline" className="border-blue-200 bg-blue-50/80 text-blue-700 font-medium text-[11px] px-2 py-0.5">
-                        <BookOpen className="w-3 h-3 mr-1" />
+                        <BookOpen className="w-3 h-3 me-1" />
                         {t('module')}
                       </Badge>
                       <Badge
@@ -389,7 +389,7 @@ export function AssignmentsTab() {
                       </Badge>
                       {primaryAssignment.requires_acknowledgement && (
                         <Badge variant="outline" className="border-amber-300 bg-amber-100/50 text-amber-800 font-medium text-[11px] px-2 py-0.5">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
+                          <CheckCircle2 className="w-3 h-3 me-1" />
                           {t('ackRequired', 'Ack required')}
                         </Badge>
                       )}
@@ -397,13 +397,13 @@ export function AssignmentsTab() {
                     <div className="flex gap-1.5">
                       {targets.length > 1 && (
                         <Badge variant="outline" className="bg-hotel-gold/10 text-hotel-navy border-hotel-gold/30 font-medium text-[11px]">
-                          <Users className="w-3 h-3 mr-1" />
+                          <Users className="w-3 h-3 me-1" />
                           {targets.length} {t('targets', 'targets')}
                         </Badge>
                       )}
                       {exemptedCount > 0 && (
                         <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 font-medium text-[11px]">
-                          <X className="w-3 h-3 mr-1" />
+                          <X className="w-3 h-3 me-1" />
                           {exemptedCount} {t('exempted', 'exempted')}
                         </Badge>
                       )}
@@ -432,7 +432,7 @@ export function AssignmentsTab() {
                           <Button
                             size="icon"
                             variant="ghost"
-                            className="h-7 w-7 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-2"
+                            className="h-7 w-7 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -me-2"
                             onClick={() => handleDelete(targets[0].assignmentId)}
                             aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                           >
@@ -448,7 +448,7 @@ export function AssignmentsTab() {
                               {targets.length}
                             </Badge>
                           </div>
-                          <div className="pl-6 space-y-1">
+                          <div className="ps-6 space-y-1">
                             {targets.slice(0, 3).map((target) => (
                               <div key={target.assignmentId} className="flex items-start justify-between gap-2">
                                 <div className="text-sm text-slate-900 truncate min-w-0 flex-1">
@@ -457,7 +457,7 @@ export function AssignmentsTab() {
                                 <Button
                                   size="icon"
                                   variant="ghost"
-                                  className="h-6 w-6 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -mr-1"
+                                  className="h-6 w-6 shrink-0 text-slate-400 hover:text-rose-600 hover:bg-rose-50 -me-1"
                                   onClick={() => handleDelete(target.assignmentId)}
                                   aria-label={t('accessibility.deleteAssignment', 'Delete assignment')}
                                 >
@@ -498,7 +498,7 @@ export function AssignmentsTab() {
                       className="w-full border-slate-200 hover:bg-slate-50 text-slate-700 text-sm font-medium h-9"
                       onClick={() => openManageAssignees(primaryAssignment.content_id, primaryAssignment.training_modules?.title)}
                     >
-                      <Users className={cn("h-4 w-4 text-slate-500", isRTL ? "ml-2" : "mr-2")} />
+                      <Users className={cn("h-4 w-4 text-slate-500", isRTL ? "ms-2" : "me-2")} />
                       {t('manageAssignees', 'Manage assignees')}
                     </Button>
                   </div>
@@ -512,7 +512,7 @@ export function AssignmentsTab() {
               <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center shadow-inner">
                 <BookOpen className="w-12 h-12 text-slate-300" />
               </div>
-              <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-sm">
+              <div className="absolute -bottom-2 -end-2 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shadow-sm">
                 <Plus className="w-5 h-5 text-slate-400" />
               </div>
             </div>
@@ -523,7 +523,7 @@ export function AssignmentsTab() {
                 onClick={() => setShowAssignmentDialog(true)}
                 className="mt-6 bg-hotel-navy hover:bg-hotel-navy/90 text-white px-6 shadow-sm hover:shadow transition-all"
               >
-                <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('createAssignment')}
               </Button>
             )}

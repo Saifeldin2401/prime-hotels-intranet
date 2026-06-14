@@ -363,7 +363,7 @@ export function DocumentExpiryBanner({
                   variant="outline"
                   className="w-full justify-start text-left font-normal"
                 >
-                  <Calendar className="mr-2 h-4 w-4" />
+                  <Calendar className="me-2 h-4 w-4" />
                   {newExpiryDate ? (
                     format(newExpiryDate, "PPP")
                   ) : (
@@ -401,7 +401,7 @@ export function DocumentExpiryBanner({
               disabled={!newExpiryDate}
               className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             >
-              <CheckCircle2 className="w-4 h-4 mr-2" />
+              <CheckCircle2 className="w-4 h-4 me-2" />
               Extend Expiry
             </Button>
           </DialogFooter>

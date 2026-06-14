@@ -279,7 +279,7 @@ export function PushNotificationSettings() {
               onClick={testNotification}
               className="flex-1"
             >
-              <Bell className="h-4 w-4 mr-2" />
+              <Bell className="h-4 w-4 me-2" />
               {t('push.test_button', { defaultValue: 'Test Notification' })}
             </Button>
             

@@ -60,10 +60,10 @@ export function TaskFilters({ filters, onChange }: TaskFiltersProps) {
     return (
         <div className="flex flex-col md:flex-row gap-4 mb-6">
             <div className="flex-1 relative">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                     placeholder={t('search_placeholder')}
-                    className="pl-8"
+                    className="ps-8"
                 />
             </div>
 

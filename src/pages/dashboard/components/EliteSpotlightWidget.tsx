@@ -462,8 +462,8 @@ export function EliteSpotlightWidget() {
 
   return (
     <Card className="h-full border-0 relative overflow-hidden rounded-2xl bg-[#0f172a] group">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+      <div className="absolute top-0 end-0 w-64 h-64 bg-indigo-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+      <div className="absolute bottom-0 start-0 w-32 h-32 bg-blue-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
 
       <CardContent className="h-full p-6 flex flex-col relative z-10">
         <div className="flex items-center justify-between mb-4">
@@ -533,7 +533,7 @@ export function EliteSpotlightWidget() {
                   </div>
                   <div
                     className={cn(
-                      'absolute -bottom-1 -right-1 w-6 h-6 rounded-lg flex items-center justify-center border-2 border-[#0f172a] shadow-lg',
+                      'absolute -bottom-1 -end-1 w-6 h-6 rounded-lg flex items-center justify-center border-2 border-[#0f172a] shadow-lg',
                       bg
                     )}
                   >

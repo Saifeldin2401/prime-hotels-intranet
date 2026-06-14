@@ -193,7 +193,7 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                             </>
                         ) : (
                             <div className="flex items-center p-3 bg-gray-50 border rounded-lg">
-                                <File className="h-8 w-8 text-blue-500 mr-3" />
+                                <File className="h-8 w-8 text-blue-500 me-3" />
                                 <div className="flex-1 min-w-0">
                                     <p className="text-sm font-medium text-gray-900 truncate">
                                         {file.name}
@@ -225,7 +225,7 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                         onClick={handleUpload}
                         disabled={!file || uploadDocument.isPending}
                     >
-                        {uploadDocument.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {uploadDocument.isPending && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                         {t('common.upload')}
                     </Button>
                 </DialogFooter>

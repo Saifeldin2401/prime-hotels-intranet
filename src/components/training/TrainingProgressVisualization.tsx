@@ -428,10 +428,10 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
           <TabsTrigger value="personal">{t('visualization.personalProgress')}</TabsTrigger>
           <TabsTrigger value="department">{t('visualization.department')}</TabsTrigger>
           <TabsTrigger value="achievements">
-            <Trophy className="w-4 h-4 mr-1" />
+            <Trophy className="w-4 h-4 me-1" />
             {t('visualization.achievements')}
             {achievements && achievements.length > 0 && (
-              <Badge variant="secondary" className="ml-1 text-xs">
+              <Badge variant="secondary" className="ms-1 text-xs">
                 {achievements.length}
               </Badge>
             )}

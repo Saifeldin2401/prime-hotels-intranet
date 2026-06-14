@@ -80,7 +80,7 @@ export function UserSkillsDisplay({ userId }: { userId?: string }) {
                                 </div>
                                 {userSkill.verified ? (
                                     <Badge variant="default" className="bg-green-600 hover:bg-green-700">
-                                        <ShieldCheck className="w-3 h-3 mr-1" />
+                                        <ShieldCheck className="w-3 h-3 me-1" />
                                         {t_ext('verified', 'Verified')}</Badge>
                                 ) : (
                                     <Badge variant="secondary" className="text-gray-500">

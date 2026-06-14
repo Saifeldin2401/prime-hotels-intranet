@@ -1,5 +1,4 @@
 import { NotificationBell } from '@/components/notifications/NotificationBell'
-import { GlobalSearch } from '@/components/search/GlobalSearch'
 import { SyncStatus } from '@/components/common/SyncStatus'
 import {
     AlertDialogAction,
@@ -49,6 +48,7 @@ import {
     Globe,
     LogOut,
     Menu,
+    Search,
     Settings,
     Sparkles,
     User
@@ -60,11 +60,13 @@ import { useNavigate } from 'react-router-dom'
 interface HeaderProps {
   sidebarCollapsed: boolean
   setSidebarCollapsed: (value: boolean) => void
+  setCommandPaletteOpen?: (value: boolean) => void
 }
 
 export function Header({
   sidebarCollapsed,
-  setSidebarCollapsed
+  setSidebarCollapsed,
+  setCommandPaletteOpen
 }: HeaderProps) {
   const navigate = useNavigate()
   const { user, profile, primaryRole, signOut } = useAuth()
@@ -106,7 +108,14 @@ export function Header({
 
           {/* Center Search - Premium Style */}
           <div className="flex-1 max-w-2xl mx-6 hidden md:flex items-center gap-2">
-            <GlobalSearch className="mx-0 w-full flex-1" />
+            <Button
+              variant="outline"
+              className="w-full justify-start text-sm text-gray-400 bg-hotel-navy-dark border-hotel-navy-dark hover:bg-hotel-navy-light hover:text-white"
+              onClick={() => setCommandPaletteOpen?.(true)}
+            >
+              <Search className="me-2 h-4 w-4" />
+              {t('nav.search_placeholder', 'Search pages, people, documents...')}
+            </Button>
             <kbd className="hidden lg:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/50 px-2 font-mono text-[10px] font-medium text-hotel-gold/80" aria-hidden="true">
               Ctrl+K
             </kbd>
@@ -124,7 +133,7 @@ export function Header({
                     {isConsolidatedContext && (
                         <div className="absolute inset-0 bg-hotel-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                     )}
-                    <div className="flex items-center gap-3 w-full pr-1">
+                    <div className="flex items-center gap-3 w-full pe-1">
                       <div className={cn(
                         "flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-all duration-300",
                         isConsolidatedContext ? "bg-gradient-to-br from-hotel-gold via-yellow-500 to-yellow-600 text-hotel-navy shadow-md" : "bg-hotel-navy/80 text-hotel-gold border border-hotel-gold/20 group-hover:bg-hotel-navy"
@@ -151,7 +160,7 @@ export function Header({
                   <SelectContent className="w-[340px] max-h-[500px] border border-hotel-gold/20 bg-hotel-navy shadow-2xl shadow-black/40 rounded-xl p-0 overflow-hidden">
                     {/* Header */}
                     <div className="px-4 py-4 bg-gradient-to-br from-hotel-navy-dark to-hotel-navy border-b border-hotel-gold/20 relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-hotel-gold/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
+                      <div className="absolute top-0 end-0 w-32 h-32 bg-hotel-gold/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
                       <p className="text-xs font-bold text-hotel-gold uppercase tracking-[0.1em] relative z-10">Available Properties</p>
                       <p className="text-[11px] text-white/50 mt-1 font-medium relative z-10">Select your working context</p>
                     </div>

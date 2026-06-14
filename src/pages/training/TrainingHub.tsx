@@ -399,7 +399,7 @@ export default function TrainingHub() {
             onClick={() => setViewMode('insights')}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <BarChart3 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <BarChart3 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('track')}
           </Button>
           <Button
@@ -407,7 +407,7 @@ export default function TrainingHub() {
             onClick={handleCreateWithWizard}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('createWithWizard')}
           </Button>
           <Button
@@ -415,11 +415,11 @@ export default function TrainingHub() {
             onClick={handleCreateFromTemplate}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <Layers className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Layers className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('createFromTemplate')}
           </Button>
           <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-            <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('startFromScratch', 'Start from Scratch')}
           </Button>
         </div>
@@ -435,14 +435,14 @@ export default function TrainingHub() {
             onClick={() => navigate('/training/assignments/rules')}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <Settings className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Settings className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('autoAssignRules')}
           </Button>
           <Button
             onClick={() => setViewMode('assignments', { openAssign: true, assignModuleId })}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('createAssignment')}
           </Button>
         </div>
@@ -458,7 +458,7 @@ export default function TrainingHub() {
             onClick={() => setViewMode('list')}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <BookOpen className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('library')}
           </Button>
           {moduleId && moduleId !== 'new' && (
@@ -466,7 +466,7 @@ export default function TrainingHub() {
               onClick={() => handleAssign(moduleId)}
               className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
             >
-              <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
               {t('assign')}
             </Button>
           )}
@@ -483,7 +483,7 @@ export default function TrainingHub() {
             onClick={() => setViewMode('assignments')}
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
-            <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('manageAssignments')}
           </Button>
         </div>
@@ -562,13 +562,13 @@ export default function TrainingHub() {
               <div className="p-3 sm:p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-3 sm:gap-4 items-stretch md:items-center justify-between">
                 <div className="flex flex-wrap gap-3 sm:gap-4 w-full md:w-auto">
                   <div className="relative w-full sm:w-auto">
-                    <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "right-3" : "left-3")} />
+                    <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "end-3" : "start-3")} />
                     <Input
                       type="text"
                       placeholder={t('search')}
                       value={search}
                       onChange={(e) => setSearch(e.target.value)}
-                      className={cn(isRTL ? "pr-10 text-right" : "pl-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
+                      className={cn(isRTL ? "pe-10 text-right" : "ps-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
                     />
                   </div>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -596,7 +596,7 @@ export default function TrainingHub() {
                 </div>
 
                 <div className={cn("flex items-center gap-2 w-full md:w-auto justify-between md:justify-end", isRTL ? "flex-row-reverse" : "")}>
-                  <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ml-2" : "mr-2")}>{t('sortBy')}</span>
+                  <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ms-2" : "me-2")}>{t('sortBy')}</span>
                   <Select value={sortBy} onValueChange={setSortBy}>
                     <SelectTrigger className={cn("w-full sm:w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('sortBy')} />
@@ -684,11 +684,11 @@ export default function TrainingHub() {
                         <p className="text-gray-500 mb-6 text-center max-w-md">{t('noModulesDesc')}</p>
                         <div className={cn("flex w-full flex-wrap gap-2 justify-center", isRTL ? "flex-row-reverse" : "")}>
                           <Button variant="outline" onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                            <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                             {t('createWithWizard')}
                           </Button>
                           <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                            <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                             {t('startFromScratch', 'Start from Scratch')}
                           </Button>
                         </div>
@@ -714,11 +714,11 @@ export default function TrainingHub() {
                 <p className="text-gray-500 mb-6 text-center max-w-md">{t('builderReadyDesc')}</p>
                 <div className={cn("flex w-full flex-wrap gap-2 justify-center", isRTL ? "flex-row-reverse" : "")}>
                   <Button variant="outline" onClick={() => setViewMode('list')} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                    <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    <BookOpen className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                     {t('library')}
                   </Button>
                   <Button onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                    <Wand2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                     {t('createWithWizard')}
                   </Button>
                 </div>

@@ -519,7 +519,7 @@ export default function DocumentLibrary() {
         )}
       >
         {/* Selection checkbox */}
-        <div className="absolute top-3 left-3 z-10">
+        <div className="absolute top-3 start-3 z-10">
           <input
             type="checkbox"
             checked={isSelected}
@@ -532,7 +532,7 @@ export default function DocumentLibrary() {
         {/* Expiry warning */}
         {(isExpiringSoon || isExpired) && (
           <div className={cn(
-            "absolute top-3 right-3 z-10 p-1.5 rounded-full",
+            "absolute top-3 end-3 z-10 p-1.5 rounded-full",
             isExpired ? "bg-red-100 text-red-600" : "bg-amber-100 text-amber-600"
           )}>
             <AlertTriangle className="w-4 h-4" />
@@ -562,7 +562,7 @@ export default function DocumentLibrary() {
               <p className={cn(
                 isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
               )}>
-                <Clock className="w-3 h-3 inline mr-1" />
+                <Clock className="w-3 h-3 inline me-1" />
                 {isExpired ? 'Expired' : `Expires ${formatRelativeTime(doc.expires_at)}`}
               </p>
             )}
@@ -608,20 +608,20 @@ export default function DocumentLibrary() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={(e) => handleViewDocument(doc, e)}>
-                  <Eye className="w-4 h-4 mr-2" />
+                  <Eye className="w-4 h-4 me-2" />
                   Preview
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => handleOpenEdit(doc, e)}>
-                  <Pencil className="w-4 h-4 mr-2" />
+                  <Pencil className="w-4 h-4 me-2" />
                   Edit
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={(e) => handleOpenAIAssistant(doc, e)}>
-                  <Sparkles className="w-4 h-4 mr-2" />
+                  <Sparkles className="w-4 h-4 me-2" />
                   AI Assistant
                 </DropdownMenuItem>
                 {doc.content_type === 'document' && (
                   <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
-                    <BookOpen className="w-4 h-4 mr-2" />
+                    <BookOpen className="w-4 h-4 me-2" />
                     Publish to Knowledge Base
                   </DropdownMenuItem>
                 )}
@@ -630,7 +630,7 @@ export default function DocumentLibrary() {
                   onClick={(e) => handleDelete(doc.id, e)}
                   className="text-red-600"
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4 me-2" />
                   Delete
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -701,13 +701,13 @@ export default function DocumentLibrary() {
                   "text-xs",
                   isExpired ? "text-red-600" : isExpiringSoon ? "text-amber-600" : "text-gray-400"
                 )}>
-                  <Clock className="w-3 h-3 inline mr-1" />
+                  <Clock className="w-3 h-3 inline me-1" />
                   {isExpired ? 'Expired' : `Expires ${format(new Date(doc.expires_at), 'MMM d')}`}
                 </span>
               )}
               {doc.view_count !== undefined && (
                 <span className="text-xs text-gray-400">
-                  <Eye className="w-3 h-3 inline mr-1" />
+                  <Eye className="w-3 h-3 inline me-1" />
                   {doc.view_count}
                 </span>
               )}
@@ -764,20 +764,20 @@ export default function DocumentLibrary() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={(e) => handleViewDocument(doc, e)}>
-                <Eye className="w-4 h-4 mr-2" />
+                <Eye className="w-4 h-4 me-2" />
                 Preview
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => handleOpenEdit(doc, e)}>
-                <Pencil className="w-4 h-4 mr-2" />
+                <Pencil className="w-4 h-4 me-2" />
                 Edit
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => handleOpenAIAssistant(doc, e)}>
-                <Sparkles className="w-4 h-4 mr-2" />
+                <Sparkles className="w-4 h-4 me-2" />
                 AI Assistant
               </DropdownMenuItem>
               {doc.content_type === 'document' && (
                 <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
-                  <BookOpen className="w-4 h-4 mr-2" />
+                  <BookOpen className="w-4 h-4 me-2" />
                   Publish to Knowledge Base
                 </DropdownMenuItem>
               )}
@@ -786,7 +786,7 @@ export default function DocumentLibrary() {
                 onClick={(e) => handleDelete(doc.id, e)}
                 className="text-red-600"
               >
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
                 Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -810,10 +810,10 @@ export default function DocumentLibrary() {
               onClick={() => setShowFilters(!showFilters)}
               className={cn(showFilters && "bg-hotel-navy/5")}
             >
-              <Filter className="w-4 h-4 mr-2" />
+              <Filter className="w-4 h-4 me-2" />
               {t('filters')}
               {Object.values(filters).some(v => v && (Array.isArray(v) ? v.length > 0 : true)) && (
-                <span className="ml-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
+                <span className="ms-1.5 w-2 h-2 rounded-full bg-hotel-gold" />
               )}
             </Button>
 
@@ -837,7 +837,7 @@ export default function DocumentLibrary() {
             </div>
 
             <Button onClick={() => setUploadDialogOpen(true)} className="shadow-md hover:shadow-lg transition-all">
-              <Plus className="w-4 h-4 mr-2" />
+              <Plus className="w-4 h-4 me-2" />
               {t('upload_document')}
             </Button>
           </div>
@@ -860,7 +860,7 @@ export default function DocumentLibrary() {
             <div className="flex items-center gap-2">
               {stats?.expiringSoon ? (
                 <Badge variant="warning" className="text-xs">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  <AlertTriangle className="w-3 h-3 me-1" />
                   {t('storage.expiring_soon_badge', { count: stats.expiringSoon })}
                 </Badge>
               ) : null}
@@ -1137,7 +1137,7 @@ export default function DocumentLibrary() {
                               return (
                                 <div
                                   key={doc.id}
-                                  className="absolute left-0 top-0 w-full pb-2"
+                                  className="absolute start-0 top-0 w-full pb-2"
                                   style={{ transform: `translateY(${virtualRow.start}px)` }}
                                 >
                                   {rowContent}
@@ -1350,12 +1350,12 @@ export default function DocumentLibrary() {
                 >
                   {aiSummaryLoading ? (
                     <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      <Loader2 className="w-4 h-4 me-2 animate-spin" />
                       Analyzing
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-4 h-4 mr-2" />
+                      <Sparkles className="w-4 h-4 me-2" />
                       Refresh Summary
                     </>
                   )}
@@ -1394,7 +1394,7 @@ export default function DocumentLibrary() {
                   {Array.isArray(aiSummary.keyChanges) && aiSummary.keyChanges.length > 0 && (
                     <div className="space-y-2">
                       <div className="text-xs font-medium text-muted-foreground">Key changes</div>
-                      <ul className="list-disc pl-5 space-y-1 text-sm">
+                      <ul className="list-disc ps-5 space-y-1 text-sm">
                         {aiSummary.keyChanges.map((item) => (
                           <li key={item}>{item}</li>
                         ))}

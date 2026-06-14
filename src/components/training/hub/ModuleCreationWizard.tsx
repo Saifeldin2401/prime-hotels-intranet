@@ -440,7 +440,7 @@ export function ModuleCreationWizard({
             disabled={currentStepIndex === 0}
             className={cn(isRTL ? "flex-row-reverse" : "")}
           >
-            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('common:actions.back')}
           </Button>
           {currentStep === 'review' ? (
@@ -451,13 +451,13 @@ export function ModuleCreationWizard({
             >
               {createModuleMutation.isPending ? (
                 <>
-                  <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
+                  <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ms-2" : "me-2")} />
                   {t('hub.wizard.creating')}
                 </>
               ) : (
                 <>
                   {t('hub.wizard.createModule')}
-                  <CheckCircle2 className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
+                  <CheckCircle2 className={cn("h-4 w-4", isRTL ? "me-2" : "ms-2")} />
                 </>
               )}
             </Button>
@@ -468,7 +468,7 @@ export function ModuleCreationWizard({
               className={cn("bg-hotel-gold hover:bg-hotel-gold-dark", isRTL ? "flex-row-reverse" : "")}
             >
               {t('common:actions.next')}
-              <ArrowRight className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
+              <ArrowRight className={cn("h-4 w-4", isRTL ? "me-2" : "ms-2")} />
             </Button>
           )}
         </div>

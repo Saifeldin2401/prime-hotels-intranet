@@ -125,7 +125,7 @@ export function InlineQuizWidget({
                         Test your understanding with {displayQuestions.length} quick question{displayQuestions.length > 1 ? 's' : ''}
                     </p>
                     <Button onClick={handleStart} size="sm">
-                        <Sparkles className="h-4 w-4 mr-2" />
+                        <Sparkles className="h-4 w-4 me-2" />
                         Start Quiz
                     </Button>
                 </CardContent>

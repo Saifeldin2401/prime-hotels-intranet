@@ -118,7 +118,7 @@ export function AutomationSettings() {
                             onClick={() => handleSaveConfig('smart_leave')}
                             disabled={updateMutation.isPending}
                         >
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 me-2" />
                             {t_ext('save_rules', 'Save Rules')}</Button>
                     </div>
                 </CardContent>
@@ -159,7 +159,7 @@ export function AutomationSettings() {
                             onClick={() => handleSaveConfig('auto_training')}
                             disabled={updateMutation.isPending}
                         >
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 me-2" />
                             {t_ext('save_rules', 'Save Rules')}</Button>
                     </div>
                 </CardContent>
@@ -201,7 +201,7 @@ export function AutomationSettings() {
                             onClick={() => handleSaveConfig('recurring_tasks')}
                             disabled={updateMutation.isPending}
                         >
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 me-2" />
                             {t_ext('save_schedule', 'Save Schedule')}</Button>
                     </div>
                 </CardContent>

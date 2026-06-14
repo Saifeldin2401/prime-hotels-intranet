@@ -88,9 +88,9 @@ export function TodaysBirthdaysWidget() {
           className="w-full mt-5 font-bold text-slate-600 shadow-sm hover:bg-slate-50 hover:text-slate-900 border-slate-200 rounded-xl rounded-tr-xl"
           onClick={() => navigate('/directory')}
         >
-          <Gift className="w-4 h-4 mr-2 text-rose-500" />
+          <Gift className="w-4 h-4 me-2 text-rose-500" />
           Open Directory
-          <ChevronRight className={cn("w-4 h-4 ml-auto", isRTL && "rotate-180")} />
+          <ChevronRight className={cn("w-4 h-4 ms-auto", isRTL && "rotate-180")} />
         </Button>
       </CardContent>
     </Card>

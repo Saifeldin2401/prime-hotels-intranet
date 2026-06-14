@@ -116,7 +116,7 @@ export function HospitalityNewsWidget() {
                                                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-400 mt-auto pt-4 border-t border-slate-50">
                                                         <Globe className="w-3.5 h-3.5 group-hover:text-blue-500 transition-colors" />
                                                         <span className="group-hover:text-slate-700 transition-colors">{item.source}</span>
-                                                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 ml-auto opacity-0 group-hover:opacity-100 group-hover:text-blue-500 transition-all" />
+                                                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 ms-auto opacity-0 group-hover:opacity-100 group-hover:text-blue-500 transition-all" />
                                                     </div>
                                                 </div>
                                             </div>

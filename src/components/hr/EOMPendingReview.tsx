@@ -248,7 +248,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                                 className="bg-green-600 hover:bg-green-700 text-white flex-1"
                                                 size="sm"
                                             >
-                                                <CheckCircle className="h-4 w-4 mr-1" />
+                                                <CheckCircle className="h-4 w-4 me-1" />
                                                 Approve
                                             </Button>
                                             <Button
@@ -258,7 +258,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                                 size="sm"
                                                 className="border-red-200 text-red-600"
                                             >
-                                                <XCircle className="h-4 w-4 mr-1" />
+                                                <XCircle className="h-4 w-4 me-1" />
                                                 Reject
                                             </Button>
                                         </div>
@@ -337,7 +337,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                                     {selection.profile?.full_name?.charAt(0) || '?'}
                                                 </AvatarFallback>
                                             </Avatar>
-                                            <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white p-1 rounded-full shadow-sm">
+                                            <div className="absolute -bottom-1 -end-1 bg-amber-500 text-white p-1 rounded-full shadow-sm">
                                                 <Crown className="h-3 w-3" />
                                             </div>
                                         </div>
@@ -363,7 +363,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                                 </span>
                                             </div>
                                             <Badge variant="outline" className="text-amber-600 border-amber-200">
-                                                <Trophy className="h-3 w-3 mr-1" />
+                                                <Trophy className="h-3 w-3 me-1" />
                                                 Auto-Selected
                                             </Badge>
                                         </div>
@@ -395,7 +395,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                             {processing === selection.id ? (
                                                 <Clock className="h-4 w-4 animate-spin" />
                                             ) : (
-                                                <CheckCircle className="h-4 w-4 mr-1.5" />
+                                                <CheckCircle className="h-4 w-4 me-1.5" />
                                             )}
                                             Approve
                                         </Button>
@@ -406,7 +406,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                                             size="sm"
                                             className="border-red-200 text-red-600 hover:bg-red-50"
                                         >
-                                            <XCircle className="h-4 w-4 mr-1.5" />
+                                            <XCircle className="h-4 w-4 me-1.5" />
                                             Reject
                                         </Button>
                                     </div>

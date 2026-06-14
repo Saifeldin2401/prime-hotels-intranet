@@ -100,7 +100,7 @@ export default function MyPayslips() {
                             <CardDescription>{t('payroll.history_desc')}</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <ScrollArea className="h-[500px] w-full pr-4">
+                            <ScrollArea className="h-[500px] w-full pe-4">
                                 {isLoading ? (
                                     <div className="flex justify-center py-8">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -134,7 +134,7 @@ export default function MyPayslips() {
                                                 </div>
                                                 <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <Button variant="ghost" size="sm" onClick={() => handleDownload(payslip)}>
-                                                        <Download className="w-4 h-4 mr-2" />
+                                                        <Download className="w-4 h-4 me-2" />
                                                         {t('payroll.download')}
                                                     </Button>
                                                     <Button size="sm" variant="secondary" className="gap-1">

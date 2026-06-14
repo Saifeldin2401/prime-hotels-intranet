@@ -224,7 +224,7 @@ export function DocumentVersionUpload({
               size="sm"
               onClick={() => setCompareDialogOpen(true)}
             >
-              <ArrowLeftRight className="w-4 h-4 mr-1.5" />
+              <ArrowLeftRight className="w-4 h-4 me-1.5" />
               Compare
             </Button>
           )}
@@ -233,7 +233,7 @@ export function DocumentVersionUpload({
             className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             onClick={() => setUploadDialogOpen(true)}
           >
-            <Upload className="w-4 h-4 mr-1.5" />
+            <Upload className="w-4 h-4 me-1.5" />
             Upload New Version
           </Button>
         </div>
@@ -260,7 +260,7 @@ export function DocumentVersionUpload({
               size="sm"
               onClick={() => onDownload?.(currentVersion)}
             >
-              <Download className="w-4 h-4 mr-1.5" />
+              <Download className="w-4 h-4 me-1.5" />
               Download
             </Button>
           </div>
@@ -324,7 +324,7 @@ export function DocumentVersionUpload({
                         <span className="font-medium truncate">{version.fileName}</span>
                         {isCurrent && (
                           <Badge variant="outline" className="text-xs bg-green-100 text-green-700 border-green-200">
-                            <Check className="w-3 h-3 mr-1" />
+                            <Check className="w-3 h-3 me-1" />
                             Current
                           </Badge>
                         )}
@@ -369,7 +369,7 @@ export function DocumentVersionUpload({
                             <DropdownMenuItem
                               onClick={() => onRestore?.(version.id)}
                             >
-                              <RotateCcw className="w-4 h-4 mr-2" />
+                              <RotateCcw className="w-4 h-4 me-2" />
                               Restore This Version
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -424,7 +424,7 @@ export function DocumentVersionUpload({
                               className="flex-1"
                               onClick={() => onRestore?.(version.id)}
                             >
-                              <RotateCcw className="w-4 h-4 mr-1.5" />
+                              <RotateCcw className="w-4 h-4 me-1.5" />
                               Restore This Version
                             </Button>
                             <Button
@@ -433,7 +433,7 @@ export function DocumentVersionUpload({
                               className="flex-1"
                               onClick={() => onDownload?.(version)}
                             >
-                              <Download className="w-4 h-4 mr-1.5" />
+                              <Download className="w-4 h-4 me-1.5" />
                               Download
                             </Button>
                           </div>
@@ -548,9 +548,9 @@ export function DocumentVersionUpload({
               className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             >
               {isUploading ? (
-                <span className="animate-spin mr-2">◌</span>
+                <span className="animate-spin me-2">◌</span>
               ) : (
-                <Upload className="w-4 h-4 mr-2" />
+                <Upload className="w-4 h-4 me-2" />
               )}
               Upload Version
             </Button>
@@ -610,7 +610,7 @@ export function DocumentVersionUpload({
               disabled={!compareVersion1 || !compareVersion2 || compareVersion1 === compareVersion2}
               className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             >
-              <ArrowLeftRight className="w-4 h-4 mr-2" />
+              <ArrowLeftRight className="w-4 h-4 me-2" />
               Compare
             </Button>
           </DialogFooter>

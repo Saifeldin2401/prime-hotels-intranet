@@ -229,12 +229,12 @@ export function MFAVerificationDialog({ isOpen, onClose, onSuccess }: MFAVerific
           >
             {isVerifying ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-4 w-4 me-2 animate-spin" />
                 {t('mfa.verifying', { defaultValue: 'Verifying...' })}
               </>
             ) : (
               <>
-                <Lock className="h-4 w-4 mr-2" />
+                <Lock className="h-4 w-4 me-2" />
                 {t('mfa.verify', { defaultValue: 'Verify' })}
               </>
             )}

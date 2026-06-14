@@ -129,7 +129,7 @@ export function LeaveCoverageCalendar({ departmentId, className }: LeaveCoverage
                                         </div>
 
                                         {hasConflict && (
-                                            <AlertTriangle className="h-3 w-3 text-red-500 absolute bottom-1 right-1" />
+                                            <AlertTriangle className="h-3 w-3 text-red-500 absolute bottom-1 end-1" />
                                         )}
 
                                         {dayEvents.length > 0 && (

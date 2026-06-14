@@ -129,7 +129,7 @@ export function WelcomeHeader({
                   focusMode ? "bg-amber-50 text-amber-600 border-amber-200" : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-slate-700"
                 )}
               >
-                <Zap className={cn("w-3.5 h-3.5 mr-1.5", focusMode && "fill-amber-500 text-amber-500 animate-pulse")} />
+                <Zap className={cn("w-3.5 h-3.5 me-1.5", focusMode && "fill-amber-500 text-amber-500 animate-pulse")} />
                 {focusMode ? t("welcome_header.focus_mode_on", "Focus Mode On") : t("welcome_header.focus_mode", "Focus Mode")}
               </Button>
             </div>
@@ -154,7 +154,7 @@ export function WelcomeHeader({
                 className="mt-5 p-3.5 rounded-2xl bg-slate-50/50 border border-slate-100 shadow-sm max-w-sm hidden md:block group hover:shadow-md hover:border-blue-200/50 transition-all cursor-pointer overflow-hidden relative"
                 onClick={() => navigate(unreadCount > 0 ? '/notifications' : '/tasks')}
               >
-                <div className="absolute top-0 right-0 p-2 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform">
+                <div className="absolute top-0 end-0 p-2 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform">
                   <Sparkles className="w-12 h-12 text-blue-600" />
                 </div>
 

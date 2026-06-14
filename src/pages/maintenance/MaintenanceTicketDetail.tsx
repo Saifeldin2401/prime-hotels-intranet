@@ -125,7 +125,7 @@ export default function MaintenanceTicketDetail() {
         return (
             <div className="container mx-auto py-6">
                 <Button variant="ghost" onClick={() => navigate('/maintenance')} className="mb-4">
-                    <ArrowLeft className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} /> {t('back_to_dashboard')}
+                    <ArrowLeft className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} /> {t('back_to_dashboard')}
                 </Button>
                 <div className="text-center py-12 border rounded-lg bg-muted/20">
                     <h3 className="text-lg font-medium">{t('ticket_not_found')}</h3>
@@ -229,7 +229,7 @@ export default function MaintenanceTicketDetail() {
     return (
         <div className="container mx-auto py-6 space-y-6">
             <Button variant="ghost" onClick={() => navigate('/maintenance')} className="mb-2 group">
-                <ArrowLeft className={cn("w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1", isRTL ? "ml-2" : "mr-2")} /> {t('back_to_dashboard')}
+                <ArrowLeft className={cn("w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1", isRTL ? "ms-2" : "me-2")} /> {t('back_to_dashboard')}
             </Button>
 
             <div className="flex flex-col md:flex-row gap-6">
@@ -265,7 +265,7 @@ export default function MaintenanceTicketDetail() {
                                             </Button>
                                         )}
                                         <Button onClick={openManageDialog} size="sm" variant="outline">
-                                            <Settings className="w-4 h-4 mr-2" />
+                                            <Settings className="w-4 h-4 me-2" />
                                             {t_ext('manage', 'Manage')}</Button>
                                     </div>
                                 )}
@@ -335,7 +335,7 @@ export default function MaintenanceTicketDetail() {
                             <CardTitle className="text-lg">{t('comments')}</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
-                            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+                            <div className="space-y-4 max-h-[400px] overflow-y-auto pe-2">
                                 {ticket.comments && ticket.comments.length > 0 ? (
                                     ticket.comments.map(comment => (
                                         <div key={comment.id} className="flex gap-3">
@@ -504,7 +504,7 @@ export default function MaintenanceTicketDetail() {
                         <Button variant="outline" onClick={() => setManageOpen(false)} disabled={manageSaving}>
                             {t_ext('cancel', 'Cancel')}</Button>
                         <Button onClick={handleManageSave} disabled={manageSaving}>
-                            {manageSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                            {manageSaving ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : null}
                             {t_ext('save_changes', 'Save Changes')}</Button>
                     </DialogFooter>
                 </DialogContent>

@@ -112,7 +112,7 @@ export function MultiDepartmentSelector({
                         <span className="truncate flex-1">
                             {displayText}
                         </span>
-                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[400px] p-0" align="start">
@@ -137,10 +137,10 @@ export function MultiDepartmentSelector({
                                                 key={dept.id}
                                                 value={`${propertyName} - ${dept.name}`} // Combine for search
                                                 onSelect={() => handleSelect(dept.id)}
-                                                className="pl-8 relative cursor-pointer"
+                                                className="ps-8 relative cursor-pointer"
                                             >
                                                 <div className={cn(
-                                                    "absolute left-2 flex h-3.5 w-3.5 items-center justify-center border border-primary/30 rounded-sm",
+                                                    "absolute start-2 flex h-3.5 w-3.5 items-center justify-center border border-primary/30 rounded-sm",
                                                     value.includes(dept.id) ? "bg-primary border-primary text-primary-foreground" : "opacity-50"
                                                 )}>
                                                     {value.includes(dept.id) && <Check className="h-2.5 w-2.5" />}
@@ -163,12 +163,12 @@ export function MultiDepartmentSelector({
                         if (!dept) return null
                         const prop = properties?.find(p => p.id === dept.property_id)
                         return (
-                            <Badge key={deptId} variant="secondary" className="text-[10px] pl-2 pr-1 py-0.5 h-6 gap-1 group">
+                            <Badge key={deptId} variant="secondary" className="text-[10px] ps-2 pe-1 py-0.5 h-6 gap-1 group">
                                 <span className="opacity-70">{prop?.name.split(' ')[0]}:</span>
                                 {dept.name}
                                 <button
                                     onClick={(e) => removeValue(deptId, e)}
-                                    className="ml-1 hover:bg-black/10 rounded-full p-0.5 transition-colors"
+                                    className="ms-1 hover:bg-black/10 rounded-full p-0.5 transition-colors"
                                 >
                                     <X className="h-3 w-3 text-muted-foreground group-hover:text-destructive" />
                                 </button>

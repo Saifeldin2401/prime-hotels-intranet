@@ -146,7 +146,7 @@ export default function MessageDetail() {
       <div className="space-y-6">
         <PageHeader title={t('message_not_found')} description={t('message_not_found_desc')} />
         <Button onClick={() => navigate('/messaging')}>
-          <ArrowLeft className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+          <ArrowLeft className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
           {t('back_to_messages')}
         </Button>
       </div>
@@ -176,20 +176,20 @@ export default function MessageDetail() {
         actions={
           <div className="flex items-center gap-2">
             <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm" onClick={() => navigate('/messaging')}>
-              <ArrowLeft className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              <ArrowLeft className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('back')}
             </Button>
             <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm" onClick={() => setIsReplying(true)}>
-              <Reply className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              <Reply className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('reply')}
             </Button>
             <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm" onClick={() => setIsForwarding(true)}>
-              <Forward className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              <Forward className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('forward')}
             </Button>
             {message.status !== 'archived' && (
               <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm" onClick={handleArchive}>
-                <Archive className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Archive className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('archive')}
               </Button>
             )}
@@ -332,7 +332,7 @@ export default function MessageDetail() {
                 onClick={handleReply}
                 disabled={sendMessageMutation.isPending || !replyContent.trim()}
               >
-                <Send className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Send className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('send_reply')}
               </Button>
             </div>
@@ -370,7 +370,7 @@ export default function MessageDetail() {
                 onClick={handleForward}
                 disabled={sendMessageMutation.isPending || !forwardRecipient}
               >
-                <Send className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Send className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('forward')}
               </Button>
             </div>

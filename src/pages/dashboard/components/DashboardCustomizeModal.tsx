@@ -82,7 +82,7 @@ export function DashboardCustomizeModal({
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pr-2">
+                    <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pe-2">
                         {widgetConfig.map((widget) => {
                             const Icon = widget.icon
                             return (
@@ -118,7 +118,7 @@ export function DashboardCustomizeModal({
                     >
                         {isSaving ? (
                             <>
-                                <Spinner className="h-4 w-4 mr-2" />
+                                <Spinner className="h-4 w-4 me-2" />
                                 Resetting...
                             </>
                         ) : (

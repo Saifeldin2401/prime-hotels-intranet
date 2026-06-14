@@ -56,7 +56,7 @@ function TaskDetailList({ processId }: { processId: string }) {
                                 </p>
                                 {task.link_type === 'training' && (
                                     <Badge variant="secondary" className="text-[10px] h-4 px-1.5 bg-purple-100 text-purple-700 border-purple-200">
-                                        <GraduationCap className="h-2.5 w-2.5 mr-1" />
+                                        <GraduationCap className="h-2.5 w-2.5 me-1" />
                                         {t_ext('training_1', 'Training')}</Badge>
                                 )}
                             </div>
@@ -156,10 +156,10 @@ export default function OnboardingTracker() {
                             <div className="flex items-center justify-between">
                                 <CardTitle>{t('tracker.active_processes')}</CardTitle>
                                 <div className="relative w-64">
-                                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                    <Search className="absolute start-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                     <Input
                                         placeholder={t('tracker.search_placeholder')}
-                                        className="pl-8"
+                                        className="ps-8"
                                         value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                     />

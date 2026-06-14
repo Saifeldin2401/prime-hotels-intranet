@@ -187,7 +187,7 @@ export default function JobPostingDetail() {
                 actions={
                     <div className="flex items-center gap-2">
                         <Button onClick={() => setReferralJob(true)}>
-                            <UserPlus className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                            <UserPlus className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} />
                             {t('referrals.refer_candidate', { defaultValue: 'Refer Candidate' })}
                         </Button>
 
@@ -195,7 +195,7 @@ export default function JobPostingDetail() {
                             <>
                                 <Link to={`/jobs/${id}/edit`}>
                                     <Button variant="outline">
-                                        <Edit className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                        <Edit className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} />
                                         {t('edit')}
                                     </Button>
                                 </Link>
@@ -204,7 +204,7 @@ export default function JobPostingDetail() {
                                     className="text-red-600 hover:text-red-700"
                                     onClick={() => setDeleteJob(true)}
                                 >
-                                    <Trash2 className={`h-4 w-4 ${isRTL ? 'ml-2' : 'mr-2'}`} />
+                                    <Trash2 className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} />
                                     {t('delete')}
                                 </Button>
                             </>
@@ -325,7 +325,7 @@ export default function JobPostingDetail() {
                                                                         size="sm"
                                                                         onClick={() => updateApplicationMutation.mutate({ appId: app.id, status: 'shortlisted' })}
                                                                     >
-                                                                        <CheckCircle className={`h-4 w-4 ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                                                                        <CheckCircle className={`h-4 w-4 ${isRTL ? 'ms-1' : 'me-1'}`} />
                                                                         {t('shortlist')}
                                                                     </Button>
                                                                     <Button
@@ -333,7 +333,7 @@ export default function JobPostingDetail() {
                                                                         variant="outline"
                                                                         onClick={() => updateApplicationMutation.mutate({ appId: app.id, status: 'rejected' })}
                                                                     >
-                                                                        <XCircle className={`h-4 w-4 ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                                                                        <XCircle className={`h-4 w-4 ${isRTL ? 'ms-1' : 'me-1'}`} />
                                                                         {t('reject')}
                                                                     </Button>
                                                                 </>
@@ -380,9 +380,9 @@ export default function JobPostingDetail() {
                                                                     disabled={cvLoadingId === app.id}
                                                                 >
                                                                     {cvLoadingId === app.id ? (
-                                                                        <Loader2 className={`h-4 w-4 animate-spin ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                                                                        <Loader2 className={`h-4 w-4 animate-spin ${isRTL ? 'ms-1' : 'me-1'}`} />
                                                                     ) : (
-                                                                        <FileText className={`h-4 w-4 ${isRTL ? 'ml-1' : 'mr-1'}`} />
+                                                                        <FileText className={`h-4 w-4 ${isRTL ? 'ms-1' : 'me-1'}`} />
                                                                     )}
                                                                     {t('viewCv')}
                                                                 </Button>

@@ -52,10 +52,10 @@ export const BuilderPreview = ({ title, description, sections }: BuilderPreviewP
                             {sections.map((section) => (
                                 <div key={section.id} className="mb-10 p-6 bg-slate-50/50 rounded-xl border border-slate-100">
                                     <h2 className={`text-2xl font-bold mb-3 text-hotel-navy flex items-center ${isRTL ? 'flex-row-reverse' : ''}`}>
-                                        <span className={cn("w-2 h-8 bg-hotel-gold rounded-full", isRTL ? "ml-3" : "mr-3")}></span>
+                                        <span className={cn("w-2 h-8 bg-hotel-gold rounded-full", isRTL ? "ms-3" : "me-3")}></span>
                                         {section.title}
                                     </h2>
-                                    {section.description && <p className={cn("text-gray-600 mb-6", isRTL ? "pr-5" : "pl-5")}>{section.description}</p>}
+                                    {section.description && <p className={cn("text-gray-600 mb-6", isRTL ? "pe-5" : "ps-5")}>{section.description}</p>}
 
                                     <div className="space-y-6 mt-6">
                                         {section.items.map((item) => (

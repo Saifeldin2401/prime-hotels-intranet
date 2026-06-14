@@ -245,7 +245,7 @@ export default function TemplateEditor() {
             )}
             <div className="flex items-center gap-4">
                 <Button variant="ghost" onClick={() => navigate('/admin/onboarding/templates')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" /> {t('actions.back')}
+                    <ArrowLeft className="me-2 h-4 w-4" /> {t('actions.back')}
                 </Button>
                 <div>
                     <h2 className="text-3xl font-bold tracking-tight">{isEditMode ? t('editor.edit_title') : t('editor.create_title')}</h2>
@@ -320,7 +320,7 @@ export default function TemplateEditor() {
                                             {jobTitle
                                                 ? jobTitlesList?.find((t) => t.title === jobTitle)?.title || jobTitle
                                                 : t('editor.select_job')}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[400px] p-0" align="start">
@@ -342,7 +342,7 @@ export default function TemplateEditor() {
                                                             <div className="w-full flex items-center px-2 py-1.5">
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "me-2 h-4 w-4",
                                                                         item.title === jobTitle
                                                                             ? "opacity-100"
                                                                             : "opacity-0"
@@ -379,7 +379,7 @@ export default function TemplateEditor() {
                             {requiredTrainingIds.map(id => {
                                 const module = trainingModules?.find(m => m.id === id)
                                 return (
-                                    <Badge key={id} variant="secondary" className="pl-2 pr-1 py-1 gap-1">
+                                    <Badge key={id} variant="secondary" className="ps-2 pe-1 py-1 gap-1">
                                         {module?.title || id}
                                         <Button
                                             type="button"
@@ -426,7 +426,7 @@ export default function TemplateEditor() {
                     <div className="flex items-center justify-between">
                         <h3 className="text-lg font-medium">{t('editor.tasks_title')}</h3>
                         <Button type="button" variant="outline" size="sm" onClick={handleAddTask}>
-                            <Plus className="mr-2 h-4 w-4" /> {t('actions.add_task')}
+                            <Plus className="me-2 h-4 w-4" /> {t('actions.add_task')}
                         </Button>
                     </div>
 
@@ -572,7 +572,7 @@ export default function TemplateEditor() {
                 <div className="flex justify-end gap-4">
                     <Button type="button" variant="outline" onClick={() => navigate('/admin/onboarding/templates')}>{t('actions.cancel')}</Button>
                     <Button type="submit" disabled={isCreating || isUpdating}>
-                        {(isCreating || isUpdating) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        {(isCreating || isUpdating) && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
                         {isEditMode ? t('actions.update_template') : t('actions.save_template')}
                     </Button>
                 </div>

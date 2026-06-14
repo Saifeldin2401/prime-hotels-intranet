@@ -220,7 +220,7 @@ export function AIOnboardingPathGenerator({
                                                     {propertyName}
                                                 </SelectLabel>
                                                 {depts.map(dept => (
-                                                    <SelectItem key={dept.id} value={dept.name} className="pl-6">
+                                                    <SelectItem key={dept.id} value={dept.name} className="ps-6">
                                                         {dept.name}
                                                     </SelectItem>
                                                 ))}
@@ -287,7 +287,7 @@ export function AIOnboardingPathGenerator({
                         </Button>
                         {path && (
                             <Button variant="outline" onClick={clearPath}>
-                                <RefreshCw className="h-4 w-4 mr-1" />
+                                <RefreshCw className="h-4 w-4 me-1" />
                                 Clear
                             </Button>
                         )}
@@ -355,7 +355,7 @@ export function AIOnboardingPathGenerator({
 
                         {/* Phases */}
                         <ScrollArea className="h-[500px]">
-                            <div className="space-y-4 pr-4">
+                            <div className="space-y-4 pe-4">
                                 {path.phases.map((phase, phaseIndex) => (
                                     <Card key={phaseIndex}>
                                         <CardHeader className="pb-3">

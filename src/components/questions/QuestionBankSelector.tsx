@@ -143,12 +143,12 @@ export function QuestionBankSelector({
             {/* Filters */}
             <div className="flex flex-wrap gap-3 items-center">
                 <div className="relative flex-1 min-w-[200px]">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                    <Search className="absolute start-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                     <Input
                         placeholder="Search questions..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-9"
+                        className="ps-9"
                     />
                 </div>
                 <Select value={difficultyFilter} onValueChange={(v) => setDifficultyFilter(v as any)}>

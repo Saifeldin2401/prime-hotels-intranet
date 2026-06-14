@@ -115,7 +115,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
         return (
           <Card key={item.id} className="relative bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow duration-300">
             {/* Top Accent Line */}
-            <div className={cn("absolute top-0 left-0 right-0 h-1 opacity-80", typeStyleClass)} />
+            <div className={cn("absolute top-0 start-0 end-0 h-1 opacity-80", typeStyleClass)} />
 
             <CardHeader className="pb-3 pt-6 px-6">
               <div className="flex items-start justify-between">
@@ -300,7 +300,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                                   <button className="text-xs font-bold text-slate-400 hover:text-blue-600 transition-colors">{t('social.like', 'Like')}</button>
                                   <button className="text-xs font-bold text-slate-400 hover:text-slate-700 transition-colors">{t('social.reply', 'Reply')}</button>
                                   {Object.keys(comment.reactions).length > 0 && (
-                                    <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm ml-auto">
+                                    <div className="flex items-center gap-1.5 bg-white px-2 py-0.5 rounded-full border border-slate-200 shadow-sm ms-auto">
                                       <Icons.ThumbsUp className="h-3 w-3 text-blue-500 fill-current" />
                                       <span className="text-[10px] font-bold text-slate-600">{Object.values(comment.reactions).reduce((a, b) => a + b, 0)}</span>
                                     </div>
@@ -326,7 +326,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                           placeholder={t('social.write_comment', 'Write a comment...')}
                           value={newComment[item.id] || ''}
                           onChange={(e) => setNewComment(prev => ({ ...prev, [item.id]: e.target.value }))}
-                          className="min-h-[50px] resize-none pr-24 rounded-xl border-slate-200 focus-visible:ring-blue-500 shadow-sm bg-slate-50 focus:bg-white transition-colors"
+                          className="min-h-[50px] resize-none pe-24 rounded-xl border-slate-200 focus-visible:ring-blue-500 shadow-sm bg-slate-50 focus:bg-white transition-colors"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' && !e.shiftKey) {
                               e.preventDefault();
@@ -334,7 +334,7 @@ export function SocialFeed({ user, feedItems, onReact, onComment, onShare }: Soc
                             }
                           }}
                         />
-                        <div className="absolute right-2 bottom-2">
+                        <div className="absolute end-2 bottom-2">
                           <Button
                             size="sm"
                             className="h-8 shadow-sm font-bold tracking-wide rounded-lg"

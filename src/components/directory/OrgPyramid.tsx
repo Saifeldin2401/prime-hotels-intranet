@@ -196,7 +196,7 @@ export function OrgPyramid({
             <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
                     <Badge variant="secondary" className="text-sm px-3 py-1">
-                        <Users className="h-4 w-4 mr-1.5" />
+                        <Users className="h-4 w-4 me-1.5" />
                         {hierarchy.totalEmployees} {t('employees', 'Employees')}
                     </Badge>
 
@@ -681,7 +681,7 @@ function DepartmentCard({
                                                     initial={{ height: 0, opacity: 0 }}
                                                     animate={{ height: 'auto', opacity: 1 }}
                                                     exit={{ height: 0, opacity: 0 }}
-                                                    className="flex flex-wrap gap-2 pl-6"
+                                                    className="flex flex-wrap gap-2 ps-6"
                                                 >
                                                     {roleGroup.employees.map(emp => (
                                                         <OrgNode

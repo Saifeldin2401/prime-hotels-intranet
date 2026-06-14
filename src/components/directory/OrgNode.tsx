@@ -133,12 +133,12 @@ export function OrgNode({
             {/* Header with gradient */}
             <div className={cn("h-12 relative", styles.bg)}>
                 {/* Role icon badge */}
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 end-2">
                     <Icon className="h-4 w-4 text-white/80" />
                 </div>
 
                 <Avatar className={cn(
-                    "h-16 w-16 absolute -bottom-8 left-1/2 -translate-x-1/2",
+                    "h-16 w-16 absolute -bottom-8 start-1/2 -translate-x-1/2",
                     "border-4 border-white shadow-md"
                 )}>
                     {!imageError && employee.avatar_url ? (

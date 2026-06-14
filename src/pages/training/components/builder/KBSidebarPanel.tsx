@@ -37,7 +37,7 @@ export function KBSidebarPanel({
   const queryClient = useQueryClient()
 
   return (
-    <div className="fixed inset-x-0 sm:inset-x-auto sm:right-0 top-16 bottom-0 w-full sm:w-80 z-40 shadow-xl border-l bg-white">
+    <div className="fixed inset-x-0 sm:inset-x-auto sm:end-0 top-16 bottom-0 w-full sm:w-80 z-40 shadow-xl border-l bg-white">
       <KnowledgeBaseSidebar
         moduleId={moduleId || undefined}
         moduleTopic={title}

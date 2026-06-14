@@ -247,7 +247,7 @@ export default function PropertyDepartments() {
                             onClick={handleAdd}
                             disabled={createDepartment.isPending || !selectedDept}
                         >
-                            <Plus className="w-4 h-4 mr-2" />
+                            <Plus className="w-4 h-4 me-2" />
                             {t('properties.add_dept')}
                         </Button>
                     </CardContent>

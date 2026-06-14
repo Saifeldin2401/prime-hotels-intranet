@@ -117,7 +117,7 @@ export function Sidebar() {
                      If title exists and it's not 'home', maybe show label? 
                      Design preference: 'home' usually silent. 'settings' maybe silent.
                  */}
-                {group.config.title && group.config.id !== 'home' && group.config.id !== 'settings' && (
+                {group.config.title && group.config.id !== 'my_space' && (
                   <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     {t(group.config.title)}
                   </h3>
@@ -144,7 +144,7 @@ export function Sidebar() {
                       </motion.div>
                       <span className="flex-1">{t(item.title)}</span>
                       {item.badgeCount !== undefined && item.badgeCount > 0 && (
-                        <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold ring-2 ring-background">
+                        <span className="absolute -top-1 -end-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white font-bold ring-2 ring-background">
                           {item.badgeCount}
                         </span>
                       )}

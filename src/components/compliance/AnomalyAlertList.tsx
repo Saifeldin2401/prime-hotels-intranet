@@ -86,7 +86,7 @@ export function AnomalyAlertList({
 
   return (
     <ScrollArea className="h-[500px]">
-      <div className="space-y-3 pr-4">
+      <div className="space-y-3 pe-4">
         {allAlerts.map((alert, index) => (
           <Alert
             key={index}

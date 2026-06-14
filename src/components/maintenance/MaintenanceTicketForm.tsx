@@ -147,7 +147,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
           </h1>
         </div>
         <Button variant="ghost" onClick={onClose}>
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="w-4 h-4 me-2" />
           {t('back_to_dashboard', { defaultValue: 'Back' })}
         </Button>
       </div>
@@ -309,7 +309,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
                     {t('submit_ticket.attachments_note', { defaultValue: 'Add photos of the issue (optional)' })}
                   </p>
                   <Button type="button" variant="outline" size="sm">
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 me-2" />
                     {t('submit_ticket.upload_files', { defaultValue: 'Upload Photos' })}
                   </Button>
                 </div>

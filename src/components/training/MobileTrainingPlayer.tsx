@@ -306,7 +306,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                             </AnimatePresence>
 
                             {/* Navigation Controls */}
-                            <div className="fixed bottom-20 left-0 right-0 px-4 z-20">
+                            <div className="fixed bottom-20 start-0 end-0 px-4 z-20">
                                 <div className="flex items-center justify-between gap-3">
                                     <Button
                                         variant="outline"
@@ -315,7 +315,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                         disabled={activeBlockIndex === 0}
                                         onClick={handlePrevious}
                                     >
-                                        <ChevronLeft className="h-5 w-5 mr-2" />
+                                        <ChevronLeft className="h-5 w-5 me-2" />
                                         {t('previous')}
                                     </Button>
 
@@ -325,7 +325,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                             className="flex-1 touch-target-lg bg-primary"
                                             onClick={handleComplete}
                                         >
-                                            <Trophy className="h-5 w-5 mr-2" />
+                                            <Trophy className="h-5 w-5 me-2" />
                                             {t('complete')}
                                         </Button>
                                     ) : (
@@ -335,7 +335,7 @@ export function MobileTrainingPlayer({ moduleId, assignmentId, onComplete }: Mob
                                             onClick={handleNext}
                                         >
                                             {t('next')}
-                                            <ChevronRight className="h-5 w-5 ml-2" />
+                                            <ChevronRight className="h-5 w-5 ms-2" />
                                         </Button>
                                     )}
                                 </div>
@@ -764,7 +764,7 @@ function CompletionModal({ isOpen, onClose, module }: CompletionModalProps) {
                     </Button>
                     {module.certificate_enabled && (
                         <Button variant="outline" className="w-full">
-                            <Download className="h-4 w-4 mr-2" />
+                            <Download className="h-4 w-4 me-2" />
                             View Certificate
                         </Button>
                     )}

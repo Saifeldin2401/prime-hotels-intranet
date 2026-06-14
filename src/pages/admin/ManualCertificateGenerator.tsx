@@ -205,12 +205,12 @@ export default function ManualCertificateGenerator() {
                             >
                                 {isGenerating ? (
                                     <>
-                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                         {t('manual_certificates.actions.generating')}
                                     </>
                                 ) : (
                                     <>
-                                        <Award className="mr-2 h-4 w-4 text-hotel-gold" />
+                                        <Award className="me-2 h-4 w-4 text-hotel-gold" />
                                         {t('manual_certificates.actions.generate')}
                                     </>
                                 )}

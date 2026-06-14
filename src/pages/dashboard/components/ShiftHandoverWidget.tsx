@@ -153,13 +153,13 @@ export function ShiftHandoverWidget() {
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
                                 placeholder={t('handover.placeholder', 'Important notes for next shift...')}
-                                className="min-h-[80px] bg-white border-slate-200 text-xs font-semibold focus:ring-1 focus:ring-slate-400 rounded-xl resize-none pr-10"
+                                className="min-h-[80px] bg-white border-slate-200 text-xs font-semibold focus:ring-1 focus:ring-slate-400 rounded-xl resize-none pe-10"
                             />
                             <Button
                                 type="submit"
                                 size="icon"
                                 disabled={!message.trim() || createLog.isPending}
-                                className="absolute bottom-2 right-2 h-7 w-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 shadow-sm"
+                                className="absolute bottom-2 end-2 h-7 w-7 rounded-lg bg-indigo-600 hover:bg-indigo-700 shadow-sm"
                                 aria-label={t('accessibility.send_handover', 'Send handover message')}
                             >
                                 <Send className="w-3.5 h-3.5" />

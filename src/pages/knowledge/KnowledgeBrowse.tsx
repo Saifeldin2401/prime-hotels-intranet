@@ -130,7 +130,7 @@ export default function KnowledgeBrowse() {
                                 {t('search_page.filters.all_departments')} {/* Placeholder for Active Dept Name if available, or just generic */}
                                 <Link
                                     to="/knowledge/browse"
-                                    className="ml-1 hover:text-red-600"
+                                    className="ms-1 hover:text-red-600"
                                 >
                                     ×
                                 </Link>
@@ -141,7 +141,7 @@ export default function KnowledgeBrowse() {
                                 {t(`content_types.${typeFilter}` as any)}
                                 <Link
                                     to="/knowledge/browse"
-                                    className="ml-1 hover:text-red-600"
+                                    className="ms-1 hover:text-red-600"
                                 >
                                     ×
                                 </Link>

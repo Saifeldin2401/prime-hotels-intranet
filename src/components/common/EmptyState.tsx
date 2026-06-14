@@ -151,7 +151,7 @@ export function EmptyState({
                 <div className={cn('flex items-center gap-3', compact ? 'mt-4' : 'mt-6')}>
                     {action && (
                         <Button onClick={action.onClick} size={compact ? 'sm' : 'default'}>
-                            {action.icon && <action.icon className="w-4 h-4 mr-2" />}
+                            {action.icon && <action.icon className="w-4 h-4 me-2" />}
                             {action.label}
                         </Button>
                     )}

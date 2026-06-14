@@ -132,7 +132,7 @@ export function RightPanel({
               className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
               onClick={openAIGeneratorForModule}
             >
-              <FileQuestion className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              <FileQuestion className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('builder.generateQuiz')}
             </Button>
             <Button
@@ -140,7 +140,7 @@ export function RightPanel({
               className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
               onClick={() => setShowSmartWizard(true)}
             >
-              <Layers className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+              <Layers className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
               {t('builder.smartWizard')}
             </Button>
           </CardContent>

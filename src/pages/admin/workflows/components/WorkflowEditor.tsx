@@ -580,7 +580,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                 <div className="flex items-center justify-between">
                     <h3 className="text-lg font-medium">{t_ext('workflow_steps', 'Workflow Steps')}</h3>
                     <Button type="button" variant="outline" size="sm" onClick={handleAddStep}>
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-4 w-4 me-2" />
                         {t_ext('add_step', 'Add Step')}</Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Steps are actions performed in order when the workflow runs.</p>
@@ -725,9 +725,9 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                 <Button variant="outline" onClick={onClose}>{t_ext('cancel', 'Cancel')}</Button>
                 <Button onClick={handleSave} disabled={updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending}>
                     {updateWorkflowMutation.isPending || updateStepsMutation.isPending || createWorkflowMutation.isPending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        <Loader2 className="me-2 h-4 w-4 animate-spin" />
                     ) : (
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="me-2 h-4 w-4" />
                     )}
                     {t_ext('save_workflow', 'Save Workflow')}</Button>
             </div>

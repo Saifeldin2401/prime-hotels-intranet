@@ -181,7 +181,7 @@ export function InlineQuizBuilder({
                         <HelpCircle className="h-10 w-10 mx-auto text-gray-300 mb-3" />
                         <p className="text-gray-500 mb-4">{t('inlineQuiz.noQuestions')}</p>
                         <Button onClick={handleAddQuestion}>
-                            <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                             {t('inlineQuiz.addQuestion')}
                         </Button>
                     </div>
@@ -210,7 +210,7 @@ export function InlineQuizBuilder({
                                     )}>
                                         {t(`inlineQuiz.${question.difficulty_level}`)}
                                     </Badge>
-                                    <span className={cn("text-xs text-gray-400", isRTL ? "mr-auto" : "ml-auto")}>
+                                    <span className={cn("text-xs text-gray-400", isRTL ? "me-auto" : "ms-auto")}>
                                         {question.points} {t('inlineQuiz.pts')}
                                     </span>
                                 </div>
@@ -245,11 +245,11 @@ export function InlineQuizBuilder({
             {questions.length > 0 && (
                 <div className={`flex gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <Button onClick={handleAddQuestion}>
-                        <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                        <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                         {t('inlineQuiz.addQuestion')}
                     </Button>
                     <Button variant="outline" onClick={() => setShowImportDialog(true)}>
-                        <BookOpen className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                        <BookOpen className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                         {t('inlineQuiz.importFromBank')}
                     </Button>
                     {sopContent && (
@@ -260,7 +260,7 @@ export function InlineQuizBuilder({
                                 setShowAddDialog(true)
                             }}
                         >
-                            <Sparkles className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                             {t('inlineQuiz.generateWithAi')}
                         </Button>
                     )}
@@ -385,7 +385,7 @@ export function InlineQuizBuilder({
                                             onClick={addOption}
                                             className={isRTL ? 'flex-row-reverse' : ''}
                                         >
-                                            <Plus className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                                            <Plus className={cn("h-4 w-4", isRTL ? "ms-1" : "me-1")} />
                                             {t('inlineQuiz.addOption', 'Add Option')}
                                         </Button>
                                     </div>
@@ -472,7 +472,7 @@ export function InlineQuizBuilder({
                                     {t('cancel')}
                                 </Button>
                                 <Button onClick={handleSaveQuestion}>
-                                    <Save className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                    <Save className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                                     {t('inlineQuiz.saveQuestion')}
                                 </Button>
                             </div>

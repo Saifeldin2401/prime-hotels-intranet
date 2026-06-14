@@ -159,7 +159,7 @@ export function WorkflowList() {
                     <p className="text-xs text-muted-foreground">Create, activate, and run automated workflows.</p>
                 </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 me-2" />
                     {t_ext('new_workflow', 'New Workflow')}</Button>
             </div>
 
@@ -234,7 +234,7 @@ export function WorkflowList() {
                                             size="sm"
                                             onClick={() => setEditingWorkflow(workflow)}
                                         >
-                                            <Settings2 className="h-4 w-4 mr-2" />
+                                            <Settings2 className="h-4 w-4 me-2" />
                                             {t_ext('edit', 'Edit')}</Button>
                                         <Button
                                             variant="outline"
@@ -243,9 +243,9 @@ export function WorkflowList() {
                                             disabled={executingId === workflow.id}
                                         >
                                             {executingId === workflow.id ? (
-                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                <Loader2 className="h-4 w-4 animate-spin me-2" />
                                             ) : (
-                                                <Play className="h-4 w-4 mr-2" />
+                                                <Play className="h-4 w-4 me-2" />
                                             )}
                                             {t_ext('run', 'Run')}</Button>
                                         <Button

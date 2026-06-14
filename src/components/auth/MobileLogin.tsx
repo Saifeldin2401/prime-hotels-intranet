@@ -111,12 +111,12 @@ export function MobileLogin() {
                             {t('email', 'Email')}
                         </Label>
                         <div className="relative">
-                            <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+                            <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
                             <Input
                                 id="email"
                                 type="email"
                                 placeholder="name@primehotels.com"
-                                className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                                className="ps-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
                                 {...register('email')}
                             />
                         </div>
@@ -131,18 +131,18 @@ export function MobileLogin() {
                             {t('password', 'Password')}
                         </Label>
                         <div className="relative">
-                            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+                            <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
                             <Input
                                 id="password"
                                 type={showPassword ? 'text' : 'password'}
                                 placeholder="••••••••"
-                                className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
+                                className="ps-10 pe-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
                                 {...register('password')}
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40"
+                                className="absolute end-3 top-1/2 -translate-y-1/2 text-white/40"
                             >
                                 {showPassword ? (
                                     <EyeOff className="h-5 w-5" />
@@ -188,7 +188,7 @@ export function MobileLogin() {
                             className="w-full h-12 border-white/20 text-white hover:bg-white/10"
                             onClick={handleBiometricLogin}
                         >
-                            <Fingerprint className="h-5 w-5 mr-2" />
+                            <Fingerprint className="h-5 w-5 me-2" />
                             {t('biometric_login', 'Biometric Login')}
                         </Button>
                     )}

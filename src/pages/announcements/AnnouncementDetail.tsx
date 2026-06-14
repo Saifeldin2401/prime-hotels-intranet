@@ -238,7 +238,7 @@ export default function AnnouncementDetail() {
                     title={t('detail.not_found', 'Announcement Not Found')}
                     actions={
                         <Button variant="outline" onClick={() => navigate('/announcements')}>
-                            <ArrowLeft className="w-4 h-4 mr-2" />
+                            <ArrowLeft className="w-4 h-4 me-2" />
                             {t('actions.back', 'Back')}
                         </Button>
                     }
@@ -272,12 +272,12 @@ export default function AnnouncementDetail() {
                     <div className="flex items-center gap-2">
                         {canViewAnalytics && (
                             <Button variant="outline" onClick={() => navigate(`/announcements/${id}/analytics`)}>
-                                <BarChart2 className="w-4 h-4 mr-2" />
+                                <BarChart2 className="w-4 h-4 me-2" />
                                 View Analytics
                             </Button>
                         )}
                         <Button variant="outline" onClick={() => navigate('/announcements')}>
-                            <ArrowLeft className={`w-4 h-4 ${isRTL ? 'ml-2 rotate-180' : 'mr-2'}`} />
+                            <ArrowLeft className={`w-4 h-4 ${isRTL ? 'ms-2 rotate-180' : 'me-2'}`} />
                             {t('actions.back', 'Back')}
                         </Button>
                     </div>
@@ -291,7 +291,7 @@ export default function AnnouncementDetail() {
                         <div className="flex items-center gap-3">
                             {announcement.pinned && (
                                 <Badge variant="secondary" className="bg-hotel-gold/20 text-hotel-gold border-hotel-gold/30">
-                                    <Pin className="w-3 h-3 mr-1" />
+                                    <Pin className="w-3 h-3 me-1" />
                                     {t('status.pinned', 'Pinned')}
                                 </Badge>
                             )}
@@ -300,7 +300,7 @@ export default function AnnouncementDetail() {
                         <div className="flex items-center gap-2">
                             {isRead && (
                                 <Badge variant="outline" className="text-green-600 border-green-600/30">
-                                    <CheckCircle className="w-3 h-3 mr-1" />
+                                    <CheckCircle className="w-3 h-3 me-1" />
                                     {t('status.read', 'Read')}
                                 </Badge>
                             )}
@@ -386,13 +386,13 @@ export default function AnnouncementDetail() {
                                                 className="mt-3"
                                                 size="sm"
                                             >
-                                                {acknowledgeMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                                <ThumbsUp className="w-4 h-4 mr-2" />
+                                                {acknowledgeMutation.isPending && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                                                <ThumbsUp className="w-4 h-4 me-2" />
                                                 {t('detail.acknowledge_button', 'I Acknowledge')}
                                             </Button>
                                         ) : (
                                             <Badge variant="default" className="mt-3 bg-green-600">
-                                                <CheckCircle className="w-3 h-3 mr-1" />
+                                                <CheckCircle className="w-3 h-3 me-1" />
                                                 {t('detail.acknowledged', 'Acknowledged')}
                                             </Badge>
                                         )}
@@ -440,8 +440,8 @@ export default function AnnouncementDetail() {
                                 onClick={() => markAsReadMutation.mutate()}
                                 disabled={markAsReadMutation.isPending}
                             >
-                                {markAsReadMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                <CheckCircle className="w-4 h-4 mr-2" />
+                                {markAsReadMutation.isPending && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                                <CheckCircle className="w-4 h-4 me-2" />
                                 {t('actions.markRead', 'Mark as Read')}
                             </Button>
                         </div>
@@ -479,8 +479,8 @@ export default function AnnouncementDetail() {
                                     onClick={() => addCommentMutation.mutate(newComment)}
                                     disabled={!newComment.trim() || addCommentMutation.isPending}
                                 >
-                                    {addCommentMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                                    <Send className="w-4 h-4 mr-2" />
+                                    {addCommentMutation.isPending && <Loader2 className="w-4 h-4 me-2 animate-spin" />}
+                                    <Send className="w-4 h-4 me-2" />
                                     {t('detail.post_comment', 'Post')}
                                 </Button>
                             </div>

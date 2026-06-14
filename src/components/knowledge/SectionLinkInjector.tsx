@@ -43,7 +43,7 @@ export function SectionLinkInjector({ containerRef, isActive }: SectionLinkInjec
 
                 // Create container for the button
                 const buttonContainer = document.createElement('span')
-                buttonContainer.className = 'section-link-wrapper inline-flex items-center ml-2'
+                buttonContainer.className = 'section-link-wrapper inline-flex items-center ms-2'
 
                 // Append to heading
                 heading.appendChild(buttonContainer)

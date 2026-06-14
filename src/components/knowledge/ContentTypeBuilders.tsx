@@ -274,10 +274,10 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                                 {/* Play button overlay */}
                                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/40 transition-colors">
                                     <div className="w-16 h-16 rounded-full bg-red-600 flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
-                                        <Play className="h-8 w-8 text-white fill-white ml-1" />
+                                        <Play className="h-8 w-8 text-white fill-white ms-1" />
                                     </div>
                                 </div>
-                                <div className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                                <div className="absolute bottom-3 start-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
                                     Click to watch on YouTube
                                 </div>
                             </div>
@@ -300,7 +300,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             >
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
                                     <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                        <Play className="h-8 w-8 text-white fill-white ml-1" />
+                                        <Play className="h-8 w-8 text-white fill-white ms-1" />
                                     </div>
                                     <p className="text-sm font-medium">Vimeo Video</p>
                                     <p className="text-xs opacity-80 mt-1">Click to watch</p>
@@ -386,10 +386,10 @@ export function ChecklistBuilder({ items, onChange }: ChecklistBuilderProps) {
                     <CardTitle className="text-base flex items-center gap-2">
                         <CheckSquare className="h-5 w-5 text-orange-500" />
                         Checklist Items
-                        <Badge variant="secondary" className="ml-2">{items.length}</Badge>
+                        <Badge variant="secondary" className="ms-2">{items.length}</Badge>
                     </CardTitle>
                     <Button type="button" size="sm" onClick={addItem}>
-                        <Plus className="h-4 w-4 mr-1" />
+                        <Plus className="h-4 w-4 me-1" />
                         Add Item
                     </Button>
                 </div>
@@ -535,10 +535,10 @@ export function FAQBuilder({ items, onChange }: FAQBuilderProps) {
                     <CardTitle className="text-base flex items-center gap-2">
                         <HelpCircle className="h-5 w-5 text-yellow-500" />
                         FAQ Questions
-                        <Badge variant="secondary" className="ml-2">{items.length}</Badge>
+                        <Badge variant="secondary" className="ms-2">{items.length}</Badge>
                     </CardTitle>
                     <Button type="button" size="sm" onClick={addItem}>
-                        <Plus className="h-4 w-4 mr-1" />
+                        <Plus className="h-4 w-4 me-1" />
                         Add Question
                     </Button>
                 </div>
@@ -716,7 +716,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                     <CardTitle className="text-base flex items-center gap-2">
                         <Eye className="h-5 w-5 text-purple-500" />
                         Visual Content
-                        <Badge variant="secondary" className="ml-2">{images.length} images</Badge>
+                        <Badge variant="secondary" className="ms-2">{images.length} images</Badge>
                     </CardTitle>
                 </div>
             </CardHeader>
@@ -776,7 +776,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                                         alt={image.caption}
                                         className="w-full h-full object-contain"
                                     />
-                                    <div className="absolute top-2 right-2 flex gap-1">
+                                    <div className="absolute top-2 end-2 flex gap-1">
                                         <Button
                                             type="button"
                                             size="icon"

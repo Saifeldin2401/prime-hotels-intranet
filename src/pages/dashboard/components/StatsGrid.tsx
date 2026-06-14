@@ -97,7 +97,7 @@ export function StatsGrid({ stats, isLoading }: StatsGridProps) {
 
                 {/* Subtle ambient corner glow */}
                 <div className={cn(
-                  "absolute -right-8 -top-8 w-32 h-32 rounded-full blur-[50px] opacity-5 group-hover:opacity-15 transition-opacity duration-700",
+                  "absolute -end-8 -top-8 w-32 h-32 rounded-full blur-[50px] opacity-5 group-hover:opacity-15 transition-opacity duration-700",
                   style.glow
                 )} />
 

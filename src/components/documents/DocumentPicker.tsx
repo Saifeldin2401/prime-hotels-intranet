@@ -115,7 +115,7 @@ function DocumentPickerItem({
         {showCheckbox && (
           <div
             className={cn(
-              'absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
+              'absolute top-2 end-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
               isSelected ? 'bg-primary border-primary' : 'bg-white/90 border-gray-300'
             )}
           >
@@ -124,14 +124,14 @@ function DocumentPickerItem({
         )}
 
         {/* Type Badge */}
-        <Badge variant="secondary" className="absolute top-2 left-2 text-[10px]">
+        <Badge variant="secondary" className="absolute top-2 start-2 text-[10px]">
           {config.label}
         </Badge>
 
         {/* Status Badge - Show if published to knowledge base */}
         {doc.status === 'PUBLISHED' && (
-          <Badge variant="default" className="absolute bottom-2 right-2 text-[10px] bg-green-600">
-            <BookOpen className="w-3 h-3 mr-1" />
+          <Badge variant="default" className="absolute bottom-2 end-2 text-[10px] bg-green-600">
+            <BookOpen className="w-3 h-3 me-1" />
             Published
           </Badge>
         )}
@@ -265,12 +265,12 @@ function UploadTab({
       <Button onClick={() => fileInputRef.current?.click()} disabled={uploading} size="lg">
         {uploading ? (
           <>
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            <RefreshCw className="w-4 h-4 me-2 animate-spin" />
             {t('documents:upload.uploading', 'Uploading...')}
           </>
         ) : (
           <>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4 me-2" />
             {t('documents:upload.selectFile', 'Select File')}
           </>
         )}
@@ -406,12 +406,12 @@ export function DocumentPicker({
             {/* Filters */}
             <div className="px-6 py-3 border-b flex items-center gap-2">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={t('documents:picker.searchPlaceholder', 'Search documents...')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
 
@@ -450,7 +450,7 @@ export function DocumentPicker({
                       : t('documents:picker.uploadFirst', 'Upload files to your document library')}
                   </p>
                   <Button className="mt-4" variant="outline" onClick={() => setActiveTab('upload')}>
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 me-2" />
                     {t('documents:picker.uploadBtn', 'Upload File')}
                   </Button>
                 </div>
@@ -496,7 +496,7 @@ export function DocumentPicker({
                       <span className="truncate max-w-[100px]">{doc.title}</span>
                       <button
                         onClick={() => removeFromSelection(doc.id)}
-                        className="ml-1 hover:text-destructive"
+                        className="ms-1 hover:text-destructive"
                       >
                         <X className="w-3 h-3" />
                       </button>

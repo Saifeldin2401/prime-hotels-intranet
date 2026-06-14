@@ -70,7 +70,7 @@ export default function PreventiveMaintenance() {
                 <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
                     <DialogTrigger asChild>
                         <Button className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                            <Plus className="w-4 h-4 mr-2" />
+                            <Plus className="w-4 h-4 me-2" />
                             {t('preventive.new_schedule')}
                         </Button>
                     </DialogTrigger>

@@ -14,7 +14,7 @@ export default function QuestionGeneratorPage() {
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" onClick={() => navigate('/questions')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="h-4 w-4 me-2" />
                     Back to Library
                 </Button>
                 <div>

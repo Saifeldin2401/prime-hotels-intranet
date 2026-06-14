@@ -222,11 +222,11 @@ export default function MaintenanceDashboard() {
         </div>
         <div className="flex gap-2">
           <Button onClick={() => navigate('/maintenance/preventive')} variant="outline" className="shadow-sm rounded-md transition-colors border-hotel-gold text-hotel-gold hover:bg-hotel-gold/10">
-            <Calendar className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            <Calendar className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
             {t('schedules')}
           </Button>
           <Button onClick={() => navigate('/maintenance/submit')} className="bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm rounded-md transition-colors">
-            <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+            <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
             {t('new_ticket')}
           </Button>
         </div>
@@ -239,7 +239,7 @@ export default function MaintenanceDashboard() {
       >
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-            <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+            <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "start-0" : "end-0")}>
               <Wrench className="w-24 h-24" />
             </div>
             <p className="text-sm font-medium text-muted-foreground">{t('dashboard.my_active_tickets')}</p>
@@ -252,7 +252,7 @@ export default function MaintenanceDashboard() {
           {canManageTickets && (
             <>
               <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "start-0" : "end-0")}>
                   <User className="w-24 h-24" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">{t('dashboard.assigned_me')}</p>
@@ -263,7 +263,7 @@ export default function MaintenanceDashboard() {
               </div>
 
               <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "start-0" : "end-0")}>
                   <AlertTriangle className="w-24 h-24" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">{t('dashboard.critical_issues')}</p>
@@ -274,7 +274,7 @@ export default function MaintenanceDashboard() {
               </div>
 
               <div className="bg-card border border-border p-6 rounded-lg relative overflow-hidden shadow-sm">
-                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "left-0" : "right-0")}>
+                <div className={cn("absolute top-0 p-4 opacity-5", isRTL ? "start-0" : "end-0")}>
                   <Clock className="w-24 h-24" />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">{t('dashboard.avg_resolution')}</p>
@@ -292,12 +292,12 @@ export default function MaintenanceDashboard() {
       <div className="space-y-4">
         <div className="bg-card border border-border p-4 rounded-lg flex flex-col md:flex-row gap-4 items-center shadow-sm">
           <div className="relative flex-1 w-full">
-            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
+            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "end-3" : "start-3")} />
             <Input
               placeholder={t('dashboard.search')}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className={cn("bg-background border-input focus:border-primary transition-all", isRTL ? "pr-10" : "pl-10")}
+              className={cn("bg-background border-input focus:border-primary transition-all", isRTL ? "pe-10" : "ps-10")}
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -353,7 +353,7 @@ export default function MaintenanceDashboard() {
                   }
                 </p>
                 <Button onClick={() => navigate('/maintenance/submit')} className="rounded-md shadow-sm">
-                  <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                  <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                   {t('new_ticket')}
                 </Button>
               </div>

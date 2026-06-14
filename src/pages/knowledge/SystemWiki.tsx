@@ -109,7 +109,7 @@ export default function SystemWiki() {
                         onClick={handleCreate}
                         className="bg-hotel-gold hover:bg-hotel-gold/90 text-white shadow-sm mt-4"
                     >
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 me-2" />
                         Add Section
                     </Button>
                 )}
@@ -155,9 +155,9 @@ export default function SystemWiki() {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleEdit(activeArticle)}
-                                className="absolute top-4 right-4 text-slate-400 hover:text-hotel-gold z-10"
+                                className="absolute top-4 end-4 text-slate-400 hover:text-hotel-gold z-10"
                             >
-                                <Edit3 className="w-4 h-4 mr-2" />
+                                <Edit3 className="w-4 h-4 me-2" />
                                 Edit
                             </Button>
                         )}
@@ -175,7 +175,7 @@ export default function SystemWiki() {
                                     {activeArticle.subtopics && activeArticle.subtopics.length > 0 && (
                                         <div className="mt-8 pt-8 border-t border-slate-200">
                                             <h3 className="text-xl font-semibold mb-6 flex items-center text-slate-800">
-                                                <BookOpen className="w-5 h-5 mr-2 text-hotel-gold" />
+                                                <BookOpen className="w-5 h-5 me-2 text-hotel-gold" />
                                                 {t('detailed_topics', { defaultValue: 'Detailed Topics' })}
                                             </h3>
                                             <Accordion type="multiple" className="w-full space-y-4">
@@ -223,7 +223,7 @@ export default function SystemWiki() {
                                             onClick={handleCreate}
                                             className="bg-hotel-gold hover:bg-hotel-gold/90 text-white shadow-sm mt-6"
                                         >
-                                            <Plus className="w-4 h-4 mr-2" />
+                                            <Plus className="w-4 h-4 me-2" />
                                             {t('create_first_section', { defaultValue: 'Create First Section' })}
                                         </Button>
                                     )}

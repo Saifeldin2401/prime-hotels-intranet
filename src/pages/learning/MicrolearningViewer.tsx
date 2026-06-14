@@ -149,7 +149,7 @@ export default function MicrolearningViewer() {
         <div className="min-h-screen bg-slate-50 p-6">
             <div className="max-w-4xl mx-auto space-y-6">
                 <Button variant="ghost" className="mb-4" onClick={() => navigate(-1)}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    <ArrowLeft className="me-2 h-4 w-4" />
                     {t_ext('back', 'Back')}</Button>
 
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-lg group">
@@ -181,7 +181,7 @@ export default function MicrolearningViewer() {
                                 <Badge>{content.category || 'General'}</Badge>
                                 {completed && (
                                     <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                        <CheckCircle2 className="w-3 h-3 mr-1" />
+                                        <CheckCircle2 className="w-3 h-3 me-1" />
                                         {t_ext('completed', 'Completed')}</Badge>
                                 )}
                             </div>
@@ -190,7 +190,7 @@ export default function MicrolearningViewer() {
 
                         <Card className="p-6">
                             <h3 className="font-semibold mb-2 flex items-center">
-                                <FileText className="w-4 h-4 mr-2" />
+                                <FileText className="w-4 h-4 me-2" />
                                 {t_ext('description_1', 'Description')}</h3>
                             <p className="text-muted-foreground whitespace-pre-wrap">
                                 {content.description || t('no_description_provided')}
@@ -219,7 +219,7 @@ export default function MicrolearningViewer() {
                                         onClick={handleMarkComplete}
                                         disabled={markingComplete}
                                     >
-                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        <CheckCircle2 className="me-2 h-4 w-4" />
                                         {t_ext('mark_as_complete', 'Mark as Complete')}</Button>
                                 ) : (
                                     <Button className="w-full" variant="outline" disabled>
@@ -230,7 +230,7 @@ export default function MicrolearningViewer() {
 
                         <Card className="p-4">
                             <div className="flex items-center text-sm text-muted-foreground">
-                                <Clock className="w-4 h-4 mr-2" />
+                                <Clock className="w-4 h-4 me-2" />
                                 {t_ext('duration_1', 'Duration:')}{Math.round((content.duration_seconds || 0) / 60)} {t_ext('mins', 'mins')}</div>
                         </Card>
                     </div>

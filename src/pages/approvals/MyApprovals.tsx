@@ -587,16 +587,16 @@ export default function MyApprovals() {
 
       <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
         <div className="relative flex-1">
-          <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "right-3" : "left-3")} />
+          <Search className={cn("absolute top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4", isRTL ? "end-3" : "start-3")} />
           <Input
             placeholder={t('search_placeholder', 'Search approvals...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className={cn("h-11", isRTL ? "pr-10" : "pl-10")}
+            className={cn("h-11", isRTL ? "pe-10" : "ps-10")}
           />
         </div>
         <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors h-11 w-full sm:w-auto" size="sm">
-          <Filter className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+          <Filter className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
           {t('filter', 'Filters')}
         </Button>
       </div>
@@ -608,7 +608,7 @@ export default function MyApprovals() {
               <span className="hidden sm:inline">{t('documents_tab')}</span>
               <span className="sm:hidden">{t('documents_tab')}</span>
               {safePendingDocuments.length > 0 && (
-                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                <Badge variant="destructive" className="ms-1.5 sm:ms-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {safePendingDocuments.length}
                 </Badge>
               )}
@@ -617,7 +617,7 @@ export default function MyApprovals() {
               <span className="hidden sm:inline">{t('leaves_tab')}</span>
               <span className="sm:hidden">{t('leaves_tab')}</span>
               {filteredPendingLeave.length > 0 && (
-                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                <Badge variant="destructive" className="ms-1.5 sm:ms-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {filteredPendingLeave.length}
                 </Badge>
               )}
@@ -626,7 +626,7 @@ export default function MyApprovals() {
               <span className="hidden sm:inline">{t('maintenance_tab')}</span>
               <span className="sm:hidden">{t('maintenance_tab')}</span>
               {filteredPendingMaintenance.length > 0 && (
-                <Badge variant="destructive" className="ml-1.5 sm:ml-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
+                <Badge variant="destructive" className="ms-1.5 sm:ms-2 px-1.5 sm:px-2 py-0 text-[10px] sm:text-xs">
                   {filteredPendingMaintenance.length}
                 </Badge>
               )}
@@ -687,13 +687,13 @@ export default function MyApprovals() {
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ms-4">
                         <Button
                           className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                           size="sm"
                           onClick={() => handleViewDocument(approval.documents)}
                         >
-                          <Eye className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          <Eye className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                           {t('view')}
                         </Button>
                         <Button
@@ -703,7 +703,7 @@ export default function MyApprovals() {
                           disabled={approveMutation.isPending}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                           {t('approve')}
                         </Button>
                         <Button
@@ -712,7 +712,7 @@ export default function MyApprovals() {
                           onClick={() => handleReject(approval.id)}
                           disabled={rejectMutation.isPending}
                         >
-                          <XCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          <XCircle className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                           {t('reject')}
                         </Button>
                       </div>
@@ -783,7 +783,7 @@ export default function MyApprovals() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ms-4">
                         <Button
                           variant="default"
                           size="sm"
@@ -791,7 +791,7 @@ export default function MyApprovals() {
                           disabled={approveLeaveMutation.isPending}
                           className="bg-green-600 hover:bg-green-700"
                         >
-                          <CheckCircle className="w-4 h-4 mr-1" />
+                          <CheckCircle className="w-4 h-4 me-1" />
                           Approve
                         </Button>
                         <Button
@@ -800,7 +800,7 @@ export default function MyApprovals() {
                           onClick={() => handleRejectLeave(leave.id)}
                           disabled={rejectLeaveMutation.isPending}
                         >
-                          <XCircle className="w-4 h-4 mr-1" />
+                          <XCircle className="w-4 h-4 me-1" />
                           Reject
                         </Button>
                       </div>
@@ -878,7 +878,7 @@ export default function MyApprovals() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ms-4">
                         <Button
                           variant="default"
                           size="sm"
@@ -886,7 +886,7 @@ export default function MyApprovals() {
                           disabled={assignMaintenanceMutation.isPending}
                           className="bg-blue-600 hover:bg-blue-700"
                         >
-                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          <CheckCircle className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                           {t('assign')}
                         </Button>
                       </div>
@@ -955,13 +955,13 @@ export default function MyApprovals() {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ms-4">
                         <Button
                           className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
                           size="sm"
                           onClick={() => handleViewDocument(approval.documents)}
                         >
-                          <Eye className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                          <Eye className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                           {t('view')}
                         </Button>
                       </div>

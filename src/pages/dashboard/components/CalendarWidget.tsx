@@ -93,7 +93,7 @@ function SelectedDateEventsPanel({
         </h4>
       </div>
       <ScrollArea className="h-[210px] -mx-1 px-1">
-        <div className="space-y-3 pr-4">
+        <div className="space-y-3 pe-4">
           <AnimatePresence mode="popLayout">
             {selectedDateEvents.length === 0 ? (
               <m.div
@@ -460,7 +460,7 @@ export function CalendarWidget() {
                   >
                     {/* Today indicator dot */}
                     {isToday && !isSelected && (
-                      <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
+                      <span className="absolute top-1.5 end-1.5 w-1.5 h-1.5 bg-blue-500 rounded-full" />
                     )}
 
                     <span className={cn(
@@ -529,7 +529,7 @@ export function CalendarWidget() {
                 className="h-9 px-4 text-xs font-bold rounded-xl shrink-0 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-900 transition-all shadow-sm"
                 onClick={goToToday}
               >
-                <Sun className="w-4 h-4 mr-1.5" />
+                <Sun className="w-4 h-4 me-1.5" />
                 {t('schedule.go_to_today', 'Today')}
               </Button>
             )}

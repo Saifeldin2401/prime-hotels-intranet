@@ -450,7 +450,7 @@ export function TaskForm({ task, onSuccess, onCancel }: TaskFormProps) {
             <div className="flex justify-end pt-4 gap-2">
                 <Button type="button" variant="outline" onClick={onCancel}>{t('common:common.cancel')}</Button>
                 <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin me-2" />}
                     {t('save_task')}
                 </Button>
             </div>

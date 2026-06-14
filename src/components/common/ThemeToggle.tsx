@@ -49,7 +49,7 @@ export function ThemeToggle() {
             <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-blue-400" />
             <Monitor className="absolute h-4 w-4 rotate-0 scale-0 transition-all duration-300 opacity-50" />
           </div>
-          <div className="absolute -bottom-1 -right-1 h-2 w-2 rounded-full bg-hotel-gold transition-all duration-300 scale-0 group-hover:scale-100" />
+          <div className="absolute -bottom-1 -end-1 h-2 w-2 rounded-full bg-hotel-gold transition-all duration-300 scale-0 group-hover:scale-100" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -72,7 +72,7 @@ export function ThemeToggle() {
             <Sun className="h-4 w-4 text-amber-500" />
             <span>Light</span>
           </div>
-          <div className="ml-auto">
+          <div className="ms-auto">
             {mode === 'light' && (
               <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center animate-scale-in">
                 <Check className="h-2.5 w-2.5 text-primary-foreground" />
@@ -88,7 +88,7 @@ export function ThemeToggle() {
             <Moon className="h-4 w-4 text-blue-400" />
             <span>Dark</span>
           </div>
-          <div className="ml-auto">
+          <div className="ms-auto">
             {mode === 'dark' && (
               <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center animate-scale-in">
                 <Check className="h-2.5 w-2.5 text-primary-foreground" />
@@ -104,7 +104,7 @@ export function ThemeToggle() {
             <Monitor className="h-4 w-4 text-muted-foreground" />
             <span>System</span>
           </div>
-          <div className="ml-auto">
+          <div className="ms-auto">
             {mode === 'system' && (
               <div className="h-4 w-4 rounded-full bg-primary flex items-center justify-center animate-scale-in">
                 <Check className="h-2.5 w-2.5 text-primary-foreground" />

@@ -88,7 +88,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
               <div className="flex gap-2">
                 <Button onClick={this.handleRetry} className="flex-1">
-                  <RefreshCw className="w-4 h-4 mr-2" />
+                  <RefreshCw className="w-4 h-4 me-2" />
                   Try Again
                 </Button>
                 <Button

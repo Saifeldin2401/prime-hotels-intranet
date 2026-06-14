@@ -226,7 +226,7 @@ export function SessionTimeoutWarning({
             className="w-full sm:w-auto"
             disabled={isExtending}
           >
-            <LogOut className="h-4 w-4 mr-2" />
+            <LogOut className="h-4 w-4 me-2" />
             {t('session_timeout.logout', { defaultValue: 'Logout' })}
           </Button>
           
@@ -237,12 +237,12 @@ export function SessionTimeoutWarning({
           >
             {isExtending ? (
               <>
-                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                 {t('session_timeout.extending', { defaultValue: 'Extending...' })}
               </>
             ) : (
               <>
-                <RefreshCw className="h-4 w-4 mr-2" />
+                <RefreshCw className="h-4 w-4 me-2" />
                 {t('session_timeout.stay_logged_in', { defaultValue: 'Stay Logged In' })}
               </>
             )}

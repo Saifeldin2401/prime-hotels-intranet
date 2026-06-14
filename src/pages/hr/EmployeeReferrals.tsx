@@ -332,18 +332,18 @@ export default function EmployeeReferrals() {
             {isHR && referrals && referrals.length > 0 && (
               <>
                 <Button variant="outline" onClick={handleExportExcel}>
-                  <FileDown className="h-4 w-4 mr-2" />
+                  <FileDown className="h-4 w-4 me-2" />
                   {t('referrals.export_excel', { defaultValue: 'Export Excel' })}
                 </Button>
                 <Button variant="outline" onClick={handleExportPDF}>
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4 me-2" />
                   {t('referrals.export_pdf', { defaultValue: 'Export PDF' })}
                 </Button>
               </>
             )}
             <Link to="/jobs">
               <Button>
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="h-4 w-4 me-2" />
                 {t('referrals.new_referral', { defaultValue: 'New Referral' })}
               </Button>
             </Link>
@@ -555,7 +555,7 @@ export default function EmployeeReferrals() {
                     )}
                     {/* View Profile */}
                     <Button size="sm" variant="outline" onClick={() => handleViewProfile(referral)}>
-                      <Eye className="h-4 w-4 mr-1" />
+                      <Eye className="h-4 w-4 me-1" />
                       {t('referrals.view')}
                     </Button>
                   </div>

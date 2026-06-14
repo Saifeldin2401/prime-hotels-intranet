@@ -11,7 +11,7 @@ export function ScrollProgress() {
 
   return (
     <motion.div
-      className="fixed top-0 left-0 right-0 h-1 bg-gradient-to-r from-hotel-gold via-yellow-300 to-hotel-gold origin-left z-[100]"
+      className="fixed top-0 start-0 end-0 h-1 bg-gradient-to-r from-hotel-gold via-yellow-300 to-hotel-gold origin-left z-[100]"
       style={{ scaleX }}
     />
   );
@@ -50,7 +50,7 @@ export function ScrollToTop() {
       whileHover={{ scale: 1.1 }}
       whileTap={{ scale: 0.9 }}
       onClick={scrollToTop}
-      className="fixed bottom-8 right-8 z-50 w-12 h-12 bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy rounded-full shadow-lg flex items-center justify-center transition-colors duration-300"
+      className="fixed bottom-8 end-8 z-50 w-12 h-12 bg-hotel-gold hover:bg-hotel-gold-dark text-hotel-navy rounded-full shadow-lg flex items-center justify-center transition-colors duration-300"
       aria-label="Scroll to top"
     >
       <svg

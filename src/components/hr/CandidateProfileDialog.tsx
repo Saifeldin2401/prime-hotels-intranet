@@ -255,7 +255,7 @@ export function CandidateProfileDialog({
                                 )}
                                 {referral.status === 'review' && (
                                     <Button size="sm" onClick={() => setShowScheduleForm(true)} disabled={saving}>
-                                        <CalendarPlus className="h-4 w-4 mr-1" />
+                                        <CalendarPlus className="h-4 w-4 me-1" />
                                         Schedule Interview
                                     </Button>
                                 )}
@@ -305,7 +305,7 @@ export function CandidateProfileDialog({
                         )}
                         {departmentName && (
                             <div className="flex items-center gap-2 text-sm">
-                                <span className="font-medium ml-6">Department:</span> {departmentName}
+                                <span className="font-medium ms-6">Department:</span> {departmentName}
                             </div>
                         )}
                         <div className="flex items-center gap-2 text-sm">
@@ -340,7 +340,7 @@ export function CandidateProfileDialog({
                                     </div>
                                 </div>
                                 <Button size="sm" variant="outline" onClick={handleViewCv} disabled={cvLoading}>
-                                    {cvLoading ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ExternalLink className="h-4 w-4 mr-1" />}
+                                    {cvLoading ? <Loader2 className="h-4 w-4 me-1 animate-spin" /> : <ExternalLink className="h-4 w-4 me-1" />}
                                     View
                                 </Button>
                             </div>
@@ -417,7 +417,7 @@ export function CandidateProfileDialog({
                             </div>
                             <div className="flex gap-2 mt-4">
                                 <Button size="sm" onClick={handleScheduleInterview} disabled={saving || !interviewDate || !interviewTime}>
-                                    {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                                    {saving && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
                                     Confirm
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => setShowScheduleForm(false)}>
@@ -446,7 +446,7 @@ export function CandidateProfileDialog({
                                 onClick={handleSaveNotes}
                                 disabled={!hrNotes.trim() || saving}
                             >
-                                {saving && <Loader2 className="h-4 w-4 mr-1 animate-spin" />}
+                                {saving && <Loader2 className="h-4 w-4 me-1 animate-spin" />}
                                 Save Note
                             </Button>
                         </div>

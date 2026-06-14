@@ -117,7 +117,7 @@ export function BulkActionsBar({
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
                     className={cn(
-                        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 left-1/2 -translate-x-1/2 z-50',
+                        'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 start-1/2 -translate-x-1/2 z-50',
                         'bg-background border rounded-lg shadow-lg p-3',
                         'flex items-center gap-3',
                         className
@@ -135,7 +135,7 @@ export function BulkActionsBar({
                     {onBulkStatusChange && statusOptions.length > 0 && (
                         <Select onValueChange={handleStatusChange} disabled={isLoading}>
                             <SelectTrigger className="w-[140px]">
-                                <Clock className="h-4 w-4 mr-2" />
+                                <Clock className="h-4 w-4 me-2" />
                                 <SelectValue placeholder={t('common:common.status')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -152,7 +152,7 @@ export function BulkActionsBar({
                     {onBulkAssign && assignees.length > 0 && (
                         <Select onValueChange={handleAssign} disabled={isLoading}>
                             <SelectTrigger className="w-[140px]">
-                                <UserPlus className="h-4 w-4 mr-2" />
+                                <UserPlus className="h-4 w-4 me-2" />
                                 <SelectValue placeholder={t('common:common.assign')} />
                             </SelectTrigger>
                             <SelectContent>
@@ -175,7 +175,7 @@ export function BulkActionsBar({
                             disabled={isLoading}
                             className="h-8"
                         >
-                            <CheckCircle className="h-4 w-4 mr-2" />
+                            <CheckCircle className="h-4 w-4 me-2" />
                             {t('common:common.approveAll')}
                         </Button>
                     )}
@@ -189,7 +189,7 @@ export function BulkActionsBar({
                             disabled={isLoading}
                             className="h-8 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
-                            <Trash2 className="h-4 w-4 mr-2" />
+                            <Trash2 className="h-4 w-4 me-2" />
                             {t('common:common.delete')}
                         </Button>
                     )}
@@ -333,7 +333,7 @@ export function BulkActionsBar({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 20 }}
                         className={cn(
-                            'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+6rem)] sm:bottom-20 left-1/2 -translate-x-1/2 z-50',
+                            'fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+6rem)] sm:bottom-20 start-1/2 -translate-x-1/2 z-50',
                             'bg-background border rounded-lg shadow-lg p-3',
                             'flex items-center gap-3'
                         )}
@@ -369,7 +369,7 @@ export function BulkActionsBar({
                                 }}
                             >
                                 {isUndoing ? (
-                                    <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                    <Loader2 className="h-3.5 w-3.5 me-1 animate-spin" />
                                 ) : null}
                                 Undo
                             </Button>

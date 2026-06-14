@@ -71,7 +71,7 @@ export function StatusHistoryTimeline({ entityType, entityId, className }: Statu
             </h4>
             <div className="relative">
                 {/* Timeline line */}
-                <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-border" />
+                <div className="absolute start-4 top-0 bottom-0 w-0.5 bg-border" />
 
                 {/* Timeline entries */}
                 <div className="space-y-4">
@@ -99,10 +99,10 @@ function StatusHistoryItem({ entry, isFirst }: StatusHistoryItemProps) {
     const profile = entry.changed_by_profile
 
     return (
-        <div className="relative pl-10">
+        <div className="relative ps-10">
             {/* Timeline dot */}
             <div className={cn(
-                'absolute left-2.5 w-3 h-3 rounded-full border-2 border-background',
+                'absolute start-2.5 w-3 h-3 rounded-full border-2 border-background',
                 isFirst ? 'bg-primary' : 'bg-muted'
             )} />
 

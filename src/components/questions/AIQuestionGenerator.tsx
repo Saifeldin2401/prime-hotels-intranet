@@ -465,10 +465,10 @@ export function AIQuestionGenerator({
 
                             <TabsContent value="sop" className="mt-4 space-y-4">
                                 <div className="relative">
-                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                                     <Input
                                         placeholder="Search Knowledge Base..."
-                                        className="pl-10"
+                                        className="ps-10"
                                         value={sopSearch}
                                         onChange={e => setSopSearch(e.target.value)}
                                     />
@@ -666,7 +666,7 @@ export function AIQuestionGenerator({
                             />
                             <Label htmlFor="citations-toggle" className="text-sm font-medium text-slate-700">Include source snippets</Label>
                         </div>
-                        <div className="flex items-center gap-2 ml-auto">
+                        <div className="flex items-center gap-2 ms-auto">
                             <Label className="text-sm font-medium text-slate-700">Language:</Label>
                             <div className="flex rounded-lg border border-slate-200 overflow-hidden">
                                 <button
@@ -711,12 +711,12 @@ export function AIQuestionGenerator({
                     >
                         {generateQuestions.isPending ? (
                             <>
-                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                <Loader2 className="h-5 w-5 me-2 animate-spin" />
                                 Generating Questions...
                             </>
                         ) : (
                             <>
-                                <Sparkles className="h-5 w-5 mr-2 text-hotel-gold fill-hotel-gold animate-pulse" />
+                                <Sparkles className="h-5 w-5 me-2 text-hotel-gold fill-hotel-gold animate-pulse" />
                                 Generate Questions
                             </>
                         )}
@@ -853,7 +853,7 @@ export function AIQuestionGenerator({
                                         <p className="font-medium mb-3">{question.question_text}</p>
 
                                         {question.options && (
-                                            <div className="space-y-1 ml-4">
+                                            <div className="space-y-1 ms-4">
                                                 {question.options.map((opt, optIdx) => (
                                                     <div
                                                         key={optIdx}
@@ -893,7 +893,7 @@ export function AIQuestionGenerator({
                                         )}
 
                                         {(question.source_snippet || question.linked_section) && (
-                                            <div className="mt-3 border-l-2 border-slate-200 pl-3 text-xs text-slate-500">
+                                            <div className="mt-3 border-l-2 border-slate-200 ps-3 text-xs text-slate-500">
                                                 <span className="font-medium text-slate-600">Source:</span>{' '}
                                                 {question.source_snippet || question.linked_section}
                                             </div>
@@ -913,12 +913,12 @@ export function AIQuestionGenerator({
                         >
                             {saving ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                                     Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="h-4 w-4 mr-2" />
+                                    <Save className="h-4 w-4 me-2" />
                                     Save {selectedQuestions.size} Question{selectedQuestions.size !== 1 ? 's' : ''} as Drafts
                                 </>
                             )}

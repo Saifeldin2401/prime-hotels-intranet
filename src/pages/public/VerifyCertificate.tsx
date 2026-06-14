@@ -100,7 +100,7 @@ export default function VerifyCertificate() {
                                                 className="h-14 lg:text-lg ps-12 border-gray-200 focus:ring-hotel-gold focus:border-hotel-gold bg-white"
                                                 disabled={isVerifying}
                                             />
-                                            <Search className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 ${isRTL ? 'right-4' : 'left-4'}`} />
+                                            <Search className={`absolute top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 ${isRTL ? 'end-4' : 'start-4'}`} />
                                         </div>
                                     </div>
 

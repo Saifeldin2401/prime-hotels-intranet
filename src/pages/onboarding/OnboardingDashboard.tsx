@@ -160,7 +160,7 @@ export default function OnboardingDashboard() {
                                                 {task.link_type === 'document' && t('actions.view_document')}
                                                 {task.link_type === 'url' && t('actions.open_link')}
 
-                                                <ArrowRight className="h-3 w-3 ml-1 opacity-50" />
+                                                <ArrowRight className="h-3 w-3 ms-1 opacity-50" />
                                             </Button>
                                         </div>
                                     )}

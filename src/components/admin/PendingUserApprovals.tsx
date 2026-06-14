@@ -173,7 +173,7 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
           <CardTitle className="flex items-center gap-2 text-green-800">
             <ShieldCheck className="w-5 h-5" />
             {t('approvals.pending_title', 'Pending User Approvals')}
-            <span className="ml-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-sm">
+            <span className="ms-2 bg-green-500 text-white px-2 py-0.5 rounded-full text-sm">
               0
             </span>
           </CardTitle>
@@ -197,7 +197,7 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
           <CardTitle className="flex items-center gap-2 text-yellow-800">
             <ShieldAlert className="w-5 h-5" />
             {t('approvals.pending_title', 'Pending User Approvals')}
-            <span className="ml-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-sm">
+            <span className="ms-2 bg-yellow-500 text-white px-2 py-0.5 rounded-full text-sm">
               {pendingUsers.length}
             </span>
           </CardTitle>
@@ -244,7 +244,7 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
                     className="text-red-600 hover:bg-red-50"
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                   >
-                    <UserX className="w-4 h-4 mr-1" />
+                    <UserX className="w-4 h-4 me-1" />
                     {t('approvals.reject', 'Reject')}
                   </Button>
                   <Button
@@ -253,7 +253,7 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
                     className="bg-hotel-gold hover:bg-hotel-gold-dark text-white"
                     disabled={approveMutation.isPending || rejectMutation.isPending}
                   >
-                    <CheckCircle className="w-4 h-4 mr-1" />
+                    <CheckCircle className="w-4 h-4 me-1" />
                     {t('approvals.approve', 'Approve')}
                   </Button>
                 </div>
@@ -313,12 +313,12 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
             >
               {actionType === 'approve' ? (
                 <>
-                  <CheckCircle className="w-4 h-4 mr-1" />
+                  <CheckCircle className="w-4 h-4 me-1" />
                   {t('approvals.confirm_approve', 'Approve')}
                 </>
               ) : (
                 <>
-                  <XCircle className="w-4 h-4 mr-1" />
+                  <XCircle className="w-4 h-4 me-1" />
                   {t('approvals.confirm_reject', 'Reject')}
                 </>
               )}

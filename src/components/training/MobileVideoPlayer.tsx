@@ -214,7 +214,7 @@ export function MobileVideoPlayer({
 
             {/* Title Overlay */}
             {title && showControls && (
-                <div className="absolute top-0 left-0 right-0 p-4 bg-gradient-to-b from-black/70 to-transparent">
+                <div className="absolute top-0 start-0 end-0 p-4 bg-gradient-to-b from-black/70 to-transparent">
                     <h3 className="text-white font-medium truncate">{title}</h3>
                 </div>
             )}
@@ -226,7 +226,7 @@ export function MobileVideoPlayer({
                     className="absolute inset-0 flex items-center justify-center bg-black/30"
                 >
                     <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
-                        <svg className="w-8 h-8 text-black ml-1" fill="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-8 h-8 text-black ms-1" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M8 5v14l11-7z" />
                         </svg>
                     </div>
@@ -236,7 +236,7 @@ export function MobileVideoPlayer({
             {/* Controls Overlay */}
             <div
                 className={cn(
-                    'absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300',
+                    'absolute bottom-0 start-0 end-0 p-4 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-300',
                     showControls || !isPlaying ? 'opacity-100' : 'opacity-0'
                 )}
             >
@@ -259,7 +259,7 @@ export function MobileVideoPlayer({
                     />
                     {/* Handle */}
                     <div
-                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg -ml-2"
+                        className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-lg -ms-2"
                         style={{ left: `${progress}%` }}
                     />
                 </div>
@@ -300,7 +300,7 @@ export function MobileVideoPlayer({
                             </button>
 
                             {showSpeedMenu && (
-                                <div className="absolute bottom-full right-0 mb-2 bg-black/90 rounded-lg overflow-hidden">
+                                <div className="absolute bottom-full end-0 mb-2 bg-black/90 rounded-lg overflow-hidden">
                                     {[0.5, 0.75, 1, 1.25, 1.5, 2].map((rate) => (
                                         <button
                                             key={rate}
@@ -338,7 +338,7 @@ export function MobileVideoPlayer({
 
             {/* Mandatory Watch Indicator */}
             {isMandatory && (
-                <div className="absolute top-4 right-4 px-2 py-1 bg-amber-500 text-white text-xs font-medium rounded">
+                <div className="absolute top-4 end-4 px-2 py-1 bg-amber-500 text-white text-xs font-medium rounded">
                     Required
                 </div>
             )}

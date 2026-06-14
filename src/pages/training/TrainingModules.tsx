@@ -656,17 +656,17 @@ export default function TrainingModules() {
         actions={
           <div className="flex items-center gap-2">
             <div className="relative">
-              <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "right-3" : "left-3")} />
+              <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400", isRTL ? "end-3" : "start-3")} />
               <Input
                 type="text"
                 placeholder={t('search')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={cn(isRTL ? "pr-10 text-right" : "pl-10", "w-64")}
+                className={cn(isRTL ? "pe-10 text-right" : "ps-10", "w-64")}
               />
             </div>
             <Button onClick={handleCreate} className={isRTL ? "flex-row-reverse" : ""}>
-              <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
               {t('createModule')}
             </Button>
           </div>
@@ -677,13 +677,13 @@ export default function TrainingModules() {
       <div className="mb-8 p-4 bg-white rounded-xl border border-gray-100 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="flex flex-wrap gap-4 w-full md:w-auto">
           <div className="relative">
-            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "right-3" : "left-3")} />
+            <Search className={cn("absolute top-1/2 transform -translate-y-1/2 h-4 w-4 text-hotel-muted", isRTL ? "end-3" : "start-3")} />
             <Input
               type="text"
               placeholder={t('search')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={cn(isRTL ? "pr-10 text-right" : "pl-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
+              className={cn(isRTL ? "pe-10 text-right" : "ps-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
             />
           </div>
           <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -711,7 +711,7 @@ export default function TrainingModules() {
         </div>
 
         <div className={cn("flex items-center gap-2 w-full md:w-auto", isRTL ? "flex-row-reverse" : "")}>
-          <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ml-2" : "mr-2")}>{t('sortBy')}</span>
+          <span className={cn("text-sm text-muted-foreground hidden md:inline-block", isRTL ? "ms-2" : "me-2")}>{t('sortBy')}</span>
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className={cn("w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
               <SelectValue placeholder={t('sortBy')} />
@@ -781,7 +781,7 @@ export default function TrainingModules() {
                     size="sm"
                     onClick={() => handleEdit(module)}
                   >
-                    <Edit className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ml-2 group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" : "mr-2 group-hover:-translate-y-0.5 group-hover:translate-x-0.5")} />
+                    <Edit className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ms-2 group-hover:-translate-y-0.5 group-hover:-translate-x-0.5" : "me-2 group-hover:-translate-y-0.5 group-hover:translate-x-0.5")} />
                     {t('edit')}
                   </Button>
                   <Button
@@ -790,7 +790,7 @@ export default function TrainingModules() {
                     size="sm"
                     onClick={() => navigate(`/training/hub/${module.id}?view=builder`)}
                   >
-                    <FileText className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ml-2 group-hover:-translate-x-1" : "mr-2 group-hover:translate-x-1")} />
+                    <FileText className={cn("h-4 w-4 transition-transform duration-300", isRTL ? "ms-2 group-hover:-translate-x-1" : "me-2 group-hover:translate-x-1")} />
                     {t('content')}
                   </Button>
                   <Button
@@ -813,7 +813,7 @@ export default function TrainingModules() {
                       handleAssign(module.id);
                     }}
                   >
-                    <Users className={cn("h-4 w-4 transition-transform duration-300 group-hover:scale-110", isRTL ? "ml-2" : "mr-2")} />
+                    <Users className={cn("h-4 w-4 transition-transform duration-300 group-hover:scale-110", isRTL ? "ms-2" : "me-2")} />
                     {t('assign')}
                   </Button>
                   <Button
@@ -823,7 +823,7 @@ export default function TrainingModules() {
                     onClick={() => handleUnassign(module)}
                     disabled={unassignModuleMutation.isPending}
                   >
-                    <UserX className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-6", isRTL ? "ml-2" : "mr-2")} />
+                    <UserX className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-6", isRTL ? "ms-2" : "me-2")} />
                     {t('unassign', 'Unassign')}
                   </Button>
                   <Button
@@ -833,7 +833,7 @@ export default function TrainingModules() {
                     onClick={() => handleDelete(module)}
                     disabled={deleteModuleMutation.isPending}
                   >
-                    <Trash2 className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-12", isRTL ? "ml-2" : "mr-2")} />
+                    <Trash2 className={cn("h-4 w-4 transition-transform duration-300 group-hover:rotate-12", isRTL ? "ms-2" : "me-2")} />
                     {t('delete')}
                   </Button>
                 </div>
@@ -853,7 +853,7 @@ export default function TrainingModules() {
             </p>
             {!(search || categoryFilter !== 'all' || statusFilter !== 'all') && (
               <Button onClick={handleCreate} className={cn("bg-hotel-navy text-white hover:bg-hotel-navy-light", isRTL ? "flex-row-reverse" : "")}>
-                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                 {t('createModule')}
               </Button>
             )}

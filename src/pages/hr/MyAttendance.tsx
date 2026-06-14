@@ -99,7 +99,7 @@ export default function MyAttendance() {
                                     onClick={handleCheckIn}
                                     disabled={checkInMutation.isPending}
                                 >
-                                    <LogIn className="w-5 h-5 mr-2" />
+                                    <LogIn className="w-5 h-5 me-2" />
                                     {t('attendance.clock_in')}
                                 </Button>
                             )}
@@ -110,7 +110,7 @@ export default function MyAttendance() {
                                     onClick={handleCheckOut}
                                     disabled={checkOutMutation.isPending}
                                 >
-                                    <LogOut className="w-5 h-5 mr-2" />
+                                    <LogOut className="w-5 h-5 me-2" />
                                     {t('attendance.clock_out')}
                                 </Button>
                             )}

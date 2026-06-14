@@ -1365,7 +1365,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                                                         }}
                                                                     />
                                                                     <span className="text-sm">{mod.title}</span>
-                                                                    <Badge variant="outline" className="text-xs ml-auto">
+                                                                    <Badge variant="outline" className="text-xs ms-auto">
                                                                         {mod.category}
                                                                     </Badge>
                                                                 </div>
@@ -1423,7 +1423,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                     <div className="grid grid-cols-2 gap-2 text-sm">
                                         <div>
                                             <span className="text-gray-600">Assignment:</span>
-                                            <span className="ml-2 font-medium">
+                                            <span className="ms-2 font-medium">
                                                 {courseConfig.assignmentType === 'manual' ? 'Manual' : 
                                                  courseConfig.assignmentType === 'auto_assign' ? 'Auto-Assign' :
                                                  courseConfig.assignmentType === 'onboarding' ? 'Onboarding' : 'Role-Based'}
@@ -1431,25 +1431,25 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                                         </div>
                                         <div>
                                             <span className="text-gray-600">Quiz Required:</span>
-                                            <span className="ml-2 font-medium">{courseConfig.requireQuiz ? `Yes (${courseConfig.minQuizScore}%)` : 'No'}</span>
+                                            <span className="ms-2 font-medium">{courseConfig.requireQuiz ? `Yes (${courseConfig.minQuizScore}%)` : 'No'}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-600">Certificate:</span>
-                                            <span className="ml-2 font-medium">{courseConfig.issueCertificate ? 'Yes' : 'No'}</span>
+                                            <span className="ms-2 font-medium">{courseConfig.issueCertificate ? 'Yes' : 'No'}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-600">Due Date:</span>
-                                            <span className="ml-2 font-medium">
+                                            <span className="ms-2 font-medium">
                                                 {courseConfig.hasDueDate ? `${courseConfig.dueDaysAfterAssignment} days` : 'None'}
                                             </span>
                                         </div>
                                         <div>
                                             <span className="text-gray-600">Reminders:</span>
-                                            <span className="ml-2 font-medium">{courseConfig.sendReminders ? 'Yes' : 'No'}</span>
+                                            <span className="ms-2 font-medium">{courseConfig.sendReminders ? 'Yes' : 'No'}</span>
                                         </div>
                                         <div>
                                             <span className="text-gray-600">Priority:</span>
-                                            <span className="ml-2 font-medium capitalize">{courseConfig.priority}</span>
+                                            <span className="ms-2 font-medium capitalize">{courseConfig.priority}</span>
                                         </div>
                                     </div>
                                     {courseConfig.isMandatory && (
@@ -1535,7 +1535,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 <div className="flex justify-between pt-4 border-t">
                     {step !== 'topic' ? (
                         <Button variant="outline" onClick={handleBack} disabled={generating || creating} className={isRTL ? 'flex-row-reverse' : ''}>
-                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ml-2 rotate-180" : "mr-2")} />
+                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ms-2 rotate-180" : "me-2")} />
                             {t('common:action.back')}
                         </Button>
                     ) : (
@@ -1548,23 +1548,23 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                     >
                         {generating || creating ? (
                             <>
-                                <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ml-2" : "mr-2")} />
+                                <Loader2 className={cn("h-4 w-4 animate-spin", isRTL ? "ms-2" : "me-2")} />
                                 {generating ? t('wizard.generating') : t('wizard.creating')}
                             </>
                         ) : step === 'review' ? (
                             <div className={isRTL ? 'flex-row-reverse' : ''}>
                                 {t('wizard.createModule')}
-                                <CheckCircle className={cn("h-4 w-4", isRTL ? "mr-2" : "ml-2")} />
+                                <CheckCircle className={cn("h-4 w-4", isRTL ? "me-2" : "ms-2")} />
                             </div>
                         ) : step === 'documents' ? (
                             <div className={isRTL ? 'flex-row-reverse' : ''}>
-                                <Sparkles className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                                 {t('wizard.generateOutline')}
                             </div>
                         ) : (
                             <div className={isRTL ? 'flex-row-reverse' : ''}>
                                 {t('common:action.next')}
-                                <ArrowRight className={cn("h-4 w-4", isRTL ? "mr-2 rotate-180" : "ml-2")} />
+                                <ArrowRight className={cn("h-4 w-4", isRTL ? "me-2 rotate-180" : "ms-2")} />
                             </div>
                         )}
                     </Button>

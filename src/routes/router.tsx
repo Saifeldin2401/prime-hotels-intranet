@@ -35,60 +35,21 @@ const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
-/**
- * Get contextual loading message based on the current route path
- */
-function getLoadingMessage(pathname: string): string {
-    // Map route patterns to user-friendly loading messages
-    const routeMessages: Record<string, string> = {
-        '/login': 'Loading authentication...',
-        '/dashboard': 'Loading your dashboard...',
-        '/documents': 'Loading documents...',
-        '/knowledge': 'Loading knowledge base...',
-        '/training': 'Loading training modules...',
-        '/hr': 'Loading HR resources...',
-        '/admin': 'Loading admin panel...',
-        '/profile': 'Loading your profile...',
-        '/settings': 'Loading settings...',
-        '/tasks': 'Loading tasks...',
-        '/approvals': 'Loading approvals...',
-        '/messages': 'Loading messages...',
-        '/maintenance': 'Loading maintenance requests...',
-        '/announcements': 'Loading announcements...',
-    }
 
-    // Find matching route pattern
-    for (const [route, message] of Object.entries(routeMessages)) {
-        if (pathname.startsWith(route)) {
-            return message
-        }
-    }
 
-    return 'Loading...'
-}
-
-const LoadingSpinner = ({ message }: { message?: string }) => (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="text-center">
-            <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
-            <p className="mt-4 animate-pulse text-muted-foreground">{message || 'Loading...'}</p>
-        </div>
-    </div>
-)
+import { PageSkeleton } from '@/components/ui/loading-skeleton'
 
 const RootLayout = () => {
     const { loading } = useAuth()
-    const location = useLocation()
-    const loadingMessage = useMemo(() => getLoadingMessage(location.pathname), [location.pathname])
 
     if (loading) {
-        return <LoadingSpinner message={loadingMessage} />
+        return <PageSkeleton />
     }
 
     return (
         <NotificationProvider>
             <PageTracker />
-            <Suspense fallback={<LoadingSpinner message={loadingMessage} />}>
+            <Suspense fallback={<PageSkeleton />}>
                 <Outlet />
             </Suspense>
             <SessionTimeoutWarning />
@@ -118,7 +79,7 @@ const RootIndex = () => {
     }, [user])
 
     if (loading) {
-        return <LoadingSpinner message="Loading authentication..." />
+        return <PageSkeleton />
     }
 
     if (user && destination) {
@@ -152,7 +113,7 @@ const AuthenticatedNotFound = () => {
     }, [])
 
     if (!AppLayoutComponent) {
-        return <LoadingSpinner message="Loading page..." />
+        return <PageSkeleton />
     }
 
     return (
@@ -181,7 +142,7 @@ const LegacyAnalyticsRedirect = () => {
     const location = useLocation()
 
     if (loading || rolesLoading) {
-        return <LoadingSpinner message="Loading analytics..." />
+        return <PageSkeleton />
     }
 
     if (!user) {
@@ -205,7 +166,7 @@ const LegacyScheduleRedirect = () => {
     const location = useLocation()
 
     if (loading) {
-        return <LoadingSpinner message="Loading schedule..." />
+        return <PageSkeleton />
     }
 
     if (!user) {
@@ -225,7 +186,7 @@ const CatchAllRedirect = () => {
     const location = useLocation()
 
     if (loading) {
-        return <LoadingSpinner message="Checking authentication..." />
+        return <PageSkeleton />
     }
 
     if (user) {

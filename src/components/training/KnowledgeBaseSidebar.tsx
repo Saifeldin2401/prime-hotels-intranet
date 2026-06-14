@@ -171,12 +171,12 @@ export function KnowledgeBaseSidebar({
                     {t('knowledgeBase.title')}
                 </CardTitle>
                 <div className="relative mt-2">
-                    <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400`} />
+                    <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400`} />
                     <Input
                         placeholder={t('knowledgeBase.searchResources')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className={isRTL ? 'pr-9 text-right' : 'pl-9 text-left'}
+                        className={isRTL ? 'pe-9 text-right' : 'ps-9 text-left'}
                     />
                 </div>
             </CardHeader>
@@ -184,15 +184,15 @@ export function KnowledgeBaseSidebar({
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
                 <TabsList className={`mx-4 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
                     <TabsTrigger value="documents" className="flex-1">
-                        <FileText className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        <FileText className={cn("h-4 w-4", isRTL ? "ms-1" : "me-1")} />
                         {t('knowledgeBase.docs')}
                     </TabsTrigger>
                     <TabsTrigger value="quizzes" className="flex-1">
-                        <ClipboardCheck className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        <ClipboardCheck className={cn("h-4 w-4", isRTL ? "ms-1" : "me-1")} />
                         {t('knowledgeBase.quizzes')}
                     </TabsTrigger>
                     <TabsTrigger value="questions" className="flex-1">
-                        <HelpCircle className={cn("h-4 w-4", isRTL ? "ml-1" : "mr-1")} />
+                        <HelpCircle className={cn("h-4 w-4", isRTL ? "ms-1" : "me-1")} />
                         {t('knowledgeBase.qa')}
                     </TabsTrigger>
                 </TabsList>
@@ -232,7 +232,7 @@ export function KnowledgeBaseSidebar({
                                             className="h-7 text-xs flex-1"
                                             onClick={() => onLinkDocument?.(doc.id)}
                                         >
-                                            <Link2 className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+                                            <Link2 className={cn("h-3 w-3", isRTL ? "ms-1" : "me-1")} />
                                             {t('knowledgeBase.link')}
                                         </Button>
                                         <Button
@@ -242,9 +242,9 @@ export function KnowledgeBaseSidebar({
                                             disabled={aiGenerating && generatingFor === doc.id}
                                         >
                                             {aiGenerating && generatingFor === doc.id ? (
-                                                <Loader2 className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1", "animate-spin")} />
+                                                <Loader2 className={cn("h-3 w-3", isRTL ? "ms-1" : "me-1", "animate-spin")} />
                                             ) : (
-                                                <Sparkles className={cn("h-3 w-3", isRTL ? "ml-1" : "mr-1")} />
+                                                <Sparkles className={cn("h-3 w-3", isRTL ? "ms-1" : "me-1")} />
                                             )}
                                             {t('knowledgeBase.generate')}
                                         </Button>
@@ -323,7 +323,7 @@ export function KnowledgeBaseSidebar({
                                 className={`w-full mt-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}
                                 onClick={() => onAddQuestions?.(questions.map(q => q.id))}
                             >
-                                <Plus className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                                <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                                 {t('knowledgeBase.addAll', { count: questions.length })}
                             </Button>
                         )}

@@ -90,13 +90,13 @@ export function QuestionLibrary() {
                 <div className="flex gap-2">
                     <Button variant="outline" asChild className="hidden sm:flex">
                         <Link to="/questions/generate">
-                            <Sparkles className="h-4 w-4 mr-2 text-purple-600" />
+                            <Sparkles className="h-4 w-4 me-2 text-purple-600" />
                             {t('question_library.generate_with_ai')}
                         </Link>
                     </Button>
                     <Button asChild>
                         <Link to="/questions/new">
-                            <Plus className="h-4 w-4 mr-2" />
+                            <Plus className="h-4 w-4 me-2" />
                             {t('question_library.create_question')}
                         </Link>
                     </Button>
@@ -160,18 +160,18 @@ export function QuestionLibrary() {
             {/* Filters & Search */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
                         placeholder={t('question_library.search_placeholder')}
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="pl-10"
+                        className="ps-10"
                     />
                 </div>
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline">
-                            <Filter className="h-4 w-4 mr-2" />
+                            <Filter className="h-4 w-4 me-2" />
                             {typeFilter ? QUESTION_TYPE_CONFIG[typeFilter]?.label : t('question_library.all_types')}
                         </Button>
                     </DropdownMenuTrigger>
@@ -201,7 +201,7 @@ export function QuestionLibrary() {
                     <TabsTrigger value="pending_review" className="relative">
                         {t('question_library.tabs.pending_review')}
                         {pendingData?.total ? (
-                            <Badge className="ml-2 bg-yellow-500">{pendingData.total}</Badge>
+                            <Badge className="ms-2 bg-yellow-500">{pendingData.total}</Badge>
                         ) : null}
                     </TabsTrigger>
                     <TabsTrigger value="published">{t('question_library.tabs.published')}</TabsTrigger>
@@ -281,7 +281,7 @@ function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCa
                             </Badge>
                             {question.ai_generated && (
                                 <Badge className="bg-purple-100 text-purple-700">
-                                    <Sparkles className="h-3 w-3 mr-1" />
+                                    <Sparkles className="h-3 w-3 me-1" />
                                     AI
                                 </Badge>
                             )}
@@ -316,7 +316,7 @@ function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCa
                                         <Loader2 className="h-4 w-4 animate-spin" />
                                     ) : (
                                         <>
-                                            <CheckCircle className="h-4 w-4 mr-1" />
+                                            <CheckCircle className="h-4 w-4 me-1" />
                                             Approve
                                         </>
                                     )}
@@ -326,7 +326,7 @@ function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCa
 
                         <Button variant="outline" size="sm" asChild>
                             <Link to={`/questions/${question.id}`}>
-                                <Eye className="h-4 w-4 mr-1" />
+                                <Eye className="h-4 w-4 me-1" />
                                 View
                             </Link>
                         </Button>
@@ -340,12 +340,12 @@ function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCa
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
                                     <Link to={`/questions/${question.id}/edit`}>
-                                        <FileEdit className="h-4 w-4 mr-2" />
+                                        <FileEdit className="h-4 w-4 me-2" />
                                         Edit
                                     </Link>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={onDelete} className="text-red-600">
-                                    <Archive className="h-4 w-4 mr-2" />
+                                    <Archive className="h-4 w-4 me-2" />
                                     Delete
                                 </DropdownMenuItem>
                             </DropdownMenuContent>

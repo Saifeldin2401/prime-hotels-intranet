@@ -117,7 +117,7 @@ export function BottomSheet({
             <div
                 ref={sheetRef}
                 className={cn(
-                    "absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out",
+                    "absolute bottom-0 start-0 end-0 bg-background rounded-t-2xl shadow-2xl transition-transform duration-300 ease-out",
                     getSnapHeight(),
                     open ? "translate-y-0" : "translate-y-full",
                     className

@@ -629,7 +629,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                     onClick={() => setTargetAudience({ type: value as 'all' | 'role' | 'department' | 'property', values: [] })}
                     className="h-12"
                   >
-                    <Icon className="h-4 w-4 mr-2" />
+                    <Icon className="h-4 w-4 me-2" />
                     {label}
                   </Button>
                 ))}
@@ -778,7 +778,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
             loading={createAnnouncementMutation.isPending || updateAnnouncementMutation.isPending}
             loadingText={asString(initialData?.id) ? 'Updating...' : 'Creating...'}
           >
-            <Save className="h-4 w-4 mr-2" />
+            <Save className="h-4 w-4 me-2" />
             {asString(initialData?.id) ? 'Update' : 'Create'} Announcement
           </LoadingButton>
         </div>

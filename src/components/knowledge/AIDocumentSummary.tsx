@@ -103,7 +103,7 @@ export function AIDocumentSummary({
                             onClick={handleGenerate}
                             className="bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-700 hover:to-blue-700"
                         >
-                            <Sparkles className="h-4 w-4 mr-2" />
+                            <Sparkles className="h-4 w-4 me-2" />
                             Analyze Document
                         </Button>
                     </div>
@@ -137,7 +137,7 @@ export function AIDocumentSummary({
                     <div className="flex items-center justify-between">
                         <p className="text-sm text-red-600">{error}</p>
                         <Button variant="ghost" size="sm" onClick={handleRegenerate}>
-                            <RefreshCw className="h-4 w-4 mr-1" />
+                            <RefreshCw className="h-4 w-4 me-1" />
                             Retry
                         </Button>
                     </div>
@@ -200,7 +200,7 @@ export function AIDocumentSummary({
                             <CardTitle className="text-base font-semibold">AI Summary</CardTitle>
                         </div>
                         <Button variant="ghost" size="sm" onClick={handleRegenerate} className="h-8">
-                            <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                            <RefreshCw className="h-3.5 w-3.5 me-1" />
                             Regenerate
                         </Button>
                     </div>

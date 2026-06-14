@@ -316,7 +316,7 @@ Generated: ${new Date().toLocaleString()}
                         size="sm"
                         onClick={handleDownloadBackupCodes}
                       >
-                        <Download className="h-4 w-4 mr-1" />
+                        <Download className="h-4 w-4 me-1" />
                         {t('mfa.download', { defaultValue: 'Download' })}
                       </Button>
                     ) : null}
@@ -372,9 +372,9 @@ Generated: ${new Date().toLocaleString()}
               )}
               <Button onClick={handleStartSetup} disabled={isLoading}>
                 {isLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                 ) : (
-                  <Shield className="h-4 w-4 mr-2" />
+                  <Shield className="h-4 w-4 me-2" />
                 )}
                 {t('mfa.start_setup', { defaultValue: 'Start Setup' })}
               </Button>
@@ -399,9 +399,9 @@ Generated: ${new Date().toLocaleString()}
               </Button>
               <Button onClick={handleVerify} disabled={isLoading || verificationCode.length !== 6}>
                 {isLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                 ) : (
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="h-4 w-4 me-2" />
                 )}
                 {t('mfa.verify', { defaultValue: 'Verify' })}
               </Button>
@@ -410,7 +410,7 @@ Generated: ${new Date().toLocaleString()}
           
           {step === 'complete' && (
             <Button onClick={handleClose}>
-              <Check className="h-4 w-4 mr-2" />
+              <Check className="h-4 w-4 me-2" />
               {t('mfa.done', { defaultValue: 'Done' })}
             </Button>
           )}

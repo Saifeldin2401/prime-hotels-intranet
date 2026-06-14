@@ -110,3 +110,20 @@ export function ButtonSkeleton({ className }: { className?: string }) {
 export function TableSkeleton({ className }: { className?: string }) {
   return <LoadingSkeleton variant="table" className={className} />
 }
+
+export function PageSkeleton({ className }: { className?: string }) {
+  return (
+    <div className={cn("space-y-6 p-6", className)}>
+      <div className="space-y-2">
+        <div className="h-8 w-1/4 animate-pulse rounded-md bg-muted" />
+        <div className="h-4 w-1/3 animate-pulse rounded-md bg-muted" />
+      </div>
+      <div className="grid gap-6 md:grid-cols-3">
+        <CardSkeleton />
+        <CardSkeleton />
+        <CardSkeleton />
+      </div>
+      <TableSkeleton />
+    </div>
+  )
+}

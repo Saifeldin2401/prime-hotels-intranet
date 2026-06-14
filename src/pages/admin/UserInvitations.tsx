@@ -143,28 +143,28 @@ export default function UserInvitations() {
       case 'pending':
         return (
           <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
-            <Clock className="w-3 h-3 mr-1" />
+            <Clock className="w-3 h-3 me-1" />
             {t('status.pending', { defaultValue: 'Pending' })}
           </Badge>
         );
       case 'accepted':
         return (
           <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-            <Check className="w-3 h-3 mr-1" />
+            <Check className="w-3 h-3 me-1" />
             {t('status.accepted', { defaultValue: 'Accepted' })}
           </Badge>
         );
       case 'expired':
         return (
           <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200">
-            <AlertCircle className="w-3 h-3 mr-1" />
+            <AlertCircle className="w-3 h-3 me-1" />
             {t('status.expired', { defaultValue: 'Expired' })}
           </Badge>
         );
       case 'cancelled':
         return (
           <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
-            <X className="w-3 h-3 mr-1" />
+            <X className="w-3 h-3 me-1" />
             {t('status.cancelled', { defaultValue: 'Cancelled' })}
           </Badge>
         );
@@ -200,11 +200,11 @@ export default function UserInvitations() {
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" onClick={() => refreshInvitations()} disabled={isLoading}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
             {t('common.refresh', { defaultValue: 'Refresh' })}
           </Button>
           <Button onClick={() => setIsCreateDialogOpen(true)}>
-            <UserPlus className="w-4 h-4 mr-2" />
+            <UserPlus className="w-4 h-4 me-2" />
             {t('invitations.invite_user', { defaultValue: 'Invite User' })}
           </Button>
         </div>
@@ -274,12 +274,12 @@ export default function UserInvitations() {
 
       {/* Search */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           placeholder={t('invitations.search_placeholder', { defaultValue: 'Search by email or role...' })}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10"
+          className="ps-10"
         />
       </div>
 
@@ -311,7 +311,7 @@ export default function UserInvitations() {
               </p>
               {!searchQuery && (
                 <Button className="mt-4" onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
+                  <Plus className="w-4 h-4 me-2" />
                   {t('invitations.invite_user', { defaultValue: 'Invite User' })}
                 </Button>
               )}
@@ -499,8 +499,8 @@ export default function UserInvitations() {
                 {t('common.cancel', { defaultValue: 'Cancel' })}
               </Button>
               <Button type="submit" disabled={isCreating}>
-                {isCreating && <RefreshCw className="w-4 h-4 mr-2 animate-spin" />}
-                <Send className="w-4 h-4 mr-2" />
+                {isCreating && <RefreshCw className="w-4 h-4 me-2 animate-spin" />}
+                <Send className="w-4 h-4 me-2" />
                 {t('invitations.send_invitation', { defaultValue: 'Send Invitation' })}
               </Button>
             </div>

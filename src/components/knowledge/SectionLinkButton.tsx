@@ -49,7 +49,7 @@ export function SectionLinkButton({ sectionId, className }: SectionLinkButtonPro
         <button
             onClick={handleCopy}
             className={cn(
-                "inline-flex items-center justify-center ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200",
+                "inline-flex items-center justify-center ms-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-all duration-200",
                 "text-slate-400 hover:text-indigo-600 hover:bg-indigo-50",
                 copied && "text-green-600 bg-green-50",
                 className

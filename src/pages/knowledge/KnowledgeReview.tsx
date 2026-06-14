@@ -334,15 +334,15 @@ export default function KnowledgeReview() {
         const s = status.toUpperCase()
         switch (s) {
             case KNOWLEDGE_STATUS.DRAFT:
-                return <Badge className="bg-gray-100 text-gray-700 border-gray-200"><Edit3 className="h-3 w-3 mr-1" />{t('review_queue.status.draft')}</Badge>
+                return <Badge className="bg-gray-100 text-gray-700 border-gray-200"><Edit3 className="h-3 w-3 me-1" />{t('review_queue.status.draft')}</Badge>
             case KNOWLEDGE_STATUS.PENDING_REVIEW:
-                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 mr-1" />{t('review_queue.status.pending_review')}</Badge>
+                return <Badge className="bg-yellow-100 text-yellow-700 border-yellow-200"><Clock className="h-3 w-3 me-1" />{t('review_queue.status.pending_review')}</Badge>
             case KNOWLEDGE_STATUS.APPROVED:
-                return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.approved')}</Badge>
+                return <Badge className="bg-blue-100 text-blue-700 border-blue-200"><CheckCircle2 className="h-3 w-3 me-1" />{t('review_queue.status.approved')}</Badge>
             case KNOWLEDGE_STATUS.PUBLISHED:
-                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 mr-1" />{t('review_queue.status.published')}</Badge>
+                return <Badge className="bg-green-100 text-green-700 border-green-200"><CheckCircle2 className="h-3 w-3 me-1" />{t('review_queue.status.published')}</Badge>
             case KNOWLEDGE_STATUS.REJECTED:
-                return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 mr-1" />{t('review_queue.status.rejected')}</Badge>
+                return <Badge className="bg-red-100 text-red-700 border-red-200"><XCircle className="h-3 w-3 me-1" />{t('review_queue.status.rejected')}</Badge>
             default:
                 return <Badge variant="outline">{status}</Badge>
         }
@@ -486,7 +486,7 @@ export default function KnowledgeReview() {
                                                 navigate(`/knowledge/${article.id}`)
                                             }}
                                         >
-                                            <Eye className="h-4 w-4 mr-1" />
+                                            <Eye className="h-4 w-4 me-1" />
                                             {t('review_queue.dialog.view')}
                                         </Button>
                                     </div>
@@ -526,7 +526,7 @@ export default function KnowledgeReview() {
                                     className="p-0 h-auto mt-2"
                                     onClick={() => selectedArticle && navigate(`/knowledge/${selectedArticle.id}`)}
                                 >
-                                    <Eye className="h-4 w-4 mr-1" />
+                                    <Eye className="h-4 w-4 me-1" />
                                     {t('review_queue.dialog.view_full')}
                                 </Button>
                             </div>
@@ -618,9 +618,9 @@ export default function KnowledgeReview() {
                                                 className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                                             >
                                                 {reviewMutation.isPending && reviewAction === 'approve' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    <Loader2 className="h-4 w-4 animate-spin me-2" />
                                                 ) : (
-                                                    <ThumbsUp className="h-4 w-4 mr-2" />
+                                                    <ThumbsUp className="h-4 w-4 me-2" />
                                                 )}
                                                 {t('review_queue.dialog.publish')}
                                             </Button>
@@ -630,9 +630,9 @@ export default function KnowledgeReview() {
                                                 className="flex-1 sm:flex-none bg-red-600 hover:bg-red-700 text-white"
                                             >
                                                 {reviewMutation.isPending && reviewAction === 'reject' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    <Loader2 className="h-4 w-4 animate-spin me-2" />
                                                 ) : (
-                                                    <ThumbsDown className="h-4 w-4 mr-2" />
+                                                    <ThumbsDown className="h-4 w-4 me-2" />
                                                 )}
                                                 {t('review_queue.dialog.reject')}
                                             </Button>
@@ -643,9 +643,9 @@ export default function KnowledgeReview() {
                                                 className="flex-1 sm:flex-none"
                                             >
                                                 {reviewMutation.isPending && reviewAction === 'changes' ? (
-                                                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                    <Loader2 className="h-4 w-4 animate-spin me-2" />
                                                 ) : (
-                                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                                    <MessageSquare className="h-4 w-4 me-2" />
                                                 )}
                                                 {t('review_queue.dialog.request_changes')}
                                             </Button>
@@ -660,9 +660,9 @@ export default function KnowledgeReview() {
                                             className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                                         >
                                             {reviewMutation.isPending && reviewAction === 'approve' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                <Loader2 className="h-4 w-4 animate-spin me-2" />
                                             ) : (
-                                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                                <ThumbsUp className="h-4 w-4 me-2" />
                                             )}
                                             {t('review_queue.dialog.publish')}
                                         </Button>
@@ -677,9 +677,9 @@ export default function KnowledgeReview() {
                                             className="flex-1 sm:flex-none"
                                         >
                                             {reviewMutation.isPending && reviewAction === 'reject' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                <Loader2 className="h-4 w-4 animate-spin me-2" />
                                             ) : (
-                                                <ThumbsDown className="h-4 w-4 mr-2" />
+                                                <ThumbsDown className="h-4 w-4 me-2" />
                                             )}
                                             {t('review_queue.dialog.unpublish')}
                                         </Button>
@@ -693,9 +693,9 @@ export default function KnowledgeReview() {
                                             className="flex-1 sm:flex-none bg-green-600 hover:bg-green-700"
                                         >
                                             {reviewMutation.isPending && reviewAction === 'approve' ? (
-                                                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                                <Loader2 className="h-4 w-4 animate-spin me-2" />
                                             ) : (
-                                                <ThumbsUp className="h-4 w-4 mr-2" />
+                                                <ThumbsUp className="h-4 w-4 me-2" />
                                             )}
                                             {t('review_queue.dialog.publish')}
                                         </Button>

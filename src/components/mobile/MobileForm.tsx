@@ -159,7 +159,7 @@ export function MobileFormField({
           className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
         >
           {label}
-          {required && <span className="text-destructive ml-1">*</span>}
+          {required && <span className="text-destructive ms-1">*</span>}
         </label>
       )}
       
@@ -257,7 +257,7 @@ export function MobileFormActions({
         'flex items-center gap-3 pt-4',
         sticky && [
           // Use sticky positioning instead of fixed for better iOS keyboard handling
-          'sticky bottom-0 left-0 right-0 z-40',
+          'sticky bottom-0 start-0 end-0 z-40',
           'bg-background/95 backdrop-blur-sm',
           'border-t px-4 py-4',
           'safe-area-bottom',
@@ -358,7 +358,7 @@ export function MobileFormSelect({
           id={selectId}
           className={cn(
             'flex w-full rounded-md border border-input bg-background',
-            'px-4 py-3 pr-10 text-base appearance-none',
+            'px-4 py-3 pe-10 text-base appearance-none',
             'ring-offset-background focus-visible:outline-none',
             'focus-visible:ring-2 focus-visible:ring-ring',
             'focus-visible:ring-offset-2',
@@ -374,7 +374,7 @@ export function MobileFormSelect({
             </option>
           ))}
         </select>
-        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+        <ChevronDown className="absolute end-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
       </div>
     </MobileFormField>
   )

@@ -107,7 +107,7 @@ export default function ReportBuilder() {
                 </div>
                 {!isEditing && (
                     <Button onClick={handleCreateNew} className="bg-indigo-600 hover:bg-indigo-700 text-white">
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-4 w-4 me-2" />
                         Create New Report Map
                     </Button>
                 )}

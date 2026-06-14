@@ -196,7 +196,7 @@ export function DocumentTrashBin({
               size="sm"
               onClick={() => setEmptyTrashDialogOpen(true)}
             >
-              <Trash2 className="w-4 h-4 mr-1.5" />
+              <Trash2 className="w-4 h-4 me-1.5" />
               Empty Trash
             </Button>
           )}
@@ -219,13 +219,13 @@ export function DocumentTrashBin({
               : "Select all"}
           </span>
           {selectedIds.length > 0 && (
-            <div className="flex items-center gap-2 ml-4">
+            <div className="flex items-center gap-2 ms-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setRestoreDialogOpen(true)}
               >
-                <RotateCcw className="w-4 h-4 mr-1.5" />
+                <RotateCcw className="w-4 h-4 me-1.5" />
                 Restore
               </Button>
               <Button
@@ -233,7 +233,7 @@ export function DocumentTrashBin({
                 size="sm"
                 onClick={() => setDeleteDialogOpen(true)}
               >
-                <Trash2 className="w-4 h-4 mr-1.5" />
+                <Trash2 className="w-4 h-4 me-1.5" />
                 Delete Permanently
               </Button>
             </div>
@@ -242,18 +242,18 @@ export function DocumentTrashBin({
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className="relative">
-            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder="Search trash..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 w-64"
+              className="ps-9 w-64"
             />
             {searchQuery && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-6 w-6"
+                className="absolute end-1 top-1/2 -translate-y-1/2 h-6 w-6"
                 onClick={() => setSearchQuery("")}
                 aria-label={t("accessibility.clear_search", "Clear search")}
               >
@@ -307,7 +307,7 @@ export function DocumentTrashBin({
               >
                 <Checkbox
                   checked={selectedIds.includes(doc.id)}
-                  className="absolute top-2 left-2"
+                  className="absolute top-2 start-2"
                   onClick={(e) => e.stopPropagation()}
                   onCheckedChange={() => toggleSelection(doc.id)}
                 />
@@ -404,7 +404,7 @@ export function DocumentTrashBin({
                         setRestoreDialogOpen(true);
                       }}
                     >
-                      <RotateCcw className="w-4 h-4 mr-2" />
+                      <RotateCcw className="w-4 h-4 me-2" />
                       Restore
                     </DropdownMenuItem>
                     <DropdownMenuItem
@@ -415,7 +415,7 @@ export function DocumentTrashBin({
                         setDeleteDialogOpen(true);
                       }}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4 me-2" />
                       Delete Permanently
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -454,9 +454,9 @@ export function DocumentTrashBin({
               className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
             >
               {actionLoading ? (
-                <span className="animate-spin mr-2">◌</span>
+                <span className="animate-spin me-2">◌</span>
               ) : (
-                <RotateCcw className="w-4 h-4 mr-2" />
+                <RotateCcw className="w-4 h-4 me-2" />
               )}
               Restore
             </Button>
@@ -486,9 +486,9 @@ export function DocumentTrashBin({
               className="bg-destructive hover:bg-destructive/90"
             >
               {actionLoading ? (
-                <span className="animate-spin mr-2">◌</span>
+                <span className="animate-spin me-2">◌</span>
               ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
               )}
               Delete Permanently
             </AlertDialogAction>
@@ -522,9 +522,9 @@ export function DocumentTrashBin({
               className="bg-destructive hover:bg-destructive/90"
             >
               {actionLoading ? (
-                <span className="animate-spin mr-2">◌</span>
+                <span className="animate-spin me-2">◌</span>
               ) : (
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
               )}
               Empty Trash
             </AlertDialogAction>

@@ -229,7 +229,7 @@ export default function DocumentDetail() {
     return (
       <div className="container mx-auto py-6">
         <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-4">
-          <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
+          <ArrowLeft className="w-4 h-4 me-2" /> {t('detail.back_to_library')}
         </Button>
         <div className="text-center py-12 border rounded-lg bg-destructive/10 text-destructive">
           <h3 className="text-lg font-medium">{t('detail.error_loading')}</h3>
@@ -253,7 +253,7 @@ export default function DocumentDetail() {
     <div className="container mx-auto py-6 space-y-6 animate-fade-in">
       {/* Back Button */}
       <Button variant="ghost" onClick={() => navigate('/documents')} className="mb-2">
-        <ArrowLeft className="w-4 h-4 mr-2" /> {t('detail.back_to_library')}
+        <ArrowLeft className="w-4 h-4 me-2" /> {t('detail.back_to_library')}
       </Button>
 
       {/* Expiry Banner */}
@@ -283,7 +283,7 @@ export default function DocumentDetail() {
                     <DocumentConfidentialityBadge level={document.confidentiality_level} />
                     {document.featured && (
                       <Badge variant="gold">
-                        <Sparkles className="w-3 h-3 mr-1" />
+                        <Sparkles className="w-3 h-3 me-1" />
                         Featured
                       </Badge>
                     )}
@@ -300,11 +300,11 @@ export default function DocumentDetail() {
                     disabled={resolvingDocumentUrl || !secureDocumentUrl}
                     onClick={handleDownload}
                   >
-                    <Download className="w-4 h-4 mr-2" />
+                    <Download className="w-4 h-4 me-2" />
                     Download
                   </Button>
                   <Button onClick={() => setViewerOpen(true)}>
-                    <Eye className="w-4 h-4 mr-2" />
+                    <Eye className="w-4 h-4 me-2" />
                     Preview
                   </Button>
                   <DropdownMenu>
@@ -315,22 +315,22 @@ export default function DocumentDetail() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={handlePrint}>
-                        <Printer className="w-4 h-4 mr-2" />
+                        <Printer className="w-4 h-4 me-2" />
                         Print
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={handleShare}>
-                        <Share2 className="w-4 h-4 mr-2" />
+                        <Share2 className="w-4 h-4 me-2" />
                         Share
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => setAiAssistantOpen(true)}>
-                        <Sparkles className="w-4 h-4 mr-2" />
+                        <Sparkles className="w-4 h-4 me-2" />
                         AI Assistant
                       </DropdownMenuItem>
                       {canEdit && (
                         <>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setEditMetadataOpen(true)}>
-                            <Edit3 className="w-4 h-4 mr-2" />
+                            <Edit3 className="w-4 h-4 me-2" />
                             Edit Metadata
                           </DropdownMenuItem>
                         </>
@@ -445,14 +445,14 @@ export default function DocumentDetail() {
                 <History className="w-4 h-4" />
                 Version History
                 {versions.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">{versions.length}</Badge>
+                  <Badge variant="secondary" className="ms-1">{versions.length}</Badge>
                 )}
               </TabsTrigger>
               <TabsTrigger value="comments" className="flex items-center gap-2">
                 <MessageSquare className="w-4 h-4" />
                 Comments
                 {comments.length > 0 && (
-                  <Badge variant="secondary" className="ml-1">{comments.length}</Badge>
+                  <Badge variant="secondary" className="ms-1">{comments.length}</Badge>
                 )}
               </TabsTrigger>
             </TabsList>
@@ -627,7 +627,7 @@ export default function DocumentDetail() {
                   className="w-full"
                   onClick={() => setEditMetadataOpen(true)}
                 >
-                  <Edit3 className="w-4 h-4 mr-2" />
+                  <Edit3 className="w-4 h-4 me-2" />
                   Edit Details
                 </Button>
               </CardFooter>
@@ -668,7 +668,7 @@ export default function DocumentDetail() {
                 className="w-full border-hotel-gold/30 hover:bg-hotel-gold/10"
                 onClick={() => setAiAssistantOpen(true)}
               >
-                <Sparkles className="w-4 h-4 mr-2" />
+                <Sparkles className="w-4 h-4 me-2" />
                 Open AI Assistant
               </Button>
             </CardContent>
@@ -754,12 +754,12 @@ export default function DocumentDetail() {
               >
                 {aiSummaryLoading ? (
                   <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    <Loader2 className="w-4 h-4 me-2 animate-spin" />
                     Analyzing
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4 mr-2" />
+                    <Sparkles className="w-4 h-4 me-2" />
                     Refresh Summary
                   </>
                 )}
@@ -798,7 +798,7 @@ export default function DocumentDetail() {
                 {Array.isArray(aiSummary.keyChanges) && aiSummary.keyChanges.length > 0 && (
                   <div className="space-y-2">
                     <div className="text-xs font-medium text-muted-foreground">Key changes</div>
-                    <ul className="list-disc pl-5 space-y-1 text-sm">
+                    <ul className="list-disc ps-5 space-y-1 text-sm">
                       {aiSummary.keyChanges.map((item) => (
                         <li key={item}>{item}</li>
                       ))}
@@ -829,7 +829,7 @@ export default function DocumentDetail() {
             </div>
             <div className="flex gap-2">
               <Button onClick={copyShareLink} className="flex-1">
-                <Share2 className="w-4 h-4 mr-2" />
+                <Share2 className="w-4 h-4 me-2" />
                 Copy Link
               </Button>
             </div>

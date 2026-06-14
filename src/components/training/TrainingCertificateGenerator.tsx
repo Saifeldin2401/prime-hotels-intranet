@@ -659,7 +659,7 @@ export function TrainingCertificateGenerator({
                   checked={certificateData.include_signature}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_signature: !!checked })}
                 />
-                <Label htmlFor="include_signature" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeSignature')}</Label>
+                <Label htmlFor="include_signature" className={isRTL ? 'me-2' : ''}>{t('certificateGenerator.includeSignature')}</Label>
               </div>
               <div className={`flex items-center space-x-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
                 <Checkbox
@@ -667,7 +667,7 @@ export function TrainingCertificateGenerator({
                   checked={certificateData.include_seal}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_seal: !!checked })}
                 />
-                <Label htmlFor="include_seal" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeSeal')}</Label>
+                <Label htmlFor="include_seal" className={isRTL ? 'me-2' : ''}>{t('certificateGenerator.includeSeal')}</Label>
               </div>
               <div className={`flex items-center space-x-2 ${isRTL ? 'space-x-reverse flex-row-reverse' : ''}`}>
                 <Checkbox
@@ -675,7 +675,7 @@ export function TrainingCertificateGenerator({
                   checked={certificateData.include_qr_code}
                   onCheckedChange={(checked) => setCertificateData({ ...certificateData, include_qr_code: !!checked })}
                 />
-                <Label htmlFor="include_qr_code" className={isRTL ? 'mr-2' : ''}>{t('certificateGenerator.includeQr')}</Label>
+                <Label htmlFor="include_qr_code" className={isRTL ? 'me-2' : ''}>{t('certificateGenerator.includeQr')}</Label>
               </div>
             </div>
           </div>
@@ -692,7 +692,7 @@ export function TrainingCertificateGenerator({
                     onClick={() => setPreviewMode(!previewMode)}
                     className={isRTL ? 'flex-row-reverse' : ''}
                   >
-                    <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                    <Eye className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                     {previewMode ? t('certificateGenerator.hide') : t('certificateGenerator.show')} {t('certificateGenerator.preview')}
                   </Button>
                 </div>
@@ -718,7 +718,7 @@ export function TrainingCertificateGenerator({
               disabled={!selectedTemplate || !certificateData.recipient_name || !certificateData.course_name}
               className={isRTL ? 'flex-row-reverse' : ''}
             >
-              <Download className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              <Download className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
               {t('certificateGenerator.generateDownload')}
             </Button>
 
@@ -727,7 +727,7 @@ export function TrainingCertificateGenerator({
               onClick={() => setPreviewMode(!previewMode)}
               className={isRTL ? 'flex-row-reverse' : ''}
             >
-              <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              <Eye className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
               {t('certificateGenerator.preview')}
             </Button>
           </div>

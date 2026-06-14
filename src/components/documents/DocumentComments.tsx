@@ -153,7 +153,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
   const { content } = parseMentions(comment.content, users);
 
   return (
-    <div className={cn("group", level > 0 && "ml-8 mt-3")}>
+    <div className={cn("group", level > 0 && "ms-8 mt-3")}>
       <div
         className={cn(
           "flex gap-3 p-3 rounded-lg transition-colors",
@@ -249,7 +249,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                 onClick={() => onStartReply(comment.id)}
               >
-                <CornerDownRight className="w-3.5 h-3.5 mr-1" />
+                <CornerDownRight className="w-3.5 h-3.5 me-1" />
                 Reply
               </Button>
               {!comment.parentId && (
@@ -261,12 +261,12 @@ const CommentItem: React.FC<CommentItemProps> = ({
                 >
                   {comment.isResolved ? (
                     <>
-                      <RotateCcw className="w-3.5 h-3.5 mr-1" />
+                      <RotateCcw className="w-3.5 h-3.5 me-1" />
                       Unresolve
                     </>
                   ) : (
                     <>
-                      <Check className="w-3.5 h-3.5 mr-1" />
+                      <Check className="w-3.5 h-3.5 me-1" />
                       Resolve
                     </>
                   )}
@@ -289,7 +289,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       <DropdownMenuItem
                         onClick={() => onPin(comment.id, !comment.isPinned)}
                       >
-                        <Pin className="w-4 h-4 mr-2" />
+                        <Pin className="w-4 h-4 me-2" />
                         {comment.isPinned ? "Unpin" : "Pin"}
                       </DropdownMenuItem>
                     )}
@@ -297,7 +297,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       <DropdownMenuItem
                         onClick={() => onStartEdit(comment.id, comment.content)}
                       >
-                        <Edit3 className="w-4 h-4 mr-2" />
+                        <Edit3 className="w-4 h-4 me-2" />
                         Edit
                       </DropdownMenuItem>
                     )}
@@ -305,7 +305,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                       className="text-destructive focus:text-destructive"
                       onClick={() => onDelete(comment.id)}
                     >
-                      <Trash2 className="w-4 h-4 mr-2" />
+                      <Trash2 className="w-4 h-4 me-2" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -345,7 +345,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
                     onClick={onSubmitReply}
                     disabled={!replyContent.trim()}
                   >
-                    <Send className="w-3.5 h-3.5 mr-1.5" />
+                    <Send className="w-3.5 h-3.5 me-1.5" />
                     Reply
                   </Button>
                 </div>
@@ -630,7 +630,7 @@ export function DocumentComments({
                     value={newComment}
                     onChange={(e) => handleTextChange(e.target.value)}
                     placeholder="Add a comment... Use @ to mention someone"
-                    className="min-h-[80px] resize-none pr-10"
+                    className="min-h-[80px] resize-none pe-10"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
                         handleSubmitComment();
@@ -639,7 +639,7 @@ export function DocumentComments({
                   />
                   <Button
                     size="icon"
-                    className="absolute bottom-2 right-2 h-8 w-8 bg-[#0B1C3E] hover:bg-[#1a3a6e]"
+                    className="absolute bottom-2 end-2 h-8 w-8 bg-[#0B1C3E] hover:bg-[#1a3a6e]"
                     onClick={handleSubmitComment}
                     disabled={!newComment.trim()}
                     aria-label={t('accessibility.send_comment', 'Send comment')}

@@ -382,7 +382,7 @@ export function MobileKnowledgeViewer() {
                                 <div className="flex flex-wrap gap-2 mb-3">
                                     {article.category && (
                                         <Badge variant="secondary" className="text-xs">
-                                            <Folder className="h-3 w-3 mr-1" />
+                                            <Folder className="h-3 w-3 me-1" />
                                             {article.category.name}
                                         </Badge>
                                     )}
@@ -456,11 +456,11 @@ export function MobileKnowledgeViewer() {
                                 <h3 className="font-semibold mb-3">Was this article helpful?</h3>
                                 <div className="flex gap-2">
                                     <Button variant="outline" className="flex-1 touch-target">
-                                        <ThumbsUp className="h-4 w-4 mr-2" />
+                                        <ThumbsUp className="h-4 w-4 me-2" />
                                         Yes
                                     </Button>
                                     <Button variant="outline" className="flex-1 touch-target">
-                                        <ThumbsDown className="h-4 w-4 mr-2" />
+                                        <ThumbsDown className="h-4 w-4 me-2" />
                                         No
                                     </Button>
                                 </div>
@@ -474,7 +474,7 @@ export function MobileKnowledgeViewer() {
                     <m.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="fixed bottom-4 left-1/2 -translate-x-1/2 z-40"
+                        className="fixed bottom-4 start-1/2 -translate-x-1/2 z-40"
                     >
                         <Button
                             variant="secondary"
@@ -482,7 +482,7 @@ export function MobileKnowledgeViewer() {
                             className="rounded-full shadow-lg"
                             onClick={() => setIsFocusMode(false)}
                         >
-                            <ChevronUp className="h-4 w-4 mr-2" />
+                            <ChevronUp className="h-4 w-4 me-2" />
                             {Math.round(readingProgress)}% read
                         </Button>
                     </m.div>
@@ -676,9 +676,9 @@ function ActionsSheet({
                         onClick={() => { onBookmark(); onClose(); }}
                     >
                         {article.is_bookmarked ? (
-                            <BookmarkCheck className="h-4 w-4 mr-2 text-primary" />
+                            <BookmarkCheck className="h-4 w-4 me-2 text-primary" />
                         ) : (
-                            <Bookmark className="h-4 w-4 mr-2" />
+                            <Bookmark className="h-4 w-4 me-2" />
                         )}
                         {article.is_bookmarked ? 'Remove Bookmark' : 'Add Bookmark'}
                     </Button>
@@ -688,7 +688,7 @@ function ActionsSheet({
                         className="w-full justify-start touch-target"
                         onClick={() => { onShare(); onClose(); }}
                     >
-                        <Share2 className="h-4 w-4 mr-2" />
+                        <Share2 className="h-4 w-4 me-2" />
                         Share Article
                     </Button>
 
@@ -698,7 +698,7 @@ function ActionsSheet({
                         disabled={isTranslating}
                         onClick={() => { onTranslate(); onClose(); }}
                     >
-                        <Languages className="h-4 w-4 mr-2" />
+                        <Languages className="h-4 w-4 me-2" />
                         {isTranslating ? 'Translating...' : 'Translate'}
                     </Button>
 
@@ -707,7 +707,7 @@ function ActionsSheet({
                         className="w-full justify-start touch-target"
                         onClick={() => window.print()}
                     >
-                        <Printer className="h-4 w-4 mr-2" />
+                        <Printer className="h-4 w-4 me-2" />
                         Print / PDF
                     </Button>
                 </div>

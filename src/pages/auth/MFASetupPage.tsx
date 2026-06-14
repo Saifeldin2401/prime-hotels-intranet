@@ -238,9 +238,9 @@ Generated: ${new Date().toLocaleString()}
                   size="lg"
                 >
                   {isLoading ? (
-                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                   ) : (
-                    <Shield className="h-4 w-4 mr-2" />
+                    <Shield className="h-4 w-4 me-2" />
                   )}
                   {t('mfa.start_setup', { defaultValue: 'Start Setup' })}
                 </Button>
@@ -346,7 +346,7 @@ Generated: ${new Date().toLocaleString()}
                     className="flex-1"
                   >
                     {t('mfa.continue', { defaultValue: 'Continue' })}
-                    <ArrowRight className="h-4 w-4 ml-2" />
+                    <ArrowRight className="h-4 w-4 ms-2" />
                   </Button>
                 </div>
               </motion.div>
@@ -397,9 +397,9 @@ Generated: ${new Date().toLocaleString()}
                     className="flex-1"
                   >
                     {isLoading ? (
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                     ) : (
-                      <Check className="h-4 w-4 mr-2" />
+                      <Check className="h-4 w-4 me-2" />
                     )}
                     {t('mfa.verify', { defaultValue: 'Verify' })}
                   </Button>
@@ -433,7 +433,7 @@ Generated: ${new Date().toLocaleString()}
                         size="sm"
                         onClick={handleDownloadBackupCodes}
                       >
-                        <Download className="h-4 w-4 mr-1" />
+                        <Download className="h-4 w-4 me-1" />
                         {t('mfa.download', { defaultValue: 'Download' })}
                       </Button>
                     ) : null}
@@ -480,7 +480,7 @@ Generated: ${new Date().toLocaleString()}
                   className="w-full"
                   size="lg"
                 >
-                  <Check className="h-4 w-4 mr-2" />
+                  <Check className="h-4 w-4 me-2" />
                   {t('mfa.go_to_dashboard', { defaultValue: 'Go to Dashboard' })}
                 </Button>
               </motion.div>

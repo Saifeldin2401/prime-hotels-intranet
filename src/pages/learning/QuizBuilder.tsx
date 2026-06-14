@@ -235,7 +235,7 @@ export default function QuizBuilder() {
                 <div className="flex gap-2">
                     <Button variant="outline" onClick={() => navigate('/learning/quizzes')}>{t('common.cancel')}</Button>
                     <Button onClick={handleSave} disabled={saving}>
-                        {saving ? t('training:quizzes.builder.saving') : <><Save className="mr-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
+                        {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_quiz')}</>}
                     </Button>
                 </div>
             </div>
@@ -341,7 +341,7 @@ export default function QuizBuilder() {
                                 {t('training:quizzes.builder.save_first_desc')}
                             </p>
                             <Button onClick={handleSave} disabled={saving || !quiz.title}>
-                                {saving ? t('training:quizzes.builder.saving') : <><Save className="mr-2 h-4 w-4" /> {t('training:quizzes.builder.save_now')}</>}
+                                {saving ? t('training:quizzes.builder.saving') : <><Save className="me-2 h-4 w-4" /> {t('training:quizzes.builder.save_now')}</>}
                             </Button>
                             {!quiz.title && (
                                 <p className="text-xs text-amber-600 mt-2">{t('training:quizzes.builder.enter_title_error')}</p>
@@ -369,7 +369,7 @@ export default function QuizBuilder() {
                                         </DialogContent>
                                     </Dialog>
                                     <Button variant="outline" onClick={() => setShowSelector(true)}>
-                                        <Plus className="mr-2 h-4 w-4" /> {t('training:quizzes.builder.add_questions')}
+                                        <Plus className="me-2 h-4 w-4" /> {t('training:quizzes.builder.add_questions')}
                                     </Button>
                                 </div>
                             </div>

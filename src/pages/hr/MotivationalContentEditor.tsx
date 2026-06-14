@@ -82,7 +82,7 @@ export default function MotivationalContentEditor() {
                 </div>
                 {!isEditing && (
                     <Button onClick={handleCreateNew} className="bg-brand-purple hover:bg-brand-purple/90 text-white">
-                        <Plus className="h-4 w-4 mr-2" />
+                        <Plus className="h-4 w-4 me-2" />
                         Add New Quote
                     </Button>
                 )}
@@ -91,7 +91,7 @@ export default function MotivationalContentEditor() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: List of Quotes */}
                 <div className={`lg:col-span-4 space-y-4 ${isEditing ? 'hidden lg:block opacity-50 pointer-events-none' : ''}`}>
-                    <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pr-2 pb-10">
+                    <div className="flex flex-col gap-4 max-h-[75vh] overflow-y-auto pe-2 pb-10">
                         {isLoading ? (
                             <p className="text-sm text-muted-foreground animate-pulse">Loading quotes...</p>
                         ) : !quotes || quotes.length === 0 ? (
@@ -110,7 +110,7 @@ export default function MotivationalContentEditor() {
                                         className="relative overflow-hidden transition-all hover:shadow-md cursor-pointer group min-h-[120px] bg-white" 
                                         onClick={() => { setSelectedQuote(quote); setIsEditing(true); }}
                                     >
-                                        <div className={`absolute left-0 top-0 bottom-0 w-1 ${quote.is_active ? 'bg-hotel-gold' : 'bg-slate-300'}`} />
+                                        <div className={`absolute start-0 top-0 bottom-0 w-1 ${quote.is_active ? 'bg-hotel-gold' : 'bg-slate-300'}`} />
                                         <CardHeader className="p-4 pb-0">
                                             <div className="flex justify-between items-start">
                                                 <Badge variant="outline" className="flex items-center gap-1 bg-slate-50 text-[10px] py-0 h-5">
@@ -127,7 +127,7 @@ export default function MotivationalContentEditor() {
                                                 <p className="text-sm italic font-medium text-slate-800 line-clamp-2 leading-snug">
                                                     "{quote.content_en || 'No English content'}"
                                                 </p>
-                                                <p dir="rtl" className="text-xs italic font-medium text-slate-600 font-arabic line-clamp-2 leading-relaxed text-right border-r-2 border-slate-100 pr-2">
+                                                <p dir="rtl" className="text-xs italic font-medium text-slate-600 font-arabic line-clamp-2 leading-relaxed text-right border-r-2 border-slate-100 pe-2">
                                                     "{quote.content_ar || 'لا يوجد محتوى عربي'}"
                                                 </p>
                                             </div>

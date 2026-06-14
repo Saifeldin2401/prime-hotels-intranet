@@ -86,7 +86,7 @@ export function ActionSheet({
                                 <DrawerClose asChild>
                                     <button 
                                         className={cn(
-                                            "absolute right-4 top-2 p-2 rounded-full transition-colors",
+                                            "absolute end-4 top-2 p-2 rounded-full transition-colors",
                                             isPremium 
                                                 ? "text-white/50 hover:text-white hover:bg-white/10" 
                                                 : "text-slate-400 hover:text-slate-600 hover:bg-slate-100"

@@ -169,7 +169,7 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
                     !dateRange.from && 'text-muted-foreground'
                   )}
                 >
-                  <Calendar className="mr-2 h-4 w-4" />
+                  <Calendar className="me-2 h-4 w-4" />
                   {dateRange.from ? (
                     dateRange.to ? (
                       <>
@@ -244,12 +244,12 @@ export function QuickExportDialog({ open, onOpenChange }: QuickExportDialogProps
           <Button onClick={handleSubmit} disabled={!canSubmit || createExport.isPending}>
             {createExport.isPending ? (
               <>
-                <span className="animate-spin mr-2">⏳</span>
+                <span className="animate-spin me-2">⏳</span>
                 Creating...
               </>
             ) : (
               <>
-                <Download className="mr-2 h-4 w-4" />
+                <Download className="me-2 h-4 w-4" />
                 Create Export
               </>
             )}

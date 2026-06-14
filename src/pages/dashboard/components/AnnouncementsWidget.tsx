@@ -120,7 +120,7 @@ export function AnnouncementsWidget() {
                     <Bell className="w-8 h-8 text-amber-500" />
                   </div>
                   <p className="text-slate-800 font-bold text-lg">{t('widgets.no_announcements', 'No announcements yet')}</p>
-                  <p className="text-sm text-slate-500 font-medium mt-1 pr-4 pl-4">We'll notify you when an update arrives.</p>
+                  <p className="text-sm text-slate-500 font-medium mt-1 pe-4 ps-4">We'll notify you when an update arrives.</p>
                 </m.div>
               ) : (
                 announcements?.map((announcement, index: number) => {
@@ -201,7 +201,7 @@ export function AnnouncementsWidget() {
                               )}
                               {hasRead && (
                                 <Badge variant="outline" className="text-[10px] uppercase tracking-wider font-bold border-emerald-200 bg-emerald-50 text-emerald-600 px-2 h-6">
-                                  <Check className="w-3 h-3 mr-1" />
+                                  <Check className="w-3 h-3 me-1" />
                                   {t('common.acknowledged', 'Acknowledged')}
                                 </Badge>
                               )}
@@ -214,8 +214,8 @@ export function AnnouncementsWidget() {
                                   onClick={(e) => handleAcknowledge(announcement.id, e)}
                                   disabled={isProcessing}
                                   className={cn(
-                                    "h-6 text-xs px-2 ml-auto",
-                                    isRTL && "mr-auto ml-0",
+                                    "h-6 text-xs px-2 ms-auto",
+                                    isRTL && "me-auto ms-0",
                                     "border-amber-200 text-amber-700 hover:bg-amber-50 hover:text-amber-800"
                                   )}
                                 >
@@ -227,7 +227,7 @@ export function AnnouncementsWidget() {
                                     />
                                   ) : (
                                     <>
-                                      <CheckCircle className={cn("w-3 h-3", isRTL ? "ml-1" : "mr-1")} />
+                                      <CheckCircle className={cn("w-3 h-3", isRTL ? "ms-1" : "me-1")} />
                                       {t('actions.acknowledge', 'Acknowledge')}
                                     </>
                                   )}

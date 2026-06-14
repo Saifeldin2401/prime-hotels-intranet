@@ -484,7 +484,7 @@ export default function LearningAnalytics() {
                         }
                     }}>
                         <SelectTrigger className="w-[140px]">
-                            <Calendar className="h-4 w-4 mr-2" />
+                            <Calendar className="h-4 w-4 me-2" />
                             <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -495,7 +495,7 @@ export default function LearningAnalytics() {
                         </SelectContent>
                     </Select>
                     <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 me-2" />
                         Export
                     </Button>
                 </div>

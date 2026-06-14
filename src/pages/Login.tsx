@@ -169,7 +169,7 @@ export default function Login() {
             y: mousePosition.y * 2,
           }}
           transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px]"
+          className="absolute top-1/4 end-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px]"
         />
         <motion.div
           animate={{
@@ -177,7 +177,7 @@ export default function Login() {
             y: -mousePosition.y * 1.5,
           }}
           transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute bottom-1/4 left-1/4 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px]"
+          className="absolute bottom-1/4 start-1/4 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px]"
         />
 
         {/* Floating Particles */}
@@ -337,7 +337,7 @@ export default function Login() {
               opacity: [0.3, 0.5, 0.3],
             }}
             transition={{ duration: 8, repeat: Infinity }}
-            className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
+            className="absolute top-0 end-0 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
           />
           <motion.div
             animate={{
@@ -345,7 +345,7 @@ export default function Login() {
               opacity: [0.2, 0.4, 0.2],
             }}
             transition={{ duration: 10, repeat: Infinity }}
-            className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"
+            className="absolute bottom-0 start-0 w-[500px] h-[500px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"
           />
 
           {/* Subtle grid */}

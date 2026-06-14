@@ -128,7 +128,7 @@ export function ErrorState({
 
                     {onRetry && (
                         <Button onClick={onRetry} className="mt-2">
-                            <RefreshCw className="h-4 w-4 mr-2" />
+                            <RefreshCw className="h-4 w-4 me-2" />
                             {t('action.try_again', { defaultValue: 'Try Again' })}
                         </Button>
                     )}

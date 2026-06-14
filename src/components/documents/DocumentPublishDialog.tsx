@@ -194,7 +194,7 @@ export function DocumentPublishDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="flex-1 pr-4">
+        <ScrollArea className="flex-1 pe-4">
           <div className="space-y-6 py-4">
             {/* Document Preview */}
             <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50 border">
@@ -213,7 +213,7 @@ export function DocumentPublishDialog({
             <div className="space-y-2">
               <Label htmlFor="title">
                 {t('documents:publish.articleTitle', 'Article Title')}
-                <span className="text-destructive ml-1">*</span>
+                <span className="text-destructive ms-1">*</span>
               </Label>
               <Input
                 id="title"
@@ -283,7 +283,7 @@ export function DocumentPublishDialog({
               <div className="space-y-2">
                 <Label htmlFor="department">
                   {t('documents:publish.department', 'Department')}
-                  <span className="text-destructive ml-1">*</span>
+                  <span className="text-destructive ms-1">*</span>
                 </Label>
                 <Select value={departmentId} onValueChange={setDepartmentId}>
                   <SelectTrigger>
@@ -349,7 +349,7 @@ export function DocumentPublishDialog({
                       {tag}
                       <button
                         onClick={() => handleRemoveTag(tag)}
-                        className="ml-1 hover:text-destructive"
+                        className="ms-1 hover:text-destructive"
                       >
                         ×
                       </button>

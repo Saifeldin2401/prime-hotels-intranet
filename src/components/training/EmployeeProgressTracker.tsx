@@ -283,7 +283,7 @@ function ModuleListPanel({
                               onClick={() => onResetProgress(userId, record.id)}
                               className="text-amber-600"
                             >
-                              <RotateCcw className="size-4 mr-2" />
+                              <RotateCcw className="size-4 me-2" />
                               {t('resetProgress', 'Reset Progress')}
                             </DropdownMenuItem>
                           )}
@@ -292,7 +292,7 @@ function ModuleListPanel({
                               onClick={() => onRevokeCertificate(userId, record.id)}
                               className="text-rose-600"
                             >
-                              <Shield className="size-4 mr-2" />
+                              <Shield className="size-4 me-2" />
                               {t('revokeCertificate', 'Revoke Certificate')}
                             </DropdownMenuItem>
                           )}
@@ -301,7 +301,7 @@ function ModuleListPanel({
                               onClick={() => onExemptUser(userId, record.id)}
                               className="text-slate-600"
                             >
-                              <UserX className="size-4 mr-2" />
+                              <UserX className="size-4 me-2" />
                               {t('exemptUser', 'Exempt User')}
                             </DropdownMenuItem>
                           )}

@@ -386,7 +386,7 @@ export function PromoteEmployeeDialog({
                                                 {field.value
                                                     ? jobTitlesList?.find((t) => t.title === field.value)?.title || field.value
                                                     : "Select job title"}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
@@ -434,13 +434,13 @@ export function PromoteEmployeeDialog({
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "me-2 h-4 w-4",
                                                                         item.title === field.value
                                                                             ? "opacity-100"
                                                                             : "opacity-0"
                                                                     )}
                                                                 />
-                                                                {item.title} <span className="ml-auto text-xs text-muted-foreground">{item.category}</span>
+                                                                {item.title} <span className="ms-auto text-xs text-muted-foreground">{item.category}</span>
                                                             </div>
                                                         </CommandItem>
                                                     ))}
@@ -494,7 +494,7 @@ export function PromoteEmployeeDialog({
                                             <Button
                                                 variant={"outline"}
                                                 className={cn(
-                                                    "w-full pl-3 text-left font-normal",
+                                                    "w-full ps-3 text-left font-normal",
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -503,7 +503,7 @@ export function PromoteEmployeeDialog({
                                                 ) : (
                                                     <span>Pick a date</span>
                                                 )}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                <CalendarIcon className="ms-auto h-4 w-4 opacity-50" />
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
@@ -548,7 +548,7 @@ export function PromoteEmployeeDialog({
                         </Button>
                         <Button type="submit" disabled={form.formState.isSubmitting}>
                             {form.formState.isSubmitting && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                             )}
                             {editRecord ? 'Save Changes' : 'Submit Request'}
                         </Button>

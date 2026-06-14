@@ -41,7 +41,7 @@ export default function InboundEmails() {
     if (row.content_fetch_error) {
       return (
         <Badge variant="outline" className={cn('bg-red-100 text-red-800')}> 
-          <AlertCircle className="w-3 h-3 mr-1" />
+          <AlertCircle className="w-3 h-3 me-1" />
           {t('common:error', { defaultValue: 'Error' })}
         </Badge>
       )
@@ -50,7 +50,7 @@ export default function InboundEmails() {
     if (row.content_fetched_at) {
       return (
         <Badge variant="outline" className={cn('bg-green-100 text-green-800')}>
-          <CheckCircle2 className="w-3 h-3 mr-1" />
+          <CheckCircle2 className="w-3 h-3 me-1" />
           {t('common:status.ready', { defaultValue: 'Ready' })}
         </Badge>
       )
@@ -70,7 +70,7 @@ export default function InboundEmails() {
         description={t('admin:inbound_emails_desc', { defaultValue: 'View emails received via Resend webhooks.' })}
         actions={
           <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
-            {isFetching ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            {isFetching ? <Loader2 className="w-4 h-4 me-2 animate-spin" /> : <RefreshCw className="w-4 h-4 me-2" />}
             {t('common:actions.refresh', { defaultValue: 'Refresh' })}
           </Button>
         }
@@ -129,9 +129,9 @@ export default function InboundEmails() {
                           disabled={!row.email_id || fetchContent.isPending}
                         >
                           {fetchContent.isPending ? (
-                            <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                            <Loader2 className="w-3 h-3 me-1 animate-spin" />
                           ) : (
-                            <Download className="w-3 h-3 mr-1" />
+                            <Download className="w-3 h-3 me-1" />
                           )}
                           {t('admin:fetch_content', { defaultValue: 'Fetch content' })}
                         </Button>

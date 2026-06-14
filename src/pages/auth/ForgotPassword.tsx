@@ -89,7 +89,7 @@ export default function ForgotPassword() {
                         </Button>
                         <Link to={loginUrl} className="w-full">
                             <Button variant="ghost" className="w-full">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                <ArrowLeft className="h-4 w-4 me-2" />
                                 {t('forgot_password.back_to_login')}
                             </Button>
                         </Link>
@@ -133,7 +133,7 @@ export default function ForgotPassword() {
                         <Button type="submit" className="w-full" disabled={loading}>
                             {loading ? (
                                 <>
-                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
                                     {t('forgot_password.sending')}
                                 </>
                             ) : (
@@ -142,7 +142,7 @@ export default function ForgotPassword() {
                         </Button>
                         <Link to={loginUrl} className="w-full">
                             <Button variant="ghost" className="w-full">
-                                <ArrowLeft className="h-4 w-4 mr-2" />
+                                <ArrowLeft className="h-4 w-4 me-2" />
                                 {t('forgot_password.back_to_login')}
                             </Button>
                         </Link>

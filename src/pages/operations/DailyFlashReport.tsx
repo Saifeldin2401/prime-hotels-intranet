@@ -112,7 +112,7 @@ function StatBox({ label, value, subValue, trend, icon: Icon, className }: {
                     "text-xs mt-2 flex items-center",
                     trend.positive ? "text-green-600" : "text-red-600"
                 )}>
-                    {trend.positive ? <TrendingUp className="h-3 w-3 mr-1" /> : <TrendingDown className="h-3 w-3 mr-1" />}
+                    {trend.positive ? <TrendingUp className="h-3 w-3 me-1" /> : <TrendingDown className="h-3 w-3 me-1" />}
                     {Math.abs(trend.value).toFixed(1)}% vs yesterday
                 </div>
             )}
@@ -190,7 +190,7 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 md:border-l md:pl-6">
+                            <div className="space-y-4 md:border-l md:ps-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Guest Mix</div>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="bg-white p-3 rounded-xl border border-slate-100">
@@ -203,7 +203,7 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 md:border-l md:pl-6">
+                            <div className="space-y-4 md:border-l md:ps-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Payment Health</div>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                                     <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
@@ -220,7 +220,7 @@ const PropertyRow = ({ report, consolidated, formatCurrency }: {
                                     </div>
                                 </div>
                             </div>
-                            <div className="space-y-4 md:border-l md:pl-6">
+                            <div className="space-y-4 md:border-l md:ps-6">
                                 <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Ancillary</div>
                                 <div className="bg-white p-3 rounded-xl border border-slate-100">
                                     <div className="text-[10px] text-muted-foreground mb-1">Spa Revenue</div>
@@ -616,7 +616,7 @@ export default function DailyFlashReport() {
                         disabled={!canExportOperations}
                         title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
                     >
-                        <Printer className="h-4 w-4 mr-2" />
+                        <Printer className="h-4 w-4 me-2" />
                         Print
                     </Button>
                     <Button
@@ -626,7 +626,7 @@ export default function DailyFlashReport() {
                         disabled={!canExportOperations}
                         title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
                     >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 me-2" />
                         Export
                     </Button>
                 </div>
@@ -809,12 +809,12 @@ export default function DailyFlashReport() {
 
                                             {/* Property Attribution (Consolidated Mode Only) */}
                                             {isConsolidatedSelection && reportData.length > 1 && (
-                                                <div className="pl-8 space-y-1">
+                                                <div className="ps-8 space-y-1">
                                                     {reportData.map((report) => {
                                                         const val = (report.revenue as any)[item.key]
                                                         if (val === 0) return null
                                                         return (
-                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ml-1">
+                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ms-1">
                                                                 <span>{report.property.name}</span>
                                                                 <span className="font-medium">{formatCurrency(val)}</span>
                                                             </div>
@@ -855,12 +855,12 @@ export default function DailyFlashReport() {
 
                                             {/* Property Attribution (Consolidated Mode Only) */}
                                             {isConsolidatedSelection && reportData.length > 1 && (
-                                                <div className="pl-8 space-y-1">
+                                                <div className="ps-8 space-y-1">
                                                     {reportData.map((report) => {
                                                         const val = (report.collections as any)[item.key]
                                                         if (val === 0) return null
                                                         return (
-                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ml-1">
+                                                            <div key={report.property.id} className="flex justify-between items-center px-3 py-1 text-[11px] text-muted-foreground border-l-2 border-slate-100 ms-1">
                                                                 <span>{report.property.name}</span>
                                                                 <span className="font-medium">{formatCurrency(val)}</span>
                                                             </div>

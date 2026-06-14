@@ -162,7 +162,7 @@ export function RecentExportsTable({ exports, isLoading = false, showAll = false
                   onClick={() => handleDownload(exportItem)}
                   disabled={recordDownload.isPending}
                 >
-                  <Download className="h-4 w-4 mr-1" />
+                  <Download className="h-4 w-4 me-1" />
                   Download
                 </Button>
               )}

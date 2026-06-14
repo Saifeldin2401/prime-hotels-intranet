@@ -272,7 +272,7 @@ export function TaskTemplateList() {
                     <h3 className="text-lg font-medium">{t_ext('recurring_task_templates', 'Recurring Task Templates')}</h3>
                 </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 me-2" />
                     {t_ext('new_template', 'New Template')}</Button>
             </div>
 

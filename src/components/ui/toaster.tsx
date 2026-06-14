@@ -104,7 +104,7 @@ export function Toaster() {
                         transition-opacity
                         absolute
                         top-2
-                        right-2
+                        end-2
                         p-2
                         rounded-full
                         hover:bg-black/5

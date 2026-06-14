@@ -136,12 +136,12 @@ export function RelatedArticlesEditor({
                     <CardTitle className="text-base flex items-center gap-2">
                         <Link2 className="h-5 w-5 text-indigo-500" />
                         Related Articles
-                        <Badge variant="secondary" className="ml-2">{relatedArticles.length}</Badge>
+                        <Badge variant="secondary" className="ms-2">{relatedArticles.length}</Badge>
                     </CardTitle>
                     <Popover open={searchOpen} onOpenChange={setSearchOpen}>
                         <PopoverTrigger asChild>
                             <Button type="button" size="sm">
-                                <Plus className="h-4 w-4 mr-1" />
+                                <Plus className="h-4 w-4 me-1" />
                                 Link Article
                             </Button>
                         </PopoverTrigger>
@@ -206,7 +206,7 @@ export function RelatedArticlesEditor({
                                                     role="button"
                                                     tabIndex={0}
                                                 >
-                                                    <FileText className="h-4 w-4 mr-2 text-gray-400" />
+                                                    <FileText className="h-4 w-4 me-2 text-gray-400" />
                                                     <div className="flex-1">
                                                         <p className="text-sm">{article.title}</p>
                                                     </div>

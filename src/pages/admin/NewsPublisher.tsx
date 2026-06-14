@@ -78,7 +78,7 @@ export default function NewsPublisher() {
                 </div>
                 {!isEditing && (
                     <Button onClick={handleCreateNew} className="bg-hotel-gold hover:bg-hotel-gold/90 text-white">
-                        <Plus className={`h-4 w-4 ${isRtl ? 'ml-2' : 'mr-2'}`} />
+                        <Plus className={`h-4 w-4 ${isRtl ? 'ms-2' : 'me-2'}`} />
                         {t('admin:news.add_article', 'Add Article')}
                     </Button>
                 )}
@@ -100,7 +100,7 @@ export default function NewsPublisher() {
                                 newsItems?.map(item => (
                                     <div key={item.id} className="p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer group flex flex-col gap-2">
                                         <div className="flex justify-between items-start">
-                                            <h4 className="font-medium text-sm line-clamp-2 pr-4">{isRtl ? item.title_ar || item.original_title : item.title_en || item.original_title}</h4>
+                                            <h4 className="font-medium text-sm line-clamp-2 pe-4">{isRtl ? item.title_ar || item.original_title : item.title_en || item.original_title}</h4>
                                             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => { setSelectedNews(item); setIsEditing(true); }} aria-label={t('accessibility.edit_article', 'Edit article')}>
                                                     <Edit2 className="h-3 w-3 text-blue-600" />

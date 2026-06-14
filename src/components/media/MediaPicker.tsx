@@ -129,7 +129,7 @@ function MediaPickerItem({
         {showCheckbox && !isDisabled && (
           <div
             className={cn(
-              'absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
+              'absolute top-2 end-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-colors',
               isSelected ? 'bg-primary border-primary' : 'bg-white/90 border-gray-300'
             )}
           >
@@ -138,7 +138,7 @@ function MediaPickerItem({
         )}
 
         {/* Scan Status Badge */}
-        <div className="absolute top-2 left-2">
+        <div className="absolute top-2 start-2">
           <Badge variant="secondary" className="text-[10px] gap-1">
             <ScanStatusIcon status={asset.virus_scan_status} />
             <TypeIcon className="w-3 h-3" />
@@ -148,7 +148,7 @@ function MediaPickerItem({
 
         {/* Usage count */}
         {asset.usage_count > 0 && (
-          <Badge variant="outline" className="absolute bottom-2 right-2 text-[10px] bg-white/90">
+          <Badge variant="outline" className="absolute bottom-2 end-2 text-[10px] bg-white/90">
             {asset.usage_count} uses
           </Badge>
         )}
@@ -327,12 +327,12 @@ function UploadTab({
       >
         {uploading || isScanning ? (
           <>
-            <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+            <RefreshCw className="w-4 h-4 me-2 animate-spin" />
             Processing...
           </>
         ) : (
           <>
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4 me-2" />
             Select File
           </>
         )}
@@ -494,12 +494,12 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
             {/* Filters */}
             <div className="px-6 py-3 border-b flex items-center gap-2">
               <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder="Search media..."
                   value={filters.searchQuery || ''}
                   onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                  className="pl-9"
+                  className="ps-9"
                 />
               </div>
 
@@ -549,7 +549,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
                       : 'Upload files to your media library'}
                   </p>
                   <Button className="mt-4" variant="outline" onClick={() => setActiveTab('upload')}>
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 me-2" />
                     Upload File
                   </Button>
                 </div>
@@ -600,7 +600,7 @@ export function MediaPicker({ open, onOpenChange, onSelect, config = {}, title }
                       <ScanStatusIcon status={asset.virus_scan_status} />
                       <button
                         onClick={() => removeFromSelection(asset.id)}
-                        className="ml-1 hover:text-destructive"
+                        className="ms-1 hover:text-destructive"
                       >
                         <X className="w-3 h-3" />
                       </button>

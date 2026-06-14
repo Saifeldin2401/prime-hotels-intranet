@@ -68,9 +68,9 @@ export function ContextualHelpWidget({
     }
 
     const positionClasses = {
-        'bottom-right': 'bottom-4 right-4',
-        'bottom-left': 'bottom-4 left-4',
-        'top-right': 'top-4 right-4'
+        'bottom-right': 'bottom-4 end-4',
+        'bottom-left': 'bottom-4 start-4',
+        'top-right': 'top-4 end-4'
     }
 
     // Minimal variant - just an icon
@@ -167,7 +167,7 @@ export function ContextualHelpWidget({
                 >
                     <HelpCircle className="h-5 w-5" />
                     {helpItems && helpItems.length > 0 && (
-                        <Badge className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center bg-hotel-navy text-white text-xs">
+                        <Badge className="absolute -top-1 -end-1 h-5 w-5 p-0 flex items-center justify-center bg-hotel-navy text-white text-xs">
                             {helpItems.length}
                         </Badge>
                     )}

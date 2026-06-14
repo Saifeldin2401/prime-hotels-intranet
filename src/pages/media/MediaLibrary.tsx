@@ -164,16 +164,16 @@ const MediaCard = React.memo(function MediaCard({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(asset.public_url, '_blank'); }}>
-                <ExternalLink className="w-4 h-4 mr-2" />
+                <ExternalLink className="w-4 h-4 me-2" />
                 {t('actions.open')}
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleCopyUrl(); }}>
-                <Copy className="w-4 h-4 mr-2" />
+                <Copy className="w-4 h-4 me-2" />
                 {t('actions.copyUrl')}
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); onDelete(asset); }} className="text-destructive">
-                <Trash2 className="w-4 h-4 mr-2" />
+                <Trash2 className="w-4 h-4 me-2" />
                 {t('actions.delete')}
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -207,14 +207,14 @@ const MediaCard = React.memo(function MediaCard({
           )}
 
           {/* Type Badge */}
-          <Badge variant="secondary" className="absolute top-2 left-2">
-            <TypeIcon className="w-3 h-3 mr-1" />
+          <Badge variant="secondary" className="absolute top-2 start-2">
+            <TypeIcon className="w-3 h-3 me-1" />
             {typeLabel}
           </Badge>
 
           {/* Usage Badge */}
           {asset.usage_count > 0 && (
-            <Badge variant="default" className="absolute top-2 right-2">
+            <Badge variant="default" className="absolute top-2 end-2">
               {t('card.uses', { count: asset.usage_count })}
             </Badge>
           )}
@@ -222,11 +222,11 @@ const MediaCard = React.memo(function MediaCard({
           {/* Overlay Actions */}
           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
             <Button size="sm" variant="secondary" onClick={(e) => { e.stopPropagation(); handleCopyUrl(); }}>
-              <Link2 className="w-4 h-4 mr-1" />
+              <Link2 className="w-4 h-4 me-1" />
               {t('actions.copyUrl')}
             </Button>
             <Button size="sm" variant="default" onClick={(e) => { e.stopPropagation(); onEdit(asset); }}>
-              <Edit3 className="w-4 h-4 mr-1" />
+              <Edit3 className="w-4 h-4 me-1" />
               {t('actions.edit')}
             </Button>
           </div>
@@ -559,9 +559,9 @@ export default function MediaLibrary() {
               />
               <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                 {uploading ? (
-                  <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                  <RefreshCw className="w-4 h-4 me-2 animate-spin" />
                 ) : (
-                  <Upload className="w-4 h-4 mr-2" />
+                  <Upload className="w-4 h-4 me-2" />
                 )}
                 {uploading ? t('actions.uploading') : t('actions.upload')}
               </Button>
@@ -630,12 +630,12 @@ export default function MediaLibrary() {
 
             <div className="flex items-center gap-2">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
                   placeholder={t('search.placeholder')}
                   value={filters.searchQuery || ''}
                   onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                  className="pl-9 w-[200px]"
+                  className="ps-9 w-[200px]"
                 />
               </div>
 
@@ -680,7 +680,7 @@ export default function MediaLibrary() {
                 </p>
                 {!filters.searchQuery && (
                   <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="w-4 h-4 mr-2" />
+                    <Upload className="w-4 h-4 me-2" />
                     {t('actions.upload')}
                   </Button>
                 )}

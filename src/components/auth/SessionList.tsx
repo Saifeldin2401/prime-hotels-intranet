@@ -249,7 +249,7 @@ export function SessionList() {
                 onClick={() => void handleSignOutAll()}
                 disabled={loading}
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 me-2" />
                 {t('sessions.sign_out_others', { defaultValue: 'Sign Out from Other Devices' })}
               </Button>
               
@@ -258,7 +258,7 @@ export function SessionList() {
                 onClick={() => void handleSignOutAllDevices()}
                 disabled={loading}
               >
-                <LogOut className="h-4 w-4 mr-2" />
+                <LogOut className="h-4 w-4 me-2" />
                 {t('sessions.sign_out_all', { defaultValue: 'Sign Out from All Devices' })}
               </Button>
             </div>

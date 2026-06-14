@@ -254,7 +254,7 @@ export function MobileDataCard<T>({
                       }}
                     >
                       {action.icon}
-                      <span className="ml-2">{action.label}</span>
+                      <span className="ms-2">{action.label}</span>
                     </Button>
                   ))}
                 </div>

@@ -1430,7 +1430,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" onClick={() => saveArticle('DRAFT')} disabled={isSaving || isUploading}>
-                        {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 mr-2" />}
+                        {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 me-2" />}
                         {t('editor.draft')}
                     </Button>
                     {/* Submit for Review (Dept Head, HR, Prop Manager) */}
@@ -1440,7 +1440,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             disabled={isSaving || isUploading}
                             className="bg-yellow-500 hover:bg-yellow-600 text-white"
                         >
-                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Clock className="h-4 w-4 mr-2" />}
+                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Clock className="h-4 w-4 me-2" />}
                             {t('editor.submit_for_review')}
                         </Button>
                     )}
@@ -1452,7 +1452,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             disabled={isSaving || isUploading}
                             className="bg-hotel-gold text-hotel-navy"
                         >
-                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4 mr-2" />}
+                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4 me-2" />}
                             {t('editor.publish')}
                         </Button>
                     )}
@@ -1480,7 +1480,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                     {duplicateCheckResult.duplicates.slice(0, 3).map(dup => (
                                                         <li key={dup.id} className="text-xs text-amber-700 flex items-center justify-between">
                                                             <span className="truncate flex-1">• {dup.title}</span>
-                                                            <Badge variant="outline" className="ml-2 text-[10px]">{dup.similarity}% match</Badge>
+                                                            <Badge variant="outline" className="ms-2 text-[10px]">{dup.similarity}% match</Badge>
                                                         </li>
                                                     ))}
                                                 </ul>
@@ -1509,7 +1509,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                             className="h-7 text-xs text-indigo-600 hover:text-indigo-700"
                                             onClick={() => generateSuggestions(formData.title, formData.content, formData.description)}
                                         >
-                                            <Tag className="w-3 h-3 mr-1" />
+                                            <Tag className="w-3 h-3 me-1" />
                                             {t('editor.suggest_tags', 'AI: Suggest tags')}
                                         </Button>
                                     </div>
@@ -2050,7 +2050,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
                                     >
                                         <SelectTrigger className="w-full">
-                                            <Building2 className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <Building2 className="me-2 h-4 w-4 shrink-0 opacity-50" />
                                             <SelectValue placeholder={t('editor.which_hotel', 'Which Hotel?')} />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -2058,7 +2058,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                                 <span className="font-medium text-blue-600 underline decoration-blue-200 underline-offset-4 decoration-2">
                                                     {t('editor.current_hotel', 'Current Hotel')}
                                                 </span>
-                                                <span className="ml-1 opacity-50">
+                                                <span className="ms-1 opacity-50">
                                                     ({currentProperty?.name || 'Head Office'})
                                                 </span>
                                             </SelectItem>

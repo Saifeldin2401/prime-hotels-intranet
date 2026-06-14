@@ -58,17 +58,10 @@ import {
 // ============================================================================
 
 export type NavigationGroup =
-    | 'home'
-    | 'my_work'
-    | 'knowledge_base'
-    | 'learning'
-    | 'learning_management'
+    | 'my_space'
     | 'operations'
-    | 'hr_management'
-    | 'my_hr'
-    | 'communication'
+    | 'resources'
     | 'administration'
-    | 'settings'
 
 export type Permission = 'read' | 'write' | 'approve' | 'delete' | 'manage'
 
@@ -112,7 +105,7 @@ export interface NavigationGroupConfig {
     visibleTo: AllowedRoles
     /** Whether group is collapsible in sidebar */
     collapsible: boolean
-}
+}
 
 // ============================================================================
 // NAVIGATION GROUPS
@@ -120,75 +113,26 @@ export interface NavigationGroupConfig {
 
 export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     {
-        id: 'home',
-        title: 'groups.home',
-        icon: Home,
-        order: 0,
-        visibleTo: 'all',
-        collapsible: false
-    },
-    {
-        id: 'my_work',
-        title: 'groups.my_work',
+        id: 'my_space',
+        title: 'groups.my_space',
         icon: User,
         order: 1,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'knowledge_base',
-        title: 'groups.knowledge_base',
-        icon: BookOpen,
+        id: 'operations',
+        title: 'groups.operations',
+        icon: Briefcase,
         order: 2,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'learning',
-        title: 'groups.learning',
-        icon: GraduationCap,
+        id: 'resources',
+        title: 'groups.resources',
+        icon: BookOpen,
         order: 3,
-        visibleTo: 'all',
-        collapsible: true
-    },
-    {
-        id: 'operations',
-        title: 'groups.operations',
-        icon: CheckSquare,
-        order: 4,
-        visibleTo: 'all',
-        collapsible: true
-    },
-    {
-        id: 'hr_management',
-        title: 'groups.hr_management',
-        icon: Users,
-        order: 5,
-        visibleTo: 'all',
-        collapsible: true
-    },
-    {
-        id: 'my_hr',
-        title: 'groups.my_hr',
-        icon: Users,
-        order: 5.5,
-        visibleTo: 'all',
-        collapsible: true
-    },
-    {
-        id: 'learning_management',
-        title: 'groups.learning_management',
-        icon: GraduationCap,
-        order: 6,
-        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        collapsible: true
-    },
-
-    {
-        id: 'communication',
-        title: 'groups.communication',
-        icon: MessageSquare,
-        order: 8,
         visibleTo: 'all',
         collapsible: true
     },
@@ -196,17 +140,9 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         id: 'administration',
         title: 'groups.admin',
         icon: Shield,
-        order: 9,
-        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        collapsible: true
-    },
-    {
-        id: 'settings',
-        title: 'groups.settings',
-        icon: Settings,
-        order: 10,
+        order: 4,
         visibleTo: 'all',
-        collapsible: false
+        collapsible: true
     }
 ]
 
@@ -224,7 +160,7 @@ export const ROUTES: RouteConfig[] = [
         icon: BarChart3,
         description: 'Your personalized dashboard',
         allowedRoles: 'all',
-        group: 'home',
+        group: 'my_space',
         order: 1,
     },
 
@@ -237,7 +173,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Calendar,
         description: 'Submit and track leave requests',
         allowedRoles: 'all',
-        group: 'my_hr',
+        group: 'my_space',
         order: 5
     },
     {
@@ -246,7 +182,7 @@ export const ROUTES: RouteConfig[] = [
         icon: History,
         description: 'Your attendance records and clock-in/out',
         allowedRoles: 'all',
-        group: 'my_hr',
+        group: 'my_space',
         order: 1
     },
     {
@@ -255,7 +191,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Award,
         description: 'Your performance evaluations and ratings',
         allowedRoles: 'all',
-        group: 'my_hr',
+        group: 'my_space',
         order: 2
     },
     {
@@ -265,7 +201,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Your career goals and milestones',
         allowedRoles: 'all',
         badgeKey: 'activeGoals',
-        group: 'my_hr',
+        group: 'my_space',
         order: 3
     },
     {
@@ -274,7 +210,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Wallet,
         description: 'Your payroll documents',
         allowedRoles: 'all',
-        group: 'my_hr',
+        group: 'my_space',
         order: 4
     },
     {
@@ -284,7 +220,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Your assigned tasks',
         allowedRoles: 'all',
         badgeKey: 'overdueTasks',
-        group: 'my_work',
+        group: 'my_space',
         order: 2
     },
     {
@@ -293,7 +229,7 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare, // Using CheckSquare as it looks like a checklist
         description: 'Complete your onboarding tasks',
         allowedRoles: 'all',
-        group: 'my_work',
+        group: 'my_space',
         order: 0 // Priority!
     },
 
@@ -390,7 +326,7 @@ export const ROUTES: RouteConfig[] = [
         icon: ClipboardList,
         description: 'Central hub for HR workflows and approvals',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 0
     },
     {
@@ -399,7 +335,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Award,
         description: 'Manage performance reviews for staff',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 6.6
     },
     {
@@ -408,7 +344,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Target,
         description: 'Assign and track employee goals',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 6.7
     },
     {
@@ -417,7 +353,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Wallet,
         description: 'Create and publish payslips',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 6.95
     },
     {
@@ -426,7 +362,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Users,
         description: 'Employee directory',
         allowedRoles: 'all',
-        group: 'hr_management',
+        group: 'operations',
         order: 1
     },
     {
@@ -435,7 +371,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Briefcase,
         description: 'Job postings and applications',
         allowedRoles: 'all',
-        group: 'hr_management',
+        group: 'operations',
         order: 2
     },
     {
@@ -444,7 +380,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Users,
         description: 'Employee referral program',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 3
     },
     {
@@ -453,7 +389,7 @@ export const ROUTES: RouteConfig[] = [
         icon: ArrowUp,
         description: 'Initiate employee promotions',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 4
     },
     {
@@ -462,7 +398,7 @@ export const ROUTES: RouteConfig[] = [
         icon: ArrowRightLeft,
         description: 'Initiate employee transfers',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 5
     },
     {
@@ -471,7 +407,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Building,
         description: 'HR operations center',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 6
     },
     {
@@ -480,7 +416,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Clock,
         description: 'Shift planning and attendance corrections',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
-        group: 'hr_management',
+        group: 'operations',
         order: 6.5
     },
     {
@@ -489,7 +425,7 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Track new hire onboarding progress',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'hr_management',
+        group: 'operations',
         order: 0.5 // Top priority in HR
     },
     {
@@ -498,7 +434,7 @@ export const ROUTES: RouteConfig[] = [
         icon: History,
         description: 'View promotion and transfer history',
         allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'hr_management',
+        group: 'operations',
         order: 7
     },
 
@@ -512,7 +448,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Centralized knowledge hub - SOPs, policies, guides',
         allowedRoles: 'all',
         badgeKey: 'requiredReading',
-        group: 'knowledge_base',
+        group: 'resources',
         order: 1
     },
     {
@@ -521,7 +457,7 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'How to use PRIME Connect',
         allowedRoles: 'all',
-        group: 'knowledge_base',
+        group: 'resources',
         order: 1.5
     },
     {
@@ -531,7 +467,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Review pending content',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
         badgeKey: 'pendingReviews',
-        group: 'knowledge_base',
+        group: 'resources',
         order: 2
     },
     {
@@ -540,7 +476,7 @@ export const ROUTES: RouteConfig[] = [
         icon: BarChart3,
         description: 'Content usage and insights',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'knowledge_base',
+        group: 'resources',
         order: 3
     },
     {
@@ -549,7 +485,7 @@ export const ROUTES: RouteConfig[] = [
         icon: FolderOpen,
         description: 'Media library - manage videos, images, and documents for reuse',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'knowledge_base',
+        group: 'resources',
         order: 4
     },
     {
@@ -558,7 +494,7 @@ export const ROUTES: RouteConfig[] = [
         icon: FileText,
         description: 'Document library and file management',
         allowedRoles: 'all',
-        group: 'knowledge_base',
+        group: 'resources',
         order: 5
     },
 
@@ -572,7 +508,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Your assigned training modules',
         allowedRoles: 'all',
         badgeKey: 'pendingTraining',
-        group: 'learning',
+        group: 'resources',
         order: 1
     },
     {
@@ -581,7 +517,7 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'Learning paths and curricula',
         allowedRoles: 'all',
-        group: 'learning',
+        group: 'resources',
         order: 2
     },
     {
@@ -590,7 +526,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Award,
         description: 'Your earned certificates',
         allowedRoles: 'all',
-        group: 'learning',
+        group: 'resources',
         order: 3
     },
 
@@ -603,7 +539,7 @@ export const ROUTES: RouteConfig[] = [
         icon: GraduationCap,
         description: 'Unified LMS admin workspace',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'learning_management',
+        group: 'resources',
         order: 1
     },
     {
@@ -612,7 +548,7 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'Legacy modules route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'learning_management',
+        group: 'resources',
         order: 2,
         hideFromNav: true
     },
@@ -622,7 +558,7 @@ export const ROUTES: RouteConfig[] = [
         icon: ListTodo,
         description: 'Legacy builder route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'learning_management',
+        group: 'resources',
         order: 3,
         hideFromNav: true
     },
@@ -632,7 +568,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Users,
         description: 'Legacy assignments route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'learning_management',
+        group: 'resources',
         order: 4,
         hideFromNav: true
     },
@@ -646,7 +582,7 @@ export const ROUTES: RouteConfig[] = [
         icon: FileQuestion,
         description: 'Manage knowledge questions',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'learning_management',
+        group: 'resources',
         order: 5
     },
     {
@@ -655,7 +591,7 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Manage quizzes',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
-        group: 'learning_management',
+        group: 'resources',
         order: 6
     },
 
@@ -669,7 +605,7 @@ export const ROUTES: RouteConfig[] = [
         description: 'Direct messages and team chat',
         allowedRoles: 'all',
         badgeKey: 'unreadMessages',
-        group: 'communication',
+        group: 'operations',
         order: 1
     },
     {
@@ -678,7 +614,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Megaphone,
         description: 'Company announcements',
         allowedRoles: 'all',
-        group: 'communication',
+        group: 'operations',
         order: 2
     },
 
@@ -912,7 +848,7 @@ export const ROUTES: RouteConfig[] = [
         icon: User,
         description: 'Your profile settings',
         allowedRoles: 'all',
-        group: 'settings',
+        group: 'administration',
         order: 1
     },
     {
@@ -921,7 +857,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Settings,
         description: 'App preferences',
         allowedRoles: 'all',
-        group: 'settings',
+        group: 'administration',
         order: 2
     },
     {
@@ -930,7 +866,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Search,
         description: 'Global search',
         allowedRoles: 'all',
-        group: 'settings',
+        group: 'administration',
         order: 3,
         hideFromNav: true  // Accessible via header search
     }

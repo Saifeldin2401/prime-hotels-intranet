@@ -74,7 +74,7 @@ export function ApprovalDetailsSheet({
                                 navigate(`/hr/request/${approval.id}`)
                                 onOpenChange(false)
                             }}>
-                                {t_ext('view_full_request', 'View Full Request')}<ArrowRight className="ml-2 w-4 h-4" />
+                                {t_ext('view_full_request', 'View Full Request')}<ArrowRight className="ms-2 w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -114,7 +114,7 @@ export function ApprovalDetailsSheet({
                                 navigate(`/hr/request/${approval.id}`)
                                 onOpenChange(false)
                             }}>
-                                {t_ext('view_workflow', 'View Workflow')}<ArrowRight className="ml-2 w-4 h-4" />
+                                {t_ext('view_workflow', 'View Workflow')}<ArrowRight className="ms-2 w-4 h-4" />
                             </Button>
                         </div>
                     </div>
@@ -154,7 +154,7 @@ export function ApprovalDetailsSheet({
                                         openUrlInNewTab(secureUrl)
                                     }}
                                 >
-                                    <FileText className="mr-2 h-4 w-4" /> {t_ext('view_document', 'View Document')}</Button>
+                                    <FileText className="me-2 h-4 w-4" /> {t_ext('view_document', 'View Document')}</Button>
                             </div>
                         )}
                     </div>
@@ -246,7 +246,7 @@ export function ApprovalDetailsSheet({
                     </SheetDescription>
                 </SheetHeader>
 
-                <ScrollArea className="h-[calc(100vh-250px)] pr-4">
+                <ScrollArea className="h-[calc(100vh-250px)] pe-4">
                     {renderContent()}
                 </ScrollArea>
 
@@ -259,14 +259,14 @@ export function ApprovalDetailsSheet({
                                 onClick={() => onReject(approval.id, '')}
                                 disabled={isProcessing}
                             >
-                                <XCircle className="w-4 h-4 mr-2" />
+                                <XCircle className="w-4 h-4 me-2" />
                                 {t_ext('reject', 'Reject')}</Button>
                             <Button
                                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white"
                                 onClick={() => onApprove(approval.id)}
                                 disabled={isProcessing}
                             >
-                                <CheckCircle className="w-4 h-4 mr-2" />
+                                <CheckCircle className="w-4 h-4 me-2" />
                                 {t_ext('approve', 'Approve')}</Button>
                         </>
                     )}

@@ -89,7 +89,7 @@ export function KnowledgeBaseWidget() {
                                                     <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center flex-shrink-0 border border-indigo-100/50 group-hover:bg-indigo-500 group-hover:border-indigo-600 transition-colors">
                                                         <FileText className="w-5 h-5 text-indigo-500 group-hover:text-white transition-colors" />
                                                     </div>
-                                                    <div className="flex-1 min-w-0 pr-8">
+                                                    <div className="flex-1 min-w-0 pe-8">
                                                         <p className="font-bold text-[15px] text-slate-800 line-clamp-2 leading-snug group-hover:text-indigo-600 transition-colors">
                                                             {article.title}
                                                         </p>
@@ -108,7 +108,7 @@ export function KnowledgeBaseWidget() {
                                                 </div>
                                             </Link>
                                             {/* Pin button */}
-                                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="absolute top-2 end-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                                 <PinButtonCompact
                                                     itemType="knowledge"
                                                     itemId={article.id}

@@ -70,7 +70,7 @@ export const BuilderHeader = ({
                         onClick={onMagic}
                         className={cn("hidden sm:flex", isRTL && "flex-row-reverse")}
                     >
-                        <Wand2 className={cn("h-4 w-4 text-purple-500", isRTL ? "ml-2" : "mr-2")} />
+                        <Wand2 className={cn("h-4 w-4 text-purple-500", isRTL ? "ms-2" : "me-2")} />
                         {t('builder.aiAssistant')}
                     </Button>
                     <Button
@@ -79,7 +79,7 @@ export const BuilderHeader = ({
                         onClick={onPreview}
                         className={isRTL ? 'flex-row-reverse' : ''}
                     >
-                        <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                        <Eye className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                         {t('preview')}
                     </Button>
                     <Button
@@ -89,9 +89,9 @@ export const BuilderHeader = ({
                         className={isRTL ? 'flex-row-reverse' : ''}
                     >
                         {isSaving ? (
-                            <div className={cn("h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent", isRTL ? "ml-2" : "mr-2")} />
+                            <div className={cn("h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent", isRTL ? "ms-2" : "me-2")} />
                         ) : (
-                            <Save className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+                            <Save className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                         )}
                         {t('save')}
                     </Button>

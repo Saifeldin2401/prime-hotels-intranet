@@ -178,7 +178,7 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-48 text-gray-500">
-                <Users className="h-6 w-6 animate-pulse mr-2" />
+                <Users className="h-6 w-6 animate-pulse me-2" />
                 {t('common:loading', 'Loading...')}
             </div>
         )
@@ -217,7 +217,7 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                             <p className="text-sm text-gray-500">{property.departments.length} {t('organization.departments', 'Departments')}</p>
                         </div>
                         <Badge variant="secondary" className="text-sm">
-                            <Users className="h-3.5 w-3.5 mr-1" />
+                            <Users className="h-3.5 w-3.5 me-1" />
                             {property.employeeCount} {t('organization.employees', 'Employees')}
                         </Badge>
                     </div>
@@ -241,7 +241,7 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                                         </button>
                                         <Briefcase className="h-5 w-5 text-green-600" />
                                         <span className="font-medium text-gray-700 dark:text-gray-200">{dept.name}</span>
-                                        <Badge variant="outline" className="ml-auto text-xs">
+                                        <Badge variant="outline" className="ms-auto text-xs">
                                             {dept.employees.length}
                                         </Badge>
                                     </div>

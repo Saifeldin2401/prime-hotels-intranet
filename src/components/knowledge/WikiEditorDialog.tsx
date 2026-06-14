@@ -193,7 +193,7 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                                 <div className="flex justify-between items-center mb-4">
                                     <Label className="uppercase text-slate-500 font-bold tracking-wider text-xs">Subtopics (English)</Label>
                                     <Button type="button" variant="outline" size="sm" onClick={handleAddSubtopic} className="h-8">
-                                        <Plus className="w-4 h-4 mr-2" /> Add Subtopic
+                                        <Plus className="w-4 h-4 me-2" /> Add Subtopic
                                     </Button>
                                 </div>
                                 <div className="space-y-6">
@@ -203,12 +203,12 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="absolute top-2 right-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0"
+                                                className="absolute top-2 end-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0"
                                                 onClick={() => handleRemoveSubtopic(subtopic.id)}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
-                                            <div className="space-y-4 pr-8">
+                                            <div className="space-y-4 pe-8">
                                                 <div className="space-y-2">
                                                     <Label>Subtopic {index + 1} Title</Label>
                                                     <Input
@@ -258,7 +258,7 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                             <div className="pt-6 border-t border-slate-200">
                                 <div className="flex justify-between items-center mb-4">
                                     <Button type="button" variant="outline" size="sm" onClick={handleAddSubtopic} className="h-8">
-                                        <Plus className="w-4 h-4 ml-2" /> إضافة موضوع فرعي
+                                        <Plus className="w-4 h-4 ms-2" /> إضافة موضوع فرعي
                                     </Button>
                                     <Label className="uppercase text-slate-500 font-bold tracking-wider text-xs">المواضيع الفرعية (عربي)</Label>
                                 </div>
@@ -269,12 +269,12 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="absolute top-2 left-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0"
+                                                className="absolute top-2 start-2 text-rose-500 hover:text-rose-700 hover:bg-rose-50 h-8 w-8 p-0"
                                                 onClick={() => handleRemoveSubtopic(subtopic.id)}
                                             >
                                                 <Trash2 className="w-4 h-4" />
                                             </Button>
-                                            <div className="space-y-4 pl-8">
+                                            <div className="space-y-4 ps-8">
                                                 <div className="space-y-2">
                                                     <Label>عنوان الموضوع الفرعي {index + 1}</Label>
                                                     <Input
@@ -339,7 +339,7 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                         Cancel
                     </Button>
                     <Button onClick={handleSave} disabled={isSaving} className="bg-rose-600 hover:bg-rose-700">
-                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                        {isSaving ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Save className="w-4 h-4 me-2" />}
                         Save Changes
                     </Button>
                 </DialogFooter>

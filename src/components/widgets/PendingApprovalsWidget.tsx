@@ -92,7 +92,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                         <Clock className="h-5 w-5" />
                         Pending Approvals
                         {stats?.total_pending && stats.total_pending > 0 && (
-                            <Badge variant="secondary" className="ml-2">
+                            <Badge variant="secondary" className="ms-2">
                                 {stats.total_pending}
                             </Badge>
                         )}

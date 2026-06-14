@@ -250,40 +250,40 @@ export function DocumentBulkOperations({
                   onClick={handleBulkDownload}
                   disabled={isProcessing}
                 >
-                  <Download className="h-4 w-4 mr-2" />
+                  <Download className="h-4 w-4 me-2" />
                   Download
                 </Button>
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" disabled={isProcessing}>
-                      <MoreHorizontal className="h-4 w-4 mr-2" />
+                      <MoreHorizontal className="h-4 w-4 me-2" />
                       More
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={handleBulkShare}>
-                      <Share2 className="h-4 w-4 mr-2" />
+                      <Share2 className="h-4 w-4 me-2" />
                       Share
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkMove('new-folder')}>
-                      <Move className="h-4 w-4 mr-2" />
+                      <Move className="h-4 w-4 me-2" />
                       Move to Folder
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBulkTag(['important'])}>
-                      <Tag className="h-4 w-4 mr-2" />
+                      <Tag className="h-4 w-4 me-2" />
                       Add Tags
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleBulkArchive}>
-                      <Archive className="h-4 w-4 mr-2" />
+                      <Archive className="h-4 w-4 me-2" />
                       Archive
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={handleBulkDelete}
                       className="text-red-600"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-4 w-4 me-2" />
                       Delete
                     </DropdownMenuItem>
                   </DropdownMenuContent>

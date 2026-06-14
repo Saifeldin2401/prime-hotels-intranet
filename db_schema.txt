@@ -1,0 +1,2392 @@
+TABLE: account_action_notes
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  action text NOT NULL,
+  note text NOT NULL,
+  created_by uuid,
+  metadata jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: achievement_definitions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  achievement_type public.achievement_type NOT NULL,
+  title text NOT NULL,
+  description text,
+  icon text DEFAULT 'award'::text,
+  color text DEFAULT 'gold'::text,
+  points integer DEFAULT 10,
+  criteria jsonb NOT NULL,
+  is_active boolean DEFAULT true
+
+TABLE: activity_log
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  action_type text NOT NULL,
+  target_type text,
+  target_id uuid,
+  target_name text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  property_id uuid,
+  department_id uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: admin_delegations
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  delegator_id uuid,
+  delegate_id uuid,
+  delegation_type text NOT NULL DEFAULT 'approval_authority'::text,
+  permissions text[] DEFAULT '{}'::text[],
+  reason text,
+  starts_at timestamp with time zone NOT NULL,
+  ends_at timestamp with time zone NOT NULL,
+  is_active boolean DEFAULT true,
+  auto_expired boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  revoked_at timestamp with time zone,
+  revoked_by uuid,
+  max_approvals integer,
+  approvals_used integer DEFAULT 0,
+  allow_redelegate boolean DEFAULT false,
+  fallback_delegate_ids uuid[] DEFAULT '{}'::uuid[],
+  notify_delegate boolean DEFAULT true,
+  notify_delegator boolean DEFAULT true,
+  notify_on_action boolean DEFAULT true,
+  notify_on_expiry boolean DEFAULT true,
+  paused_at timestamp with time zone,
+  paused_by uuid
+
+TABLE: announcement_attachments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  announcement_id uuid NOT NULL,
+  file_url text NOT NULL,
+  file_name text,
+  file_type text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: announcement_reads
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  announcement_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  read_at timestamp with time zone DEFAULT now()
+
+TABLE: announcement_targets
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  announcement_id uuid NOT NULL,
+  target_properties uuid[],
+  target_departments uuid[],
+  target_roles app_role[]
+
+TABLE: announcements
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  content text NOT NULL,
+  priority public.announcement_priority NOT NULL DEFAULT 'normal'::announcement_priority,
+  pinned boolean DEFAULT false,
+  scheduled_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  property_id uuid,
+  created_by_id uuid,
+  category text DEFAULT 'general'::text,
+  target_audience jsonb DEFAULT '{"type": "all", "values": []}'::jsonb,
+  allow_comments boolean DEFAULT true,
+  send_push_notification boolean DEFAULT false,
+  send_email boolean DEFAULT false,
+  requires_acknowledgment boolean DEFAULT false,
+  attachments jsonb DEFAULT '[]'::jsonb,
+  department_id uuid
+
+TABLE: approval_delegations
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  approval_id uuid NOT NULL,
+  approval_type text NOT NULL,
+  delegator_id uuid NOT NULL,
+  delegate_id uuid NOT NULL,
+  reason text,
+  status text NOT NULL DEFAULT 'active'::text,
+  expires_at timestamp with time zone NOT NULL,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: approval_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  approval_request_id uuid NOT NULL,
+  approver_id uuid,
+  was_delegate boolean DEFAULT false,
+  original_approver_id uuid,
+  action text NOT NULL,
+  feedback text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: approval_requests
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  current_approver_id uuid,
+  status text NOT NULL DEFAULT 'pending'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: attendance
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  date date NOT NULL,
+  check_in timestamp with time zone,
+  check_out timestamp with time zone,
+  status text DEFAULT 'present'::text,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  property_id uuid,
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: categories
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  department_id uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: certificate_history
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  certificate_id uuid NOT NULL,
+  action varchar(50) NOT NULL,
+  performed_by uuid,
+  ip_address inet,
+  user_agent text,
+  details jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: certificate_templates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text NOT NULL DEFAULT ''::text,
+  template_html text NOT NULL DEFAULT ''::text,
+  background_color text NOT NULL DEFAULT '#ffffff'::text,
+  text_color text NOT NULL DEFAULT '#111827'::text,
+  accent_color text NOT NULL DEFAULT '#b8860b'::text,
+  font_family text NOT NULL DEFAULT 'Georgia'::text,
+  logo_url text,
+  signature_url text,
+  is_default boolean NOT NULL DEFAULT false,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: certificates
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  certificate_number varchar(20) NOT NULL,
+  verification_code varchar(32) NOT NULL,
+  user_id uuid NOT NULL,
+  recipient_name varchar(255) NOT NULL,
+  recipient_email varchar(255),
+  certificate_type varchar(50) NOT NULL,
+  training_module_id uuid,
+  training_progress_id uuid,
+  sop_id uuid,
+  quiz_attempt_id uuid,
+  title varchar(500) NOT NULL,
+  description text,
+  completion_date timestamp with time zone NOT NULL,
+  expiry_date timestamp with time zone,
+  score numeric,
+  passing_score numeric,
+  property_id uuid,
+  department_id uuid,
+  status varchar(20) DEFAULT 'active'::character varying,
+  revocation_reason text,
+  revoked_by uuid,
+  revoked_at timestamp with time zone,
+  pdf_url text,
+  pdf_generated_at timestamp with time zone,
+  issued_by uuid,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: conversation_participants
+  conversation_id uuid NOT NULL,
+  participant_id uuid NOT NULL
+
+TABLE: conversations
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text,
+  participant_ids uuid[] NOT NULL,
+  last_message_at timestamp with time zone DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: data_import_logs
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL,
+  pms_system_id uuid,
+  import_type public.import_type NOT NULL,
+  file_name text,
+  business_date_start date,
+  business_date_end date,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  status public.sync_status DEFAULT 'pending'::sync_status,
+  records_processed integer DEFAULT 0,
+  records_failed integer DEFAULT 0,
+  error_details jsonb,
+  imported_by uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: departments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid,
+  name text NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean DEFAULT false
+
+TABLE: designations
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  department_id uuid,
+  level integer DEFAULT 1,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: document_acknowledgments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  acknowledged_at timestamp with time zone DEFAULT now()
+
+TABLE: document_approvals
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  approver_id uuid,
+  status text NOT NULL DEFAULT 'pending'::text,
+  feedback text,
+  approved_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  approver_role public.app_role,
+  approved_by uuid,
+  rejected_by uuid,
+  rejected_at timestamp with time zone,
+  rejection_reason text,
+  is_active boolean DEFAULT true,
+  entity_type text DEFAULT 'document'::text,
+  entity_id uuid
+
+TABLE: document_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  parent_id uuid,
+  user_id uuid NOT NULL,
+  content text NOT NULL,
+  is_resolved boolean DEFAULT false,
+  is_pinned boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: document_department_access
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid,
+  department_id uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: document_favorites
+  user_id uuid NOT NULL,
+  document_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: document_folders
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  parent_id uuid,
+  department_id uuid,
+  property_id uuid,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  is_system boolean DEFAULT false
+
+TABLE: document_notification_rules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  folder_id uuid,
+  notify_on_new boolean DEFAULT true,
+  notify_on_update boolean DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: document_tag_assignments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: document_tags
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  color text DEFAULT '#3B82F6'::text,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: document_versions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  version_number integer NOT NULL,
+  file_url text NOT NULL,
+  change_summary text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: document_views
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  user_id uuid,
+  viewed_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: documents
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  file_url text,
+  visibility public.document_visibility NOT NULL DEFAULT 'property'::document_visibility,
+  property_id uuid,
+  department_id uuid,
+  role public.app_role,
+  status public.document_status NOT NULL DEFAULT 'DRAFT'::document_status,
+  requires_acknowledgment boolean DEFAULT false,
+  created_by uuid,
+  current_version integer DEFAULT 1,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  summary text,
+  summary_ar text,
+  is_deleted boolean DEFAULT false,
+  file_size bigint DEFAULT 0,
+  category_id uuid,
+  content text,
+  content_type text DEFAULT 'document'::text,
+  checklist_items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  faq_items jsonb NOT NULL DEFAULT '[]'::jsonb,
+  video_url text,
+  images jsonb NOT NULL DEFAULT '[]'::jsonb,
+  featured boolean NOT NULL DEFAULT false,
+  view_count integer NOT NULL DEFAULT 0,
+  estimated_read_time integer,
+  last_reviewed_at timestamp with time zone,
+  last_reviewed_by uuid,
+  valid_from timestamp with time zone,
+  valid_until timestamp with time zone,
+  title_ar text,
+  description_ar text,
+  content_ar text,
+  translation_status public.translation_status DEFAULT 'pending'::translation_status,
+  last_translated_at timestamp with time zone,
+  expires_at timestamp with time zone,
+  review_reminder_date timestamp with time zone,
+  document_number text,
+  confidentiality_level public.document_confidentiality DEFAULT 'internal'::document_confidentiality,
+  owner_id uuid,
+  folder_id uuid,
+  file_extension text,
+  download_count integer DEFAULT 0,
+  last_downloaded_at timestamp with time zone,
+  watermark_text text,
+  is_archived boolean DEFAULT false,
+  search_vector tsvector,
+  deleted_at timestamp with time zone,
+  file_type text,
+  linked_training_id uuid,
+  last_published_by uuid
+
+TABLE: employee_documents
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  user_id uuid NOT NULL,
+  title text NOT NULL,
+  category public.document_category NOT NULL DEFAULT 'other'::document_category,
+  file_path text NOT NULL,
+  file_type text NOT NULL,
+  file_size integer NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  expiry_date date,
+  document_number text,
+  status text DEFAULT 'active'::text
+
+TABLE: employee_of_the_month
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid,
+  user_id uuid NOT NULL,
+  month integer NOT NULL,
+  year integer NOT NULL,
+  reason_en text NOT NULL,
+  reason_ar text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  created_by uuid
+
+TABLE: employee_promotions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid,
+  from_role text,
+  to_role text NOT NULL,
+  from_title text,
+  to_title text NOT NULL,
+  from_department_id uuid,
+  to_department_id uuid,
+  effective_date date NOT NULL,
+  approved_by uuid,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean DEFAULT false
+
+TABLE: employee_referrals
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  referred_by uuid NOT NULL,
+  candidate_name text NOT NULL,
+  candidate_email text,
+  candidate_phone text,
+  position_applied text,
+  department text,
+  property_id uuid,
+  status text DEFAULT 'pending'::text,
+  referral_date date,
+  hire_date date,
+  bonus_amount numeric,
+  bonus_status text DEFAULT 'pending'::text,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  job_posting_id uuid
+
+TABLE: employee_transfers
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid,
+  from_property_id uuid,
+  to_property_id uuid NOT NULL,
+  from_department_id uuid,
+  to_department_id uuid,
+  effective_date date NOT NULL,
+  approved_by uuid,
+  reason text,
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: eom_auto_selections
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  month integer NOT NULL,
+  year integer NOT NULL,
+  total_score numeric NOT NULL,
+  selection_reason_en text NOT NULL,
+  selection_reason_ar text NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  review_notes text,
+  announced_eom_id uuid,
+  announced_at timestamp with time zone,
+  scoring_history_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: eom_automation_config
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL,
+  is_enabled boolean DEFAULT false,
+  task_completion_weight integer DEFAULT 40,
+  training_completion_weight integer DEFAULT 30,
+  sop_compliance_weight integer DEFAULT 20,
+  attendance_weight integer DEFAULT 10,
+  min_attendance_rate integer DEFAULT 80,
+  min_task_completion_rate integer DEFAULT 70,
+  auto_announce boolean DEFAULT false,
+  announcement_day integer DEFAULT 1,
+  exclude_recent_winners boolean DEFAULT true,
+  exclusion_months integer DEFAULT 3,
+  min_employment_days integer DEFAULT 30,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid
+
+TABLE: eom_scoring_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  month integer NOT NULL,
+  year integer NOT NULL,
+  task_completion_rate integer,
+  training_completion_rate integer,
+  sop_compliance_rate integer,
+  attendance_rate integer,
+  task_completion_score numeric,
+  training_completion_score numeric,
+  sop_compliance_score numeric,
+  attendance_score numeric,
+  total_score numeric NOT NULL,
+  rank integer NOT NULL,
+  is_eligible boolean DEFAULT true,
+  ineligibility_reason text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: escalation_rules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  action_type text NOT NULL,
+  threshold_hours integer NOT NULL DEFAULT 48,
+  next_role public.app_role NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: events
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  start_date timestamp with time zone NOT NULL,
+  end_date timestamp with time zone,
+  all_day boolean DEFAULT false,
+  location text,
+  type text DEFAULT 'general'::text,
+  property_id uuid,
+  department_id uuid,
+  created_by uuid NOT NULL,
+  is_public boolean DEFAULT true,
+  attendees uuid[] DEFAULT '{}'::uuid[],
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: failed_login_attempts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  ip_address text,
+  user_agent text,
+  attempt_count integer NOT NULL DEFAULT 1,
+  first_attempt_at timestamp with time zone NOT NULL DEFAULT now(),
+  last_attempt_at timestamp with time zone NOT NULL DEFAULT now(),
+  locked_until timestamp with time zone,
+  captcha_required boolean NOT NULL DEFAULT false
+
+TABLE: feed_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  feed_item_id text NOT NULL,
+  author_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: feed_reactions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  feed_item_id text NOT NULL,
+  user_id uuid NOT NULL,
+  reaction_type text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: goals
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  target_date date,
+  progress integer DEFAULT 0,
+  status text DEFAULT 'not_started'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  training_module_id uuid,
+  category text
+
+TABLE: holidays
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  date date NOT NULL,
+  property_id uuid,
+  is_optional boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: hospitality_news
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  original_title text NOT NULL,
+  title_en text,
+  title_ar text,
+  summary_en text,
+  summary_ar text,
+  source text NOT NULL,
+  source_url text,
+  image_url text,
+  published_at timestamp with time zone NOT NULL,
+  category text,
+  is_visible boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  guid text,
+  original_language text DEFAULT 'en'::text,
+  tags text[] DEFAULT '{}'::text[]
+
+TABLE: inbound_emails
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email_id uuid,
+  message_id text,
+  "from" text,
+  "to" text[] NOT NULL DEFAULT '{}'::text[],
+  cc text[] NOT NULL DEFAULT '{}'::text[],
+  bcc text[] NOT NULL DEFAULT '{}'::text[],
+  subject text,
+  attachments jsonb NOT NULL DEFAULT '[]'::jsonb,
+  received_created_at timestamp with time zone,
+  webhook_created_at timestamp with time zone,
+  event_type text NOT NULL DEFAULT 'email.received'::text,
+  raw_event jsonb NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  html text,
+  text text,
+  headers jsonb,
+  reply_to text[] NOT NULL DEFAULT '{}'::text[],
+  raw_download_url text,
+  raw_expires_at timestamp with time zone,
+  attachment_downloads jsonb NOT NULL DEFAULT '[]'::jsonb,
+  content_fetched_at timestamp with time zone,
+  content_fetch_error text
+
+TABLE: job_applications
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  job_posting_id uuid,
+  applicant_name text NOT NULL,
+  applicant_email text NOT NULL,
+  applicant_phone text,
+  cv_url text,
+  cover_letter text,
+  status text NOT NULL DEFAULT 'received'::text,
+  referred_by uuid,
+  routed_to uuid[] DEFAULT '{}'::uuid[],
+  notes text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  cv_bucket text,
+  cv_path text,
+  cv_filename text,
+  cv_mime text,
+  cv_size integer,
+  referral_source text
+
+TABLE: job_postings
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  department_id uuid,
+  property_id uuid,
+  seniority_level text NOT NULL,
+  employment_type text NOT NULL,
+  description text,
+  requirements text,
+  responsibilities text,
+  salary_range_min numeric,
+  salary_range_max numeric,
+  status public.entity_status NOT NULL DEFAULT 'draft'::entity_status,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  published_at timestamp with time zone,
+  closes_at timestamp with time zone,
+  is_deleted boolean DEFAULT false
+
+TABLE: job_title_role_mappings
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  job_title text NOT NULL,
+  system_role public.app_role NOT NULL,
+  category text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: job_titles
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  category text NOT NULL,
+  default_role public.app_role NOT NULL DEFAULT 'staff'::app_role,
+  created_at timestamp with time zone DEFAULT now(),
+  department_id uuid
+
+TABLE: knowledge_question_attempts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  question_id uuid NOT NULL,
+  session_id uuid,
+  selected_answer text,
+  selected_options uuid[],
+  is_correct boolean,
+  partial_score numeric,
+  context_type public.question_usage_type,
+  context_entity_id uuid,
+  time_spent_seconds integer,
+  attempt_number integer DEFAULT 1,
+  hint_used boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: knowledge_question_options
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL,
+  option_text text NOT NULL,
+  option_text_ar text,
+  is_correct boolean DEFAULT false,
+  display_order integer DEFAULT 0,
+  feedback text,
+  feedback_ar text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: knowledge_question_usages
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL,
+  usage_type public.question_usage_type NOT NULL,
+  usage_entity_id uuid NOT NULL,
+  display_order integer DEFAULT 0,
+  is_required boolean DEFAULT true,
+  weight numeric DEFAULT 1.0,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: knowledge_question_versions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_id uuid NOT NULL,
+  version_number integer NOT NULL,
+  data_snapshot jsonb NOT NULL,
+  changed_by uuid,
+  changed_at timestamp with time zone DEFAULT now(),
+  change_reason text
+
+TABLE: knowledge_questions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  question_text text NOT NULL,
+  question_text_ar text,
+  question_type public.question_type NOT NULL DEFAULT 'mcq'::question_type,
+  difficulty_level public.question_difficulty NOT NULL DEFAULT 'medium'::question_difficulty,
+  correct_answer text,
+  explanation text,
+  explanation_ar text,
+  hint text,
+  hint_ar text,
+  linked_sop_id uuid,
+  linked_sop_section text,
+  category_id uuid,
+  tags text[] DEFAULT '{}'::text[],
+  estimated_time_seconds integer DEFAULT 30,
+  points integer DEFAULT 1,
+  ai_generated boolean DEFAULT false,
+  ai_model_used text,
+  ai_confidence_score numeric,
+  ai_prompt_used text,
+  status public.question_status NOT NULL DEFAULT 'draft'::question_status,
+  version integer DEFAULT 1,
+  reviewed_by uuid,
+  reviewed_at timestamp with time zone,
+  review_notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  training_module_id uuid,
+  training_section_id text
+
+TABLE: knowledge_quiz_sessions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  quiz_type public.question_usage_type NOT NULL,
+  quiz_entity_id uuid,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  total_questions integer DEFAULT 0,
+  correct_answers integer DEFAULT 0,
+  total_points integer DEFAULT 0,
+  earned_points integer DEFAULT 0,
+  score_percentage numeric,
+  passed boolean,
+  time_limit_seconds integer,
+  passing_score numeric
+
+TABLE: knowledge_related_articles
+  document_id uuid NOT NULL,
+  related_document_id uuid NOT NULL,
+  relation_type text NOT NULL DEFAULT 'see_also'::text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: kudos
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  giver_id uuid NOT NULL,
+  recipient_id uuid NOT NULL,
+  message text NOT NULL,
+  category text DEFAULT 'general'::text,
+  likes_count integer DEFAULT 0,
+  is_public boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: kudos_likes
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  kudos_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: learning_assignments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  target_type public.learning_target_type NOT NULL,
+  target_id text,
+  content_type public.learning_content_type NOT NULL,
+  content_id uuid NOT NULL,
+  due_date timestamp with time zone,
+  valid_from timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  priority text DEFAULT 'normal'::text,
+  assigned_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean DEFAULT false,
+  instructions text,
+  requires_acknowledgement boolean DEFAULT false,
+  notify_on_due boolean DEFAULT true,
+  reminder_days_before int4[] DEFAULT '{}'::integer[]
+
+TABLE: learning_progress
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  assignment_id uuid,
+  user_id uuid NOT NULL,
+  content_type public.learning_content_type NOT NULL,
+  content_id uuid NOT NULL,
+  status public.learning_assignment_status NOT NULL DEFAULT 'assigned'::learning_assignment_status,
+  progress_percentage integer DEFAULT 0,
+  score_percentage numeric,
+  passed boolean,
+  completed_at timestamp with time zone,
+  last_accessed_at timestamp with time zone DEFAULT now(),
+  last_session_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  training_module_id uuid,
+  is_deleted boolean DEFAULT false,
+  last_block_index integer,
+  last_block_id uuid,
+  time_spent_seconds integer DEFAULT 0,
+  last_activity_at timestamp with time zone DEFAULT now(),
+  metadata jsonb,
+  acknowledged_at timestamp with time zone
+
+TABLE: learning_quiz_questions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  quiz_id uuid NOT NULL,
+  question_id uuid NOT NULL,
+  display_order integer DEFAULT 0,
+  points_override integer,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: learning_quizzes
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  category_id uuid,
+  time_limit_minutes integer,
+  passing_score_percentage integer DEFAULT 70,
+  max_attempts integer,
+  randomize_questions boolean DEFAULT false,
+  show_feedback_during boolean DEFAULT true,
+  status public.question_status NOT NULL DEFAULT 'draft'::question_status,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  linked_sop_id uuid,
+  is_deleted boolean DEFAULT false,
+  training_module_id uuid,
+  source_document_id uuid
+
+TABLE: leave_requests
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  requester_id uuid NOT NULL,
+  property_id uuid,
+  department_id uuid,
+  start_date date NOT NULL,
+  end_date date NOT NULL,
+  type public.leave_type NOT NULL,
+  reason text,
+  status public.entity_status NOT NULL DEFAULT 'pending'::entity_status,
+  approved_by_id uuid,
+  rejected_by_id uuid,
+  rejection_reason text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  workflow_request_id uuid,
+  is_deleted boolean DEFAULT false
+
+TABLE: leave_types
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  days_per_year integer DEFAULT 0,
+  carry_forward boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: maintenance_attachments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  ticket_id uuid NOT NULL,
+  uploaded_by_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_path text NOT NULL,
+  file_type text NOT NULL,
+  file_size bigint,
+  description text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: maintenance_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  ticket_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  comment text NOT NULL,
+  internal_only boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: maintenance_schedules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  property_id uuid,
+  title text NOT NULL,
+  description text,
+  frequency text NOT NULL,
+  last_generated_at timestamp with time zone,
+  next_run_at timestamp with time zone NOT NULL,
+  assigned_to_id uuid,
+  priority text NOT NULL DEFAULT 'medium'::text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  created_by uuid
+
+TABLE: maintenance_sla_policies
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  priority text NOT NULL,
+  sla_hours integer NOT NULL,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: maintenance_tickets
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text NOT NULL,
+  category public.maintenance_category NOT NULL,
+  priority public.maintenance_priority NOT NULL DEFAULT 'medium'::maintenance_priority,
+  status public.entity_status NOT NULL DEFAULT 'open'::entity_status,
+  property_id uuid,
+  department_id uuid,
+  room_number text,
+  reported_by_id uuid NOT NULL,
+  assigned_to_id uuid,
+  estimated_completion_date date,
+  actual_completion_date date,
+  parts_needed text,
+  labor_hours numeric,
+  material_cost numeric,
+  notes text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  completed_at timestamp with time zone,
+  is_deleted boolean DEFAULT false,
+  estimated_cost numeric,
+  due_at timestamp with time zone,
+  sla_hours integer,
+  escalated_at timestamp with time zone
+
+TABLE: media_access_logs
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  media_asset_id uuid,
+  accessed_by uuid,
+  accessed_at timestamp with time zone NOT NULL DEFAULT now(),
+  access_type text NOT NULL DEFAULT 'view'::text,
+  ip_address inet,
+  user_agent text,
+  request_id text,
+  metadata jsonb DEFAULT '{}'::jsonb
+
+TABLE: media_asset_usages
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  media_asset_id uuid NOT NULL,
+  usage_type text NOT NULL,
+  usage_entity_id uuid NOT NULL,
+  usage_entity_title text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: media_assets
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  filename text NOT NULL,
+  original_filename text NOT NULL,
+  storage_path text NOT NULL,
+  storage_bucket text NOT NULL DEFAULT 'media'::text,
+  public_url text NOT NULL,
+  media_type public.media_type NOT NULL,
+  category public.media_category DEFAULT 'general'::media_category,
+  file_size_bytes bigint NOT NULL,
+  mime_type text NOT NULL,
+  duration_seconds integer,
+  width integer,
+  height integer,
+  thumbnail_url text,
+  tags text[] DEFAULT '{}'::text[],
+  metadata jsonb DEFAULT '{}'::jsonb,
+  usage_count integer DEFAULT 0,
+  last_used_at timestamp with time zone,
+  uploaded_by uuid,
+  property_id uuid,
+  is_public boolean DEFAULT false,
+  is_archived boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  virus_scan_status text DEFAULT 'pending'::text,
+  virus_scan_score integer DEFAULT 0,
+  sha256_hash text,
+  scanned_at timestamp with time zone,
+  content_disposition text DEFAULT 'inline'::text
+
+TABLE: media_collection_items
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  collection_id uuid,
+  media_asset_id uuid,
+  added_at timestamp with time zone DEFAULT now()
+
+TABLE: media_collections
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  created_by uuid,
+  property_id uuid,
+  is_system boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: message_attachments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  message_id uuid NOT NULL,
+  uploaded_by_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_path text NOT NULL,
+  file_type text NOT NULL,
+  file_size bigint NOT NULL,
+  description text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: messages
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sender_id uuid NOT NULL,
+  recipient_id uuid,
+  subject text NOT NULL,
+  content text NOT NULL,
+  message_type text NOT NULL,
+  priority text NOT NULL DEFAULT 'medium'::text,
+  status text NOT NULL DEFAULT 'draft'::text,
+  sent_at timestamp with time zone,
+  read_at timestamp with time zone,
+  parent_message_id uuid,
+  property_id uuid,
+  department_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  conversation_id uuid
+
+TABLE: mfa_secrets
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  secret text NOT NULL,
+  backup_codes text[] NOT NULL DEFAULT '{}'::text[],
+  enabled boolean NOT NULL DEFAULT false,
+  verified_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: microlearning_content
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  title text NOT NULL,
+  description text,
+  video_url text NOT NULL,
+  duration_seconds integer,
+  thumbnail_url text,
+  category text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: module_skills
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  module_id uuid NOT NULL,
+  skill_id uuid NOT NULL,
+  points_awarded integer DEFAULT 0
+
+TABLE: motivational_content
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  content_en text NOT NULL,
+  content_ar text NOT NULL,
+  author_en text,
+  author_ar text,
+  category text DEFAULT 'general'::text,
+  is_active boolean DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: notification_batches
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  job_type text NOT NULL,
+  total_count integer NOT NULL DEFAULT 0,
+  processed_count integer DEFAULT 0,
+  failed_count integer DEFAULT 0,
+  status text NOT NULL DEFAULT 'pending'::text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  started_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  email_sent_count integer NOT NULL DEFAULT 0,
+  email_failed_count integer NOT NULL DEFAULT 0,
+  last_processed_at timestamp with time zone
+
+TABLE: notification_delivery_events
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  queue_id uuid,
+  notification_id uuid,
+  batch_id uuid,
+  user_id uuid NOT NULL,
+  recipient_email text NOT NULL,
+  provider text NOT NULL DEFAULT 'resend'::text,
+  provider_message_id text,
+  template_key text,
+  business_domain text NOT NULL DEFAULT 'system'::text,
+  notification_type text NOT NULL DEFAULT 'system'::text,
+  status text NOT NULL DEFAULT 'queued'::text,
+  attempts integer NOT NULL DEFAULT 0,
+  error_message text,
+  request_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  response_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  sent_at timestamp with time zone,
+  delivered_at timestamp with time zone,
+  opened_at timestamp with time zone,
+  clicked_at timestamp with time zone,
+  failed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: notification_email_templates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  template_key text NOT NULL,
+  business_domain text NOT NULL DEFAULT 'system'::text,
+  notification_type text NOT NULL DEFAULT 'system'::text,
+  subject_template text NOT NULL,
+  html_template text NOT NULL,
+  text_template text,
+  from_name text NOT NULL DEFAULT 'PHG Connect'::text,
+  from_email text NOT NULL DEFAULT 'notifications@phg-connect.com'::text,
+  is_active boolean NOT NULL DEFAULT true,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: notification_preferences
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  email_enabled boolean DEFAULT true,
+  approval_email boolean DEFAULT true,
+  training_email boolean DEFAULT true,
+  announcement_email boolean DEFAULT false,
+  maintenance_email boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  browser_push_enabled boolean DEFAULT true,
+  approval_push boolean DEFAULT false,
+  training_push boolean DEFAULT false,
+  announcement_push boolean DEFAULT false,
+  maintenance_push boolean DEFAULT false,
+  quiet_hours_enabled boolean DEFAULT false,
+  quiet_hours_start time without time zone DEFAULT '22:00:00'::time without time zone,
+  quiet_hours_end time without time zone DEFAULT '08:00:00'::time without time zone,
+  daily_digest_enabled boolean DEFAULT false,
+  notification_sounds_enabled boolean DEFAULT true
+
+TABLE: notification_queue
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  batch_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  notification_type text NOT NULL,
+  notification_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  status text NOT NULL DEFAULT 'pending'::text,
+  attempts integer DEFAULT 0,
+  max_attempts integer DEFAULT 3,
+  error_message text,
+  created_at timestamp with time zone DEFAULT now(),
+  processed_at timestamp with time zone,
+  channels text[] NOT NULL DEFAULT ARRAY['in_app'::text],
+  template_key text,
+  business_domain text NOT NULL DEFAULT 'system'::text,
+  email_subject text,
+  email_payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+  send_email boolean NOT NULL DEFAULT false,
+  scheduled_for timestamp with time zone,
+  priority text NOT NULL DEFAULT 'normal'::text
+
+TABLE: notification_templates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  type public.notification_type NOT NULL,
+  channel text NOT NULL,
+  subject text,
+  body_template text NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: notifications
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  type text NOT NULL,
+  title text NOT NULL,
+  message text,
+  link text,
+  read_at timestamp with time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  data jsonb DEFAULT '{}'::jsonb,
+  entity_type text,
+  entity_id uuid,
+  is_read boolean
+
+TABLE: onboarding_process
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  template_id uuid,
+  status public.entity_status DEFAULT 'pending'::entity_status,
+  start_date timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  progress_percent integer DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now())
+
+TABLE: onboarding_tasks
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  process_id uuid NOT NULL,
+  title text NOT NULL,
+  description text,
+  status text DEFAULT 'pending'::text,
+  assigned_to_id uuid,
+  due_date timestamp with time zone,
+  is_completed boolean DEFAULT false,
+  completed_at timestamp with time zone,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  link_type text,
+  link_id uuid
+
+TABLE: onboarding_templates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  role public.app_role,
+  department_id uuid,
+  tasks jsonb NOT NULL DEFAULT '[]'::jsonb,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  job_title text
+
+TABLE: password_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  password_hash text NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: password_reset_requests
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  email text NOT NULL,
+  ip_address text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: payslips
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  month integer NOT NULL,
+  year integer NOT NULL,
+  basic_salary numeric,
+  gross_salary numeric,
+  deductions numeric,
+  net_salary numeric,
+  components jsonb,
+  status text DEFAULT 'draft'::text,
+  payment_date date,
+  created_at timestamp with time zone DEFAULT now(),
+  period_start date,
+  period_end date,
+  currency text,
+  is_published boolean DEFAULT false,
+  storage_path text,
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: performance_reviews
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  employee_id uuid NOT NULL,
+  reviewer_id uuid,
+  review_period text,
+  overall_rating integer,
+  strengths text,
+  areas_for_improvement text,
+  goals text,
+  comments text,
+  status text DEFAULT 'pending'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  review_date date DEFAULT CURRENT_DATE,
+  rating integer
+
+TABLE: pii_access_logs
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  actor_id uuid,
+  target_user_id uuid NOT NULL,
+  fields_accessed text[] NOT NULL,
+  reason text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: profiles
+  id uuid NOT NULL,
+  email text NOT NULL,
+  full_name text,
+  phone text,
+  avatar_url text,
+  hire_date date,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  date_of_birth date NOT NULL,
+  job_title text,
+  reporting_to uuid,
+  is_deleted boolean DEFAULT false,
+  is_temp_password boolean DEFAULT false,
+  password_initialized boolean DEFAULT false,
+  password_last_changed_at timestamp with time zone,
+  emergency_contact_name text,
+  emergency_contact_phone text,
+  nationality text,
+  blood_group text,
+  staff_id text,
+  suspended_until timestamp with time zone,
+  account_status text NOT NULL DEFAULT 'active'::text,
+  suspended_at timestamp with time zone,
+  suspended_by uuid,
+  suspend_reason text,
+  last_login_at timestamp with time zone,
+  force_password_reset boolean NOT NULL DEFAULT false,
+  employment_type text DEFAULT 'full_time'::text,
+  contract_end_date date,
+  iqama_number text,
+  iqama_expiry date,
+  bio text,
+  phone_extension text,
+  national_id text,
+  salary_grade text,
+  failed_login_attempts integer DEFAULT 0,
+  locked_until timestamp with time zone,
+  mfa_required boolean DEFAULT false
+
+TABLE: properties
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  address text,
+  phone text,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean DEFAULT false,
+  is_headquarters boolean DEFAULT false,
+  property_code varchar(20),
+  city varchar(100),
+  country varchar(100)
+
+TABLE: push_subscriptions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  subscription jsonb NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: quiz_answers
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  attempt_id uuid NOT NULL,
+  question_id uuid NOT NULL,
+  user_answer text,
+  is_correct boolean,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: quiz_attempts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  quiz_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  score integer,
+  passed boolean,
+  answers jsonb
+
+TABLE: quiz_questions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  quiz_id uuid NOT NULL,
+  question_text text NOT NULL,
+  question_type text DEFAULT 'multiple_choice'::text,
+  option_a text,
+  option_b text,
+  option_c text,
+  option_d text,
+  correct_answer text NOT NULL,
+  points integer DEFAULT 1,
+  order_num integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: quizzes
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  duration_minutes integer DEFAULT 30,
+  passing_score integer DEFAULT 70,
+  status text DEFAULT 'pending'::text,
+  created_by uuid,
+  property_id uuid,
+  training_id uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: rate_limit_entries
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL,
+  count integer NOT NULL DEFAULT 0,
+  window_start timestamp with time zone NOT NULL DEFAULT now(),
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: referral_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  referral_id uuid NOT NULL,
+  old_status text,
+  new_status text NOT NULL,
+  changed_by uuid,
+  change_note text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: request_attachments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL,
+  uploaded_by uuid,
+  storage_bucket text NOT NULL,
+  storage_path text NOT NULL,
+  file_name text,
+  file_type text,
+  file_size bigint,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: request_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  comment text NOT NULL,
+  visibility text NOT NULL DEFAULT 'all'::text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: request_events
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL,
+  actor_id uuid,
+  event_type text NOT NULL,
+  payload jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: request_sla_policies
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL,
+  step_role public.app_role,
+  sla_hours integer,
+  default_priority text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: request_steps
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_id uuid NOT NULL,
+  step_order integer NOT NULL,
+  assignee_id uuid,
+  assignee_role text,
+  status text NOT NULL DEFAULT 'waiting'::text,
+  acted_at timestamp with time zone,
+  comment text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  due_at timestamp with time zone,
+  sla_hours integer,
+  escalated_at timestamp with time zone
+
+TABLE: requests
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  request_no bigint NOT NULL DEFAULT nextval('requests_request_no_seq'::regclass),
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  requester_id uuid NOT NULL,
+  supervisor_id uuid,
+  current_assignee_id uuid,
+  status text NOT NULL DEFAULT 'draft'::text,
+  submitted_at timestamp with time zone,
+  closed_at timestamp with time zone,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  property_id uuid,
+  department_id uuid,
+  priority text NOT NULL DEFAULT 'normal'::text,
+  due_at timestamp with time zone,
+  last_action_at timestamp with time zone
+
+TABLE: role_permissions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  role text NOT NULL,
+  permission text NOT NULL,
+  granted boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: salary_components
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  type text,
+  is_percentage boolean DEFAULT false,
+  default_value numeric,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: scheduled_reminders
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  user_id uuid,
+  reminder_type text NOT NULL,
+  scheduled_for timestamp with time zone NOT NULL,
+  sent_at timestamp with time zone,
+  status text DEFAULT 'pending'::text,
+  notification_data jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: shifts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  shift_type text NOT NULL,
+  start_time timestamp with time zone NOT NULL,
+  end_time timestamp with time zone NOT NULL,
+  location text,
+  department_id uuid,
+  property_id uuid,
+  notes text,
+  status text DEFAULT 'scheduled'::text,
+  break_duration_minutes integer DEFAULT 0,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: skills
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  category text,
+  description text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: sop_access_logs
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  version_id uuid,
+  user_id uuid NOT NULL,
+  action text NOT NULL,
+  ip_address text,
+  user_agent text,
+  metadata jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_acknowledgments
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  version_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  acknowledged_at timestamp with time zone NOT NULL DEFAULT now(),
+  signature_data jsonb,
+  ip_address text,
+  user_agent text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_approval_steps
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  workflow_id uuid NOT NULL,
+  step_number integer NOT NULL,
+  approver_role text NOT NULL,
+  approver_id uuid,
+  status public.sop_approval_status NOT NULL DEFAULT 'pending'::sop_approval_status,
+  comments text,
+  approved_at timestamp with time zone,
+  approved_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_approval_workflows
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  version_id uuid NOT NULL,
+  status public.sop_approval_status NOT NULL DEFAULT 'pending'::sop_approval_status,
+  current_step integer NOT NULL DEFAULT 1,
+  total_steps integer NOT NULL,
+  created_by uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  completed_at timestamp with time zone,
+  completed_by uuid,
+  rejection_reason text
+
+TABLE: sop_attachments
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  version_id uuid,
+  file_name text NOT NULL,
+  file_type text NOT NULL,
+  file_size integer NOT NULL,
+  storage_path text NOT NULL,
+  is_primary boolean NOT NULL DEFAULT false,
+  uploaded_by uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_bookmarks
+  user_id uuid NOT NULL,
+  document_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_categories
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  name_ar text NOT NULL,
+  description text,
+  description_ar text,
+  department_id uuid,
+  parent_id uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_comment_votes
+  user_id uuid NOT NULL,
+  comment_id uuid NOT NULL,
+  vote_type text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  parent_id uuid,
+  user_id uuid NOT NULL,
+  content text NOT NULL,
+  is_question boolean DEFAULT false,
+  is_resolved boolean DEFAULT false,
+  is_pinned boolean DEFAULT false,
+  upvotes integer DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_context_triggers
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  trigger_type text NOT NULL,
+  trigger_value text NOT NULL,
+  priority integer DEFAULT 0,
+  show_as text DEFAULT 'link'::text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_document_relations
+  source_document_id uuid NOT NULL,
+  target_document_id uuid NOT NULL,
+  relation_type text NOT NULL,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_document_tags
+  document_id uuid NOT NULL,
+  tag_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_document_versions
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  version_number integer NOT NULL,
+  content jsonb NOT NULL,
+  change_summary text,
+  status public.sop_document_status NOT NULL,
+  created_by uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  published_at timestamp with time zone,
+  published_by uuid
+
+TABLE: sop_documents
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  title text NOT NULL,
+  title_ar text NOT NULL,
+  code text,
+  description text,
+  description_ar text,
+  department_id uuid NOT NULL,
+  category_id uuid,
+  subcategory_id uuid,
+  status public.sop_document_status NOT NULL DEFAULT 'draft'::sop_document_status,
+  version integer NOT NULL DEFAULT 1,
+  current_version_id uuid,
+  review_frequency_months integer NOT NULL DEFAULT 12,
+  next_review_date date,
+  is_template boolean NOT NULL DEFAULT false,
+  template_id uuid,
+  created_by uuid NOT NULL,
+  updated_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  published_at timestamp with time zone,
+  published_by uuid,
+  archived_at timestamp with time zone,
+  archived_by uuid,
+  property_id uuid,
+  visibility_scope public.knowledge_visibility DEFAULT 'global'::knowledge_visibility,
+  content_type public.knowledge_content_type DEFAULT 'sop'::knowledge_content_type,
+  requires_acknowledgment boolean DEFAULT false,
+  view_count integer DEFAULT 0,
+  featured boolean DEFAULT false,
+  estimated_read_time integer,
+  last_reviewed_at timestamp with time zone,
+  last_reviewed_by uuid,
+  content text,
+  requires_quiz boolean DEFAULT false,
+  passing_score integer DEFAULT 70,
+  quiz_enabled boolean DEFAULT false,
+  priority text DEFAULT 'medium'::text,
+  compliance_level text DEFAULT 'standard'::text,
+  video_url text,
+  checklist_items jsonb DEFAULT '[]'::jsonb,
+  faq_items jsonb DEFAULT '[]'::jsonb,
+  linked_quiz_id uuid,
+  linked_training_id uuid,
+  images jsonb DEFAULT '[]'::jsonb,
+  is_deleted boolean DEFAULT false,
+  file_size bigint DEFAULT 0
+
+TABLE: sop_feedback
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  helpful boolean NOT NULL,
+  feedback_text text,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_quiz_attempts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sop_document_id uuid,
+  user_id uuid,
+  score numeric NOT NULL,
+  total_points integer NOT NULL,
+  percentage numeric NOT NULL,
+  passed boolean NOT NULL,
+  answers jsonb NOT NULL,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  certificate_url text,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: sop_quiz_questions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sop_document_id uuid,
+  question_text text NOT NULL,
+  question_type text NOT NULL,
+  options jsonb,
+  correct_answer text NOT NULL,
+  points integer DEFAULT 1,
+  order_index integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: sop_review_reminders
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  document_id uuid NOT NULL,
+  reminder_date date NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  sent_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  completed_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_role_assignments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  document_id uuid NOT NULL,
+  role text NOT NULL,
+  property_id uuid,
+  department_id uuid,
+  is_required boolean DEFAULT false,
+  due_days_after_assignment integer,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_tags
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  name text NOT NULL,
+  name_ar text NOT NULL,
+  color text DEFAULT '#3b82f6'::text,
+  created_by uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: sop_view_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  document_id uuid NOT NULL,
+  view_duration_seconds integer,
+  scroll_depth_percent integer,
+  viewed_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: status_history
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  entity_type text NOT NULL,
+  entity_id uuid NOT NULL,
+  old_status text,
+  new_status text NOT NULL,
+  changed_by uuid,
+  changed_at timestamp with time zone DEFAULT now(),
+  reason text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: system_settings
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  key text NOT NULL,
+  value jsonb NOT NULL DEFAULT '{}'::jsonb,
+  category text NOT NULL DEFAULT 'general'::text,
+  description text,
+  updated_at timestamp with time zone DEFAULT now(),
+  updated_by uuid
+
+TABLE: system_wiki
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  slug text NOT NULL,
+  title_en text NOT NULL,
+  title_ar text NOT NULL,
+  content_en text,
+  content_ar text,
+  subtopics jsonb DEFAULT '[]'::jsonb,
+  allowed_roles app_role[] DEFAULT '{}'::app_role[],
+  order_index integer DEFAULT 0,
+  is_active boolean DEFAULT true,
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: task_attachments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL,
+  uploaded_by_id uuid NOT NULL,
+  file_name text NOT NULL,
+  file_path text NOT NULL,
+  file_type text NOT NULL,
+  file_size bigint,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: task_comments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  task_id uuid NOT NULL,
+  author_id uuid NOT NULL,
+  content text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: task_watchers
+  task_id uuid NOT NULL,
+  user_id uuid NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: tasks
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  status public.entity_status NOT NULL DEFAULT 'todo'::entity_status,
+  priority public.task_priority NOT NULL DEFAULT 'medium'::task_priority,
+  assigned_to_id uuid,
+  created_by_id uuid NOT NULL,
+  property_id uuid,
+  department_id uuid,
+  due_date date,
+  start_date date,
+  completed_at timestamp with time zone,
+  tags text[],
+  estimated_hours numeric,
+  actual_hours numeric,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  is_deleted boolean DEFAULT false
+
+TABLE: temporary_approvers
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  approver_id uuid NOT NULL,
+  temporary_approver_id uuid NOT NULL,
+  start_date timestamp with time zone NOT NULL,
+  end_date timestamp with time zone NOT NULL,
+  status text NOT NULL DEFAULT 'active'::text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  delegator_id uuid,
+  delegate_id uuid,
+  scope_type text NOT NULL DEFAULT 'all'::text,
+  scope_id uuid,
+  start_at timestamp with time zone,
+  end_at timestamp with time zone,
+  reason text,
+  entity_type text,
+  entity_id uuid,
+  fallback_delegate_ids uuid[] DEFAULT '{}'::uuid[],
+  max_approvals integer,
+  approvals_used integer DEFAULT 0,
+  allow_redelegate boolean DEFAULT false,
+  notify_delegate boolean DEFAULT true,
+  notify_delegator boolean DEFAULT true,
+  notify_on_action boolean DEFAULT true,
+  notify_on_expiry boolean DEFAULT true
+
+TABLE: training_assignment_rules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  training_module_id uuid,
+  target_role text NOT NULL,
+  target_department_id uuid,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  created_by uuid
+
+TABLE: training_block_progress
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  training_module_id uuid NOT NULL,
+  block_id uuid NOT NULL,
+  completed_at timestamp with time zone,
+  last_viewed_at timestamp with time zone DEFAULT now(),
+  time_spent_seconds integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: training_certificates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  training_progress_id uuid NOT NULL,
+  certificate_url text NOT NULL,
+  issued_at timestamp with time zone DEFAULT now(),
+  expires_at timestamp with time zone,
+  verification_code text,
+  attempt_id uuid
+
+TABLE: training_content_blocks
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  training_module_id uuid NOT NULL,
+  type public.content_block_type NOT NULL,
+  content text NOT NULL,
+  "order" integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  content_url text,
+  content_data jsonb,
+  is_mandatory boolean DEFAULT true,
+  is_deleted boolean NOT NULL DEFAULT false,
+  source_document_id uuid,
+  ai_generated boolean DEFAULT false,
+  ai_source_content text,
+  title text,
+  duration_seconds integer,
+  points integer DEFAULT 0
+
+TABLE: training_content_templates
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  category text NOT NULL,
+  template_structure jsonb NOT NULL,
+  is_active boolean DEFAULT true,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: training_module_documents
+  id uuid NOT NULL DEFAULT uuid_generate_v4(),
+  training_module_id uuid NOT NULL,
+  document_id uuid NOT NULL,
+  is_required boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: training_module_resources
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  training_module_id uuid NOT NULL,
+  resource_type text NOT NULL,
+  resource_id uuid,
+  resource_url text,
+  title text NOT NULL,
+  description text,
+  display_order integer DEFAULT 0,
+  is_required boolean DEFAULT false,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: training_modules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  estimated_duration_minutes integer,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  property_id uuid,
+  is_deleted boolean NOT NULL DEFAULT false,
+  department_id uuid,
+  validity_period_days integer,
+  allow_retake boolean DEFAULT true,
+  max_attempts integer,
+  auto_advance boolean DEFAULT false,
+  show_feedback boolean DEFAULT true,
+  randomize_questions boolean DEFAULT false,
+  show_answers boolean DEFAULT false,
+  time_limit_minutes integer,
+  audience text,
+  content_language text,
+  template_id uuid,
+  passing_score_percentage integer DEFAULT 80
+
+TABLE: training_path_modules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  path_id uuid,
+  module_id uuid,
+  sequence integer NOT NULL,
+  is_mandatory boolean DEFAULT true
+
+TABLE: training_paths
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  path_type text NOT NULL,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  estimated_duration_hours integer DEFAULT 0,
+  is_mandatory boolean DEFAULT false,
+  certificate_enabled boolean DEFAULT true,
+  target_role public.app_role,
+  target_department_id uuid,
+  created_by uuid,
+  target_property_id uuid,
+  target_user_ids uuid[] DEFAULT '{}'::uuid[]
+
+TABLE: training_progress
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  training_id uuid NOT NULL,
+  assignment_id uuid,
+  status public.training_status NOT NULL DEFAULT 'not_started'::training_status,
+  started_at timestamp with time zone,
+  completed_at timestamp with time zone,
+  quiz_score integer,
+  certificate_url text,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean NOT NULL DEFAULT false
+
+TABLE: training_quiz_attempts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  module_id uuid,
+  score integer NOT NULL,
+  max_score integer NOT NULL,
+  passed boolean NOT NULL,
+  attempt_number integer NOT NULL DEFAULT 1,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  answers jsonb
+
+TABLE: training_quizzes
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  training_module_id uuid NOT NULL,
+  question text NOT NULL,
+  type public.quiz_type NOT NULL,
+  options text[],
+  correct_answer text NOT NULL,
+  "order" integer NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  is_deleted boolean NOT NULL DEFAULT false
+
+TABLE: user_achievements
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  achievement_type public.achievement_type NOT NULL,
+  title text NOT NULL,
+  description text,
+  icon text DEFAULT 'award'::text,
+  color text DEFAULT 'gold'::text,
+  points integer DEFAULT 10,
+  earned_at timestamp with time zone NOT NULL DEFAULT now(),
+  metadata jsonb DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: user_dashboard_preferences
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  widget_visibility jsonb DEFAULT '{}'::jsonb,
+  widget_order jsonb DEFAULT '[]'::jsonb,
+  property_filter uuid,
+  department_filter uuid[],
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: user_departments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  department_id uuid
+
+TABLE: user_invitations
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  auth_user_id uuid,
+  email text NOT NULL,
+  role public.app_role NOT NULL,
+  property_id uuid,
+  department_id uuid,
+  invited_by uuid NOT NULL,
+  invited_at timestamp with time zone NOT NULL DEFAULT now(),
+  expires_at timestamp with time zone NOT NULL,
+  status text NOT NULL DEFAULT 'pending'::text,
+  token_hash text,
+  invite_url text,
+  accepted_at timestamp with time zone,
+  metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now()
+
+TABLE: user_path_enrollments
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  path_id uuid,
+  enrolled_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone
+
+TABLE: user_pins
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  item_type varchar(50) NOT NULL,
+  item_id uuid NOT NULL,
+  pinned_at timestamp with time zone DEFAULT now(),
+  display_order integer DEFAULT 0
+
+TABLE: user_properties
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid,
+  property_id uuid
+
+TABLE: user_roles
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  role public.app_role NOT NULL
+
+TABLE: user_sessions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  session_token_hash text NOT NULL,
+  ip_address text,
+  ip_hash text,
+  user_agent text,
+  user_agent_hash text,
+  fingerprint text,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  last_active_at timestamp with time zone NOT NULL DEFAULT now(),
+  expires_at timestamp with time zone NOT NULL,
+  revoked_at timestamp with time zone,
+  revoked_reason text,
+  is_current boolean NOT NULL DEFAULT false,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  device_info jsonb
+
+TABLE: user_settings
+  user_id uuid NOT NULL,
+  theme text NOT NULL DEFAULT 'light'::text,
+  language text NOT NULL DEFAULT 'en'::text,
+  email_notifications boolean NOT NULL DEFAULT true,
+  push_notifications boolean NOT NULL DEFAULT true,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  reduced_motion boolean DEFAULT false,
+  high_contrast boolean DEFAULT false,
+  large_text boolean DEFAULT false,
+  keyboard_shortcuts boolean DEFAULT true,
+  timezone text DEFAULT 'Asia/Riyadh'::text
+
+TABLE: user_shifts
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  property_id uuid,
+  department_id uuid,
+  shift_date date NOT NULL,
+  start_time time without time zone NOT NULL,
+  end_time time without time zone NOT NULL,
+  shift_type text DEFAULT 'regular'::text,
+  status text DEFAULT 'scheduled'::text,
+  notes text,
+  created_by uuid,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: user_skills
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  skill_id uuid NOT NULL,
+  proficiency_level integer,
+  verified boolean DEFAULT false,
+  verified_by uuid,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: user_vacation_balance
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  year integer NOT NULL DEFAULT EXTRACT(year FROM CURRENT_DATE),
+  total_days integer NOT NULL DEFAULT 25,
+  used_days numeric DEFAULT 0,
+  pending_days numeric DEFAULT 0,
+  carried_over numeric DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now()
+
+TABLE: workflow_definitions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  name text NOT NULL,
+  description text,
+  type text NOT NULL,
+  trigger_config jsonb NOT NULL DEFAULT '{}'::jsonb,
+  action_config jsonb NOT NULL DEFAULT '{}'::jsonb,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  created_by uuid,
+  is_deleted boolean DEFAULT false
+
+TABLE: workflow_executions
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workflow_id uuid,
+  status text NOT NULL DEFAULT 'pending'::text,
+  started_at timestamp with time zone DEFAULT now(),
+  completed_at timestamp with time zone,
+  result jsonb,
+  error text,
+  metadata jsonb DEFAULT '{}'::jsonb,
+  execution_time_ms integer
+
+TABLE: workflow_schedules
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  workflow_id uuid,
+  cron_expression text NOT NULL,
+  timezone text DEFAULT 'UTC'::text,
+  last_run_at timestamp with time zone,
+  next_run_at timestamp with time zone,
+  is_active boolean DEFAULT true,
+  created_at timestamp with time zone DEFAULT now()
+
+TABLE: unified_questions
+  id                    uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  source_domain         text NOT NULL DEFAULT 'core'
+  CHECK (source_domain IN ('core','sop','knowledge','training','learning')),
+  question_text         text NOT NULL,
+  question_text_ar      text,
+  question_type         question_type NOT NULL DEFAULT 'mcq',
+  difficulty            question_difficulty NOT NULL DEFAULT 'medium',
+  status                question_status NOT NULL DEFAULT 'draft',
+  correct_answer        text,
+  explanation           text,
+  explanation_ar        text,
+  hint                  text,
+  hint_ar               text,
+  points                integer DEFAULT 1,
+  estimated_time_seconds integer DEFAULT 30,
+  linked_sop_id         uuid,
+  linked_sop_section    text,
+  training_module_id    uuid,
+  training_section_id   text,
+  source_document_id    uuid,
+  tags                  text[] DEFAULT '{}',
+  ai_generated          boolean DEFAULT false,
+  ai_model_used         text,
+  ai_confidence_score   numeric,
+  ai_prompt_used        text,
+  version               integer DEFAULT 1,
+  reviewed_by           uuid,
+  reviewed_at           timestamptz,
+  review_notes          text,
+  created_by            uuid,
+  created_at            timestamptz DEFAULT now(),
+  updated_at            timestamptz DEFAULT now()
+
+TABLE: unified_question_options
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id     uuid NOT NULL REFERENCES public.unified_questions(id) ON DELETE CASCADE,
+  option_text     text NOT NULL,
+  option_text_ar  text,
+  is_correct      boolean DEFAULT false,
+  display_order   integer DEFAULT 0,
+  feedback        text,
+  feedback_ar     text,
+  created_at      timestamptz DEFAULT now()
+
+TABLE: unified_quiz_questions
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  quiz_id          uuid NOT NULL REFERENCES public.quizzes(id) ON DELETE CASCADE,
+  question_id      uuid NOT NULL REFERENCES public.unified_questions(id) ON DELETE CASCADE,
+  display_order    integer DEFAULT 0,
+  points_override  integer,
+  created_at       timestamptz DEFAULT now(),
+
+TABLE: unified_question_usages
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id      uuid NOT NULL REFERENCES public.unified_questions(id) ON DELETE CASCADE,
+  usage_type       text NOT NULL,
+  usage_entity_id  uuid NOT NULL,
+  display_order    integer DEFAULT 0,
+  is_required      boolean DEFAULT true,
+  weight           numeric DEFAULT 1.0,
+  created_at       timestamptz DEFAULT now()
+
+TABLE: unified_question_versions
+  id              uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id     uuid NOT NULL REFERENCES public.unified_questions(id) ON DELETE CASCADE,
+  version_number  integer NOT NULL,
+  data_snapshot   jsonb NOT NULL,
+  changed_by      uuid,
+  changed_at      timestamptz DEFAULT now(),
+  change_reason   text
+
+TABLE: unified_question_attempts
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             uuid NOT NULL,
+  question_id         uuid NOT NULL REFERENCES public.unified_questions(id) ON DELETE CASCADE,
+  session_id          uuid,
+  selected_answer     text,
+  selected_options    uuid[],
+  is_correct          boolean,
+  partial_score       numeric,
+  context_type        text,
+  context_entity_id   uuid,
+  time_spent_seconds  integer,
+  attempt_number      integer DEFAULT 1,
+  hint_used           boolean DEFAULT false,
+  created_at          timestamptz DEFAULT now()
+
+TABLE: unified_quiz_sessions
+  id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id             uuid NOT NULL,
+  quiz_type           text NOT NULL,
+  quiz_entity_id      uuid,
+  started_at          timestamptz DEFAULT now(),
+  completed_at        timestamptz,
+  total_questions     integer DEFAULT 0,
+  correct_answers     integer DEFAULT 0,
+  total_points        integer DEFAULT 0,
+  earned_points       integer DEFAULT 0,
+  score_percentage    numeric,
+  passed              boolean,
+  time_limit_seconds  integer,
+  passing_score       numeric
+
+TABLE: system_events
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  event_type    text        NOT NULL,
+  actor_id      uuid        REFERENCES auth.users(id) ON DELETE SET NULL,
+  entity_type   text,
+  entity_id     uuid,
+  property_id   uuid,
+  department_id uuid,
+  metadata      jsonb       NOT NULL DEFAULT '{}',
+  ip_address    inet,
+  user_agent    text,
+  created_at    timestamptz NOT NULL DEFAULT now()
+

@@ -255,7 +255,7 @@ function FeedbackOverlay({
                     )}
                 >
                     Continue
-                    <ArrowRight className="ml-2 h-5 w-5" />
+                    <ArrowRight className="ms-2 h-5 w-5" />
                 </Button>
             </m.div>
         </m.div>
@@ -1084,7 +1084,7 @@ export function QuizComponentEnhanced({
                 >
                     <div className="relative">
                         <div className="w-16 h-16 border-4 border-hotel-gold/20 border-t-hotel-gold rounded-full animate-spin" />
-                        <Brain className="h-6 w-6 text-hotel-gold absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                        <Brain className="h-6 w-6 text-hotel-gold absolute top-1/2 start-1/2 -translate-x-1/2 -translate-y-1/2" />
                     </div>
                     <p className="text-slate-500 font-medium">{t('training:quizzes.player.loading')}</p>
                 </m.div>
@@ -1230,7 +1230,7 @@ export function QuizComponentEnhanced({
             {/* Progress Bar */}
             <div className="relative h-3 w-full bg-slate-100 rounded-full overflow-hidden">
                 <m.div
-                    className="absolute left-0 top-0 h-full bg-gradient-to-r from-hotel-gold-dark via-hotel-gold to-hotel-gold-light"
+                    className="absolute start-0 top-0 h-full bg-gradient-to-r from-hotel-gold-dark via-hotel-gold to-hotel-gold-light"
                     initial={{ width: 0 }}
                     animate={{ width: `${((currentQuestionIndex) / (quiz.questions?.length || 1)) * 100}%` }}
                     transition={{ type: "spring", stiffness: 50 }}
@@ -1251,7 +1251,7 @@ export function QuizComponentEnhanced({
                         >
                             {powerUp.icon}
                             <span className="hidden sm:inline">{powerUp.name}</span>
-                            <Badge variant="secondary" className="ml-1">{powerUp.count}</Badge>
+                            <Badge variant="secondary" className="ms-1">{powerUp.count}</Badge>
                         </Button>
                     ))}
                 </div>
@@ -1534,7 +1534,7 @@ export function QuizComponentEnhanced({
                     disabled={currentQuestionIndex === 0 || showFeedback}
                     onClick={() => setCurrentQuestionIndex(prev => prev - 1)}
                 >
-                    <ArrowLeft className={cn("h-4 w-4 mr-2", isRTL && "rotate-180")} />
+                    <ArrowLeft className={cn("h-4 w-4 me-2", isRTL && "rotate-180")} />
                     Previous
                 </Button>
 
@@ -1544,7 +1544,7 @@ export function QuizComponentEnhanced({
                     className="bg-hotel-navy hover:bg-hotel-navy-dark text-white px-8 py-6 rounded-xl font-bold"
                 >
                     Submit Answer
-                    <CheckCircle2 className="ml-2 h-5 w-5" />
+                    <CheckCircle2 className="ms-2 h-5 w-5" />
                 </Button>
             </div>
 

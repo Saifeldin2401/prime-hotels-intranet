@@ -186,7 +186,7 @@ export function SyncStatus({ className, showDetails = false }: SyncStatusProps) 
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -10, scale: 0.95 }}
               transition={{ duration: 0.15 }}
-              className="absolute right-0 top-full mt-2 w-80 z-50"
+              className="absolute end-0 top-full mt-2 w-80 z-50"
             >
               <div className="bg-popover border rounded-lg shadow-lg p-4">
                 <div className="flex items-center justify-between mb-4">
@@ -278,12 +278,12 @@ export function SyncStatus({ className, showDetails = false }: SyncStatusProps) 
                   >
                     {syncState === 'syncing' ? (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        <RefreshCw className="h-4 w-4 me-2 animate-spin" />
                         {t('sync.syncing', { defaultValue: 'Syncing...' })}
                       </>
                     ) : (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                        <RefreshCw className="h-4 w-4 me-2" />
                         {pendingCount > 0 
                           ? t('sync.sync_now', { defaultValue: 'Sync Now' })
                           : t('sync.all_synced', { defaultValue: 'All Synced' })}

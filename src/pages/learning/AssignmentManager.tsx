@@ -357,7 +357,7 @@ export default function AssignmentManager() {
                     </p>
                 </div>
                 <Button onClick={() => setShowModal(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     New Assignment
                 </Button>
             </div>
@@ -440,7 +440,7 @@ export default function AssignmentManager() {
                                             {formData.content_id
                                                 ? getContentName(formData.content_id, formData.content_type)
                                                 : `Select ${formData.content_type === 'quiz' ? 'Quiz' : 'Module'}...`}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[300px] p-0">
@@ -470,13 +470,13 @@ export default function AssignmentManager() {
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "me-2 h-4 w-4",
                                                                         formData.content_id === quiz.id ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
                                                                 {quiz.title}
                                                                 {quiz.status !== 'published' && (
-                                                                    <span className="ml-2 text-xs text-muted-foreground capitalize">({quiz.status})</span>
+                                                                    <span className="ms-2 text-xs text-muted-foreground capitalize">({quiz.status})</span>
                                                                 )}
                                                             </div>
                                                         </CommandItem>
@@ -503,7 +503,7 @@ export default function AssignmentManager() {
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "me-2 h-4 w-4",
                                                                         formData.content_id === module.id ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
@@ -558,7 +558,7 @@ export default function AssignmentManager() {
                                                 {formData.target_id
                                                     ? users?.find((user) => user.id === formData.target_id)?.full_name
                                                     : t('selectUser')}
-                                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
                                         <PopoverContent className="w-[300px] p-0">
@@ -587,7 +587,7 @@ export default function AssignmentManager() {
                                                             >
                                                                 <Check
                                                                     className={cn(
-                                                                        "mr-2 h-4 w-4",
+                                                                        "me-2 h-4 w-4",
                                                                         formData.target_id === user.id ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />

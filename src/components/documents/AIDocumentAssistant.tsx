@@ -424,7 +424,7 @@ export function AIDocumentAssistant({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="ml-2"
+                            className="ms-2"
                             onClick={() => onViewDuplicate?.(warning.documentId)}
                           >
                             View

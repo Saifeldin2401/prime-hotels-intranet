@@ -109,12 +109,12 @@ export function AIDocumentSummarizer() {
                         >
                             {loading ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                     {progress || 'Processing...'}
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    <Sparkles className="me-2 h-4 w-4" />
                                     Summarize Text
                                 </>
                             )}
@@ -145,7 +145,7 @@ export function AIDocumentSummarizer() {
                                         AI Summary
                                     </CardTitle>
                                     <Button variant="ghost" size="sm" onClick={copyToClipboard} className="h-8 text-blue-700 hover:text-blue-900 hover:bg-blue-100">
-                                        <Copy className="h-3.5 w-3.5 mr-1.5" />
+                                        <Copy className="h-3.5 w-3.5 me-1.5" />
                                         Copy
                                     </Button>
                                 </div>

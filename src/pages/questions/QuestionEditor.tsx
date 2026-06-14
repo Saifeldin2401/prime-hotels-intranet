@@ -214,7 +214,7 @@ export function QuestionEditor() {
         <div className="max-w-4xl mx-auto space-y-6 pb-12">
             <div className="flex items-center gap-4">
                 <Button variant="ghost" onClick={() => navigate('/questions')}>
-                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    <ArrowLeft className="h-4 w-4 me-2" />
                     Back
                 </Button>
                 <div>
@@ -444,7 +444,7 @@ export function QuestionEditor() {
                                         size="sm"
                                         onClick={() => append({ option_text: '', is_correct: false, display_order: fields.length + 1 })}
                                     >
-                                        <Plus className="h-4 w-4 mr-2" />
+                                        <Plus className="h-4 w-4 me-2" />
                                         Add Option
                                     </Button>
 
@@ -544,12 +544,12 @@ export function QuestionEditor() {
                         <Button type="submit" disabled={form.formState.isSubmitting}>
                             {form.formState.isSubmitting ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    <Loader2 className="me-2 h-4 w-4 animate-spin" />
                                     Saving...
                                 </>
                             ) : (
                                 <>
-                                    <Save className="mr-2 h-4 w-4" />
+                                    <Save className="me-2 h-4 w-4" />
                                     Save Question
                                 </>
                             )}

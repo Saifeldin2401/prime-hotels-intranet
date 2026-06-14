@@ -249,12 +249,12 @@ export default function KnowledgeLibrary() {
                     <div className="bg-white/50 backdrop-blur-sm px-4 sm:px-6 py-3 flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between border-b border-gray-100/50">
                         <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1 w-full">
                             <div className="relative flex-1 w-full sm:max-w-md">
-                                <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 font-bold", isRTL ? "right-3" : "left-3")} />
+                                <Search className={cn("absolute top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 font-bold", isRTL ? "end-3" : "start-3")} />
                                 <Input
                                     placeholder={t('library.filter_within', 'Filter within these results...')}
                                     value={localSearch}
                                     onChange={(e) => handleSearch(e.target.value)}
-                                    className={cn("h-10 border-none bg-white shadow-sm ring-1 ring-gray-100 focus-visible:ring-hotel-gold/50", isRTL ? "pr-10" : "pl-10")}
+                                    className={cn("h-10 border-none bg-white shadow-sm ring-1 ring-gray-100 focus-visible:ring-hotel-gold/50", isRTL ? "pe-10" : "ps-10")}
                                 />
                             </div>
                             {searchParams.toString() && (
@@ -268,7 +268,7 @@ export default function KnowledgeLibrary() {
                         <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
                             <Select value={sortBy} onValueChange={setSortBy}>
                                 <SelectTrigger className="h-10 w-full sm:w-[140px] bg-white border-none shadow-sm ring-1 ring-gray-100">
-                                    <ArrowUpDown className="h-3.5 w-3.5 mr-2 text-gray-400" />
+                                    <ArrowUpDown className="h-3.5 w-3.5 me-2 text-gray-400" />
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -401,7 +401,7 @@ export default function KnowledgeLibrary() {
                                                             </div>
 
                                                             {viewMode === 'list' && (
-                                                                <div className="hidden sm:flex items-center gap-2 text-hotel-gold opacity-0 group-hover:opacity-100 transition-opacity pr-4">
+                                                                <div className="hidden sm:flex items-center gap-2 text-hotel-gold opacity-0 group-hover:opacity-100 transition-opacity pe-4">
                                                                     <span className="text-xs font-bold">{t('library.view', 'View')}</span>
                                                                     <ChevronRight className="h-4 w-4" />
                                                                 </div>
@@ -414,7 +414,7 @@ export default function KnowledgeLibrary() {
                                                     <div
                                                         className={cn(
                                                             "absolute z-20 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity",
-                                                            isRTL ? "left-3" : "right-3",
+                                                            isRTL ? "start-3" : "end-3",
                                                             viewMode === 'grid' ? "top-3" : "top-3 sm:top-4"
                                                         )}
                                                     >
@@ -476,7 +476,7 @@ export default function KnowledgeLibrary() {
                                             className="mt-6 border-hotel-navy/20 text-hotel-navy hover:bg-hotel-navy/5"
                                             onClick={clearFilters}
                                         >
-                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            <RefreshCw className="h-4 w-4 me-2" />
                                             {t('library.clear_filters', 'Clear All Filters')}
                                         </Button>
                                     )}

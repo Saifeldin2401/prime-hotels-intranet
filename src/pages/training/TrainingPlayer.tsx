@@ -1733,7 +1733,7 @@ export default function TrainingPlayer() {
                     className="min-h-screen bg-slate-50 flex items-center justify-center p-6"
                 >
                     <Card className="max-w-xl w-full text-center p-6 sm:p-12 shadow-2xl border-0 overflow-hidden relative">
-                        <div className="absolute top-0 left-0 w-full h-2 bg-hotel-gold"></div>
+                        <div className="absolute top-0 start-0 w-full h-2 bg-hotel-gold"></div>
                         <m.div
                             initial={{ scale: 0.95, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
@@ -1800,7 +1800,7 @@ export default function TrainingPlayer() {
                         className={cn(
                             "flex flex-col bg-hotel-navy-dark text-white shrink-0 relative z-[60] shadow-2xl transition-all duration-300",
                             "fixed inset-y-0 lg:static lg:h-full",
-                            isRTL ? "right-0 border-l border-white/5" : "left-0 border-r border-white/5",
+                            isRTL ? "end-0 border-l border-white/5" : "start-0 border-r border-white/5",
                             sidebarOpen ? "translate-x-0 w-[88vw] max-w-[320px]" : (isRTL ? "translate-x-full w-0" : "-translate-x-full w-0"),
                             "lg:translate-x-0 lg:w-[320px] lg:max-w-none"
                         )}
@@ -1854,7 +1854,7 @@ export default function TrainingPlayer() {
                                                 layoutId="active-pill"
                                                 className={cn(
                                                     "absolute top-0 bottom-0 w-1 bg-hotel-gold",
-                                                    isRTL ? "right-0" : "left-0"
+                                                    isRTL ? "end-0" : "start-0"
                                                 )}
                                             />
                                         )}
@@ -1953,7 +1953,7 @@ export default function TrainingPlayer() {
                     </div>
 
                     <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="hidden sm:flex bg-slate-100 px-4 py-2 rounded-full items-center gap-2 mr-2">
+                        <div className="hidden sm:flex bg-slate-100 px-4 py-2 rounded-full items-center gap-2 me-2">
                             <div className="h-1.5 w-1.5 rounded-full bg-hotel-gold animate-pulse" />
                             <span className="text-xs font-bold text-hotel-navy tabular-nums">
                                 {activeBlockIndex + 1} / {moduleData.blocks.length}
@@ -2006,7 +2006,7 @@ export default function TrainingPlayer() {
                             onClick={() => navigate('/learning/my')}
                             className="text-hotel-navy hover:bg-slate-50 font-medium hidden sm:flex"
                         >
-                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ml-2 rotate-180" : "mr-2")} />
+                            <ArrowLeft className={cn("h-4 w-4", isRTL ? "ms-2 rotate-180" : "me-2")} />
                             <span className="hidden md:inline">{t('exitLearning')}</span>
                         </Button>
                         <Button
@@ -2030,7 +2030,7 @@ export default function TrainingPlayer() {
                 >
                     {/* Anti-Cheat Status Toast/Indicator (Dev/User Feedback) */}
                     {(!isFocused || isIdle) && (
-                        <div className="absolute top-4 left-4 right-4 sm:left-auto sm:right-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
+                        <div className="absolute top-4 start-4 end-4 sm:start-auto sm:end-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
                             {isIdle ? <MousePointer2 className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                             {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
                         </div>
@@ -2126,7 +2126,7 @@ export default function TrainingPlayer() {
                     >
                         <ChevronLeft className={cn(
                             "h-4 w-4 md:h-5 md:w-5",
-                            isRTL ? "ml-2 md:ml-3 rotate-180" : "mr-2 md:mr-3"
+                            isRTL ? "ms-2 md:ms-3 rotate-180" : "me-2 md:me-3"
                         )} />
                         <span className="hidden md:inline">{t('previous')}</span>
                         <ChevronLeft className="h-4 w-4 md:hidden" />
@@ -2163,7 +2163,7 @@ export default function TrainingPlayer() {
                             if (isLastBlock) {
                                 return (
                                     <>
-                                        <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ml-2 md:ml-3" : "mr-2 md:mr-3")} />
+                                        <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
                                         <span className="hidden sm:inline">
                                             {activeBlock?.type === 'quiz' && !activeQuizPassed
                                                 ? t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.')
@@ -2187,7 +2187,7 @@ export default function TrainingPlayer() {
                                     </span>
                                     <ChevronRight className={cn(
                                         "h-4 w-4 md:h-5 md:w-5",
-                                        isRTL ? "mr-2 md:mr-3 rotate-180" : "ml-2 md:ml-3"
+                                        isRTL ? "me-2 md:me-3 rotate-180" : "ms-2 md:ms-3"
                                     )} />
                                     <ChevronRight className="h-4 w-4 md:hidden" />
                                 </>

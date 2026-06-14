@@ -67,7 +67,7 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
                     <p className="text-sm text-muted-foreground">{t('employee_documents.description')}</p>
                 </div>
                 <Button onClick={() => setIsUploaderOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     {t('employee_documents.upload_button')}
                 </Button>
             </div>

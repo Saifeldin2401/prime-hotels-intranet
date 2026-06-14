@@ -382,7 +382,7 @@ export function TransferEmployeeDialog({
                                             <Button
                                                 variant={"outline"}
                                                 className={cn(
-                                                    "w-full pl-3 text-left font-normal",
+                                                    "w-full ps-3 text-left font-normal",
                                                     !field.value && "text-muted-foreground"
                                                 )}
                                             >
@@ -391,7 +391,7 @@ export function TransferEmployeeDialog({
                                                 ) : (
                                                     <span>Pick a date</span>
                                                 )}
-                                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                                <CalendarIcon className="ms-auto h-4 w-4 opacity-50" />
                                             </Button>
                                         </FormControl>
                                     </PopoverTrigger>
@@ -464,7 +464,7 @@ export function TransferEmployeeDialog({
                         </Button>
                         <Button type="submit" disabled={form.formState.isSubmitting}>
                             {form.formState.isSubmitting && (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                <Loader2 className="me-2 h-4 w-4 animate-spin" />
                             )}
                             {editRecord ? 'Save Changes' : 'Submit Request'}
                         </Button>

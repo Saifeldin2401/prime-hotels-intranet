@@ -354,7 +354,7 @@ export default function RoutingHealth() {
           <TabsTrigger value="issues">
             Routing Issues
             {routingIssues.length > 0 && (
-              <Badge variant="destructive" className="ml-2">
+              <Badge variant="destructive" className="ms-2">
                 {routingIssues.length}
               </Badge>
             )}
@@ -423,7 +423,7 @@ export default function RoutingHealth() {
                           setAssignDialogOpen(true)
                         }}
                       >
-                        <UserPlus className="h-4 w-4 mr-2" />
+                        <UserPlus className="h-4 w-4 me-2" />
                         Fix Routing
                       </Button>
                     </div>
@@ -539,7 +539,7 @@ export default function RoutingHealth() {
                 disabled={!delegatorId || !delegateId || delegationMutation.isPending}
                 onClick={() => delegationMutation.mutate()}
               >
-                {delegationMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                {delegationMutation.isPending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
                 Create Temporary Delegation
               </Button>
             </CardContent>
@@ -654,7 +654,7 @@ export default function RoutingHealth() {
                 })
               }}
             >
-              {assignMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              {assignMutation.isPending && <Loader2 className="h-4 w-4 me-2 animate-spin" />}
               Save Assignment
             </Button>
           </DialogFooter>

@@ -210,7 +210,7 @@ export function DocumentTagManager({
                   onClick={handleCreateTag}
                   disabled={!newTagName.trim()}
                 >
-                  <Plus className="w-4 h-4 mr-1" />
+                  <Plus className="w-4 h-4 me-1" />
                   Create
                 </Button>
               </div>
@@ -263,7 +263,7 @@ export function DocumentTagManager({
                             "font-medium"
                           )}
                         >
-                          <Hash className="w-3 h-3 mr-1" />
+                          <Hash className="w-3 h-3 me-1" />
                           {tag.name}
                         </Badge>
                       </div>
@@ -342,7 +342,7 @@ export function DocumentTagManager({
                 className="bg-[#0B1C3E] hover:bg-[#1a3a6e]"
                 onClick={handleBulkAssign}
               >
-                <Tag className="w-4 h-4 mr-1" />
+                <Tag className="w-4 h-4 me-1" />
                 Assign {bulkSelectedTags.length} tag
                 {bulkSelectedTags.length !== 1 ? "s" : ""}
               </Button>
@@ -377,7 +377,7 @@ export function DocumentTagManager({
                         "font-medium"
                       )}
                     >
-                      <Hash className="w-3 h-3 mr-1" />
+                      <Hash className="w-3 h-3 me-1" />
                       {tag.name}
                     </Badge>
                   </div>
@@ -405,7 +405,7 @@ export function DocumentTagManager({
                     colors.bg,
                     colors.text,
                     colors.border,
-                    "gap-1 pr-1"
+                    "gap-1 pe-1"
                   )}
                 >
                   <Hash className="w-3 h-3" />
@@ -413,7 +413,7 @@ export function DocumentTagManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-4 w-4 ml-1 hover:bg-black/10"
+                    className="h-4 w-4 ms-1 hover:bg-black/10"
                     onClick={() => handleToggleTag(tag.id)}
                     aria-label={t("accessibility.remove_tag", "Remove tag")}
                   >

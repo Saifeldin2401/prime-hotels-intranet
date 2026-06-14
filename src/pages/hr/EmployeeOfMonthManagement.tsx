@@ -382,7 +382,7 @@ export default function EmployeeOfMonthManagement() {
                                             {selectedEmployee
                                                 ? selectedEmployee.full_name
                                                 : "Search employees..."}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
@@ -419,7 +419,7 @@ export default function EmployeeOfMonthManagement() {
                                                                 </div>
                                                                 <Check
                                                                     className={cn(
-                                                                        "ml-auto h-4 w-4",
+                                                                        "ms-auto h-4 w-4",
                                                                         selectedEmployee?.id === p.id ? "opacity-100" : "opacity-0"
                                                                     )}
                                                                 />
@@ -552,7 +552,7 @@ export default function EmployeeOfMonthManagement() {
                                                     className="h-8 px-2"
                                                     onClick={() => handleEditWinner(w)}
                                                 >
-                                                    <Pencil className="h-3.5 w-3.5 mr-1" />
+                                                    <Pencil className="h-3.5 w-3.5 me-1" />
                                                     Edit
                                                 </Button>
                                                 <Button
@@ -561,7 +561,7 @@ export default function EmployeeOfMonthManagement() {
                                                     className="h-8 px-2 text-destructive hover:text-destructive"
                                                     onClick={() => handleDeleteWinner(w.id)}
                                                 >
-                                                    <Trash2 className="h-3.5 w-3.5 mr-1" />
+                                                    <Trash2 className="h-3.5 w-3.5 me-1" />
                                                     Delete
                                                 </Button>
                                             </div>

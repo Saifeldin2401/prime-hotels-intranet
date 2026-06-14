@@ -387,7 +387,7 @@ export default function TrainingPaths() {
           <div className="flex items-center gap-2">
             {['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '') && (
               <Button onClick={() => setShowPathDialog(true)} className={isRTL ? "flex-row-reverse" : ""}>
-                <Plus className={cn("w-4 h-4", isRTL ? "ml-2" : "mr-2")} />
+                <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
                 {t('createPath')}
               </Button>
             )}
@@ -720,7 +720,7 @@ export default function TrainingPaths() {
               </div>
 
               <div className={cn("p-3 bg-blue-50 text-blue-800 text-[11px] rounded border border-blue-100 flex items-start gap-2", isRTL ? "flex-row-reverse" : "")}>
-                <Target className={cn("w-4 h-4 mt-0.5 text-blue-600", isRTL ? "ml-2" : "")} />
+                <Target className={cn("w-4 h-4 mt-0.5 text-blue-600", isRTL ? "ms-2" : "")} />
                 <p className={isRTL ? "text-right" : ""}>
                   <strong>{t('targeting_logic')}:</strong> {t('targeting_logic_desc')}
                 </p>
@@ -733,7 +733,7 @@ export default function TrainingPaths() {
               {t('cancel')}
             </Button>
             <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark rounded-md transition-colors px-6" onClick={handleSubmit} disabled={pathMutation.isPending}>
-              {pathMutation.isPending ? <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ml-2" : "mr-1")} /> : null}
+              {pathMutation.isPending ? <Loader2 className={cn("w-4 h-4 animate-spin", isRTL ? "ms-2" : "me-1")} /> : null}
               {pathMutation.isPending ? t('saving') : t('savePath')}
             </Button>
           </div>

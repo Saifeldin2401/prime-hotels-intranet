@@ -44,34 +44,34 @@ export function ModuleQuickActions({
         onClick={onEdit}
         className={cn("bg-hotel-gold hover:bg-hotel-gold-dark", isRTL ? "flex-row-reverse" : "")}
       >
-        <Edit className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+        <Edit className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
         {t('common:action.edit')}
       </Button>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="sm" className={cn("w-full", isRTL ? "flex-row-reverse" : "")}>
-            <MoreVertical className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <MoreVertical className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('common:action.more')}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align={isRTL ? 'start' : 'end'} className={cn(isRTL ? "text-right" : "text-left")}>
           <DropdownMenuItem onClick={onView} className={cn(isRTL ? "flex-row-reverse" : "")}>
-            <Eye className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Eye className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('common:action.view')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={onAssign} className={cn(isRTL ? "flex-row-reverse" : "")}>
-            <Users className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('assign')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onClone} className={cn(isRTL ? "flex-row-reverse" : "")}>
-            <Copy className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Copy className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('clone')}
           </DropdownMenuItem>
           {module.status === 'published' && (
             <DropdownMenuItem onClick={onView} className={cn(isRTL ? "flex-row-reverse" : "")}>
-              <Play className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+              <Play className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
               {t('preview')}
             </DropdownMenuItem>
           )}
@@ -80,7 +80,7 @@ export function ModuleQuickActions({
             onClick={onDelete}
             className={cn("text-red-600 focus:text-red-600", isRTL ? "flex-row-reverse" : "")}
           >
-            <Trash2 className={cn("h-4 w-4", isRTL ? "ml-2" : "mr-2")} />
+            <Trash2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('common:action.delete')}
           </DropdownMenuItem>
         </DropdownMenuContent>

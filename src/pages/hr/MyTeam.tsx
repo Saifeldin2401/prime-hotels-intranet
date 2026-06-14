@@ -317,7 +317,7 @@ export default function MyTeam() {
                                     {pendingApprovalsCount}
                                 </span>
                             )}
-                            <Button variant="outline" size="sm" asChild className="ml-auto text-xs h-8">
+                            <Button variant="outline" size="sm" asChild className="ms-auto text-xs h-8">
                                 <Link to="/hr/inbox">{t('actions.view_inbox', 'Go to Inbox')}</Link>
                             </Button>
                         </div>
@@ -385,10 +385,10 @@ export default function MyTeam() {
 
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div className="relative w-full sm:w-96">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Search className="absolute start-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         placeholder={t('common:search', 'Search...')}
-                        className="pl-8"
+                        className="ps-8"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -442,17 +442,17 @@ export default function MyTeam() {
                                 </div>
                                 <div className="p-4 space-y-3 bg-white">
                                     <div className="flex items-center text-sm text-gray-600">
-                                        <Mail className="h-4 w-4 mr-2 text-gray-400" />
+                                        <Mail className="h-4 w-4 me-2 text-gray-400" />
                                         <span className="truncate" title={member.email}>{member.email}</span>
                                     </div>
                                     {member.phone && (
                                         <div className="flex items-center text-sm text-gray-600">
-                                            <Phone className="h-4 w-4 mr-2 text-gray-400" />
+                                            <Phone className="h-4 w-4 me-2 text-gray-400" />
                                             <span>{member.phone}</span>
                                         </div>
                                     )}
                                     <div className="flex items-center text-sm text-gray-600">
-                                        <Users className="h-4 w-4 mr-2 text-gray-400" />
+                                        <Users className="h-4 w-4 me-2 text-gray-400" />
                                         <span className="truncate">
                                             {member.department?.[0]?.departments?.name || t('team.no_department', 'No Department')}
                                         </span>

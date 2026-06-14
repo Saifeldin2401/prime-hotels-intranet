@@ -429,7 +429,7 @@ export function MobileQuizPlayer({ quiz, onComplete, onExit }: MobileQuizPlayerP
                             onClick={isLastQuestion ? handleComplete : handleNext}
                         >
                             {isLastQuestion ? 'Finish Quiz' : 'Next Question'}
-                            <ChevronRight className="h-5 w-5 ml-2" />
+                            <ChevronRight className="h-5 w-5 ms-2" />
                         </Button>
                     ) : (
                         <div className="flex-1 text-center text-sm text-muted-foreground">

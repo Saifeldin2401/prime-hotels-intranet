@@ -178,10 +178,10 @@ function TrainingBuilderInner() {
               </div>
               <div className={cn("flex items-center gap-2", ctx.isRTL ? "flex-row-reverse" : "")}>
                 <Button variant="outline" size="sm" onClick={ctx.handleUndo} disabled={ctx.historyIndex <= 0} className={ctx.isRTL ? "flex-row-reverse" : ""}>
-                  <RotateCcw className={cn("h-4 w-4", ctx.isRTL ? "ml-2" : "mr-2")} />{t('builder.undo')}
+                  <RotateCcw className={cn("h-4 w-4", ctx.isRTL ? "ms-2" : "me-2")} />{t('builder.undo')}
                 </Button>
                 <Button variant="outline" size="sm" onClick={ctx.handleRedo} disabled={ctx.historyIndex >= ctx.historyRef.current.length - 1} className={ctx.isRTL ? "flex-row-reverse" : ""}>
-                  <RotateCw className={cn("h-4 w-4", ctx.isRTL ? "ml-2" : "mr-2")} />{t('builder.redo')}
+                  <RotateCw className={cn("h-4 w-4", ctx.isRTL ? "ms-2" : "me-2")} />{t('builder.redo')}
                 </Button>
                 <div className="text-xs text-muted-foreground">
                   {ctx.autosaveStatus === 'saving' && t('builder.autosaveSaving')}
@@ -194,10 +194,10 @@ function TrainingBuilderInner() {
               <div className="text-xs text-muted-foreground">{ctx.steps[ctx.currentStepIndex]?.description}</div>
               <div className={cn("flex items-center gap-2", ctx.isRTL ? "flex-row-reverse" : "")}>
                 <Button variant="outline" size="sm" onClick={ctx.goPrevStep} disabled={ctx.currentStepIndex === 0} className={ctx.isRTL ? "flex-row-reverse" : ""}>
-                  <ChevronLeft className={cn("h-4 w-4", ctx.isRTL ? "ml-2 rotate-180" : "mr-2")} />{t('builder.back')}
+                  <ChevronLeft className={cn("h-4 w-4", ctx.isRTL ? "ms-2 rotate-180" : "me-2")} />{t('builder.back')}
                 </Button>
                 <Button size="sm" onClick={ctx.goNextStep} disabled={ctx.currentStepIndex === ctx.steps.length - 1} className={ctx.isRTL ? "flex-row-reverse" : ""}>
-                  {t('builder.next')}<ChevronRight className={cn("h-4 w-4", ctx.isRTL ? "mr-2 rotate-180" : "ml-2")} />
+                  {t('builder.next')}<ChevronRight className={cn("h-4 w-4", ctx.isRTL ? "me-2 rotate-180" : "ms-2")} />
                 </Button>
               </div>
             </div>
@@ -217,7 +217,7 @@ function TrainingBuilderInner() {
                 <div className="text-xs text-slate-500">{t('builder.activeSectionLabel')}: {ctx.activeSectionName || t('builder.noSectionSelected')}</div>
               </div>
               <Button variant="outline" size="sm" onClick={ctx.addSection} className={cn("w-full", ctx.isRTL ? "flex-row-reverse" : "")}>
-                <Plus className={cn("h-4 w-4", ctx.isRTL ? "ml-2" : "mr-2")} />{t('builder.addSection')}
+                <Plus className={cn("h-4 w-4", ctx.isRTL ? "ms-2" : "me-2")} />{t('builder.addSection')}
               </Button>
               <div className="space-y-2">
                 {ctx.savedBlocks.length > 0 && (

@@ -277,7 +277,7 @@ export function DocumentMetadataForm({
                 className="w-full justify-start text-left font-normal"
                 disabled={readOnly}
               >
-                <Calendar className="mr-2 h-4 w-4" />
+                <Calendar className="me-2 h-4 w-4" />
                 {metadata.expiryDate ? (
                   format(metadata.expiryDate, "PPP")
                 ) : (
@@ -554,7 +554,7 @@ export function DocumentMetadataForm({
                 onClick={addCustomField}
                 disabled={!newFieldName.trim()}
               >
-                <Plus className="w-4 h-4 mr-1" />
+                <Plus className="w-4 h-4 me-1" />
                 Add Field
               </Button>
             </div>

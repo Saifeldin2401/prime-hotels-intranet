@@ -191,7 +191,7 @@ export default function KnowledgeAnalytics() {
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-xs text-blue-600 font-medium">
-                            <Users className="h-3 w-3 mr-1" />
+                            <Users className="h-3 w-3 me-1" />
                             {analytics.avgViews} {t_ext('avg_per_article', 'avg per article')}</div>
                     </CardContent>
                 </Card>
@@ -211,7 +211,7 @@ export default function KnowledgeAnalytics() {
                             </div>
                         </div>
                         <div className="mt-4 flex items-center text-xs text-green-700 font-medium">
-                            <ArrowUpRight className="h-3 w-3 mr-1" />
+                            <ArrowUpRight className="h-3 w-3 me-1" />
                             {t('analytics.new_in_period', { count: analytics.newInPeriod })}
                         </div>
                     </CardContent>
@@ -282,7 +282,7 @@ export default function KnowledgeAnalytics() {
                                                 <span className="w-5 text-gray-400 text-xs">{idx + 1}.</span>
                                                 {dept.name}
                                             </div>
-                                            <div className="text-gray-900 font-semibold">{dept.views.toLocaleString()} <span className="text-gray-400 font-normal text-xs ml-1">{t_ext('views_1', 'views')}</span></div>
+                                            <div className="text-gray-900 font-semibold">{dept.views.toLocaleString()} <span className="text-gray-400 font-normal text-xs ms-1">{t_ext('views_1', 'views')}</span></div>
                                         </div>
                                         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                                             <div

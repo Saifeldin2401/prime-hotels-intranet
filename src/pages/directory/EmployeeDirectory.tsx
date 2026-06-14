@@ -332,11 +332,11 @@ export default function EmployeeDirectory() {
           )}
 
           <div className="relative w-full md:w-72">
-            <Search className={`absolute top-2.5 h-4 w-4 text-gray-500 ${isRTL ? 'right-2.5' : 'left-2.5'}`} />
+            <Search className={`absolute top-2.5 h-4 w-4 text-gray-500 ${isRTL ? 'end-2.5' : 'start-2.5'}`} />
             <Input
               type="search"
               placeholder={t('search_placeholder')}
-              className={isRTL ? 'pr-9' : 'pl-9'}
+              className={isRTL ? 'pe-9' : 'ps-9'}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -519,7 +519,7 @@ export default function EmployeeDirectory() {
                   return (
                     <div
                       key={employee.id}
-                      className="absolute left-0 top-0 w-full pb-3"
+                      className="absolute start-0 top-0 w-full pb-3"
                       style={{ transform: `translateY(${virtualRow.start}px)` }}
                     >
                       <EmployeeCard

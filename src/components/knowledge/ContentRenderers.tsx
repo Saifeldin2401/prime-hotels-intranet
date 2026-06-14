@@ -147,7 +147,7 @@ function EmbeddedVideoPlayer({ videoUrl, title, isYouTube, isVimeo }: VideoPlaye
                     className="text-xs text-gray-500 hover:text-hotel-navy"
                     onClick={() => window.open(videoUrl, '_blank')}
                 >
-                    <ExternalLink className="h-3 w-3 mr-2" />
+                    <ExternalLink className="h-3 w-3 me-2" />
                     Having trouble? Watch directly on YouTube
                 </Button>
             </div>
@@ -518,7 +518,7 @@ export function ChecklistRenderer({ items, onCheckChange, readOnly = false }: Ch
                 </div>
                 {completedCount === totalCount && (
                     <Badge className="bg-green-100 text-green-700 border-green-200">
-                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        <CheckCircle2 className="h-4 w-4 me-1" />
                         Complete
                     </Badge>
                 )}
@@ -607,7 +607,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
                             <span className="font-medium text-gray-900">{item.question}</span>
                         </div>
                     </AccordionTrigger>
-                    <AccordionContent className="pl-8 pb-4">
+                    <AccordionContent className="ps-8 pb-4">
                         <InlineErrorBoundary>
                             <div
                                 className="prose prose-sm max-w-none text-gray-600"
@@ -832,12 +832,12 @@ export function ImageGalleryRenderer({ images, cacheVersion }: ImageGalleryRende
                             className="w-full h-full object-contain"
                         />
                         {selectedImage.caption && (
-                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
+                            <div className="absolute bottom-0 start-0 end-0 p-4 bg-gradient-to-t from-black/80 to-transparent">
                                 <p className="text-white text-lg text-center">{selectedImage.caption}</p>
                             </div>
                         )}
                         <button
-                            className="absolute top-4 right-4 text-white hover:text-gray-300 text-3xl font-bold"
+                            className="absolute top-4 end-4 text-white hover:text-gray-300 text-3xl font-bold"
                             onClick={() => setSelectedImage(null)}
                         >
                             ×

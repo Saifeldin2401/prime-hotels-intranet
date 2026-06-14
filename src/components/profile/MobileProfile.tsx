@@ -150,7 +150,7 @@ export function MobileProfile() {
                             </Avatar>
                             <button
                                 onClick={handlePhotoUpload}
-                                className="absolute bottom-0 right-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg"
+                                className="absolute bottom-0 end-0 w-8 h-8 bg-primary text-primary-foreground rounded-full flex items-center justify-center shadow-lg"
                             >
                                 <Camera className="h-4 w-4" />
                             </button>
@@ -364,14 +364,14 @@ export function MobileProfile() {
                             className="flex-1"
                             onClick={() => setShowEditSheet(false)}
                         >
-                            <X className="h-4 w-4 mr-2" />
+                            <X className="h-4 w-4 me-2" />
                             {t('cancel', 'Cancel')}
                         </Button>
                         <Button
                             className="flex-1"
                             onClick={handleSave}
                         >
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 me-2" />
                             {t('save', 'Save')}
                         </Button>
                     </div>

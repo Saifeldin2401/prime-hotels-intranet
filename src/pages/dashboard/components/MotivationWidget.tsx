@@ -35,13 +35,13 @@ export const MotivationWidget = memo(function MotivationWidget() {
             <Card className="h-full bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-slate-900/40 dark:to-slate-800/40 border-none shadow-sm relative overflow-hidden group min-h-[160px]">
                 {/* Background micro-decoration */}
                 <div className={cn(
-                    "absolute -bottom-6 -right-6 w-32 h-32 bg-hotel-gold/10 rounded-full blur-2xl transition-transform duration-700 group-hover:scale-150",
-                    isRTL && "-right-auto -left-6"
+                    "absolute -bottom-6 -end-6 w-32 h-32 bg-hotel-gold/10 rounded-full blur-2xl transition-transform duration-700 group-hover:scale-150",
+                    isRTL && "-end-auto -start-6"
                 )} />
 
                 <div className={cn(
-                    "absolute top-2 right-2 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-20",
-                    isRTL && "right-auto left-2"
+                    "absolute top-2 end-2 p-2 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 z-20",
+                    isRTL && "end-auto start-2"
                 )}>
                     <Button
                         variant="ghost"
@@ -58,7 +58,7 @@ export const MotivationWidget = memo(function MotivationWidget() {
                 <CardContent className="flex flex-col items-center justify-center p-8 h-full text-center relative z-10">
                     <Quote className={cn(
                         "h-10 w-10 text-hotel-gold/20 mb-4 absolute top-4 opacity-50",
-                        isRTL ? "right-4" : "left-4 rotate-180"
+                        isRTL ? "end-4" : "start-4 rotate-180"
                     )} />
 
                     <AnimatePresence mode="wait">

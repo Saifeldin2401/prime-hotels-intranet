@@ -198,7 +198,7 @@ export function TrainingRulesList() {
                     <h3 className="text-lg font-medium">{t_ext('training_auto_assignment_rules', 'Training Auto-Assignment Rules')}</h3>
                 </div>
                 <Button size="sm" onClick={() => setIsCreateOpen(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-4 w-4 me-2" />
                     {t_ext('new_rule', 'New Rule')}</Button>
             </div>
 

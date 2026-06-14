@@ -307,8 +307,8 @@ ASSISTANT RESPONSE:`
                         {/* Header: Redesigned for Maximum Pop */}
                         <CardHeader className="bg-gradient-to-br from-hotel-navy via-[#1e293b] to-[#0f172a] text-white py-6 px-8 flex-shrink-0 relative overflow-hidden ring-1 ring-white/10">
                             {/* Decorative Elements */}
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-hotel-gold/10 rounded-full blur-3xl -mr-32 -mt-32" />
-                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -ml-24 -mb-24" />
+                            <div className="absolute top-0 end-0 w-64 h-64 bg-hotel-gold/10 rounded-full blur-3xl -me-32 -mt-32" />
+                            <div className="absolute bottom-0 start-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -ms-24 -mb-24" />
 
                             <div className="flex items-center justify-between relative z-10">
                                 <div className="flex items-center gap-4">

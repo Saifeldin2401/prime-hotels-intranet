@@ -158,7 +158,7 @@ export function ContentBlockDialog({
                         quizOptions.map(q => (
                           <SelectItem key={q.id} value={q.id} className={isRTL ? "flex-row-reverse" : ""}>
                             <span className="font-medium">{q.title}</span>
-                            <span className={cn("text-xs text-gray-400", isRTL ? "mr-2" : "ml-2")}>({q.question_count || 0} qs)</span>
+                            <span className={cn("text-xs text-gray-400", isRTL ? "me-2" : "ms-2")}>({q.question_count || 0} qs)</span>
                           </SelectItem>
                         ))
                       )}
@@ -485,9 +485,9 @@ export function ContentBlockDialog({
                         value={currentBlock.duration || ''}
                         onChange={(e) => setCurrentBlock({ ...currentBlock, duration: parseInt(e.target.value) })}
                         placeholder="10"
-                        className={cn(isRTL ? "pl-8 text-right" : "pr-8")}
+                        className={cn(isRTL ? "ps-8 text-right" : "pe-8")}
                       />
-                      <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "left-3" : "right-3")}>{t('min')}</span>
+                      <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "start-3" : "end-3")}>{t('min')}</span>
                     </div>
                   </div>
                   <div className={isRTL ? 'text-right' : ''}>
@@ -498,9 +498,9 @@ export function ContentBlockDialog({
                         value={currentBlock.points || ''}
                         onChange={(e) => setCurrentBlock({ ...currentBlock, points: parseInt(e.target.value) })}
                         placeholder="1"
-                        className={cn(isRTL ? "pl-8 text-right" : "pr-8")}
+                        className={cn(isRTL ? "ps-8 text-right" : "pe-8")}
                       />
-                      <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "left-3" : "right-3")}>{t('pts')}</span>
+                      <span className={cn("absolute top-2.5 text-gray-400 text-sm", isRTL ? "start-3" : "end-3")}>{t('pts')}</span>
                     </div>
                   </div>
                   {currentBlock.type !== 'text' && currentBlock.type !== 'quiz' && currentBlock.type !== 'sop_reference' && (

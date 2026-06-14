@@ -854,7 +854,7 @@ export default function OperationsAnalytics() {
                         disabled={!canExportOperations}
                         title={!canExportOperations ? 'Insufficient permissions to export' : undefined}
                     >
-                        <Download className="h-4 w-4 mr-2" />
+                        <Download className="h-4 w-4 me-2" />
                         Export CSV
                     </Button>
                 </div>

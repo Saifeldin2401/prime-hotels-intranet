@@ -32,7 +32,7 @@ export function EmployeeCard({ profile, isRTL }: EmployeeCardProps) {
         <Card className="overflow-hidden hover:shadow-md transition-shadow h-full">
             <CardHeader className="p-0">
                 <div className="h-20 bg-gradient-to-r from-blue-600 to-indigo-600 relative">
-                    <Avatar className={`h-20 w-20 absolute -bottom-10 border-4 border-white shadow-sm ring-1 ring-gray-100 ${isRTL ? 'right-6' : 'left-6'}`}>
+                    <Avatar className={`h-20 w-20 absolute -bottom-10 border-4 border-white shadow-sm ring-1 ring-gray-100 ${isRTL ? 'end-6' : 'start-6'}`}>
                         {!imageError && profile.avatar_url ? (
                             <LazyLoadImage
                                 alt={profile.full_name}

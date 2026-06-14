@@ -64,7 +64,7 @@ export function EmployeeOfMonthWidget() {
         <LazyMotion features={domAnimation}>
             <Card className="border border-slate-200 shadow-sm rounded-2xl bg-white overflow-hidden relative flex flex-col h-full group">
                 {/* Very subtle background icon for premium depth */}
-                <div className="absolute -top-4 -right-4 p-3 opacity-[0.03] rotate-12 pointer-events-none transition-transform duration-700 group-hover:rotate-[24deg] group-hover:scale-110">
+                <div className="absolute -top-4 -end-4 p-3 opacity-[0.03] rotate-12 pointer-events-none transition-transform duration-700 group-hover:rotate-[24deg] group-hover:scale-110">
                     <Trophy className="w-48 h-48 text-amber-500" />
                 </div>
 
@@ -112,7 +112,7 @@ export function EmployeeOfMonthWidget() {
                                         </AvatarFallback>
                                     </Avatar>
                                 </button>
-                                <div className="absolute -bottom-1 -right-1 bg-amber-500 text-white p-1.5 rounded-full shadow-lg border-[3px] border-white">
+                                <div className="absolute -bottom-1 -end-1 bg-amber-500 text-white p-1.5 rounded-full shadow-lg border-[3px] border-white">
                                     <Medal className="w-4 h-4" />
                                 </div>
                             </div>
@@ -133,7 +133,7 @@ export function EmployeeOfMonthWidget() {
 
                             {winner.reason ? (
                                 <div className="relative bg-white p-5 rounded-2xl text-[14px] italic text-slate-600 w-full shadow-[0_2px_10px_rgb(0,0,0,0.03)] border border-slate-100 hover:border-amber-100 hover:shadow-[0_4px_12px_rgb(0,0,0,0.04)] transition-all">
-                                    <Quote className={cn("absolute top-3 w-4 h-4 text-amber-200 opacity-70", isRTL ? 'right-3 -scale-x-100' : 'left-3')} />
+                                    <Quote className={cn("absolute top-3 w-4 h-4 text-amber-200 opacity-70", isRTL ? 'end-3 -scale-x-100' : 'start-3')} />
                                     <p className="px-4 line-clamp-3 leading-relaxed font-serif">"{winner.reason}"</p>
                                 </div>
                             ) : null}
@@ -146,7 +146,7 @@ export function EmployeeOfMonthWidget() {
                                 disabled={!winner?.user?.id}
                             >
                                 {t('widgets.employee_of_the_month.congratulate', 'Congratulate')}
-                                <ChevronRight className={cn("w-4 h-4 ml-1", isRTL && "rotate-180")} />
+                                <ChevronRight className={cn("w-4 h-4 ms-1", isRTL && "rotate-180")} />
                             </Button>
                         </m.div>
                     ) : (

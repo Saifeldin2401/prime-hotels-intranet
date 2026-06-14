@@ -4,6 +4,7 @@ import { TaskForm } from '@/components/tasks/TaskForm'
 import { TaskKanban } from '@/components/tasks/TaskKanban'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { PageSkeleton } from '@/components/ui/loading-skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAnalytics } from '@/hooks/useAnalytics'
 import { useAuth } from '@/hooks/useAuth'
@@ -91,7 +92,7 @@ export default function TasksDashboard() {
   const { data: stats } = useTaskStats(user?.id)
 
   if (isLoading && !stats) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+    return <PageSkeleton />
   }
 
   return (

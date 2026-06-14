@@ -395,7 +395,7 @@ export default function RequestDetail() {
           />
         </div>
         <Button variant="outline" onClick={() => navigate(-1)} className="w-full sm:w-auto order-first sm:order-last">
-          <ArrowLeft className="w-4 h-4 mr-2" />
+          <ArrowLeft className="w-4 h-4 me-2" />
           Back
         </Button>
       </div>

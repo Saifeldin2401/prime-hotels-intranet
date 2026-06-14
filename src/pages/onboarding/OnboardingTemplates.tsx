@@ -44,7 +44,7 @@ export default function OnboardingTemplates() {
     }
 
     if (isLoading) {
-        return <div className="flex p-8 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-hotel-gold" /> <span className="ml-2">{t('actions.loading')}</span></div>
+        return <div className="flex p-8 justify-center items-center"><Loader2 className="h-8 w-8 animate-spin text-hotel-gold" /> <span className="ms-2">{t('actions.loading')}</span></div>
     }
 
     return (
@@ -55,7 +55,7 @@ export default function OnboardingTemplates() {
                     <p className="text-muted-foreground">{t('templates.subtitle')}</p>
                 </div>
                 <Button onClick={() => navigate('/admin/onboarding/templates/new')}>
-                    <Plus className="mr-2 h-4 w-4" />
+                    <Plus className="me-2 h-4 w-4" />
                     {t('actions.create_template')}
                 </Button>
             </div>
@@ -92,7 +92,7 @@ export default function OnboardingTemplates() {
                         </CardContent>
                         <div className="flex items-center justify-end gap-2 p-4 pt-0">
                             <Button variant="outline" size="sm" onClick={() => navigate(`/admin/onboarding/templates/${template.id}`)}>
-                                <Edit className="mr-2 h-4 w-4" /> {t('actions.edit')}
+                                <Edit className="me-2 h-4 w-4" /> {t('actions.edit')}
                             </Button>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>

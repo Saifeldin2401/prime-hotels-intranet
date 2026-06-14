@@ -39,7 +39,7 @@ function StatBentoCard({
       transition={{ delay, duration: 0.4, ease: "easeOut" }}
       className="group relative overflow-hidden rounded-[14px] bg-white border border-slate-200 p-5 transition-all hover:bg-slate-50 hover:shadow-sm flex-1 cursor-default"
     >
-      <div className="absolute bottom-0 right-0 p-1 opacity-20 transition-opacity group-hover:opacity-40 z-0">
+      <div className="absolute bottom-0 end-0 p-1 opacity-20 transition-opacity group-hover:opacity-40 z-0">
         <Sparkline
           data={[30, 45, 32, 50, 40, 60, 40]}
           color={accentColor.includes('amber') ? '#d97706' : accentColor.includes('emerald') ? '#059669' : accentColor.includes('blue') ? '#2563eb' : '#4f46e5'}
@@ -56,7 +56,7 @@ function StatBentoCard({
                 <Icon className="w-4 h-4" />
               </div>
               {showPulse && (
-                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                <span className="absolute -top-1 -end-1 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
                   <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border border-white"></span>
                 </span>

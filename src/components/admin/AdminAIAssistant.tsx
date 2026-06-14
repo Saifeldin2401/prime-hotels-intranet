@@ -215,7 +215,7 @@ export function FloatingAdminAI() {
         <>
             <Button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl bg-hotel-navy hover:bg-[#0f172a] text-white z-50 group transition-all"
+                className="fixed bottom-6 end-6 h-14 w-14 rounded-full shadow-2xl bg-hotel-navy hover:bg-[#0f172a] text-white z-50 group transition-all"
                 title="System Configuration Assistant"
             >
                 <Settings className="h-6 w-6 group-hover:rotate-90 transition-transform duration-500" />

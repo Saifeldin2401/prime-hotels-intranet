@@ -129,7 +129,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
             {/* Notifications */}
             <Button variant="ghost" size="sm" className="text-white hover:bg-hotel-navy-dark">
               <Icons.Bell className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
+              <Badge className="absolute -top-1 -end-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
                 3
               </Badge>
             </Button>
@@ -137,7 +137,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
             {/* Messages */}
             <Button variant="ghost" size="sm" className="text-white hover:bg-hotel-navy-dark">
               <Icons.MessageSquare className="h-5 w-5" />
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
+              <Badge className="absolute -top-1 -end-1 h-5 w-5 rounded-full bg-red-500 text-white text-xs">
                 5
               </Badge>
             </Button>

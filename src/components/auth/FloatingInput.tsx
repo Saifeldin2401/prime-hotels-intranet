@@ -63,7 +63,7 @@ function FloatingInputComponent({
       <div
         className={cn(
           'absolute top-1/2 -translate-y-1/2 z-10 transition-all duration-300',
-          isRTL ? 'right-4' : 'left-4',
+          isRTL ? 'end-4' : 'start-4',
           isActive ? 'text-primary' : 'text-gray-400'
         )}
         aria-hidden="true"
@@ -86,8 +86,8 @@ function FloatingInputComponent({
         aria-invalid={ariaInvalid ?? (valid === false && value.length > 0)}
         className={cn(
           'w-full h-14 pt-4 pb-1.5 bg-gray-50/50 dark:bg-gray-800/50 border-2 rounded-xl outline-none transition-all duration-300',
-          isRTL ? 'pr-12 text-right' : 'pl-12 text-left',
-          rightElement ? (isRTL ? 'pl-12' : 'pr-12') : '',
+          isRTL ? 'pe-12 text-right' : 'ps-12 text-left',
+          rightElement ? (isRTL ? 'ps-12' : 'pe-12') : '',
           isActive
             ? 'border-primary/50 bg-white dark:bg-gray-800 shadow-sm'
             : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600',
@@ -103,7 +103,7 @@ function FloatingInputComponent({
         htmlFor={id}
         className={cn(
           'absolute pointer-events-none transition-all duration-300',
-          isRTL ? 'right-12' : 'left-12',
+          isRTL ? 'end-12' : 'start-12',
           isActive
             ? 'top-1.5 text-xs font-medium text-primary'
             : 'top-1/2 -translate-y-1/2 text-sm text-gray-500'
@@ -117,7 +117,7 @@ function FloatingInputComponent({
         <div
           className={cn(
             'absolute top-1/2 -translate-y-1/2',
-            isRTL ? 'left-3' : 'right-3'
+            isRTL ? 'start-3' : 'end-3'
           )}
         >
           {rightElement}
@@ -134,7 +134,7 @@ function FloatingInputComponent({
               exit={{ opacity: 0, scale: 0.5 }}
               className={cn(
                 'absolute top-1/2 -translate-y-1/2',
-                isRTL ? 'left-3' : 'right-10'
+                isRTL ? 'start-3' : 'end-10'
               )}
               aria-hidden="true"
             >

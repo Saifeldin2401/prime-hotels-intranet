@@ -141,7 +141,7 @@ export const BuilderCanvas = ({
                 <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : ''}`}>
                     <h3 className="text-lg font-semibold text-slate-800">{t('builder.courseStructure')}</h3>
                     <Button onClick={onAddSection} size="sm" className={cn("bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm", isRTL ? 'flex-row-reverse' : '')}>
-                        <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                        <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                         {t('builder.addSection')}
                     </Button>
                 </div>
@@ -155,7 +155,7 @@ export const BuilderCanvas = ({
                             <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startCreating')}</h4>
                             <p className="text-slate-500 mb-6 max-w-sm">{t('builder.noContent')}</p>
                             <Button onClick={onAddSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold hover:bg-hotel-gold/5", isRTL ? 'flex-row-reverse' : '')}>
-                                <Plus className={cn("w-4 h-4", isRTL ? "ml-1" : "mr-1")} />
+                                <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
                                 {t('builder.addSection')}
                             </Button>
                         </CardContent>
@@ -199,7 +199,7 @@ export const BuilderCanvas = ({
                                                         onGenerateQuizFromSection(section.id)
                                                     }}
                                                 >
-                                                    <Sparkles className={cn("w-3.5 h-3.5", isRTL ? "ml-1" : "mr-1")} />
+                                                    <Sparkles className={cn("w-3.5 h-3.5", isRTL ? "ms-1" : "me-1")} />
                                                     {t('builder.aiQuiz', 'AI Quiz')}
                                                 </Button>
                                             )}
@@ -243,7 +243,7 @@ export const BuilderCanvas = ({
                                                                 onClick={() => onAddContent(type, section.id)}
                                                             >
                                                                 {getContentIcon(type)}
-                                                                <span className={isRTL ? "mr-2 capitalize" : "ml-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
+                                                                <span className={isRTL ? "me-2 capitalize" : "ms-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
                                                             </Button>
                                                         ))}
                                                     </div>
@@ -305,7 +305,7 @@ export const BuilderCanvas = ({
                                                                     onClick={() => onAddContent(type, section.id)}
                                                                 >
                                                                     {getContentIcon(type)}
-                                                                    <span className={isRTL ? "mr-2 capitalize" : "ml-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
+                                                                    <span className={isRTL ? "me-2 capitalize" : "ms-2 capitalize"}>{t(`wizard.type_${type}`, type.replace('_', ' '))}</span>
                                                                 </Button>
                                                             ))}
                                                         </div>

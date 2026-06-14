@@ -375,7 +375,7 @@ export function SidebarNavigation({
             isMobile && "h-auto border-none bg-transparent px-4 py-3"
           )}>
             {!isMobile && (
-              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute left-1/2 transform -translate-x-1/2")}>
+              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
                 <img
                   src="/prime-logo-light.png"
                   alt="Prime Hotels"
@@ -463,7 +463,7 @@ export function SidebarNavigation({
                         {userInitials}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
+                    <span className="absolute bottom-0 end-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
                   </div>
 
                   <div className="flex-1 min-w-0 text-left">

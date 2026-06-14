@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { PageSkeleton } from '@/components/ui/loading-skeleton'
 import { useAuth } from '@/hooks/useAuth'
 import { useAddTaskComment, useTask, useUpdateTask } from '@/hooks/useTasks'
 import { supabase } from '@/lib/supabase'
@@ -54,7 +55,7 @@ export default function TaskDetail() {
   })
 
   if (isLoading) {
-    return <div className="flex justify-center p-8"><Loader2 className="animate-spin" /></div>
+    return <PageSkeleton />
   }
 
   if (!task) {
@@ -133,7 +134,7 @@ export default function TaskDetail() {
             className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
             onClick={() => setShowDeleteConfirm(true)}
           >
-            <Trash2 className="w-4 h-4 mr-2" />
+            <Trash2 className="w-4 h-4 me-2" />
             {t('delete', 'Delete')}
           </Button>
         </div>
@@ -206,8 +207,8 @@ export default function TaskDetail() {
                     onClick={handleAddComment}
                     disabled={issubmittingComment || !comment.trim()}
                   >
-                    {issubmittingComment && <Loader2 className="w-3 h-3 animate-spin mr-2" />}
-                    <Send className="w-3 h-3 mr-2" />
+                    {issubmittingComment && <Loader2 className="w-3 h-3 animate-spin me-2" />}
+                    <Send className="w-3 h-3 me-2" />
                     {t('post_comment')}
                   </Button>
                 </div>

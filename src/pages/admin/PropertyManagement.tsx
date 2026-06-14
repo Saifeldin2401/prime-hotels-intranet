@@ -131,7 +131,7 @@ function DepartmentManager({ property }: { property: Property }) {
                     </SelectContent>
                 </Select>
                 <Button onClick={handleAdd} disabled={createDepartment.isPending || !selectedDept} size="sm" className="bg-hotel-gold text-white hover:bg-hotel-gold-dark">
-                    <Plus className="w-4 h-4 mr-1" /> {t('properties.add_dept')}
+                    <Plus className="w-4 h-4 me-1" /> {t('properties.add_dept')}
                 </Button>
             </div>
             <Separator />
@@ -337,7 +337,7 @@ export default function PropertyManagement() {
                 description={t('admin:properties.description')}
                 actions={
                     <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                        <Plus className="w-4 h-4 mr-2" />
+                        <Plus className="w-4 h-4 me-2" />
                         {t('admin:properties.add_property')}
                     </Button>
                 }
@@ -371,7 +371,7 @@ export default function PropertyManagement() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Button variant="outline" size="sm" onClick={() => handleManageDepartments(property)}>
-                                            <Layers className="w-4 h-4 mr-2" />
+                                            <Layers className="w-4 h-4 me-2" />
                                             {t('admin:properties.departments')}
                                         </Button>
                                         <Badge variant={property.is_active ? 'default' : 'secondary'}>

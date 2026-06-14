@@ -28,7 +28,7 @@ export function PageHeader({ title, description, actions, className }: PageHeade
         )}
       </div>
       {description && (
-        <div className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-2xl pl-3 sm:pl-4">
+        <div className="text-muted-foreground text-sm sm:text-base leading-relaxed max-w-2xl ps-3 sm:ps-4">
           {description}
         </div>
       )}

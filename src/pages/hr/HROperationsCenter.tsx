@@ -129,7 +129,7 @@ export default function HROperationsCenter() {
     return (
       <Badge className={cn(config.color, "rounded-md")}>
         {config.icon}
-        <span className={cn("ml-1", isRTL && "mr-1 ml-0")}>{config.label}</span>
+        <span className={cn("ms-1", isRTL && "me-1 ms-0")}>{config.label}</span>
       </Badge>
     )
   }
@@ -171,7 +171,7 @@ export default function HROperationsCenter() {
             disabled={unreadCount === 0 || markAllAsRead.isPending}
             className="flex-1 sm:flex-none h-11"
           >
-            {markAllAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+            {markAllAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin me-2" />}
             {t('operations_center.mark_all_read')}
           </Button>
         </div>
@@ -222,12 +222,12 @@ export default function HROperationsCenter() {
         <CardHeader className="p-4 sm:p-6 pb-0 sm:pb-0">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div className="relative w-full lg:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
                 placeholder={t('operations_center.search_notifications', 'Search notifications...')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 h-11 w-full bg-white"
+                className="ps-10 h-11 w-full bg-white"
               />
             </div>
 
@@ -262,7 +262,7 @@ export default function HROperationsCenter() {
                   <Filter className="w-4 h-4" />
                   <span className="hidden xs:inline">{t('operations_center.filters')}</span>
                   {(selectedTypes.length > 0 || readStatus !== 'all' || dateRange) && (
-                    <Badge variant="secondary" className="ml-1 bg-hotel-navy text-white">
+                    <Badge variant="secondary" className="ms-1 bg-hotel-navy text-white">
                       {selectedTypes.length + (readStatus !== 'all' ? 1 : 0) + (dateRange ? 1 : 0)}
                     </Badge>
                   )}
@@ -336,7 +336,7 @@ export default function HROperationsCenter() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="me-2 h-4 w-4" />
                       {dateRange?.start ? format(new Date(dateRange.start), 'PPP', { locale }) : t('operations_center.pick_date', 'Pick a date')}
                     </Button>
                   </PopoverTrigger>
@@ -356,7 +356,7 @@ export default function HROperationsCenter() {
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="me-2 h-4 w-4" />
                       {dateRange?.end ? format(new Date(dateRange.end), 'PPP', { locale }) : t('operations_center.pick_date', 'Pick a date')}
                     </Button>
                   </PopoverTrigger>
@@ -411,7 +411,7 @@ export default function HROperationsCenter() {
                     <div className="text-sm text-gray-500">
                       {t('operations_center.created_at', 'Created')}: {format(new Date(notification.created_at), 'PPP p', { locale })}
                       {notification.read_at && (
-                        <span className="ml-4">
+                        <span className="ms-4">
                           {t('operations_center.read_at', 'Read')}: {format(new Date(notification.read_at), 'PPP p', { locale })}
                         </span>
                       )}
@@ -426,7 +426,7 @@ export default function HROperationsCenter() {
                         onClick={() => markAsRead.mutate(notification.id)}
                         disabled={markAsRead.isPending}
                       >
-                        {markAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+                        {markAsRead.isPending && <Loader2 className="w-4 h-4 animate-spin me-2" />}
                         {t('operations_center.mark_read')}
                       </Button>
                     )}

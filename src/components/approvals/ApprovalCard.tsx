@@ -155,12 +155,12 @@ export function ApprovalCard({
                     onClick={onView}
                     className="h-8 text-xs font-medium hover:bg-white hover:shadow-sm"
                 >
-                    <Eye className="w-3.5 h-3.5 mr-1.5 text-gray-500" />
+                    <Eye className="w-3.5 h-3.5 me-1.5 text-gray-500" />
                     {t('view_details', 'Details')}
                 </Button>
 
                 {(onApprove || onReject) && (
-                    <div className="flex items-center ml-auto gap-2">
+                    <div className="flex items-center ms-auto gap-2">
                         {onReject && (
                             <Button
                                 variant="outline"
@@ -188,9 +188,9 @@ export function ApprovalCard({
                                 aria-busy={isActionPending}
                             >
                                 {isActionPending ? (
-                                    <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
+                                    <Loader2 className="w-3.5 h-3.5 me-1.5 animate-spin" />
                                 ) : (
-                                    <CheckCircle className="w-3.5 h-3.5 mr-1.5" />
+                                    <CheckCircle className="w-3.5 h-3.5 me-1.5" />
                                 )}
                                 {t('approve')}
                             </Button>

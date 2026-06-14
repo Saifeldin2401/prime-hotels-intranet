@@ -225,7 +225,7 @@ export default function UserProfile() {
                         {getInitials(profile.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-green-500 border-4 border-white rounded-full z-20 shadow-lg" title="Online" />
+                    <div className="absolute -bottom-1 -end-1 w-8 h-8 bg-green-500 border-4 border-white rounded-full z-20 shadow-lg" title="Online" />
                   </div>
 
                   <div className="space-y-1">

@@ -36,7 +36,7 @@ export function PullToRefresh({
             {/* Pull indicator */}
             <div
                 className={cn(
-                    "absolute left-1/2 -translate-x-1/2 z-50 transition-all duration-200 pointer-events-none",
+                    "absolute start-1/2 -translate-x-1/2 z-50 transition-all duration-200 pointer-events-none",
                     showIndicator ? "opacity-100" : "opacity-0"
                 )}
                 style={{
@@ -63,7 +63,7 @@ export function PullToRefresh({
 
             {/* Pull progress bar */}
             {isPulling && !isRefreshing && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-hotel-navy/10 z-40">
+                <div className="absolute top-0 start-0 end-0 h-1 bg-hotel-navy/10 z-40">
                     <div
                         className="h-full bg-hotel-gold transition-all duration-100"
                         style={{ width: `${pullProgress * 100}%` }}

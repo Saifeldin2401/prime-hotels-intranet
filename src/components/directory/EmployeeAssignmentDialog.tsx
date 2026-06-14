@@ -449,7 +449,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                     <SelectItem key={prop.id} value={prop.id}>
                                         {prop.name}
                                         {prop.is_headquarters && (
-                                            <Badge variant="secondary" className="ml-2 text-xs">HQ</Badge>
+                                            <Badge variant="secondary" className="ms-2 text-xs">HQ</Badge>
                                         )}
                                     </SelectItem>
                                 ))}
@@ -537,7 +537,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                     {selectedManagerId
                                         ? (selectedManagerProfile?.full_name || t('selected_manager', 'Selected manager'))
                                         : t('no_manager', 'No manager')}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    <ChevronsUpDown className="ms-2 h-4 w-4 shrink-0 opacity-50" />
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[360px] p-0" align="start">
@@ -566,7 +566,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                                 <div className="w-full flex items-center px-2 py-1.5">
                                                     <Check
                                                         className={cn(
-                                                            "mr-2 h-4 w-4",
+                                                            "me-2 h-4 w-4",
                                                             !selectedManagerId ? "opacity-100" : "opacity-0"
                                                         )}
                                                     />
@@ -587,15 +587,15 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                                                     <div className="w-full flex items-center px-2 py-1.5">
                                                         <Check
                                                             className={cn(
-                                                                "mr-2 h-4 w-4",
+                                                                "me-2 h-4 w-4",
                                                                 selectedManagerId === manager.id ? "opacity-100" : "opacity-0"
                                                             )}
                                                         />
                                                         <span>{manager.full_name}</span>
-                                                        <span className="ml-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
+                                                        <span className="ms-2 text-[10px] bg-slate-100 px-1 rounded text-slate-500 font-mono">
                                                             {manager.staff_id || 'no-id'}
                                                         </span>
-                                                        <span className="ml-auto text-xs text-muted-foreground">
+                                                        <span className="ms-auto text-xs text-muted-foreground">
                                                             {manager.job_title || ''}
                                                         </span>
                                                     </div>
@@ -621,9 +621,9 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                         disabled={updateAssignment.isPending || !selectedPropertyId || !canEditEmployee}
                     >
                         {updateAssignment.isPending ? (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            <Loader2 className="h-4 w-4 me-2 animate-spin" />
                         ) : (
-                            <Save className="h-4 w-4 mr-2" />
+                            <Save className="h-4 w-4 me-2" />
                         )}
                         {t('save_changes', 'Save Changes')}
                     </Button>

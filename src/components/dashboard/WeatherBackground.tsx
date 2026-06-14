@@ -50,7 +50,7 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                 <m.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 200, repeat: Infinity, ease: "linear" }}
-                    className="absolute -top-32 -right-32 text-amber-500/10"
+                    className="absolute -top-32 -end-32 text-amber-500/10"
                 >
                     <Sun className="w-96 h-96" strokeWidth={1} />
                 </m.div>
@@ -60,7 +60,7 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
                 <m.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 300, repeat: Infinity, ease: "linear" }}
-                    className="absolute -top-16 -right-16 text-indigo-400/10"
+                    className="absolute -top-16 -end-16 text-indigo-400/10"
                 >
                     <Moon className="w-64 h-64" strokeWidth={1} />
                 </m.div>
@@ -89,7 +89,7 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
 
             {mode === 'rain' && (
                 <div className="absolute inset-0 opacity-40">
-                    <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-400/10" />
+                    <div className="absolute top-0 start-0 end-0 h-16 bg-gradient-to-b from-slate-400/10" />
                     {particles.map((p) => (
                         <m.div
                             key={`rain-${p.id}`}
@@ -106,7 +106,7 @@ export function WeatherBackground({ code, isDay }: WeatherBackgroundProps) {
 
             {mode === 'snow' && (
                 <div className="absolute inset-0 opacity-40">
-                    <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-slate-300/10" />
+                    <div className="absolute top-0 start-0 end-0 h-16 bg-gradient-to-b from-slate-300/10" />
                     {snowParticles.map((p) => (
                         <m.div
                             key={`snow-${p.id}`}

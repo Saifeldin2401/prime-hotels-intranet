@@ -240,7 +240,7 @@ export function HolidayCelebration() {
                   </div>
                 </div>
                 
-                <div className="flex-shrink-0 ml-4 rtl:ml-0 rtl:mr-4">
+                <div className="flex-shrink-0 ms-4 rtl:ms-0 rtl:me-4">
                   <Button
                     variant="ghost"
                     onClick={() => setShowBanner(false)}

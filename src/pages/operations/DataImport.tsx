@@ -974,7 +974,7 @@ export default function DataImport() {
                                                 )}
                                             >
                                                 <div className="flex items-start justify-between">
-                                                    <div className="min-w-0 pr-2">
+                                                    <div className="min-w-0 pe-2">
                                                         <p className="text-xs font-bold truncate mb-1">{item.file.name}</p>
                                                         <div className="flex items-center gap-1.5 flex-wrap">
                                                             {getFormatBadge(item.extractedData?.detectedFormat)}
@@ -1014,9 +1014,9 @@ export default function DataImport() {
                                 disabled={isGeneratingAI || fileQueue.length === 0}
                             >
                                 {isGeneratingAI ? (
-                                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                    <Loader2 className="h-3 w-3 me-2 animate-spin" />
                                 ) : (
-                                    <Sparkles className="h-3 w-3 mr-2 text-primary group-hover:animate-pulse" />
+                                    <Sparkles className="h-3 w-3 me-2 text-primary group-hover:animate-pulse" />
                                 )}
                                 {isGeneratingAI
                                     ? t('data_import.ai_actions.analyzing', { defaultValue: 'Analyzing...' })
@@ -1070,9 +1070,9 @@ export default function DataImport() {
                                                 disabled={isFixing}
                                             >
                                                 {isFixing ? (
-                                                    <Loader2 className="h-3 w-3 mr-2 animate-spin" />
+                                                    <Loader2 className="h-3 w-3 me-2 animate-spin" />
                                                 ) : (
-                                                    <RefreshCw className="h-3 w-3 mr-2" />
+                                                    <RefreshCw className="h-3 w-3 me-2" />
                                                 )}
                                                 {isFixing
                                                     ? t('data_import.warnings.fixing', { defaultValue: 'Fixing...' })
@@ -1254,7 +1254,7 @@ export default function DataImport() {
                                             ))}
                                         </div>
                                         <Button variant="ghost" size="sm" className="text-xs h-8" onClick={() => removeFile(fileQueue.indexOf(selectedFile))}>
-                                            <Trash2 className="h-3 w-3 mr-2" />
+                                            <Trash2 className="h-3 w-3 me-2" />
                                             {t('data_import.review.delete_file', { defaultValue: 'Delete File' })}
                                         </Button>
                                     </div>
@@ -1327,7 +1327,7 @@ export default function DataImport() {
                                         onClick={handleImportAll}
                                         disabled={sessionStats.readyFiles === 0}
                                     >
-                                        <Zap className="h-4 w-4 mr-2" />
+                                        <Zap className="h-4 w-4 me-2" />
                                         {t('data_import.actions.commit_process', {
                                             defaultValue: 'Commit Process ({{count}})',
                                             count: sessionStats.totalRecords
@@ -1376,7 +1376,7 @@ export default function DataImport() {
                             </p>
                             <div className="flex gap-4">
                                 <Button variant="outline" size="lg" className="rounded-2xl px-8 border-slate-200" onClick={handlePrintSummary}>
-                                    <Printer className="h-4 w-4 mr-2" />
+                                    <Printer className="h-4 w-4 me-2" />
                                     {t('data_import.complete.print_summary', { defaultValue: 'Print Sync Summary' })}
                                 </Button>
                                 <Button variant="outline" size="lg" className="rounded-2xl px-8" onClick={resetImport}>
@@ -1384,7 +1384,7 @@ export default function DataImport() {
                                 </Button>
                                 <Button asChild size="lg" className="rounded-2xl px-8 shadow-lg shadow-primary/20">
                                     <a href="/operations">
-                                        <TrendingUp className="h-4 w-4 mr-2" />
+                                        <TrendingUp className="h-4 w-4 me-2" />
                                         {t('data_import.complete.view_dashboard', { defaultValue: 'View Dashboard' })}
                                     </a>
                                 </Button>
@@ -1397,7 +1397,7 @@ export default function DataImport() {
             {/* Recent History Sidebar (Sheet) */}
             <Sheet>
                 <SheetTrigger asChild>
-                    <Button variant="ghost" size="sm" className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 right-4 sm:right-6 rounded-full shadow-xl bg-white border h-12 w-12 group p-0">
+                    <Button variant="ghost" size="sm" className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom)+4rem)] sm:bottom-6 end-4 sm:end-6 rounded-full shadow-xl bg-white border h-12 w-12 group p-0">
                         <Clock className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
                     </Button>
                 </SheetTrigger>
@@ -1414,7 +1414,7 @@ export default function DataImport() {
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className="h-6 w-6 absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full transition-all"
+                                    className="h-6 w-6 absolute top-2 end-2 opacity-0 group-hover:opacity-100 text-red-500 hover:text-red-700 hover:bg-red-100 rounded-full transition-all"
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         setLogToDelete(log.id)
@@ -1425,7 +1425,7 @@ export default function DataImport() {
                                 </Button>
                                 <div className="flex items-center justify-between mb-2">
                                     <Badge variant="outline" className="text-[10px]">{log.status.toUpperCase()}</Badge>
-                                    <span className="text-[10px] text-muted-foreground pr-6">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
+                                    <span className="text-[10px] text-muted-foreground pe-6">{format(new Date(log.created_at), 'MMM d, h:mm a')}</span>
                                 </div>
                                 <p className="text-sm font-bold truncate">
                                     {log.file_name || t('data_import.history.manual_batch', { defaultValue: 'Manual Batch' })}
@@ -1475,9 +1475,9 @@ export default function DataImport() {
                             className="bg-red-600 hover:bg-red-700"
                         >
                             {deleteImportLog.isPending ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                <Loader2 className="h-4 w-4 me-2 animate-spin" />
                             ) : (
-                                <Trash2 className="h-4 w-4 mr-2" />
+                                <Trash2 className="h-4 w-4 me-2" />
                             )}
                             {t('data_import.delete.delete_permanently', { defaultValue: 'Delete Permanently' })}
                         </Button>

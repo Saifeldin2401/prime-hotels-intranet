@@ -118,12 +118,12 @@ export default function TrainingCertificates() {
         <TabsContent value="my-certificates" className="space-y-4">
           <div className="flex items-center gap-4">
             <div className="relative flex-1">
-              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
+              <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
               <Input
                 placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={isRTL ? 'pr-10' : 'pl-10'}
+                className={isRTL ? 'pe-10' : 'ps-10'}
               />
             </div>
           </div>
@@ -163,11 +163,11 @@ export default function TrainingCertificates() {
 
                     <div className="flex gap-2">
                       <Button variant="outline" size="sm" className="flex-1" onClick={() => handleView(cert)}>
-                        <FileText className="w-4 h-4 mr-2" />
+                        <FileText className="w-4 h-4 me-2" />
                         {t('viewCertificate')}
                       </Button>
                       <Button size="sm" className="flex-1 bg-hotel-gold hover:bg-hotel-gold-dark text-white" onClick={() => handleDownload(cert.id)} disabled={downloadMutation.isPending}>
-                        <Download className="w-4 h-4 mr-2" />
+                        <Download className="w-4 h-4 me-2" />
                         {t('download')}
                       </Button>
                     </div>
@@ -250,12 +250,12 @@ export default function TrainingCertificates() {
         {isAdmin && (
           <TabsContent value="all-certificates" className="space-y-4">
             <div className="relative flex-1">
-              <Search className={`absolute ${isRTL ? 'right-3' : 'left-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
+              <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4`} />
               <Input
                 placeholder={t('searchCertificates')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className={isRTL ? 'pr-10' : 'pl-10'}
+                className={isRTL ? 'pe-10' : 'ps-10'}
               />
             </div>
 
@@ -345,11 +345,11 @@ export default function TrainingCertificates() {
 
               <div className="bg-white/80 backdrop-blur p-4 flex justify-center gap-4 border-t border-hotel-gold/20">
                 <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark" onClick={() => handleDownload(selectedCertificate.id)} disabled={downloadMutation.isPending}>
-                  <Download className="w-4 h-4 mr-2" />
+                  <Download className="w-4 h-4 me-2" />
                   {t('download')}
                 </Button>
                 <Button variant="outline" onClick={() => window.print()}>
-                  <Printer className="w-4 h-4 mr-2" />
+                  <Printer className="w-4 h-4 me-2" />
                   {t('printCertificate')}
                 </Button>
                 <Button variant="outline" onClick={() => setShowCertificateDialog(false)}>
