@@ -446,7 +446,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           >
             <Button
               type="submit"
-              className="w-full h-14 text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
               disabled={loading || !emailValid}
             >
               {/* Shine effect */}

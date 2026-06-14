@@ -5,6 +5,8 @@ import type {
     ColumnFiltersState,
     SortingState,
     VisibilityState,
+    ExpandedState,
+    Row,
 } from "@tanstack/react-table"
 import {
     flexRender,
@@ -12,6 +14,7 @@ import {
     getFilteredRowModel,
     getPaginationRowModel,
     getSortedRowModel,
+    getExpandedRowModel,
     useReactTable,
 } from "@tanstack/react-table"
 import * as React from "react"
@@ -38,6 +41,8 @@ interface DataTableProps<TData, TValue> {
     searchPlaceholder?: string
     caption?: string
     ariaLabel?: string
+    renderSubComponent?: (props: { row: Row<TData> }) => React.ReactNode
+    getRowCanExpand?: (row: Row<TData>) => boolean
 }
 
 export function DataTable<TData, TValue>({
@@ -47,6 +52,8 @@ export function DataTable<TData, TValue>({
     searchPlaceholder,
     caption,
     ariaLabel = 'Data table',
+    renderSubComponent,
+    getRowCanExpand,
 }: DataTableProps<TData, TValue>) {
     const { t, i18n } = useTranslation('common')
     const isRTL = i18n.dir() === 'rtl'
@@ -55,6 +62,7 @@ export function DataTable<TData, TValue>({
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({})
     const [rowSelection, setRowSelection] = React.useState({})
+    const [expanded, setExpanded] = React.useState<ExpandedState>({})
 
     const table = useReactTable({
         data,
@@ -67,11 +75,15 @@ export function DataTable<TData, TValue>({
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        onExpandedChange: setExpanded,
+        getExpandedRowModel: getExpandedRowModel(),
+        getRowCanExpand,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
+            expanded,
         },
     })
 
@@ -121,17 +133,25 @@ export function DataTable<TData, TValue>({
                     <TableBody>
                         {table.getRowModel().rows?.length ? (
                             table.getRowModel().rows.map((row) => (
-                                <TableRow
-                                    key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
-                                    role="row"
-                                >
-                                    {row.getVisibleCells().map((cell) => (
-                                        <TableCell key={cell.id} role="cell">
-                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                        </TableCell>
-                                    ))}
-                                </TableRow>
+                                <React.Fragment key={row.id}>
+                                    <TableRow
+                                        data-state={row.getIsSelected() && "selected"}
+                                        role="row"
+                                    >
+                                        {row.getVisibleCells().map((cell) => (
+                                            <TableCell key={cell.id} role="cell">
+                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                            </TableCell>
+                                        ))}
+                                    </TableRow>
+                                    {row.getIsExpanded() && renderSubComponent && (
+                                        <TableRow>
+                                            <TableCell colSpan={row.getVisibleCells().length} className="p-0 border-b">
+                                                {renderSubComponent({ row })}
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </React.Fragment>
                             ))
                         ) : (
                             <TableRow role="row">

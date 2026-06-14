@@ -1,21 +1,29 @@
 import { Button } from '@/components/ui/button'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { getAuthFlowRedirectPath } from '@/lib/authFlowState'
 import { getRedirectFromSearch, peekPostLoginRedirect } from '@/lib/authRedirect'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Eye, EyeOff, Loader2, Lock, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useForm } from 'react-hook-form'
 import { useLocation, useNavigate } from 'react-router-dom'
+import * as z from 'zod'
+
+const loginSchema = z.object({
+    email: z.string().min(1, { message: 'Email is required' }).email({ message: 'Invalid email address' }),
+    password: z.string().min(1, { message: 'Password is required' }),
+})
+
+type LoginFormValues = z.infer<typeof loginSchema>
 
 interface LoginPanelProps {
     className?: string
 }
 
 export function LoginPanel({ className = '' }: LoginPanelProps) {
-    const [email, setEmail] = useState('')
-    const [password, setPassword] = useState('')
     const [showPassword, setShowPassword] = useState(false)
     const [isLoading, setIsLoading] = useState(false)
     const { signIn } = useAuth()
@@ -26,6 +34,14 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
     // Use ref to preserve redirect across renders - critical for when auth state changes during login
     const postLoginDestinationRef = useRef<string>('/')
     
+    const form = useForm<LoginFormValues>({
+        resolver: zodResolver(loginSchema),
+        defaultValues: {
+            email: '',
+            password: '',
+        },
+    })
+
     useEffect(() => {
         // Capture redirect on mount (or when location changes)
         const redirectPath = getRedirectFromSearch(location.search)
@@ -36,22 +52,11 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
         postLoginDestinationRef.current = destination
     }, [location.search])
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        if (!email || !password) {
-            toast({
-                title: 'Missing credentials',
-                description: 'Please enter both email and password.',
-                variant: 'destructive'
-            })
-            return
-        }
-
+    const onSubmit = async (values: LoginFormValues) => {
         setIsLoading(true)
 
         try {
-            const { error } = await signIn(email, password)
+            const { error } = await signIn(values.email, values.password)
 
             if (error) {
                 toast({
@@ -77,6 +82,14 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
         }
     }
 
+    const onInvalid = () => {
+        toast({
+            title: 'Missing credentials',
+            description: 'Please enter both email and password.',
+            variant: 'destructive'
+        })
+    }
+
     return (
         <div className={`bg-white rounded-lg shadow-lg border border-gray-200 ${className}`}>
             {/* Header */}
@@ -85,88 +98,104 @@ export function LoginPanel({ className = '' }: LoginPanelProps) {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-gray-700 font-medium">
-                        Username
-                    </Label>
-                    <div className="relative">
-                        <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            id="login-email"
-                            type="email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            placeholder="Enter your email"
-                            className="ps-10 bg-white border-gray-300 focus:border-hotel-gold focus:ring-hotel-gold"
-                            disabled={isLoading}
-                        />
-                    </div>
-                </div>
+            <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit, onInvalid)} className="p-6 space-y-4">
+                    <FormField
+                        control={form.control}
+                        name="email"
+                        render={({ field }) => (
+                            <FormItem className="space-y-2">
+                                <FormLabel className="text-gray-700 font-medium">
+                                    Username
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <Input
+                                            {...field}
+                                            type="email"
+                                            placeholder="Enter your email"
+                                            className="ps-10 bg-white border-gray-300 focus:border-hotel-gold focus:ring-hotel-gold"
+                                            disabled={isLoading}
+                                        />
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
 
-                <div className="space-y-2">
-                    <Label htmlFor="login-password" className="text-gray-700 font-medium">
-                        Password
-                    </Label>
-                    <div className="relative">
-                        <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                        <Input
-                            id="login-password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
-                            className="ps-10 pe-10 bg-white border-gray-300 focus:border-hotel-gold focus:ring-hotel-gold"
-                            disabled={isLoading}
-                        />
-                        <button
-                            type="button"
-                            onClick={() => setShowPassword(!showPassword)}
-                            className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                            tabIndex={-1}
+                    <FormField
+                        control={form.control}
+                        name="password"
+                        render={({ field }) => (
+                            <FormItem className="space-y-2">
+                                <FormLabel className="text-gray-700 font-medium">
+                                    Password
+                                </FormLabel>
+                                <FormControl>
+                                    <div className="relative">
+                                        <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                        <Input
+                                            {...field}
+                                            type={showPassword ? 'text' : 'password'}
+                                            placeholder="Enter your password"
+                                            className="ps-10 pe-10 bg-white border-gray-300 focus:border-hotel-gold focus:ring-hotel-gold"
+                                            disabled={isLoading}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                                            tabIndex={-1}
+                                        >
+                                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                                        </button>
+                                    </div>
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <Button
+                        type="submit"
+                        className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-white font-semibold py-2"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? (
+                            <>
+                                <Loader2 className="me-2 h-4 w-4 animate-spin" />
+                                Signing in...
+                            </>
+                        ) : (
+                            'Login'
+                        )}
+                    </Button>
+
+                    {/* Links */}
+                    <div className="pt-2 border-t border-gray-200 space-y-1 text-sm">
+                        <a
+                            href="/forgot-password"
+                            className="block text-hotel-navy hover:text-hotel-gold transition-colors"
                         >
-                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
+                            Login Password
+                        </a>
+                        <a
+                            href="/forgot-password"
+                            className="block text-hotel-navy hover:text-hotel-gold transition-colors"
+                        >
+                            System Password
+                        </a>
+                        <a
+                            href="/help"
+                            className="block text-hotel-navy hover:text-hotel-gold transition-colors"
+                        >
+                            System Login Assistance
+                        </a>
                     </div>
-                </div>
-
-                <Button
-                    type="submit"
-                    className="w-full bg-hotel-gold hover:bg-hotel-gold-dark text-white font-semibold py-2"
-                    disabled={isLoading}
-                >
-                    {isLoading ? (
-                        <>
-                            <Loader2 className="me-2 h-4 w-4 animate-spin" />
-                            Signing in...
-                        </>
-                    ) : (
-                        'Login'
-                    )}
-                </Button>
-
-                {/* Links */}
-                <div className="pt-2 border-t border-gray-200 space-y-1 text-sm">
-                    <a
-                        href="/forgot-password"
-                        className="block text-hotel-navy hover:text-hotel-gold transition-colors"
-                    >
-                        Login Password
-                    </a>
-                    <a
-                        href="/forgot-password"
-                        className="block text-hotel-navy hover:text-hotel-gold transition-colors"
-                    >
-                        System Password
-                    </a>
-                    <a
-                        href="/help"
-                        className="block text-hotel-navy hover:text-hotel-gold transition-colors"
-                    >
-                        System Login Assistance
-                    </a>
-                </div>
-            </form>
+                </form>
+            </Form>
         </div>
     )
 }

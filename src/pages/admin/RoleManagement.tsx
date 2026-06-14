@@ -26,8 +26,10 @@ import {
     Users,
     XCircle
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import type { ColumnDef } from '@tanstack/react-table'
+import { DataTable } from '@/components/ui/data-table/data-table'
 
 // Fallback hardcoded permissions for role assignment dialog
 
@@ -170,9 +172,127 @@ export default function RoleManagement() {
     }
   }
 
-  const getRoleDisplayName = (role: AppRole) => {
+  const getRoleDisplayName = useCallback((role: AppRole) => {
     return t(`common:roles.${role}`, { defaultValue: ROLES[role]?.label || role })
-  }
+  }, [t])
+
+  const userColumns = useMemo<ColumnDef<any>[]>(() => [
+    {
+      accessorKey: 'full_name',
+      header: t('roles.user'),
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <span className="text-primary-foreground font-bold">
+                {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div>
+              <p className="font-medium">{user.full_name || user.email}</p>
+              <p className="text-sm text-muted-foreground">{user.email}</p>
+            </div>
+          </div>
+        )
+      }
+    },
+    {
+      accessorKey: 'role',
+      header: t('roles.role'),
+      cell: ({ row }) => {
+        const user = row.original
+        return (
+          <Badge variant="outline">
+            {getRoleDisplayName(user.user_roles?.[0]?.role || 'staff')}
+          </Badge>
+        )
+      }
+    },
+    {
+      id: 'actions',
+      cell: ({ row }) => {
+        const user = row.original
+        if (!hasPermission('users.assign_roles')) return null
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedUser(user)
+                setSelectedRole(user.user_roles?.[0]?.role || 'staff')
+                setShowAssignDialog(true)
+              }}
+            >
+              <Edit className="w-4 h-4" />
+            </Button>
+          </div>
+        )
+      }
+    }
+  ], [t, getRoleDisplayName, hasPermission])
+
+  const comparisonColumns = useMemo<ColumnDef<any>[]>(() => {
+    const cols: ColumnDef<any>[] = [
+      {
+        accessorKey: 'category',
+        header: 'Category',
+        cell: ({ row }) => (
+          <span className="font-medium text-[10px] uppercase tracking-wider text-muted-foreground">
+            {row.original.category}
+          </span>
+        ),
+      },
+      {
+        accessorKey: 'permission',
+        header: 'Permission',
+        cell: ({ row }) => (
+          <span className="capitalize">
+            {formatPermissionLabel(row.original.permission)}
+          </span>
+        ),
+      },
+    ]
+
+    ROLE_HIERARCHY.forEach((role) => {
+      cols.push({
+        accessorKey: role,
+        header: () => (
+          <div className="text-center font-medium min-w-[90px]">
+            <div className="truncate">{ROLES[role]?.label.split(' ')[0]}</div>
+            <div className="text-[10px] text-muted-foreground font-normal truncate">
+              {ROLES[role]?.label.split(' ').slice(1).join(' ')}
+            </div>
+          </div>
+        ),
+        cell: ({ row }) => {
+          const isGranted = permissionMatrix[role]?.[row.original.permission] ?? false
+          return (
+            <div className="flex justify-center">
+              {isGranted ? (
+                <CheckCircle className="w-4 h-4 text-green-500" />
+              ) : (
+                <XCircle className="w-4 h-4 text-gray-200" />
+              )}
+            </div>
+          )
+        },
+      })
+    })
+
+    return cols
+  }, [permissionMatrix])
+
+  const comparisonData = useMemo(() => {
+    const data: any[] = []
+    Object.entries(PERMISSION_CATEGORIES).forEach(([category, permissions]) => {
+      permissions.forEach((permission) => {
+        data.push({ category, permission })
+      })
+    })
+    return data
+  }, [])
 
 
   if (!hasPermission('users.view')) {
@@ -227,41 +347,10 @@ export default function RoleManagement() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {users.map((user) => (
-                  <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
-                        <span className="text-primary-foreground font-bold">
-                          {user.full_name?.charAt(0) || user.email.charAt(0).toUpperCase()}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{user.full_name || user.email}</p>
-                        <p className="text-sm text-muted-foreground">{user.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline">
-                        {getRoleDisplayName(user.user_roles?.[0]?.role || 'staff')}
-                      </Badge>
-                      {hasPermission('users.assign_roles') && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user)
-                            setSelectedRole(user.user_roles?.[0]?.role || 'staff')
-                            setShowAssignDialog(true)
-                          }}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <DataTable 
+                columns={userColumns} 
+                data={users}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -343,58 +432,12 @@ export default function RoleManagement() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-start p-2 font-medium text-muted-foreground sticky start-0 bg-background min-w-[150px]">
-                        Permission
-                      </th>
-                      {ROLE_HIERARCHY.map((role) => (
-                        <th key={role} className="p-2 text-center font-medium min-w-[90px]">
-                          <div className="truncate">{ROLES[role]?.label.split(' ')[0]}</div>
-                          <div className="text-[10px] text-muted-foreground font-normal truncate">
-                            {ROLES[role]?.label.split(' ').slice(1).join(' ')}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {Object.entries(PERMISSION_CATEGORIES).map(([category, permissions]) => (
-                      <>
-                        <tr key={`cat-${category}`}>
-                          <td
-                            colSpan={ROLE_HIERARCHY.length + 1}
-                            className="p-2 pt-4 font-medium text-[10px] uppercase tracking-wider text-muted-foreground bg-muted/30"
-                          >
-                            {category}
-                          </td>
-                        </tr>
-                        {permissions.map((permission) => (
-                          <tr key={permission} className="border-b border-muted/50 hover:bg-muted/20">
-                            <td className="p-2 capitalize sticky start-0 bg-background">
-                              {formatPermissionLabel(permission)}
-                            </td>
-                            {ROLE_HIERARCHY.map((role) => {
-                              const isGranted = permissionMatrix[role]?.[permission] ?? false
-                              return (
-                                <td key={`${role}-${permission}`} className="p-2 text-center">
-                                  {isGranted ? (
-                                    <CheckCircle className="w-4 h-4 text-green-500 mx-auto" />
-                                  ) : (
-                                    <XCircle className="w-4 h-4 text-gray-200 mx-auto" />
-                                  )}
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        ))}
-                      </>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <DataTable 
+                columns={comparisonColumns} 
+                data={comparisonData}
+                searchKey="permission"
+                searchPlaceholder="Search permissions..."
+              />
             </CardContent>
           </Card>
         </TabsContent>

@@ -16,6 +16,8 @@ import { ar, enUS } from 'date-fns/locale'
 import { AlertCircle, Award, BookOpen, CheckCircle, Clock, FileQuestion, Flame, Loader2, Play, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { DataTable } from '@/components/ui/data-table/data-table'
+import type { ColumnDef } from '@tanstack/react-table'
 
 export default function MyLearning() {
     const { t, i18n } = useTranslation(['training', 'common'])
@@ -76,6 +78,149 @@ export default function MyLearning() {
         overdue: activeItems.filter(a => a.due_date && new Date(a.due_date) < new Date()).length,
         streak: calculateStreak(completedItems.map(i => ({ completed_at: i.progress?.completed_at || null })))
     }
+
+    const activeColumns: ColumnDef<LearningAssignment>[] = [
+        {
+            accessorKey: 'content_title',
+            header: t('topic'),
+            cell: ({ row }) => {
+                const item = row.original
+                return (
+                    <div className="flex flex-col gap-1 min-w-[200px]">
+                        <div className="flex items-center gap-2 font-medium">
+                            {item.content_type === 'quiz' ? <FileQuestion className="h-4 w-4 text-purple-500" /> : <BookOpen className="h-4 w-4 text-blue-500" />}
+                            {item.content_title || t('untitledAssignment')}
+                        </div>
+                        <p className="text-xs text-muted-foreground line-clamp-1">
+                            {item.content_metadata?.description || t('noDescription')}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1 text-[10px] text-muted-foreground">
+                            {item.content_metadata?.duration && <span>{item.content_metadata.duration} {t('min')}</span>}
+                            {item.content_metadata?.question_count && <span>{item.content_metadata.question_count} {t('questions')}</span>}
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            id: 'status',
+            header: t('status'),
+            cell: ({ row }) => {
+                const item = row.original
+                return (
+                    <div className="flex flex-col gap-2 min-w-[120px]">
+                        <div className="flex flex-wrap gap-1">
+                            <Badge variant={item.progress?.status === 'in_progress' ? 'default' : 'secondary'}>
+                                {t((item.progress?.status || 'notStarted'))}
+                            </Badge>
+                            {item.priority === 'compliance' && (
+                                <Badge variant="destructive">{t('mandatory')}</Badge>
+                            )}
+                            {item.onboarding_process_id && (
+                                <Badge
+                                    variant="outline"
+                                    className="bg-indigo-50 text-indigo-700 border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigate('/onboarding');
+                                    }}
+                                >
+                                    <Sparkles className="h-3 w-3 me-1" />
+                                    Onboarding Required
+                                </Badge>
+                            )}
+                        </div>
+                        {item.progress?.status === 'in_progress' && (
+                            <Progress value={item.progress.progress_percentage || 0} className="h-1.5 w-full" />
+                        )}
+                    </div>
+                )
+            }
+        },
+        {
+            accessorKey: 'due_date',
+            header: t('due'),
+            cell: ({ row }) => {
+                const item = row.original
+                if (!item.due_date) return null
+                const isOverdue = new Date(item.due_date) < new Date()
+                return (
+                    <span className={`text-xs flex items-center gap-1 whitespace-nowrap ${isOverdue ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
+                        <Clock className="h-3 w-3" />
+                        {formatDistanceToNow(new Date(item.due_date), { addSuffix: true, locale: dateLocale })}
+                    </span>
+                )
+            }
+        },
+        {
+            id: 'actions',
+            header: t('action'),
+            cell: ({ row }) => {
+                const item = row.original
+                return (
+                    <Button
+                        size="sm"
+                        onClick={() => handleStart(item)}
+                        className={cn("w-full sm:w-auto", isRTL ? 'flex-row-reverse' : '')}
+                    >
+                        {item.progress?.status === 'in_progress' ? (
+                            <>{t('continue')}</>
+                        ) : (
+                            <><Play className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} /> {t('start')}</>
+                        )}
+                    </Button>
+                )
+            }
+        }
+    ]
+
+    const completedColumns: ColumnDef<LearningAssignment>[] = [
+        {
+            accessorKey: 'content_title',
+            header: t('topic'),
+            cell: ({ row }) => {
+                const item = row.original
+                return (
+                    <div className="flex items-center gap-2 font-medium">
+                        {item.content_type === 'quiz' ? <FileQuestion className="h-4 w-4 text-muted-foreground" /> : <BookOpen className="h-4 w-4 text-muted-foreground" />}
+                        {item.content_title}
+                    </div>
+                )
+            }
+        },
+        {
+            id: 'completed_at',
+            header: t('completed'),
+            cell: ({ row }) => {
+                const item = row.original
+                return item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale }) : '-'
+            }
+        },
+        {
+            id: 'score',
+            header: t('score'),
+            cell: ({ row }) => {
+                const item = row.original
+                return (
+                    <span className="font-mono">
+                        {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
+                    </span>
+                )
+            }
+        },
+        {
+            id: 'actions',
+            header: t('action'),
+            cell: () => {
+                return (
+                    <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
+                        <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ms-2' : 'me-2'}`} />
+                        {t('certificate')}
+                    </Button>
+                )
+            }
+        }
+    ]
 
     if (isLoading) {
         return (
@@ -162,71 +307,11 @@ export default function MyLearning() {
                             </CardContent>
                         </Card>
                     ) : (
-                        <div className="grid gap-4">
-                            {activeItems.map(item => (
-                                <Card key={item.id} className="hover:shadow-md transition-shadow">
-                                    <CardContent className="p-6">
-                                        <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-start">
-                                            <div className="space-y-1 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2 mb-2">
-                                                    <Badge variant={item.progress?.status === 'in_progress' ? 'default' : 'secondary'}>
-                                                        {t((item.progress?.status || 'notStarted'))}
-                                                    </Badge>
-                                                    {item.priority === 'compliance' && (
-                                                        <Badge variant="destructive">{t('mandatory')}</Badge>
-                                                    )}
-                                                    {item.onboarding_process_id && (
-                                                        <Badge
-                                                            variant="outline"
-                                                            className="bg-indigo-50 text-indigo-700 border-indigo-200 cursor-pointer hover:bg-indigo-100 transition-colors"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                navigate('/onboarding');
-                                                            }}
-                                                        >
-                                                            <Sparkles className="h-3 w-3 me-1" />
-                                                            Onboarding Required
-                                                        </Badge>
-                                                    )}
-                                                    {item.due_date && (
-                                                        <span className={`text-xs flex items-center gap-1 ${new Date(item.due_date) < new Date() ? 'text-red-500 font-medium' : 'text-muted-foreground'}`}>
-                                                            <Clock className="h-3 w-3" />
-                                                            {t('due')} {formatDistanceToNow(new Date(item.due_date), { addSuffix: true, locale: dateLocale })}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                                <h3 className="font-semibold text-lg flex items-center gap-2">
-                                                    {item.content_type === 'quiz' ? <FileQuestion className="h-4 w-4 text-purple-500" /> : <BookOpen className="h-4 w-4 text-blue-500" />}
-                                                    {item.content_title || t('untitledAssignment')}
-                                                </h3>
-                                                <p className="text-sm text-muted-foreground line-clamp-1">
-                                                    {item.content_metadata?.description || t('noDescription')}
-                                                </p>
-                                                <div className="flex flex-wrap items-center gap-4 mt-2 text-xs text-muted-foreground">
-                                                    {item.content_metadata?.duration && <span>{item.content_metadata.duration} {t('min')}</span>}
-                                                    {item.content_metadata?.question_count && <span>{item.content_metadata.question_count} {t('questions')}</span>}
-                                                </div>
-                                            </div>
-
-                                            <Button
-                                                onClick={() => handleStart(item)}
-                                                className={cn("w-full sm:w-auto sm:ms-4", isRTL ? 'flex-row-reverse' : '')}
-                                            >
-                                                {item.progress?.status === 'in_progress' ? (
-                                                    <>{t('continue')}</>
-                                                ) : (
-                                                    <><Play className={`h-4 w-4 ${isRTL ? 'ms-2' : 'me-2'}`} /> {t('start')}</>
-                                                )}
-                                            </Button>
-                                        </div>
-                                        {item.progress?.status === 'in_progress' && (
-                                            <div className="mt-4">
-                                                <Progress value={item.progress.progress_percentage || 0} className="h-2" />
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ))}
+                        <div className="bg-card rounded-lg border shadow-sm">
+                            <DataTable
+                                columns={activeColumns}
+                                data={activeItems}
+                            />
                         </div>
                     )}
 
@@ -235,85 +320,17 @@ export default function MyLearning() {
                         {t('completedHistory')}
                     </h2>
 
-                    <div className="border rounded-lg bg-white overflow-hidden">
-                        <div className="hidden md:block overflow-x-auto">
-                            <table className={`w-full text-sm ${isRTL ? 'text-right' : 'text-left'}`}>
-                                <thead className="bg-slate-50 border-b">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">{t('topic')}</th>
-                                        <th className="px-4 py-3 font-medium">{t('completed')}</th>
-                                        <th className="px-4 py-3 font-medium">{t('score')}</th>
-                                        <th className="px-4 py-3 font-medium">{t('action')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y">
-                                    {completedItems.map(item => (
-                                        <tr key={item.id}>
-                                            <td className="px-4 py-3 font-medium flex items-center gap-2">
-                                                {item.content_type === 'quiz' ? <FileQuestion className="h-3 w-3 text-muted-foreground" /> : <BookOpen className="h-3 w-3 text-muted-foreground" />}
-                                                {item.content_title}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {item.progress?.completed_at ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale }) : '-'}
-                                            </td>
-                                            <td className="px-4 py-3 font-mono">
-                                                {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                <Button size="sm" variant="ghost" onClick={() => navigate(`/training/certificates`)}>
-                                                    <Award className={`h-4 w-4 text-purple-600 ${isRTL ? 'ms-2' : 'me-2'}`} />
-                                                    {t('certificate')}
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {completedItems.length === 0 && (
-                                        <tr>
-                                            <td colSpan={4} className="px-4 py-8 text-center text-muted-foreground">
-                                                {t('noCompletedHistory')}
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                        <div className="divide-y md:hidden">
-                            {completedItems.length === 0 ? (
-                                <div className="px-4 py-8 text-center text-muted-foreground">
-                                    {t('noCompletedHistory')}
-                                </div>
-                            ) : (
-                                completedItems.map(item => (
-                                    <div key={item.id} className="space-y-3 p-4">
-                                        <div className="flex items-start justify-between gap-3">
-                                            <p className="min-w-0 font-medium text-sm text-slate-900 flex items-center gap-2">
-                                                {item.content_type === 'quiz'
-                                                    ? <FileQuestion className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                                                    : <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />}
-                                                <span className="truncate">{item.content_title}</span>
-                                            </p>
-                                            <Badge variant="secondary" className="font-mono shrink-0">
-                                                {item.progress?.score_percentage != null ? `${item.progress.score_percentage}%` : 'N/A'}
-                                            </Badge>
-                                        </div>
-                                        <p className="text-xs text-muted-foreground">
-                                            {item.progress?.completed_at
-                                                ? format(new Date(item.progress.completed_at), 'MMM d, yyyy', { locale: dateLocale })
-                                                : '-'}
-                                        </p>
-                                        <Button
-                                            size="sm"
-                                            variant="ghost"
-                                            className={cn("w-full", isRTL ? "flex-row-reverse" : "")}
-                                            onClick={() => navigate('/training/certificates')}
-                                        >
-                                            <Award className={cn("h-4 w-4 text-purple-600", isRTL ? "ms-2" : "me-2")} />
-                                            {t('certificate')}
-                                        </Button>
-                                    </div>
-                                ))
-                            )}
-                        </div>
+                    <div className="bg-card rounded-lg border shadow-sm">
+                        {completedItems.length === 0 ? (
+                            <div className="px-4 py-8 text-center text-muted-foreground">
+                                {t('noCompletedHistory')}
+                            </div>
+                        ) : (
+                            <DataTable
+                                columns={completedColumns}
+                                data={completedItems}
+                            />
+                        )}
                     </div>
                 </div>
 

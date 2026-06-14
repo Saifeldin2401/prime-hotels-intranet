@@ -39,7 +39,7 @@ import {
     TrendingUp,
     Users
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import {
@@ -58,6 +58,8 @@ import {
 import { toast } from 'sonner'
 
 import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
+import { DataTable } from '@/components/ui/data-table'
+import type { ColumnDef } from '@tanstack/react-table'
 
 interface FlashReportData {
     property: {
@@ -120,120 +122,7 @@ function StatBox({ label, value, subValue, trend, icon: Icon, className }: {
     )
 }
 
-const PropertyRow = ({ report, consolidated, formatCurrency }: {
-    report: FlashReportData,
-    consolidated,
-    formatCurrency: (v: number) => string
-}) => {
-    const [isExpanded, setIsExpanded] = useState(false)
-    const contribution = consolidated ? (report.revenue.totalRevenue / consolidated.totalRevenue) * 100 : 0
 
-    return (
-        <>
-            <tr className="hover:bg-slate-50/30 transition-colors group cursor-pointer" onClick={() => setIsExpanded(!isExpanded)}>
-                <td className="p-4">
-                    <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
-                            <Building2 className="h-4 w-4" />
-                        </div>
-                        <div>
-                            <div className="font-bold text-slate-900">{report.property.name}</div>
-                            <div className="text-[10px] text-muted-foreground uppercase tracking-tighter">
-                                {contribution.toFixed(1)}% portfolio contribution
-                            </div>
-                        </div>
-                    </div>
-                </td>
-                <td className="text-center p-4">
-                    <div className="font-medium">{report.occupancy.roomsSold}</div>
-                    <div className="text-[10px] text-muted-foreground">of {report.occupancy.roomsAvailable} rms</div>
-                </td>
-                <td className="text-center p-4">
-                    <div className="flex flex-col items-center gap-1">
-                        <div className="font-bold">{report.occupancy.occupancyRate.toFixed(1)}%</div>
-                        <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
-                            <div
-                                className={cn(
-                                    "h-full rounded-full transition-all duration-500",
-                                    report.occupancy.occupancyRate >= 80 ? "bg-emerald-500" :
-                                        report.occupancy.occupancyRate >= 60 ? "bg-blue-500" :
-                                            "bg-amber-500"
-                                )}
-                                style={{ width: `${Math.min(100, report.occupancy.occupancyRate)}%` }}
-                            />
-                        </div>
-                    </div>
-                </td>
-                <td className="text-right p-4 font-medium text-slate-600">{formatCurrency(report.revenue.roomRevenue)}</td>
-                <td className="text-right p-4 text-slate-600">{formatCurrency(report.revenue.fbRevenue)}</td>
-                <td className="text-right p-4 text-slate-600">{formatCurrency(report.revenue.otherRevenue)}</td>
-                <td className="text-right p-4 font-medium text-emerald-600">{formatCurrency(report.collections.total)}</td>
-                <td className="text-right p-4 font-bold text-slate-900">{formatCurrency(report.revenue.totalRevenue)}</td>
-                <td className="p-4 text-center">
-                    <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", isExpanded && "rotate-180")} />
-                </td>
-            </tr>
-            {isExpanded && (
-                <tr className="bg-slate-50/50">
-                    <td colSpan={9} className="p-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                            <div className="space-y-4">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Yield Analysis</div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
-                                        <div className="text-[10px] text-muted-foreground mb-1">ADR</div>
-                                        <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.adr)}</div>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
-                                        <div className="text-[10px] text-muted-foreground mb-1">RevPAR</div>
-                                        <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.revpar)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="space-y-4 md:border-l md:ps-6">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Guest Mix</div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
-                                        <div className="text-[10px] text-muted-foreground mb-1">Adults</div>
-                                        <div className="text-sm font-bold text-slate-900">{report.occupancy.adults}</div>
-                                    </div>
-                                    <div className="bg-white p-3 rounded-xl border border-slate-100">
-                                        <div className="text-[10px] text-muted-foreground mb-1">Children</div>
-                                        <div className="text-sm font-bold text-slate-900">{report.occupancy.children}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="space-y-4 md:border-l md:ps-6">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Payment Health</div>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
-                                        <div className="text-[9px] text-muted-foreground">Cash</div>
-                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.cash)}</div>
-                                    </div>
-                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
-                                        <div className="text-[9px] text-muted-foreground">CC</div>
-                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.credit)}</div>
-                                    </div>
-                                    <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
-                                        <div className="text-[9px] text-muted-foreground">AR</div>
-                                        <div className="text-[10px] font-bold">{formatCurrency(report.collections.ar)}</div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="space-y-4 md:border-l md:ps-6">
-                                <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Ancillary</div>
-                                <div className="bg-white p-3 rounded-xl border border-slate-100">
-                                    <div className="text-[10px] text-muted-foreground mb-1">Spa Revenue</div>
-                                    <div className="text-sm font-bold text-blue-600">{formatCurrency(report.revenue.spaRevenue)}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </td>
-                </tr>
-            )}
-        </>
-    )
-}
 
 export default function DailyFlashReport() {
     const { t } = useTranslation(['operations', 'common'])
@@ -392,12 +281,176 @@ export default function DailyFlashReport() {
         }
     }, [reportData])
 
-    const formatCurrency = (value: number) => {
+    const formatCurrency = useCallback((value: number) => {
         return new Intl.NumberFormat('en-SA', {
             style: 'currency',
             currency: 'SAR',
             minimumFractionDigits: 0
         }).format(value)
+    }, [])
+
+    const columns = useMemo<ColumnDef<FlashReportData>[]>(() => [
+        {
+            id: 'property',
+            header: 'Property',
+            cell: ({ row }) => {
+                const report = row.original
+                const contribution = consolidated && consolidated.totalRevenue > 0 ? (report.revenue.totalRevenue / consolidated.totalRevenue) * 100 : 0
+                return (
+                    <div className="flex items-center gap-3 cursor-pointer group" onClick={() => row.toggleExpanded()}>
+                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 transition-colors">
+                            <Building2 className="h-4 w-4" />
+                        </div>
+                        <div>
+                            <div className="font-bold text-slate-900">{report.property.name}</div>
+                            <div className="text-[10px] text-muted-foreground uppercase tracking-tighter">
+                                {contribution.toFixed(1)}% portfolio contribution
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            id: 'inventory',
+            header: () => <div className="text-center">Inventory</div>,
+            cell: ({ row }) => {
+                const report = row.original
+                return (
+                    <div className="text-center cursor-pointer" onClick={() => row.toggleExpanded()}>
+                        <div className="font-medium">{report.occupancy.roomsSold}</div>
+                        <div className="text-[10px] text-muted-foreground">of {report.occupancy.roomsAvailable} rms</div>
+                    </div>
+                )
+            }
+        },
+        {
+            id: 'occupancy',
+            header: () => <div className="text-center">Occupancy %</div>,
+            cell: ({ row }) => {
+                const report = row.original
+                return (
+                    <div className="flex flex-col items-center gap-1 cursor-pointer" onClick={() => row.toggleExpanded()}>
+                        <div className="font-bold">{report.occupancy.occupancyRate.toFixed(1)}%</div>
+                        <div className="w-16 h-1 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                                className={cn(
+                                    "h-full rounded-full transition-all duration-500",
+                                    report.occupancy.occupancyRate >= 80 ? "bg-emerald-500" :
+                                        report.occupancy.occupancyRate >= 60 ? "bg-blue-500" :
+                                            "bg-amber-500"
+                                )}
+                                style={{ width: `${Math.min(100, report.occupancy.occupancyRate)}%` }}
+                            />
+                        </div>
+                    </div>
+                )
+            }
+        },
+        {
+            id: 'roomRev',
+            header: () => <div className="text-right">Room Rev</div>,
+            cell: ({ row }) => {
+                return <div className="text-right font-medium text-slate-600 cursor-pointer" onClick={() => row.toggleExpanded()}>{formatCurrency(row.original.revenue.roomRevenue)}</div>
+            }
+        },
+        {
+            id: 'fbRev',
+            header: () => <div className="text-right">F&B Rev</div>,
+            cell: ({ row }) => {
+                return <div className="text-right text-slate-600 cursor-pointer" onClick={() => row.toggleExpanded()}>{formatCurrency(row.original.revenue.fbRevenue)}</div>
+            }
+        },
+        {
+            id: 'otherRev',
+            header: () => <div className="text-right">Other</div>,
+            cell: ({ row }) => {
+                return <div className="text-right text-slate-600 cursor-pointer" onClick={() => row.toggleExpanded()}>{formatCurrency(row.original.revenue.otherRevenue)}</div>
+            }
+        },
+        {
+            id: 'collections',
+            header: () => <div className="text-right">Collections</div>,
+            cell: ({ row }) => {
+                return <div className="text-right font-medium text-emerald-600 cursor-pointer" onClick={() => row.toggleExpanded()}>{formatCurrency(row.original.collections.total)}</div>
+            }
+        },
+        {
+            id: 'totalRev',
+            header: () => <div className="text-right">Total Rev</div>,
+            cell: ({ row }) => {
+                return <div className="text-right font-bold text-slate-900 cursor-pointer" onClick={() => row.toggleExpanded()}>{formatCurrency(row.original.revenue.totalRevenue)}</div>
+            }
+        },
+        {
+            id: 'actions',
+            header: () => <div></div>,
+            cell: ({ row }) => {
+                return (
+                    <div className="text-center cursor-pointer p-2 flex justify-center" onClick={() => row.toggleExpanded()}>
+                        <ChevronDown className={cn("h-4 w-4 text-slate-400 transition-transform", row.getIsExpanded() && "rotate-180")} />
+                    </div>
+                )
+            }
+        }
+    ], [consolidated, formatCurrency])
+
+    const renderSubComponent = ({ row }: { row: any }) => {
+        const report = row.original as FlashReportData
+        return (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 p-6 bg-slate-50/50 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="space-y-4">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Yield Analysis</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                            <div className="text-[10px] text-muted-foreground mb-1">ADR</div>
+                            <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.adr)}</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                            <div className="text-[10px] text-muted-foreground mb-1">RevPAR</div>
+                            <div className="text-sm font-bold text-slate-900">{formatCurrency(report.revenue.revpar)}</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-4 md:border-l md:ps-6">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Guest Mix</div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                            <div className="text-[10px] text-muted-foreground mb-1">Adults</div>
+                            <div className="text-sm font-bold text-slate-900">{report.occupancy.adults}</div>
+                        </div>
+                        <div className="bg-white p-3 rounded-xl border border-slate-100">
+                            <div className="text-[10px] text-muted-foreground mb-1">Children</div>
+                            <div className="text-sm font-bold text-slate-900">{report.occupancy.children}</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-4 md:border-l md:ps-6">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Payment Health</div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                            <div className="text-[9px] text-muted-foreground">Cash</div>
+                            <div className="text-[10px] font-bold">{formatCurrency(report.collections.cash)}</div>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                            <div className="text-[9px] text-muted-foreground">CC</div>
+                            <div className="text-[10px] font-bold">{formatCurrency(report.collections.credit)}</div>
+                        </div>
+                        <div className="bg-white p-2 rounded-lg border border-slate-100 text-center">
+                            <div className="text-[9px] text-muted-foreground">AR</div>
+                            <div className="text-[10px] font-bold">{formatCurrency(report.collections.ar)}</div>
+                        </div>
+                    </div>
+                </div>
+                <div className="space-y-4 md:border-l md:ps-6">
+                    <div className="text-[10px] font-bold uppercase tracking-widest text-[#1a365d]">Ancillary</div>
+                    <div className="bg-white p-3 rounded-xl border border-slate-100">
+                        <div className="text-[10px] text-muted-foreground mb-1">Spa Revenue</div>
+                        <div className="text-sm font-bold text-blue-600">{formatCurrency(report.revenue.spaRevenue)}</div>
+                    </div>
+                </div>
+            </div>
+        )
     }
 
     const revenueComposition = useMemo(() => {
@@ -893,33 +946,12 @@ export default function DailyFlashReport() {
                             </div>
                         </CardHeader>
                         <CardContent className="p-0">
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-slate-50/50">
-                                            <th className="text-left p-4 font-semibold text-slate-600 border-b">Property</th>
-                                            <th className="text-center p-4 font-semibold text-slate-600 border-b">Inventory</th>
-                                            <th className="text-center p-4 font-semibold text-slate-600 border-b">Occupancy %</th>
-                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Room Rev</th>
-                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">F&B Rev</th>
-                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Other</th>
-                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Collections</th>
-                                            <th className="text-right p-4 font-semibold text-slate-600 border-b">Total Rev</th>
-                                            <th className="p-4 border-b w-10"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-100">
-                                        {reportData.map((report) => (
-                                            <PropertyRow
-                                                key={report.property.id}
-                                                report={report}
-                                                consolidated={consolidated}
-                                                formatCurrency={formatCurrency}
-                                            />
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
+                            <DataTable
+                                columns={columns}
+                                data={reportData}
+                                getRowCanExpand={() => true}
+                                renderSubComponent={renderSubComponent}
+                            />
                         </CardContent>
                     </Card>
 
