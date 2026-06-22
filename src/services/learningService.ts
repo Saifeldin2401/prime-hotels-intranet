@@ -139,9 +139,25 @@ async function getCurrentAuthUserId() {
     return authData.user?.id ?? null
 }
 
+// training_progress.status uses the training_status enum (not_started/in_progress/completed/expired).
+// The UI works in learning_assignment_status terms. Map between the two at the boundary.
+function fromTrainingStatus(status?: string | null): LearningAssignmentStatus {
+    if (status === 'not_started') return 'assigned'
+    if (status === 'expired') return 'overdue'
+    return (status as LearningAssignmentStatus) ?? 'assigned'
+}
+
+function toTrainingStatus(status?: string | null): string {
+    if (status === 'assigned') return 'not_started'
+    if (status === 'overdue') return 'expired'
+    // 'excused' has no training_status equivalent; exemption state lives in
+    // learning_assignment_exemptions, so callers must not write it here.
+    return status ?? 'not_started'
+}
+
 function getResolvedStatus(progress?: LearningProgress | null): LearningAssignmentStatus | 'not_started' {
     if (!progress) return 'not_started'
-    return progress.status
+    return fromTrainingStatus(progress.status)
 }
 
 function resolveMatchingUserIds(
@@ -264,9 +280,9 @@ async function fetchModuleAssignmentContext(moduleId: string): Promise<ModuleAss
             .select('id, name'),
         supabase
             .from('training_progress')
-            .select('*')
-            .eq('content_type', 'module')
-            .eq('content_id', moduleId),
+            .select('*, content_id:training_id, content_type:lp_content_type')
+            .eq('lp_content_type', 'module')
+            .eq('training_id', moduleId),
         supabase
             .from('learning_assignment_exemptions')
             .select('*')
@@ -947,32 +963,15 @@ export const learningService = {
 
         if (exemptionError) throw exemptionError
 
-        const { data: progressRow, error: progressSelectError } = await supabase
-            .from('training_progress')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('content_type', 'module')
-            .eq('content_id', moduleId)
-            .maybeSingle()
-
-        if (progressSelectError) throw progressSelectError
-
-        if (progressRow) {
-            const { error: progressUpdateError } = await supabase
-                .from('training_progress')
-                .update({
-                    status: 'excused',
-                    updated_at: timestamp,
-                    last_activity_at: timestamp,
-                })
-                .eq('id', progressRow.id)
-
-            if (progressUpdateError) throw progressUpdateError
-        }
+        // Exemption state is tracked authoritatively in learning_assignment_exemptions
+        // (and the roster derives "exempted" from it). training_progress.status uses the
+        // training_status enum, which has no 'excused' value, so we do not mirror it here.
+        void timestamp
     },
 
     async restoreUserModuleAccess(moduleId: string, userId: string) {
-        const timestamp = new Date().toISOString()
+        // Removing the exemption restores access; the roster recomputes status from
+        // training_progress and the (now absent) exemption. No progress write needed.
         const { error: restoreError } = await supabase
             .from('learning_assignment_exemptions')
             .delete()
@@ -981,36 +980,6 @@ export const learningService = {
             .eq('content_id', moduleId)
 
         if (restoreError) throw restoreError
-
-        const { data: progressRow, error: progressSelectError } = await supabase
-            .from('training_progress')
-            .select('*')
-            .eq('user_id', userId)
-            .eq('content_type', 'module')
-            .eq('content_id', moduleId)
-            .maybeSingle()
-
-        if (progressSelectError) throw progressSelectError
-
-        if (progressRow?.status === 'excused') {
-            const restoredStatus: LearningAssignmentStatus =
-                progressRow.completed_at || progressRow.progress_percentage >= 100
-                    ? 'completed'
-                    : progressRow.progress_percentage > 0
-                        ? 'in_progress'
-                        : 'assigned'
-
-            const { error: progressUpdateError } = await supabase
-                .from('training_progress')
-                .update({
-                    status: restoredStatus,
-                    updated_at: timestamp,
-                    last_activity_at: timestamp,
-                })
-                .eq('id', progressRow.id)
-
-            if (progressUpdateError) throw progressUpdateError
-        }
     },
 
     async setModuleUserOverride({
@@ -1067,8 +1036,8 @@ export const learningService = {
             .from('training_progress')
             .select('*')
             .eq('user_id', userId)
-            .eq('content_type', 'module')
-            .eq('content_id', moduleId)
+            .eq('lp_content_type', 'module')
+            .eq('training_id', moduleId)
             .maybeSingle()
 
         if (selectError) throw selectError
@@ -1077,10 +1046,9 @@ export const learningService = {
             id: existingRow?.id,
             assignment_id: existingRow?.assignment_id ?? null,
             user_id: userId,
-            content_type: 'module' as LearningContentType,
-            content_id: moduleId,
-            training_module_id: moduleId,
-            status: 'assigned' as LearningAssignmentStatus,
+            lp_content_type: 'module',
+            training_id: moduleId,
+            status: toTrainingStatus('assigned'),
             progress_percentage: 0,
             score_percentage: null,
             passed: null,
@@ -1096,7 +1064,7 @@ export const learningService = {
 
         const { error } = await supabase
             .from('training_progress')
-            .upsert(payload, { onConflict: 'user_id,content_type,content_id' })
+            .upsert(payload, { onConflict: 'user_id,training_id' })
 
         if (error) throw error
 
@@ -1127,13 +1095,13 @@ export const learningService = {
             .from('training_progress')
             .select('*')
             .eq('user_id', userId)
-            .eq('content_type', 'quiz')
-            .in('content_id', quizContentIds)
+            .eq('lp_content_type', 'quiz')
+            .in('training_id', quizContentIds)
 
         if (quizRowsError) throw quizRowsError
 
         const existingQuizRowsByContent = new Map(
-            (existingQuizRows || []).map((row: LearningProgress) => [row.content_id, row])
+            (existingQuizRows || []).map((row: { id: string; training_id: string; assignment_id: string | null }) => [row.training_id, row])
         )
 
         const quizResetPayload = quizContentIds.map((contentId) => {
@@ -1143,10 +1111,9 @@ export const learningService = {
                 id: existingQuizRow?.id,
                 assignment_id: existingQuizRow?.assignment_id ?? null,
                 user_id: userId,
-                content_type: 'quiz' as LearningContentType,
-                content_id: contentId,
-                training_module_id: moduleId,
-                status: 'assigned' as LearningAssignmentStatus,
+                lp_content_type: 'quiz',
+                training_id: contentId,
+                status: toTrainingStatus('assigned'),
                 progress_percentage: 0,
                 score_percentage: null,
                 passed: null,
@@ -1163,7 +1130,7 @@ export const learningService = {
 
         const { error: quizResetError } = await supabase
             .from('training_progress')
-            .upsert(quizResetPayload, { onConflict: 'user_id,content_type,content_id' })
+            .upsert(quizResetPayload, { onConflict: 'user_id,training_id' })
 
         if (quizResetError) throw quizResetError
     },
@@ -1241,13 +1208,15 @@ export const learningService = {
             .from('training_progress')
             .select(`
                 *,
-                user:profiles!learning_progress_user_id_fkey(full_name, job_title)
+                content_id:training_id,
+                content_type:lp_content_type,
+                user:profiles!training_progress_user_id_fkey(full_name, job_title)
             `)
             .eq('assignment_id', assignmentId)
             .order('updated_at', { ascending: false })
 
         if (error) throw error
-        return data as LearningProgress[]
+        return (data || []).map((row) => ({ ...row, status: fromTrainingStatus(row.status) })) as LearningProgress[]
     },
 
     async submitQuizProgress(progress: Partial<LearningProgress>) {
@@ -1259,8 +1228,8 @@ export const learningService = {
             .from('training_progress')
             .select('*')
             .eq('user_id', progress.user_id)
-            .eq('content_type', progress.content_type)
-            .eq('content_id', progress.content_id)
+            .eq('lp_content_type', progress.content_type)
+            .eq('training_id', progress.content_id)
             .maybeSingle()
 
         if (existingError) throw existingError
@@ -1309,27 +1278,33 @@ export const learningService = {
             ? (existingRow?.completed_at ?? progress.completed_at)
             : (keepExistingScore ? (existingRow?.completed_at ?? progress.completed_at) : (progress.completed_at ?? existingRow?.completed_at))
 
+        // Translate the learning-model payload to training_progress columns:
+        // content_id -> training_id, content_type -> lp_content_type, and the
+        // learning_assignment_status -> training_status enum. training_progress has
+        // no content_id/content_type/training_module_id columns.
+        const { content_id: _ci, content_type: _ct, training_module_id: _tmi, status: _st, ...restProgress } = progress
+        void _ci; void _ct; void _tmi; void _st
+
         const progressData = {
-            ...progress,
-            status: resolvedStatus,
+            ...restProgress,
+            training_id: progress.content_id,
+            lp_content_type: progress.content_type,
+            status: toTrainingStatus(resolvedStatus),
             progress_percentage: resolvedProgressPercentage,
             score_percentage: bestScorePercentage,
             passed: bestPassed,
             completed_at: bestCompletedAt,
-            training_module_id: progress.content_type === 'module'
-                ? progress.content_id
-                : (progress.training_module_id ?? existingRow?.training_module_id ?? null),
             metadata: Object.keys(mergedMetadata).length ? mergedMetadata : progress.metadata,
             updated_at: new Date().toISOString()
         }
 
         const { data, error } = await supabase
             .from('training_progress')
-            .upsert(progressData, { onConflict: 'user_id,content_type,content_id' })
-            .select()
+            .upsert(progressData, { onConflict: 'user_id,training_id' })
+            .select('*, content_id:training_id, content_type:lp_content_type')
             .single()
 
         if (error) throw error
-        return data as LearningProgress
+        return { ...data, status: fromTrainingStatus(data.status) } as LearningProgress
     },
 }

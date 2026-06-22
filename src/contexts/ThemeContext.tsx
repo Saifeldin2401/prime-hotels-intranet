@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { createContext, useContext, useEffect, useState } from 'react'
 import type { Theme, ThemeMode } from '../lib/theme'
-import { applyTheme, lightTheme } from '../lib/theme'
+import { lightTheme } from '../lib/theme'
 import { safeLocalStorage } from '@/lib/storage'
 
 interface ThemeContextType {
@@ -31,7 +31,6 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     document.documentElement.classList.remove('dark')
     // Always ensure theme is light
     setTheme(lightTheme)
-    applyTheme(lightTheme)
     safeLocalStorage.setItem('theme-mode', 'light')
   }, []) // Run once on mount to clear any existing preference
 

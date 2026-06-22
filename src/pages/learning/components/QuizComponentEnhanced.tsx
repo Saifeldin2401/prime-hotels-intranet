@@ -487,8 +487,8 @@ export function QuizComponentEnhanced({
                     .from('training_progress')
                     .select('metadata')
                     .eq('user_id', user.id)
-                    .eq('content_type', 'quiz')
-                    .eq('content_id', id)
+                    .eq('lp_content_type', 'quiz')
+                    .eq('training_id', id)
                     .maybeSingle()
 
                 applyAttemptProgress(progressData?.metadata, data.max_attempts)

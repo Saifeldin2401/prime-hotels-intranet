@@ -283,14 +283,14 @@ export default function LearningAnalytics() {
                 .select(`
                     id,
                     status,
-                    content_id,
-                    content_type,
+                    content_id:training_id,
+                    content_type:lp_content_type,
                     last_accessed_at,
                     completed_at,
                     score_percentage,
                     user:profiles!inner(id, first_name, last_name, department:departments(name))
                 `)
-                .eq('content_type', 'module')
+                .eq('lp_content_type', 'module')
                 .order('last_accessed_at', { ascending: false })
                 .limit(50)
 
@@ -334,8 +334,8 @@ export default function LearningAnalytics() {
 
             const { data: moduleProgress } = await supabase
                 .from('training_progress')
-                .select('training_module_id, content_id, status, progress_percentage, time_spent_seconds')
-                .eq('content_type', 'module')
+                .select('training_module_id:training_id, content_id:training_id, status, progress_percentage, time_spent_seconds')
+                .eq('lp_content_type', 'module')
                 .gte('last_activity_at', dateFilter)
 
             const { data: blockProgress } = await supabase

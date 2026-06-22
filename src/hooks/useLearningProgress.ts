@@ -49,8 +49,12 @@ export function useLearningProgress() {
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('training_progress')
+                // training_progress stores the content reference as training_id / lp_content_type.
+                // Alias them to the legacy content_id / content_type names this layer expects.
                 .select(`
           *,
+          content_id:training_id,
+          content_type:lp_content_type,
           profiles:user_id (
             full_name,
             email,
@@ -66,6 +70,13 @@ export function useLearningProgress() {
                 .order('created_at', { ascending: false })
 
             if (error) throw error
+
+            // training_progress.status uses the training_status enum; map it to the
+            // learning_assignment_status values the UI renders.
+            const STATUS_MAP: Record<string, LearningProgress['status']> = {
+                not_started: 'assigned',
+                expired: 'overdue'
+            }
 
             const moduleIds = Array.from(new Set(
                 (data || [])
@@ -86,6 +97,7 @@ export function useLearningProgress() {
 
             return (data || []).map((row) => ({
                 ...row,
+                status: STATUS_MAP[row.status as string] ?? row.status,
                 training_modules: row.content_type === 'module'
                     ? (modulesById.get(row.content_id) || null)
                     : null

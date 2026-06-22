@@ -88,14 +88,14 @@ function usePropertyComparison() {
                             .from('training_progress')
                             .select('*', { count: 'exact', head: true })
                             .eq('status', 'completed')
-                            .eq('content_type', 'module')
+                            .eq('lp_content_type', 'module')
                             .or('is_deleted.is.null,is_deleted.eq.false')
                             .in('user_id', userIds)
 
                         const { count: total } = await supabase
                             .from('training_progress')
                             .select('*', { count: 'exact', head: true })
-                            .eq('content_type', 'module')
+                            .eq('lp_content_type', 'module')
                             .or('is_deleted.is.null,is_deleted.eq.false')
                             .in('user_id', userIds)
 

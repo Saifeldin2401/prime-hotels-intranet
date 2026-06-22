@@ -65,10 +65,10 @@ export default function MicrolearningViewer() {
         queryFn: async () => {
             const { data } = await supabase
                 .from('training_progress')
-                .select('*')
+                .select('*, content_id:training_id, content_type:lp_content_type')
                 .eq('user_id', user?.id)
-                .eq('content_id', id)
-                .in('content_type', ['microlearning', 'video'])
+                .eq('training_id', id)
+                .in('lp_content_type', ['microlearning', 'video'])
                 .order('updated_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()

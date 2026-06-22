@@ -1,14 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, FileText, RotateCw, ZoomIn, ZoomOut } from 'lucide-react';
-import * as pdfjsLib from 'pdfjs-dist';
+// Type-only import: erased at build time so pdfjs-dist (~hundreds of KB plus its
+// worker) is NOT pulled into the bundle of every component that renders a PdfViewer.
+// The runtime library is loaded on demand inside the effect below.
+import type * as pdfjsLib from 'pdfjs-dist';
 import type { RenderParameters } from 'pdfjs-dist/types/src/display/api';
 import { useCallback, useEffect, useRef, useState } from 'react';
-
-// Set worker source locally using Vite's URL handling
-pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-).toString()
 
 interface PdfViewerProps {
     url: string
@@ -25,6 +22,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
     const [canvasKey, setCanvasKey] = useState(0)
 
     const canvasRef = useRef<HTMLCanvasElement>(null)
+    const pdfjsRef = useRef<typeof import('pdfjs-dist') | null>(null)
     const pdfDocRef = useRef<pdfjsLib.PDFDocumentProxy | null>(null)
     const renderTaskRef = useRef<pdfjsLib.RenderTask | null>(null)
     const isRenderingRef = useRef<boolean>(false)
@@ -108,24 +106,44 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
     }, [scale, rotation])
 
     useEffect(() => {
-        if (url) {
-            setLoading(true)
-            setError(null)
-            setPageNumber(1)
-            setRotation(0)
+        if (!url) return
 
-            const loadingTask = pdfjsLib.getDocument(url)
+        let cancelled = false
+        setLoading(true)
+        setError(null)
+        setPageNumber(1)
+        setRotation(0)
 
-            loadingTask.promise.then(pdf => {
+        ;(async () => {
+            try {
+                // Load pdfjs on demand and initialise its worker once.
+                const pdfjs = pdfjsRef.current ?? (await import('pdfjs-dist'))
+                if (!pdfjsRef.current) {
+                    pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+                        'pdfjs-dist/build/pdf.worker.min.mjs',
+                        import.meta.url
+                    ).toString()
+                    pdfjsRef.current = pdfjs
+                }
+                if (cancelled) return
+
+                const pdf = await pdfjs.getDocument(url).promise
+                if (cancelled) return
+
                 pdfDocRef.current = pdf
                 setNumPages(pdf.numPages)
                 setLoading(false)
                 renderPage(1, pdf)
-            }).catch(err => {
+            } catch (err) {
+                if (cancelled) return
                 console.error('Error loading PDF:', err)
                 setError(err instanceof Error ? err : new Error(String(err)))
                 setLoading(false)
-            })
+            }
+        })()
+
+        return () => {
+            cancelled = true
         }
     }, [url, renderPage])
 

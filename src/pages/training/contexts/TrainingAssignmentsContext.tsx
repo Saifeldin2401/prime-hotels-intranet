@@ -621,10 +621,10 @@ export function TrainingAssignmentsProvider({
       if (!selectedProgress?.user_id || selectedModuleQuizIds.length === 0) return []
       const { data, error } = await supabase
         .from('training_progress')
-        .select('content_id, score_percentage, passed, completed_at, updated_at, metadata')
+        .select('content_id:training_id, score_percentage, passed, completed_at, updated_at, metadata')
         .eq('user_id', selectedProgress.user_id)
-        .eq('content_type', 'quiz')
-        .in('content_id', selectedModuleQuizIds)
+        .eq('lp_content_type', 'quiz')
+        .in('training_id', selectedModuleQuizIds)
         .order('updated_at', { ascending: false })
       if (error) throw error
       return data || []

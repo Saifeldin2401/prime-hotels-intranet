@@ -158,10 +158,10 @@ export async function awardCertificationPathCertificates(
 
       const { data: progressRows, error: progressError } = await supabase
         .from('training_progress')
-        .select('content_id,status,score_percentage')
+        .select('content_id:training_id,status,score_percentage')
         .eq('user_id', input.userId)
-        .eq('content_type', 'module')
-        .in('content_id', allModuleIds)
+        .eq('lp_content_type', 'module')
+        .in('training_id', allModuleIds)
         .or('is_deleted.is.null,is_deleted.eq.false')
 
       if (progressError) {

@@ -1186,8 +1186,8 @@ export default function TrainingPlayer() {
                 .from('training_progress')
                 .select('id, status, progress_percentage, score_percentage, passed, completed_at, last_block_index, last_block_id, time_spent_seconds, metadata, updated_at')
                 .eq('user_id', user.id)
-                .eq('content_type', 'module')
-                .eq('content_id', moduleData.module.id)
+                .eq('lp_content_type', 'module')
+                .eq('training_id', moduleData.module.id)
                 .maybeSingle()
 
             if (!isActive) return

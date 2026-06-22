@@ -201,8 +201,8 @@ export default function TrainingAnalytics() {
                 const { data: progress } = await supabase
                     .from('training_progress')
                     .select('status, score_percentage')
-                    .eq('content_id', module.id)
-                    .eq('content_type', 'module')
+                    .eq('training_id', module.id)
+                    .eq('lp_content_type', 'module')
 
                 const completed = progress?.filter(p => p.status === 'completed') || []
                 const scores = completed

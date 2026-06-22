@@ -1,15 +1,18 @@
-import ExcelJS from 'exceljs'
+// exceljs is heavy (~hundreds of KB). Import it dynamically inside each function
+// so it only loads when the user actually imports/exports a spreadsheet, instead
+// of being pulled into the main bundle via every consumer of this module.
 
 type ExportRow = Record<string, string | number | boolean | null | undefined>
 
 const XLSX_MIME = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 
 export async function parseExcelRows(file: File): Promise<string[][]> {
+    const { default: ExcelJS } = await import('exceljs')
     const workbook = new ExcelJS.Workbook()
     const buffer = await file.arrayBuffer()
     await workbook.xlsx.load(buffer)
 
-    let bestSheet: ExcelJS.Worksheet | undefined
+    let bestSheet: (typeof workbook.worksheets)[number] | undefined
     let maxRows = -1
 
     for (const worksheet of workbook.worksheets) {
@@ -41,6 +44,7 @@ export async function exportRowsToXlsx(
     filename: string,
     sheetName = 'Sheet1'
 ) {
+    const { default: ExcelJS } = await import('exceljs')
     const workbook = new ExcelJS.Workbook()
     const worksheet = workbook.addWorksheet(sheetName)
 

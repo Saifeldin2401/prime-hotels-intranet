@@ -1,4 +1,6 @@
 -- Fix analytics_events table and RLS
+-- Schema must match the AnalyticsEvent payload inserted by src/services/analyticsService.ts:
+-- { event_name, category, properties, user_id, session_id, timestamp, metadata }
 CREATE TABLE IF NOT EXISTS public.analytics_events (
     id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
     event_name text NOT NULL,
@@ -6,8 +8,17 @@ CREATE TABLE IF NOT EXISTS public.analytics_events (
     user_id uuid,
     session_id text,
     properties jsonb DEFAULT '{}'::jsonb,
+    metadata jsonb DEFAULT '{}'::jsonb,
+    page_url text,
     timestamp timestamp with time zone DEFAULT now()
 );
+-- Idempotent guards: ensure all columns exist even if an earlier variant of the
+-- table was already created (the service errors with PGRST204 on any missing column).
+ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS category text;
+ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS properties jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS metadata jsonb DEFAULT '{}'::jsonb;
+ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS page_url text;
+ALTER TABLE public.analytics_events ADD COLUMN IF NOT EXISTS session_id text;
 ALTER TABLE public.analytics_events ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS analytics_events_insert ON public.analytics_events;
