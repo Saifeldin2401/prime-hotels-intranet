@@ -351,7 +351,7 @@ export function useDashboardPreferences() {
             .subscribe()
 
         return () => {
-            channel.unsubscribe()
+            void supabase.removeChannel(channel)
         }
     }, [user, queryClient])
 

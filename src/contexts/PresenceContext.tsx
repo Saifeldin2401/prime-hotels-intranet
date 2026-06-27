@@ -65,7 +65,7 @@ export function PresenceProvider({ children }: { children: React.ReactNode }) {
             })
 
         return () => {
-            channel.unsubscribe()
+            void supabase.removeChannel(channel)
         }
     }, [user, profile])
 

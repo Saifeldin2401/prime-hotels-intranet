@@ -1,7 +1,6 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 
 import { QueryClientProvider } from '@tanstack/react-query'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
@@ -12,6 +11,13 @@ import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { queryClient } from '@/lib/queryClient'
 
 import { QueryRuntimeBridge } from './QueryRuntimeBridge'
+
+// Dev-only: lazily loaded so it is never bundled into production builds.
+const ReactQueryDevtools = import.meta.env.DEV
+  ? lazy(() =>
+      import('@tanstack/react-query-devtools').then((m) => ({ default: m.ReactQueryDevtools }))
+    )
+  : null
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -27,7 +33,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
             </UserSettingsProvider>
           </PropertyProvider>
         </AuthProvider>
-        {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
+        {ReactQueryDevtools && (
+          <Suspense fallback={null}>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </Suspense>
+        )}
       </ThemeProvider>
       <Toaster />
     </QueryClientProvider>
