@@ -10198,7 +10198,36 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "unified_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unified_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "unified_questions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unified_questions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       unified_quiz_questions: {
         Row: {
@@ -11552,7 +11581,36 @@ export type Database = {
           updated_at?: string | null
           version?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "unified_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unified_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "unified_questions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "unified_questions_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       knowledge_quiz_sessions: {
         Row: {
@@ -11814,28 +11872,55 @@ export type Database = {
       }
       pii_access_logs_v: {
         Row: {
+          access_type: string | null
+          accessed_by_profile: Json | null
           actor_id: string | null
+          approved_at: string | null
+          approved_by: string | null
+          approved_by_profile: Json | null
           created_at: string | null
           fields_accessed: string[] | null
           id: string | null
+          justification: string | null
           reason: string | null
+          resource_type: string | null
           target_user_id: string | null
+          user: Json | null
+          user_id: string | null
         }
         Insert: {
+          access_type?: never
+          accessed_by_profile?: never
           actor_id?: string | null
+          approved_at?: never
+          approved_by?: never
+          approved_by_profile?: never
           created_at?: string | null
           fields_accessed?: never
           id?: string | null
+          justification?: never
           reason?: never
+          resource_type?: never
           target_user_id?: string | null
+          user?: never
+          user_id?: string | null
         }
         Update: {
+          access_type?: never
+          accessed_by_profile?: never
           actor_id?: string | null
+          approved_at?: never
+          approved_by?: never
+          approved_by_profile?: never
           created_at?: string | null
           fields_accessed?: never
           id?: string | null
+          justification?: never
           reason?: never
+          resource_type?: never
           target_user_id?: string | null
+          user?: never
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -12389,6 +12474,10 @@ export type Database = {
         }
         Returns: Json
       }
+      approve_pending_user: {
+        Args: { p_approve?: boolean; p_user_id: string }
+        Returns: Json
+      }
       approve_sop_document: {
         Args: {
           p_approver_id: string
@@ -12479,6 +12568,10 @@ export type Database = {
       }
       calculate_next_cron_run: {
         Args: { cron_expr: string; from_time?: string }
+        Returns: string
+      }
+      calculate_next_task_run: {
+        Args: { last_run: string; recurrence: string }
         Returns: string
       }
       can_approve_leave: {
@@ -12640,6 +12733,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_operations_import: {
+        Args: { import_log_id: string }
+        Returns: undefined
+      }
       detect_pii_access_anomalies: {
         Args: { p_lookback_days?: number; p_threshold_multiplier?: number }
         Returns: {
@@ -12662,6 +12759,10 @@ export type Database = {
       enforce_session_limit: {
         Args: { p_max_sessions?: number; p_user_id: string }
         Returns: boolean
+      }
+      execute_scheduled_report: {
+        Args: { p_report_id: string }
+        Returns: string
       }
       expire_delegations: { Args: never; Returns: undefined }
       export_birthdays_for_month: {
@@ -12722,6 +12823,18 @@ export type Database = {
         Returns: string
       }
       generate_verification_code: { Args: never; Returns: string }
+      get_analytics_summary: { Args: never; Returns: Json }
+      get_announcement_compliance_breakdown: {
+        Args: { p_announcement_id: string }
+        Returns: {
+          acknowledged_users: number
+          read_users: number
+          scope_id: string
+          scope_name: string
+          scope_type: string
+          total_users: number
+        }[]
+      }
       get_audit_chain_of_custody: {
         Args: { p_export_id: string }
         Returns: {
@@ -12779,6 +12892,13 @@ export type Database = {
           document_id: string
           show_as: string
           title: string
+        }[]
+      }
+      get_daily_active_users: {
+        Args: { days_ago?: number }
+        Returns: {
+          active_users: number
+          date: string
         }[]
       }
       get_dashboard_stats: {
@@ -13037,8 +13157,29 @@ export type Database = {
           title: string
         }[]
       }
+      get_search_metrics: {
+        Args: { days_ago?: number }
+        Returns: {
+          avg_results_count: number
+          top_queries: Json
+          total_searches: number
+          zero_results_count: number
+        }[]
+      }
       get_secure_document_url: {
         Args: { document_id: string }
+        Returns: string
+      }
+      get_secure_document_version_url: {
+        Args: { p_version_id: string }
+        Returns: string
+      }
+      get_secure_expense_receipt_url: {
+        Args: { p_claim_id: string }
+        Returns: string
+      }
+      get_secure_maintenance_attachment_url: {
+        Args: { p_attachment_id: string }
         Returns: string
       }
       get_secure_media_url: {
@@ -13052,6 +13193,7 @@ export type Database = {
         Args: { p_payslip_id: string }
         Returns: string
       }
+      get_secure_report_run_url: { Args: { p_run_id: string }; Returns: string }
       get_security_summary: { Args: { p_user_id: string }; Returns: Json }
       get_sidebar_counts: {
         Args: {
@@ -13157,6 +13299,13 @@ export type Database = {
           property_name: string
         }[]
       }
+      get_top_events: {
+        Args: { limit_count?: number }
+        Returns: {
+          count: number
+          event_name: string
+        }[]
+      }
       get_top_pii_accessors: {
         Args: { p_date_from?: string; p_date_to?: string; p_limit?: number }
         Returns: {
@@ -13228,6 +13377,10 @@ export type Database = {
       has_role_optimized: {
         Args: { check_role: Database["public"]["Enums"]["app_role"] }
         Returns: boolean
+      }
+      increment_article_view_count: {
+        Args: { doc_id: string }
+        Returns: undefined
       }
       increment_batch_email_counters: {
         Args: { p_batch_id: string; p_failed?: number; p_sent?: number }
@@ -13423,6 +13576,15 @@ export type Database = {
       request_id_from_storage_path: {
         Args: { p_path: string }
         Returns: string
+      }
+      request_knowledge_content: {
+        Args: {
+          p_department_id?: string
+          p_description?: string
+          p_property_id?: string
+          p_title: string
+        }
+        Returns: undefined
       }
       resolve_comment: { Args: { p_comment_id: string }; Returns: boolean }
       resolve_training_certificate_progress: {
@@ -13720,6 +13882,19 @@ export type Database = {
       }
       toggle_comment_pin: { Args: { p_comment_id: string }; Returns: boolean }
       toggle_kudos_like: { Args: { kudos_uuid: string }; Returns: boolean }
+      track_related_article_click: {
+        Args: {
+          p_clicked_doc_id: string
+          p_position?: number
+          p_source_doc_id: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
+      track_related_article_impression: {
+        Args: { p_related_doc_ids: string[]; p_source_doc_id: string }
+        Returns: undefined
+      }
       update_request_details: {
         Args: { p_request_id: string; p_updates: Json }
         Returns: Json
