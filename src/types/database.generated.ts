@@ -6966,6 +6966,7 @@ export type Database = {
           is_deleted: boolean | null
           is_temp_password: boolean | null
           job_title: string | null
+          language: string
           last_login_at: string | null
           locked_until: string | null
           mfa_required: boolean | null
@@ -7007,6 +7008,7 @@ export type Database = {
           is_deleted?: boolean | null
           is_temp_password?: boolean | null
           job_title?: string | null
+          language?: string
           last_login_at?: string | null
           locked_until?: string | null
           mfa_required?: boolean | null
@@ -7048,6 +7050,7 @@ export type Database = {
           is_deleted?: boolean | null
           is_temp_password?: boolean | null
           job_title?: string | null
+          language?: string
           last_login_at?: string | null
           locked_until?: string | null
           mfa_required?: boolean | null

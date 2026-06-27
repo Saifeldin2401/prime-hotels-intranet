@@ -93,7 +93,7 @@ export function KnowledgeBaseSidebar({
             const query = supabase
                 .from('learning_quizzes')
                 .select('id, title, description, question_count')
-                .in('status', ['PUBLISHED', 'APPROVED'])
+                .eq('status', 'published')
                 .order('created_at', { ascending: false })
                 .limit(10)
 
@@ -115,7 +115,7 @@ export function KnowledgeBaseSidebar({
             const query = supabase
                 .from('knowledge_questions')
                 .select('id, question_text, question_type, difficulty_level')
-                .in('status', ['PUBLISHED', 'APPROVED'])
+                .eq('status', 'published')
                 .order('created_at', { ascending: false })
                 .limit(30)
 
