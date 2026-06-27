@@ -16,6 +16,7 @@
     "test:ui": "vitest --ui",
     "test:coverage": "vitest run --coverage",
     "check:migrations": "node scripts/check-migrations.mjs",
+    "db:types": "supabase gen types typescript --project-id dhbfaclkfysqwfppuxxa --schema public > src/types/database.generated.ts",
     "db:migrate": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command migration",
     "db:push": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command db push",
     "db:status": "powershell -ExecutionPolicy Bypass -File scripts/supabase-cmd.ps1 -Command migration list",
