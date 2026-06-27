@@ -141,18 +141,33 @@ export function useApprovePIIAccess() {
       approvedBy: string
       justification: string
     }) => {
-      const { data, error } = await supabase
-        .from('pii_access_logs_v')
-        .update({
-          approved_by: approvedBy,
-          justification
-        })
+      // pii_access_logs_v is a read-only view over system_events; approval data
+      // is persisted into the underlying system_events.metadata jsonb.
+      const { data: existing, error: fetchError } = await supabase
+        .from('system_events')
+        .select('metadata')
         .eq('id', logId)
+        .eq('event_type', 'pii_access')
+        .single()
+      if (fetchError) throw fetchError
+
+      const mergedMetadata = {
+        ...((existing?.metadata as Record<string, unknown>) || {}),
+        approved_by: approvedBy,
+        justification,
+        approved_at: new Date().toISOString(),
+      }
+
+      const { data, error } = await supabase
+        .from('system_events')
+        .update({ metadata: mergedMetadata })
+        .eq('id', logId)
+        .eq('event_type', 'pii_access')
         .select()
         .single()
 
       if (error) throw error
-      return data as PIIAccessLog
+      return data as unknown as PIIAccessLog
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pii-access-logs'] })
