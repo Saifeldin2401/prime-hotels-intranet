@@ -846,9 +846,8 @@ export const learningService = {
             moduleIds.length > 0
                 ? supabase
                     .from('training_modules')
-                    .select('id, title, description, estimated_duration_minutes, status, is_active')
+                    .select('id, title, description, estimated_duration_minutes, status')
                     .in('id', moduleIds)
-                    .eq('is_active', true)
                     .eq('is_deleted', false)
                 : Promise.resolve({ data: [], error: null })
         ])
