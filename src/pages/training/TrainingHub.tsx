@@ -21,7 +21,6 @@ import {
     BarChart3,
     BookOpen,
     Clock,
-    Eye,
     FileText,
     Layers,
     Loader2,
@@ -49,18 +48,12 @@ interface TrainingModule {
   id: string
   title: string
   description?: string
-  estimated_duration?: string
-  difficulty_level?: 'beginner' | 'intermediate' | 'advanced'
-  category?: string
-  status: ModuleStatus
-  view_count?: number
+  estimated_duration_minutes?: number
+  status?: ModuleStatus
   created_by?: string
   updated_by?: string
   created_at?: string
   updated_at?: string
-  completion_count?: number
-  average_score?: number
-  certificate_enabled?: boolean
 }
 
 export default function TrainingHub() {
@@ -116,8 +109,6 @@ export default function TrainingHub() {
   // State management
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
-  const [statusFilter, setStatusFilter] = useState<ModuleStatus | 'all'>('all')
-  const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('created_at')
   const [sortOrder] = useState<'asc' | 'desc'>('desc')
 
@@ -135,15 +126,13 @@ export default function TrainingHub() {
 
   // Data fetching
   const { data: modules, isLoading } = useQuery({
-    queryKey: ['training-modules', statusFilter, categoryFilter, debouncedSearch, sortBy, sortOrder],
+    queryKey: ['training-modules', debouncedSearch, sortBy, sortOrder],
     queryFn: async () => {
       let query = supabase
         .from('training_modules')
         .select('*')
         .not('is_deleted', 'is', true)
         .order(sortBy, { ascending: sortOrder === 'asc' })
-
-      // Status and category filters removed as those columns do not exist in the current schema
 
       if (debouncedSearch) {
         query = query.ilike('title', `%${debouncedSearch}%`)
@@ -217,15 +206,6 @@ export default function TrainingHub() {
     enabled: canAssignTraining || canManageModules
   })
 
-  // Categories
-  const { data: categories } = useQuery({
-    queryKey: ['training-categories'],
-    queryFn: async () => {
-      return []
-    },
-    enabled: canManageModules
-  })
-
   // Mutations
   const deleteModuleMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -289,7 +269,7 @@ export default function TrainingHub() {
         .insert({
           title: `${module.title} (Copy)`,
           description: module.description,
-          estimated_duration_minutes: module.estimated_duration ? parseInt(module.estimated_duration) : null,
+          estimated_duration_minutes: module.estimated_duration_minutes ?? null,
           created_by: profile?.id
         })
         .select()
@@ -331,24 +311,6 @@ export default function TrainingHub() {
         description: t('cloneError'),
         variant: 'destructive'
       })
-    }
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'published': return 'bg-green-100 text-green-800'
-      case 'draft': return 'bg-gray-100 text-gray-800'
-      case 'archived': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
-  }
-
-  const getDifficultyColor = (difficulty: string) => {
-    switch (difficulty) {
-      case 'beginner': return 'bg-blue-100 text-blue-800'
-      case 'intermediate': return 'bg-yellow-100 text-yellow-800'
-      case 'advanced': return 'bg-red-100 text-red-800'
-      default: return 'bg-gray-100 text-gray-800'
     }
   }
 
@@ -571,28 +533,6 @@ export default function TrainingHub() {
                       className={cn(isRTL ? "pe-10 text-right" : "ps-10", "w-full md:w-64 border-gray-200 bg-gray-50/50 focus:border-hotel-gold focus:ring-hotel-gold transition-all")}
                     />
                   </div>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className={cn("w-full sm:w-[160px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
-                      <SelectValue placeholder={t('category')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className={isRTL ? "flex-row-reverse" : ""}>{t('allCategories')}</SelectItem>
-                      {categories?.map(cat => (
-                        <SelectItem key={cat} value={cat} className={isRTL ? "flex-row-reverse" : ""}>{cat}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={statusFilter} onValueChange={(value: ModuleStatus | 'all') => setStatusFilter(value)}>
-                    <SelectTrigger className={cn("w-full sm:w-[140px] border-gray-200 bg-gray-50/50", isRTL ? "flex-row-reverse" : "")}>
-                      <SelectValue placeholder={t('status')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all" className={isRTL ? "flex-row-reverse" : ""}>{t('allModules')}</SelectItem>
-                      <SelectItem value="published" className={isRTL ? "flex-row-reverse" : ""}>{t('published')}</SelectItem>
-                      <SelectItem value="draft" className={isRTL ? "flex-row-reverse" : ""}>{t('draft')}</SelectItem>
-                      <SelectItem value="archived" className={isRTL ? "flex-row-reverse" : ""}>{t('archived')}</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
 
                 <div className={cn("flex items-center gap-2 w-full md:w-auto justify-between md:justify-end", isRTL ? "flex-row-reverse" : "")}>
@@ -619,7 +559,7 @@ export default function TrainingHub() {
                 ) : modules && modules.length > 0 ? (
                   modules.map((module) => (
                     <Card key={module.id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-gray-100 overflow-hidden bg-white/50 backdrop-blur-sm">
-                      <div className={`h-2 w-full ${module.status === 'published' ? 'bg-hotel-navy' : module.status === 'draft' ? 'bg-gray-300' : 'bg-red-400'}`} />
+                      <div className={cn("h-2 w-full", module.status === 'published' ? 'bg-hotel-navy' : module.status === 'archived' ? 'bg-red-400' : 'bg-gray-300')} />
                       <CardHeader className="pb-3 pt-5">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-1">
@@ -632,20 +572,12 @@ export default function TrainingHub() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 mt-3">
-                          <Badge variant="secondary" className={cn("rounded-sm font-normal", getStatusColor(module.status || 'draft'))}>
-                            {t(module.status)}
+                          <Badge variant="secondary" className={cn("rounded-sm font-normal", module.status === 'published' ? 'bg-green-100 text-green-800' : module.status === 'archived' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')}>
+                            {t(module.status || 'draft')}
                           </Badge>
                           {assignedModuleIds.has(module.id) && (
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
                               {t('assigned')}
-                            </Badge>
-                          )}
-                          <Badge variant="outline" className={cn("rounded-sm font-normal", getDifficultyColor(module.difficulty_level || 'beginner'))}>
-                            {t(module.difficulty_level || 'beginner')}
-                          </Badge>
-                          {module.category && (
-                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
-                              {module.category}
                             </Badge>
                           )}
                         </div>
@@ -655,11 +587,7 @@ export default function TrainingHub() {
                           <div className="flex items-center gap-4">
                             <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")} title={t('estimatedDuration')}>
                               <Clock className="h-3.5 w-3.5" />
-                              <span>{module.estimated_duration || `0 ${t('min')}`}</span>
-                            </div>
-                            <div className={cn("flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")} title={t('totalViews')}>
-                              <Eye className="h-3.5 w-3.5" />
-                              <span>{module.view_count || 0}</span>
+                              <span>{module.estimated_duration_minutes ? `${module.estimated_duration_minutes} ${t('min')}` : `0 ${t('min')}`}</span>
                             </div>
                           </div>
                         </div>

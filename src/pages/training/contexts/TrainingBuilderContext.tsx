@@ -615,15 +615,6 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   ])
 
   // -------------------------------------------------------------------------
-  // Questions state (minimal – questions are saved separately)
-  // -------------------------------------------------------------------------
-
-  const [questions, _setQuestions] = useState<Array<{
-    question: string; type: 'mcq' | 'true_false' | 'fill_blank'; options: string[];
-    correct_answer: string; points: number; explanation?: string
-  }>>([])
-
-  // -------------------------------------------------------------------------
   // AI dialog state
   // -------------------------------------------------------------------------
 
@@ -1532,13 +1523,23 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     if (blocksToInsert.length === 0) return
 
     // Map TrainingContentBlockInsert fields to the unified documents columns.
+    // documents has no `type`/`order`/`source_document_id` columns (they are
+    // block_type/block_order/linked_training_id), and title is NOT NULL.
     const docRows = blocksToInsert.map((b) => {
       const rec = b as unknown as Record<string, unknown>
       return {
-        ...rec,
+        training_module_id: rec.training_module_id ?? null,
         content_type: 'training_block',
         block_type: rec.type,
         block_order: rec.order,
+        title: (rec.title as string) || 'Content block',
+        content: (rec.content as string) ?? '',
+        content_url: rec.content_url ?? null,
+        content_data: rec.content_data ?? {},
+        linked_training_id: rec.source_document_id ?? null,
+        is_mandatory: rec.is_mandatory ?? true,
+        duration_seconds: rec.duration_seconds ?? null,
+        points: rec.points ?? null,
       }
     })
 
@@ -1719,37 +1720,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     }
   })
 
-  const saveQuestionsMutation = useMutation({
-    mutationFn: async (idToUse?: string) => {
-      const targetId = idToUse || moduleId
-      if (!targetId) return
-
-      await supabase
-        .from('unified_questions')
-        .delete()
-        .eq('source_domain', 'training')
-        .eq('source_id', targetId)
-
-      if (questions.length > 0) {
-        const questionsToInsert = questions.map((question, index) => ({
-          source_domain: 'training',
-          source_id: targetId,
-          question_text: question.question,
-          question_type: question.type,
-          options: question.type === 'mcq' ? question.options : null,
-          correct_answer: question.correct_answer,
-          order_index: index
-        }))
-
-        const { error } = await supabase
-          .from('unified_questions')
-          .insert(questionsToInsert)
-        if (error) throw error
-      }
-    }
-  })
-
-  const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending || saveQuestionsMutation.isPending
+  const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending
 
   const handleSave = async () => {
     try {
@@ -1759,10 +1730,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       const savedModuleId = await saveModuleMutation.mutateAsync()
 
-      await Promise.all([
-        saveContentBlocksMutation.mutateAsync(savedModuleId),
-        saveQuestionsMutation.mutateAsync(savedModuleId)
-      ])
+      await saveContentBlocksMutation.mutateAsync(savedModuleId)
 
       toast({
         title: t('moduleSaved'),
@@ -1795,10 +1763,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       if (!quizzesReady) return
 
       const savedModuleId = await saveModuleMutation.mutateAsync()
-      await Promise.all([
-        saveContentBlocksMutation.mutateAsync(savedModuleId),
-        saveQuestionsMutation.mutateAsync(savedModuleId)
-      ])
+      await saveContentBlocksMutation.mutateAsync(savedModuleId)
 
       if (savedModuleId) {
         const { error } = await supabase

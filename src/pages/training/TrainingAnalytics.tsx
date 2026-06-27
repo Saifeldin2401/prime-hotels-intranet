@@ -151,7 +151,8 @@ export default function TrainingAnalytics() {
             // Calculate metrics
             const completed = progress?.filter(p => p.status === 'completed') || []
             const inProgress = progress?.filter(p => p.status === 'in_progress') || []
-            const overdue = progress?.filter(p => p.status === 'overdue') || []
+            // training_status enum uses 'expired' (there is no 'overdue' value)
+            const overdue = progress?.filter(p => p.status === 'expired') || []
 
             const scores = completed
                 .map(p => p.score_percentage)

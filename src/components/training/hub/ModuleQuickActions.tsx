@@ -7,13 +7,12 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { Copy, Edit, Eye, MoreVertical, Play, Trash2, Users } from 'lucide-react'
+import { Copy, Edit, Eye, MoreVertical, Trash2, Users } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrainingModule {
   id: string
   title: string
-  status: string
 }
 
 interface ModuleQuickActionsProps {
@@ -69,12 +68,6 @@ export function ModuleQuickActions({
             <Copy className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('clone')}
           </DropdownMenuItem>
-          {module.status === 'published' && (
-            <DropdownMenuItem onClick={onView} className={cn(isRTL ? "flex-row-reverse" : "")}>
-              <Play className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-              {t('preview')}
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={onDelete}
