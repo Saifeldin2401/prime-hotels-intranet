@@ -15,14 +15,11 @@ export function usePIIAccessLogs(filters?: {
   return useQuery({
     queryKey: ['pii-access-logs', filters],
     queryFn: async () => {
+      // pii_access_logs_v already exposes accessed_by_profile / user /
+      // approved_by_profile as JSON columns (a view cannot carry FK embeds).
       let query = supabase
         .from('pii_access_logs_v')
-        .select(`
-          *,
-          accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email),
-          user:profiles!pii_access_logs_target_user_id_fkey(full_name, email),
-          approved_by_profile:profiles!pii_access_logs_approved_by_fkey(full_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (filters?.user_id) {
@@ -206,10 +203,7 @@ export function useExportPIIAccessLogs() {
     }) => {
       let query = supabase
         .from('pii_access_logs_v')
-        .select(`
-          *,
-          accessed_by_profile:profiles!pii_access_logs_actor_id_fkey(full_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (filters?.user_id) query = query.eq('user_id', filters.user_id)
