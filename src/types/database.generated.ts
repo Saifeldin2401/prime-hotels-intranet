@@ -5380,6 +5380,10 @@ export type Database = {
       maintenance_tickets: {
         Row: {
           actual_completion_date: string | null
+          ai_notes: string | null
+          ai_triage_notes: string | null
+          ai_triage_status: string | null
+          ai_triaged_at: string | null
           assigned_to_id: string | null
           category: Database["public"]["Enums"]["maintenance_category"]
           completed_at: string | null
@@ -5407,6 +5411,10 @@ export type Database = {
         }
         Insert: {
           actual_completion_date?: string | null
+          ai_notes?: string | null
+          ai_triage_notes?: string | null
+          ai_triage_status?: string | null
+          ai_triaged_at?: string | null
           assigned_to_id?: string | null
           category: Database["public"]["Enums"]["maintenance_category"]
           completed_at?: string | null
@@ -5434,6 +5442,10 @@ export type Database = {
         }
         Update: {
           actual_completion_date?: string | null
+          ai_notes?: string | null
+          ai_triage_notes?: string | null
+          ai_triage_status?: string | null
+          ai_triaged_at?: string | null
           assigned_to_id?: string | null
           category?: Database["public"]["Enums"]["maintenance_category"]
           completed_at?: string | null

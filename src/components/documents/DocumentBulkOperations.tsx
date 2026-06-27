@@ -195,13 +195,50 @@ export function DocumentBulkOperations({
 
     setIsProcessing(true)
     try {
-      const { error } = await supabase
-        .from('documents')
-        .update({ tags })
-        .in('id', Array.from(selectedDocuments))
-        .eq('created_by', user?.id)
+      // Tags live in the normalized document_tags + document_tag_assignments tables,
+      // not on a documents.tags column. Resolve (or create) each tag name to an id,
+      // then attach to each selected document, skipping existing assignments.
+      const docIds = Array.from(selectedDocuments)
+      const tagIds: string[] = []
+      for (const name of tags) {
+        const trimmed = name.trim()
+        if (!trimmed) continue
+        const { data: existingTag } = await supabase
+          .from('document_tags')
+          .select('id')
+          .eq('name', trimmed)
+          .maybeSingle()
+        let tagId = existingTag?.id
+        if (!tagId) {
+          const { data: created, error: createErr } = await supabase
+            .from('document_tags')
+            .insert({ name: trimmed, created_by: user?.id })
+            .select('id')
+            .single()
+          if (createErr) throw createErr
+          tagId = created.id
+        }
+        if (tagId) tagIds.push(tagId)
+      }
 
-      if (error) throw error
+      const { data: existingAssignments } = await supabase
+        .from('document_tag_assignments')
+        .select('document_id, tag_id')
+        .in('document_id', docIds)
+      const existingSet = new Set(
+        (existingAssignments || []).map((a) => `${a.document_id}:${a.tag_id}`)
+      )
+
+      const rows = docIds.flatMap((documentId) =>
+        tagIds
+          .filter((tagId) => !existingSet.has(`${documentId}:${tagId}`))
+          .map((tagId) => ({ document_id: documentId, tag_id: tagId }))
+      )
+
+      if (rows.length > 0) {
+        const { error } = await supabase.from('document_tag_assignments').insert(rows)
+        if (error) throw error
+      }
 
       queryClient.invalidateQueries({ queryKey: ['documents'] })
       toast.success(`Updated tags for ${selectedDocuments.size} documents`)
