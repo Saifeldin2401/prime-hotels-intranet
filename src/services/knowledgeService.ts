@@ -146,7 +146,7 @@ export async function getArticles(
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
           last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
           department:departments(id, name),
-          category:categories(id, name)
+          category:categories!documents_category_id_fkey(id, name)
         `, { count: 'exact' })
 
         // Filter out deleted items
@@ -221,7 +221,7 @@ export async function getArticleById(id: string, userId?: string): Promise<Knowl
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
                 last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 department:departments(id, name),
-                category:categories(id, name),
+                category:categories!documents_category_id_fkey(id, name),
                 document_department_access(department_id, department:departments(id, name))
             `)
             .eq('id', id)
@@ -279,7 +279,7 @@ export async function getFeaturedArticles(limit = 5, propertyId?: string): Promi
                 author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
                 last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                 department:departments(id, name),
-                category:categories(id, name)
+                category:categories!documents_category_id_fkey(id, name)
             `)
             .eq('status', 'PUBLISHED')
             .eq('is_deleted', false)
