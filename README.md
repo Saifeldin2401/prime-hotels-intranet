@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="public/prime-hotels-logo.png" alt="Prime Hotels Group" width="200"/>
+<img src="public/remal-logo-brand.png" alt="REMAL Connect" width="200"/>
 
-# PHG Connect Intranet Platform
+# REMAL Connect Intranet Platform
 
 **A comprehensive multi-property hotel intranet system with bilingual support (English/Arabic)**
 
@@ -12,7 +12,7 @@
 [![Supabase](https://img.shields.io/badge/Supabase-Backend-3ECF8E?logo=supabase&logoColor=white)](https://supabase.com/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind-CSS-06B6D4?logo=tailwindcss&logoColor=white)](https://tailwindcss.com/)
 
-[Live Demo](https://phg-connect.com) · [Documentation](#documentation) · [Report Bug](../../issues) · [Request Feature](../../issues)
+[Live Demo](#) · [Documentation](#documentation) · [Report Bug](../../issues) · [Request Feature](../../issues)
 
 </div>
 
@@ -33,7 +33,7 @@
 
 ## 🎯 Overview
 
-PHG Connect is an enterprise-grade intranet platform built for multi-property hotel management. It provides a centralized hub for staff communication, document management, training, and HR operations with full support for both English and Arabic languages.
+REMAL Connect is an enterprise-grade intranet platform built for multi-property hotel management. It provides a centralized hub for staff communication, document management, training, and HR operations with full support for both English and Arabic languages.
 
 ### ✨ Highlights
 
@@ -87,7 +87,30 @@ PHG Connect is an enterprise-grade intranet platform built for multi-property ho
 - **Leave Requests** - Digital workflow with approvals
 - **Maintenance Tickets** - Property maintenance request system
 
-### 🔒 Audit & Compliance
+### � Finance & Procurement
+- **Budget Management** - Track and allocate budgets across properties
+- **Invoice Processing** - Vendor invoice approval workflow
+- **Purchase Requests** - Submit and approve purchase requests
+- **Purchase Orders** - Track orders and receive goods
+- **Inventory Management** - Per-property inventory tracking
+- **Supplier Registry** - Corporate-wide supplier management
+
+### 🏨 Operations & Housekeeping
+- **CAPEX Projects** - Capital expenditure tracking and renovation milestones
+- **Room Status Board** - Live room status monitoring
+- **Housekeeping Tasks** - Assign and track housekeeping tasks
+- **Daily Logbook** - Shift logs and handover notes
+- **Guest Requests** - Track and fulfill guest service requests
+- **Incidents** - Log and track operational incidents
+- **VIP Guests** - Flag VIP guests for staff attention
+- **Lost & Found** - Track lost and found items
+
+### 💼 Commercial CRM
+- **Account Management** - Corporate and commercial client accounts
+- **Leads Pipeline** - Sales pipeline and opportunity tracking
+- **Contract Management** - Manage commercial contracts
+
+### � Audit & Compliance
 - **Comprehensive Logging** - All actions tracked with timestamps
 - **PII Tracking** - Special tracking for sensitive data access
 - **Retention Policies** - 3-year audit, 7-year PII retention
@@ -137,8 +160,8 @@ PHG Connect is an enterprise-grade intranet platform built for multi-property ho
 
 ```bash
 # Clone the repository
-git clone https://github.com/Saifeldin2401/prime-hotels-intranet.git
-cd prime-hotels-intranet
+git clone https://github.com/Saifeldin2401/remal-intranet.git
+cd remal-intranet
 
 # Install dependencies
 npm install
@@ -153,8 +176,8 @@ cp .env.example .env
 ```env
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-VITE_APP_URL=https://phg-connect.com
-VITE_ALLOWED_ORIGINS=https://phg-connect.com,https://www.phg-connect.com
+VITE_APP_URL=https://remal-connect.com
+VITE_ALLOWED_ORIGINS=https://remal-connect.com,https://www.remal-connect.com
 ```
 
 ### Database Setup
@@ -178,9 +201,9 @@ supabase functions deploy bulk-notification-processor
 
 # Set secrets
 supabase secrets set RESEND_API_KEY=your_resend_api_key \
-  APP_BASE_URL=https://phg-connect.com \
-  EMAIL_FROM_ADDRESS=notifications@phg-connect.com \
-  EMAIL_FROM_NAME="PHG Connect"
+  APP_BASE_URL=https://remal-connect.com \
+  EMAIL_FROM_ADDRESS=notifications@remal-connect.com \
+  EMAIL_FROM_NAME="REMAL Connect"
 ```
 
 ### Development
@@ -232,6 +255,10 @@ npm run build
 
 ## 🛣️ Roadmap
 
+- [x] Finance & Procurement Module
+- [x] Operations & Housekeeping Module
+- [x] Commercial CRM Module
+- [x] CAPEX Projects Management
 - [ ] Guest Review Intelligence System
 - [ ] Advanced Analytics & Reporting
 - [ ] Mobile App (iOS/Android)
@@ -271,15 +298,15 @@ See [FEATURES.md](FEATURES.md) for detailed feature planning.
 
 ## 🤝 Contributing
 
-This is a private repository for Prime Hotels Group internal use. For internal development guidelines, contact the IT department.
+This is a private repository for REMAL internal use. For internal development guidelines, contact the IT department.
 
 ---
 
 ## 📄 License
 
-Private - PHG Connect Internal Use Only
+Private - REMAL Connect Internal Use Only
 
-Copyright © 2024 Prime Hotels Group. All rights reserved.
+Copyright © 2024 REMAL. All rights reserved.
 
 ---
 
@@ -294,8 +321,8 @@ For technical support or questions:
 
 <div align="center">
 
-**[⬆ Back to Top](#phg-connect-intranet-platform)**
+**[⬆ Back to Top](#remal-connect-intranet-platform)**
 
-Built with ❤️ by the Prime Hotels Group IT Team
+Built with ❤️ by the REMAL IT Team
 
 </div>
