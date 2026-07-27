@@ -124,11 +124,16 @@ export default defineConfig({
           // Large visualization / document libraries - these are the biggest chunks
           if (
             id.includes('/node_modules/mermaid') ||
-            id.includes('/node_modules/d3-') ||
             id.includes('/node_modules/dagre-d3-es') ||
             id.includes('/node_modules/khroma')
           ) {
             return 'vendor-mermaid'
+          }
+          // d3-* packages are shared between recharts (d3-shape) and mermaid (d3-*).
+          // They must be in their own chunk to avoid circular dependency TDZ errors
+          // between vendor-charts (recharts) and vendor-mermaid (mermaid).
+          if (id.includes('/node_modules/d3-')) {
+            return 'vendor-d3'
           }
           if (id.includes('/node_modules/katex')) return 'vendor-katex'
           if (id.includes('/node_modules/pdfjs-dist')) return 'vendor-pdfjs'
