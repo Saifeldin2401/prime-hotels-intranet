@@ -28,7 +28,7 @@ export default function NewsPublisher() {
             title_ar: '',
             summary_en: '',
             summary_ar: '',
-            source: 'REMAL Hospitality',
+            source: 'Altus Advisory',
             source_url: '',
             image_url: '',
             is_visible: true,

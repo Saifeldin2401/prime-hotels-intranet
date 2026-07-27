@@ -27,9 +27,9 @@
         currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
       ) || hasAuthParams
 
-      if (window.location.hostname !== 'www.remal-connect.com' || !isSensitiveEntry) return
+      if (window.location.hostname !== 'www.altus-advisory.com' || !isSensitiveEntry) return
 
-      const hostRedirectKey = '__remal_www_host_redirect_attempted__'
+      const hostRedirectKey = '__altus_www_host_redirect_attempted__'
       try {
         if (sessionStorage.getItem(hostRedirectKey) === '1') return
         sessionStorage.setItem(hostRedirectKey, '1')
@@ -38,32 +38,32 @@
       }
 
       const target = new URL(window.location.href)
-      target.hostname = 'remal-connect.com'
+      target.hostname = 'altus-advisory.com'
       window.location.replace(target.toString())
     })()
   </script>
 
   <!-- PWA Meta Tags -->
   <link rel="manifest" href="/manifest.json" />
-  <meta name="theme-color" content="#0B1C3E" />
+  <meta name="theme-color" content="#0B1528" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="REMAL" />
+  <meta name="apple-mobile-web-app-title" content="Altus" />
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 
   <!-- Mobile Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes" />
   <!-- SEO & Open Graph Meta Tags -->
   <meta name="description"
-    content="REMAL Hospitality Operating System — نظام عمليات الضيافة لسلسلة فنادق ريمال" />
+    content="Altus Advisory Operating System — نظام عمليات الضيافة والاستشارات" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="REMAL Connect — Hospitality Operating System" />
-  <meta property="og:description" content="REMAL Hospitality Management — Premium hotel operations platform" />
-  <meta property="og:site_name" content="REMAL Hospitality" />
+  <meta property="og:title" content="Altus Connect — Advisory Operating System" />
+  <meta property="og:description" content="Altus Advisory Management — Premium hospitality consulting platform" />
+  <meta property="og:site_name" content="Altus Advisory" />
   <meta property="og:image" content="/icons/icon-512x512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="robots" content="noindex, nofollow" /> <!-- Internal tool, prevent indexing -->
-  <link rel="canonical" href="https://remal-connect.com" />
+  <link rel="canonical" href="https://altus-advisory.com" />
 
   <!-- Cache busting: force browsers to fetch latest after updates -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -74,15 +74,15 @@
 
   <!-- CSP: frame-ancestors is only enforced via HTTP headers (vercel.json), not meta tags -->
   <meta http-equiv="Content-Security-Policy"
-    content="default-src 'self'; connect-src 'self' https://api.supabase.co https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://api.pwnedpasswords.com https://phg-connect.com https://www.phg-connect.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://va.vercel-scripts.com https://*.vercel-scripts.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://va.vercel-scripts.com https://*.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob: data: https://*.supabase.co; manifest-src 'self' https://phg-connect.com https://www.phg-connect.com; frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co; worker-src 'self' blob:; base-uri 'self'; form-action 'self';">
+    content="default-src 'self'; connect-src 'self' https://api.supabase.co https://*.supabase.co wss://*.supabase.co https://generativelanguage.googleapis.com https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://api.pwnedpasswords.com https://altus-advisory.com https://www.altus-advisory.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://altus-advisory.com https://www.altus-advisory.com https://va.vercel-scripts.com https://*.vercel-scripts.com; script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://altus-advisory.com https://www.altus-advisory.com https://va.vercel-scripts.com https://*.vercel-scripts.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' blob: data: https://*.supabase.co; manifest-src 'self' https://altus-advisory.com https://www.altus-advisory.com; frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co; worker-src 'self' blob:; base-uri 'self'; form-action 'self';">
 
   <link rel="dns-prefetch" href="//api.supabase.co" />
   <link rel="preconnect" href="https://api.supabase.co" crossorigin />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" />
-  <title>REMAL Connect | نظام عمليات الضيافة</title>
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&display=swap" />
+  <title>ALTUS Advisory | Elevating Hospitality & Business Performance</title>
 </head>
 
 <body>

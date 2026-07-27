@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="public/remal-logo-brand.png" alt="REMAL Connect" width="200"/>
+<img src="public/altus-logo-brand.png" alt="Altus Advisory" width="200"/>
 
-# REMAL Connect Intranet Platform
+# Altus Advisory Intranet Platform
 
 **A comprehensive multi-property hotel intranet system with bilingual support (English/Arabic)**
 

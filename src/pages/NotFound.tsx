@@ -22,7 +22,7 @@ export default function NotFound() {
       </div>
 
       <div className="text-center max-w-sm relative z-10">
-        {/* REMAL Emblem */}
+        {/* Altus Advisory Emblem */}
         <motion.div
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -30,8 +30,8 @@ export default function NotFound() {
           className="flex justify-center mb-8"
         >
           <img
-            src="/remal-emblem-icon.png"
-            alt="REMAL"
+            src="/altus-emblem-icon.png"
+            alt="Altus Advisory"
             className="h-20 w-20 object-contain opacity-60"
           />
         </motion.div>
@@ -91,7 +91,7 @@ export default function NotFound() {
           transition={{ duration: 0.5, delay: 0.6 }}
           className="mt-12 text-[10px] text-white/20 uppercase tracking-[0.3em]"
         >
-          REMAL HOSPITALITY
+          ALTUS ADVISORY
         </motion.p>
       </div>
     </div>

@@ -20,10 +20,13 @@ export function PublicNavbar() {
   }, [])
 
   const navItems = [
-    { label: t('nav.home'), href: '/' },
-    { label: t('nav.features'), href: '#features' },
-    { label: t('nav.verify'), href: '/verify' },
-    { label: t('nav.about'), href: '#about' },
+    { label: t('nav.about', 'About'), href: '#about' },
+    { label: t('nav.practices', 'Services'), href: '#practices' },
+    { label: t('nav.platform', 'Platform'), href: '#platform' },
+    { label: t('nav.ascent', 'Methodology'), href: '#ascent' },
+    { label: t('nav.leadership', 'Leadership'), href: '#leadership' },
+    { label: t('nav.portal', 'Portal'), href: '#portal' },
+    { label: t('nav.verify', 'Verify'), href: '/verify' },
   ]
 
   const handleNavClick = (href: string) => {
@@ -40,29 +43,37 @@ export function PublicNavbar() {
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
-        ? 'bg-hotel-navy/95 backdrop-blur-md shadow-lg'
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled
+        ? 'bg-[#0B1528]/95 backdrop-blur-md shadow-lg'
         : 'bg-transparent'
         }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-[72px]">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-3">
+          <Link to="/" className="flex items-center gap-2.5 shrink-0">
             <img
-              src="/remal-logo-web.png"
-              alt="REMAL Hospitality"
+              src="/altus-emblem-icon.png"
+              alt=""
               className="h-9 w-auto object-contain"
             />
+            <span
+              className="text-white leading-none"
+              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+            >
+              <span className="block text-lg tracking-wide">ALTUS</span>
+              <span className="block text-[9px] tracking-[0.3em] text-amber-400/90 -mt-0.5">ADVISORY</span>
+            </span>
           </Link>
 
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
+          {/* Desktop Navigation - Center */}
+          <nav className="hidden lg:flex items-center gap-8">
             {navItems.map((item) => (
               <button
                 key={item.href}
                 onClick={() => handleNavClick(item.href)}
-                className="text-white/80 hover:text-white text-sm font-medium transition-colors"
+                className="text-white/60 hover:text-white text-[13px] font-normal tracking-wide transition-colors duration-300"
+                style={{ fontFamily: "'Inter', sans-serif" }}
               >
                 {item.label}
               </button>
@@ -73,21 +84,32 @@ export function PublicNavbar() {
           <div className="flex items-center gap-3">
             <LanguageSwitcher
               variant="ghost"
-              className="text-white hover:bg-white/10"
+              className="text-white/60 hover:text-white hover:bg-white/5"
               showLabel={false}
             />
+
             <Button
               onClick={() => navigate('/login')}
               size="sm"
-              className="hidden sm:flex bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold px-5 rounded-full transition-all"
+              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-transparent border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 rounded-none transition-all duration-300"
+              style={{ fontFamily: "'Inter', sans-serif" }}
             >
-              {t('login_button')}
+              {t('nav.contact', 'Contact')}
+            </Button>
+
+            <Button
+              onClick={() => navigate('/login')}
+              size="sm"
+              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500/30 rounded-none transition-all duration-300"
+              style={{ fontFamily: "'Inter', sans-serif" }}
+            >
+              {t('login_button', 'REQUEST BRIEFING')}
             </Button>
 
             {/* Mobile Menu Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
+              className="lg:hidden text-white p-2 hover:bg-white/10 rounded-lg transition-colors"
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -96,23 +118,24 @@ export function PublicNavbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden bg-hotel-navy/95 backdrop-blur-md border-t border-white/10">
+          <div className="lg:hidden bg-[#0B1528]/98 backdrop-blur-md border-t border-white/10">
             <nav className="py-4 space-y-1">
               {navItems.map((item) => (
                 <button
                   key={item.href}
                   onClick={() => handleNavClick(item.href)}
-                  className={`block w-full py-3 text-white/80 hover:text-white hover:bg-white/5 text-sm font-medium border-b border-white/5 last:border-0 text-start`}
+                  className="block w-full py-3 px-2 text-white/70 hover:text-white hover:bg-white/5 text-sm font-normal border-b border-white/5 last:border-0 text-start transition-colors"
+                  style={{ fontFamily: "'Inter', sans-serif" }}
                 >
                   {item.label}
                 </button>
               ))}
-              <div className="pt-3 px-1">
+              <div className="pt-3 px-1 flex gap-2">
                 <Button
-                  onClick={() => navigate('/login')}
-                  className="w-full bg-hotel-gold hover:bg-white hover:text-hotel-navy text-hotel-navy font-semibold rounded-full"
+                  onClick={() => { navigate('/login'); setMobileMenuOpen(false) }}
+                  className="flex-1 h-10 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-semibold text-xs tracking-wider uppercase rounded-none"
                 >
-                  {t('login_button')}
+                  {t('login_button', 'REQUEST BRIEFING')}
                 </Button>
               </div>
             </nav>

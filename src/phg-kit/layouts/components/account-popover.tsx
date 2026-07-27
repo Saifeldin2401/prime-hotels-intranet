@@ -54,8 +54,8 @@ export function AccountPopover({ data = [], account, onLogout, sx, ...other }: A
     [handleClosePopover, router]
   );
 
-  const displayName = account?.displayName || 'PHG Connect';
-  const email = account?.email || 'connect@primehotels.com';
+  const displayName = account?.displayName || 'Altus Connect';
+  const email = account?.email || 'connect@altusadvisory.com';
   const photoURL = account?.photoURL || null;
 
   return (

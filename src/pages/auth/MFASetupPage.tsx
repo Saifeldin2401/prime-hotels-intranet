@@ -150,7 +150,7 @@ Generated: ${new Date().toLocaleString()}
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-6">
             <div className="mx-auto w-full max-w-[200px] flex items-center justify-center mb-6">
-              <img src="/remal-logo-web.png" alt="REMAL" className="h-24 w-auto object-contain" />
+              <img src="/altus-logo-light.png" alt="Altus" className="h-24 w-auto object-contain" />
             </div>
             <CardTitle className="text-2xl font-bold">
               {step === 'intro' && t('mfa.title', { defaultValue: 'Set Up Two-Factor Authentication' })}

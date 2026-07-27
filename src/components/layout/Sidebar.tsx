@@ -66,19 +66,31 @@ export function Sidebar() {
 
   return (
     <div className="flex flex-col w-64 bg-card border-e h-screen">
-      <div className="flex flex-col gap-4 p-4 border-b bg-hotel-navy overflow-hidden">
-        <div className="flex items-center justify-center w-full">
+      <div className="flex flex-col gap-3 p-4 border-b bg-white dark:bg-hotel-navy overflow-hidden">
+        <Link to="/dashboard" className="flex items-center justify-center py-1 group">
           <img
-            src="/remal-logo-web.png"
-            alt="REMAL Hospitality"
-            className="w-full h-auto object-contain max-h-16"
+            src="/altus-logo-web.png"
+            alt="ALTUS Advisory"
+            className="h-12 w-auto object-contain max-w-full drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+            onError={(e) => {
+              // Fallback text if image fails
+              const target = e.currentTarget
+              target.style.display = 'none'
+              const parent = target.parentElement
+              if (parent && !parent.querySelector('.altus-fallback')) {
+                const fallback = document.createElement('div')
+                fallback.className = 'altus-fallback text-center font-bold text-lg text-hotel-navy dark:text-hotel-gold'
+                fallback.innerText = 'ALTUS ADVISORY'
+                parent.appendChild(fallback)
+              }
+            }}
           />
-        </div>
+        </Link>
 
         {/* Property name display */}
         {!isMultiPropertyUser && currentProperty && (
           <div className="text-center">
-            <p className="text-xs text-white/70 font-medium truncate" title={currentProperty.name}>
+            <p className="text-xs text-muted-foreground font-medium truncate" title={currentProperty.name}>
               {currentProperty.name}
             </p>
           </div>
@@ -89,7 +101,7 @@ export function Sidebar() {
             value={currentProperty?.id ?? ''}
             onValueChange={switchProperty}
           >
-            <SelectTrigger className="w-full h-8 text-xs">
+            <SelectTrigger className="w-full h-9 text-xs font-medium border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900">
               <SelectValue placeholder={t_ext('select_property', 'Select Property')} />
             </SelectTrigger>
             <SelectContent>

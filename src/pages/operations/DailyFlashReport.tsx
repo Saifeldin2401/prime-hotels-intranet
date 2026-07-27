@@ -582,7 +582,7 @@ export default function DailyFlashReport() {
         if (!consolidated) return
 
         const data = [
-            ['REMAL Hospitality - Daily Flash Report'],
+            ['Altus Advisory - Daily Flash Report'],
             [`Date: ${format(new Date(selectedDate), 'MMMM d, yyyy')}`],
             [''],
             ['CONSOLIDATED SUMMARY'],
@@ -687,7 +687,7 @@ export default function DailyFlashReport() {
 
             {/* Print Header */}
             <div className="hidden print:block text-center mb-6">
-                <h1 className="text-2xl font-bold">REMAL Hospitality - Daily Flash Report</h1>
+                <h1 className="text-2xl font-bold">Altus Advisory - Daily Flash Report</h1>
                 <p className="text-lg">{format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}</p>
                 <p className="text-sm text-muted-foreground">Generated: {format(new Date(), 'PPpp')}</p>
             </div>

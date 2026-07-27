@@ -582,7 +582,7 @@ export const ROUTES: RouteConfig[] = [
         path: '/knowledge/wiki',
         title: 'system_wiki',
         icon: BookOpen,
-        description: 'How to use REMAL Connect',
+        description: 'How to use Altus Connect',
         allowedRoles: 'all',
         keywords: ['wiki', 'help', 'docs', 'system'],
         group: 'knowledge_sop',

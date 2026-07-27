@@ -236,7 +236,7 @@ export function WelcomeHeader({
                 <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-slate-300">
                   <span className="bg-[#1b3464]/40 px-2.5 py-1 rounded-md border border-[#1b3464]/60 flex items-center gap-1">
                     <Building2 className="w-3.5 h-3.5 text-[#C39A45]" />
-                    {currentProperty?.name || t('welcome_header.property_greeting', 'Prime Property')}
+                    {currentProperty?.name || t('welcome_header.property_greeting', 'Altus Property')}
                   </span>
                   <span className="bg-[#1b3464]/40 px-2.5 py-1 rounded-md border border-[#1b3464]/60">
                     {displayRole}

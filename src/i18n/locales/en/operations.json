@@ -155,7 +155,7 @@
         },
         "print": {
             "title": "Data Integration Sync Summary",
-            "default_hotel": "REMAL Hospitality",
+            "default_hotel": "Altus Advisory",
             "system": "System",
             "kpis": {
                 "title": "Sync Impact",

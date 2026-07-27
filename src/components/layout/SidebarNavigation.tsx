@@ -364,24 +364,24 @@ export function SidebarNavigation({
               <div id="sidebar-logo" className={cn("flex items-center justify-center", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
                 {collapsed ? (
                   <img
-                    src="/remal-emblem-icon.png"
-                    alt="REMAL"
+                    src="/altus-emblem-icon.png"
+                    alt="Altus"
                     className="h-9 w-9 object-contain transition-all duration-300 drop-shadow-[0_0_8px_rgba(197,160,101,0.3)]"
                   />
                 ) : (
                   <img
-                    src="/remal-logo-web.png"
-                    alt="REMAL Hospitality"
+                    src="/altus-logo-web.png"
+                    alt="Altus Advisory"
                     className="h-12 w-auto object-contain transition-all duration-300"
                   />
                 )}
               </div>
             )}
             {isMobile && (
-              <div className="w-full flex items-center justify-between">
+                <div className="w-full flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <img src="/remal-emblem-icon.png" alt="REMAL" className="h-8 w-8 object-contain" />
-                  <span className="text-sm font-semibold text-hotel-gold tracking-wider uppercase">REMAL</span>
+                  <img src="/altus-emblem-icon.png" alt="Altus" className="h-8 w-8 object-contain" />
+                  <span className="text-sm font-semibold text-hotel-gold tracking-wider uppercase">ALTUS</span>
                 </div>
                 <Button
                   variant="ghost"

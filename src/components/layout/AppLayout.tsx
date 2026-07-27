@@ -95,7 +95,7 @@ export function AppLayout({ children }: AppLayoutProps) {
       id: property.id,
       name: property.name,
       plan: property.id === currentProperty?.id ? 'Active' : 'Property',
-      logo: '/remal-emblem-icon.png',
+      logo: '/altus-emblem-icon.png',
     }))
   }, [availableProperties, currentProperty])
 

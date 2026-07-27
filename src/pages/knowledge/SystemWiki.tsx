@@ -102,7 +102,7 @@ export default function SystemWiki() {
             <div className="flex justify-between items-start">
                 <PageHeader
                     title={t('nav:system_wiki', 'System Wiki')}
-                    description={t('wiki.description', 'Your complete guide to using the REMAL Hospitality Intranet')}
+                    description={t('wiki.description', 'Your complete guide to using the Altus Advisory Intranet')}
                 />
                 {isAdmin && (
                     <Button

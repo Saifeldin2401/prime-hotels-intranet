@@ -119,8 +119,8 @@ export function useAppBranding() {
     const { settings, isLoading } = useSystemSettings('branding')
     const { settings: generalSettings } = useSystemSettings('general')
 
-    const appName = (settings.find(s => s.key === 'app_name')?.value as string) || 'REMAL Connect'
-    const companyName = (settings.find(s => s.key === 'company_name')?.value as string) || 'REMAL Hospitality'
+    const appName = (settings.find(s => s.key === 'app_name')?.value as string) || 'Altus Advisory'
+    const companyName = (settings.find(s => s.key === 'company_name')?.value as string) || 'Altus Advisory'
     const companyProfile = generalSettings.find(s => s.key === 'company_profile')?.value as {
         name?: string
         brand?: string

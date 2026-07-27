@@ -298,7 +298,7 @@ export function IntegratedDashboard() {
         id: notification.id ?? String(index),
         title: notification.title ?? t('widgets.announcements', 'Announcement'),
         description: notification.message ?? notification.type ?? t('welcome_header.subtitle', 'Operational dashboard overview'),
-        coverUrl: '/remal-emblem-icon.png',
+        coverUrl: '/altus-emblem-icon.png',
         postedAt: notification.created_at ?? Date.now(),
       })),
     [notifications, t]

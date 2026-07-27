@@ -12,7 +12,7 @@ export default function Unauthorized() {
       <Card className="w-full max-w-md shadow-xl border-0">
         <CardHeader className="text-center pb-6">
           <div className="mx-auto mb-6 max-w-[200px]">
-             <img src="/remal-logo-web.png" alt="REMAL" className="h-24 w-auto mx-auto object-contain" />
+             <img src="/altus-logo-light.png" alt="Altus" className="h-24 w-auto mx-auto object-contain" />
           </div>
           <CardTitle className="text-2xl font-bold text-red-600">{t('errors.unauthorized')}</CardTitle>
           <CardDescription className="text-base">{t('errors.unauthorized_description')}</CardDescription>

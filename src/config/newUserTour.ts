@@ -8,7 +8,7 @@ const BASE_STEPS: TourStep[] = [
     {
         element: '#sidebar-logo',
         popover: {
-            title: '🎉 Welcome to REMAL Connect!',
+            title: '🎉 Welcome to Altus Advisory!',
             description: 'This is your hotel intranet portal. Let us show you around!',
             side: 'right',
             align: 'start'

@@ -333,7 +333,7 @@
         "delete_message": "Are you sure? This action cannot be undone and will permanently remove the data.",
         "delete": "Delete",
         "logout_title": "Sign Out",
-        "logout_message": "Are you sure you want to sign out of REMAL Connect? You will need to sign in again to access the portal.",
+        "logout_message": "Are you sure you want to sign out of Altus Advisory? You will need to sign in again to access the portal.",
         "logout": "Sign Out",
         "archive_title": "Archive {{item}}?",
         "archive_message": "Archiving will hide this item from the main view. You can restore it later if needed.",
@@ -436,7 +436,7 @@
     "selectdepartment": "Select department",
     "selecttype": "Select type",
     "effectivedate": "Effective date",
-    "phgconnect": "REMAL Connect",
+    "phgconnect": "Altus Advisory",
     "noactivityyet": "No activity yet",
     "selectpriority": "Select priority",
     "typeyouranswer": "Type your answer...",
@@ -452,7 +452,7 @@
     "confirmsignout": "Confirm Sign Out",
     "auth": {
         "confirm_signout": "Confirm Sign Out",
-        "signout_message": "Are you sure you want to sign out of REMAL Connect? You will need to sign in again to access your dashboard and continue your work."
+        "signout_message": "Are you sure you want to sign out of Altus Advisory? You will need to sign in again to access your dashboard and continue your work."
     },
     "aisuggestion": "AI Suggestion",
     "scrolltotop": "Scroll to top",

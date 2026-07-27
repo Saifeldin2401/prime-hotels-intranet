@@ -12,42 +12,44 @@
 
 @layer base {
   :root {
-    /* REMAL Hospitality Corporate Palette */
-    /* Primary Navy: #0B1C3E (Approximate HSL: 220 70% 15%) */
-    /* Primary Gold: #C39A45 (Brand Gold HSL: 39 52% 52%) */
+    /* Altus Advisory Corporate Palette */
+    /* Primary Navy: #0B1528 (HSL 219 57% 10%) */
+    /* Primary Gold: #C9A54D (HSL 43 53% 55%) */
+    /* Emerald Accent: #1B4332 (HSL 154 43% 18%) */
+    /* Cream: #F5F1EA (HSL 38 36% 94%) */
 
     --background: 0 0% 100%;
-    --foreground: 220 20% 10%;
+    --foreground: 219 40% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 20% 10%;
+    --card-foreground: 219 40% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 20% 10%;
+    --popover-foreground: 219 40% 10%;
 
-    --primary: 39 52% 52%;
-    --primary-foreground: 0 0% 100%;
-    --primary-hover: 45 80% 74%;
-    --primary-active: 37 63% 28%;
+    --primary: 43 53% 55%;
+    --primary-foreground: 219 57% 10%;
+    --primary-hover: 44 55% 62%;
+    --primary-active: 42 55% 30%;
 
-    --secondary: 220 15% 96%;
-    --secondary-foreground: 220 20% 10%;
+    --secondary: 38 20% 96%;
+    --secondary-foreground: 219 40% 10%;
 
-    --muted: 220 15% 96%;
-    --muted-foreground: 220 10% 40%;
+    --muted: 38 20% 96%;
+    --muted-foreground: 219 10% 40%;
 
-    --accent: 220 15% 96%;
-    --accent-foreground: 39 52% 52%;
+    --accent: 38 20% 96%;
+    --accent-foreground: 43 53% 55%;
 
     --destructive: 0 84% 45%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 90%;
-    --input: 220 15% 90%;
-    
-    --border-accent: 39 52% 52%;
-    --ring: 39 52% 52%;
-    --focus-ring: 39 52% 52%;
+    --border: 38 15% 89%;
+    --input: 38 15% 89%;
+
+    --border-accent: 43 53% 55%;
+    --ring: 43 53% 55%;
+    --focus-ring: 43 53% 55%;
 
     --radius: 0.5rem;
 
@@ -61,17 +63,20 @@
     --info: 199 89% 48%;
     --info-foreground: 199 89% 95%;
 
-    /* Extended Hotel Palette */
-    --hotel-gold: 39 52% 52%;
-    --hotel-gold-light: 45 80% 74%;
-    --hotel-gold-dark: 37 63% 28%;
+    /* Extended Hotel Palette (Altus Advisory) */
+    --hotel-gold: 43 53% 55%;
+    --hotel-gold-light: 44 55% 62%;
+    --hotel-gold-dark: 42 55% 30%;
 
-    --hotel-navy: 220 70% 15%;
-    --hotel-navy-light: 220 50% 25%;
-    --hotel-navy-dark: 220 80% 8%;
+    --hotel-navy: 219 57% 10%;
+    --hotel-navy-light: 219 45% 22%;
+    --hotel-navy-dark: 217 64% 6%;
 
-    --hotel-cream: 37 40% 98%;
-    --hotel-mist: 220 20% 96%;
+    --hotel-cream: 38 36% 94%;
+    --hotel-mist: 38 20% 96%;
+
+    --hotel-emerald: 154 43% 18%;
+    --hotel-emerald-light: 154 35% 28%;
 
     /* Shadows used by animations.css */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -81,43 +86,43 @@
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
     /* Typography */
-    --font-heading: 'Inter', sans-serif;
+    --font-heading: 'Playfair Display', Georgia, serif;
     --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 220 20% 6%;
-    --foreground: 0 0% 98%;
+    --background: 219 45% 7%;
+    --foreground: 38 30% 95%;
 
-    --card: 220 20% 8%;
-    --card-foreground: 0 0% 98%;
+    --card: 219 45% 9%;
+    --card-foreground: 38 30% 95%;
 
-    --popover: 220 20% 8%;
-    --popover-foreground: 0 0% 98%;
+    --popover: 219 45% 9%;
+    --popover-foreground: 38 30% 95%;
 
-    --primary: 39 52% 52%;
-    --primary-foreground: 220 20% 6%;
-    --primary-hover: 45 80% 74%;
-    --primary-active: 37 63% 28%;
+    --primary: 43 53% 55%;
+    --primary-foreground: 219 57% 8%;
+    --primary-hover: 44 55% 62%;
+    --primary-active: 42 55% 30%;
 
-    --secondary: 220 20% 12%;
-    --secondary-foreground: 0 0% 98%;
+    --secondary: 219 35% 14%;
+    --secondary-foreground: 38 30% 95%;
 
-    --muted: 220 20% 12%;
-    --muted-foreground: 220 10% 65%;
+    --muted: 219 35% 14%;
+    --muted-foreground: 219 10% 65%;
 
-    --accent: 220 20% 12%;
-    --accent-foreground: 39 52% 52%;
+    --accent: 219 35% 14%;
+    --accent-foreground: 43 53% 55%;
 
     --destructive: 0 62% 30%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 20% 15%;
-    --input: 220 20% 15%;
-    
-    --border-accent: 39 52% 52%;
-    --ring: 39 52% 52%;
-    --focus-ring: 39 52% 52%;
+    --border: 219 30% 17%;
+    --input: 219 30% 17%;
+
+    --border-accent: 43 53% 55%;
+    --ring: 43 53% 55%;
+    --focus-ring: 43 53% 55%;
   }
 
   * {
@@ -414,33 +419,33 @@ select:focus-visible {
     @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200 hover:shadow-md;
   }
 
-  /* REMAL Hospitality Header Style */
-  .prime-header {
+  /* Altus Advisory Header Style */
+  .altus-header {
     @apply bg-hotel-navy border-b border-hotel-navy-dark shadow-sm;
   }
 
-  .prime-footer {
+  .altus-footer {
     @apply bg-hotel-navy border-t border-hotel-navy-dark text-white;
   }
 
-  .prime-nav-link {
+  .altus-nav-link {
     @apply text-white hover:bg-hotel-navy-light px-3 py-2 rounded-md transition-colors duration-200;
   }
 
-  .prime-nav-link.active {
+  .altus-nav-link.active {
     @apply bg-hotel-navy-light text-white;
   }
 
-  /* REMAL Hospitality Card Styles */
-  .prime-card {
+  /* Altus Advisory Card Styles */
+  .altus-card {
     @apply bg-white dark:bg-hotel-navy border border-gray-200 dark:border-hotel-navy-light rounded-lg shadow-sm hover:shadow-lg transition-all duration-200;
   }
 
-  .prime-card-header {
+  .altus-card-header {
     @apply bg-hotel-navy text-white px-4 py-3 rounded-t-lg border-b border-hotel-navy-dark;
   }
 
-  .prime-card-body {
+  .altus-card-body {
     @apply p-4;
   }
 

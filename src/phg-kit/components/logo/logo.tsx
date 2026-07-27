@@ -28,8 +28,8 @@ export function Logo({
   const logo = (
     <Box
       component="img"
-      alt="PHG Connect"
-      src={isSingle ? '/remal-emblem-icon.png' : '/remal-logo-web.png'}
+      alt="Altus Connect"
+      src={isSingle ? '/altus-emblem-icon.png' : '/altus-logo-web.png'}
       sx={{ width: 1, height: 1, objectFit: 'contain' }}
     />
   );

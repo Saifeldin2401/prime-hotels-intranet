@@ -59,7 +59,7 @@ type EmailBusinessDomain =
 
 type EmailContentMode = 'template' | 'custom_html'
 
-const EMAIL_BASE_DOMAIN = 'https://remal-connect.com'
+const EMAIL_BASE_DOMAIN = 'https://altus-advisory.com'
 
 function toAbsoluteUrl(base: string, url: string) {
   const trimmed = (url || '').trim()
@@ -132,18 +132,18 @@ const STARTER_TEMPLATES: Record<EmailTemplateKey, {
 }> = {
   system_generic_alert: {
     subject: 'Important Update',
-    shortMessage: 'Please review the latest update in REMAL Connect.',
-    body: 'Hello team,\n\nThis is an important update from REMAL Connect. Please review the details and follow the required actions.\n\nThank you,\nREMAL Hospitality Intranet',
+    shortMessage: 'Please review the latest update in Altus Advisory.',
+    body: 'Hello team,\n\nThis is an important update from Altus Advisory. Please review the details and follow the required actions.\n\nThank you,\nAltus Advisory',
     html_en: '',
     html_ar: '',
     actionUrl: '/dashboard',
-    actionLabel: 'Open REMAL Connect',
+    actionLabel: 'Open Altus Advisory',
     priority: 'normal',
   },
   management_kpi_alert: {
     subject: 'Leadership Update',
     shortMessage: 'A new management update is available. Please review.',
-    body: 'Hello team,\n\nPlease review the latest leadership update and ensure alignment across your property/departments.\n\nRegards,\nREMAL Hospitality Intranet',
+    body: 'Hello team,\n\nPlease review the latest leadership update and ensure alignment across your property/departments.\n\nRegards,\nAltus Advisory',
     actionUrl: '/dashboard',
     actionLabel: 'View Dashboard',
     priority: 'normal',
@@ -151,7 +151,7 @@ const STARTER_TEMPLATES: Record<EmailTemplateKey, {
   hr_employee_update: {
     subject: 'HR Update',
     shortMessage: 'An HR update has been published. Please review.',
-    body: 'Hello team,\n\nPlease review the latest HR update. If you have questions, contact Property HR.\n\nThank you,\nREMAL Hospitality Intranet',
+    body: 'Hello team,\n\nPlease review the latest HR update. If you have questions, contact Property HR.\n\nThank you,\nAltus Advisory',
     actionUrl: '/hr/control',
     actionLabel: 'Open HR Center',
     priority: 'normal',
@@ -159,15 +159,15 @@ const STARTER_TEMPLATES: Record<EmailTemplateKey, {
   operations_incident_alert: {
     subject: 'Operations Alert',
     shortMessage: 'An operations alert requires attention. Please review.',
-    body: 'Hello team,\n\nAn operations item requires your attention. Please review the details and take action as needed.\n\nThank you,\nREMAL Hospitality Intranet',
+    body: 'Hello team,\n\nAn operations item requires your attention. Please review the details and take action as needed.\n\nThank you,\nAltus Advisory',
     actionUrl: '/operations',
     actionLabel: 'Open Operations',
     priority: 'high',
   },
   finance_approval_alert: {
     subject: 'Finance Approval Required',
-    shortMessage: 'A finance item requires review/approval. Please check REMAL Connect.',
-    body: 'Hello team,\n\nA finance approval is required. Please review the details and complete the approval workflow as soon as possible.\n\nRegards,\nREMAL Hospitality Intranet',
+    shortMessage: 'A finance item requires review/approval. Please check Altus Advisory.',
+    body: 'Hello team,\n\nA finance approval is required. Please review the details and complete the approval workflow as soon as possible.\n\nRegards,\nAltus Advisory',
     actionUrl: '/approvals',
     actionLabel: 'Open Approvals',
     priority: 'high',
@@ -175,15 +175,15 @@ const STARTER_TEMPLATES: Record<EmailTemplateKey, {
   sales_pipeline_alert: {
     subject: 'Sales Update',
     shortMessage: 'A sales update has been posted. Please review.',
-    body: 'Hello team,\n\nPlease review the latest sales update and ensure follow-ups are completed on time.\n\nRegards,\nREMAL Hospitality Intranet',
+    body: 'Hello team,\n\nPlease review the latest sales update and ensure follow-ups are completed on time.\n\nRegards,\nAltus Advisory',
     actionUrl: '/reports',
     actionLabel: 'View Reports',
     priority: 'normal',
   },
   user_management_welcome: {
-    subject: 'Welcome to REMAL Connect',
-    shortMessage: 'Welcome! Your account is ready in REMAL Connect.',
-    body: 'Hello,\n\nWelcome to REMAL Connect. Please sign in and complete your profile.\n\nThank you,\nREMAL Hospitality Intranet',
+    subject: 'Welcome to Altus Advisory',
+    shortMessage: 'Welcome! Your account is ready in Altus Advisory.',
+    body: 'Hello,\n\nWelcome to Altus Advisory. Please sign in and complete your profile.\n\nThank you,\nAltus Advisory',
     html_en: '',
     html_ar: '',
     actionUrl: '/dashboard',
@@ -204,7 +204,7 @@ function buildBilingualEmailHtml(params: {
   actionLabel_ar: string
   logoUrl: string
 }) {
-  const title = escapeHtml(params.subject_en || params.subject_ar || 'REMAL Hospitality')
+  const title = escapeHtml(params.subject_en || params.subject_ar || 'Altus Advisory')
   const logoUrl = escapeHtml(params.logoUrl)
   const actionUrl = escapeHtml(params.actionUrl)
 
@@ -243,7 +243,7 @@ function buildBilingualEmailHtml(params: {
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                   <tr>
                     <td align="left" style="vertical-align:middle;">
-                      <img src="${logoUrl}" alt="REMAL Hospitality" height="34" style="display:block;height:34px;max-height:34px;"/>
+                      <img src="${logoUrl}" alt="Altus Advisory" height="34" style="display:block;height:34px;max-height:34px;"/>
                     </td>
                   </tr>
                 </table>
@@ -265,7 +265,7 @@ function buildBilingualEmailHtml(params: {
             </tr>
             <tr>
               <td style="padding:16px 18px;background:#0b1220;">
-                <div style="color:rgba(255,255,255,0.75);font-size:12px;">Sent by REMAL Hospitality system</div>
+                <div style="color:rgba(255,255,255,0.75);font-size:12px;">Sent by Altus Advisory system</div>
                 <div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:6px;">${actionUrl ? `Link: ${actionUrl}` : ''}</div>
               </td>
             </tr>
@@ -359,7 +359,7 @@ function buildBeautifulEmailHtml(params: {
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
                   <tr>
                     <td style="vertical-align:middle;" align="${isAr ? 'right' : 'left'}">
-                      <img src="${logoUrl}" alt="REMAL Hospitality" height="36" style="display:block;height:36px;max-height:36px;"/>
+                      <img src="${logoUrl}" alt="Altus Advisory" height="36" style="display:block;height:36px;max-height:36px;"/>
                     </td>
                     <td style="vertical-align:middle;" align="${isAr ? 'left' : 'right'}">
                       <div style="color:rgba(255,255,255,0.88);font-size:12px;">${isAr ? 'رسالة تلقائية' : 'Automated message'}</div>
@@ -375,8 +375,8 @@ function buildBeautifulEmailHtml(params: {
             </tr>
             <tr>
               <td style="padding:18px 28px;background:#0b1220;text-align:${isAr ? 'right' : 'left'};">
-                <div style="color:rgba(255,255,255,0.75);font-size:12px;">${isAr ? 'مرسلة من نظام REMAL Hospitality' : 'Sent by REMAL Hospitality system'}</div>
-                <div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:6px;">© ${new Date().getFullYear()} REMAL Hospitality</div>
+                <div style="color:rgba(255,255,255,0.75);font-size:12px;">${isAr ? 'مرسلة من نظام Altus Advisory' : 'Sent by Altus Advisory system'}</div>
+                <div style="color:rgba(255,255,255,0.55);font-size:11px;margin-top:6px;">© ${new Date().getFullYear()} Altus Advisory</div>
               </td>
             </tr>
           </table>
@@ -400,7 +400,7 @@ export default function EmailWriter() {
   const { t } = useTranslation(['admin', 'common'])
 
   const appBaseUrl = useMemo(() => EMAIL_BASE_DOMAIN, [])
-  const defaultLogoUrl = useMemo(() => `${EMAIL_BASE_DOMAIN}/prime-logo-white-full.png`, [])
+  const defaultLogoUrl = useMemo(() => `${EMAIL_BASE_DOMAIN}/altus-logo-web.png`, [])
 
   // Track if component has mounted to prevent hydration mismatches
   const [hasMounted, setHasMounted] = useState(false)
@@ -830,7 +830,7 @@ Requirements:
 - Provide: subject, shortMessage, html, text
 - HTML must include: header branding, title, short message, a content box with details, CTA button, footer
 - Support language direction: if input is Arabic or lang=ar, generate RTL Arabic HTML
-- ALWAYS use this exact img tag for the logo in the header: <img src="https://remal-connect.com/prime-logo-white-full.png" alt="REMAL Hospitality" height="34" style="display:block;height:34px;max-height:34px;"/>
+- ALWAYS use this exact img tag for the logo in the header: <img src="https://altus-advisory.com/altus-logo-web.png" alt="Altus Advisory" height="34" style="display:block;height:34px;max-height:34px;"/>
 - The header MUST have a dark blue background (e.g., #0B1C3E) so the white logo is visible.
 
 Inputs:

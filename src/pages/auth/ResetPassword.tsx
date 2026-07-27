@@ -389,7 +389,7 @@ export default function ResetPassword() {
         <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-hotel-navy-dark px-4 py-12">
             <div className="w-full max-w-md flex flex-col items-center">
                 <div className="mt-16 mb-8 text-center">
-                    <img src="/remal-logo-web.png" alt="REMAL" className="h-14 w-auto mx-auto object-contain" />
+                    <img src="/altus-logo-light.png" alt="Altus" className="h-14 w-auto mx-auto object-contain" />
                 </div>
                 {content}
             </div>

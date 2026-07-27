@@ -474,8 +474,8 @@ export async function generateMFASecret(userId: string): Promise<MFASecret | nul
 
     const { data, error } = await supabase.auth.mfa.enroll({
       factorType: 'totp',
-      friendlyName: 'REMAL Connect',
-      issuer: 'REMAL Connect',
+      friendlyName: 'Altus Connect',
+      issuer: 'Altus Connect',
     });
 
     if (error || !data?.id || !data.totp?.secret) {
@@ -970,7 +970,7 @@ function buildSupabaseQrCodeUrl(
 }
 
 function buildMfaQrCodeUrl(accountId: string, secret: string): string {
-  const otpauth = `otpauth://totp/REMAL:${accountId}?secret=${secret}&issuer=REMAL%20Connect`;
+  const otpauth = `otpauth://totp/Altus:${accountId}?secret=${secret}&issuer=Altus%20Connect`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauth)}`;
 }
 

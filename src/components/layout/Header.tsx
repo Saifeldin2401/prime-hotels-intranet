@@ -91,7 +91,7 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-40 w-full transition-all duration-300">
-      {/* REMAL Connect Premium Header Bar - Navy Background */}
+      {/* Altus Advisory Premium Header Bar - Navy Background */}
       <div className="bg-hotel-navy text-white shadow-md border-b-4 border-hotel-gold">
         <div className="flex h-16 items-center justify-between px-6">
           <div className="flex items-center gap-4">

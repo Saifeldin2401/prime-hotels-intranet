@@ -128,7 +128,7 @@ export function KnowledgeSidebar({ className }: KnowledgeSidebarProps) {
                     </div>
                     <div>
                         <h2 className="text-sm font-bold text-hotel-navy uppercase tracking-wider">{t('library.nav_title', 'Knowledge Library')}</h2>
-                        <p className="text-[10px] text-gray-400 font-medium">{t('library.version', 'REMAL CONNECT v2')}</p>
+                        <p className="text-[10px] text-gray-400 font-medium">{t('library.version', 'ALTUS ADVISORY v2')}</p>
                     </div>
                 </div>
                 <Link to="/knowledge/search" className="block">

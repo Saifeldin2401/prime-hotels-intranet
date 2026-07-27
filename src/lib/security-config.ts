@@ -1,4 +1,4 @@
-// Comprehensive security configuration for REMAL Hospitality Intranet
+// Comprehensive security configuration for Altus Advisory Intranet
 import * as Sentry from "@sentry/react";
 import { isValidSentryDsn } from './sentry';
 
@@ -55,7 +55,7 @@ export const securityConfig = {
     // CORS - Strict origin validation
     cors: {
       allowedOrigins: import.meta.env.PROD
-        ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
+        ? (import.meta.env.VITE_ALLOWED_ORIGINS?.split(',').map(origin => origin.trim()).filter(Boolean) || ['https://altus-advisory.com', 'https://www.altus-advisory.com'])
         : ['http://localhost:5173', 'http://localhost:3000'],
       allowedMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: ['Content-Type', 'Authorization', 'apikey'],

@@ -1,8 +1,8 @@
 {
-  "name": "prime-hotels",
+  "name": "altus-advisory",
   "private": true,
   "version": "1.0.0",
-  "description": "PHG Connect Intranet Platform - A comprehensive multi-property hotel intranet system with bilingual support (English/Arabic)",
+  "description": "Altus Connect Advisory Platform - A comprehensive hospitality consulting platform with bilingual support (English/Arabic)",
   "type": "module",
   "scripts": {
     "dev": "vite",

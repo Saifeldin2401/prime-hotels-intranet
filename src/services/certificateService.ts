@@ -3,7 +3,7 @@
  * 
  * Features:
  * - High-quality PDF generation using jsPDF
- * - REMAL Hospitality branded certificates
+ * - Altus Advisory branded certificates
  * - Unique certificate numbers and verification codes
  * - Dynamic content population
  * - Audit trail integration
@@ -109,19 +109,19 @@ function resolveCertificateStatus(
     return expiryTime <= Date.now() ? 'expired' : normalizedStatus
 }
 
-// Brand colors for REMAL Hospitality
+// Brand colors for Altus Advisory
 const _BRAND_COLORS = {
-    navy: '#0B1C3E',      // REMAL Navy
-    gold: '#C39A45',      // REMAL Mid-Tone Gold
-    darkGold: '#75531B',  // REMAL Deep Bronze
-    lightGold: '#F2D888', // REMAL Highlight Gold
+    navy: '#0B1C3E',      // Altus Navy
+    gold: '#C39A45',      // Altus Mid-Tone Gold
+    darkGold: '#75531B',  // Altus Deep Bronze
+    lightGold: '#F2D888', // Altus Highlight Gold
     white: '#ffffff',
     lightGray: '#f8f9fa',
     darkGray: '#2d3748',
     text: '#1a202c'
 }
 
-const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'remal-connect.com/verify'
+const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'altus-advisory.com/verify'
 
 /**
  * Generate a professional PDF certificate
@@ -146,12 +146,12 @@ export async function generateCertificatePDF(
     doc.rect(0, 0, pageWidth, pageHeight, 'F')
 
     // Decorative border - outer gold
-    doc.setDrawColor(201, 169, 98) // Gold
+    doc.setDrawColor(201, 165, 77) // Gold
     doc.setLineWidth(2)
     doc.rect(8, 8, pageWidth - 16, pageHeight - 16, 'S')
 
     // Inner decorative border
-    doc.setDrawColor(26, 54, 93) // Navy
+    doc.setDrawColor(11, 21, 40) // Navy
     doc.setLineWidth(0.5)
     doc.rect(12, 12, pageWidth - 24, pageHeight - 24, 'S')
 
@@ -172,18 +172,18 @@ export async function generateCertificatePDF(
         } catch (e) {
             console.warn('Could not add logo:', e)
             // Fallback text logo
-            doc.setTextColor(26, 54, 93)
+            doc.setTextColor(11, 21, 40)
             doc.setFontSize(24)
             doc.setFont('helvetica', 'bold')
-            doc.text('REMAL HOSPITALITY', pageWidth / 2, yPos + 10, { align: 'center' })
+            doc.text('ALTUS ADVISORY', pageWidth / 2, yPos + 10, { align: 'center' })
             yPos += 20
         }
     } else {
         // Text logo fallback
-        doc.setTextColor(26, 54, 93)
+        doc.setTextColor(11, 21, 40)
         doc.setFontSize(24)
         doc.setFont('helvetica', 'bold')
-        doc.text('REMAL HOSPITALITY', pageWidth / 2, yPos + 10, { align: 'center' })
+        doc.text('ALTUS ADVISORY', pageWidth / 2, yPos + 10, { align: 'center' })
         yPos += 20
     }
 
@@ -191,7 +191,7 @@ export async function generateCertificatePDF(
     yPos += 5
     doc.setFontSize(12)
     doc.setFont('helvetica', 'normal')
-    doc.setTextColor(168, 139, 74) // Dark gold
+    doc.setTextColor(156, 120, 53) // Dark gold
     const typeLabel = getCertificateTypeLabel(certificate.certificateType)
     doc.text(typeLabel, pageWidth / 2, yPos, { align: 'center' })
 
@@ -199,12 +199,12 @@ export async function generateCertificatePDF(
     yPos += 12
     doc.setFontSize(32)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(26, 54, 93) // Navy
+    doc.setTextColor(11, 21, 40) // Navy
     doc.text('CERTIFICATE OF COMPLETION', pageWidth / 2, yPos, { align: 'center' })
 
     // Decorative line under title
     yPos += 6
-    doc.setDrawColor(201, 169, 98)
+    doc.setDrawColor(201, 165, 77)
     doc.setLineWidth(1)
     doc.line(pageWidth / 2 - 60, yPos, pageWidth / 2 + 60, yPos)
 
@@ -219,12 +219,12 @@ export async function generateCertificatePDF(
     yPos += 14
     doc.setFontSize(28)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(26, 54, 93)
+    doc.setTextColor(11, 21, 40)
     doc.text(certificate.recipientName, pageWidth / 2, yPos, { align: 'center' })
 
     // Underline for name
     yPos += 3
-    doc.setDrawColor(201, 169, 98)
+    doc.setDrawColor(201, 165, 77)
     doc.setLineWidth(0.5)
     const nameWidth = doc.getTextWidth(certificate.recipientName)
     doc.line(pageWidth / 2 - nameWidth / 2 - 5, yPos, pageWidth / 2 + nameWidth / 2 + 5, yPos)
@@ -240,7 +240,7 @@ export async function generateCertificatePDF(
     yPos += 12
     doc.setFontSize(18)
     doc.setFont('helvetica', 'bold')
-    doc.setTextColor(26, 54, 93)
+    doc.setTextColor(11, 21, 40)
 
     // Handle long titles with word wrap
     const maxTitleWidth = pageWidth - 80
@@ -319,7 +319,7 @@ export async function generateCertificatePDF(
  */
 function drawCornerDecoration(doc: jsPDF, x: number, y: number, corner: 'tl' | 'tr' | 'bl' | 'br') {
     const size = 8
-    doc.setDrawColor(201, 169, 98) // Gold
+    doc.setDrawColor(201, 165, 77) // Gold
     doc.setLineWidth(0.5)
 
     switch (corner) {
@@ -756,7 +756,7 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
  */
 export async function loadLogoAsDataUrl(): Promise<string | null> {
     try {
-        const response = await fetch('/prime-hotels-logo.png')
+        const response = await fetch('/altus-logo-web.png')
         const blob = await response.blob()
         return new Promise((resolve) => {
             const reader = new FileReader()

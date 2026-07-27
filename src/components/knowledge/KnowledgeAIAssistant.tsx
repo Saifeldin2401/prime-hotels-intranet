@@ -314,8 +314,8 @@ ASSISTANT RESPONSE:`
                                 <div className="flex items-center gap-4">
                                     <div className="w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md flex items-center justify-center shadow-lg transform rotate-3 ring-1 ring-white/20">
                                         <img
-                                            src="/prime-logo-light.png"
-                                            alt="REMAL Hospitality"
+                                            src="/altus-logo-web.png"
+                                            alt="Altus Advisory"
                                             className="h-10 w-auto object-contain"
                                         />
                                     </div>

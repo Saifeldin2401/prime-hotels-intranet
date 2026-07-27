@@ -1,15 +1,15 @@
 {
-    "brand_name": "REMAL Connect",
-    "brand_full": "REMAL Hospitality",
-    "brand_tagline": "Your Official Digital Gateway",
+    "brand_name": "ALTUS Connect",
+    "brand_full": "ALTUS Advisory",
+    "brand_tagline": "Elevating Hospitality & Business Performance",
     "welcome_title": "Welcome to",
-    "prime_connect": "REMAL Connect",
-    "subtitle": "The official digital intranet of REMAL Hospitality (REMAL). Your centralized hub for career growth, operational excellence, and team collaboration.",
+    "prime_connect": "ALTUS Connect",
+    "subtitle": "The official enterprise platform of ALTUS Advisory. Elevating hospitality operations, business performance, advisory services, and team collaboration.",
     "login_button": "Access Portal",
     "explore_button": "Explore Features",
-    "official_intranet": "Official Intranet",
+    "official_intranet": "Official Platform",
     "hero": {
-        "badge": "REMAL Hospitality • Official Intranet"
+        "badge": "ALTUS Advisory • Enterprise Platform"
     },
     "nav": {
         "home": "Home",
@@ -25,10 +25,10 @@
         "contact": "Contact"
     },
     "who_we_are": {
-        "title": "About REMAL Connect",
+        "title": "About ALTUS Advisory",
         "subtitle": "Who We Are",
-        "mission": "REMAL Connect is the official intranet platform of REMAL Hospitality, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality.",
-        "description": "From onboarding to career advancement, everything you need is here. Our platform connects all team members across our properties, creating a unified digital workplace that fosters collaboration, learning, and growth.",
+        "mission": "ALTUS Advisory is dedicated to elevating hospitality and business performance, empowering teams with advisory insights, tools, and operational excellence.",
+        "description": "From onboarding to career advancement, everything you need is here. Our platform connects team members across all properties, creating a unified digital workplace that fosters collaboration, learning, and growth.",
         "features": {
             "1": "Centralized Information Hub",
             "2": "Seamless HR Services",
@@ -36,7 +36,7 @@
             "4": "Team Collaboration Tools"
         },
         "excellence_title": "Excellence in Hospitality",
-        "excellence_desc": "Serving with passion across the Kingdom"
+        "excellence_desc": "Elevating performance across the Kingdom"
     },
     "features": {
         "title": "Everything You Need to Excel",
@@ -84,7 +84,7 @@
         },
         "step4": {
             "title": "Grow & Succeed",
-            "desc": "Track your progress, earn certifications, and advance your career with REMAL."
+            "desc": "Track your progress, earn certifications, and advance your career with Altus Advisory."
         }
     },
     "cta": {
@@ -116,8 +116,8 @@
         }
     },
     "footer": {
-        "description": "REMAL Connect is the official digital workplace platform for REMAL Hospitality team members across the Kingdom of Saudi Arabia.",
-        "copyright": "© {{year}} REMAL Hospitality (REMAL). All Rights Reserved. | Internal Use Only",
+        "description": "The Altus Portal is the official digital workplace platform for Altus Advisory teams and partner properties across the Kingdom of Saudi Arabia.",
+        "copyright": "© {{year}} Altus Advisory. All Rights Reserved. | Internal Use Only",
         "links": {
             "title": "Quick Links",
             "home": "Home",
@@ -145,7 +145,7 @@
     },
     "verification": {
         "title": "Certificate Verification",
-        "subtitle": "Official validation service for REMAL Hospitality certifications.",
+        "subtitle": "Official validation service for Altus Advisory certifications.",
         "input_label": "Verification Code",
         "input_placeholder": "Enter the code from the certificate (e.g., PH-XXXX-XXXX)",
         "verify_button": "Verify Authenticity",
@@ -154,7 +154,7 @@
         "invalid_code": "Invalid Verification Code",
         "invalid_desc": "The code you entered could not be found or has expired. Please check the code and try again.",
         "valid_title": "Certificate Verified",
-        "valid_desc": "This certificate is authentic and was issued by REMAL Hospitality Excellence Center.",
+        "valid_desc": "This certificate is authentic and was issued by the Altus Advisory Excellence Center.",
         "details": {
             "title": "Certificate Details",
             "recipient": "Issued To",

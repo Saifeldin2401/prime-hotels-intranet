@@ -15,9 +15,9 @@ const shouldEnableVercelInsights = () => {
   const host = window.location.hostname
   return (
     host.endsWith('vercel.app') ||
-    host === 'phg-connect.com' ||
-    host === 'www.phg-connect.com' ||
-    host === 'connect.primehotels.com'
+    host === 'altus-advisory.com' ||
+    host === 'www.altus-advisory.com' ||
+    host === 'connect.altusadvisory.com'
   )
 }
 

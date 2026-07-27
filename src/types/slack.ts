@@ -204,7 +204,7 @@ export const SLACK_COMMANDS: SlackCommandDefinition[] = [
   },
   {
     command: '/whoami',
-    description: 'Show your linked REMAL profile',
+    description: 'Show your linked Altus profile',
     access: 'all',
   },
 ];

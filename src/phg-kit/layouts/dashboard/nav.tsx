@@ -4,6 +4,7 @@ import { useEffect, useState, Fragment } from 'react';
 import { varAlpha } from 'minimal-shared/utils';
 
 import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import ListItem from '@mui/material/ListItem';
 import Collapse from '@mui/material/Collapse';
 import { useTheme } from '@mui/material/styles';
@@ -314,7 +315,21 @@ export function NavContent({ data, groupedData, slots, workspaces, currentWorksp
 
   return (
     <>
-      <Logo />
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 2.5, py: 2 }}>
+        <Logo />
+        <Typography
+          variant="subtitle1"
+          sx={{
+            fontFamily: "'Playfair Display', Georgia, serif",
+            fontWeight: 600,
+            letterSpacing: '0.02em',
+            color: 'text.primary',
+            lineHeight: 1.1,
+          }}
+        >
+          Altus Connect
+        </Typography>
+      </Box>
 
       {slots?.topArea}
 

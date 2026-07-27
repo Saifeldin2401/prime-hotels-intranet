@@ -24,7 +24,7 @@ export function AIDocumentSummarizer() {
         setError(null)
         setSummary(null)
         // Set initial progress
-        setProgress('Connecting to REMAL Hospitality AI Server...')
+        setProgress('Connecting to Altus Advisory AI Server...')
 
         try {
             // Server-side approach: No user downloads needed

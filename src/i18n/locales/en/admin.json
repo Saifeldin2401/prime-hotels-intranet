@@ -350,7 +350,7 @@
     "name_label": "Property Name *",
     "address_label": "Address",
     "phone_label": "Phone",
-    "name_placeholder": "e.g. REMAL Al Nokhba",
+    "name_placeholder": "e.g. Altus Advisory",
     "address_placeholder": "Building, Street, City",
     "phone_placeholder": "+966 ...",
     "active_status": "Active Status",

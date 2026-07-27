@@ -315,7 +315,7 @@ export default function CompanyManagement() {
                                 id="code"
                                 value={formData.code}
                                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                placeholder="REMAL"
+                                placeholder="Altus Advisory"
                             />
                         </div>
                         {selectedCompany && (

@@ -89,6 +89,10 @@ export default {
             dark: "hsl(var(--hotel-navy-dark))",
           },
           cream: "hsl(var(--hotel-cream))",
+          emerald: {
+            DEFAULT: "hsl(var(--hotel-emerald))",
+            light: "hsl(var(--hotel-emerald-light))",
+          },
         },
         success: {
           DEFAULT: "hsl(var(--success))",

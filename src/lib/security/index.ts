@@ -1,7 +1,7 @@
 /**
  * Security Module
  * 
- * Centralized security utilities for the REMAL Hospitality Intranet application.
+ * Centralized security utilities for the Altus Advisory Intranet application.
  * 
  * @module security
  * 

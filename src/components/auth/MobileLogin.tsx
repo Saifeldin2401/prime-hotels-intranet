@@ -90,13 +90,13 @@ export function MobileLogin() {
                 <div className="text-center mb-8">
                     <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
                         <img
-                            src="/prime-logo-light.png"
-                            alt="REMAL Hospitality"
+                            src="/altus-logo-light.png"
+                            alt="Altus Advisory"
                             className="w-16 h-16 object-contain"
                         />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-1">
-                        REMAL Connect
+                        Altus Advisory
                     </h1>
                     <p className="text-white/60 text-sm">
                         {t('sign_in_to_continue', 'Sign in to continue')}
@@ -211,7 +211,7 @@ export function MobileLogin() {
             {/* Footer */}
             <div className="py-4 px-6 text-center">
                 <p className="text-white/30 text-xs">
-                    © {new Date().getFullYear()} REMAL Hospitality. All rights reserved.
+                    © {new Date().getFullYear()} Altus Advisory. All rights reserved.
                 </p>
             </div>
         </div>

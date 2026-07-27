@@ -706,7 +706,7 @@
             "active_tasks": "You have {{count}} active tasks in your queue",
             "milestone": "Milestone: {{count}} training modules completed",
             "operational_focus": "Operational focus: {{name}}",
-            "system_operational": "REMAL Connect operational"
+            "system_operational": "Altus Advisory operational"
         },
         "stats": {
             "tasks": "Tasks",

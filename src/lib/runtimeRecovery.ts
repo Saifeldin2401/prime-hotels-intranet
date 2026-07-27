@@ -8,7 +8,7 @@ const AUTH_SENSITIVE_PREFIXES = [
 ] as const
 
 export const AUTH_ROUTE_RECOVERY_MESSAGE =
-  'REMAL Connect is recovering your secure link. This should take a moment.'
+  'Altus Advisory is recovering your secure link. This should take a moment.'
 
 function isLocalDevelopmentHost(hostname: string): boolean {
   return hostname === 'localhost'

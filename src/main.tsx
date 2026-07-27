@@ -132,7 +132,7 @@ clearLegacyRecoveryState()
 restoreSpaRedirectFromSearch()
 stripLegacyRecoveryParams()
 
-;(window as Window & { __PHG_FORCE_REFRESH__?: () => Promise<void> }).__PHG_FORCE_REFRESH__ = async () => {
+;(window as Window & { __ALTUS_FORCE_REFRESH__?: () => Promise<void> }).__ALTUS_FORCE_REFRESH__ = async () => {
   await clearPrimeHotelServiceWorkersAndCaches()
   window.location.reload()
 }

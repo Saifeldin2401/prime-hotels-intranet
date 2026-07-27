@@ -561,7 +561,7 @@ export default function KnowledgeViewer() {
             {
                 reportType: 'knowledge_article',
                 title: article.title,
-                hotelName: 'REMAL Hospitality',
+                hotelName: 'Altus Advisory',
                 period: {
                     start: article.created_at || new Date().toISOString(),
                     end: article.updated_at || new Date().toISOString()
@@ -1410,7 +1410,7 @@ export default function KnowledgeViewer() {
                     <div className="text-center">
                         <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
                         <p className="text-sm text-gray-600">
-                            REMAL Connect - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
+                            Altus Advisory - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
                         </p>
                     </div>
                 </div>
