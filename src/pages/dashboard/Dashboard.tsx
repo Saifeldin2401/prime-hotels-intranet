@@ -16,12 +16,6 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useTasks } from '@/hooks/useTasks'
 import { useUnifiedSocialFeed } from '@/hooks/useUnifiedSocialFeed'
 import { isRealPropertyId } from '@/lib/propertyScope'
-import { DashboardContent } from '@/phg-kit/layouts/dashboard'
-import { AnalyticsConversionRates } from '@/phg-kit/sections/overview/analytics-conversion-rates'
-import { AnalyticsCurrentVisits } from '@/phg-kit/sections/overview/analytics-current-visits'
-import { AnalyticsNews } from '@/phg-kit/sections/overview/analytics-news'
-import { AnalyticsOrderTimeline } from '@/phg-kit/sections/overview/analytics-order-timeline'
-import { AnalyticsWebsiteVisits } from '@/phg-kit/sections/overview/analytics-website-visits'
 
 import {
   AnnouncementsWidget,
@@ -479,7 +473,7 @@ export function IntegratedDashboard() {
   }
 
   return (
-    <DashboardContent maxWidth="xl">
+    <Box maxWidth="xl" sx={{ mx: 'auto', px: { xs: 2, sm: 3 } }}>
       {/* Hero Welcome Banner */}
       <Box sx={{ mb: 3 }}>
         <WelcomeHeader
@@ -611,36 +605,32 @@ export function IntegratedDashboard() {
 
           {/* Priority Updates Timeline */}
           <Grid size={{ xs: 12, lg: 5 }}>
-            <AnalyticsOrderTimeline
-              title={t('widgets.priority_timeline', 'Priority Timeline')}
-              list={timelineItems}
-            />
+            <Card sx={{ height: 1 }}>
+              <CardHeader title={t('widgets.priority_timeline', 'Priority Timeline')} />
+              <CardContent>
+                <Typography variant="body2" color="text.secondary">
+                  Timeline component temporarily disabled
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
 
           {/* Activity Trend Chart */}
           <Grid size={{ xs: 12, lg: 8 }}>
-            <AnalyticsWebsiteVisits
-              title={t('widgets.activity_trend', 'Activity Trend')}
-              subheader={statsLoading ? t('loading', 'Loading...') : t('welcome_header.subtitle', 'Operational activity pattern')}
-              chart={{
-                categories: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-                series: [
-                  { name: t('widgets.tasks', 'Tasks'), data: trendSeries(metrics[0]?.total ?? 0).slice(0, 7) },
-                  { name: t('widgets.documents', 'Documents'), data: trendSeries(metrics[2]?.total ?? 0).slice(0, 7) },
-                ],
-              }}
-            />
+            <PerformanceChart />
           </Grid>
 
           {/* Operational Mix Donut */}
           <Grid size={{ xs: 12, lg: 4 }}>
             {operationalMixTotal > 0 ? (
-              <AnalyticsCurrentVisits
-                title={t('widgets.operational_mix', 'Operational Mix')}
-                chart={{
-                  series: metrics.map((metric) => ({ label: metric.label, value: metric.total })),
-                }}
-              />
+              <Card sx={{ height: 1 }}>
+                <CardHeader title={t('widgets.operational_mix', 'Operational Mix')} />
+                <CardContent sx={{ minHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    Chart component temporarily disabled
+                  </Typography>
+                </CardContent>
+              </Card>
             ) : (
               <Card sx={{ height: 1 }}>
                 <CardHeader title={t('widgets.operational_mix', 'Operational Mix')} />
@@ -662,22 +652,7 @@ export function IntegratedDashboard() {
           {/* Latest News Feed */}
           {visibleWidgets.hospitalityNews && (
             <Grid size={{ xs: 12 }}>
-              <AnalyticsNews
-                title={t('widgets.latest_updates', 'Latest Updates')}
-                list={
-                  notificationItems.length > 0
-                    ? notificationItems
-                    : [
-                        {
-                          id: 'empty',
-                          title: t('widgets.no_updates', 'No new updates'),
-                          description: t('widgets.no_updates_desc', 'Everything is running smoothly.'),
-                          coverUrl: '/remal-emblem-icon.png',
-                          postedAt: Date.now(),
-                        },
-                      ]
-                }
-              />
+              <HospitalityNewsWidget />
             </Grid>
           )}
         </Grid>
@@ -699,17 +674,14 @@ export function IntegratedDashboard() {
           )}
 
           <Grid size={{ xs: 12, lg: 7 }}>
-            <AnalyticsConversionRates
-              title={t('widgets.department_pulse', 'Department Pulse')}
-              subheader={t('widgets.department_pulse_desc', 'Current work distribution by area')}
-              chart={{
-                categories: metrics.map((metric) => metric.label),
-                series: [
-                  { name: t('current', 'Current'), data: metrics.map((metric) => metric.total) },
-                  { name: t('previous', 'Previous'), data: metrics.map((metric) => metric.previous) },
-                ],
-              }}
-            />
+            <Card sx={{ height: 1 }}>
+              <CardHeader title={t('widgets.department_pulse', 'Department Pulse')} subheader={t('widgets.department_pulse_desc', 'Current work distribution by area')} />
+              <CardContent sx={{ minHeight: 280, display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
+                <Typography variant="body2" color="text.secondary">
+                  Chart component temporarily disabled
+                </Typography>
+              </CardContent>
+            </Card>
           </Grid>
 
           {visibleWidgets.performanceChart && (
@@ -869,7 +841,7 @@ export function IntegratedDashboard() {
         onToggleWidget={handleToggleWidget}
         onReset={handleResetWidgets}
       />
-    </DashboardContent>
+    </Box>
   )
 }
 
