@@ -138,8 +138,8 @@ export default function MFAVerifyPage() {
       >
         <Card className="shadow-xl border-0">
           <CardHeader className="text-center pb-6">
-            <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Shield className="h-8 w-8 text-primary" />
+            <div className="mx-auto w-full max-w-[200px] flex items-center justify-center mb-6">
+              <img src="/remal-logo-web.png" alt="REMAL" className="h-24 w-auto object-contain" />
             </div>
             <CardTitle className="text-2xl font-bold">
               {t('mfa.verification_title', { defaultValue: 'Two-Factor Authentication' })}

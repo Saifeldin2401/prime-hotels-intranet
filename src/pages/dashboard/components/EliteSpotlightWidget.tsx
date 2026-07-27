@@ -103,7 +103,7 @@ export function EliteSpotlightWidget() {
     queryFn: async (): Promise<SpotlightItem[]> => {
       const propertyId = currentProperty?.id
       const isScoped = isRealPropertyId(propertyId)
-      const defaultPropertyName = currentProperty?.name || t('spotlight.company', 'Prime Hotels')
+      const defaultPropertyName = currentProperty?.name || t('spotlight.company', 'REMAL Hospitality')
       const now = new Date()
       const today = startOfToday(now)
 
@@ -394,7 +394,7 @@ export function EliteSpotlightWidget() {
           date: daysUntil,
           description: t(
             'spotlight.birthday.description',
-            'Wishing you a fantastic birthday and a wonderful year ahead from the Prime Hotels team!'
+            'Wishing you a fantastic birthday and a wonderful year ahead from the REMAL Hospitality team!'
           )
         })
       }

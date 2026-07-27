@@ -1,4 +1,4 @@
-// Comprehensive security configuration for Prime Hotels Intranet
+// Comprehensive security configuration for REMAL Hospitality Intranet
 import * as Sentry from "@sentry/react";
 import { isValidSentryDsn } from './sentry';
 

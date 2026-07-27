@@ -23,12 +23,16 @@ import {
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
+import { CommercialRoutes } from './modules/CommercialRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
+import { FinanceRoutes } from './modules/FinanceRoutes'
+import { HousekeepingRoutes } from './modules/HousekeepingRoutes'
 import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
 import { MediaRoutes } from './modules/MediaRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
 import { OperationsRoutes } from './modules/OperationsRoutes'
+import { ProcurementRoutes } from './modules/ProcurementRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
@@ -37,6 +41,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'))
 
 
 
+import { MaintenanceGuard } from '@/components/common/MaintenanceGuard'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
 
 const RootLayout = () => {
@@ -49,9 +54,11 @@ const RootLayout = () => {
     return (
         <NotificationProvider>
             <PageTracker />
-            <Suspense fallback={<PageSkeleton />}>
-                <Outlet />
-            </Suspense>
+            <MaintenanceGuard>
+                <Suspense fallback={<PageSkeleton />}>
+                    <Outlet />
+                </Suspense>
+            </MaintenanceGuard>
             <SessionTimeoutWarning />
         </NotificationProvider>
     )
@@ -220,6 +227,10 @@ export const router = createBrowserRouter(
                 {AdminRoutes()}
                 {HRRoutes()}
                 {OperationsRoutes()}
+                {HousekeepingRoutes()}
+                {CommercialRoutes()}
+                {ProcurementRoutes()}
+                {FinanceRoutes()}
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
                 {MediaRoutes()}

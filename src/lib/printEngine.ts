@@ -253,7 +253,7 @@ function drawTextLogo(doc: jsPDF, x: number, y: number): void {
     doc.setFontSize(10)
     doc.setFont('helvetica', 'bold')
     doc.setTextColor(...BRAND_COLORS.navy)
-    doc.text('PRIME HOTELS', x, y)
+    doc.text('REMAL HOSPITALITY', x, y)
 }
 
 function drawKPISection(
@@ -745,7 +745,7 @@ function drawFooter(
     }
 
     // Company name (right)
-    doc.text('© Prime Hotels', pageWidth - MARGINS.right, footerY, { align: 'right' })
+    doc.text('© REMAL Hospitality', pageWidth - MARGINS.right, footerY, { align: 'right' })
 
     // Footer line
     doc.setDrawColor(...BRAND_COLORS.gold)
@@ -774,12 +774,12 @@ function formatDateRange(start: string, end: string): string {
 
 /**
  * Generate corporate filename
- * Format: PRIME_ReportType_Hotel_Period_Date.pdf
+ * Format: REMAL_ReportType_Hotel_Period_Date.pdf
  */
 function generateFileName(config: PrintConfig): string {
     const sanitize = (str: string) => str.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_')
 
-    const company = 'PRIME'
+    const company = 'REMAL'
     const reportType = sanitize(config.reportType)
     const hotel = sanitize(config.hotelCode || config.hotelName.substring(0, 10))
     const period = `${config.period.start.replace(/-/g, '')}_${config.period.end.replace(/-/g, '')}`

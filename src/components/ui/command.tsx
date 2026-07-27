@@ -28,7 +28,7 @@ type CommandDialogProps = DialogProps
 const CommandDialog = ({ children, ...props }: CommandDialogProps) => {
     return (
         <Dialog {...props}>
-            <DialogContent className="overflow-hidden p-0 shadow-lg">
+            <DialogContent className="overflow-hidden p-0 shadow-2xl max-w-2xl" bodyClassName="p-0 max-h-[80vh] flex flex-col">
                 <DialogHeader className="sr-only">
                     <DialogTitle>Command palette</DialogTitle>
                     <DialogDescription>
@@ -68,7 +68,7 @@ const CommandList = React.forwardRef<
 >(({ className, ...props }, ref) => (
     <CommandPrimitive.List
         ref={ref}
-        className={cn("max-h-[300px] overflow-y-auto overflow-x-hidden", className)}
+        className={cn("max-h-[360px] overflow-y-auto overflow-x-hidden", className)}
         {...props}
     />
 ))
@@ -119,16 +119,41 @@ CommandSeparator.displayName = CommandPrimitive.Separator.displayName
 const CommandItem = React.forwardRef<
     React.ElementRef<typeof CommandPrimitive.Item>,
     React.ComponentPropsWithoutRef<typeof CommandPrimitive.Item>
->(({ className, ...props }, ref) => (
-    <CommandPrimitive.Item
-        ref={ref}
-        className={cn(
-            "relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm text-slate-900 dark:text-slate-100 outline-none aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
-            className
-        )}
-        {...props}
-    />
-))
+>(({ className, onSelect, onClick, onPointerDown, ...props }, ref) => {
+    const handleAction = React.useCallback((e: React.SyntheticEvent) => {
+        if ((e.target as HTMLElement)?.closest('button')) {
+            return
+        }
+        if (onSelect) {
+            onSelect(props.value || "")
+        }
+        if (onClick) {
+            onClick(e as React.MouseEvent<HTMLDivElement>)
+        }
+    }, [onSelect, onClick, props.value])
+
+    return (
+        <CommandPrimitive.Item
+            ref={ref}
+            onSelect={onSelect}
+            onPointerDown={(e) => {
+                onPointerDown?.(e)
+                if (e.button === 0) {
+                    handleAction(e)
+                }
+            }}
+            onClick={(e) => {
+                onClick?.(e)
+                handleAction(e)
+            }}
+            className={cn(
+                "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm text-slate-900 dark:text-slate-100 outline-none aria-selected:bg-slate-100 dark:aria-selected:bg-slate-800 data-[disabled]:pointer-events-none data-[disabled]:opacity-50",
+                className
+            )}
+            {...props}
+        />
+    )
+})
 
 CommandItem.displayName = CommandPrimitive.Item.displayName
 

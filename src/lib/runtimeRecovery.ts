@@ -1,4 +1,4 @@
-const DEFAULT_CANONICAL_APP_URL = 'https://phg-connect.com'
+const DEFAULT_CANONICAL_APP_URL = 'https://remal-connect.com'
 
 const AUTH_SENSITIVE_PREFIXES = [
   '/login',
@@ -8,7 +8,7 @@ const AUTH_SENSITIVE_PREFIXES = [
 ] as const
 
 export const AUTH_ROUTE_RECOVERY_MESSAGE =
-  'PHG Connect is recovering your secure link. This should take a moment.'
+  'REMAL Connect is recovering your secure link. This should take a moment.'
 
 function isLocalDevelopmentHost(hostname: string): boolean {
   return hostname === 'localhost'
@@ -28,8 +28,8 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
     if (isLocalDevelopmentHost(parsed.hostname)) {
       return fallback.toString().replace(/\/$/, '')
     }
-    if (parsed.hostname === 'www.phg-connect.com') {
-      parsed.hostname = 'phg-connect.com'
+    if (parsed.hostname === 'www.remal-connect.com') {
+      parsed.hostname = 'remal-connect.com'
     }
     parsed.pathname = ''
     parsed.search = ''

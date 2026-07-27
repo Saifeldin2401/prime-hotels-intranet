@@ -148,7 +148,7 @@ export default function PublicHome() {
             </h1>
             <p className="mt-3 text-sm leading-6 text-slate-600">
               {secureEntryRecoveryFailed
-                ? `PHG Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to continue account setup.`
+                ? `REMAL Connect detected an unexpected public-page render on ${currentPathname}. Retry the secure link to continue account setup.`
                 : AUTH_ROUTE_RECOVERY_MESSAGE}
             </p>
           </div>
@@ -467,7 +467,7 @@ export default function PublicHome() {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {/* Brand */}
             <div>
-              <img src="/prime-logo-light.png" alt="Prime Hotels" className="h-10 w-auto mb-4" />
+              <img src="/prime-logo-light.png" alt="REMAL Hospitality" className="h-10 w-auto mb-4" />
               <p className="text-white/60 text-sm leading-relaxed">
                 {t('footer.description')}
               </p>

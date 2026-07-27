@@ -219,20 +219,20 @@ function MetricBar({
     const percentage = Math.min((value / max) * 100, 100)
 
     const colorClasses = {
-        blue: 'bg-blue-500',
-        emerald: 'bg-emerald-500',
-        amber: 'bg-amber-500',
-        rose: 'bg-rose-500',
-        purple: 'bg-purple-500'
+        blue: 'bg-gradient-to-r from-blue-400 to-indigo-500 shadow-blue-500/20',
+        emerald: 'bg-gradient-to-r from-emerald-400 to-teal-500 shadow-emerald-500/20',
+        amber: 'bg-gradient-to-r from-amber-400 to-orange-500 shadow-amber-500/20',
+        rose: 'bg-gradient-to-r from-rose-400 to-red-500 shadow-rose-500/20',
+        purple: 'bg-gradient-to-r from-purple-400 to-fuchsia-500 shadow-purple-500/20'
     }
 
     return (
         <div className={cn(
-            "w-full bg-slate-100 rounded-full overflow-hidden",
+            "w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden",
             size === 'sm' ? "h-1.5" : "h-2"
         )}>
             <div
-                className={cn("h-full rounded-full transition-all duration-500", colorClasses[color])}
+                className={cn("h-full rounded-full transition-all duration-500 shadow-sm", colorClasses[color])}
                 style={{ width: `${percentage}%` }}
             />
         </div>
@@ -291,35 +291,35 @@ function ComparisonTable({ data }: { data: PropertyComparisonData }) {
                                 className="w-[200px] shrink-0"
                             >
                                 <Card
-                                    className="border border-slate-200 rounded-xl hover:border-blue-300 hover:shadow-md transition-all cursor-pointer group"
+                                    className="border border-slate-200/60 dark:border-slate-850 rounded-[20px] bg-white/80 dark:bg-slate-900/60 backdrop-blur-sm hover:border-[#C39A45]/40 hover:shadow-xl transition-all duration-300 cursor-pointer group"
                                     onClick={() => navigate(`/operations/property/${prop.id}`)}
                                 >
-                                    <CardContent className="p-3 space-y-3">
+                                    <CardContent className="p-4 space-y-4">
                                         {/* Header */}
-                                        <div className="flex items-start justify-between">
+                                        <div className="flex items-start justify-between gap-2 border-b border-slate-100/60 dark:border-slate-800/60 pb-2">
                                             <div className="min-w-0">
-                                                <p className="text-sm font-bold text-slate-800 truncate">
+                                                <p className="text-sm font-extrabold text-slate-800 dark:text-slate-200 truncate group-hover:text-[#C39A45] transition-colors">
                                                     {prop.name}
                                                 </p>
-                                                <p className="text-xs text-slate-500">
+                                                <p className="text-[10px] font-bold text-[#C39A45] bg-[#C39A45]/10 px-2 py-0.5 rounded-full w-fit mt-1">
                                                     {prop.staffCount} {t('comparison.staff', 'staff')}
                                                 </p>
                                             </div>
-                                            <div className={cn("p-1.5 rounded-lg shrink-0", health.bg)}>
+                                            <div className={cn("p-2 rounded-xl shrink-0 shadow-sm", health.bg)}>
                                                 <HealthIcon className={cn("w-4 h-4", health.color)} />
                                             </div>
                                         </div>
 
                                         {/* Metrics */}
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             {/* Compliance */}
                                             <div>
-                                                <div className="flex justify-between text-xs mb-1">
-                                                    <span className="text-slate-500">{t('comparison.compliance', 'Compliance')}</span>
+                                                <div className="flex justify-between text-xs mb-1.5 font-semibold">
+                                                    <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-wider">{t('comparison.compliance', 'Compliance')}</span>
                                                     <span className={cn(
-                                                        "font-semibold",
-                                                        prop.complianceRate >= 80 ? "text-emerald-600" :
-                                                            prop.complianceRate >= 60 ? "text-amber-600" : "text-rose-600"
+                                                        "text-xs font-bold",
+                                                        prop.complianceRate >= 80 ? "text-emerald-600 dark:text-emerald-400" :
+                                                            prop.complianceRate >= 60 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"
                                                     )}>
                                                         {prop.complianceRate}%
                                                     </span>
@@ -329,12 +329,12 @@ function ComparisonTable({ data }: { data: PropertyComparisonData }) {
 
                                             {/* Maintenance */}
                                             <div>
-                                                <div className="flex justify-between text-xs mb-1">
-                                                    <span className="text-slate-500">{t('comparison.maintenance', 'Maintenance')}</span>
+                                                <div className="flex justify-between text-xs mb-1.5 font-semibold">
+                                                    <span className="text-slate-400 dark:text-slate-500 text-[10px] uppercase tracking-wider">{t('comparison.maintenance', 'Maintenance')}</span>
                                                     <span className={cn(
-                                                        "font-semibold",
-                                                        prop.maintenanceEfficiency >= 70 ? "text-emerald-600" :
-                                                            prop.maintenanceEfficiency >= 50 ? "text-amber-600" : "text-rose-600"
+                                                        "text-xs font-bold",
+                                                        prop.maintenanceEfficiency >= 70 ? "text-emerald-600 dark:text-emerald-400" :
+                                                            prop.maintenanceEfficiency >= 50 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400"
                                                     )}>
                                                         {prop.maintenanceEfficiency}%
                                                     </span>
@@ -343,12 +343,13 @@ function ComparisonTable({ data }: { data: PropertyComparisonData }) {
                                             </div>
 
                                             {/* Open Tickets */}
-                                            <div className="flex items-center justify-between pt-1">
-                                                <span className="text-xs text-slate-500">{t('comparison.open_tickets', 'Open Tickets')}</span>
+                                            <div className="flex items-center justify-between pt-1 border-t border-slate-100/40 dark:border-slate-800/40">
+                                                <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{t('comparison.open_tickets', 'Open Tickets')}</span>
                                                 <span className={cn(
-                                                    "text-xs font-semibold px-2 py-0.5 rounded-full",
-                                                    prop.openTickets === 0 ? "bg-emerald-100 text-emerald-700" :
-                                                        prop.openTickets < 10 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700"
+                                                    "text-[11px] font-bold px-2 py-0.5 rounded-full shadow-sm",
+                                                    prop.openTickets === 0 ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/40" :
+                                                        prop.openTickets < 10 ? "bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-100 dark:border-amber-900/40" : 
+                                                        "bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-100 dark:border-rose-900/40"
                                                 )}>
                                                     {prop.openTickets}
                                                 </span>
@@ -356,9 +357,9 @@ function ComparisonTable({ data }: { data: PropertyComparisonData }) {
                                         </div>
 
                                         {/* View Link */}
-                                        <div className="flex items-center justify-center gap-1 pt-1 text-xs font-medium text-blue-600 group-hover:text-blue-700">
+                                        <div className="flex items-center justify-center gap-1 pt-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 group-hover:text-[#C39A45] transition-colors">
                                             {t('comparison.view_details', 'View')}
-                                            <ChevronRight className="w-3 h-3 group-hover:translate-x-0.5 transition-transform" />
+                                            <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
                                         </div>
                                     </CardContent>
                                 </Card>

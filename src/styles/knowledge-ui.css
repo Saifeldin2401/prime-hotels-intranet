@@ -5,9 +5,9 @@
 
 :root {
     /* Typography Tokens */
-    --kb-font-sans: 'Inter', -apple-system, system-ui, sans-serif;
-    --kb-font-serif: 'Source Serif 4', 'Charter', 'Georgia', serif;
-    --kb-font-arabic: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', sans-serif;
+    --kb-font-sans: 'Inter', sans-serif;
+    --kb-font-serif: 'Inter', sans-serif;
+    --kb-font-arabic: 'Cairo', sans-serif;
 
     /* Color Tokens */
     --kb-accent-gold: 212, 175, 55;

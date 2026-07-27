@@ -6,6 +6,7 @@
  */
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { isAuthorizedServiceRoleRequest } from "../_shared/auth.ts";
 
 interface AITagResult {
   tags: string[];
@@ -14,9 +15,8 @@ interface AITagResult {
 }
 
 export default async (req: Request) => {
-  // Verify JWT and get user
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) {
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!isAuthorizedServiceRoleRequest(req.headers.get("Authorization"), serviceRoleKey)) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
@@ -36,8 +36,7 @@ export default async (req: Request) => {
 
     // Create Supabase client
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     // Determine document type based on file extension
     const docType = getDocumentType(fileExtension);

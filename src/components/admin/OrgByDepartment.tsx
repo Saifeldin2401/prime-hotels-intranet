@@ -201,17 +201,17 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                 <Card key={property.id} className="overflow-hidden">
                     {/* Property Header */}
                     <div
-                        className="flex items-center gap-3 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 cursor-pointer hover:bg-blue-100/50 transition-colors"
+                        className="flex items-center gap-3 p-4 bg-gradient-to-r from-hotel-navy/5 to-hotel-navy/10 dark:from-hotel-navy/20 dark:to-hotel-navy/10 cursor-pointer hover:bg-hotel-navy/10 transition-colors"
                         onClick={() => toggleProperty(property.id)}
                     >
                         <button className="p-1">
                             {expandedProperties.has(property.id) ? (
-                                <ChevronDown className="h-5 w-5 text-blue-600" />
+                                <ChevronDown className="h-5 w-5 text-hotel-navy" />
                             ) : (
-                                <ChevronRight className="h-5 w-5 text-blue-600" />
+                                <ChevronRight className="h-5 w-5 text-hotel-navy" />
                             )}
                         </button>
-                        <Building2 className="h-6 w-6 text-blue-600" />
+                        <Building2 className="h-6 w-6 text-hotel-navy" />
                         <div className="flex-1">
                             <h3 className="font-semibold text-gray-900 dark:text-white">{property.name}</h3>
                             <p className="text-sm text-gray-500">{property.departments.length} {t('organization.departments', 'Departments')}</p>

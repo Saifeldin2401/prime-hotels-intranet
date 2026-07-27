@@ -255,7 +255,7 @@ function ClusterHROverview() {
 function ClusterMetricsGrid({ cards }: { cards: ClusterMetricCard[] }) {
     return (
         <LazyMotion features={domAnimation}>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {cards.map((card, index) => {
                     const Icon = card.icon
                     const theme = colorMap[card.theme]
@@ -263,40 +263,45 @@ function ClusterMetricsGrid({ cards }: { cards: ClusterMetricCard[] }) {
                     return (
                         <m.div
                             key={card.label}
-                            initial={{ opacity: 0, scale: 0.95, y: 12 }}
+                            initial={{ opacity: 0, scale: 0.96, y: 15 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            transition={{ delay: index * 0.06, ease: 'easeOut', duration: 0.35 }}
+                            transition={{ delay: index * 0.05, ease: [0.16, 1, 0.3, 1], duration: 0.4 }}
                         >
                             <Card className={cn(
-                                "group relative overflow-hidden border rounded-xl shadow-sm transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
-                                card.alert ? "border-rose-200 bg-rose-50/30" : "border-slate-200 bg-white"
+                                "group relative overflow-hidden border rounded-[20px] transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1",
+                                card.alert 
+                                  ? "border-rose-200 dark:border-rose-950/40 bg-rose-50/50 dark:bg-rose-950/20" 
+                                  : "border-slate-200/60 dark:border-slate-800/60 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm"
                             )}>
-                                <CardContent className="p-3 relative z-10">
-                                    <div className="flex items-start justify-between gap-2 mb-2">
-                                        <span className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-tight line-clamp-2 flex-1 leading-tight">
+                                <CardContent className="p-4 relative z-10 space-y-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-tight flex-1">
                                             {card.label}
                                         </span>
                                         <div className={cn(
-                                            "p-1.5 rounded-lg transition-colors duration-300 shrink-0",
-                                            theme.bg, theme.icon,
-                                            "group-hover:scale-110"
+                                            "p-2 rounded-xl transition-all duration-300 shrink-0 border shadow-sm",
+                                            card.alert
+                                              ? "bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 border-rose-200/50"
+                                              : "bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200/30"
                                         )}>
-                                            <Icon className="w-3.5 h-3.5" />
+                                            <Icon className="w-4 h-4" />
                                         </div>
                                     </div>
-                                    <div className="flex items-baseline gap-1">
-                                        <span className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">
+                                    
+                                    <div className="flex items-baseline gap-1 pt-1">
+                                        <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
                                             {card.value}
                                         </span>
                                         {card.suffix && (
-                                            <span className="text-xs font-bold text-slate-400">
+                                            <span className="text-xs font-extrabold text-slate-400 dark:text-slate-500">
                                                 {card.suffix}
                                             </span>
                                         )}
                                     </div>
+
                                     {card.alert && (
-                                        <div className="mt-1.5 flex items-center gap-1 text-[10px] font-semibold text-rose-600">
-                                            <AlertCircle className="w-3 h-3" />
+                                        <div className="flex items-center gap-1.5 text-[9px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-tight bg-rose-50 dark:bg-rose-950/40 px-2 py-0.5 rounded-full w-fit">
+                                            <AlertCircle className="w-3.5 h-3.5 animate-pulse" />
                                             {card.trend === 'up' ? 'Attention needed' : 'Below target'}
                                         </div>
                                     )}

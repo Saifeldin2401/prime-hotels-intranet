@@ -78,3 +78,90 @@ export function useSystemSettings(category?: string) {
         getSetting,
     }
 }
+
+/**
+ * Hook to retrieve a single system setting value reactively
+ */
+export function useSetting<T = unknown>(key: string, defaultValue?: T) {
+    const { data: setting, isLoading } = useQuery({
+        queryKey: ['system-setting', key],
+        queryFn: async () => {
+            const { data, error } = await supabase
+                .from('system_settings')
+                .select('value')
+                .eq('key', key)
+                .maybeSingle()
+
+            if (error) throw error
+            return data ? (data.value as T) : (defaultValue as T)
+        },
+        staleTime: 60000,
+    })
+
+    return {
+        value: setting ?? defaultValue,
+        isLoading,
+    }
+}
+
+/**
+ * Hook for Maintenance Mode status
+ */
+export function useMaintenanceMode() {
+    const { value: isMaintenance, isLoading } = useSetting<boolean>('maintenance_mode', false)
+    return { isMaintenance: Boolean(isMaintenance), isLoading }
+}
+
+/**
+ * Hook for App & Corporate Branding settings
+ */
+export function useAppBranding() {
+    const { settings, isLoading } = useSystemSettings('branding')
+    const { settings: generalSettings } = useSystemSettings('general')
+
+    const appName = (settings.find(s => s.key === 'app_name')?.value as string) || 'REMAL Connect'
+    const companyName = (settings.find(s => s.key === 'company_name')?.value as string) || 'REMAL Hospitality'
+    const companyProfile = generalSettings.find(s => s.key === 'company_profile')?.value as {
+        name?: string
+        brand?: string
+        tagline?: string
+        support_email?: string
+    } || {}
+
+    return {
+        appName,
+        companyName,
+        companyProfile,
+        isLoading,
+    }
+}
+
+/**
+ * Hook for Security Settings
+ */
+export function useSecuritySettings() {
+    const { settings, isLoading } = useSystemSettings('security')
+
+    return {
+        force2FA: Boolean(settings.find(s => s.key === 'force_2fa')?.value ?? false),
+        maxLoginAttempts: Number(settings.find(s => s.key === 'max_login_attempts')?.value ?? 5),
+        passwordExpiryDays: Number(settings.find(s => s.key === 'password_expiry_days')?.value ?? 90),
+        passwordMinLength: Number(settings.find(s => s.key === 'password_min_length')?.value ?? 8),
+        sessionTimeoutMinutes: Number(settings.find(s => s.key === 'session_timeout_minutes')?.value ?? 30),
+        isLoading,
+    }
+}
+
+/**
+ * Hook for HR & Compliance Settings
+ */
+export function useHRSettings() {
+    const { settings, isLoading } = useSystemSettings('hr')
+
+    return {
+        iqamaExpiryWarningDays: Number(settings.find(s => s.key === 'iqama_expiry_warning_days')?.value ?? 60),
+        probationPeriodDays: Number(settings.find(s => s.key === 'probation_period_days')?.value ?? 90),
+        autoApproveLeave: Boolean(settings.find(s => s.key === 'auto_approve_leave')?.value ?? false),
+        isLoading,
+    }
+}

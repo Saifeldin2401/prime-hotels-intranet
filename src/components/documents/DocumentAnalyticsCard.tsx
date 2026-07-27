@@ -280,8 +280,8 @@ export function DocumentAnalyticsCard({
                       <stop offset="95%" stopColor="#0B1C3E" stopOpacity={0} />
                     </linearGradient>
                     <linearGradient id="colorDownloads" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#C5A065" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#C5A065" stopOpacity={0} />
+                      <stop offset="5%" stopColor="#C39A45" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#C39A45" stopOpacity={0} />
                     </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -306,7 +306,7 @@ export function DocumentAnalyticsCard({
                     type="monotone"
                     dataKey="downloads"
                     name="Downloads"
-                    stroke="#C5A065"
+                    stroke="#C39A45"
                     fillOpacity={1}
                     fill="url(#colorDownloads)"
                     strokeWidth={2}
@@ -391,7 +391,7 @@ export function DocumentAnalyticsCard({
                     width={75}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="views" fill="#C5A065" radius={[0, 4, 4, 0]} />
+                  <Bar dataKey="views" fill="#C39A45" radius={[0, 4, 4, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

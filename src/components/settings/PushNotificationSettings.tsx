@@ -177,7 +177,7 @@ export function PushNotificationSettings() {
       await registration.showNotification(
         t('push.test_title', { defaultValue: 'Test Notification' }),
         {
-          body: t('push.test_body', { defaultValue: 'This is a test notification from Prime Hotels Intranet.' }),
+          body: t('push.test_body', { defaultValue: 'This is a test notification from REMAL Hospitality Intranet.' }),
           icon: '/prime-logo-light.png',
           badge: '/prime-logo-light.png',
           tag: 'test',

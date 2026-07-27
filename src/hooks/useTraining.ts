@@ -860,7 +860,7 @@ export function useMyAssignments() {
       .channel(`my-assignments-${user.id}`)
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'learning_assignments' },
+        { event: '*', schema: 'public', table: 'training_assignment_rules' },
         invalidateMyAssignments
       )
       .on(

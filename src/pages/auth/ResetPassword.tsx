@@ -385,135 +385,32 @@ export default function ResetPassword() {
         </div>
     )
 
+    const renderWrapper = (content: React.ReactNode) => (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-hotel-navy-dark px-4 py-12">
+            <div className="w-full max-w-md flex flex-col items-center">
+                <div className="mt-16 mb-8 text-center">
+                    <img src="/remal-logo-web.png" alt="REMAL" className="h-14 w-auto mx-auto object-contain" />
+                </div>
+                {content}
+            </div>
+        </div>
+    )
+
     if (awaitingConfirmation) {
         if (!hasResetParams()) {
-            return (
-                <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                    <Card className="w-full max-w-md">
-                        <CardHeader className="text-center">
-                            <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                                <AlertCircle className="h-6 w-6 text-red-600" />
-                            </div>
-                            <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
-                            <CardDescription>
-                                {t('reset_password.invalid_message')}
-                            </CardDescription>
-                        </CardHeader>
-                        <CardFooter>
-                            <div className="w-full">
-                                <Button
-                                    className="w-full"
-                                    variant="outline"
-                                    onClick={() => {
-                                        clearAuthFlowState('reset-password')
-                                        navigate('/forgot-password')
-                                    }}
-                                >
-                                    {t('reset_password.request_new')}
-                                </Button>
-                            </div>
-                        </CardFooter>
-                    </Card>
-                </div>
-            )
-        }
-
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                <Card className="w-full max-w-md">
+            return renderWrapper(
+                <Card className="w-full">
                     <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                            <Lock className="h-6 w-6 text-primary" />
-                        </div>
-                        <CardTitle>{t('reset_password.confirm_title')}</CardTitle>
-                        <CardDescription>
-                            {t('reset_password.confirm_message')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardFooter>
-                        <Button className="w-full" size="lg" onClick={handleConfirmClick}>
-                            {t('reset_password.confirm_button')}
-                        </Button>
-                    </CardFooter>
-                </Card>
-            </div>
-        )
-    }
-
-    if (validatingToken) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50">
-                <Card className="w-full max-w-md">
-                    <CardContent className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                        <p className="text-gray-600">{t('reset_password.validating')}</p>
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    if (!tokenValid && serviceUnavailableMessage) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-amber-100 rounded-full flex items-center justify-center mb-4">
-                            <AlertCircle className="h-6 w-6 text-amber-600" />
-                        </div>
-                        <CardTitle>
-                            {t('reset_password.service_unavailable_title', { defaultValue: 'Authentication service unavailable' })}
-                        </CardTitle>
-                        <CardDescription>
-                            {t('reset_password.service_unavailable_message', { defaultValue: serviceUnavailableMessage })}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {renderResendPanel()}
-                    </CardContent>
-                    <CardFooter>
-                        <div className="w-full space-y-3">
-                            <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
-                                {t('reset_password.revalidate_link')}
-                            </Button>
-                            <Button
-                                className="w-full"
-                                variant="outline"
-                                onClick={() => {
-                                    clearAuthFlowState('reset-password')
-                                    navigate('/forgot-password')
-                                }}
-                            >
-                                {t('reset_password.request_new')}
-                            </Button>
-                        </div>
-                    </CardFooter>
-                </Card>
-            </div>
-        )
-    }
-
-    if (!tokenValid) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mb-4">
-                            <AlertCircle className="h-6 w-6 text-red-600" />
+                        <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                            <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
                         </div>
                         <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
                         <CardDescription>
                             {t('reset_password.invalid_message')}
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        {renderResendPanel()}
-                    </CardContent>
                     <CardFooter>
-                        <div className="w-full space-y-3">
-                            <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
-                                {t('reset_password.revalidate_link')}
-                            </Button>
+                        <div className="w-full">
                             <Button
                                 className="w-full"
                                 variant="outline"
@@ -527,134 +424,234 @@ export default function ResetPassword() {
                         </div>
                     </CardFooter>
                 </Card>
-            </div>
-        )
-    }
+            )
+        }
 
-    if (success) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-                <Card className="w-full max-w-md">
-                    <CardHeader className="text-center">
-                        <div className="mx-auto w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-4">
-                            <CheckCircle className="h-6 w-6 text-green-600" />
-                        </div>
-                        <CardTitle>{t('reset_password.success_title')}</CardTitle>
-                        <CardDescription>
-                            {t('reset_password.success_message')}
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="text-center">
-                        <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
-                        {redirectCountdown !== null && (
-                            <p className="mt-4 text-sm text-gray-500">{t('reset_password.redirecting', { count: redirectCountdown })}</p>
-                        )}
-                    </CardContent>
-                </Card>
-            </div>
-        )
-    }
-
-    return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-            <Card className="w-full max-w-md">
+        return renderWrapper(
+            <Card className="w-full">
                 <CardHeader className="text-center">
                     <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
                         <Lock className="h-6 w-6 text-primary" />
                     </div>
-                    <CardTitle>{t('reset_password.title')}</CardTitle>
+                    <CardTitle>{t('reset_password.confirm_title')}</CardTitle>
                     <CardDescription>
-                        {t('reset_password.description')}
+                        {t('reset_password.confirm_message')}
                     </CardDescription>
                 </CardHeader>
-                <form onSubmit={handleSubmit}>
-                    <CardContent className="space-y-4">
-                        {error && (
-                            <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
-                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                                <span className="text-sm">{error}</span>
-                            </div>
-                        )}
-
-                        <div className="space-y-2">
-                            <Label htmlFor="password">{t('reset_password.new_password')}</Label>
-                            <div className="relative">
-                                <Input
-                                    id="password"
-                                    type={showPassword ? 'text' : 'password'}
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    disabled={loading}
-                                    className="pe-10"
-                                />
-                                <button
-                                    type="button"
-                                    className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-3 space-y-2">
-                            <p className="text-xs font-medium text-gray-700 flex items-center gap-1">
-                                <ShieldCheck className="h-3 w-3" />
-                                Password Requirements:
-                            </p>
-                            <ul className="text-xs space-y-1">
-                                {[
-                                    { check: password.length >= securityConfig.auth.passwordMinLength, text: `At least ${securityConfig.auth.passwordMinLength} characters` },
-                                    { check: /[A-Z]/.test(password), text: 'One uppercase letter' },
-                                    { check: /[a-z]/.test(password), text: 'One lowercase letter' },
-                                    { check: /\d/.test(password), text: 'One number' },
-                                    { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' },
-                                ].map((requirement) => (
-                                    <li key={requirement.text} className={`flex items-center gap-1 ${requirement.check ? 'text-green-600' : 'text-gray-500'}`}>
-                                        {requirement.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300" />}
-                                        {requirement.text}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="confirmPassword">{t('reset_password.confirm_password')}</Label>
-                            <Input
-                                id="confirmPassword"
-                                type={showPassword ? 'text' : 'password'}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                disabled={loading}
-                            />
-                            {confirmPassword && !doPasswordsMatch && (
-                                <p className="text-xs text-red-500">Passwords do not match</p>
-                            )}
-                            {doPasswordsMatch && (
-                                <p className="text-xs text-green-600 flex items-center gap-1">
-                                    <CheckCircle className="h-3 w-3" /> Passwords match
-                                </p>
-                            )}
-                        </div>
-                    </CardContent>
-                    <CardFooter>
-                        <Button
-                            type="submit"
-                            className="w-full"
-                            disabled={loading || !isPasswordValid || !doPasswordsMatch}
-                        >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="h-4 w-4 me-2 animate-spin" />
-                                    {t('reset_password.updating')}
-                                </>
-                            ) : (
-                                t('reset_password.update_password')
-                            )}
-                        </Button>
-                    </CardFooter>
-                </form>
+                <CardFooter>
+                    <Button className="w-full" size="lg" onClick={handleConfirmClick}>
+                        {t('reset_password.confirm_button')}
+                    </Button>
+                </CardFooter>
             </Card>
-        </div>
+        )
+    }
+
+    if (validatingToken) {
+        return renderWrapper(
+            <Card className="w-full">
+                <CardContent className="flex flex-col items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                    <p className="text-gray-600 dark:text-gray-300">{t('reset_password.validating')}</p>
+                </CardContent>
+            </Card>
+        )
+    }
+
+    if (!tokenValid && serviceUnavailableMessage) {
+        return renderWrapper(
+            <Card className="w-full">
+                <CardHeader className="text-center">
+                    <div className="mx-auto w-12 h-12 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+                    </div>
+                    <CardTitle>
+                        {t('reset_password.service_unavailable_title', { defaultValue: 'Authentication service unavailable' })}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('reset_password.service_unavailable_message', { defaultValue: serviceUnavailableMessage })}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {renderResendPanel()}
+                </CardContent>
+                <CardFooter>
+                    <div className="w-full space-y-3">
+                        <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
+                            {t('reset_password.revalidate_link')}
+                        </Button>
+                        <Button
+                            className="w-full"
+                            variant="outline"
+                            onClick={() => {
+                                clearAuthFlowState('reset-password')
+                                navigate('/forgot-password')
+                            }}
+                        >
+                            {t('reset_password.request_new')}
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Card>
+        )
+    }
+
+    if (!tokenValid) {
+        return renderWrapper(
+            <Card className="w-full">
+                <CardHeader className="text-center">
+                    <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                        <AlertCircle className="h-6 w-6 text-red-600 dark:text-red-400" />
+                    </div>
+                    <CardTitle>{t('reset_password.invalid_title')}</CardTitle>
+                    <CardDescription>
+                        {t('reset_password.invalid_message')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {renderResendPanel()}
+                </CardContent>
+                <CardFooter>
+                    <div className="w-full space-y-3">
+                        <Button className="w-full" onClick={() => setValidationNonce((value) => value + 1)}>
+                            {t('reset_password.revalidate_link')}
+                        </Button>
+                        <Button
+                            className="w-full"
+                            variant="outline"
+                            onClick={() => {
+                                clearAuthFlowState('reset-password')
+                                navigate('/forgot-password')
+                            }}
+                        >
+                            {t('reset_password.request_new')}
+                        </Button>
+                    </div>
+                </CardFooter>
+            </Card>
+        )
+    }
+
+    if (success) {
+        return renderWrapper(
+            <Card className="w-full">
+                <CardHeader className="text-center">
+                    <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mb-4">
+                        <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
+                    </div>
+                    <CardTitle>{t('reset_password.success_title')}</CardTitle>
+                    <CardDescription>
+                        {t('reset_password.success_message')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="text-center">
+                    <Loader2 className="h-5 w-5 animate-spin mx-auto text-gray-400" />
+                    {redirectCountdown !== null && (
+                        <p className="mt-4 text-sm text-gray-500">{t('reset_password.redirecting', { count: redirectCountdown })}</p>
+                    )}
+                </CardContent>
+            </Card>
+        )
+    }
+
+    return renderWrapper(
+        <Card className="w-full">
+            <CardHeader className="text-center">
+                <div className="mx-auto w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                    <Lock className="h-6 w-6 text-primary" />
+                </div>
+                <CardTitle>{t('reset_password.title')}</CardTitle>
+                <CardDescription>
+                    {t('reset_password.description')}
+                </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleSubmit}>
+                <CardContent className="space-y-4">
+                    {error && (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-850/50 rounded-md text-red-700 dark:text-red-400">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                            <span className="text-sm">{error}</span>
+                        </div>
+                    )}
+
+                    <div className="space-y-2">
+                        <Label htmlFor="password">{t('reset_password.new_password')}</Label>
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                disabled={loading}
+                                className="pe-10"
+                            />
+                            <button
+                                type="button"
+                                className="absolute end-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                onClick={() => setShowPassword(!showPassword)}
+                            >
+                                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div className="bg-gray-50 dark:bg-muted/50 rounded-lg p-3 space-y-2">
+                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                            <ShieldCheck className="h-3 w-3" />
+                            Password Requirements:
+                        </p>
+                        <ul className="text-xs space-y-1">
+                            {[
+                                { check: password.length >= securityConfig.auth.passwordMinLength, text: `At least ${securityConfig.auth.passwordMinLength} characters` },
+                                { check: /[A-Z]/.test(password), text: 'One uppercase letter' },
+                                { check: /[a-z]/.test(password), text: 'One lowercase letter' },
+                                { check: /\d/.test(password), text: 'One number' },
+                                { check: /[!@#$%^&*(),.?":{}|<>]/.test(password), text: 'One special character' },
+                            ].map((requirement) => (
+                                <li key={requirement.text} className={`flex items-center gap-1 ${requirement.check ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'}`}>
+                                    {requirement.check ? <CheckCircle className="h-3 w-3" /> : <span className="w-3 h-3 rounded-full border border-gray-300 dark:border-gray-700" />}
+                                    {requirement.text}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="confirmPassword">{t('reset_password.confirm_password')}</Label>
+                        <Input
+                            id="confirmPassword"
+                            type={showPassword ? 'text' : 'password'}
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            disabled={loading}
+                        />
+                        {confirmPassword && !doPasswordsMatch && (
+                            <p className="text-xs text-red-500">Passwords do not match</p>
+                        )}
+                        {doPasswordsMatch && (
+                            <p className="text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                                <CheckCircle className="h-3 w-3" /> Passwords match
+                            </p>
+                        )}
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button
+                        type="submit"
+                        className="w-full"
+                        disabled={loading || !isPasswordValid || !doPasswordsMatch}
+                    >
+                        {loading ? (
+                            <>
+                                <Loader2 className="h-4 w-4 me-2 animate-spin" />
+                                {t('reset_password.updating')}
+                            </>
+                        ) : (
+                            t('reset_password.update_password')
+                        )}
+                    </Button>
+                </CardFooter>
+            </form>
+        </Card>
     )
 }

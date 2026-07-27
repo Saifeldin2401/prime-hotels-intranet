@@ -1,4 +1,4 @@
-﻿/**
+/**
  * KnowledgeHome - Knowledge Base Homepage (Full Redesign)
  * Premium, content-forward design inspired by modern documentation platforms.
  */
@@ -49,7 +49,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
-/* â”€â”€â”€ Content Type Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Content Type Configuration ───────────────────────────── */
 const TYPE_CONFIG: Record<string, {
     icon: React.ElementType
     gradient: string
@@ -74,7 +74,7 @@ const fadeUp = {
     })
 }
 
-/* â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* ─── Helper ───────────────────────────────────────────────── */
 function readTime(article: { estimated_read_time?: number; content?: string }): number {
     if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
     if (!article.content) return 2
@@ -91,9 +91,9 @@ function timeAgo(dateStr: string): string {
     return `${Math.floor(days / 30)}mo ago`
 }
 
-/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+/* ═══════════════════════════════════════════════════════════════
    COMPONENT
-   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
+   ═══════════════════════════════════════════════════════════════ */
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
@@ -129,10 +129,10 @@ export default function KnowledgeHome() {
         { type: 'video', label: t('content_types.video'), desc: t('content_type_desc.video') },
     ], [t])
 
-    /* â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+    /* ─── Render ─────────────────────────────────────────────── */
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50 to-white pb-16">
-            {/* â•â•â• HERO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
+            {/* ═══ HERO ═══════════════════════════════════════════ */}
             <div className="relative overflow-hidden">
                 {/* Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950" />
@@ -163,7 +163,7 @@ export default function KnowledgeHome() {
                             {t('subtitle', 'Your centralized hub for operational knowledge')}
                         </h1>
                         <p className="text-base md:text-lg text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-                            {t('hero_description', 'Access SOPs, policies, guides, and training materials â€” everything your team needs in one place.')}
+                            {t('hero_description', 'Access SOPs, policies, guides, and training materials — everything your team needs in one place.')}
                         </p>
                     </motion.div>
 
@@ -225,10 +225,10 @@ export default function KnowledgeHome() {
                 </div>
             </div>
 
-            {/* â•â•â• MAIN CONTENT (Negative margin overlap) â•â•â•â•â•â•â• */}
+            {/* ═══ MAIN CONTENT (Negative margin overlap) ═══════ */}
             <div className="container mx-auto px-4 md:px-6 -mt-10 relative z-10">
 
-                {/* â”€â”€ Required Reading Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                {/* ── Required Reading Alert ────────────────────── */}
                 {pendingRequired.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.97 }}
@@ -256,7 +256,7 @@ export default function KnowledgeHome() {
                     </motion.div>
                 )}
 
-                {/* â”€â”€ Category Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                {/* ── Category Cards ────────────────────────────── */}
                 <section className="mb-12">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {categoryCards.map((cat, idx) => {
@@ -296,10 +296,10 @@ export default function KnowledgeHome() {
                     </div>
                 </section>
 
-                {/* â”€â”€ Two-Column Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                {/* ── Two-Column Layout ─────────────────────────── */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* â–ŒLEFT COLUMN (8 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                    {/* ▌LEFT COLUMN (8 cols) ────────────────────── */}
                     <div className="lg:col-span-8 space-y-10">
 
                         {/* Gateway Tiles */}
@@ -353,7 +353,7 @@ export default function KnowledgeHome() {
                             )}
                         </div>
 
-                        {/* â”€â”€ Featured Articles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                        {/* ── Featured Articles ────────────────────── */}
                         {featured && featured.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -368,7 +368,7 @@ export default function KnowledgeHome() {
                                     </Link>
                                 </div>
 
-                                {/* Feature card â€” first article large, rest in grid */}
+                                {/* Feature card — first article large, rest in grid */}
                                 <div className="space-y-4">
                                     {/* Hero Feature */}
                                     {featured[0] && (() => {
@@ -464,9 +464,9 @@ export default function KnowledgeHome() {
                                                                     {article.title}
                                                                 </h4>
                                                                 <span className="text-[11px] text-gray-400 mt-1.5 block">
-                                                                    {article.department?.name && `${article.department.name} · `}
-                                                                    {(article.last_editor?.full_name || t('home.unknown_editor', 'System admin')) && `${article.last_editor?.full_name || t('home.unknown_editor', 'System admin')} · `}
-                                                                    v{article.current_version || article.version || 1} · {timeAgo(article.updated_at)}
+                                                                    {article.department?.name && `${article.department.name} � `}
+                                                                    {(article.last_editor?.full_name || t('home.unknown_editor', 'System admin')) && `${article.last_editor?.full_name || t('home.unknown_editor', 'System admin')} � `}
+                                                                    v{article.current_version || article.version || 1} � {timeAgo(article.updated_at)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -479,7 +479,7 @@ export default function KnowledgeHome() {
                             </section>
                         )}
 
-                        {/* â”€â”€ Recently Updated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                        {/* ── Recently Updated ─────────────────────── */}
                         {recentArticles && recentArticles.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -519,7 +519,7 @@ export default function KnowledgeHome() {
                                                             {t(`content_types.${article.content_type}`)}
                                                         </span>
                                                         {article.department?.name && (
-                                                            <span className="text-[10px] text-gray-400">Â· {article.department.name}</span>
+                                                            <span className="text-[10px] text-gray-400">· {article.department.name}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -537,7 +537,7 @@ export default function KnowledgeHome() {
                         )}
                     </div>
 
-                    {/* â–ŒRIGHT COLUMN (4 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
+                    {/* ▌RIGHT COLUMN (4 cols) ───────────────────── */}
                     <div className="lg:col-span-4 space-y-6">
 
                         {/* AI Assistant */}

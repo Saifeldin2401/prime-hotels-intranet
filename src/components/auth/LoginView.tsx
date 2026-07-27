@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { showErrorToast } from '@/lib/toastHelpers';
 import { useAuth } from '@/hooks/useAuth';
 import { MFAVerificationDialog } from './MFAVerificationDialog';
-import { isCaptchaRequired, getRemainingAttempts } from '@/lib/authSecurityService';
+import { getRemainingAttempts } from '@/lib/authSecurityService';
 import { safeLocalStorage } from '@/lib/storage';
 
 export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout' | 'mfa';
@@ -38,40 +38,13 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
   const { t } = useTranslation('auth');
   const { signIn, user, pendingMFAUserId } = useAuth();
 
-  const [email, setEmail] = useState(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        return localStorage.getItem('remembered_email') || '';
-      }
-    } catch {
-      // localStorage not available (Safari private mode, etc.)
-    }
-    return '';
-  });
+  const [email, setEmail] = useState(() => safeLocalStorage.getItem('remembered_email') || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        return !!localStorage.getItem('remembered_email');
-      }
-    } catch {
-      // localStorage not available (Safari private mode, etc.)
-    }
-    return false;
-  });
+  const [rememberMe, setRememberMe] = useState(() => safeLocalStorage.hasItem('remembered_email'));
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
-  const [emailValid, setEmailValid] = useState<boolean | null>(() => {
-    try {
-      if (typeof window !== 'undefined') {
-        return !!localStorage.getItem('remembered_email');
-      }
-    } catch {
-      // localStorage not available (Safari private mode, etc.)
-    }
-    return null;
-  });
+  const [emailValid, setEmailValid] = useState<boolean | null>(() => safeLocalStorage.hasItem('remembered_email'));
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
@@ -162,14 +135,10 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
       setError(null);
       setLoading(true);
 
-      try {
-        if (rememberMe) {
-          localStorage.setItem('remembered_email', email);
-        } else {
-          localStorage.removeItem('remembered_email');
-        }
-      } catch {
-        // localStorage not available (Safari private mode, etc.)
+      if (rememberMe) {
+        safeLocalStorage.setItem('remembered_email', email);
+      } else {
+        safeLocalStorage.removeItem('remembered_email');
       }
 
       try {

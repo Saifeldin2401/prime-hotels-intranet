@@ -12,15 +12,14 @@ import { Switch } from '@/components/ui/switch'
 import {
     BarChart3,
     Bell,
-    Book,
+    Building2,
     Cake,
-    Calendar,
     CheckCircle,
     GraduationCap,
     LayoutDashboard,
-    MessageCircle,
     Newspaper,
     Quote,
+    Star,
     Users,
     Wrench
 } from 'lucide-react'
@@ -43,35 +42,30 @@ export function DashboardCustomizeModal({
     isSaving = false
 }: DashboardCustomizeModalProps) {
     const widgetConfig = [
-        { key: 'quickInsights', label: 'Quick Insights', icon: LayoutDashboard },
-        { key: 'motivation', label: 'Motivation', icon: Quote },
-        { key: 'statsGrid', label: 'Statistics Overview', icon: BarChart3 },
-        { key: 'quickActions', label: 'Quick Actions', icon: LayoutDashboard },
-        { key: 'announcements', label: 'Announcements', icon: Bell },
-        { key: 'tasks', label: 'My Tasks', icon: CheckCircle },
-        { key: 'calendar', label: 'Calendar', icon: Calendar },
-        { key: 'training', label: 'Training Progress', icon: GraduationCap },
-        { key: 'knowledgeBase', label: 'Knowledge Base', icon: Book },
-        { key: 'todaysBirthdays', label: "Today's Birthdays", icon: Cake },
-        { key: 'employeeOfMonth', label: 'Employee of the Month', icon: Star },
-        { key: 'teamActivity', label: 'Team Activity', icon: Users },
-        { key: 'performanceChart', label: 'Performance Analytics', icon: BarChart3 },
-        { key: 'maintenance', label: 'Maintenance Requests', icon: Wrench },
-        { key: 'hospitalityNews', label: 'Hospitality News', icon: Newspaper },
-        { key: 'shiftHandover', label: 'Shift Handover', icon: MessageCircle },
-        { key: 'eliteSpotlight', label: 'Elite Spotlight', icon: Star },
+        { key: 'bentoStats', label: 'Bento KPI Summary Cards', icon: BarChart3 },
+        { key: 'quickInsights', label: 'Role-Aware Operational Insights', icon: LayoutDashboard },
+        { key: 'motivation', label: 'Hospitality Quote & Motivation', icon: Quote },
+        { key: 'quickActions', label: 'Quick Action Shortcuts', icon: LayoutDashboard },
+        { key: 'announcements', label: 'Property & Chain Announcements', icon: Bell },
+        { key: 'tasks', label: 'Active Work Queue & Tasks', icon: CheckCircle },
+        { key: 'maintenance', label: 'Property Maintenance Tickets', icon: Wrench },
+        { key: 'clusterOverview', label: 'Multi-Property Cluster Portfolio', icon: Building2 },
+        { key: 'propertyComparison', label: 'Property Comparison Matrix', icon: BarChart3 },
+        { key: 'performanceChart', label: 'Performance Analytics Chart', icon: BarChart3 },
+        { key: 'employeeSpotlight', label: 'Elite Spotlight & Recognitions', icon: Star },
+        { key: 'todaysBirthdays', label: "Teammates Birthdays", icon: Cake },
+        { key: 'teamActivity', label: 'Live Team Online Presence', icon: Users },
+        { key: 'training', label: 'Training Compliance Gauge', icon: GraduationCap },
+        { key: 'hospitalityNews', label: 'Hospitality Updates & News Feed', icon: Newspaper },
     ]
-
-    // Filter out any widgets that might not be relevant for specific roles if needed
-    // For now, show all
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[520px]">
                 <DialogHeader>
-                    <DialogTitle>Customize Dashboard</DialogTitle>
+                    <DialogTitle>Customize Dashboard Layout</DialogTitle>
                     <DialogDescription>
-                        Choose which widgets to display on your dashboard.
+                        Toggle widgets on or off. Preferences are saved automatically to your workspace profile.
                         {isSaving && (
                             <span className="flex items-center gap-2 mt-2 text-muted-foreground">
                                 <Spinner className="h-4 w-4" />
@@ -81,26 +75,28 @@ export function DashboardCustomizeModal({
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid gap-4 py-4">
-                    <div className="grid grid-cols-1 gap-4 max-h-[400px] overflow-y-auto pe-2">
+                <div className="grid gap-4 py-3">
+                    <div className="grid grid-cols-1 gap-3 max-h-[420px] overflow-y-auto pe-2">
                         {widgetConfig.map((widget) => {
                             const Icon = widget.icon
+                            const isChecked = visibleWidgets[widget.key] !== false
+
                             return (
                                 <div
                                     key={widget.key}
-                                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-slate-50 transition-colors"
+                                    className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-slate-800 p-3.5 hover:bg-slate-50 dark:hover:bg-slate-900/50 transition-colors"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-slate-100 rounded-md">
-                                            <Icon className="h-4 w-4 text-slate-600" />
+                                        <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-700 dark:text-slate-300">
+                                            <Icon className="h-4 w-4" />
                                         </div>
-                                        <Label htmlFor={`widget-${widget.key}`} className="font-medium cursor-pointer">
+                                        <Label htmlFor={`widget-${widget.key}`} className="font-semibold text-xs text-slate-800 dark:text-slate-200 cursor-pointer">
                                             {widget.label}
                                         </Label>
                                     </div>
                                     <Switch
                                         id={`widget-${widget.key}`}
-                                        checked={visibleWidgets[widget.key] ?? true}
+                                        checked={isChecked}
                                         onCheckedChange={(checked) => onToggleWidget(widget.key, checked)}
                                         disabled={isSaving}
                                     />
@@ -110,22 +106,18 @@ export function DashboardCustomizeModal({
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-3">
+                <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
                     <Button
-                        variant="outline"
+                        variant="ghost"
+                        size="sm"
                         onClick={onReset}
                         disabled={isSaving}
+                        className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white"
                     >
-                        {isSaving ? (
-                            <>
-                                <Spinner className="h-4 w-4 me-2" />
-                                Resetting...
-                            </>
-                        ) : (
-                            'Reset to Default'
-                        )}
+                        Reset Defaults
                     </Button>
                     <Button
+                        size="sm"
                         onClick={() => onOpenChange(false)}
                         disabled={isSaving}
                     >
@@ -134,24 +126,5 @@ export function DashboardCustomizeModal({
                 </div>
             </DialogContent>
         </Dialog>
-    )
-}
-
-function Star(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-        </svg>
     )
 }

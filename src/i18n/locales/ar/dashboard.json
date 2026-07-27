@@ -184,7 +184,7 @@
         "elite_spotlight": {
             "title": "نقطة الضوء",
             "birthday_celebration": "احتفال عيد الميلاد",
-            "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق Prime Hotels!",
+            "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق REMAL Hospitality!",
             "coming_up_on": "سيأتي في",
             "coo_title": "المدير التنفيذي للعمليات"
         },
@@ -776,7 +776,7 @@
             "milestone": "إنجاز: تم إكمال {{count}} وحدات تدريبية",
             "milestone_one": "إنجاز: تم إكمال وحدة تدريبية واحدة",
             "operational_focus": "التركيز التشغيلي: {{name}}",
-            "system_operational": "PRIME Connect يعمل بشكل طبيعي",
+            "system_operational": "REMAL Connect يعمل بشكل طبيعي",
             "announcement_label": "إعلان:",
             "operating_normally": "يعمل بشكل طبيعي"
         },
@@ -916,7 +916,7 @@
     "elite_spotlight": {
         "title": "نقطة الضوء",
         "birthday_celebration": "احتفال عيد الميلاد",
-        "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق Prime Hotels!",
+        "birthday_message": "نتمنى لك عيد ميلاد سعيداً وعاماً مليئاً بالنجاحات من فريق REMAL Hospitality!",
         "coming_up_on": "سيأتي في"
     },
     "subtitle": "مركزك الموحد للمعرفة التشغيلية",

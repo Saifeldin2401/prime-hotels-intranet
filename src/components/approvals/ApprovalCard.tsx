@@ -59,11 +59,11 @@ export function ApprovalCard({
     const getTypeConfig = (type: ApprovalType) => {
         switch (type) {
             case 'leave':
-                return { icon: <Calendar className="w-3.5 h-3.5" />, color: 'bg-blue-50 text-blue-700 border-blue-200', label: t('leaves_tab') }
+                return { icon: <Calendar className="w-3.5 h-3.5" />, color: 'bg-info/10 text-info border-info/20', label: t('leaves_tab') }
             case 'maintenance':
                 return { icon: <Wrench className="w-3.5 h-3.5" />, color: 'bg-orange-50 text-orange-700 border-orange-200', label: t('maintenance_tab') }
             case 'document':
-                return { icon: <FileText className="w-3.5 h-3.5" />, color: 'bg-indigo-50 text-indigo-700 border-indigo-200', label: t('documents_tab') }
+                return { icon: <FileText className="w-3.5 h-3.5" />, color: 'bg-hotel-navy/10 text-hotel-navy border-hotel-navy/20', label: t('documents_tab') }
             case 'request':
                 return { icon: <Inbox className="w-3.5 h-3.5" />, color: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: t('unified_tab', 'Request') }
             case 'expense':

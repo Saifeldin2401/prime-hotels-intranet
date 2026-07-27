@@ -28,6 +28,7 @@ export function Toaster() {
         <SonnerToaster
             position={position}
             dir={isRTL ? 'rtl' : 'ltr'}
+            style={{ zIndex: 99999 }}
             expand={false}
             richColors
             closeButton

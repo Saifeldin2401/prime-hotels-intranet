@@ -19,7 +19,7 @@ interface Message {
 
 const FALLBACK_MODELS = ['Qwen/Qwen2.5-7B-Instruct']
 
-const SYSTEM_PROMPT = `You are the PRIME Connect Configuration Assistant, an AI built to guide Corporate Administrators and HR Managers in modifying system variables. 
+const SYSTEM_PROMPT = `You are the REMAL Connect Configuration Assistant, an AI built to guide Corporate Administrators and HR Managers in modifying system variables. 
 You understand the following 5 modules deeply:
 1. Hospitality News Publisher: Broadcasts dual-language articles.
 2. SIEM Integrations: Maps security event webhooks.

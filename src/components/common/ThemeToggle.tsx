@@ -46,7 +46,7 @@ export function ThemeToggle() {
         >
           <div className="relative">
             <Sun className="h-4 w-4 rotate-0 scale-100 transition-all duration-300 dark:-rotate-90 dark:scale-0 text-amber-500" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-blue-400" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all duration-300 dark:rotate-0 dark:scale-100 text-hotel-gold" />
             <Monitor className="absolute h-4 w-4 rotate-0 scale-0 transition-all duration-300 opacity-50" />
           </div>
           <div className="absolute -bottom-1 -end-1 h-2 w-2 rounded-full bg-hotel-gold transition-all duration-300 scale-0 group-hover:scale-100" />
@@ -85,7 +85,7 @@ export function ThemeToggle() {
           className="cursor-pointer group/item"
         >
           <div className="flex items-center gap-3 flex-1">
-            <Moon className="h-4 w-4 text-blue-400" />
+            <Moon className="h-4 w-4 text-hotel-gold" />
             <span>Dark</span>
           </div>
           <div className="ms-auto">

@@ -1,15 +1,15 @@
 {
-    "brand_name": "PHG Connect",
-    "brand_full": "Prime Hotels Group",
+    "brand_name": "REMAL Connect",
+    "brand_full": "REMAL Hospitality",
     "brand_tagline": "Your Official Digital Gateway",
     "welcome_title": "Welcome to",
-    "prime_connect": "PHG Connect",
-    "subtitle": "The official digital intranet of Prime Hotels Group (PHG). Your centralized hub for career growth, operational excellence, and team collaboration.",
+    "prime_connect": "REMAL Connect",
+    "subtitle": "The official digital intranet of REMAL Hospitality (REMAL). Your centralized hub for career growth, operational excellence, and team collaboration.",
     "login_button": "Access Portal",
     "explore_button": "Explore Features",
     "official_intranet": "Official Intranet",
     "hero": {
-        "badge": "Prime Hotels Group • Official Intranet"
+        "badge": "REMAL Hospitality • Official Intranet"
     },
     "nav": {
         "home": "Home",
@@ -25,9 +25,9 @@
         "contact": "Contact"
     },
     "who_we_are": {
-        "title": "About PHG Connect",
+        "title": "About REMAL Connect",
         "subtitle": "Who We Are",
-        "mission": "PHG Connect is the official intranet platform of Prime Hotels Group, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality.",
+        "mission": "REMAL Connect is the official intranet platform of REMAL Hospitality, designed to empower every team member with the tools, resources, and information needed to deliver exceptional hospitality.",
         "description": "From onboarding to career advancement, everything you need is here. Our platform connects all team members across our properties, creating a unified digital workplace that fosters collaboration, learning, and growth.",
         "features": {
             "1": "Centralized Information Hub",
@@ -84,7 +84,7 @@
         },
         "step4": {
             "title": "Grow & Succeed",
-            "desc": "Track your progress, earn certifications, and advance your career with PHG."
+            "desc": "Track your progress, earn certifications, and advance your career with REMAL."
         }
     },
     "cta": {
@@ -116,8 +116,8 @@
         }
     },
     "footer": {
-        "description": "PHG Connect is the official digital workplace platform for Prime Hotels Group team members across the Kingdom of Saudi Arabia.",
-        "copyright": "© {{year}} Prime Hotels Group (PHG). All Rights Reserved. | Internal Use Only",
+        "description": "REMAL Connect is the official digital workplace platform for REMAL Hospitality team members across the Kingdom of Saudi Arabia.",
+        "copyright": "© {{year}} REMAL Hospitality (REMAL). All Rights Reserved. | Internal Use Only",
         "links": {
             "title": "Quick Links",
             "home": "Home",
@@ -145,7 +145,7 @@
     },
     "verification": {
         "title": "Certificate Verification",
-        "subtitle": "Official validation service for Prime Hotels Group certifications.",
+        "subtitle": "Official validation service for REMAL Hospitality certifications.",
         "input_label": "Verification Code",
         "input_placeholder": "Enter the code from the certificate (e.g., PH-XXXX-XXXX)",
         "verify_button": "Verify Authenticity",
@@ -154,7 +154,7 @@
         "invalid_code": "Invalid Verification Code",
         "invalid_desc": "The code you entered could not be found or has expired. Please check the code and try again.",
         "valid_title": "Certificate Verified",
-        "valid_desc": "This certificate is authentic and was issued by Prime Hotels Group Excellence Center.",
+        "valid_desc": "This certificate is authentic and was issued by REMAL Hospitality Excellence Center.",
         "details": {
             "title": "Certificate Details",
             "recipient": "Issued To",

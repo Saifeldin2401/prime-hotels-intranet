@@ -1,15 +1,17 @@
-import { Header } from '@/components/layout/Header'
-import { MobileHeader } from '@/components/layout/MobileHeader'
-import { MobileNavigation } from '@/components/layout/MobileNavigation'
+import { getRouteByPath } from '@/config/navigation'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
-import { cn } from '@/lib/utils'
-import { AnimatePresence } from 'framer-motion'
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useProperty } from '@/contexts/PropertyContext'
-import { SidebarNavigation } from './SidebarNavigation'
-import { useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/useAuth'
+import { useNavigation } from '@/hooks/useNavigation'
+import { useNotifications } from '@/hooks/useNotifications'
+import { useNavigationStore } from '@/stores/navigationStore'
+import { DashboardLayout } from '@/phg-kit/layouts/dashboard'
+import { Iconify } from '@/phg-kit/components/iconify'
+import { AnimatePresence } from 'framer-motion'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const CommandPalette = lazy(() =>
   import('@/components/common/CommandPalette').then((module) => ({ default: module.CommandPalette }))
@@ -25,55 +27,124 @@ interface AppLayoutProps {
   children: React.ReactNode
 }
 
-const ROOT_PATHS = new Set(['/', '/dashboard', '/home'])
-
-const DETAIL_LABEL: Record<string, string> = {
-  knowledge: 'Article',
-  documents: 'Document',
-  training: 'Training',
-  quizzes: 'Quiz',
-  tasks: 'Task',
-  profile: 'Profile',
-  questions: 'Question',
-}
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-function titleFromPath(pathname: string): string {
-  const segments = pathname.split('/').filter(Boolean)
-  if (segments.length === 0) return ''
-  const last = segments[segments.length - 1]
-  if (UUID_RE.test(last)) {
-    const parent = segments[segments.length - 2]
-    return (parent && DETAIL_LABEL[parent]) ?? 'Details'
-  }
-  return last.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
-}
-
 export function AppLayout({ children }: AppLayoutProps) {
-  const { t: t_ext } = useTranslation('extracted')
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { t } = useTranslation(['nav', 'common'])
+  const { groupedNavigation } = useNavigation()
+  const { profile, user, signOut } = useAuth()
+  const { notifications } = useNotifications()
+  const { currentProperty, availableProperties, switchProperty } = useProperty()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
-  const location = useLocation()
 
-  const handleSidebarClose = useCallback(() => setSidebarOpen(false), [])
-  const handleSidebarToggle = useCallback(() => setSidebarCollapsed((prev) => !prev), [])
+  // Track page transitions for recently visited shortcuts cleanly without hook loops
+  useEffect(() => {
+    const route = getRouteByPath(location.pathname)
+    if (route) {
+      useNavigationStore.getState().addRecentPage({ path: location.pathname, title: route.title })
+    }
+  }, [location.pathname])
+
+  const groupedNavItems = useMemo(
+    () =>
+      groupedNavigation.map((group) => {
+        const GroupIcon = group.config.icon
+        const groupTitle = t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })
+        return {
+          id: group.config.id,
+          title: groupTitle,
+          icon: <GroupIcon size={18} />,
+          collapsible: group.config.collapsible,
+          items: group.items.map((item) => {
+            const Icon = item.icon
+            return {
+              title: t(item.title, { defaultValue: item.title }),
+              path: item.resolvedPath,
+              icon: <Icon size={18} />,
+              badgeCount: item.badgeCount,
+            }
+          }),
+        }
+      }),
+    [groupedNavigation, t]
+  )
+
+  const navItems = useMemo(
+    () =>
+      groupedNavigation.flatMap((group) => {
+        const groupTitle = t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })
+        return group.items.map((item, itemIdx) => {
+          const Icon = item.icon
+          return {
+            title: t(item.title, { defaultValue: item.title }),
+            path: item.resolvedPath,
+            icon: <Icon size={20} />,
+            subheader: itemIdx === 0 ? groupTitle : undefined,
+            badgeCount: item.badgeCount,
+          }
+        })
+      }),
+    [groupedNavigation, t]
+  )
+
+  const workspaces = useMemo(() => {
+    const list = availableProperties.length > 0 ? availableProperties : currentProperty ? [currentProperty] : []
+    const uniqueProps = Array.from(new Map(list.map((p) => [p.id, p])).values())
+    return uniqueProps.map((property) => ({
+      id: property.id,
+      name: property.name,
+      plan: property.id === currentProperty?.id ? 'Active' : 'Property',
+      logo: '/remal-emblem-icon.png',
+    }))
+  }, [availableProperties, currentProperty])
+
+  const accountLinks = useMemo(
+    () => [
+      {
+        label: t('nav:profile', 'Profile'),
+        href: '/profile',
+        icon: <Iconify icon="solar:home-angle-bold-duotone" />,
+      },
+      {
+        label: t('nav:settings', 'Settings'),
+        href: '/settings',
+        icon: <Iconify icon="solar:settings-bold-duotone" />,
+      },
+    ],
+    [t]
+  )
+
+  const notificationItems = useMemo(
+    () =>
+      (notifications ?? []).slice(0, 8).map((notification) => ({
+        id: notification.id,
+        type: notification.type,
+        title: notification.title,
+        description: notification.message,
+        isUnRead: !notification.is_read,
+        avatarUrl: null,
+        postedAt: notification.created_at,
+      })),
+    [notifications]
+  )
 
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
         setCommandPaletteOpen((prev) => !prev)
       }
-      if (e.key === '/') {
-        e.preventDefault()
+
+      if (event.key === '/') {
+        event.preventDefault()
         setCommandPaletteOpen(true)
       }
     }
+
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [])
@@ -83,81 +154,41 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => window.clearTimeout(timeoutId)
   }, [])
 
-  // Required: keep PropertyContext available to children via this call
-  useProperty()
+  const handleLogout = useCallback(async () => {
+    await signOut()
+    navigate('/login')
+  }, [navigate, signOut])
 
   const shouldRenderDeferredChrome = deferredChromeReady || commandPaletteOpen
-  const pageTitle = titleFromPath(location.pathname)
-  const showBack = !ROOT_PATHS.has(location.pathname)
 
   return (
-    <div className="min-h-dvh bg-background text-foreground flex flex-col no-horizontal-scroll">
-      <a href="#main-content" className="skip-to-content">
-        {t_ext('skip_to_main_content', 'Skip to main content')}
-      </a>
-
-      {/* Desktop: permanent sidebar — CSS hides it below lg breakpoint */}
-      <div className="hidden lg:block">
-        <SidebarNavigation
-          isOpen={sidebarOpen}
-          collapsed={sidebarCollapsed}
-          onClose={handleSidebarClose}
-          onToggleCollapse={handleSidebarToggle}
-        />
-      </div>
-
-      {/* Mobile: overlay drawer — only mounted when the user opens it */}
-      {sidebarOpen && (
-        <div className="lg:hidden">
-          <SidebarNavigation
-            isOpen={true}
-            onClose={handleSidebarClose}
-            isMobile={true}
-          />
-        </div>
-      )}
-
-      <div
-        className={cn(
-          'flex-1 flex flex-col transition-all duration-300 ease-in-out',
-          sidebarCollapsed ? 'lg:ms-20' : 'lg:ms-[280px]'
-        )}
-      >
-        <HolidayCelebration />
-
-        {/* Mobile header — hidden on desktop */}
-        <div className="lg:hidden">
-          <MobileHeader
-            title={pageTitle}
-            showBack={showBack}
-            onMenuClick={() => setSidebarOpen(true)}
-          />
-        </div>
-
-        {/* Desktop header — hidden on mobile */}
-        <div className="hidden lg:block">
-          <Header
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
-            setCommandPaletteOpen={setCommandPaletteOpen}
-          />
-        </div>
-
-        <main id="main-content" className="flex-1 bg-background/50 pb-20 lg:pb-0" role="main">
-          <div className="container py-4 sm:py-6 px-3 sm:px-4 md:px-6 lg:px-8">
-            <AnimatePresence mode="wait">
-              <PageTransition className="w-full">
-                {children}
-              </PageTransition>
-            </AnimatePresence>
-          </div>
-        </main>
-      </div>
-
-      {/* Mobile bottom nav — hidden on desktop (fixed-positioned internally) */}
-      <div className="lg:hidden">
-        <MobileNavigation />
-      </div>
+    <DashboardLayout
+      navItems={navItems}
+      groupedNavItems={groupedNavItems}
+      workspaces={workspaces}
+      currentWorkspaceId={currentProperty?.id}
+      onChangeWorkspace={switchProperty}
+      notifications={notificationItems}
+      accountLinks={accountLinks}
+      account={{
+        displayName: profile?.full_name ?? user?.email ?? 'User',
+        email: user?.email ?? null,
+        photoURL: profile?.avatar_url ?? null,
+      }}
+      onLogout={handleLogout}
+      onCommandOpen={() => setCommandPaletteOpen(true)}
+      slotProps={{
+        main: {
+          sx: {
+            bgcolor: 'background.default',
+          },
+        },
+      }}
+    >
+      <HolidayCelebration />
+      <AnimatePresence mode="wait">
+        <PageTransition className="w-full">{children}</PageTransition>
+      </AnimatePresence>
 
       <Suspense fallback={null}>
         {shouldRenderDeferredChrome && <WizardTrigger />}
@@ -166,6 +197,6 @@ export function AppLayout({ children }: AppLayoutProps) {
         )}
         {shouldRenderDeferredChrome && <KeyboardShortcutsModal />}
       </Suspense>
-    </div>
+    </DashboardLayout>
   )
 }

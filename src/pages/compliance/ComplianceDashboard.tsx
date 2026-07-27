@@ -59,7 +59,7 @@ export default function ComplianceDashboard() {
   return (
     <>
       <Helmet>
-        <title>{t('page_title')} | PHG Connect</title>
+        <title>{t('page_title')} | REMAL Connect</title>
       </Helmet>
 
       <div className="container mx-auto py-6 space-y-6">

@@ -69,9 +69,9 @@ export function Sidebar() {
       <div className="flex flex-col gap-4 p-4 border-b bg-hotel-navy overflow-hidden">
         <div className="flex items-center justify-center w-full">
           <img
-            src="/prime-logo-light.png"
-            alt="Prime Hotels"
-            className="w-full h-auto object-contain transition-transform hover:scale-110 scale-125"
+            src="/remal-logo-web.png"
+            alt="REMAL Hospitality"
+            className="w-full h-auto object-contain max-h-16"
           />
         </div>
 
@@ -117,7 +117,7 @@ export function Sidebar() {
                      If title exists and it's not 'home', maybe show label? 
                      Design preference: 'home' usually silent. 'settings' maybe silent.
                  */}
-                {group.config.title && group.config.id !== 'my_space' && (
+                {group.config.title && group.config.id !== 'personal_space' && (
                   <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                     {t(group.config.title)}
                   </h3>

@@ -101,7 +101,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
                 <Icons.Building className="h-5 w-5 text-white" />
               </div>
               <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-white">Prime Hotels</h1>
+                <h1 className="text-xl font-bold text-white">REMAL Hospitality</h1>
                 <p className="text-xs text-yellow-200">Intranet Platform</p>
               </div>
             </Link>

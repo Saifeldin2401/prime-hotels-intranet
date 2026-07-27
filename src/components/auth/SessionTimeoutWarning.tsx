@@ -50,6 +50,19 @@ export function SessionTimeoutWarning({
   const updateLastActivity = useCallback(() => {
     lastActivityRef.current = Date.now();
   }, []);
+
+  const handleSessionExpired = useCallback(async () => {
+    setShowWarning(false);
+
+    recordAuthEvent({
+      type: 'logout',
+      success: true,
+      details: { reason: 'session_timeout' },
+    });
+
+    await signOut();
+    onSessionExpired?.();
+  }, [signOut, onSessionExpired]);
   
   // Listen for user activity
   useEffect(() => {
@@ -116,20 +129,7 @@ export function SessionTimeoutWarning({
         clearInterval(intervalRef.current);
       }
     };
-  }, [user, warningThreshold, sessionTimeout]);
-  
-  const handleSessionExpired = useCallback(async () => {
-    setShowWarning(false);
-    
-    recordAuthEvent({
-      type: 'logout',
-      success: true,
-      details: { reason: 'session_timeout' },
-    });
-    
-    await signOut();
-    onSessionExpired?.();
-  }, [signOut, onSessionExpired]);
+  }, [user, warningThreshold, sessionTimeout, handleSessionExpired]);
   
   const handleExtendSession = useCallback(async () => {
     setIsExtending(true);

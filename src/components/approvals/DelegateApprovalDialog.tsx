@@ -196,16 +196,17 @@ export function DelegateApprovalDialog({
             // If approvalId is provided, create approval-specific delegation
             // Otherwise, create scope-based delegation (property/department/all)
             const { error } = await supabase
-                .from('temporary_approvers')
+                .from('delegations')
                 .insert({
+                    delegation_category: 'temporary_approval',
                     delegator_id: user?.id,
                     delegate_id: delegateId,
                     entity_type: entityType,
                     entity_id: entityId,
                     scope_type: scopeType,
                     scope_id: scopeId,
-                    start_at: resolvedStart.toISOString(),
-                    end_at: resolvedEnd.toISOString(),
+                    starts_at: resolvedStart.toISOString(),
+                    ends_at: resolvedEnd.toISOString(),
                     max_approvals: maxApprovals ? Number(maxApprovals) : null,
                     allow_redelegate: allowRedelegate,
                     fallback_delegate_ids: fallbackDelegateIds,

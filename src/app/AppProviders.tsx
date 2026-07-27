@@ -9,6 +9,7 @@ import { PropertyProvider } from '@/contexts/PropertyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { queryClient } from '@/lib/queryClient'
+import { ThemeProvider as PHGKitThemeProvider } from '@/phg-kit/theme'
 
 import { QueryRuntimeBridge } from './QueryRuntimeBridge'
 
@@ -24,15 +25,17 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <QueryRuntimeBridge />
       <ThemeProvider>
-        <AuthProvider>
-          <PropertyProvider>
-            <UserSettingsProvider>
-              <PresenceProvider>
-                {children}
-              </PresenceProvider>
-            </UserSettingsProvider>
-          </PropertyProvider>
-        </AuthProvider>
+        <PHGKitThemeProvider>
+          <AuthProvider>
+            <PropertyProvider>
+              <UserSettingsProvider>
+                <PresenceProvider>
+                  {children}
+                </PresenceProvider>
+              </UserSettingsProvider>
+            </PropertyProvider>
+          </AuthProvider>
+        </PHGKitThemeProvider>
         {ReactQueryDevtools && (
           <Suspense fallback={null}>
             <ReactQueryDevtools initialIsOpen={false} />

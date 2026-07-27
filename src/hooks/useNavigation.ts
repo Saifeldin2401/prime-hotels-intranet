@@ -19,6 +19,7 @@ import {
 } from '@/config/navigation'
 import { useAuth } from '@/hooks/useAuth'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
+import { useNavigationStore } from '@/stores/navigationStore'
 import { useCallback, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
 
@@ -42,6 +43,12 @@ export interface UseNavigationReturn {
     flatNavigation: NavigationItem[]
     /** Quick actions for mobile bottom bar */
     quickActions: NavigationItem[]
+    /** User-pinned favorite items */
+    favoriteItems: NavigationItem[]
+    /** Recently visited navigation items */
+    recentItems: NavigationItem[]
+    /** Search permitted routes by query keyword */
+    searchRoutes: (query: string) => NavigationItem[]
     /** Check if current path is active */
     isPathActive: (path: string) => boolean
     /** Check if user can access a path */
@@ -57,6 +64,8 @@ export function useNavigation(): UseNavigationReturn {
     const { primaryRole } = useAuth()
     const location = useLocation()
     const { data: counts } = useSidebarCounts()
+    const favorites = useNavigationStore((state) => state.favorites)
+    const recentlyVisited = useNavigationStore((state) => state.recentlyVisited)
 
     // Map badge keys to counts
     const badgeCounts = useMemo(() => {
@@ -72,7 +81,7 @@ export function useNavigation(): UseNavigationReturn {
     }, [counts])
 
     // Check if a path is active (handles dashboard variants)
-    const isPathActive = (path: string): boolean => {
+    const isPathActive = useCallback((path: string): boolean => {
         if (path === '/') return location.pathname === '/'
 
         // Special handling for dashboard paths
@@ -84,7 +93,7 @@ export function useNavigation(): UseNavigationReturn {
 
         // Standard: exact match or prefix match for nested routes
         return location.pathname === path || location.pathname.startsWith(path + '/')
-    }
+    }, [location.pathname])
 
     // Enrich route with active state, badge count, and resolved path
     const enrichRoute = useCallback((route: RouteConfig): NavigationItem => {
@@ -129,6 +138,39 @@ export function useNavigation(): UseNavigationReturn {
         return getMobileQuickActions(primaryRole).map(enrichRoute)
     }, [primaryRole, enrichRoute])
 
+    // Pinned favorites
+    const favoriteItems = useMemo((): NavigationItem[] => {
+        return favorites
+            .map(path => ROUTES.find(r => r.path === path))
+            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole))
+            .map(enrichRoute)
+    }, [favorites, primaryRole, enrichRoute])
+
+    // Recently visited routes
+    const recentItems = useMemo((): NavigationItem[] => {
+        return recentlyVisited
+            .map(recent => ROUTES.find(r => r.path === recent.path))
+            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole))
+            .map(enrichRoute)
+    }, [recentlyVisited, primaryRole, enrichRoute])
+
+    // Filter permitted routes by search term
+    const searchRoutes = useCallback((query: string): NavigationItem[] => {
+        if (!query.trim()) return []
+        const q = query.toLowerCase().trim()
+
+        return ROUTES
+            .filter(r => canAccessRoute(r, primaryRole))
+            .filter(r =>
+                r.path.toLowerCase().includes(q) ||
+                r.title.toLowerCase().includes(q) ||
+                r.description?.toLowerCase().includes(q) ||
+                r.keywords?.some(k => k.toLowerCase().includes(q))
+            )
+            .map(enrichRoute)
+            .slice(0, 10)
+    }, [primaryRole, enrichRoute])
+
     // Check if user can access a path
     const canAccess = (path: string): boolean => {
         const route = ROUTES.find(r => r.path === path)
@@ -145,6 +187,9 @@ export function useNavigation(): UseNavigationReturn {
         groupedNavigation,
         flatNavigation,
         quickActions,
+        favoriteItems,
+        recentItems,
+        searchRoutes,
         isPathActive,
         canAccess,
         getRoute

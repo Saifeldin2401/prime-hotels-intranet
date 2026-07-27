@@ -1,4 +1,0 @@
-﻿
-> prime-hotels@1.0.0 typecheck
-> tsc -p tsconfig.app.json --noEmit
-

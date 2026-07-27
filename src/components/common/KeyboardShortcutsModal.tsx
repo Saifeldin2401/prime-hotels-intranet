@@ -50,7 +50,7 @@ export function KeyboardShortcutsModal() {
             <DialogContent className="sm:max-w-md bg-white border-slate-200">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
-                        <Command className="w-5 h-5 text-blue-600" />
+                        <Command className="w-5 h-5 text-hotel-navy" />
                         {t('shortcuts.title', 'Keyboard Shortcuts')}
                     </DialogTitle>
                     <DialogDescription className="text-slate-500 font-medium">

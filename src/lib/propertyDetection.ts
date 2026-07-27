@@ -22,7 +22,7 @@ export interface PropertyMatchSource {
 
 // Common words to strip for normalization
 const NOISE_WORDS = [
-    'hotel', 'hotels', 'resort', 'resorts', 'by', 'prime', 'the',
+    'hotel', 'hotels', 'resort', 'resorts', 'by', 'remal', 'the',
     'jeddah', 'riyadh', 'dammam', 'makkah', 'madinah', 'khobar',
     'daily', 'report', 'sales', 'flash', 'pms', 'occupancy', 'revenue',
     'data', 'export', 'xlsx', 'csv', 'xls'
@@ -30,7 +30,7 @@ const NOISE_WORDS = [
 
 /**
  * Normalizes a string for comparison
- * Example: "Prime Al Hamra Hotel Jeddah" -> "alhamra"
+ * Example: "REMAL Al Hamra Hotel Jeddah" -> "alhamra"
  */
 function normalizeName(name: string): string {
     if (!name) return '';

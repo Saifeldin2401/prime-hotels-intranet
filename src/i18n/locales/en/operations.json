@@ -155,7 +155,7 @@
         },
         "print": {
             "title": "Data Integration Sync Summary",
-            "default_hotel": "PRIME Hotels",
+            "default_hotel": "REMAL Hospitality",
             "system": "System",
             "kpis": {
                 "title": "Sync Impact",

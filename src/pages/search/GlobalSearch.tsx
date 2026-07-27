@@ -46,7 +46,7 @@ export default function GlobalSearch() {
         return (
             <div className="flex flex-col items-center justify-center min-h-[50vh] text-center">
                 <Search className="w-16 h-16 text-muted-foreground mb-4" />
-                <h2 className="text-2xl font-bold">Search Prime Hotels</h2>
+                <h2 className="text-2xl font-bold">Search REMAL Hospitality</h2>
                 <p className="text-muted-foreground">Type something in the search bar above to get started.</p>
             </div>
         )

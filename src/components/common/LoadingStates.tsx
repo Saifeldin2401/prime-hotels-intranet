@@ -15,7 +15,12 @@ export function LoadingSpinner({ size = 'md', className }: LoadingSpinnerProps) 
   }
 
   return (
-    <Loader2 className={cn('animate-spin', sizeClasses[size], className)} />
+    <img
+      src="/remal-emblem-icon.png"
+      alt="Loading..."
+      className={cn('animate-spin object-contain', sizeClasses[size], className)}
+      style={{ animationDuration: '2s' }}
+    />
   )
 }
 

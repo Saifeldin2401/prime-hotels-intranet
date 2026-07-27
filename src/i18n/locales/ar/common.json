@@ -436,7 +436,7 @@
     "selectdepartment": "اختر القسم",
     "selecttype": "اختر النوع",
     "effectivedate": "تاريخ السريان",
-    "phgconnect": "PHG Connect",
+    "phgconnect": "REMAL Connect",
     "noactivityyet": "لا يوجد نشاط بعد",
     "selectpriority": "Select priority",
     "typeyouranswer": "اكتب إجابتك...",
@@ -452,7 +452,7 @@
     "confirmsignout": "تأكيد تسجيل الخروج",
     "auth": {
         "confirm_signout": "تأكيد تسجيل الخروج",
-        "signout_message": "هل أنت متأكد من رغبتك في تسجيل الخروج من PRIME Connect؟ ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى لوحة التحكم الخاصة بك ومتابعة عملك."
+        "signout_message": "هل أنت متأكد من رغبتك في تسجيل الخروج من REMAL Connect؟ ستحتاج إلى تسجيل الدخول مرة أخرى للوصول إلى لوحة التحكم الخاصة بك ومتابعة عملك."
     },
     "aisuggestion": "اقتراح ذكاء اصطناعي",
     "scrolltotop": "العودة للأعلى",

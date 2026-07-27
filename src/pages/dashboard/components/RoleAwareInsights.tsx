@@ -210,7 +210,7 @@ const BUSINESS_ROLE_COMPONENT_MAP: Partial<Record<BusinessRole, React.ComponentT
     department_head: DepartmentHeadInsights,
 }
 
-export function RoleAwareInsights() {
+export function RoleAwareInsights({ focusMode }: { focusMode?: string } = {}) {
     const { primaryRole } = useAuth()
 
     if (!primaryRole) return null

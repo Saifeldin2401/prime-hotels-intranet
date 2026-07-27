@@ -50,16 +50,10 @@ export function PublicNavbar() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-3">
             <img
-              src="/prime-logo-light.png"
-              alt="Prime Hotels"
-              className="h-8 w-auto"
+              src="/remal-logo-web.png"
+              alt="REMAL Hospitality"
+              className="h-9 w-auto object-contain"
             />
-            <div className="hidden sm:block">
-              <div className="text-sm font-bold text-hotel-gold">PHG Connect</div>
-              <div className="text-[10px] text-white/60 uppercase tracking-wider">
-                {t('official_intranet')}
-              </div>
-            </div>
           </Link>
 
           {/* Desktop Navigation */}

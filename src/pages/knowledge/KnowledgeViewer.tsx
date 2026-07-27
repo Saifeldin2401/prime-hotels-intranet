@@ -561,7 +561,7 @@ export default function KnowledgeViewer() {
             {
                 reportType: 'knowledge_article',
                 title: article.title,
-                hotelName: 'PRIME Hotels',
+                hotelName: 'REMAL Hospitality',
                 period: {
                     start: article.created_at || new Date().toISOString(),
                     end: article.updated_at || new Date().toISOString()
@@ -836,12 +836,12 @@ export default function KnowledgeViewer() {
                 .prose [dir="rtl"] {
                     text-align: right;
                     direction: rtl;
-                    font-family: 'Noto Sans Arabic', 'IBM Plex Sans Arabic', 'Segoe UI Arabic', Arial, sans-serif;
+                    font-family: 'Cairo', sans-serif;
                     line-height: 1.85; /* Better for Arabic script */
                 }
                 
                 .prose {
-                    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+                    font-family: 'Inter', sans-serif;
                     line-height: 1.6;
                 }
 
@@ -1410,7 +1410,7 @@ export default function KnowledgeViewer() {
                     <div className="text-center">
                         <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
                         <p className="text-sm text-gray-600">
-                            PHG Connect - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
+                            REMAL Connect - Knowledge Base | {article.department?.id === 'multiple' ? t('viewer.multiple_departments', 'Multiple Departments') : (article.department?.name || 'General')} | Last updated: {new Date(article.updated_at).toLocaleDateString()}
                         </p>
                     </div>
                 </div>

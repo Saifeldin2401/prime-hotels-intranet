@@ -16,20 +16,29 @@ import { canRoleAccess, type AllowedRoles } from '@/features/access/policy'
 import type { AppRole } from '@/lib/constants'
 import {
     Activity,
+    AlertTriangle,
     ArrowRightLeft,
     ArrowUp,
     Award,
     BarChart3,
+    BedDouble,
     Bell,
+    BellRing,
     BookOpen,
+    BookText,
+    Boxes,
     Brain,
     Briefcase,
     Building,
+    Building2,
     Calendar,
     CheckSquare,
+    ClipboardCheck,
     ClipboardList,
     Clock,
+    Crown,
     FileQuestion,
+    FileSignature,
     FileText,
     FolderOpen,
     GraduationCap,
@@ -40,10 +49,13 @@ import {
     Mail,
     Megaphone,
     MessageSquare,
+    Package,
+    PackageSearch,
     Search,
     Settings,
     Shield,
     Target,
+    Truck,
     User,
     Users,
     Wallet,
@@ -58,9 +70,12 @@ import {
 // ============================================================================
 
 export type NavigationGroup =
-    | 'my_space'
-    | 'operations'
-    | 'resources'
+    | 'personal_space'
+    | 'housekeeping_ops'
+    | 'finance_revenue'
+    | 'hr_staff'
+    | 'knowledge_sop'
+    | 'reports_analytics'
     | 'administration'
 
 export type Permission = 'read' | 'write' | 'approve' | 'delete' | 'manage'
@@ -88,6 +103,8 @@ export interface RouteConfig {
     hideFromNav?: boolean
     /** Child routes (for expandable menus) */
     children?: Omit<RouteConfig, 'group' | 'children'>[]
+    /** Search keywords for Command Palette */
+    keywords?: string[]
     /**
      * Role-specific path overrides
      * Same nav label routes to different destinations per role
@@ -105,7 +122,7 @@ export interface NavigationGroupConfig {
     visibleTo: AllowedRoles
     /** Whether group is collapsible in sidebar */
     collapsible: boolean
-}
+}
 
 // ============================================================================
 // NAVIGATION GROUPS
@@ -113,35 +130,59 @@ export interface NavigationGroupConfig {
 
 export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
     {
-        id: 'my_space',
-        title: 'groups.my_space',
+        id: 'personal_space',
+        title: 'groups.personal_space',
         icon: User,
         order: 1,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'operations',
-        title: 'groups.operations',
+        id: 'housekeeping_ops',
+        title: 'groups.housekeeping_ops',
         icon: Briefcase,
         order: 2,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'resources',
-        title: 'groups.resources',
-        icon: BookOpen,
+        id: 'finance_revenue',
+        title: 'groups.finance_revenue',
+        icon: Wallet,
         order: 3,
+        visibleTo: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'],
+        collapsible: true
+    },
+    {
+        id: 'hr_staff',
+        title: 'groups.hr_staff',
+        icon: Users,
+        order: 4,
         visibleTo: 'all',
         collapsible: true
     },
     {
-        id: 'administration',
-        title: 'groups.admin',
-        icon: Shield,
-        order: 4,
+        id: 'knowledge_sop',
+        title: 'groups.knowledge_sop',
+        icon: BookOpen,
+        order: 5,
         visibleTo: 'all',
+        collapsible: true
+    },
+    {
+        id: 'reports_analytics',
+        title: 'groups.reports_analytics',
+        icon: BarChart3,
+        order: 6,
+        visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        collapsible: true
+    },
+    {
+        id: 'administration',
+        title: 'groups.administration',
+        icon: Shield,
+        order: 7,
+        visibleTo: ['corporate_admin', 'regional_admin', 'property_manager'],
         collapsible: true
     }
 ]
@@ -152,66 +193,17 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
 
 export const ROUTES: RouteConfig[] = [
     // -------------------------------------------------------------------------
-    // HOME GROUP
+    // MY PERSONAL SPACE GROUP
     // -------------------------------------------------------------------------
     {
         path: '/dashboard',
         title: 'dashboard',
-        icon: BarChart3,
+        icon: Home,
         description: 'Your personalized dashboard',
         allowedRoles: 'all',
-        group: 'my_space',
+        keywords: ['home', 'overview', 'dashboard', 'analytics', 'welcome'],
+        group: 'personal_space',
         order: 1,
-    },
-
-    // -------------------------------------------------------------------------
-    // MY WORK GROUP
-    // -------------------------------------------------------------------------
-    {
-        path: '/hr/leave',
-        title: 'my_requests',
-        icon: Calendar,
-        description: 'Submit and track leave requests',
-        allowedRoles: 'all',
-        group: 'my_space',
-        order: 5
-    },
-    {
-        path: '/hr/attendance',
-        title: 'attendance',
-        icon: History,
-        description: 'Your attendance records and clock-in/out',
-        allowedRoles: 'all',
-        group: 'my_space',
-        order: 1
-    },
-    {
-        path: '/hr/performance',
-        title: 'performance',
-        icon: Award,
-        description: 'Your performance evaluations and ratings',
-        allowedRoles: 'all',
-        group: 'my_space',
-        order: 2
-    },
-    {
-        path: '/hr/goals',
-        title: 'goals',
-        icon: Target,
-        description: 'Your career goals and milestones',
-        allowedRoles: 'all',
-        badgeKey: 'activeGoals',
-        group: 'my_space',
-        order: 3
-    },
-    {
-        path: '/hr/payslips',
-        title: 'payslips',
-        icon: Wallet,
-        description: 'Your payroll documents',
-        allowedRoles: 'all',
-        group: 'my_space',
-        order: 4
     },
     {
         path: '/tasks',
@@ -219,71 +211,176 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Your assigned tasks',
         allowedRoles: 'all',
+        keywords: ['todo', 'assignments', 'checklist', 'tasks'],
         badgeKey: 'overdueTasks',
-        group: 'my_space',
-        order: 2
+        group: 'personal_space',
+        order: 2,
     },
     {
-        path: '/onboarding',
-        title: 'onboarding',
-        icon: CheckSquare, // Using CheckSquare as it looks like a checklist
-        description: 'Complete your onboarding tasks',
+        path: '/learning/my',
+        title: 'my_training',
+        icon: GraduationCap,
+        description: 'Your assigned training modules',
         allowedRoles: 'all',
-        group: 'my_space',
-        order: 0 // Priority!
+        badgeKey: 'pendingTraining',
+        group: 'personal_space',
+        order: 3,
+    },
+    {
+        path: '/training/certificates',
+        title: 'my_certificates',
+        icon: Award,
+        description: 'Your earned certificates',
+        allowedRoles: 'all',
+        group: 'personal_space',
+        order: 4,
+    },
+    {
+        path: '/hr/payslips',
+        title: 'payslips',
+        icon: Wallet,
+        description: 'Your payroll documents',
+        allowedRoles: 'all',
+        keywords: ['salary', 'pay', 'paystub', 'payroll', 'payslips'],
+        group: 'personal_space',
+        order: 5,
+    },
+    {
+        path: '/hr/leave',
+        title: 'my_requests',
+        icon: Calendar,
+        description: 'Submit and track leave requests',
+        allowedRoles: 'all',
+        keywords: ['leave', 'vacation', 'time off', 'sick leave', 'requests'],
+        group: 'personal_space',
+        order: 6,
+    },
+    {
+        path: '/hr/attendance',
+        title: 'attendance',
+        icon: History,
+        description: 'Your attendance records and clock-in/out',
+        allowedRoles: 'all',
+        keywords: ['clock in', 'clock out', 'punch', 'hours', 'attendance'],
+        group: 'personal_space',
+        order: 7,
+    },
+    {
+        path: '/hr/performance',
+        title: 'performance',
+        icon: Award,
+        description: 'Your performance evaluations and ratings',
+        allowedRoles: 'all',
+        keywords: ['review', 'appraisal', 'evaluation', 'rating', 'performance'],
+        group: 'personal_space',
+        order: 8,
+    },
+    {
+        path: '/hr/goals',
+        title: 'goals',
+        icon: Target,
+        description: 'Your career goals and milestones',
+        allowedRoles: 'all',
+        keywords: ['okr', 'target', 'milestone', 'career', 'goals'],
+        badgeKey: 'activeGoals',
+        group: 'personal_space',
+        order: 9,
     },
 
     // -------------------------------------------------------------------------
     // OPERATIONS GROUP
     // -------------------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    {
+        path: '/operations/projects',
+        title: 'projects_capex',
+        icon: Building2,
+        description: 'Capital expenditure tracking, hotel pre-opening checklists, and renovation milestones',
+        allowedRoles: 'all',
+        keywords: ['capex', 'projects', 'pre-opening', 'renovation', 'budget', 'capital expenditure'],
+        group: 'housekeeping_ops',
+        order: 0,
+    },
+    {
+        path: '/housekeeping/rooms',
+        title: 'room_status_board',
+        icon: BedDouble,
+        description: 'Live room status board',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 1
+    },
+    {
+        path: '/housekeeping/tasks',
+        title: 'housekeeping_tasks',
+        icon: ClipboardCheck,
+        description: 'Assign and track housekeeping tasks',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 2
+    },
+    {
+        path: '/maintenance',
+        title: 'maintenance',
+        icon: Wrench,
+        description: 'Submit and track maintenance tickets',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 3
+    },
     {
         path: '/operations',
         title: 'operations_dashboard',
         icon: BarChart3,
         description: 'PMS integration and operational analytics',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'operations',
-        order: 0
+        group: 'housekeeping_ops',
+        order: 4
     },
     {
-        path: '/operations/analytics',
-        title: 'operations_analytics',
-        icon: Activity,
-        description: 'Trend analysis and multi-property comparison',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'operations',
-        order: 0.1,
-        hideFromNav: true  // Accessible from dashboard
+        path: '/operations/logbook',
+        title: 'daily_logbook',
+        icon: BookText,
+        description: 'Shift log and handover notes',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 5
     },
     {
-        path: '/operations/flash-report',
-        title: 'flash_report',
-        icon: FileText,
-        description: 'Daily consolidated flash report',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'operations',
-        order: 0.2,
-        hideFromNav: true
+        path: '/operations/guest-requests',
+        title: 'guest_requests',
+        icon: BellRing,
+        description: 'Track and fulfill front-line guest service requests',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 6
     },
     {
-        path: '/operations/import',
-        title: 'data_import',
-        icon: FileText,
-        description: 'Import PMS data via CSV',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'operations',
-        order: 0.3,
-        hideFromNav: true
+        path: '/operations/incidents',
+        title: 'incidents',
+        icon: AlertTriangle,
+        description: 'Log and track operational incidents',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 7
     },
     {
-        path: '/operations/pms-config',
-        title: 'pms_configuration',
-        icon: Settings,
-        description: 'Configure PMS integrations',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'operations',
-        order: 0.4,
-        hideFromNav: true
+        path: '/operations/vip-guests',
+        title: 'vip_guests',
+        icon: Crown,
+        description: 'Flag VIP guests for staff attention',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 8
+    },
+    {
+        path: '/operations/lost-found',
+        title: 'lost_found',
+        icon: PackageSearch,
+        description: 'Track lost and found items',
+        allowedRoles: 'all',
+        group: 'housekeeping_ops',
+        order: 9
     },
     {
         path: '/approvals',
@@ -292,132 +389,107 @@ export const ROUTES: RouteConfig[] = [
         description: 'Pending items requiring your approval',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         badgeKey: 'pendingApprovals',
-        group: 'operations',
+        group: 'housekeeping_ops',
+        order: 10
+    },
+
+    // -------------------------------------------------------------------------
+    // FINANCE & REVENUE GROUP
+    // -------------------------------------------------------------------------
+    {
+        path: '/finance/budgets',
+        title: 'budgets',
+        icon: Wallet,
+        description: 'Budget allocations by category and period',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
+        group: 'finance_revenue',
         order: 1
     },
     {
-        path: '/hr/inbox',
-        title: 'hr_inbox',
-        icon: FolderOpen,
-        description: 'HR requests inbox - Use Approvals instead',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        badgeKey: 'pendingApprovals',
-        group: 'operations',
-        order: 2,
-        hideFromNav: true  // Hidden - consolidated into /approvals
+        path: '/finance/invoices',
+        title: 'invoices',
+        icon: FileText,
+        description: 'Vendor invoices and approval workflow',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
+        group: 'finance_revenue',
+        order: 2
     },
     {
-        path: '/maintenance',
-        title: 'maintenance',
-        icon: Wrench,
-        description: 'Submit and track maintenance tickets',
+        path: '/procurement/requests',
+        title: 'purchase_requests',
+        icon: ClipboardList,
+        description: 'Submit and approve purchase requests',
         allowedRoles: 'all',
-        group: 'operations',
+        group: 'finance_revenue',
         order: 3
     },
-
-
-    // -------------------------------------------------------------------------
-    // HR MANAGEMENT GROUP
-    // -------------------------------------------------------------------------
     {
-        path: '/hr/control',
-        title: 'hr_control_center',
-        icon: ClipboardList,
-        description: 'Central hub for HR workflows and approvals',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'operations',
-        order: 0
+        path: '/procurement/orders',
+        title: 'purchase_orders',
+        icon: Package,
+        description: 'Track purchase orders and receive goods',
+        allowedRoles: 'all',
+        group: 'finance_revenue',
+        order: 4
     },
     {
-        path: '/hr/performance-management',
-        title: 'performance_management',
-        icon: Award,
-        description: 'Manage performance reviews for staff',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'operations',
-        order: 6.6
+        path: '/procurement/inventory',
+        title: 'inventory',
+        icon: Boxes,
+        description: 'Basic per-property inventory',
+        allowedRoles: 'all',
+        group: 'finance_revenue',
+        order: 5
     },
     {
-        path: '/hr/goals-management',
-        title: 'goals_management',
+        path: '/procurement/suppliers',
+        title: 'suppliers',
+        icon: Truck,
+        description: 'Corporate-wide supplier registry',
+        allowedRoles: 'all',
+        group: 'finance_revenue',
+        order: 6
+    },
+    {
+        path: '/commercial/accounts',
+        title: 'commercial_accounts',
+        icon: Briefcase,
+        description: 'Corporate and commercial client accounts',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
+        group: 'finance_revenue',
+        order: 7
+    },
+    {
+        path: '/commercial/leads',
+        title: 'commercial_leads',
         icon: Target,
-        description: 'Assign and track employee goals',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'operations',
-        order: 6.7
+        description: 'Sales pipeline and opportunities',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
+        group: 'finance_revenue',
+        order: 8
     },
-    {
-        path: '/hr/payslips-management',
-        title: 'payslips_management',
-        icon: Wallet,
-        description: 'Create and publish payslips',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'operations',
-        order: 6.95
-    },
+
+
+    // -------------------------------------------------------------------------
+    // HR & STAFF GROUP
+    // -------------------------------------------------------------------------
     {
         path: '/directory',
         title: 'directory',
         icon: Users,
         description: 'Employee directory',
         allowedRoles: 'all',
-        group: 'operations',
+        group: 'hr_staff',
         order: 1
     },
     {
-        path: '/jobs',
-        title: 'jobs',
-        icon: Briefcase,
-        description: 'Job postings and applications',
-        allowedRoles: 'all',
-        group: 'operations',
-        order: 2
-    },
-    {
-        path: '/hr/referrals',
-        title: 'referrals',
-        icon: Users,
-        description: 'Employee referral program',
+        path: '/hr/control',
+        title: 'hr_control_center',
+        icon: ClipboardList,
+        description: 'Central hub for HR workflows and approvals',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'operations',
-        order: 3
-    },
-    {
-        path: '/hr/promotions/new',
-        title: 'promotions',
-        icon: ArrowUp,
-        description: 'Initiate employee promotions',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
-        group: 'operations',
-        order: 4
-    },
-    {
-        path: '/hr/transfers/new',
-        title: 'transfers',
-        icon: ArrowRightLeft,
-        description: 'Initiate employee transfers',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr'],
-        group: 'operations',
-        order: 5
-    },
-    {
-        path: '/hr/operations',
-        title: 'hr_operations',
-        icon: Building,
-        description: 'HR operations center',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_hr'],
-        group: 'operations',
-        order: 6
-    },
-    {
-        path: '/hr/scheduling',
-        title: 'shift_scheduling',
-        icon: Clock,
-        description: 'Shift planning and attendance corrections',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
-        group: 'operations',
-        order: 6.5
+        group: 'hr_staff',
+        order: 2
     },
     {
         path: '/hr/onboarding',
@@ -425,21 +497,57 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Track new hire onboarding progress',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'operations',
-        order: 0.5 // Top priority in HR
+        group: 'hr_staff',
+        order: 3
     },
     {
-        path: '/hr/promotions/history',
-        title: 'promotion_history',
-        icon: History,
-        description: 'View promotion and transfer history',
-        allowedRoles: ['regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
-        group: 'operations',
+        path: '/hr/scheduling',
+        title: 'shift_scheduling',
+        icon: Clock,
+        description: 'Shift planning and attendance corrections',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'manager'],
+        group: 'hr_staff',
+        order: 4
+    },
+    {
+        path: '/hr/performance-management',
+        title: 'performance_management',
+        icon: Award,
+        description: 'Manage performance reviews for staff',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_staff',
+        order: 5
+    },
+    {
+        path: '/hr/goals-management',
+        title: 'goals_management',
+        icon: Target,
+        description: 'Assign and track employee goals',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr'],
+        group: 'hr_staff',
+        order: 6
+    },
+    {
+        path: '/hr/payslips-management',
+        title: 'payslips_management',
+        icon: Wallet,
+        description: 'Create and publish payslips',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
+        group: 'hr_staff',
         order: 7
+    },
+    {
+        path: '/training/hub',
+        title: 'lms_admin',
+        icon: GraduationCap,
+        description: 'Unified LMS admin workspace',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        group: 'hr_staff',
+        order: 8
     },
 
     // -------------------------------------------------------------------------
-    // KNOWLEDGE BASE GROUP
+    // KNOWLEDGE & SOPS GROUP
     // -------------------------------------------------------------------------
     {
         path: '/knowledge',
@@ -447,46 +555,19 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'Centralized knowledge hub - SOPs, policies, guides',
         allowedRoles: 'all',
+        keywords: ['sop', 'policy', 'guide', 'manual', 'knowledge'],
         badgeKey: 'requiredReading',
-        group: 'resources',
+        group: 'knowledge_sop',
         order: 1
     },
     {
-        path: '/knowledge/wiki',
-        title: 'system_wiki',
-        icon: BookOpen,
-        description: 'How to use PRIME Connect',
+        path: '/announcements',
+        title: 'announcements',
+        icon: Megaphone,
+        description: 'Company announcements',
         allowedRoles: 'all',
-        group: 'resources',
-        order: 1.5
-    },
-    {
-        path: '/knowledge/review',
-        title: 'knowledge_review',
-        icon: CheckSquare,
-        description: 'Review pending content',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        badgeKey: 'pendingReviews',
-        group: 'resources',
+        group: 'knowledge_sop',
         order: 2
-    },
-    {
-        path: '/knowledge/analytics',
-        title: 'knowledge_analytics',
-        icon: BarChart3,
-        description: 'Content usage and insights',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'resources',
-        order: 3
-    },
-    {
-        path: '/media',
-        title: 'media_library',
-        icon: FolderOpen,
-        description: 'Media library - manage videos, images, and documents for reuse',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'resources',
-        order: 4
     },
     {
         path: '/documents',
@@ -494,12 +575,22 @@ export const ROUTES: RouteConfig[] = [
         icon: FileText,
         description: 'Document library and file management',
         allowedRoles: 'all',
-        group: 'resources',
-        order: 5
+        group: 'knowledge_sop',
+        order: 3
+    },
+    {
+        path: '/knowledge/wiki',
+        title: 'system_wiki',
+        icon: BookOpen,
+        description: 'How to use REMAL Connect',
+        allowedRoles: 'all',
+        keywords: ['wiki', 'help', 'docs', 'system'],
+        group: 'knowledge_sop',
+        order: 4
     },
 
     // -------------------------------------------------------------------------
-    // LEARNING GROUP (Personal)
+    // LEARNING GROUP (under HR & Staff)
     // -------------------------------------------------------------------------
     {
         path: '/learning/my',
@@ -508,8 +599,8 @@ export const ROUTES: RouteConfig[] = [
         description: 'Your assigned training modules',
         allowedRoles: 'all',
         badgeKey: 'pendingTraining',
-        group: 'resources',
-        order: 1
+        group: 'hr_staff',
+        order: 10
     },
     {
         path: '/training/paths',
@@ -517,8 +608,8 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'Learning paths and curricula',
         allowedRoles: 'all',
-        group: 'resources',
-        order: 2
+        group: 'hr_staff',
+        order: 11
     },
     {
         path: '/training/certificates',
@@ -526,21 +617,17 @@ export const ROUTES: RouteConfig[] = [
         icon: Award,
         description: 'Your earned certificates',
         allowedRoles: 'all',
-        group: 'resources',
-        order: 3
+        group: 'hr_staff',
+        order: 12
     },
-
-    // -------------------------------------------------------------------------
-    // LEARNING MANAGEMENT GROUP (Admin)
-    // -------------------------------------------------------------------------
     {
         path: '/training/hub',
         title: 'lms_admin',
         icon: GraduationCap,
         description: 'Unified LMS admin workspace',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'resources',
-        order: 1
+        group: 'hr_staff',
+        order: 13
     },
     {
         path: '/training/modules',
@@ -548,8 +635,8 @@ export const ROUTES: RouteConfig[] = [
         icon: BookOpen,
         description: 'Legacy modules route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'resources',
-        order: 2,
+        group: 'hr_staff',
+        order: 14,
         hideFromNav: true
     },
     {
@@ -558,8 +645,8 @@ export const ROUTES: RouteConfig[] = [
         icon: ListTodo,
         description: 'Legacy builder route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'resources',
-        order: 3,
+        group: 'hr_staff',
+        order: 15,
         hideFromNav: true
     },
     {
@@ -568,22 +655,18 @@ export const ROUTES: RouteConfig[] = [
         icon: Users,
         description: 'Legacy assignments route (redirects to LMS Admin)',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        group: 'resources',
-        order: 4,
+        group: 'hr_staff',
+        order: 16,
         hideFromNav: true
     },
-
-    // -------------------------------------------------------------------------
-    // QUESTIONS & QUIZZES (under Learning Management)
-    // -------------------------------------------------------------------------
     {
         path: '/questions',
         title: 'questions',
         icon: FileQuestion,
         description: 'Manage knowledge questions',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr'],
-        group: 'resources',
-        order: 5
+        group: 'hr_staff',
+        order: 17
     },
     {
         path: '/learning/quizzes',
@@ -591,7 +674,7 @@ export const ROUTES: RouteConfig[] = [
         icon: CheckSquare,
         description: 'Manage quizzes',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'department_head'],
-        group: 'resources',
+        group: 'hr_staff',
         order: 6
     },
 
@@ -605,8 +688,8 @@ export const ROUTES: RouteConfig[] = [
         description: 'Direct messages and team chat',
         allowedRoles: 'all',
         badgeKey: 'unreadMessages',
-        group: 'operations',
-        order: 1
+        group: 'personal_space',
+        order: 10
     },
     {
         path: '/announcements',
@@ -614,7 +697,7 @@ export const ROUTES: RouteConfig[] = [
         icon: Megaphone,
         description: 'Company announcements',
         allowedRoles: 'all',
-        group: 'operations',
+        group: 'knowledge_sop',
         order: 2
     },
 
@@ -649,6 +732,15 @@ export const ROUTES: RouteConfig[] = [
         order: 1.7
     },
     {
+        path: '/admin/companies',
+        title: 'company_management',
+        icon: Building,
+        description: 'Manage operating companies',
+        allowedRoles: ['corporate_admin'],
+        group: 'administration',
+        order: 1.9
+    },
+    {
         path: '/admin/properties',
         title: 'property_management',
         icon: Building,
@@ -666,23 +758,17 @@ export const ROUTES: RouteConfig[] = [
         group: 'administration',
         order: 2.5
     },
+    // -------------------------------------------------------------------------
+    // REPORTS & ANALYTICS GROUP
+    // -------------------------------------------------------------------------
     {
         path: '/reports',
         title: 'reports',
         icon: BarChart3,
         description: 'Analytics and reports',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'administration',
-        order: 3
-    },
-    {
-        path: '/admin/certificates/generate',
-        title: 'manual_certificates',
-        icon: Award,
-        description: 'Generate manual certificates for users',
-        allowedRoles: ['corporate_admin', 'regional_admin'],
-        group: 'administration',
-        order: 3.1
+        group: 'reports_analytics',
+        order: 1
     },
     {
         path: '/admin/analytics',
@@ -690,8 +776,8 @@ export const ROUTES: RouteConfig[] = [
         icon: Activity,
         description: 'System usage and insights',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'administration',
-        order: 3.2
+        group: 'reports_analytics',
+        order: 2
     },
     {
         path: '/admin/workflows',
@@ -728,6 +814,24 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         group: 'administration',
         order: 3.54
+    },
+    {
+        path: '/admin/quality-audits',
+        title: 'quality_audits',
+        icon: ClipboardList,
+        description: 'Manage quality audit templates and runs',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        group: 'administration',
+        order: 3.55
+    },
+    {
+        path: '/admin/compliance',
+        title: 'compliance_center',
+        icon: Shield,
+        description: 'Audit logs, PII access tracking, and compliance exports',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        group: 'administration',
+        order: 3.6
     },
     {
         path: '/admin/notifications',

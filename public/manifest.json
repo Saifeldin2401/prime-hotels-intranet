@@ -1,7 +1,7 @@
 {
-    "name": "PHG Connect",
-    "short_name": "PHG Connect",
-    "description": "PHG intranet and app platform",
+    "name": "REMAL Connect",
+    "short_name": "REMAL",
+    "description": "REMAL Hospitality Operating System",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#0B1C3E",

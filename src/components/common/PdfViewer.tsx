@@ -172,7 +172,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-blue-600 hover:underline mt-2 text-sm"
+                    className="text-hotel-navy hover:text-hotel-gold transition-colors hover:underline mt-2 text-sm"
                 >
                     Download PDF
                 </a>
@@ -242,7 +242,7 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-xs text-blue-200 hover:text-white px-2"
+                    className="text-xs text-hotel-gold hover:text-hotel-gold-light transition-colors px-2"
                 >
                     Download
                 </a>

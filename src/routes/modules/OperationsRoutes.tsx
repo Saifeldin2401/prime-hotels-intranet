@@ -8,9 +8,39 @@ const OperationsDashboard = lazy(() => import('@/pages/operations/OperationsDash
 const DataImport = lazy(() => import('@/pages/operations/DataImport'))
 const OperationsAnalytics = lazy(() => import('@/pages/operations/OperationsAnalytics'))
 const DailyFlashReport = lazy(() => import('@/pages/operations/DailyFlashReport'))
+const GuestRequests = lazy(() => import('@/pages/operations/GuestRequests'))
+const Incidents = lazy(() => import('@/pages/operations/Incidents'))
+const DailyLogbook = lazy(() => import('@/pages/operations/DailyLogbook'))
+const VipGuests = lazy(() => import('@/pages/operations/VipGuests'))
+const LostAndFound = lazy(() => import('@/pages/operations/LostAndFound'))
+const CapexProjectsDashboard = lazy(() => import('@/pages/operations/CapexProjectsDashboard'))
 
 export const OperationsRoutes = () => (
     <>
+        <Route
+            path="/operations/projects"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'manager', 'staff']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <CapexProjectsDashboard />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/capex"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'department_head', 'manager', 'staff']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <CapexProjectsDashboard />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
         <Route
             path="/operations"
             element={
@@ -54,6 +84,66 @@ export const OperationsRoutes = () => (
                     <AppLayout>
                         <MotionWrapper>
                             <DailyFlashReport />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/guest-requests"
+            element={
+                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <GuestRequests />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/incidents"
+            element={
+                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <Incidents />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/logbook"
+            element={
+                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <DailyLogbook />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/vip-guests"
+            element={
+                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <VipGuests />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/operations/lost-found"
+            element={
+                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <LostAndFound />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

@@ -45,9 +45,13 @@ export default {
         ring: "hsl(var(--ring))",
         background: "hsl(var(--background))",
         foreground: "hsl(var(--foreground))",
+        "border-accent": "hsl(var(--border-accent))",
+        "focus-ring": "hsl(var(--focus-ring))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          hover: "hsl(var(--primary-hover))",
+          active: "hsl(var(--primary-active))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -105,7 +109,7 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
-        serif: ["var(--font-heading)", "Playfair Display", "Georgia", "serif"],
+        serif: ["var(--font-heading)", "Inter", "system-ui", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

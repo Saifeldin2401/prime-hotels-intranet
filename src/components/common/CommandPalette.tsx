@@ -42,8 +42,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
 
   const runCommand = (command: () => void) => {
     onOpenChange(false)
-    command()
     setQuery('')
+    setTimeout(() => {
+      command()
+    }, 10)
   }
 
   const getIcon = (type: string) => {
@@ -91,15 +93,27 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         {!debouncedQuery && (
           <>
             <CommandGroup heading={t('search.common_actions', 'Common Actions')}>
-              <CommandItem onSelect={() => runCommand(() => navigate('/hr/leave/request'))}>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/hr/leave'))}
+                onClick={() => runCommand(() => navigate('/hr/leave'))}
+                className="cursor-pointer"
+              >
                 <CalendarDays className="me-2 h-4 w-4" />
                 <span>Request Leave</span>
               </CommandItem>
-              <CommandItem onSelect={() => runCommand(() => navigate('/hr/payslips'))}>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/hr/payslips'))}
+                onClick={() => runCommand(() => navigate('/hr/payslips'))}
+                className="cursor-pointer"
+              >
                 <FileText className="me-2 h-4 w-4" />
                 <span>View Payslip</span>
               </CommandItem>
-              <CommandItem onSelect={() => runCommand(() => navigate('/operations/maintenance/new'))}>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/maintenance'))}
+                onClick={() => runCommand(() => navigate('/maintenance'))}
+                className="cursor-pointer"
+              >
                 <Wrench className="me-2 h-4 w-4" />
                 <span>Submit Maintenance Ticket</span>
               </CommandItem>
@@ -108,11 +122,19 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             <CommandSeparator />
             
             <CommandGroup heading={t('search.navigation', 'Navigation')}>
-              <CommandItem onSelect={() => runCommand(() => navigate('/profile'))}>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/profile'))}
+                onClick={() => runCommand(() => navigate('/profile'))}
+                className="cursor-pointer"
+              >
                 <User className="me-2 h-4 w-4" />
                 <span>My Profile</span>
               </CommandItem>
-              <CommandItem onSelect={() => runCommand(() => navigate('/settings'))}>
+              <CommandItem
+                onSelect={() => runCommand(() => navigate('/settings'))}
+                onClick={() => runCommand(() => navigate('/settings'))}
+                className="cursor-pointer"
+              >
                 <Settings className="me-2 h-4 w-4" />
                 <span>Settings</span>
               </CommandItem>
@@ -129,6 +151,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   key={result.id} 
                   value={result.title}
                   onSelect={() => runCommand(() => navigate(result.url))}
+                  onClick={() => runCommand(() => navigate(result.url))}
+                  className="cursor-pointer"
                 >
                   {getIcon(result.type)}
                   <span>{result.title}</span>

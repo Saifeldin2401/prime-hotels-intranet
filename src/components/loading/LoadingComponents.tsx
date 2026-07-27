@@ -16,8 +16,14 @@ export function PageLoader({ message = 'Loading...', className }: PageLoaderProp
             "flex flex-col items-center justify-center min-h-[400px] py-16",
             className
         )}>
-            <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">{message}</p>
+            <img 
+                src="/remal-emblem-icon.png" 
+                alt="Loading" 
+                className="h-16 w-16 object-contain mb-6 animate-pulse" 
+            />
+            {message && (
+                <p className="text-sm font-semibold tracking-[0.2em] uppercase text-hotel-gold/90 animate-pulse">{message}</p>
+            )}
         </div>
     )
 }

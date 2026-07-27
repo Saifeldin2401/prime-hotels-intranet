@@ -141,7 +141,7 @@ export function PendingUserApprovals({ onCountChange }: PendingUserApprovalProps
   };
 
   const getDomainBadgeColor = (domain: string) => {
-    const trustedDomains = ['primehotelsgroup.com', 'prime.com', 'phg-connect.com'];
+    const trustedDomains = ['remal-connect.com', 'remal.com', 'remalhospitality.com'];
     if (trustedDomains.includes(domain.toLowerCase())) {
       return 'bg-green-100 text-green-700';
     }

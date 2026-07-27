@@ -170,7 +170,7 @@ export default function RoutingHealth() {
     queryKey: ['routing-health', 'delegations'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('temporary_approvers')
+        .from('delegations')
         .select(
           `
           id,
@@ -178,16 +178,17 @@ export default function RoutingHealth() {
           delegate_id,
           scope_type,
           scope_id,
-          start_at,
-          end_at,
+          start_at:starts_at,
+          end_at:ends_at,
           reason,
           entity_type,
           entity_id,
-          delegator:profiles!temporary_approvers_delegator_id_fkey(id, full_name, email),
-          delegate:profiles!temporary_approvers_delegate_id_fkey(id, full_name, email)
+          delegator:profiles!delegations_delegator_id_fkey(id, full_name, email),
+          delegate:profiles!delegations_delegate_id_fkey(id, full_name, email)
         `.trim()
         )
-        .order('start_at', { ascending: false })
+        .eq('delegation_category', 'temporary_approval')
+        .order('starts_at', { ascending: false })
 
       if (error) throw error
       return (data || []) as unknown as DelegationRow[]
@@ -306,13 +307,14 @@ export default function RoutingHealth() {
 
   const delegationMutation = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('temporary_approvers').insert({
+      const { error } = await supabase.from('delegations').insert({
+        delegation_category: 'temporary_approval',
         delegator_id: delegatorId,
         delegate_id: delegateId,
         scope_type: scopeType,
         scope_id: scopeId || null,
-        start_at: new Date().toISOString(),
-        end_at: addDays(new Date(), parseInt(expiryDays)).toISOString(),
+        starts_at: new Date().toISOString(),
+        ends_at: addDays(new Date(), parseInt(expiryDays)).toISOString(),
         reason,
         entity_type: entityType || null,
         entity_id: entityId || null
@@ -333,7 +335,7 @@ export default function RoutingHealth() {
 
   const removeDelegation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('temporary_approvers').delete().eq('id', id)
+      const { error } = await supabase.from('delegations').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {

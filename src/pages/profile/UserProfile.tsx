@@ -6,11 +6,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
+import { useHRSettings } from '@/hooks/useSystemSettings'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
     AlertCircle,
+    AlertTriangle,
     ArrowLeft,
     Briefcase,
     Building,
@@ -104,6 +106,7 @@ export default function UserProfile() {
   const navigate = useNavigate()
   const { t } = useTranslation(['profile', 'common'])
   const { user, primaryRole } = useAuth()
+  const { iqamaExpiryWarningDays } = useHRSettings()
   const isValidProfileId = isValidUuid(id)
 
   const canViewPrivate = useMemo(() => {
@@ -432,8 +435,20 @@ export default function UserProfile() {
                           </div>
                           <div className="rounded-md border p-3">
                             <div className="text-xs text-gray-500 mb-1">{t('profile:iqama_expiry', 'Iqama Expiry')}</div>
-                            <div className="font-medium">
-                              {privateProfile.iqama_expiry ? format(new Date(privateProfile.iqama_expiry), 'MMMM d, yyyy') : '-'}
+                            <div className="font-medium flex items-center justify-between">
+                              <span>{privateProfile.iqama_expiry ? format(new Date(privateProfile.iqama_expiry), 'MMMM d, yyyy') : '-'}</span>
+                              {privateProfile.iqama_expiry && (() => {
+                                const daysLeft = Math.ceil((new Date(privateProfile.iqama_expiry).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                                if (daysLeft <= iqamaExpiryWarningDays) {
+                                  return (
+                                    <Badge variant="destructive" className="text-[10px] gap-1 animate-pulse">
+                                      <AlertTriangle className="w-3 h-3" />
+                                      {daysLeft <= 0 ? 'Expired' : `Expires in ${daysLeft} days (Threshold: ${iqamaExpiryWarningDays}d)`}
+                                    </Badge>
+                                  )
+                                }
+                                return null
+                              })()}
                             </div>
                           </div>
                         </div>

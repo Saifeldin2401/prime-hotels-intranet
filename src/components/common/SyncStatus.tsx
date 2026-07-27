@@ -99,7 +99,7 @@ export function SyncStatus({ className, showDetails = false }: SyncStatusProps) 
       case 'offline':
         return <CloudOff className="h-4 w-4 text-gray-400" />;
       case 'syncing':
-        return <RefreshCw className="h-4 w-4 text-blue-500 animate-spin" />;
+        return <RefreshCw className="h-4 w-4 text-info animate-spin" />;
       case 'error':
         return <AlertCircle className="h-4 w-4 text-red-500" />;
       default:
@@ -142,7 +142,7 @@ export function SyncStatus({ className, showDetails = false }: SyncStatusProps) 
                 'h-8 gap-2 px-2',
                 syncState === 'offline' && 'text-amber-600',
                 syncState === 'error' && 'text-red-600',
-                syncState === 'syncing' && 'text-blue-600'
+                syncState === 'syncing' && 'text-info'
               )}
               onClick={() => setIsExpanded(!isExpanded)}
             >

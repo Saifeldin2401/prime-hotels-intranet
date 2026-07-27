@@ -16,7 +16,7 @@ import {
     Shield,
     Users,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 const CATEGORY_META: Record<string, { label: string; icon: React.ReactNode; description: string }> = {
     general: { label: 'General', icon: <Settings className="w-4 h-4" />, description: 'Core application settings' },
@@ -34,56 +34,99 @@ function formatKey(key: string): string {
 function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (key: string, value: unknown) => void }) {
     const isBool = typeof setting.value === 'boolean'
     const isNumber = typeof setting.value === 'number'
-    const isArray = Array.isArray(setting.value)
+    const isObject = typeof setting.value === 'object' && setting.value !== null
 
-    const [localValue, setLocalValue] = useState<string>(
-        isArray ? JSON.stringify(setting.value) : String(setting.value ?? '')
-    )
+    const formattedPropValue = useMemo(() => {
+        if (isBool) return String(setting.value)
+        if (isObject) return JSON.stringify(setting.value, null, 2)
+        return String(setting.value ?? '')
+    }, [setting.value, isBool, isObject])
+
+    const [localValue, setLocalValue] = useState<string>(formattedPropValue)
     const [isDirty, setIsDirty] = useState(false)
+    const [parseError, setParseError] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!isDirty) {
+            setLocalValue(formattedPropValue)
+        }
+    }, [formattedPropValue, isDirty])
 
     const handleSave = () => {
         let parsed: unknown = localValue
-        if (isNumber) parsed = Number(localValue)
-        else if (isArray) {
-            try { parsed = JSON.parse(localValue) } catch { parsed = localValue }
+        if (isNumber) {
+            parsed = Number(localValue)
+        } else if (isObject) {
+            try {
+                parsed = JSON.parse(localValue)
+                setParseError(null)
+            } catch (err: any) {
+                setParseError(err?.message || 'Invalid JSON format')
+                return
+            }
         }
         onUpdate(setting.key, parsed)
         setIsDirty(false)
     }
 
     return (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between py-3 px-4 border-b last:border-0 gap-2">
-            <div className="flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between py-4 px-4 border-b last:border-0 gap-3">
+            <div className="flex-1 min-w-0 pr-2">
                 <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">{formatKey(setting.key)}</span>
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                        {formatKey(setting.key)}
+                    </span>
                 </div>
                 {setting.description && (
                     <p className="text-xs text-muted-foreground mt-0.5">{setting.description}</p>
                 )}
+                {parseError && (
+                    <p className="text-xs font-medium text-rose-500 mt-1">{parseError}</p>
+                )}
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0 w-full sm:w-auto">
                 {isBool ? (
                     <Switch
                         checked={setting.value as boolean}
                         onCheckedChange={(checked) => onUpdate(setting.key, checked)}
                     />
+                ) : isObject ? (
+                    <div className="flex flex-col gap-2 w-full sm:w-80">
+                        <textarea
+                            value={localValue}
+                            onChange={(e) => {
+                                setLocalValue(e.target.value)
+                                setIsDirty(true)
+                                setParseError(null)
+                            }}
+                            rows={3}
+                            className="w-full text-xs font-mono p-2 border rounded-md bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 focus:outline-none focus:ring-1 focus:ring-hotel-gold resize-y"
+                        />
+                        {isDirty && (
+                            <Button size="sm" variant="default" className="h-7 text-xs gap-1 self-end bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleSave}>
+                                <Save className="w-3.5 h-3.5" />
+                                Save Changes
+                            </Button>
+                        )}
+                    </div>
                 ) : (
-                    <>
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
                         <Input
+                            type={isNumber ? "number" : "text"}
                             value={localValue}
                             onChange={(e) => {
                                 setLocalValue(e.target.value)
                                 setIsDirty(true)
                             }}
-                            className="w-40 sm:w-48 text-sm h-8"
+                            className="w-full sm:w-48 text-sm h-9"
                         />
                         {isDirty && (
-                            <Button size="sm" variant="default" className="h-8 gap-1" onClick={handleSave}>
+                            <Button size="sm" variant="default" className="h-9 gap-1 bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleSave}>
                                 <Save className="w-3.5 h-3.5" />
                                 Save
                             </Button>
                         )}
-                    </>
+                    </div>
                 )}
             </div>
         </div>

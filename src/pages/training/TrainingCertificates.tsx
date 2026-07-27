@@ -338,7 +338,7 @@ export default function TrainingCertificates() {
                   </div>
 
                   <div className="pt-8 opacity-50 text-[10px] uppercase tracking-[0.2em]">
-                    Verified by phg-connect.com/verify
+                    Verified by remal-connect.com/verify
                   </div>
                 </div>
               </div>

@@ -320,7 +320,7 @@ export default function DataImport() {
             {
                 reportType: 'import_summary',
                 title: t('data_import.print.title', { defaultValue: 'Data Integration Sync Summary' }),
-                hotelName: currentProperty?.name || t('data_import.print.default_hotel', { defaultValue: 'PRIME Hotels' }),
+                hotelName: currentProperty?.name || t('data_import.print.default_hotel', { defaultValue: 'REMAL Hospitality' }),
                 period: {
                     start: new Date().toISOString(),
                     end: new Date().toISOString()

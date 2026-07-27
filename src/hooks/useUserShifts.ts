@@ -2,6 +2,13 @@ import { supabase } from '@/lib/supabase'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
+// NOTE: user_shifts was merged into the consolidated `shifts` table
+// (see supabase/migrations/20260721010000_merge_shifts_user_shifts.sql).
+// `shifts` stores start_time/end_time as timestamptz rather than a separate
+// shift_date + time-of-day pair, so `shift_date` below is now a convenience
+// field derived client-side from start_time (kept so existing consumers like
+// CalendarWidget.tsx, which branch on `shift.start_time.includes('T')` /
+// fall back to `shift.shift_date`, keep working unchanged).
 export interface UserShift {
   id: string
   user_id: string
@@ -10,8 +17,8 @@ export interface UserShift {
   shift_date: string
   start_time: string
   end_time: string
-  shift_type: 'regular' | 'overtime' | 'on_call' | 'training' | 'meeting'
-  status: 'scheduled' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
+  shift_type: 'regular' | 'overtime' | 'on_call' | 'training' | 'meeting' | string
+  status: 'scheduled' | 'in_progress' | 'confirmed' | 'completed' | 'cancelled' | 'no_show'
   notes?: string
   created_by?: string
   created_at: string
@@ -83,20 +90,21 @@ export function useUserShifts(startDate?: Date, endDate?: Date) {
     queryFn: async (): Promise<UserShift[]> => {
       if (!user?.id) return []
 
+      const rangeStart = startDate || new Date()
       let query = supabase
-        .from('user_shifts')
+        .from('shifts')
         .select(`
           *,
           property:properties(name),
           department:departments(name)
         `)
         .eq('user_id', user.id)
-        .gte('shift_date', (startDate || new Date()).toISOString().split('T')[0])
-        .order('shift_date', { ascending: true })
+        .gte('start_time', new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate()).toISOString())
         .order('start_time', { ascending: true })
 
       if (endDate) {
-        query = query.lte('shift_date', endDate.toISOString().split('T')[0])
+        const rangeEnd = new Date(endDate.getFullYear(), endDate.getMonth(), endDate.getDate(), 23, 59, 59, 999)
+        query = query.lte('start_time', rangeEnd.toISOString())
       }
 
       const { data, error } = await query
@@ -106,7 +114,10 @@ export function useUserShifts(startDate?: Date, endDate?: Date) {
         throw error
       }
 
-      return data || []
+      return (data || []).map((row) => ({
+        ...row,
+        shift_date: row.start_time ? row.start_time.split('T')[0] : row.shift_date
+      })) as UserShift[]
     },
     enabled: !!user?.id
   })
@@ -129,24 +140,25 @@ export function useCreateShift() {
       nextDate.setDate(nextDate.getDate() + 1)
 
       const { data: existingShifts, error: existingError } = await supabase
-        .from('user_shifts')
-        .select('id, shift_date, start_time, end_time, status')
+        .from('shifts')
+        .select('id, start_time, end_time, status')
         .eq('user_id', shift.user_id)
         .neq('status', 'cancelled')
-        .gte('shift_date', prevDate.toISOString().split('T')[0])
-        .lte('shift_date', nextDate.toISOString().split('T')[0])
+        .gte('start_time', prevDate.toISOString())
+        .lte('start_time', nextDate.toISOString())
 
       if (existingError) throw existingError
 
       const conflicts = (existingShifts || []).filter((existing) => {
-        const existingWindow = normalizeShiftWindow(existing.shift_date, existing.start_time, existing.end_time)
-        const overlaps = newWindow.start < existingWindow.end && newWindow.end > existingWindow.start
+        const existingStart = new Date(existing.start_time)
+        const existingEnd = new Date(existing.end_time)
+        const overlaps = newWindow.start < existingEnd && newWindow.end > existingStart
         if (overlaps) return true
 
-        const gapAfter = (newWindow.start.getTime() - existingWindow.end.getTime()) / (1000 * 60 * 60)
+        const gapAfter = (newWindow.start.getTime() - existingEnd.getTime()) / (1000 * 60 * 60)
         if (gapAfter > 0 && gapAfter < MIN_REST_HOURS) return true
 
-        const gapBefore = (existingWindow.start.getTime() - newWindow.end.getTime()) / (1000 * 60 * 60)
+        const gapBefore = (existingStart.getTime() - newWindow.end.getTime()) / (1000 * 60 * 60)
         if (gapBefore > 0 && gapBefore < MIN_REST_HOURS) return true
 
         return false
@@ -156,10 +168,15 @@ export function useCreateShift() {
         throw new Error('Shift conflicts with an existing assignment or violates the minimum rest period.')
       }
 
+      const { shift_date: _shiftDate, ...rest } = shift
+      void _shiftDate
+
       const { data, error } = await supabase
-        .from('user_shifts')
+        .from('shifts')
         .insert({
-          ...shift,
+          ...rest,
+          start_time: newWindow.start.toISOString(),
+          end_time: newWindow.end.toISOString(),
           created_by: user?.id
         })
         .select()

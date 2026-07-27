@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface Delegation {
     id: string
+    delegation_category: 'admin' | 'temporary_approval'
     delegator_id: string
     delegate_id: string
     delegation_type: 'full_access' | 'specific_permissions' | 'approval_authority'
@@ -82,12 +83,13 @@ export function useDelegations() {
         queryKey: ['delegations'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .select(`
           *,
           delegator:delegator_id(id, full_name, email),
           delegate:delegate_id(id, full_name, email)
         `)
+                .eq('delegation_category', 'admin')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -98,8 +100,9 @@ export function useDelegations() {
     const createDelegation = useMutation({
         mutationFn: async (input: CreateDelegationInput) => {
             const { data, error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .insert({
+                    delegation_category: 'admin',
                     delegator_id: user?.id,
                     ...input,
                 })
@@ -121,7 +124,7 @@ export function useDelegations() {
     const revokeDelegation = useMutation({
         mutationFn: async (delegationId: string) => {
             const { error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .update({
                     is_active: false,
                     revoked_at: new Date().toISOString(),
@@ -144,7 +147,7 @@ export function useDelegations() {
     const updateDelegation = useMutation({
         mutationFn: async ({ id, updates }: UpdateDelegationInput) => {
             const { error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .update({
                     ...updates,
                     updated_at: new Date().toISOString(),
@@ -165,7 +168,7 @@ export function useDelegations() {
     const pauseDelegation = useMutation({
         mutationFn: async (delegationId: string) => {
             const { error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .update({
                     is_active: false,
                     paused_at: new Date().toISOString(),
@@ -188,7 +191,7 @@ export function useDelegations() {
     const resumeDelegation = useMutation({
         mutationFn: async (delegationId: string) => {
             const { error } = await supabase
-                .from('admin_delegations')
+                .from('delegations')
                 .update({
                     is_active: true,
                     paused_at: null,

@@ -9,6 +9,7 @@ const BulkUserProvisioning = lazy(() => import('@/pages/admin/BulkUserProvisioni
 const OrganizationalControlCenter = lazy(() => import('@/pages/admin/OrganizationalControlCenter'))
 const JobTitles = lazy(() => import('@/pages/admin/JobTitles'))
 const PropertyManagement = lazy(() => import('@/pages/admin/PropertyManagement'))
+const CompanyManagement = lazy(() => import('@/pages/admin/CompanyManagement'))
 const AuditLogs = lazy(() => import('@/pages/admin/AuditLogs'))
 const PIIAuditViewer = lazy(() => import('@/pages/admin/PIIIAuditViewer').then(m => ({ default: m.PIIAuditViewer })))
 const EscalationRules = lazy(() => import('@/pages/admin/EscalationRules'))
@@ -28,6 +29,8 @@ const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
+const AuditsControlCenter = lazy(() => import('@/components/audits/AuditsControlCenter').then(m => ({ default: m.AuditsControlCenter })))
+const ComplianceDashboard = lazy(() => import('@/pages/compliance/ComplianceDashboard'))
 
 export const AdminRoutes = () => (
     <>
@@ -67,6 +70,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <PropertyManagement />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/companies"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin']}>
+                    <AppLayout>
+                        <CompanyManagement />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -280,11 +293,47 @@ export const AdminRoutes = () => (
             }
         />
         <Route
+            path="/admin/quality-audits"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <AuditsControlCenter />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
             path="/admin/invitations"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
                     <AppLayout>
                         <UserInvitations />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/compliance"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <ComplianceDashboard />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/compliance"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <ComplianceDashboard />
+                        </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
             }

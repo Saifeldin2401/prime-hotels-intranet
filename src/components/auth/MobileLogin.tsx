@@ -91,12 +91,12 @@ export function MobileLogin() {
                     <div className="w-20 h-20 bg-white/10 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
                         <img
                             src="/prime-logo-light.png"
-                            alt="PRIME Hotels"
+                            alt="REMAL Hospitality"
                             className="w-16 h-16 object-contain"
                         />
                     </div>
                     <h1 className="text-2xl font-bold text-white mb-1">
-                        PRIME Connect
+                        REMAL Connect
                     </h1>
                     <p className="text-white/60 text-sm">
                         {t('sign_in_to_continue', 'Sign in to continue')}
@@ -211,7 +211,7 @@ export function MobileLogin() {
             {/* Footer */}
             <div className="py-4 px-6 text-center">
                 <p className="text-white/30 text-xs">
-                    © {new Date().getFullYear()} PRIME Hotels Group. All rights reserved.
+                    © {new Date().getFullYear()} REMAL Hospitality. All rights reserved.
                 </p>
             </div>
         </div>

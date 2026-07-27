@@ -183,7 +183,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                         name: 'Send Welcome Notification',
                         action: 'send_notification',
                         config: {
-                            title: 'Welcome to Prime Hotels',
+                            title: 'Welcome to REMAL Hospitality',
                             message: 'Welcome aboard! Please complete your onboarding checklist.'
                         }
                     },

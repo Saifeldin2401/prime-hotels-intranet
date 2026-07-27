@@ -144,7 +144,7 @@ export default function Login() {
       {/* Left Side - Brand Experience */}
       <div className="hidden lg:flex flex-col justify-between relative overflow-hidden">
         {/* Layered Background */}
-        <div className="absolute inset-0 bg-hotel-navy" />
+        <div className="absolute inset-0 bg-black" />
 
         {/* Animated Background Image with Ken Burns effect */}
         <motion.div
@@ -153,14 +153,14 @@ export default function Login() {
           transition={{ duration: 25, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
           className="absolute inset-0 bg-cover bg-center"
           style={{
-            backgroundImage: "url('https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?q=80&w=2070&auto=format&fit=crop')",
+            backgroundImage: "url('/hero-banner.png')",
           }}
         />
 
         {/* Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-br from-hotel-navy/95 via-hotel-navy/85 to-hotel-navy/90 backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-hotel-navy via-transparent to-hotel-navy/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-hotel-navy/50 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/70 to-black/80 backdrop-blur-[2px]" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
 
         {/* Animated Orbs */}
         <motion.div
@@ -169,7 +169,7 @@ export default function Login() {
             y: mousePosition.y * 2,
           }}
           transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute top-1/4 end-1/4 w-[500px] h-[500px] bg-primary/20 rounded-full blur-[100px]"
+          className="absolute top-1/4 end-1/4 w-[500px] h-[500px] bg-hotel-gold/20 rounded-full blur-[100px]"
         />
         <motion.div
           animate={{
@@ -177,7 +177,7 @@ export default function Login() {
             y: -mousePosition.y * 1.5,
           }}
           transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute bottom-1/4 start-1/4 w-[600px] h-[600px] bg-accent/10 rounded-full blur-[120px]"
+          className="absolute bottom-1/4 start-1/4 w-[600px] h-[600px] bg-hotel-gold-light/10 rounded-full blur-[120px]"
         />
 
         {/* Floating Particles */}
@@ -212,9 +212,9 @@ export default function Login() {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <img
-                  src="/prime-logo-light.png"
-                  alt="Prime Hotels"
-                  className="h-14 w-auto opacity-95 drop-shadow-2xl"
+                  src="/remal-logo-web.png"
+                  alt="REMAL Hospitality"
+                  className="h-20 w-auto opacity-95 drop-shadow-2xl object-contain"
                 />
               </motion.div>
             </div>
@@ -248,7 +248,7 @@ export default function Login() {
               >
                 <Sparkles className="w-4 h-4 text-yellow-300" />
               </motion.div>
-              <span className="text-sm font-medium text-white/95 tracking-wide">PHG Connect</span>
+              <span className="text-sm font-medium text-white/95 tracking-wide">REMAL Connect</span>
               <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
             </div>
           </motion.div>
@@ -319,7 +319,7 @@ export default function Login() {
               {t('copyright', { year })}
             </span>
             <div className="flex items-center gap-2 text-white/30">
-              <span className="text-xs uppercase tracking-[0.2em] font-medium">PHG Connect</span>
+              <span className="text-xs uppercase tracking-[0.2em] font-medium">REMAL</span>
               <ChevronRight className="w-3 h-3" />
             </div>
           </div>
@@ -363,9 +363,9 @@ export default function Login() {
         <div className="absolute top-0 inset-x-0 p-4 lg:hidden z-30">
           <div className="flex items-center justify-between">
             <img
-              src="/prime-logo-dark.png"
-              alt="Prime Hotels"
-              className="h-8 w-auto"
+              src="/remal-emblem-icon.png"
+              alt="REMAL"
+              className="h-8 w-8 object-contain"
             />
             <LanguageSwitcher />
           </div>
@@ -386,15 +386,7 @@ export default function Login() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="text-center mb-8"
             >
-              {/* Icon */}
-              <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.3 }}
-                className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary/15 to-primary/5 mb-6 shadow-lg shadow-primary/10 border border-primary/10"
-              >
-                <Shield className="w-8 h-8 text-primary" />
-              </motion.div>
+
 
               {/* Title */}
               <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white font-heading mb-2">

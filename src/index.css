@@ -1,5 +1,6 @@
 @import './editor/styles/ai-content.css';
 @import './styles/mobile-optimizations.css';
+@import './styles/dashboard-redesign.css';
 
 @tailwind base;
 @tailwind components;
@@ -11,43 +12,44 @@
 
 @layer base {
   :root {
-    /* PRIME Hotels Corporate Palette */
+    /* REMAL Hospitality Corporate Palette */
     /* Primary Navy: #0B1C3E (Approximate HSL: 220 70% 15%) */
-    /* Primary Gold: #C5A065 (Approximate HSL: 37 45% 58%) */
+    /* Primary Gold: #C39A45 (Brand Gold HSL: 39 52% 52%) */
 
-    --background: 220 33% 98%;
-    /* Slightly cooler gray background */
-    --foreground: 220 70% 12%;
-    /* Deeper Navy for better contrast */
+    --background: 0 0% 100%;
+    --foreground: 220 20% 10%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 70% 12%;
+    --card-foreground: 220 20% 10%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 70% 12%;
+    --popover-foreground: 220 20% 10%;
 
-    --primary: 220 70% 15%;
-    --primary-foreground: 37 45% 95%;
+    --primary: 39 52% 52%;
+    --primary-foreground: 0 0% 100%;
+    --primary-hover: 45 80% 74%;
+    --primary-active: 37 63% 28%;
 
-    --secondary: 37 45% 58%;
-    --secondary-foreground: 220 70% 12%;
+    --secondary: 220 15% 96%;
+    --secondary-foreground: 220 20% 10%;
 
-    --muted: 220 20% 94%;
-    --muted-foreground: 220 15% 40%;
+    --muted: 220 15% 96%;
+    --muted-foreground: 220 10% 40%;
 
-    --accent: 37 45% 95%;
-    --accent-foreground: 220 70% 15%;
+    --accent: 220 15% 96%;
+    --accent-foreground: 39 52% 52%;
 
     --destructive: 0 84% 45%;
-    /* Slightly deeper red */
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 37 45% 58%;
+    --border: 220 15% 90%;
+    --input: 220 15% 90%;
+    
+    --border-accent: 39 52% 52%;
+    --ring: 39 52% 52%;
+    --focus-ring: 39 52% 52%;
 
     --radius: 0.5rem;
-    /* Standardized radius */
 
     /* Semantic Status Palette (HSL values) */
     --success: 142 76% 36%;
@@ -60,9 +62,9 @@
     --info-foreground: 199 89% 95%;
 
     /* Extended Hotel Palette */
-    --hotel-gold: 37 45% 58%;
-    --hotel-gold-light: 37 45% 85%;
-    --hotel-gold-dark: 37 45% 42%;
+    --hotel-gold: 39 52% 52%;
+    --hotel-gold-light: 45 80% 74%;
+    --hotel-gold-dark: 37 63% 28%;
 
     --hotel-navy: 220 70% 15%;
     --hotel-navy-light: 220 50% 25%;
@@ -79,39 +81,43 @@
     --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
 
     /* Typography */
-    --font-heading: 'Playfair Display', serif;
+    --font-heading: 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 220 70% 10%;
-    --foreground: 37 30% 97%;
+    --background: 220 20% 6%;
+    --foreground: 0 0% 98%;
 
-    --card: 220 60% 13%;
-    --card-foreground: 37 30% 97%;
+    --card: 220 20% 8%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 220 60% 13%;
-    --popover-foreground: 37 30% 97%;
+    --popover: 220 20% 8%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 37 45% 58%;
-    /* Gold becomes primary in dark mode for contrast */
-    --primary-foreground: 220 70% 15%;
+    --primary: 39 52% 52%;
+    --primary-foreground: 220 20% 6%;
+    --primary-hover: 45 80% 74%;
+    --primary-active: 37 63% 28%;
 
-    --secondary: 220 50% 20%;
-    --secondary-foreground: 37 45% 58%;
+    --secondary: 220 20% 12%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 220 50% 20%;
-    --muted-foreground: 220 20% 65%;
+    --muted: 220 20% 12%;
+    --muted-foreground: 220 10% 65%;
 
-    --accent: 220 50% 25%;
-    --accent-foreground: 37 45% 58%;
+    --accent: 220 20% 12%;
+    --accent-foreground: 39 52% 52%;
 
     --destructive: 0 62% 30%;
-    --destructive-foreground: 37 30% 97%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 220 50% 25%;
-    --input: 220 50% 25%;
-    --ring: 37 45% 58%;
+    --border: 220 20% 15%;
+    --input: 220 20% 15%;
+    
+    --border-accent: 39 52% 52%;
+    --ring: 39 52% 52%;
+    --focus-ring: 39 52% 52%;
   }
 
   * {
@@ -120,21 +126,16 @@
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
-    /* Non-fixed gradient: `background-attachment: fixed` forces a full-viewport
-       repaint on every scroll frame (major mobile jank source). A scroll-anchored
-       gradient gives the same look without the per-frame paint cost. */
     background-image:
-      radial-gradient(at 0% 0%, hsla(37, 45%, 58%, 0.15) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(220, 70%, 15%, 0.1) 0px, transparent 50%),
-      linear-gradient(to bottom right, hsl(var(--background)), #f0f4f8);
+      radial-gradient(at 0% 0%, hsla(var(--hotel-gold), 0.15) 0px, transparent 50%),
+      linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
     overflow-x: hidden;
   }
 
   .dark body {
     background-image:
-      radial-gradient(at 0% 0%, hsla(37, 45%, 58%, 0.08) 0px, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(220, 70%, 15%, 0.3) 0px, transparent 50%),
-      linear-gradient(to bottom, #020617, #0f172a);
+      radial-gradient(at 0% 0%, hsla(var(--hotel-gold), 0.08) 0px, transparent 50%),
+      linear-gradient(to bottom, hsl(var(--background)), hsl(var(--muted)));
   }
 
   img,
@@ -341,8 +342,8 @@ select:focus-visible {
 .prose,
 .prose-lg,
 .prose-sm {
-  color: #111827 !important;
-  /* gray-900 */
+  color: hsl(var(--foreground)) !important;
+  /* gray-900 replaced with theme-aware foreground variable */
 }
 
 .prose p,
@@ -363,14 +364,14 @@ select:focus-visible {
 .sop-content,
 .document-content,
 .rich-text-content {
-  color: #111827 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .article-content p,
 .sop-content p,
 .document-content p,
 .rich-text-content p {
-  color: #111827 !important;
+  color: hsl(var(--foreground)) !important;
   line-height: 1.7;
 }
 
@@ -384,7 +385,7 @@ select:focus-visible {
 /* Rich text content styling */
 .ck-content,
 .ck-editor__editable {
-  color: #111827 !important;
+  color: hsl(var(--foreground)) !important;
 }
 
 .ck-content p,
@@ -413,7 +414,7 @@ select:focus-visible {
     @apply bg-card border border-border rounded-lg shadow-sm transition-shadow duration-200 hover:shadow-md;
   }
 
-  /* Prime Hotels Header Style */
+  /* REMAL Hospitality Header Style */
   .prime-header {
     @apply bg-hotel-navy border-b border-hotel-navy-dark shadow-sm;
   }
@@ -430,7 +431,7 @@ select:focus-visible {
     @apply bg-hotel-navy-light text-white;
   }
 
-  /* Prime Hotels Card Styles */
+  /* REMAL Hospitality Card Styles */
   .prime-card {
     @apply bg-white dark:bg-hotel-navy border border-gray-200 dark:border-hotel-navy-light rounded-lg shadow-sm hover:shadow-lg transition-all duration-200;
   }
@@ -482,7 +483,7 @@ select:focus-visible {
   /* Premium Stat Value */
   .stat-value {
     @apply font-serif text-3xl font-bold tracking-tight text-hotel-navy dark:text-hotel-gold;
-    text-shadow: 0 2px 10px rgba(197, 160, 101, 0.1);
+    text-shadow: 0 2px 10px hsla(var(--hotel-gold), 0.1);
   }
 
   .stat-label {
@@ -494,7 +495,7 @@ select:focus-visible {
   }
 
   .card-gold {
-    @apply bg-[#FDF8F0] border border-hotel-gold-light/30 rounded-xl shadow-sm;
+    @apply bg-hotel-cream border border-hotel-gold-light/30 rounded-xl shadow-sm;
     /* Soft Cream */
   }
 
@@ -1114,31 +1115,25 @@ select:focus-visible {
   .light input,
   .light textarea,
   .light select {
-    color: #000000 !important;
+    color: hsl(var(--foreground)) !important;
   }
 
   /* Force high contrast for disabled inputs */
   input:disabled,
   textarea:disabled,
   select:disabled {
-    background-color: #f3f4f6 !important;
-    /* gray-100 */
-    color: #6b7280 !important;
-    /* gray-500 */
-    border-color: #d1d5db !important;
-    /* gray-300 */
+    background-color: hsl(var(--muted)) !important;
+    color: hsl(var(--muted-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
     opacity: 1 !important;
   }
 
   .dark input:disabled,
   .dark textarea:disabled,
   .dark select:disabled {
-    background-color: #1f2937 !important;
-    /* gray-800 */
-    color: #9ca3af !important;
-    /* gray-400 */
-    border-color: #374151 !important;
-    /* gray-700 */
+    background-color: hsl(var(--muted)) !important;
+    color: hsl(var(--muted-foreground)) !important;
+    border-color: hsl(var(--border)) !important;
   }
 }
 
@@ -1287,9 +1282,9 @@ select:focus-visible {
 /* Arabic font optimization */
 [dir="rtl"],
 [lang="ar"] {
-  font-family: 'Segoe UI', Tahoma, 'Cairo', 'Noto Sans Arabic', sans-serif;
+  font-family: 'Cairo', sans-serif;
   letter-spacing: 0;
-  word-spacing: 0.05em;
+  word-spacing: 0.02em;
 }
 
 /* RTL-aware sidebar */

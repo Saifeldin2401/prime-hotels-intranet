@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuth'
+import { useSecuritySettings } from '@/hooks/useSystemSettings'
 import { supabase } from '@/lib/supabase'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -12,16 +13,19 @@ interface UseInactivityTimeoutOptions {
 }
 
 const STORAGE_KEY = 'prime_last_activity'
-const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000 // 30 minutes
-const DEFAULT_WARNING_MS = 25 * 60 * 1000 // 25 minutes (shows warning 5 mins before timeout)
 
 export function useInactivityTimeout({
-    timeoutMs = DEFAULT_TIMEOUT_MS,
-    warningMs = DEFAULT_WARNING_MS,
+    timeoutMs: customTimeoutMs,
+    warningMs: customWarningMs,
     onTimeout,
     onWarning,
     enabled = true
 }: UseInactivityTimeoutOptions = {}) {
+    const { sessionTimeoutMinutes } = useSecuritySettings()
+
+    const timeoutMs = customTimeoutMs ?? sessionTimeoutMinutes * 60 * 1000
+    const warningMs = customWarningMs ?? Math.max(0, timeoutMs - 5 * 60 * 1000)
+
     const { user, signOut } = useAuth()
     const navigate = useNavigate()
     const [showWarning, setShowWarning] = useState(false)

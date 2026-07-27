@@ -52,7 +52,7 @@ export function ApprovalDetailsSheet({
                                 </div>
                                 <div className="capitalize">
                                     <span className="text-muted-foreground">{t_ext('status', 'Status:')}</span>
-                                    <p className="font-medium text-blue-600">{approval.status?.replace(/_/g, ' ')}</p>
+                                    <p className="font-medium text-info">{approval.status?.replace(/_/g, ' ')}</p>
                                 </div>
                                 <div className="col-span-2">
                                     <span className="text-muted-foreground">{t_ext('description', 'Description:')}</span>
@@ -61,10 +61,10 @@ export function ApprovalDetailsSheet({
                             </div>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm">
-                            <p className="text-blue-800 font-medium mb-1">{t_ext('assigned_to', 'Assigned To:')}</p>
+                        <div className="bg-info/10 p-4 rounded-lg border border-info/20 text-sm">
+                            <p className="text-info font-medium mb-1">{t_ext('assigned_to', 'Assigned To:')}</p>
                             <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-600" />
+                                <User className="w-4 h-4 text-info" />
                                 <span>{approval.raw?.current_assignee?.full_name || 'Unassigned'}</span>
                             </div>
                         </div>
@@ -101,10 +101,10 @@ export function ApprovalDetailsSheet({
                             </div>
                         </div>
 
-                        <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 text-sm">
-                            <p className="text-blue-800 font-medium mb-1">{t_ext('requester', 'Requester:')}</p>
+                        <div className="bg-info/10 p-4 rounded-lg border border-info/20 text-sm">
+                            <p className="text-info font-medium mb-1">{t_ext('requester', 'Requester:')}</p>
                             <div className="flex items-center gap-2">
-                                <User className="w-4 h-4 text-blue-600" />
+                                <User className="w-4 h-4 text-info" />
                                 <span>{approval.requester || 'Unknown'}</span>
                             </div>
                         </div>
@@ -163,15 +163,15 @@ export function ApprovalDetailsSheet({
                 return (
                     <div className="space-y-6">
                         <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <span className="text-xs text-blue-600 font-semibold uppercase">{t_ext('start_date', 'Start Date')}</span>
-                                <p className="text-lg font-bold text-blue-900">
+                            <div className="p-4 bg-info/5 rounded-lg border border-info/20">
+                                <span className="text-xs text-info font-semibold uppercase">{t_ext('start_date', 'Start Date')}</span>
+                                <p className="text-lg font-bold text-hotel-navy">
                                     {safeFormat(approval.raw.start_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
                             </div>
-                            <div className="p-4 bg-blue-50/50 rounded-lg border border-blue-100">
-                                <span className="text-xs text-blue-600 font-semibold uppercase">{t_ext('end_date', 'End Date')}</span>
-                                <p className="text-lg font-bold text-blue-900">
+                            <div className="p-4 bg-info/5 rounded-lg border border-info/20">
+                                <span className="text-xs text-info font-semibold uppercase">{t_ext('end_date', 'End Date')}</span>
+                                <p className="text-lg font-bold text-hotel-navy">
                                     {safeFormat(approval.raw.end_date, 'MMM d, yyyy', t('unknown_date', 'Unknown date'))}
                                 </p>
                             </div>

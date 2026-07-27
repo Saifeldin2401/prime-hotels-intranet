@@ -364,12 +364,13 @@ export function useRequestsInbox(filters?: {
 
       // 1. Fetch active delegations for this user
       const { data: delegations } = await supabase
-        .from('temporary_approvers')
+        .from('delegations')
         .select('delegator_id')
+        .eq('delegation_category', 'temporary_approval')
         .eq('delegate_id', user.id)
-        .eq('status', 'active')
-        .lte('start_at', new Date().toISOString())
-        .gte('end_at', new Date().toISOString())
+        .eq('is_active', true)
+        .lte('starts_at', new Date().toISOString())
+        .gte('ends_at', new Date().toISOString())
 
       const delegatorIds = delegations?.map(d => d.delegator_id) || []
       const idList = [user.id, ...delegatorIds]

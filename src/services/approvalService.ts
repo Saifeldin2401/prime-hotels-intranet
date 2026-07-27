@@ -42,12 +42,13 @@ export async function getApproverForRequest(
   // 1. Check for temporary approvers first
   const nowIso = new Date().toISOString()
   let tempQuery = supabase
-    .from('temporary_approvers')
+    .from('delegations')
     .select('delegate_id')
+    .eq('delegation_category', 'temporary_approval')
     .eq('scope_type', propertyId ? 'property' : 'all')
-    .lte('start_at', nowIso)
-    .gte('end_at', nowIso)
-    .order('start_at', { ascending: false })
+    .lte('starts_at', nowIso)
+    .gte('ends_at', nowIso)
+    .order('starts_at', { ascending: false })
     .limit(1)
 
   tempQuery = propertyId

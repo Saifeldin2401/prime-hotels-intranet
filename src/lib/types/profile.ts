@@ -61,6 +61,27 @@ export interface UserRole {
   role: AppRole
 }
 
+export interface Company {
+  id: string
+  name: string
+  name_ar: string | null
+  code: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface Brand {
+  id: string
+  company_id: string
+  name: string
+  name_ar: string | null
+  code: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
 export interface Property {
   id: string
   name: string
@@ -70,6 +91,8 @@ export interface Property {
   latitude: number | null
   longitude: number | null
   created_at: string
+  company_id?: string | null
+  brand_id?: string | null
 }
 
 export interface Department {

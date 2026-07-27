@@ -30,15 +30,15 @@ describe('runtimeRecovery', () => {
     expect(shouldProtectAuthEntry('/verify', '', '')).toBe(false)
   })
 
-  it('canonicalizes PHG hosts to the apex domain', () => {
-    expect(canonicalizeAppUrl('https://www.phg-connect.com/some/path?x=1')).toBe('https://phg-connect.com')
-    expect(canonicalizeAppUrl('https://phg-connect.com')).toBe('https://phg-connect.com')
-    expect(canonicalizeAppUrl('http://localhost:5173')).toBe('https://phg-connect.com')
-    expect(canonicalizeAppUrl(undefined)).toBe('https://phg-connect.com')
+  it('canonicalizes REMAL hosts to the apex domain', () => {
+    expect(canonicalizeAppUrl('https://www.remal-connect.com/some/path?x=1')).toBe('https://remal-connect.com')
+    expect(canonicalizeAppUrl('https://remal-connect.com')).toBe('https://remal-connect.com')
+    expect(canonicalizeAppUrl('http://localhost:5173')).toBe('https://remal-connect.com')
+    expect(canonicalizeAppUrl(undefined)).toBe('https://remal-connect.com')
   })
 
   it('builds canonical URLs with the preserved route context', () => {
     expect(buildCanonicalUrl('/reset-password', '?token_hash=abc&type=recovery', '#step=1'))
-      .toBe('https://phg-connect.com/reset-password?token_hash=abc&type=recovery#step=1')
+      .toBe('https://remal-connect.com/reset-password?token_hash=abc&type=recovery#step=1')
   })
 })

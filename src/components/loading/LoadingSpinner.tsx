@@ -20,7 +20,12 @@ const sizeClasses = {
 export function LoadingSpinner({ size = 'md', className, text }: LoadingSpinnerProps) {
   return (
     <div className={cn('flex items-center justify-center gap-2', className)}>
-      <Loader2 className={cn('animate-spin text-primary', sizeClasses[size])} />
+      <img
+        src="/remal-emblem-icon.png"
+        alt="Loading..."
+        className={cn('animate-spin object-contain', sizeClasses[size])}
+        style={{ animationDuration: '2s' }}
+      />
       {text && <span className="text-sm text-muted-foreground">{text}</span>}
     </div>
   )

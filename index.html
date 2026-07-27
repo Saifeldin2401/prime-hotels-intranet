@@ -3,7 +3,8 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/favicon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/remal-favicon-small.png" />
+  <link rel="shortcut icon" href="/remal-favicon-small.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script>
     (() => {
@@ -26,9 +27,9 @@
         currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
       ) || hasAuthParams
 
-      if (window.location.hostname !== 'www.phg-connect.com' || !isSensitiveEntry) return
+      if (window.location.hostname !== 'www.remal-connect.com' || !isSensitiveEntry) return
 
-      const hostRedirectKey = '__phg_www_host_redirect_attempted__'
+      const hostRedirectKey = '__remal_www_host_redirect_attempted__'
       try {
         if (sessionStorage.getItem(hostRedirectKey) === '1') return
         sessionStorage.setItem(hostRedirectKey, '1')
@@ -37,7 +38,7 @@
       }
 
       const target = new URL(window.location.href)
-      target.hostname = 'phg-connect.com'
+      target.hostname = 'remal-connect.com'
       window.location.replace(target.toString())
     })()
   </script>
@@ -47,22 +48,22 @@
   <meta name="theme-color" content="#0B1C3E" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="PRIME Connect" />
+  <meta name="apple-mobile-web-app-title" content="REMAL" />
   <link rel="apple-touch-icon" href="/icons/icon-192x192.png" />
 
   <!-- Mobile Meta Tags -->
   <meta name="mobile-web-app-capable" content="yes" />
   <!-- SEO & Open Graph Meta Tags -->
   <meta name="description"
-    content="PRIME Hotels Intranet (PRIME Connect) - The official employee portal and management platform for staff across all properties." />
+    content="REMAL Hospitality Operating System — نظام عمليات الضيافة لسلسلة فنادق ريمال" />
   <meta property="og:type" content="website" />
-  <meta property="og:title" content="PRIME Connect - Staff Portal" />
-  <meta property="og:description" content="PRIME Hotels internal operational management platform" />
-  <meta property="og:site_name" content="PRIME Hotels" />
+  <meta property="og:title" content="REMAL Connect — Hospitality Operating System" />
+  <meta property="og:description" content="REMAL Hospitality Management — Premium hotel operations platform" />
+  <meta property="og:site_name" content="REMAL Hospitality" />
   <meta property="og:image" content="/icons/icon-512x512.png" />
   <meta name="twitter:card" content="summary" />
   <meta name="robots" content="noindex, nofollow" /> <!-- Internal tool, prevent indexing -->
-  <link rel="canonical" href="https://phg-connect.com" />
+  <link rel="canonical" href="https://remal-connect.com" />
 
   <!-- Cache busting: force browsers to fetch latest after updates -->
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -80,8 +81,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap" />
-  <title>Prime Hotels Intranet</title>
+    href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" />
+  <title>REMAL Connect | نظام عمليات الضيافة</title>
 </head>
 
 <body>

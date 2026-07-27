@@ -3,7 +3,7 @@
  * 
  * Features:
  * - High-quality PDF generation using jsPDF
- * - Prime Hotels branded certificates
+ * - REMAL Hospitality branded certificates
  * - Unique certificate numbers and verification codes
  * - Dynamic content population
  * - Audit trail integration
@@ -109,19 +109,19 @@ function resolveCertificateStatus(
     return expiryTime <= Date.now() ? 'expired' : normalizedStatus
 }
 
-// Brand colors for Prime Hotels
+// Brand colors for REMAL Hospitality
 const _BRAND_COLORS = {
-    navy: '#1a365d',
-    gold: '#c9a962',
-    darkGold: '#a88b4a',
-    lightGold: '#e8d5a5',
+    navy: '#0B1C3E',      // REMAL Navy
+    gold: '#C39A45',      // REMAL Mid-Tone Gold
+    darkGold: '#75531B',  // REMAL Deep Bronze
+    lightGold: '#F2D888', // REMAL Highlight Gold
     white: '#ffffff',
     lightGray: '#f8f9fa',
     darkGray: '#2d3748',
     text: '#1a202c'
 }
 
-const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'phg-connect.com/verify'
+const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'remal-connect.com/verify'
 
 /**
  * Generate a professional PDF certificate
@@ -175,7 +175,7 @@ export async function generateCertificatePDF(
             doc.setTextColor(26, 54, 93)
             doc.setFontSize(24)
             doc.setFont('helvetica', 'bold')
-            doc.text('PRIME HOTELS', pageWidth / 2, yPos + 10, { align: 'center' })
+            doc.text('REMAL HOSPITALITY', pageWidth / 2, yPos + 10, { align: 'center' })
             yPos += 20
         }
     } else {
@@ -183,7 +183,7 @@ export async function generateCertificatePDF(
         doc.setTextColor(26, 54, 93)
         doc.setFontSize(24)
         doc.setFont('helvetica', 'bold')
-        doc.text('PRIME HOTELS', pageWidth / 2, yPos + 10, { align: 'center' })
+        doc.text('REMAL HOSPITALITY', pageWidth / 2, yPos + 10, { align: 'center' })
         yPos += 20
     }
 

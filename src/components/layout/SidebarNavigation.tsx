@@ -1,15 +1,3 @@
-/**
- * SidebarNavigation Component
- * 
- * Premium hotel-themed sidebar navigation using centralized navigation config.
- * Features:
- * - Role-based route filtering
- * - Collapsible navigation groups
- * - Dynamic badge counts
- * - Theme/language switcher
- * - Mobile responsive (Bottom Sheet Launcher)
- */
-
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import {
   AlertDialogAction,
@@ -37,15 +25,17 @@ import { useNavigation } from '@/hooks/useNavigation'
 import { sidebarItemVariants } from '@/lib/motion'
 import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
+import { useNavigationStore } from '@/stores/navigationStore'
 import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
 import {
   Building,
   ChevronDown,
   Globe,
   LogOut,
+  Star,
   X
 } from 'lucide-react'
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
@@ -66,14 +56,12 @@ export function SidebarNavigation({
 }: SidebarNavigationProps) {
   const { t } = useTranslation(['nav', 'common'])
   const navigate = useNavigate()
-  
-  // Hooks must be called unconditionally at the top level
+
   const authState = useAuth()
-  const { groupedNavigation } = useNavigation()
+  const { groupedNavigation, favoriteItems } = useNavigation()
   const { currentProperty } = useProperty()
-  const [expandedGroups, setExpandedGroups] = useState<string[]>([])
-  
-  // Extract values from authState after hook is called
+  const { expandedGroups, toggleGroupExpanded, isFavorite, toggleFavorite } = useNavigationStore()
+
   const user = authState?.user
   const primaryRole = authState?.primaryRole
   const profile = authState?.profile
@@ -85,14 +73,6 @@ export function SidebarNavigation({
       .map((group) => group.config.id),
     [groupedNavigation]
   )
-
-  const toggleGroup = useCallback((groupId: string) => {
-    setExpandedGroups(prev =>
-      prev.includes(groupId)
-        ? prev.filter(id => id !== groupId)
-        : [...prev, groupId]
-    )
-  }, [])
 
   const handleSignOut = useCallback(async () => {
     await signOut()
@@ -111,7 +91,6 @@ export function SidebarNavigation({
     }
   }
 
-  // Get user initials for avatar
   const userInitials = useMemo(() => {
     const name = profile?.full_name || (typeof user?.email === 'string' ? user.email.split('@')[0] : '')
     if (!name) return 'U'
@@ -126,15 +105,14 @@ export function SidebarNavigation({
   const renderNavItem = (item: NavigationItem) => {
     const Icon = item.icon
     const navId = item.path.split('/').filter(Boolean).pop() || item.path
+    const isFav = isFavorite(item.path)
 
     if (isMobile) {
-      // Mobile-optimized nav item
       return (
         <Link
           key={item.path}
           to={item.resolvedPath}
           onClick={handleNavClick}
-          onMouseEnter={() => { if (item.path === '/dashboard' || item.resolvedPath === '/dashboard') void import('@/pages/dashboard/Dashboard') }}
           className={cn(
             "flex items-center gap-4 px-4 py-3.5 rounded-xl text-sm font-medium transition-all duration-200",
             "active:scale-[0.98]",
@@ -152,32 +130,26 @@ export function SidebarNavigation({
               item.isActive ? "text-hotel-navy" : "text-white/70"
             )} />
           </div>
-          <span className="flex-1">{t(item.title, { defaultValue: item.title.split('.').pop() })}</span>
+          <span className="flex-1">{t(item.title, { defaultValue: item.title })}</span>
           {item.badgeCount && item.badgeCount > 0 && (
             <Badge className="bg-red-500 text-white border-0 text-xs h-5 min-w-5 px-1.5">
               {item.badgeCount > 99 ? '99+' : item.badgeCount}
             </Badge>
           )}
-          <ChevronDown className={cn(
-            "h-4 w-4 transition-transform",
-            item.isActive ? "-rotate-90 text-hotel-navy/50" : "text-white/30"
-          )} />
         </Link>
       )
     }
 
-    // Desktop nav item (original)
     return (
       <Link
         key={item.path}
         to={item.resolvedPath}
         onClick={handleNavClick}
-        onMouseEnter={() => { if (item.path === '/dashboard' || item.resolvedPath === '/dashboard') void import('@/pages/dashboard/Dashboard') }}
         data-nav={navId}
         className={cn(
-          "flex items-center gap-3 px-3 py-2.5 lg:py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
+          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group min-h-touch",
           item.isActive
-            ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20"
+            ? "bg-gradient-to-r from-hotel-gold to-hotel-gold-dark text-hotel-navy shadow-lg shadow-black/20 font-semibold"
             : "text-gray-300 hover:bg-hotel-navy-light hover:text-white hover:shadow-inner",
           collapsed && "justify-center px-0"
         )}
@@ -188,7 +160,7 @@ export function SidebarNavigation({
         )}
 
         <Icon className={cn(
-          "h-5 w-5 lg:h-5 lg:w-5 flex-shrink-0",
+          "h-5 w-5 flex-shrink-0",
           item.isActive
             ? "text-hotel-navy"
             : "text-white/60 group-hover:text-hotel-gold transition-colors"
@@ -204,13 +176,28 @@ export function SidebarNavigation({
               className="flex-1 flex items-center min-w-0 overflow-hidden"
             >
               <span className="flex-1 tracking-wide truncate">
-                {t(item.title, { defaultValue: item.title.split('.').pop() })}
+                {t(item.title, { defaultValue: item.title })}
               </span>
               {item.badgeCount && item.badgeCount > 0 && (
                 <Badge className="ms-auto text-[10px] h-5 px-1.5 font-bold min-w-[20px] justify-center bg-hotel-gold text-hotel-navy">
                   {item.badgeCount > 99 ? '99+' : item.badgeCount}
                 </Badge>
               )}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  toggleFavorite(item.path)
+                }}
+                className={cn(
+                  "ms-1 p-1 rounded hover:bg-white/10 opacity-0 group-hover:opacity-100 transition-opacity",
+                  isFav && "opacity-100 text-amber-400"
+                )}
+                title={isFav ? "Unpin favorite" : "Pin favorite"}
+              >
+                <Star className={cn("h-3.5 w-3.5", isFav && "fill-amber-400 text-amber-400")} />
+              </button>
             </m.div>
           )}
         </AnimatePresence>
@@ -227,12 +214,11 @@ export function SidebarNavigation({
     const hasActiveBadge = group.items.some(item => item.badgeCount && item.badgeCount > 0)
 
     if (isMobile) {
-      // Mobile: Show collapsible groups with same role/grouping rules as desktop
       return (
         <div key={group.config.id} className="mb-2">
           {group.config.collapsible ? (
             <button
-              onClick={() => toggleGroup(group.config.id)}
+              onClick={() => toggleGroupExpanded(group.config.id)}
               className={cn(
                 "flex items-center gap-3 w-full px-3 py-3 text-xs font-semibold uppercase tracking-wider transition-colors rounded-xl",
                 "text-white/60 hover:text-white hover:bg-white/10",
@@ -240,7 +226,7 @@ export function SidebarNavigation({
               )}
             >
               <GroupIcon className="h-4 w-4" />
-              <span className="flex-1 text-left">
+              <span className="flex-1 text-start">
                 {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
               </span>
               {hasActiveBadge && (
@@ -268,12 +254,11 @@ export function SidebarNavigation({
       )
     }
 
-    // Desktop: Original collapsible groups
     return (
-      <div key={group.config.id} className="mb-2">
+      <div key={group.config.id} className="mb-3">
         {group.config.collapsible ? (
           <button
-            onClick={() => toggleGroup(group.config.id)}
+            onClick={() => toggleGroupExpanded(group.config.id)}
             className={cn(
               "flex items-center gap-3 w-full px-3 py-2 text-xs font-semibold uppercase tracking-wider transition-colors rounded-md",
               "text-gray-400 hover:text-white hover:bg-hotel-navy-light/50",
@@ -289,7 +274,8 @@ export function SidebarNavigation({
                   exit="hidden"
                   className="flex-1 flex items-center gap-3 min-w-0 overflow-hidden"
                 >
-                  <span className="flex-1 text-left truncate">
+                  <GroupIcon className="h-3.5 w-3.5 text-hotel-gold/70 shrink-0" />
+                  <span className="flex-1 text-start truncate">
                     {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
                   </span>
                   {hasActiveBadge && (
@@ -375,17 +361,28 @@ export function SidebarNavigation({
             isMobile && "h-auto border-none bg-transparent px-4 py-3"
           )}>
             {!isMobile && (
-              <div id="sidebar-logo" className={cn("flex items-center gap-3", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
-                <img
-                  src="/prime-logo-light.png"
-                  alt="Prime Hotels"
-                  className={cn("w-auto transition-all duration-300", collapsed ? "h-8" : "h-14")}
-                />
+              <div id="sidebar-logo" className={cn("flex items-center justify-center", collapsed ? "" : "absolute start-1/2 transform -translate-x-1/2")}>
+                {collapsed ? (
+                  <img
+                    src="/remal-emblem-icon.png"
+                    alt="REMAL"
+                    className="h-9 w-9 object-contain transition-all duration-300 drop-shadow-[0_0_8px_rgba(197,160,101,0.3)]"
+                  />
+                ) : (
+                  <img
+                    src="/remal-logo-web.png"
+                    alt="REMAL Hospitality"
+                    className="h-12 w-auto object-contain transition-all duration-300"
+                  />
+                )}
               </div>
             )}
             {isMobile && (
               <div className="w-full flex items-center justify-between">
-                <h2 className="text-lg font-bold text-white">Menu</h2>
+                <div className="flex items-center gap-2.5">
+                  <img src="/remal-emblem-icon.png" alt="REMAL" className="h-8 w-8 object-contain" />
+                  <span className="text-sm font-semibold text-hotel-gold tracking-wider uppercase">REMAL</span>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -436,7 +433,6 @@ export function SidebarNavigation({
               isMobile && "px-4 py-2 border-b border-white/10"
             )}>
               {isMobile ? (
-                // Mobile: Compact profile row (static)
                 <div className="flex items-center gap-3">
                   <Avatar className="h-12 w-12 rounded-xl border-2 border-hotel-gold/30">
                     <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
@@ -454,7 +450,6 @@ export function SidebarNavigation({
                   </div>
                 </div>
               ) : (
-                // Desktop: Static profile display
                 <div className="w-full relative py-3 px-3 rounded-xl bg-hotel-navy-dark/30 border border-white/5 shadow-sm flex items-center gap-3 justify-start">
                   <div className="relative">
                     <Avatar className="h-10 w-10 border-2 border-hotel-gold/20 shadow-sm">
@@ -466,7 +461,7 @@ export function SidebarNavigation({
                     <span className="absolute bottom-0 end-0 w-2.5 h-2.5 bg-green-500 border-2 border-hotel-navy rounded-full shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
                   </div>
 
-                  <div className="flex-1 min-w-0 text-left">
+                  <div className="flex-1 min-w-0 text-start">
                     <p className="text-sm font-semibold text-white truncate font-serif tracking-wide">
                       {profile?.full_name || user?.email?.split('@')[0] || 'User'}
                     </p>
@@ -487,8 +482,22 @@ export function SidebarNavigation({
             </div>
           )}
 
-          {/* Navigation */}
+          {/* Navigation Items */}
           <nav id="sidebar-nav" className="flex-1 px-3 py-2 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
+            {/* Pinned Favorites Section */}
+            {!collapsed && favoriteItems.length > 0 && (
+              <div className="mb-4">
+                <div className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-400/90 flex items-center gap-2">
+                  <Star className="h-3 w-3 fill-amber-400" />
+                  <span>{t('groups.favorites', { defaultValue: 'Favorites' })}</span>
+                </div>
+                <div className="space-y-1 mt-1">
+                  {favoriteItems.map(renderNavItem)}
+                </div>
+                <div className="my-3 border-b border-white/10" />
+              </div>
+            )}
+
             {isMobile && (
               <div className="mb-3 px-1">
                 <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-widest">
@@ -496,6 +505,7 @@ export function SidebarNavigation({
                 </h3>
               </div>
             )}
+
             {groupedNavigation.map(renderGroup)}
           </nav>
 
@@ -506,7 +516,6 @@ export function SidebarNavigation({
             isMobile && "p-3"
           )}>
             {isMobile ? (
-              // Mobile: Simplified footer
               <div className="flex items-center justify-between w-full">
                 <LanguageSwitcher
                   variant="ghost"
@@ -546,7 +555,6 @@ export function SidebarNavigation({
                 </AlertDialogRoot>
               </div>
             ) : (
-              // Desktop: Original footer
               <>
                 <div className={cn(
                   "flex items-center gap-2",
@@ -584,3 +592,4 @@ export function SidebarNavigation({
     </LazyMotion>
   )
 }
+

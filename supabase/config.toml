@@ -80,6 +80,12 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/ai-translation/index.ts"
 
+[functions.ai-document-tagger]
+enabled = true
+# This internal worker validates the service-role credential in its handler.
+verify_jwt = false
+entrypoint = "./functions/ai-document-tagger/index.ts"
+
 [functions.approval-escalation]
 enabled = true
 verify_jwt = true
@@ -161,6 +167,18 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/scheduled-reports/index.ts"
 
+[functions.security-monitor]
+enabled = true
+# Cron-only endpoint; handler performs a timing-safe service-role check.
+verify_jwt = false
+entrypoint = "./functions/security-monitor/index.ts"
+
+[functions.password-reminders-test]
+enabled = true
+# Retained for controlled operations only; handler requires the service role.
+verify_jwt = false
+entrypoint = "./functions/password-reminders-test/index.ts"
+
 [functions.send-email]
 enabled = true
 verify_jwt = false
@@ -195,4 +213,3 @@ entrypoint = "./functions/weather-proxy/index.ts"
 enabled = true
 verify_jwt = true
 entrypoint = "./functions/workflow-engine/index.ts"
-

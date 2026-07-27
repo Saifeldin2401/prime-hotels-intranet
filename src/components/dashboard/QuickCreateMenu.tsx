@@ -84,13 +84,13 @@ export function QuickCreateMenu({
   ]
 
   const handleMenuItemClick = (itemId: typeof menuItems[number]['id']) => {
+    setDropdownOpen(false)
     setActiveModal(itemId)
   }
 
   const handleModalClose = (open: boolean) => {
     if (!open) {
       setActiveModal(null)
-      setDropdownOpen(false) // Close dropdown when modal closes
     }
   }
 
@@ -118,9 +118,8 @@ export function QuickCreateMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align={isRTL ? 'start' : 'end'}
-          className="w-64"
+          className="w-64 z-[999]"
           sideOffset={8}
-          onCloseAutoFocus={(e) => e.preventDefault()}
         >
           <DropdownMenuLabel className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
             {t('quick_create.menu_title') || 'Create New'}
@@ -129,10 +128,7 @@ export function QuickCreateMenu({
           {visibleItems.map((item) => (
             <DropdownMenuItem
               key={item.id}
-              onSelect={(e) => {
-                e.preventDefault() // Prevent dropdown from closing immediately
-                handleMenuItemClick(item.id)
-              }}
+              onClick={() => handleMenuItemClick(item.id)}
               className="flex items-start gap-3 py-3 cursor-pointer"
             >
               <div className={cn(

@@ -78,8 +78,11 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                     'Corporate Headquarters & Global Operations'
                 )
 
-                // Filter out the redundant 'PRIME Head Office' from the list if it exists
-                const filteredData = (data || []).filter(p => p.name !== 'PRIME Head Office')
+                // Filter out redundant head office and deduplicate properties by ID
+                const rawProps = (data || []).filter(p => p.name !== 'PRIME Head Office')
+                const filteredData = Array.from(
+                    new Map(rawProps.map(p => [p.id, p])).values()
+                )
                 props = [allOption, ...filteredData]
             } else {
                 // Property users fetch ONLY assigned properties via user_properties

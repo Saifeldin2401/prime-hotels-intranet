@@ -69,7 +69,7 @@ function OrgTreeNodeItem({
     const getDepthColor = (depth: number) => {
         const colors = [
             'border-l-purple-500 bg-purple-50/50 dark:bg-purple-900/10',
-            'border-l-blue-500 bg-blue-50/50 dark:bg-blue-900/10',
+            'border-l-hotel-navy bg-hotel-navy/10 dark:bg-hotel-navy/5',
             'border-l-green-500 bg-green-50/50 dark:bg-green-900/10',
             'border-l-orange-500 bg-orange-50/50 dark:bg-orange-900/10',
             'border-l-pink-500 bg-pink-50/50 dark:bg-pink-900/10',
@@ -110,7 +110,7 @@ function OrgTreeNodeItem({
                 <div className={cn(
                     "h-10 w-10 rounded-full flex items-center justify-center text-white font-semibold text-sm",
                     node.depth === 0 ? "bg-purple-600" :
-                        node.depth === 1 ? "bg-blue-600" :
+                        node.depth === 1 ? "bg-hotel-navy" :
                             node.depth === 2 ? "bg-green-600" : "bg-gray-500"
                 )}>
                     {node.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '??'}
