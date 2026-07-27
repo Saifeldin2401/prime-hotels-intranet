@@ -130,6 +130,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
       })
 
       if (fnError) {
+        // Extract the real error message from the edge function response body
+        let detailedMessage: string | undefined
         const maybeContext = fnError as unknown as { context?: Response | { response?: Response } }
         const response = maybeContext?.context instanceof Response
           ? maybeContext.context
@@ -138,15 +140,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
           try {
             const text = await response.text()
             const parsed = text ? (JSON.parse(text) as { error?: string; details?: unknown }) : null
-            const message = parsed?.error || fnError.message
-            throw new Error(message)
+            detailedMessage = parsed?.error || undefined
           } catch {
-            // If parsing fails, fall back to the generic error message
-            throw new Error(fnError.message || 'Failed to create user')
+            // Response body could not be read/parsed — fall through to generic message
           }
         }
 
-        throw new Error(fnError.message || 'Failed to create user')
+        throw new Error(detailedMessage || fnError.message || 'Failed to create user')
       }
 
       if (data?.error) {

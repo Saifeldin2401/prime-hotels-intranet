@@ -156,10 +156,12 @@ function mapErrorToUserMessage(message: string, _name?: string): ErrorDetails {
     }
   }
 
-  // Permission errors
+  // Permission errors — preserve specific messages from Edge Functions
   if (lowerMessage.includes('permission') || lowerMessage.includes('forbidden') || lowerMessage.includes('access denied')) {
+    // If the original message has specific details (e.g. from Edge Function), keep it
+    const hasSpecificDetails = message.includes(':') && message.length > 20
     return {
-      message: i18n.t('errors:permission_denied'),
+      message: hasSpecificDetails ? message : i18n.t('errors:permission_denied'),
       retryable: false,
       action: 'contact_admin'
     }

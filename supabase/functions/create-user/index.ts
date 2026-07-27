@@ -361,8 +361,11 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Check Roles (Must be Regional Admin or HR)
-    const { data: roles, error: rolesError } = await userClient
+    // Check Roles (Must be Regional Admin, HR, or Corporate Admin)
+    // Use adminClient to bypass RLS — the caller's identity is already verified
+    // via getUser() above. Using userClient here was causing false permission
+    // denials when RLS policies didn't return the caller's own role rows.
+    const { data: roles, error: rolesError } = await adminClient
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id);
