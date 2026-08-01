@@ -1,5 +1,5 @@
 /**
- * Prime Hotels Intranet - Bulk User Creation (Browser Console)
+ * Altus Connect Intranet - Bulk User Creation (Browser Console)
  *
  * Safe mode:
  * - Uses Edge Function `create-user` (no raw SQL / no auth.users direct insert)
@@ -7,7 +7,7 @@
  * - Idempotent handling for existing users
  *
  * Instructions:
- * 1) Login to Prime Hotels Intranet with a privileged account
+ * 1) Login to Altus Connect Intranet with a privileged account
  *    (corporate_admin / regional_admin / regional_hr).
  * 2) Open browser console (F12).
  * 3) Copy-paste this entire script and press Enter.
@@ -23,36 +23,36 @@ const CONFIG = {
   retryDelayMs: 800
 };
 
-// Users from Riyadh User Forum.xlsx and PHG user creation forum1.xlsx
+// Users from Riyadh User Forum.xlsx and ALTUS user creation forum1.xlsx
 const users = [
   // Riyadh Users
-  { email: 'a.taha.mamoun1991@gmail.com', name: 'Ahmed Taha Mamoun', phone: '500418959', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'department_head' },
-  { email: 'mahmoudelakabawey@gmail.com', name: 'Mahmoud Ahmed elakabawy', phone: '576234611', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Housekeeping', role: 'property_hr' },
-  { email: 'Alatawi1213@gmail.com', name: 'Faisal Mohamed Al Otaibi', phone: '551448914', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
-  { email: 'elegantlayla88@gmail.com', name: 'Layla Ali Shrahily', phone: '506388055', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
-  { email: 'hassanshalaby280@gmail.com', name: 'Hasan Abdel Raof Shalaby', phone: '569409945', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'department_head' },
-  { email: 'eslam.mady.2020@gmail.com', name: 'Islam Mahmoud Madi', phone: '570958030', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
-  { email: 'looa01230th@gmail.com', name: 'AIIam Ali lbrahim', phone: '570481399', property: 'Medhal Qurtuba by Prime Hotels', dept: 'Front Office', role: 'department_head' },
-  { email: 'mohamedgalallld@gmail.com', name: 'MOHAMED Galal Anwer Ahmed', phone: '561005446', property: 'Medhal Qurtuba by Prime Hotels', dept: 'Front Office', role: 'staff' },
-  { email: 'fhdalnzv209@gmail.com', name: 'FAHAD MESHAAL AIANzi', phone: '502792036', property: 'Medhal Qurtuba by Prime Hotels', dept: 'Front Office', role: 'staff' },
-  { email: 'mohamedreao49@gmail.com', name: 'MOHAMED ABDELBADEAA ISMEAL', phone: '559697307', property: 'Medhal Qurtuba by Prime Hotels', dept: 'Housekeeping', role: 'department_head' },
-  { email: 'aymanabdelhamid091@gmail.com', name: 'Ayman Abdul Hamid Saber', phone: '538627751', property: 'Prime Al Hamra Hotel Riyadh', dept: 'Maintenance', role: 'staff' },
+  { email: 'a.taha.mamoun1991@gmail.com', name: 'Ahmed Taha Mamoun', phone: '500418959', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'department_head' },
+  { email: 'mahmoudelakabawey@gmail.com', name: 'Mahmoud Ahmed elakabawy', phone: '576234611', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Housekeeping', role: 'property_hr' },
+  { email: 'Alatawi1213@gmail.com', name: 'Faisal Mohamed Al Otaibi', phone: '551448914', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
+  { email: 'elegantlayla88@gmail.com', name: 'Layla Ali Shrahily', phone: '506388055', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
+  { email: 'hassanshalaby280@gmail.com', name: 'Hasan Abdel Raof Shalaby', phone: '569409945', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'department_head' },
+  { email: 'eslam.mady.2020@gmail.com', name: 'Islam Mahmoud Madi', phone: '570958030', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Front Office', role: 'staff' },
+  { email: 'looa01230th@gmail.com', name: 'AIIam Ali lbrahim', phone: '570481399', property: 'Medhal Qurtuba by Altus Advisory', dept: 'Front Office', role: 'department_head' },
+  { email: 'mohamedgalallld@gmail.com', name: 'MOHAMED Galal Anwer Ahmed', phone: '561005446', property: 'Medhal Qurtuba by Altus Advisory', dept: 'Front Office', role: 'staff' },
+  { email: 'fhdalnzv209@gmail.com', name: 'FAHAD MESHAAL AIANzi', phone: '502792036', property: 'Medhal Qurtuba by Altus Advisory', dept: 'Front Office', role: 'staff' },
+  { email: 'mohamedreao49@gmail.com', name: 'MOHAMED ABDELBADEAA ISMEAL', phone: '559697307', property: 'Medhal Qurtuba by Altus Advisory', dept: 'Housekeeping', role: 'department_head' },
+  { email: 'aymanabdelhamid091@gmail.com', name: 'Ayman Abdul Hamid Saber', phone: '538627751', property: 'Altus Al Hamra Hotel Riyadh', dept: 'Maintenance', role: 'staff' },
 
   // Jeddah Users
-  { email: 'Moustafamarzook7200416@gmail.com', name: 'Moustafa mahmoud marzook', phone: '567549721', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
-  { email: 'abdullahahmed54574@gmail.com', name: 'Abdullah Ahmed Saleh Ali', phone: '545747498', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
-  { email: 'mahmoudmo919@yahoo.com', name: 'Mahmoud Zain Al-Abidin Hamed', phone: '565542083', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
-  { email: 'zooommm551@gmail.com', name: 'MOHAMED HANAFY ELSAYED ABDELMAKSOUD', phone: '595920662', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
-  { email: 'Moh-oo@hotmail.com', name: 'Saud abdulmajed alshalabi', phone: '558221628', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'Badebaksh@gmail.com', name: 'Abdulelah Mohmmed Baksh', phone: '547039704', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'ibf672017@gmail.com', name: 'Osayd Ibrahim Alrasheed', phone: '566335467', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'neehaal1989@gmail.com', name: 'Nihal Abd Al Rahman Al Harbi', phone: '543119562', property: 'Prime Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'naserelsady2020@gmail.com', name: 'Naser elsady Ibrahim', phone: '540272932', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
-  { email: 'azoooz.bk1993@gmail.com', name: 'Abdulaziz Badr Bakili', phone: '531656567', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'property_manager' },
-  { email: 'mahranahmed231@gmail.com', name: 'Ahmed Ahmed mahran', phone: '564617675', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
-  { email: 'iimansoor6@gmail.com', name: 'Mansour Mohammed Al-Mahwari', phone: '544706217', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'hmada18emam@gmail.com', name: 'Mohammad Sami Emam', phone: '509402019', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' },
-  { email: 'Play.com99874@gmail.com', name: 'Nasser musa mahdey alzharani', phone: '569379893', property: 'Prime Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' }
+  { email: 'Moustafamarzook7200416@gmail.com', name: 'Moustafa mahmoud marzook', phone: '567549721', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
+  { email: 'abdullahahmed54574@gmail.com', name: 'Abdullah Ahmed Saleh Ali', phone: '545747498', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
+  { email: 'mahmoudmo919@yahoo.com', name: 'Mahmoud Zain Al-Abidin Hamed', phone: '565542083', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
+  { email: 'zooommm551@gmail.com', name: 'MOHAMED HANAFY ELSAYED ABDELMAKSOUD', phone: '595920662', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
+  { email: 'Moh-oo@hotmail.com', name: 'Saud abdulmajed alshalabi', phone: '558221628', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'Badebaksh@gmail.com', name: 'Abdulelah Mohmmed Baksh', phone: '547039704', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'ibf672017@gmail.com', name: 'Osayd Ibrahim Alrasheed', phone: '566335467', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'neehaal1989@gmail.com', name: 'Nihal Abd Al Rahman Al Harbi', phone: '543119562', property: 'Altus Al Hamra Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'naserelsady2020@gmail.com', name: 'Naser elsady Ibrahim', phone: '540272932', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Housekeeping', role: 'department_head' },
+  { email: 'azoooz.bk1993@gmail.com', name: 'Abdulaziz Badr Bakili', phone: '531656567', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'property_manager' },
+  { email: 'mahranahmed231@gmail.com', name: 'Ahmed Ahmed mahran', phone: '564617675', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'department_head' },
+  { email: 'iimansoor6@gmail.com', name: 'Mansour Mohammed Al-Mahwari', phone: '544706217', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'hmada18emam@gmail.com', name: 'Mohammad Sami Emam', phone: '509402019', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' },
+  { email: 'Play.com99874@gmail.com', name: 'Nasser musa mahdey alzharani', phone: '569379893', property: 'Altus Al Corniche Hotel Jeddah', dept: 'Front Office', role: 'staff' }
 ];
 
 const VALID_ROLES = new Set([
@@ -351,7 +351,7 @@ async function createBulkUsers() {
     return;
   }
 
-  console.log('Prime Hotels Intranet - Bulk User Creation');
+  console.log('Altus Connect Intranet - Bulk User Creation');
   console.log(`Users to process: ${users.length}`);
   console.log(`Provisioning method: ${CONFIG.provisioningMethod}`);
   console.log(`Dry run: ${CONFIG.dryRun ? 'ON (no writes)' : 'OFF'}`);

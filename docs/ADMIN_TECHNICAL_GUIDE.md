@@ -1,4 +1,4 @@
-# PRIME Connect: Comprehensive Administrator & Technical Manual
+# ALTUS Connect: Comprehensive Administrator & Technical Manual
 
 **Version**: 2.1 (Technical Deep Dive)
 **Confidentiality**: INTERNAL USE ONLY
@@ -23,7 +23,7 @@
 
 ## 1. System Architecture
 
-PRIME Connect is a modern **Serverless Web Application** built on a highly scalable stack.
+ALTUS Connect is a modern **Serverless Web Application** built on a highly scalable stack.
 
 *   **Frontend**: React (TypeScript) + Vite. Hosted on Edge CDN.
     *   *Significance*: Extremely fast loading times; works offline for basic tasks.
@@ -65,7 +65,7 @@ Permissions are additive. A higher role inherits lower role views, but with expa
 
 ### Provisioning New Users
 1.  **Navigate**: `/admin/users` -> "Add User".
-2.  **Required Fields**: Full Name, Email (Must be `@primehotels.sa`), Property, Department.
+2.  **Required Fields**: Full Name, Email (Must be `@altus-advisory.com`), Property, Department.
 3.  **Role Assignment**: Default is `staff`. Upgrade carefully.
 4.  **Reporting Line**: **CRITICAL**. You MUST assign a "Reporting To" manager immediately.
     *   *Risk*: If a user has no Manager, their Leave Requests will get stuck (See Section 5).
@@ -80,7 +80,7 @@ Permissions are additive. A higher role inherits lower role views, but with expa
 ## 4. Organization Configuration
 
 ### Properties vs. Departments
-*   **Properties**: Physical hotels (e.g., "Prime Al Hamra").
+*   **Properties**: Physical hotels (e.g., "Altus Al Hamra").
     *   *Config*: Must have a Timezone and Localization setting.
 *   **Departments**: Functional units (e.g., "Front Office").
     *   *Logic*: Departments are Global Master Data, but linked to Properties via `property_departments`.

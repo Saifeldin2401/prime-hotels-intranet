@@ -1,4 +1,4 @@
-# PHG Connect Tab Switching Fix Summary
+# Altus Connect Tab Switching Fix Summary
 
 ## Changes Applied
 

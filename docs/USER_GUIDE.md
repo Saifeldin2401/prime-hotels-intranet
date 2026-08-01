@@ -1,6 +1,6 @@
-# Prime Connect User Guide (Non-Technical)
+# Altus Connect User Guide (Non-Technical)
 
-This guide explains how to use the Prime Connect web app end-to-end. It is written for non-technical users and focuses on daily tasks, step-by-step workflows, and common troubleshooting.
+This guide explains how to use the Altus Connect web app end-to-end. It is written for non-technical users and focuses on daily tasks, step-by-step workflows, and common troubleshooting.
 
 If a menu item or action is not visible to you, it is likely restricted by your role or property access.
 

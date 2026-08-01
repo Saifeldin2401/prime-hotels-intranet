@@ -1,5 +1,5 @@
 ================================================================================
-PRIME HOTELS INTRANET — LIVE DATABASE SCHEMA REFERENCE
+ALTUS HOTELS INTRANET — LIVE DATABASE SCHEMA REFERENCE
 ================================================================================
 
 Regenerated from the LIVE Supabase database on 2026-07-21.

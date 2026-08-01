@@ -11,7 +11,7 @@ export interface PendingSubmission {
   retryCount: number
 }
 
-const DB_NAME = 'phg-offline'
+const DB_NAME = 'altus-offline'
 const DB_VERSION = 1
 const STORE_NAME = 'pendingSubmissions'
 

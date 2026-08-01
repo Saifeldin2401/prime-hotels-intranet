@@ -1,4 +1,4 @@
-# PHG Connect Mobile - Production Deployment Guide
+# Altus Connect Mobile - Production Deployment Guide
 
 ## 🚀 Pre-Deployment Checklist
 
@@ -110,7 +110,7 @@ npm run build
 # Required
 VITE_SUPABASE_URL=https://your-project.supabase.co
 VITE_SUPABASE_ANON_KEY=your-anon-key
-VITE_APP_URL=https://phg-connect.com
+VITE_APP_URL=https://altus-advisory.com
 
 # Optional
 VITE_SENTRY_DSN=your-sentry-dsn
@@ -148,9 +148,9 @@ export default defineConfig({
 ```json
 // manifest.json
 {
-  "name": "PHG Connect",
-  "short_name": "PHG Connect",
-  "description": "Prime Hotels Group Intranet",
+  "name": "Altus Connect",
+  "short_name": "Altus Connect",
+  "description": "Altus Advisory Group Intranet",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0B1C3E",

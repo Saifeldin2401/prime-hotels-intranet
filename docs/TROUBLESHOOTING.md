@@ -78,7 +78,7 @@ FROM profiles p
 LEFT JOIN user_roles ur ON ur.user_id = p.id
 LEFT JOIN user_properties up ON up.user_id = p.id
 LEFT JOIN properties pr ON pr.id = up.property_id
-WHERE p.email = 'admin@prime.com';
+WHERE p.email = 'admin@altus-advisory.com';
 ```
 
 ### Issue: "Unauthorized" page

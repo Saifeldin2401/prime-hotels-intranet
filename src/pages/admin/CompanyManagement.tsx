@@ -48,10 +48,10 @@ function ManageCompanyAccessDialog({ company, open, onOpenChange }: { company: C
             } else {
                 await grantMutation.mutateAsync({ userId, companyId: company.id })
             }
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -151,10 +151,10 @@ export default function CompanyManagement() {
             setIsDeleteOpen(false)
             setDeleteCompany(null)
             toast({ title: t('admin:companies.success.deleted', { defaultValue: 'Company deleted' }) })
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -172,10 +172,10 @@ export default function CompanyManagement() {
             }
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -198,11 +198,11 @@ export default function CompanyManagement() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-header">
+            <div className="altus-card">
+                <div className="altus-card-header">
                     <h3 className="text-lg font-semibold">{t('admin:companies.list_title', { defaultValue: 'Companies' })}</h3>
                 </div>
-                <div className="prime-card-body">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('admin:companies.loading', { defaultValue: 'Loading companies…' })}</div>
                     ) : companies && companies.length > 0 ? (

@@ -1,6 +1,6 @@
 import { hasAuthRecoveryParams, normalizePathname } from './runtimeRecovery'
 
-const AUTH_FLOW_STATE_KEY = '__phg_auth_flow_state__'
+const AUTH_FLOW_STATE_KEY = '__altus_auth_flow_state__'
 const AUTH_FLOW_TTL_MS = 15 * 60 * 1000
 
 const AUTH_FLOW_PATHS = {

@@ -20,6 +20,7 @@ import { useCreateVipGuest, useDeactivateVipGuest, useVipGuests } from '@/hooks/
 import { Crown, Plus, X } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export default function VipGuests() {
     const { t } = useTranslation(['operations', 'common'])
@@ -45,7 +46,7 @@ export default function VipGuests() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!user || !propertyId) return
+        if (!user || !isRealPropertyId(propertyId)) return
         try {
             await createMutation.mutateAsync({
                 property_id: propertyId,
@@ -60,16 +61,16 @@ export default function VipGuests() {
             toast({ title: t('operations:vip_guests.success.created', { defaultValue: 'VIP guest flagged' }) })
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
     }
 
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
         return (
             <div className="p-6">
                 <EmptyState
@@ -94,8 +95,8 @@ export default function VipGuests() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading…' })}</div>
                     ) : vips && vips.length > 0 ? (

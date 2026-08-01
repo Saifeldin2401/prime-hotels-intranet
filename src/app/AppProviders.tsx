@@ -9,7 +9,7 @@ import { PropertyProvider } from '@/contexts/PropertyContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { queryClient } from '@/lib/queryClient'
-import { ThemeProvider as PHGKitThemeProvider } from '@/phg-kit/theme'
+import { ThemeProvider as AltusKitThemeProvider } from '@/altus-kit/theme'
 
 import { QueryRuntimeBridge } from './QueryRuntimeBridge'
 
@@ -25,7 +25,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <QueryRuntimeBridge />
       <ThemeProvider>
-        <PHGKitThemeProvider>
+        <AltusKitThemeProvider>
           <AuthProvider>
             <PropertyProvider>
               <UserSettingsProvider>
@@ -35,7 +35,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
               </UserSettingsProvider>
             </PropertyProvider>
           </AuthProvider>
-        </PHGKitThemeProvider>
+        </AltusKitThemeProvider>
         {ReactQueryDevtools && (
           <Suspense fallback={null}>
             <ReactQueryDevtools initialIsOpen={false} />

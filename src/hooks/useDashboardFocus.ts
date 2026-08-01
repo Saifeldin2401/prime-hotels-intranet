@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 
 export type DashboardFocusMode = 'my_work' | 'my_team'
 
-const FOCUS_MODE_KEY = 'prime_dashboard_focus_mode'
+const FOCUS_MODE_KEY = 'altus_dashboard_focus_mode'
 
 export function useDashboardFocus() {
     const [focusMode, setFocusModeState] = useState<DashboardFocusMode>(() => {

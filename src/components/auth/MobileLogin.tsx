@@ -115,7 +115,7 @@ export function MobileLogin() {
                             <Input
                                 id="email"
                                 type="email"
-                                placeholder="name@primehotels.com"
+                                placeholder="name@altus-advisory.com"
                                 className="ps-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-white/40"
                                 {...register('email')}
                             />

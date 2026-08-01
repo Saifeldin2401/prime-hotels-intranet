@@ -83,7 +83,7 @@ describe('AnalyticsService', () => {
         id: 'stored-session-123',
         lastActive: new Date().toISOString(),
       }
-      localStorage.setItem('prime_analytics_session', JSON.stringify(validSession))
+      localStorage.setItem('altus_analytics_session', JSON.stringify(validSession))
 
       vi.mocked(supabase.auth.getSession).mockResolvedValue({
         data: { session: { user: { id: 'user-123', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() } } },
@@ -111,7 +111,7 @@ describe('AnalyticsService', () => {
         id: 'expired-session',
         lastActive: new Date(Date.now() - 31 * 60 * 1000).toISOString(), // 31 minutes ago
       }
-      localStorage.setItem('prime_analytics_session', JSON.stringify(expiredSession))
+      localStorage.setItem('altus_analytics_session', JSON.stringify(expiredSession))
 
       const mockUser = { id: 'user-123', email: 'test@example.com', app_metadata: {}, user_metadata: {}, aud: 'authenticated', created_at: new Date().toISOString() }
       vi.mocked(supabase.auth.getSession).mockResolvedValue({

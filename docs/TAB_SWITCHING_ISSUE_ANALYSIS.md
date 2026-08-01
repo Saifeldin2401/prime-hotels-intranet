@@ -1,8 +1,8 @@
-# PHG Connect Tab Switching Issue - Root Cause Analysis
+# Altus Connect Tab Switching Issue - Root Cause Analysis
 
 ## Executive Summary
 
-PHG Connect exhibits unwanted behavior (refresh, logout, flickering) when users switch browser tabs or return from background. This document identifies the root causes and provides recommended solutions.
+Altus Connect exhibits unwanted behavior (refresh, logout, flickering) when users switch browser tabs or return from background. This document identifies the root causes and provides recommended solutions.
 
 ---
 

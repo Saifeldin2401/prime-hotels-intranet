@@ -152,7 +152,7 @@ export default function ShiftScheduling() {
   const shiftsQuery = useQuery({
     queryKey: ['shift-scheduling', propertyId, departmentId, dateStart, dateEnd],
     queryFn: async () => {
-      if (!propertyId) return []
+      if (!isRealPropertyId(propertyId)) return []
 
       const start = new Date(`${dateStart}T00:00:00`)
       const end = new Date(`${dateEnd}T23:59:59`)
@@ -173,13 +173,13 @@ export default function ShiftScheduling() {
       if (error) throw error
       return data || []
     },
-    enabled: !!dateStart && !!dateEnd && !!propertyId
+    enabled: !!dateStart && !!dateEnd && !!isRealPropertyId(propertyId)
   })
 
   const attendanceQuery = useQuery({
     queryKey: ['attendance-corrections', propertyId, departmentId, attendanceDate, staff.length],
     queryFn: async () => {
-      if (!propertyId) return []
+      if (!isRealPropertyId(propertyId)) return []
 
       let query = supabase
         .from('attendance')
@@ -195,12 +195,12 @@ export default function ShiftScheduling() {
       if (departmentId === 'all') return data || []
       return (data || []).filter((row) => staffIds.has(row.employee_id))
     },
-    enabled: !!attendanceDate && !!propertyId
+    enabled: !!attendanceDate && !!isRealPropertyId(propertyId)
   })
 
   const createAttendance = useMutation({
     mutationFn: async () => {
-      if (!propertyId) {
+      if (!isRealPropertyId(propertyId)) {
         throw new Error('Property context is required')
       }
       // Safety guard: attendance must target an employee in the currently selected property scope.
@@ -233,7 +233,7 @@ export default function ShiftScheduling() {
       if (!editingAttendanceId) {
         throw new Error('Attendance record is required')
       }
-      if (!propertyId) {
+      if (!isRealPropertyId(propertyId)) {
         throw new Error('Property context is required')
       }
       const payload = {
@@ -265,7 +265,7 @@ export default function ShiftScheduling() {
   })
 
   const handleSaveShift = async () => {
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
       toast.error(propertyRequiredMessage)
       return
     }
@@ -350,7 +350,7 @@ export default function ShiftScheduling() {
   }
 
   const handleSaveAttendance = () => {
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
       toast.error(propertyRequiredMessage)
       return
     }
@@ -378,7 +378,7 @@ export default function ShiftScheduling() {
           <CardHeader>
             <CardTitle>{t('shift_management.filters.department', 'Department')}</CardTitle>
             <CardDescription>
-              {isConsolidatedScope && !propertyId
+              {isConsolidatedScope && !isRealPropertyId(propertyId)
                 ? propertyRequiredMessage
                 : t('shift_management.filters.all_departments', 'All departments')}
             </CardDescription>
@@ -497,7 +497,7 @@ export default function ShiftScheduling() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button onClick={handleSaveShift} disabled={!propertyId}>
+                  <Button onClick={handleSaveShift} disabled={!isRealPropertyId(propertyId)}>
                     {editingShiftId ? t('shift_management.form.save', 'Save') : t('shift_management.actions.create_shift', 'Create Shift')}
                   </Button>
                   {editingShiftId && (
@@ -598,7 +598,7 @@ export default function ShiftScheduling() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Button onClick={handleSaveAttendance} disabled={!propertyId}>
+                  <Button onClick={handleSaveAttendance} disabled={!isRealPropertyId(propertyId)}>
                     {editingAttendanceId ? t('shift_management.form.save', 'Save') : t('shift_management.actions.add_attendance', 'Add Attendance')}
                   </Button>
                   {editingAttendanceId && (

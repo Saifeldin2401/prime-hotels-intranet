@@ -1,4 +1,4 @@
-# PHG Connect Tab Switching Fixes - Production Readiness
+# Altus Connect Tab Switching Fixes - Production Readiness
 
 ## Overview
 

@@ -35,7 +35,7 @@ export function HolidayCelebration() {
 
   useEffect(() => {
     // Check local storage so we don't spam confetti every page reload, just the banner
-    const hasSeenConfettiThisYear = localStorage.getItem('phg_holiday_confetti_year');
+    const hasSeenConfettiThisYear = localStorage.getItem('altus_holiday_confetti_year');
     const currentYear = new Date().getFullYear().toString();
 
     const d = new Date();
@@ -44,7 +44,7 @@ export function HolidayCelebration() {
     
     // Cache key for the API hijri date. Only fetch once per day.
     const dateStr = `${gDay.toString().padStart(2, '0')}-${gMonth.toString().padStart(2, '0')}-${currentYear}`;
-    const cacheKey = `phg_hijri_date_${dateStr}`;
+    const cacheKey = `altus_hijri_date_${dateStr}`;
 
     const determineEvent = async () => {
       let event: HolidayEvent = null;
@@ -121,7 +121,7 @@ export function HolidayCelebration() {
         const confettiKey = `${event}_${currentYear}`;
         if (hasSeenConfettiThisYear !== confettiKey) {
           setShowConfetti(true);
-          localStorage.setItem('phg_holiday_confetti_year', confettiKey);
+          localStorage.setItem('altus_holiday_confetti_year', confettiKey);
           
           // Turn off confetti after 8 seconds
           setTimeout(() => setShowConfetti(false), 8000);

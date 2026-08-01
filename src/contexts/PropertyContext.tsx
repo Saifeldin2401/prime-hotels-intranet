@@ -79,7 +79,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 )
 
                 // Filter out redundant head office and deduplicate properties by ID
-                const rawProps = (data || []).filter(p => p.name !== 'PRIME Head Office')
+                const rawProps = (data || []).filter(p => p.name !== 'ALTUS Head Office')
                 const filteredData = Array.from(
                     new Map(rawProps.map(p => [p.id, p])).values()
                 )
@@ -119,7 +119,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
             // Determine current property
             if (props.length > 0) {
                 // 1. Try to restore from local storage
-                const savedId = safeLocalStorage.getItem('prime_current_property_id')
+                const savedId = safeLocalStorage.getItem('altus_current_property_id')
                 const savedProp = props.find(p => p.id === savedId)
 
                 if (savedProp) {
@@ -127,7 +127,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 } else {
                     // 2. Default to the first available
                     setCurrentProperty(props[0])
-                    safeLocalStorage.setItem('prime_current_property_id', props[0].id)
+                    safeLocalStorage.setItem('altus_current_property_id', props[0].id)
                 }
             } else {
                 setCurrentProperty(null)
@@ -149,7 +149,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
         setCurrentProperty(prev => {
             const prop = availableProperties.find(p => p.id === propertyId)
             if (prop) {
-                safeLocalStorage.setItem('prime_current_property_id', propertyId)
+                safeLocalStorage.setItem('altus_current_property_id', propertyId)
                 return prop
             }
             return prev

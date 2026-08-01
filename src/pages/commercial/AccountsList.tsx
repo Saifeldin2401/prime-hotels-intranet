@@ -63,10 +63,10 @@ export default function AccountsList() {
             toast({ title: t('commercial:accounts.success.created', { defaultValue: 'Account created' }) })
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -85,8 +85,8 @@ export default function AccountsList() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading…' })}</div>
                     ) : accounts && accounts.length > 0 ? (

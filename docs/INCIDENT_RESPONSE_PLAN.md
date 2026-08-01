@@ -1,5 +1,5 @@
 # Enterprise Incident Response Plan & Security Strategy
-## Prime Hotels Intranet System
+## Altus Connect Intranet System
 
 **Version:** 1.0  
 **Last Updated:** 2026-04-07  
@@ -57,12 +57,12 @@ This document shall be reviewed and updated:
 
 ### 2.1 Purpose
 
-This Incident Response Plan (IRP) establishes the framework for detecting, responding to, and recovering from cybersecurity incidents affecting the Prime Hotels Intranet system. It defines roles, responsibilities, procedures, and communication protocols to ensure a coordinated and effective response.
+This Incident Response Plan (IRP) establishes the framework for detecting, responding to, and recovering from cybersecurity incidents affecting the Altus Connect Intranet system. It defines roles, responsibilities, procedures, and communication protocols to ensure a coordinated and effective response.
 
 ### 2.2 Scope
 
 This plan applies to:
-- All digital assets owned or managed by Prime Hotels
+- All digital assets owned or managed by Altus Advisory
 - All employees, contractors, and third-party vendors with system access
 - All physical locations and cloud environments
 - All types of security incidents (cyber attacks, data breaches, insider threats, etc.)
@@ -1636,7 +1636,7 @@ All employees with access to company systems must acknowledge receipt and unders
 
 **Employee Acknowledgment:**
 
-I, ________________________________, acknowledge that I have received, read, and understood the Prime Hotels Incident Response Plan and Security Strategy. I understand my responsibilities in detecting, reporting, and responding to security incidents.
+I, ________________________________, acknowledge that I have received, read, and understood the Altus Advisory Incident Response Plan and Security Strategy. I understand my responsibilities in detecting, reporting, and responding to security incidents.
 
 Employee Signature: ________________________________
 

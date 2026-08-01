@@ -793,7 +793,7 @@ function generateFileName(config: PrintConfig): string {
  */
 export async function loadLogoAsDataUrl(): Promise<string | null> {
     try {
-        const response = await fetch('/prime-hotels-logo.png')
+        const response = await fetch('/altus-logo-web.png')
         if (!response.ok) return null
         const blob = await response.blob()
         return new Promise((resolve) => {

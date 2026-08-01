@@ -344,11 +344,11 @@ export default function PropertyManagement() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-header">
+            <div className="altus-card">
+                <div className="altus-card-header">
                     <h3 className="text-lg font-semibold">{t('admin:properties.list_title')}</h3>
                 </div>
-                <div className="prime-card-body">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('admin:properties.loading')}</div>
                     ) : properties && properties.length > 0 ? (

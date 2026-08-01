@@ -5,7 +5,7 @@ import { useCallback, useEffect } from 'react'
 import { toast } from 'sonner'
 import { useAuth } from './useAuth'
 
-const LOCAL_STORAGE_KEY = 'phg_dashboard_preferences'
+const LOCAL_STORAGE_KEY = 'altus_dashboard_preferences'
 
 const isQuotaExceededError = (error: unknown): boolean => {
     if (!(error instanceof DOMException)) return false

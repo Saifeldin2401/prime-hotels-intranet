@@ -377,7 +377,7 @@ export function EditorToolbar({
                     }}
                   >
                     <UploadCloud className="h-5 w-5 text-primary" />
-                    <span className="text-xs">Upload to PRIME Cloud</span>
+                    <span className="text-xs">Upload to Altus Cloud</span>
                   </Button>
                   <p className="text-[10px] text-center text-muted-foreground">Max 500MB (.mp4, .webm, .ogg)</p>
                 </div>

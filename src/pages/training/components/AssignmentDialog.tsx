@@ -21,7 +21,7 @@ import { Search } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
+const isPriorityPropertyName = (name: string) => /head office|altus group/i.test(name)
 
 const sortPropertyNames = (a: string, b: string) => {
     if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1

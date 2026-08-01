@@ -1,5 +1,5 @@
 /**
- * Service Worker for Prime Hotels Intranet
+ * Service Worker for Altus Connect Intranet
  * 
  * Handles:
  * - Push notifications
@@ -7,11 +7,11 @@
  * - Cache management for offline access
  */
 
-const CACHE_NAME = 'prime-hotels-intranet-v2';
+const CACHE_NAME = 'altus-v1';
 const STATIC_ASSETS = [
   '/manifest.json',
-  '/prime-logo-light.png',
-  '/prime-logo-dark.png',
+  '/altus-logo-light.png',
+  '/altus-logo-web.png',
 ];
 
 // Install event - cache static assets
@@ -89,15 +89,15 @@ self.addEventListener('push', (event) => {
     data = event.data.json();
   } catch {
     data = {
-      title: 'Prime Hotels Intranet',
+      title: 'Altus Connect Intranet',
       body: event.data.text(),
     };
   }
 
   const options = {
     body: data.body || 'New notification',
-    icon: data.icon || '/prime-logo-light.png',
-    badge: data.badge || '/prime-logo-light.png',
+    icon: data.icon || '/altus-logo-light.png',
+    badge: data.badge || '/altus-logo-light.png',
     tag: data.tag || 'default',
     requireInteraction: data.requireInteraction || false,
     actions: data.actions || [],
@@ -106,7 +106,7 @@ self.addEventListener('push', (event) => {
 
   event.waitUntil(
     self.registration.showNotification(
-      data.title || 'Prime Hotels Intranet',
+      data.title || 'Altus Connect Intranet',
       options
     )
   );
@@ -137,7 +137,7 @@ self.addEventListener('notificationclick', (event) => {
 
 // Background sync event
 self.addEventListener('sync', (event) => {
-  if (event.tag === 'phg-sync-pending-actions') {
+  if (event.tag === 'altus-sync-pending-actions' || event.tag === 'altus-sync-pending-actions') {
     event.waitUntil(syncPendingActions());
   }
 });

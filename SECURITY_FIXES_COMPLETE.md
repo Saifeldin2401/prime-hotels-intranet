@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document summarizes the comprehensive security hardening performed on the Prime Hotels Intranet application to fix critical SQL injection vulnerabilities, strengthen Row Level Security (RLS), implement secure file access, and add server-side rate limiting.
+This document summarizes the comprehensive security hardening performed on the Altus Connect Intranet application to fix critical SQL injection vulnerabilities, strengthen Row Level Security (RLS), implement secure file access, and add server-side rate limiting.
 
 ---
 

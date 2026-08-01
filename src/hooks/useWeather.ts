@@ -8,7 +8,7 @@ export interface WeatherData {
     conditionText: string;
 }
 
-const WEATHER_CACHE_KEY = 'prime_dashboard_weather_cache'
+const WEATHER_CACHE_KEY = 'altus_dashboard_weather_cache'
 
 export function useWeather() {
     const [data, setData] = useState<WeatherData | null>(null)

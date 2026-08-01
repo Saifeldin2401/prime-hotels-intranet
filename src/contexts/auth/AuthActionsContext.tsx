@@ -198,7 +198,7 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
-    localStorage.removeItem('prime_current_property_id')
+    localStorage.removeItem('altus_current_property_id')
 
     await logSecurityEvent('logout.user_initiated', {
       userId: identityContext?.user?.id,

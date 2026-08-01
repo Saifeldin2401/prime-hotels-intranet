@@ -1,8 +1,8 @@
-# PHG Connect Email Notification Framework
+# Altus Connect Email Notification Framework
 
 ## Overview
 
-This framework standardizes in-app and email notifications across PHG Connect using:
+This framework standardizes in-app and email notifications across Altus Connect using:
 
 - `bulk-notification-processor` (batch orchestration and queue processing)
 - `send-email` (single-message or custom message delivery)
@@ -101,9 +101,9 @@ Migration: `supabase/migrations/20260217120000_domain_email_notification_framewo
 Set in Supabase project secrets:
 
 - `RESEND_API_KEY`
-- `APP_BASE_URL` (recommended: `https://phg-connect.com`)
-- `EMAIL_FROM_ADDRESS` (recommended: `notifications@phg-connect.com`)
-- `EMAIL_FROM_NAME` (recommended: `PHG Connect`)
+- `APP_BASE_URL` (recommended: `https://altus-advisory.com`)
+- `EMAIL_FROM_ADDRESS` (recommended: `notifications@altus-advisory.com`)
+- `EMAIL_FROM_NAME` (recommended: `Altus Connect`)
 
 ## Security
 

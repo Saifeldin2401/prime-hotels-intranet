@@ -181,8 +181,8 @@ export function useFormPersistence<T extends Record<string, unknown>>(
     [backupType]
   )
 
-  const fullKey = `phg_form_${key}_v${version}`
-  const backupKey = backupStorage ? `phg_form_${key}_backup_v${version}` : null
+  const fullKey = `altus_form_${key}_v${version}`
+  const backupKey = backupStorage ? `altus_form_${key}_backup_v${version}` : null
 
   const [isHydrated, setIsHydrated] = useState(false)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)

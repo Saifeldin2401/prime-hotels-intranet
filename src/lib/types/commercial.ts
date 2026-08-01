@@ -37,6 +37,9 @@ export interface CrmContract {
     property_id: string
     contract_name: string
     contract_value: number | null
+    rate_type?: 'LRA' | 'NLRA' | 'Group Rate' | 'Government' | null
+    annual_room_nights_goal?: number | null
+    blackout_dates_apply?: boolean
     start_date: string | null
     end_date: string | null
     status: 'draft' | 'active' | 'expired' | 'terminated'

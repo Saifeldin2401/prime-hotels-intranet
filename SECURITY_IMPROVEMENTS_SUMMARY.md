@@ -1,6 +1,6 @@
 # Authentication Security Improvements Summary
 
-This document summarizes all the security enhancements made to the Prime Hotels Intranet application.
+This document summarizes all the security enhancements made to the Altus Connect Intranet application.
 
 ## Overview
 

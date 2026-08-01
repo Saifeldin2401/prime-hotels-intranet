@@ -3,7 +3,7 @@
 ## ✅ What's Already Done
 
 - ✅ All 12 database migrations applied
-- ✅ Test property created: "Prime Hotel - Main"
+- ✅ Test property created: "Altus Hotel - Main"
 - ✅ 6 test departments created (Front Office, Housekeeping, F&B, Maintenance, Security, Management)
 - ✅ Edge Function deployed for email notifications
 - ✅ All security policies configured
@@ -16,21 +16,21 @@
 1. Go to: https://supabase.com/dashboard/project/htsvjfrofcpkfzvjpwvx/auth/users
 2. Click **"Add User"** → **"Create new user"**
 3. Enter:
-   - Email: `admin@phg-connect.com` (or your email)
+   - Email: `admin@altus-advisory.com` (or your email)
    - Password: `Admin123!` (or your password)
    - ✅ Check **"Auto Confirm User"**
 4. Click **"Create User"**
 
 **Option B: Via Supabase CLI** (if you have it installed)
 ```bash
-supabase auth users create admin@phg-connect.com --password Admin123!
+supabase auth users create admin@altus-advisory.com --password Admin123!
 ```
 
 ### Step 2: Set Up Admin Role
 
 1. Go to Supabase Dashboard → **SQL Editor**
 2. Open the file `create-admin-user.sql` from this project
-3. **Change line 5** to match your email: `admin_email TEXT := 'admin@phg-connect.com';`
+3. **Change line 5** to match your email: `admin_email TEXT := 'admin@altus-advisory.com';`
 4. Click **"Run"**
 
 This will:

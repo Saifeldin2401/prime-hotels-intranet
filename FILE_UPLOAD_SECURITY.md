@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document describes the comprehensive file upload security implementation for the Prime Hotels Intranet application. The implementation addresses all major file upload vulnerabilities and provides secure media handling.
+This document describes the comprehensive file upload security implementation for the Altus Connect Intranet application. The implementation addresses all major file upload vulnerabilities and provides secure media handling.
 
 ## Security Features Implemented
 

@@ -1,4 +1,4 @@
-# PHG Connect - State Loss Audit Report
+# Altus Connect - State Loss Audit Report
 
 ## Executive Summary
 

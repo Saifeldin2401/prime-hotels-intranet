@@ -192,7 +192,7 @@ function extractDataFromRows(rows: string[][], properties = [], fileName: string
 }
 
 function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = ''): { data: ExtractedRecord[], detected: boolean } {
-    const isValidFormat = rows.some(row => row.some(cell => cell && (cell.toLowerCase().includes('key performance indicators') || cell.toLowerCase().includes('report date') || cell.toLowerCase().includes('prime al-hamra') || cell.toLowerCase().includes('prime al corniche') || cell.toLowerCase().includes('daily sales report'))))
+    const isValidFormat = rows.some(row => row.some(cell => cell && (cell.toLowerCase().includes('key performance indicators') || cell.toLowerCase().includes('report date') || cell.toLowerCase().includes('altus al-hamra') || cell.toLowerCase().includes('altus al corniche') || cell.toLowerCase().includes('daily sales report'))))
     if (!isValidFormat) return { data: [], detected: false }
 
     // Use Multi-Signal Contextual Detection (Filename + Headers)

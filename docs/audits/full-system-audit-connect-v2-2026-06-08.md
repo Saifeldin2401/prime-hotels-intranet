@@ -1,4 +1,4 @@
-# Full System Audit - PHG Connect / connect v2
+# Full System Audit - Altus Connect / connect v2
 
 Date: 2026-06-08  
 Supabase project: `connect v2` (`dhbfaclkfysqwfppuxxa`)  

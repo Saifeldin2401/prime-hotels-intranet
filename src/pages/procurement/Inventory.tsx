@@ -20,6 +20,7 @@ import type { InventoryItem } from '@/lib/types/procurement'
 import { Boxes, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export default function Inventory() {
     const { t } = useTranslation(['procurement', 'common'])
@@ -39,7 +40,7 @@ export default function Inventory() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!user || !propertyId) return
+        if (!user || !isRealPropertyId(propertyId)) return
         try {
             await createMutation.mutateAsync({
                 property_id: propertyId,
@@ -53,10 +54,10 @@ export default function Inventory() {
             toast({ title: t('procurement:inventory.success.created', { defaultValue: 'Item added' }) })
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -71,7 +72,7 @@ export default function Inventory() {
         })
     }
 
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
         return (
             <div className="p-6">
                 <EmptyState
@@ -96,8 +97,8 @@ export default function Inventory() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading…' })}</div>
                     ) : items && items.length > 0 ? (

@@ -1,4 +1,4 @@
-# PRIME Connect: Master User Manual
+# ALTUS Connect: Master User Manual
 
 **Version**: 2.0 (Deep Dive)
 **Language**: English / العربية
@@ -38,7 +38,7 @@
 
 ## 1. Platform Overview
 
-**PRIME Connect** is the unified operating system for Prime Hotels Group. It connects every employee, department, and property into a single digital workplace.
+**ALTUS Connect** is the unified operating system for Altus Advisory Group. It connects every employee, department, and property into a single digital workplace.
 
 ### Key Concepts
 *   **Role-Based Access**: What you see depends on who you are. A Housekeeper sees different options than a General Manager.
@@ -51,7 +51,7 @@
 
 ### Logging In
 1.  Navigate to the portal URL.
-2.  Enter your **Official Hotel Email** (e.g., `name@primehotels.sa`).
+2.  Enter your **Official Hotel Email** (e.g., `name@altus-advisory.com`).
 3.  Enter your secure password.
 4.  *(First Time Only)* You may be asked to change your password.
 
@@ -219,4 +219,4 @@ Going on leave? Don't block operations.
 
 ---
 
-*PRIME Connect is a living system. For technical support, contact IT.*
+*ALTUS Connect is a living system. For technical support, contact IT.*

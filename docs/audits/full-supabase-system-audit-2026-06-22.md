@@ -1,4 +1,4 @@
-# Full Supabase System Audit - Prime Hotels Intranet
+# Full Supabase System Audit - Altus Connect Intranet
 
 Date: 2026-06-22  
 Project: `connect v2` / Supabase ref `dhbfaclkfysqwfppuxxa`  

@@ -41,7 +41,7 @@ export function PasswordEnforcementGuard({ children }: PasswordEnforcementGuardP
         const isOnChangePasswordPage = location.pathname === '/change-password'
 
         // Check if wizard is pending (means password was just changed)
-        const wizardPending = localStorage.getItem('prime_wizard_pending') === 'true'
+        const wizardPending = localStorage.getItem('altus_wizard_pending') === 'true'
 
         // If temp password AND not on change password page AND wizard not pending
         // (wizard pending means they just changed password, so allow navigation)

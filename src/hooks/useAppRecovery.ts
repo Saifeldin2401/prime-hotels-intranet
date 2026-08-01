@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { toast } from 'sonner'
-import { clearPrimeHotelServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
+import { clearAltusServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
 
 /**
  * Hook for app recovery functionality
@@ -30,11 +30,11 @@ export function useAppRecovery() {
     
     try {
       console.log('[App Recovery] Clearing service workers and caches...')
-      const hadArtifacts = await clearPrimeHotelServiceWorkersAndCaches()
+      const hadArtifacts = await clearAltusServiceWorkersAndCaches()
       
       // Clear version check keys to force fresh start on next load
-      localStorage.removeItem('__phg_app_version__')
-      sessionStorage.removeItem('__phg_version_reload_done__')
+      localStorage.removeItem('__altus_app_version__')
+      sessionStorage.removeItem('__altus_version_reload_done__')
       
       toast.success(hadArtifacts 
         ? 'Cache cleared. Reloading app...' 
@@ -53,8 +53,8 @@ export function useAppRecovery() {
   }, [])
 
   const clearVersionAndReload = useCallback(async () => {
-    localStorage.removeItem('__phg_app_version__')
-    sessionStorage.removeItem('__phg_version_reload_done__')
+    localStorage.removeItem('__altus_app_version__')
+    sessionStorage.removeItem('__altus_version_reload_done__')
     window.location.reload()
   }, [])
 
@@ -62,6 +62,6 @@ export function useAppRecovery() {
     forceRefresh,
     clearVersionAndReload,
     // Expose the raw function for advanced use cases
-    clearArtifacts: clearPrimeHotelServiceWorkersAndCaches,
+    clearArtifacts: clearAltusServiceWorkersAndCaches,
   }
 }

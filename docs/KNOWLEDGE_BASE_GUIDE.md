@@ -1,6 +1,6 @@
-# 📋 PRIME Hotels Knowledge Base: User & Manager Guide
+# 📋 ALTUS Hotels Knowledge Base: User & Manager Guide
 
-Welcome to the **PRIME Hotels Knowledge Base** guide. This document provides a comprehensive walkthrough for employees and managers on how to navigate, create, and manage operational knowledge within the PRIME Connect intranet.
+Welcome to the **ALTUS Hotels Knowledge Base** guide. This document provides a comprehensive walkthrough for employees and managers on how to navigate, create, and manage operational knowledge within the ALTUS Connect intranet.
 
 ---
 
@@ -17,7 +17,7 @@ Welcome to the **PRIME Hotels Knowledge Base** guide. This document provides a c
 ---
 
 ## 1. Introduction
-The Knowledge Base is the centralized hub for all PRIME Hotels operational standards, policies, and procedures. It ensures that every team member, from frontline staff to corporate executives, has access to the same "Single Source of Truth."
+The Knowledge Base is the centralized hub for all ALTUS Hotels operational standards, policies, and procedures. It ensures that every team member, from frontline staff to corporate executives, has access to the same "Single Source of Truth."
 
 **Key Benefits:**
 - **Standardization:** Ensure consistent service across all properties.
@@ -67,7 +67,7 @@ The rich-text editor allows you to:
 ---
 
 ## 4. AI Content Assistant
-PRIME Connect includes an **AI Assistant** (powered by Gemini) to help maintain professional standards.
+ALTUS Connect includes an **AI Assistant** (powered by Gemini) to help maintain professional standards.
 
 - **Generate Outline:** Provide a title, and the AI will create a structured outline for your SOP.
 - **Expand Content:** Turn your rough notes into full, professional paragraphs.
@@ -92,7 +92,7 @@ Ensuring the right people see the right content is critical for security and rel
 ---
 
 ## 6. Submission & Review Workflow
-PRIME Hotels maintains high quality through a mandatory review process for specific roles.
+ALTUS Hotels maintains high quality through a mandatory review process for specific roles.
 
 1.  **Draft:** Save your work without others seeing it.
 2.  **Submit for Review:** 
@@ -130,4 +130,4 @@ For "High-Stakes" documents (like Safety Protocols or Legal Policies), you can e
 ### 📧 Support
 For technical issues with the Knowledge Base, please contact the **IT Department** or use the **Feedback** tool within the intranet sidebar.
 
-*PRIME Hotels - Operational Excellence through Shared Knowledge.*
+*ALTUS Hotels - Operational Excellence through Shared Knowledge.*

@@ -12,7 +12,7 @@
 
 DO $$
 DECLARE
-  admin_email TEXT := 'admin@phg-connect.com'; -- ⚠️ CHANGE THIS to your admin email
+  admin_email TEXT := 'admin@altus-advisory.com'; -- ⚠️ CHANGE THIS to your admin email
   admin_user_id UUID;
   test_property_id UUID;
 BEGIN
@@ -39,12 +39,12 @@ BEGIN
   -- Get or create test property
   SELECT id INTO test_property_id
   FROM properties
-  WHERE name = 'Prime Hotel - Main'
+  WHERE name = 'Altus Hotel - Main'
   LIMIT 1;
   
   IF test_property_id IS NULL THEN
     INSERT INTO properties (name, address, phone, is_active)
-    VALUES ('Prime Hotel - Main', '123 Hotel Street', '+1234567890', true)
+    VALUES ('Altus Hotel - Main', '123 Hotel Street', '+1234567890', true)
     RETURNING id INTO test_property_id;
   END IF;
   

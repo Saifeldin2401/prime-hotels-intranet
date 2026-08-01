@@ -576,8 +576,8 @@ export default function UserManagement() {
         />
       )}
 
-      <div className="prime-card">
-        <div className="prime-card-header flex items-center justify-between">
+      <div className="altus-card">
+        <div className="altus-card-header flex items-center justify-between">
           <h3 className="text-lg font-semibold">{t('directory')}</h3>
           {filteredUsers && filteredUsers.length > 0 && (
             <Button
@@ -594,7 +594,7 @@ export default function UserManagement() {
             </Button>
           )}
         </div>
-        <div className="prime-card-body">
+        <div className="altus-card-body">
           <div className="mb-4">
             <input
               type="text"

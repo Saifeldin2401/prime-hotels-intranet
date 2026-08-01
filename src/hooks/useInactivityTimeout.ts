@@ -12,7 +12,7 @@ interface UseInactivityTimeoutOptions {
     enabled?: boolean
 }
 
-const STORAGE_KEY = 'prime_last_activity'
+const STORAGE_KEY = 'altus_last_activity'
 
 export function useInactivityTimeout({
     timeoutMs: customTimeoutMs,

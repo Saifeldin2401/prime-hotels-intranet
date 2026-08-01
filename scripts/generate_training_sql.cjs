@@ -44,7 +44,7 @@ for (const mod of modules) {
         <h3 class="text-xl font-bold text-hotel-navy">Module Objectives</h3>
         <p class="text-slate-700 leading-relaxed">By the end of this comprehensive training module focusing on <strong>${title}</strong>, you will be able to:</p>
         <ul class="list-disc pl-6 space-y-2 text-slate-700">
-          <li>Understand the core principles and standards of ${category} operations at PRIME Hotels.</li>
+          <li>Understand the core principles and standards of ${category} operations at ALTUS Hotels.</li>
           <li>Execute standard operating procedures safely, efficiently, and with a guest-first mindset.</li>
           <li>Identify common issues and apply approved resolution techniques.</li>
           <li>Maintain compliance with all internal policies and local regulations.</li>
@@ -55,8 +55,8 @@ for (const mod of modules) {
 
   const content2 = escapeSql(`
       <div class="space-y-4">
-        <h3 class="text-lg font-bold text-hotel-navy">The PRIME Standard</h3>
-        <p class="text-slate-700 leading-relaxed">At PRIME Hotels, we pride ourselves on exceptional service and rigorous operational standards. The ${category} department plays a critical role in the overall guest experience and operational success of our properties.</p>
+        <h3 class="text-lg font-bold text-hotel-navy">The ALTUS Standard</h3>
+        <p class="text-slate-700 leading-relaxed">At ALTUS Hotels, we pride ourselves on exceptional service and rigorous operational standards. The ${category} department plays a critical role in the overall guest experience and operational success of our properties.</p>
         
         <div class="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-md my-6">
           <h4 class="font-bold text-blue-800 mb-2">Key Focus Areas</h4>
@@ -78,7 +78,7 @@ for (const mod of modules) {
         <p class="text-slate-700 leading-relaxed">Consider the following scenario commonly encountered in ${category}:</p>
         
         <div class="bg-slate-50 border border-slate-200 p-5 rounded-lg my-4 shadow-sm">
-          <p class="font-medium text-slate-800 italic">"During a busy shift, an unexpected issue arises that conflicts with the standard timeline. You must prioritize tasks while maintaining the PRIME Hotel quality standards."</p>
+          <p class="font-medium text-slate-800 italic">"During a busy shift, an unexpected issue arises that conflicts with the standard timeline. You must prioritize tasks while maintaining the ALTUS Hotel quality standards."</p>
         </div>
 
         <h4 class="font-semibold text-slate-800">Recommended Action Steps:</h4>
@@ -97,10 +97,10 @@ for (const mod of modules) {
     questions: [
       {
         id: 1,
-        question: `What is the most critical focus area in ${category} according to the PRIME Standard?`,
+        question: `What is the most critical focus area in ${category} according to the ALTUS Standard?`,
         options: ["Speed of execution", "Safety First", "Cost reduction", "Minimal documentation"],
         correctOptionIndex: 1,
-        explanation: "Safety is always the number one priority at PRIME Hotels."
+        explanation: "Safety is always the number one priority at ALTUS Hotels."
       },
       {
         id: 2,
@@ -114,7 +114,7 @@ for (const mod of modules) {
         question: "True or False: Excellence is found in the details of our daily execution.",
         options: ["True", "False"],
         correctOptionIndex: 0,
-        explanation: "Attention to detail is a core focus area of the PRIME standard."
+        explanation: "Attention to detail is a core focus area of the ALTUS standard."
       }
     ]
   });

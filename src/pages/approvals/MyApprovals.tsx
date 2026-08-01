@@ -47,6 +47,7 @@ import {
     XCircle
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 export default function MyApprovals() {
   const { t, i18n } = useTranslation(['approvals', 'common'])
@@ -273,7 +274,7 @@ export default function MyApprovals() {
     enabled: !!properties?.[0]?.id && assignDialogOpen,
     queryFn: async () => {
       const propertyId = properties?.[0]?.id
-      if (!propertyId) return []
+      if (!isRealPropertyId(propertyId)) return []
 
       const { data, error } = await supabase
         .from('profiles')

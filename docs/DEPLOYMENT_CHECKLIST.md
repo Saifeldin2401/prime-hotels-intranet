@@ -1,4 +1,4 @@
-# PHG Connect Tab Switching Fixes - Deployment Checklist
+# Altus Connect Tab Switching Fixes - Deployment Checklist
 
 ## Pre-Deployment Verification
 

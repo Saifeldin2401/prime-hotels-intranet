@@ -23,6 +23,10 @@ export interface Incident {
     severity: 'minor' | 'moderate' | 'major' | 'critical'
     description: string
     location: string | null
+    root_cause?: string | null
+    action_plan?: string | null
+    estimated_damage_sar?: number | null
+    insurance_claimed?: boolean
     reported_by: string
     status: 'open' | 'investigating' | 'resolved' | 'closed'
     resolved_at: string | null

@@ -7,7 +7,7 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 
-const PROMPT_DISMISSED_KEY = 'prime_notification_prompt_dismissed'
+const PROMPT_DISMISSED_KEY = 'altus_notification_prompt_dismissed'
 const PROMPT_DELAY_MS = 5000 // Show after 5 seconds on the page
 const PROMPT_COOLDOWN_DAYS = 7 // Don't re-prompt for 7 days after dismissal
 

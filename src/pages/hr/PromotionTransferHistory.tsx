@@ -276,8 +276,8 @@ export default function PromotionTransferHistory() {
                 ) : undefined}
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     <div className="relative max-w-md">
                         <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                         <Input
@@ -294,8 +294,8 @@ export default function PromotionTransferHistory() {
             <div className="space-y-4">
                 {filteredRecords.length > 0 ? (
                     filteredRecords.map((record) => (
-                        <div key={`${record.type}-${record.id}`} className="prime-card group">
-                            <div className="prime-card-body">
+                        <div key={`${record.type}-${record.id}`} className="altus-card group">
+                            <div className="altus-card-body">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-4 flex-1">
                                         <div className={`p-3 rounded-lg ${record.type === 'promotion' ? 'bg-purple-100' : 'bg-blue-100'}`}>
@@ -440,8 +440,8 @@ export default function PromotionTransferHistory() {
                         </div>
                     ))
                 ) : (
-                    <div className="prime-card">
-                        <div className="prime-card-body text-center py-12">
+                    <div className="altus-card">
+                        <div className="altus-card-body text-center py-12">
                             <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                             <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('history.no_records')}</h3>
                             <p className="text-gray-600 mb-4">

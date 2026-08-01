@@ -98,7 +98,7 @@ const progressStatusOrder: Record<LearningProgress['status'], number> = {
 
 const ROSTER_PAGE_SIZE = 10
 
-const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
+const isPriorityPropertyName = (name: string) => /head office|altus group/i.test(name)
 
 const sortPropertyNames = (a: string, b: string) => {
   if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1

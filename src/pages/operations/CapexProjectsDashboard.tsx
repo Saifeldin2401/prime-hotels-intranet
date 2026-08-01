@@ -66,6 +66,7 @@ import {
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+
 const categoryOptions: { value: CapexCategory | 'all'; label: string }[] = [
   { value: 'all', label: 'All Categories' },
   { value: 'renovation', label: 'Renovation' },
@@ -236,10 +237,10 @@ export default function CapexProjectsDashboard() {
       setSelectedProjectId(createdProject.id)
       setIsNewProjectDialogOpen(false)
       resetProjectForm()
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: t('error', 'Error'),
-        description: error instanceof Error ? error.message : String(error),
+        description: error?.message || String(error),
         variant: 'destructive',
       })
     }

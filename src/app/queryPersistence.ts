@@ -2,7 +2,7 @@ import { dehydrate, hydrate, type DehydratedState, type Query } from '@tanstack/
 
 import { queryClient } from '@/lib/queryClient'
 
-const QUERY_CACHE_KEY = 'prime_query_cache_v4'
+const QUERY_CACHE_KEY = 'altus_query_cache_v4'
 const QUERY_CACHE_TTL_MS = 1000 * 60 * 5
 const NON_PERSISTED_QUERY_PREFIXES = new Set([
   'learning-progress',

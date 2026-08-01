@@ -47,7 +47,7 @@ class AnalyticsService {
      */
     private async recoverSession() {
         try {
-            const storedSession = localStorage.getItem('prime_analytics_session')
+            const storedSession = localStorage.getItem('altus_analytics_session')
             if (storedSession) {
                 const session = JSON.parse(storedSession)
                 // Check if session is expired (30 mins inactivity)
@@ -148,7 +148,7 @@ class AnalyticsService {
 
     private persistSession() {
         if (!this.sessionId) return
-        localStorage.setItem('prime_analytics_session', JSON.stringify({
+        localStorage.setItem('altus_analytics_session', JSON.stringify({
             id: this.sessionId,
             lastActive: new Date().toISOString()
         }))
@@ -175,7 +175,7 @@ class AnalyticsService {
                 } else {
                     // Logged out: end current session
                     this.sessionId = null
-                    localStorage.removeItem('prime_analytics_session')
+                    localStorage.removeItem('altus_analytics_session')
                 }
             }
         })
@@ -275,7 +275,7 @@ class AnalyticsService {
                     this.sessionId = null
                     this.userId = null
                     this.buffer = []
-                    localStorage.removeItem('prime_analytics_session')
+                    localStorage.removeItem('altus_analytics_session')
                     // Session will be re-created on next track()
                 }
                 return

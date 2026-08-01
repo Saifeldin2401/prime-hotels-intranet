@@ -8,7 +8,7 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability, please report it by emailing security@phg-connect.com. Do not open a public issue.
+If you discover a security vulnerability, please report it by emailing security@altus-advisory.com. Do not open a public issue.
 
 ## Security Measures
 

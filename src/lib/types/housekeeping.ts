@@ -26,3 +26,14 @@ export interface HousekeepingTask {
     created_at: string
     updated_at: string
 }
+
+export interface RoomInspection {
+    id: string
+    room_id: string
+    property_id: string
+    inspector_id: string
+    passed: boolean
+    checklist_scores: Record<string, boolean>
+    notes: string | null
+    created_at: string
+}

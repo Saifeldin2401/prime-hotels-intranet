@@ -1,6 +1,6 @@
 # Enhanced Dashboard
 
-A fully-featured, premium dashboard experience for PHG Connect with modern design, animations, and comprehensive widgets.
+A fully-featured, premium dashboard experience for Altus Connect with modern design, animations, and comprehensive widgets.
 
 ## Features
 

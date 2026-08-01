@@ -1,6 +1,6 @@
 # Cluster View Audit
 Date: March 3, 2026
-Scope: PRIME Hotels intranet (role visibility, consolidated/cluster behavior, permissions, and cluster feature coverage)
+Scope: ALTUS Hotels intranet (role visibility, consolidated/cluster behavior, permissions, and cluster feature coverage)
 
 ## 1) Role Differentiation (Current State)
 Current app roles are technical (`corporate_admin`, `regional_admin`, `regional_hr`, `property_manager`, `property_hr`, `department_head`, `manager`, `staff`).

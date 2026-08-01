@@ -10,7 +10,7 @@ depends_on: 00_system_grounding_report.md
 ## 0. Framing — read this before the rest
 
 **What exists today is not what's being designed here.** As of this document, the
-platform is a single hotel group's internal intranet: one seeded `companies` row ("Prime
+platform is a single hotel group's internal intranet: one seeded `companies` row ("Altus
 Hotels Group"), 9 properties, and tenant isolation that exists structurally
 (`properties.company_id`) but is only *enforced* at the admin-role layer (`user_companies`
 opt-in scoping added recently). Every other role and every other one of the ~170 tables
@@ -117,14 +117,14 @@ graph TB
 
 ```mermaid
 graph TD
-    PLATFORM["Platform<br/>(Super Admin — you, the SaaS operator)"] --> TENANT1["Client / Tenant A<br/>e.g. Prime Hotels Group"]
+    PLATFORM["Platform<br/>(Super Admin — you, the SaaS operator)"] --> TENANT1["Client / Tenant A<br/>e.g. Altus Advisory Group"]
     PLATFORM --> TENANT2["Client / Tenant B<br/>e.g. Independent Hotel Owner"]
-    TENANT1 --> BRAND1["Brand: Prime Luxury"]
-    TENANT1 --> BRAND2["Brand: Prime Select"]
+    TENANT1 --> BRAND1["Brand: Altus Luxury"]
+    TENANT1 --> BRAND2["Brand: Altus Select"]
     TENANT1 --> NOBRAND["Property with no brand<br/>(direct tenant → property)"]
     BRAND1 --> REGION1["Region: KSA West"]
     REGION1 --> COUNTRY1["Country: Saudi Arabia"]
-    COUNTRY1 --> PROP1["Property: Prime Jeddah"]
+    COUNTRY1 --> PROP1["Property: Altus Jeddah"]
     PROP1 --> BLDG1["Building A"]
     BLDG1 --> FLOOR1["Floor 3"]
     FLOOR1 --> ROOM1["Room 305"]
@@ -394,7 +394,7 @@ column-per-property schema) so new brandable surfaces don't require a migration:
   "fonts": { "heading": "...", "body": "..." },
   "domain": { "subdomain": "primehotels", "custom_domain": "connect.primehotels.com" },
   "email_templates": { "booking_confirmation": "template_id", "...": "..." },
-  "sms_sender_id": "PRIMEHTL",
+  "sms_sender_id": "ALTUSHTL",
   "invoice_template": "template_id",
   "guest_portal_theme": "template_id",
   "staff_portal_theme": "template_id",

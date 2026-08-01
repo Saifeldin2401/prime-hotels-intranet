@@ -99,7 +99,7 @@ export interface SlackInteraction {
   channel_id?: string;
   message_ts?: string;
   payload: Record<string, unknown>;
-  phg_user_id?: string;
+  altus_user_id?: string;
   processed: boolean;
   processed_at?: string;
   result?: Record<string, unknown>;
@@ -114,7 +114,7 @@ export interface SlackCommandLog {
   channel_id?: string;
   text?: string;
   response_type?: string;
-  phg_user_id?: string;
+  altus_user_id?: string;
   success: boolean;
   error_message?: string;
   created_at: string;
@@ -198,7 +198,7 @@ export const SLACK_COMMANDS: SlackCommandDefinition[] = [
     examples: ['/ops', '/ops alert Elevator out of service'],
   },
   {
-    command: '/phg-help',
+    command: '/altus-help',
     description: 'Show available commands',
     access: 'all',
   },

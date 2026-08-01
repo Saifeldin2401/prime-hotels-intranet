@@ -141,7 +141,7 @@ export function IntegratedDashboard() {
   const [customizeModalOpen, setCustomizeModalOpen] = useState(false)
   const [visibleWidgets, setVisibleWidgets] = useState<Record<string, boolean>>(() => {
     try {
-      const saved = localStorage.getItem('phg_visible_widgets')
+      const saved = localStorage.getItem('altus_visible_widgets')
       return saved ? { ...DEFAULT_VISIBLE_WIDGETS, ...JSON.parse(saved) } : DEFAULT_VISIBLE_WIDGETS
     } catch {
       return DEFAULT_VISIBLE_WIDGETS
@@ -152,7 +152,7 @@ export function IntegratedDashboard() {
     setVisibleWidgets((prev) => {
       const updated = { ...prev, [key]: visible }
       try {
-        localStorage.setItem('phg_visible_widgets', JSON.stringify(updated))
+        localStorage.setItem('altus_visible_widgets', JSON.stringify(updated))
       } catch (e) {
         console.error('Failed to save widget preference', e)
       }
@@ -163,7 +163,7 @@ export function IntegratedDashboard() {
   const handleResetWidgets = () => {
     setVisibleWidgets(DEFAULT_VISIBLE_WIDGETS)
     try {
-      localStorage.setItem('phg_visible_widgets', JSON.stringify(DEFAULT_VISIBLE_WIDGETS))
+      localStorage.setItem('altus_visible_widgets', JSON.stringify(DEFAULT_VISIBLE_WIDGETS))
     } catch (e) {
       console.error('Failed to reset widget preference', e)
     }

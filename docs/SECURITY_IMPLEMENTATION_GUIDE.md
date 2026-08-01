@@ -1,5 +1,5 @@
 # Security Implementation Guide
-## Prime Hotels Intranet System
+## Altus Connect Intranet System
 
 **Version:** 1.0  
 **Last Updated:** 2026-04-07  
@@ -930,8 +930,8 @@ port = 443
 
 # Security: Restrict CORS origins
 allowed_origins = [
-  "https://prime-hotels-intranet.netlify.app",
-  "https://admin.prime-hotels.com"
+  "https://altus-intranet.netlify.app",
+  "https://admin.altus-advisory.com"
 ]
 
 [auth]

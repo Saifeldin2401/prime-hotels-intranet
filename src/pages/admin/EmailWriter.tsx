@@ -435,8 +435,8 @@ export default function EmailWriter() {
   const [htmlBody, setHtmlBody] = useState('')
   const [textBody, setTextBody] = useState('')
   const [actionUrl, setActionUrl] = useState('/notifications')
-  const [actionLabel, setActionLabel] = useState('Open PRIME Connect')
-  const [actionLabelAr, setActionLabelAr] = useState('فتح PRIME Connect')
+  const [actionLabel, setActionLabel] = useState('Open Altus Connect')
+  const [actionLabelAr, setActionLabelAr] = useState('فتح Altus Connect')
   const [priority, setPriority] = useState<'low' | 'normal' | 'high' | 'critical'>('normal')
 
   // ============================================
@@ -723,8 +723,8 @@ export default function EmailWriter() {
     setBilingualEnabled(false)
     setPriority('normal')
     setActionUrl('/notifications')
-    setActionLabel('Open PRIME Connect')
-    setActionLabelAr('فتح PRIME Connect')
+    setActionLabel('Open Altus Connect')
+    setActionLabelAr('فتح Altus Connect')
     
     // Clear localStorage
     if (typeof window !== 'undefined') {

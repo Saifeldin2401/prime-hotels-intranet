@@ -1,6 +1,6 @@
 # OWASP Top 10 2021 Secure Coding Guidelines
 
-## PHG Connect Intranet Platform - Security Standards
+## Altus Connect Intranet Platform - Security Standards
 
 **Version:** 1.0.0  
 **Last Updated:** April 2025  
@@ -31,7 +31,7 @@ Broken Access Control occurs when users can act outside their intended permissio
 - CORS misconfiguration allowing unauthorized API access
 - Missing function-level access control on the server
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Row Level Security (RLS) Policies**: Enforce at database level
 2. **Role-Based Access Control (RBAC)**: Implement hierarchical permission system
@@ -103,7 +103,7 @@ Cryptographic failures expose sensitive data through weak encryption, improper k
 - Using deprecated cryptographic algorithms
 - Insufficient entropy in tokens
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Use Supabase Auth**: Built-in secure password handling
 2. **Encrypted Local Storage**: For sensitive client-side data
@@ -125,7 +125,7 @@ function hashPassword(password: string): string {
 
 // ✅ SECURE: Encrypted local storage using Web Crypto API
 // src/lib/secureStorage.ts
-const SECURE_STORAGE_KEY = 'prime_secure_storage_key_v1'
+const SECURE_STORAGE_KEY = 'altus_secure_storage_key_v1'
 
 const getOrCreateKey = async (): Promise<CryptoKey | null> => {
   if (typeof window === 'undefined' || !window.crypto?.subtle) return null
@@ -199,7 +199,7 @@ Injection flaws occur when untrusted data is sent to an interpreter as part of a
 - LDAP injection in directory queries
 - Path traversal in file operations
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Parameterized Queries**: Use Supabase's query builder
 2. **Input Validation**: Strict whitelist validation with Zod
@@ -310,7 +310,7 @@ Insecure design refers to risks arising from fundamental architectural flaws in 
 - Lack of integrity checks
 - No abuse detection mechanisms
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Approval Workflows**: Multi-step verification for sensitive actions
 2. **Rate Limiting**: Prevent abuse of APIs
@@ -459,7 +459,7 @@ Security misconfiguration is the most commonly seen vulnerability. It includes i
 - Missing security headers
 - Overly permissive CORS
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Security Headers**: Implement CSP, HSTS, X-Frame-Options
 2. **Environment Validation**: Strict env variable checking
@@ -561,7 +561,7 @@ const envSchema = z.object({
     }),
   VITE_ALLOWED_ORIGINS: z.string()
     .optional()
-    .default('https://phg-connect.com')
+    .default('https://altus-advisory.com')
 })
 
 export function validateEnvironment() {
@@ -590,7 +590,7 @@ Components (libraries, frameworks, modules) run with the same privileges as the 
 - No inventory of dependencies
 - Not scanning for vulnerabilities
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Automated Scanning**: npm audit in CI/CD
 2. **Dependency Pinning**: Lockfile enforcement
@@ -683,7 +683,7 @@ Authentication failures occur when functions related to authentication and sessi
 - Session fixation vulnerabilities
 - Improper session invalidation
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Strong Password Policy**: Enforce complexity requirements
 2. **Account Lockout**: Prevent brute force attacks
@@ -838,7 +838,7 @@ Software and data integrity failures relate to code and infrastructure that do n
 - Race conditions in critical operations
 - Missing integrity checks on data
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Signed Updates**: Verify integrity of deployed code
 2. **Atomic Operations**: Database transactions for critical updates
@@ -997,7 +997,7 @@ Insufficient logging and monitoring, coupled with missing or ineffective inciden
 - Logs containing sensitive data
 - No log integrity protection
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **Comprehensive Audit Logging**: All sensitive operations logged
 2. **Structured Logging**: JSON format with consistent fields
@@ -1176,7 +1176,7 @@ SSRF flaws occur when a web application fetches a remote resource without valida
 - Cloud metadata API access (169.254.169.254)
 - Open redirects through URL parameters
 
-#### Specific Mitigation Strategies for PHG Connect
+#### Specific Mitigation Strategies for Altus Connect
 
 1. **URL Whitelisting**: Only allow pre-approved domains
 2. **Protocol Restrictions**: Block file://, ftp://, etc.
@@ -1250,7 +1250,7 @@ async function fetchExternalData(url: string) {
     const response = await fetch(url, {
       signal: controller.signal,
       headers: {
-        'User-Agent': 'PHG-Connect/1.0 (Internal Service)'
+        'User-Agent': 'ALTUS-Connect/1.0 (Internal Service)'
       }
     })
     
@@ -1470,7 +1470,7 @@ function SecureForm() {
 // supabase/functions/protected-action/index.ts
 Deno.serve(async (req) => {
   const origin = req.headers.get('origin')
-  const allowedOrigins = ['https://phg-connect.com', 'https://www.phg-connect.com']
+  const allowedOrigins = ['https://altus-advisory.com', 'https://www.altus-advisory.com']
   
   if (!allowedOrigins.includes(origin)) {
     return new Response('Unauthorized origin', { status: 403 })
@@ -1798,7 +1798,7 @@ async function logout() {
   
   // Clear all sensitive local storage
   const keysToRemove = Object.keys(localStorage)
-    .filter(k => k.startsWith('prime_secure_'))
+    .filter(k => k.startsWith('altus_secure_'))
   
   keysToRemove.forEach(key => localStorage.removeItem(key))
   
@@ -2084,6 +2084,6 @@ try {
 
 ---
 
-**Document Owner:** PHG IT Security Team  
+**Document Owner:** ALTUS IT Security Team  
 **Review Cycle:** Quarterly  
 **Next Review:** July 2025

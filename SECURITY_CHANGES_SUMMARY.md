@@ -1,7 +1,7 @@
 # File Upload Security Changes Summary
 
 ## Overview
-This document summarizes all code changes made to fix file upload vulnerabilities in the Prime Hotels Intranet application.
+This document summarizes all code changes made to fix file upload vulnerabilities in the Altus Connect Intranet application.
 
 ---
 

@@ -1,10 +1,10 @@
-# Testing Guide - Prime Hotels Intranet
+# Testing Guide - Altus Connect Intranet
 
 ## 🚀 Quick Start
 
 1. **Server Status**: The dev server should be running on http://localhost:5173
 2. **Login Credentials**:
-   - Email: `admin@prime.com`
+   - Email: `admin@altus-advisory.com`
    - Password: `Reem1977`
 
 ## ✅ Features Ready for Testing

@@ -2,7 +2,7 @@
 
 ## Summary
 
-All fixes for the PHG Connect tab switching issues are now production-ready. The implementation includes comprehensive error handling, monitoring, feature flags for gradual rollout, and thorough documentation.
+All fixes for the Altus Connect tab switching issues are now production-ready. The implementation includes comprehensive error handling, monitoring, feature flags for gradual rollout, and thorough documentation.
 
 ---
 

@@ -105,7 +105,7 @@ interface MapsState {
 
 const DEFAULT_INPUT = [
   'email,name,phone,property,dept,role',
-  'example.user@hotel.com,Example User,500000000,Prime Al Hamra Hotel Riyadh,Front Office,staff'
+  'example.user@hotel.com,Example User,500000000,Altus Al Hamra Hotel Riyadh,Front Office,staff'
 ].join('\n')
 
 const VALID_ROLES = new Set([
@@ -204,8 +204,8 @@ async function withRetry<T>(operationName: string, config: BulkConfig, task: () 
   while (attempt <= config.maxRetries) {
     try {
       return await task()
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+    } catch (error: any) {
+      const message = error?.message || String(error)
       const canRetry = attempt < config.maxRetries && isRetryableErrorMessage(message)
       if (!canRetry) throw error
       await sleep(config.retryDelayMs * (attempt + 1))
@@ -532,8 +532,8 @@ export default function BulkUserProvisioning() {
       setReport(null)
       setLogs([])
       toast({ title: 'Preview generated', description: `Loaded ${rows.length} row(s) for validation.` })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+    } catch (error: any) {
+      const message = error?.message || String(error)
       setParsedRows([])
       setParseError(message)
       toast({ title: 'Invalid input', description: message, variant: 'destructive' })
@@ -571,8 +571,8 @@ export default function BulkUserProvisioning() {
         rowsToRun = parseUsersInput(rawInput)
         setParsedRows(rowsToRun)
         setParseError(null)
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error)
+      } catch (error: any) {
+        const message = error?.message || String(error)
         setParseError(message)
         toast({ title: 'Invalid input', description: message, variant: 'destructive' })
         return
@@ -634,8 +634,8 @@ export default function BulkUserProvisioning() {
           await createSingleUser(maps, config, row)
           localReport.created += 1
           appendLog(`${config.dryRun ? 'Dry-run validated' : 'Processed'}: ${email}`)
-        } catch (error) {
-          const message = error instanceof Error ? error.message : String(error)
+        } catch (error: any) {
+          const message = error?.message || String(error)
           if (isAlreadyExistsError(message)) {
             localReport.skippedExisting += 1
             appendLog(`Already exists: ${email}`)
@@ -654,8 +654,8 @@ export default function BulkUserProvisioning() {
         title: config.dryRun ? 'Dry run completed' : 'Bulk provisioning completed',
         description: `${localReport.created} processed, ${localReport.skippedExisting} already existed, ${localReport.failed} failed.`
       })
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
+    } catch (error: any) {
+      const message = error?.message || String(error)
       appendLog(`Fatal error: ${message}`)
       toast({ title: 'Bulk provisioning failed', description: message, variant: 'destructive' })
     } finally {

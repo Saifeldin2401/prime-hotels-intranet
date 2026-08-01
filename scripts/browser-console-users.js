@@ -1,5 +1,5 @@
 /**
- * Prime Hotels Intranet - Bulk User Creation (Browser Console)
+ * Altus Connect Intranet - Bulk User Creation (Browser Console)
  *
  * Legacy filename kept for operator compatibility.
  * Safe mode:
@@ -8,7 +8,7 @@
  * - Idempotent handling for existing users
  *
  * Instructions:
- * 1) Login to Prime Hotels Intranet with a privileged account
+ * 1) Login to Altus Connect Intranet with a privileged account
  *    (corporate_admin / regional_admin / regional_hr).
  * 2) Open browser console (F12).
  * 3) Copy-paste this entire script and press Enter.
@@ -24,7 +24,7 @@ const CONFIG = {
   retryDelayMs: 800
 };
 
-// Users from Riyadh User Forum.xlsx and PHG user creation forum1.xlsx
+// Users from Riyadh User Forum.xlsx and ALTUS user creation forum1.xlsx
 const users = [
   // Riyadh Users
   {
@@ -33,7 +33,7 @@ const users = [
     phone: '500418959',
     date_of_birth: '1991-08-01',
     job_title: 'Front Office Manager',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -43,7 +43,7 @@ const users = [
     phone: '576234611',
     date_of_birth: '1981-03-09',
     job_title: 'House Keeping Manager',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Housekeeping',
     role: 'property_hr'
   },
@@ -52,7 +52,7 @@ const users = [
     full_name: 'Faisal Mohamed Al Otaibi',
     phone: '551448914',
     job_title: 'Front Office Agent',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -61,7 +61,7 @@ const users = [
     full_name: 'Layla Ali Shrahily',
     phone: '506388055',
     job_title: 'Front Office Agent',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -70,7 +70,7 @@ const users = [
     full_name: 'Hasan Abdel Raof Shalaby',
     phone: '569409945',
     job_title: 'Front Office Supervisor',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -79,7 +79,7 @@ const users = [
     full_name: 'Islam Mahmoud Madi',
     phone: '570958030',
     job_title: 'Front Office Agent',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -88,7 +88,7 @@ const users = [
     full_name: 'AIIam Ali lbrahim',
     phone: '570481399',
     job_title: 'Front Office Supervisor',
-    property_name: 'Medhal Qurtuba by Prime Hotels',
+    property_name: 'Medhal Qurtuba by Altus Advisory',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -97,7 +97,7 @@ const users = [
     full_name: 'MOHAMED Galal Anwer Ahmed',
     phone: '561005446',
     job_title: 'Front Office Agent',
-    property_name: 'Medhal Qurtuba by Prime Hotels',
+    property_name: 'Medhal Qurtuba by Altus Advisory',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -106,7 +106,7 @@ const users = [
     full_name: 'FAHAD MESHAAL AIANzi',
     phone: '502792036',
     job_title: 'Front Office Agent',
-    property_name: 'Medhal Qurtuba by Prime Hotels',
+    property_name: 'Medhal Qurtuba by Altus Advisory',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -115,7 +115,7 @@ const users = [
     full_name: 'MOHAMED ABDELBADEAA ISMEAL',
     phone: '559697307',
     job_title: 'House Keeping Supervisor',
-    property_name: 'Medhal Qurtuba by Prime Hotels',
+    property_name: 'Medhal Qurtuba by Altus Advisory',
     department_name: 'Housekeeping',
     role: 'department_head'
   },
@@ -124,7 +124,7 @@ const users = [
     full_name: 'Ayman Abdul Hamid Saber',
     phone: '538627751',
     job_title: 'Maintenance',
-    property_name: 'Prime Al Hamra Hotel Riyadh',
+    property_name: 'Altus Al Hamra Hotel Riyadh',
     department_name: 'Maintenance',
     role: 'staff'
   },
@@ -136,7 +136,7 @@ const users = [
     phone: '567549721',
     date_of_birth: '1990-02-07',
     job_title: 'Fo Supervioser',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -146,7 +146,7 @@ const users = [
     phone: '545747498',
     date_of_birth: '1993-04-03',
     job_title: 'Fo Supervioser',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -156,7 +156,7 @@ const users = [
     phone: '565542083',
     date_of_birth: '1986-06-11',
     job_title: 'HK Supervioser',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Housekeeping',
     role: 'department_head'
   },
@@ -166,7 +166,7 @@ const users = [
     phone: '595920662',
     date_of_birth: '1974-05-05',
     job_title: 'Laundry Supervioser',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Housekeeping',
     role: 'department_head'
   },
@@ -176,7 +176,7 @@ const users = [
     phone: '558221628',
     date_of_birth: '1999-07-30',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -186,7 +186,7 @@ const users = [
     phone: '547039704',
     date_of_birth: '1995-03-20',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -196,7 +196,7 @@ const users = [
     phone: '566335467',
     date_of_birth: '2002-01-13',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -206,7 +206,7 @@ const users = [
     phone: '543119562',
     date_of_birth: '1989-11-03',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Hamra Hotel Jeddah',
+    property_name: 'Altus Al Hamra Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -216,7 +216,7 @@ const users = [
     phone: '540272932',
     date_of_birth: '1967-07-01',
     job_title: 'HK Supervioser',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Housekeeping',
     role: 'department_head'
   },
@@ -226,7 +226,7 @@ const users = [
     phone: '531656567',
     date_of_birth: '1993-01-01',
     job_title: 'FO Manager',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Front Office',
     role: 'property_manager'
   },
@@ -236,7 +236,7 @@ const users = [
     phone: '564617675',
     date_of_birth: '1982-03-06',
     job_title: 'Fo Supervioser',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Front Office',
     role: 'department_head'
   },
@@ -246,7 +246,7 @@ const users = [
     phone: '544706217',
     date_of_birth: '2001-11-21',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -256,7 +256,7 @@ const users = [
     phone: '509402019',
     date_of_birth: '2003-11-03',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   },
@@ -266,7 +266,7 @@ const users = [
     phone: '569379893',
     date_of_birth: '1993-08-18',
     job_title: 'Receptionist',
-    property_name: 'Prime Al Corniche Hotel Jeddah',
+    property_name: 'Altus Al Corniche Hotel Jeddah',
     department_name: 'Front Office',
     role: 'staff'
   }
@@ -572,7 +572,7 @@ async function createBulkUsers() {
     return;
   }
 
-  console.log('Prime Hotels Intranet - Bulk User Creation');
+  console.log('Altus Connect Intranet - Bulk User Creation');
   console.log(`Users to process: ${users.length}`);
   console.log(`Provisioning method: ${CONFIG.provisioningMethod}`);
   console.log(`Dry run: ${CONFIG.dryRun ? 'ON (no writes)' : 'OFF'}`);

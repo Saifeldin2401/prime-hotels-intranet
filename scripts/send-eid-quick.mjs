@@ -25,9 +25,9 @@ if (!RESEND_API_KEY.startsWith('re_')) {
   process.exit(1);
 }
 
-const APP_URL = process.env.APP_URL || "https://phg-connect.com";
-const FROM_NAME = process.env.FROM_NAME || "PHG Connect";
-const FROM_EMAIL = process.env.FROM_EMAIL || "notifications@phg-connect.com";
+const APP_URL = process.env.APP_URL || "https://altus-advisory.com";
+const FROM_NAME = process.env.FROM_NAME || "Altus Connect";
+const FROM_EMAIL = process.env.FROM_EMAIL || "notifications@altus-advisory.com";
 
 // Email recipients should be provided via environment variable or external file
 // Format: comma-separated list of emails
@@ -56,7 +56,7 @@ function getBeautifulEidTemplate(appUrl) {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eid Mubarak from PRIME Hotels</title>
+    <title>Eid Mubarak from ALTUS Hotels</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <div style="background-color: #f8fafc; padding: 40px 10px;">
@@ -65,7 +65,7 @@ function getBeautifulEidTemplate(appUrl) {
             
             <!-- Header (Dark Premium) -->
             <div style="padding: 40px 20px; text-align: center; background: linear-gradient(135deg, #0B1C3E 0%, #1a365d 100%);">
-                <img src="${logoUrl}" alt="PRIME Hotels Group" style="height: 48px; width: auto; margin-bottom: 24px;">
+                <img src="${logoUrl}" alt="ALTUS Hotels Group" style="height: 48px; width: auto; margin-bottom: 24px;">
                 <br>
                 <div style="display: inline-block; padding: 6px 20px; border: 1px solid #D4AF37; border-radius: 50px; color: #D4AF37; font-size: 14px; font-weight: 600; letter-spacing: 2px;">
                     EID MUBARAK • عيد مبارك
@@ -76,10 +76,10 @@ function getBeautifulEidTemplate(appUrl) {
                 <!-- ARABIC SECTION -->
                 <div dir="rtl" style="text-align: right; margin-bottom: 40px;">
                     <h2 style="color: #0B1C3E; font-size: 26px; font-weight: bold; margin-bottom: 16px;">أعزائنا الموظفين،</h2>
-                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">هذه رسالة عامة صادرة عبر نظام PHG Connect.</p>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">هذه رسالة عامة صادرة عبر نظام Altus Connect.</p>
                     
                     <p style="color: #334155; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
-                        بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي مجموعة فنادق برايم في كافة منشآتها. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار، وأن يكون هذا العيد مناسبة مليئة بالفرح مع عائلاتكم وأحبائكم.
+                        بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي مجموعة فنادق ألتوس في كافة منشآتها. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار، وأن يكون هذا العيد مناسبة مليئة بالفرح مع عائلاتكم وأحبائكم.
                     </p>
                     <p style="color: #334155; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
                         نشكر لكم التزامكم المستمر واحترافيتكم العالية، والتي تساهم بشكل أساسي في تقديم أفضل الخدمات وتحقيق التميز في جميع فنادقنا.
@@ -88,8 +88,8 @@ function getBeautifulEidTemplate(appUrl) {
                         عيد مبارك لكم ولعائلاتكم، مع أطيب التمنيات بقضاء أوقات سعيدة ومباركة.
                     </p>
                     <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
-                        — نظام PHG Connect<br>
-                        مجموعة فنادق برايم
+                        — نظام Altus Connect<br>
+                        مجموعة فنادق ألتوس
                     </p>
                 </div>
 
@@ -101,10 +101,10 @@ function getBeautifulEidTemplate(appUrl) {
                 <!-- ENGLISH SECTION -->
                 <div dir="ltr" style="text-align: left; margin-bottom: 20px;">
                     <h2 style="color: #0B1C3E; font-size: 26px; font-weight: bold; margin-bottom: 16px;">Dear Team,</h2>
-                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">This is a system-wide announcement from PHG Connect.</p>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">This is a system-wide announcement from Altus Connect.</p>
                     
                     <p style="color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                        On the occasion of Eid, we extend our warmest wishes to all team members across Prime Hotels Group properties. May this special time bring joy, peace, and prosperity to you and your families.
+                        On the occasion of Eid, we extend our warmest wishes to all team members across Altus Advisory Group properties. May this special time bring joy, peace, and prosperity to you and your families.
                     </p>
                     <p style="color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
                         We would like to take this opportunity to thank you for your continued dedication, professionalism, and commitment to excellence. Your efforts are highly valued and play a key role in delivering exceptional experiences across all our hotels.
@@ -113,20 +113,20 @@ function getBeautifulEidTemplate(appUrl) {
                         Eid Mubarak to you and your loved ones. We wish you a joyful and blessed celebration.
                     </p>
                     <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
-                        — PHG Connect System<br>
-                        Prime Hotels Group
+                        — Altus Connect System<br>
+                        Altus Advisory Group
                     </p>
                 </div>
                 
                 <div style="text-align: center; margin-top: 40px;">
-                    <a href="${appUrl}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 8px; font-weight: bold; letter-spacing: 0.5px; font-size: 16px;">Open PHG Connect</a>
+                    <a href="${appUrl}" style="display: inline-block; background-color: #D4AF37; color: #ffffff; text-decoration: none; padding: 16px 36px; border-radius: 8px; font-weight: bold; letter-spacing: 0.5px; font-size: 16px;">Open Altus Connect</a>
                 </div>
             </div>
             
             <!-- Footer -->
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <p style="color: #64748b; font-size: 13px; margin: 0;">&copy; ${year} PRIME Hotels Group. All rights reserved.</p>
-                <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">This email was sent from the PHG Connect Intranet.</p>
+                <p style="color: #64748b; font-size: 13px; margin: 0;">&copy; ${year} ALTUS Hotels Group. All rights reserved.</p>
+                <p style="color: #94a3b8; font-size: 12px; margin: 12px 0 0 0;">This email was sent from the Altus Connect Intranet.</p>
             </div>
         </div>
     </div>
@@ -147,7 +147,7 @@ async function sendEmails() {
         const payload = batchRecipients.map(email => ({
           from: `${FROM_NAME} <${FROM_EMAIL}>`,
           to: [email],
-          subject: "Eid Mubarak from PRIME Hotels | عيد مبارك",
+          subject: "Eid Mubarak from ALTUS Hotels | عيد مبارك",
           html: htmlTemplate,
           tags: [
             { name: "campaign", value: "eid_greeting_system" }

@@ -22,6 +22,7 @@ import type { PurchaseOrder } from '@/lib/types/procurement'
 import { Package, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const statusColors: Record<string, string> = {
     draft: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
@@ -53,7 +54,7 @@ export default function PurchaseOrders() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!user || !propertyId || !formData.supplier_id) return
+        if (!user || !isRealPropertyId(propertyId) || !formData.supplier_id) return
         try {
             await createMutation.mutateAsync({
                 property_id: propertyId,
@@ -65,10 +66,10 @@ export default function PurchaseOrders() {
             toast({ title: t('procurement:orders.success.created', { defaultValue: 'Purchase order created' }) })
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
@@ -86,16 +87,16 @@ export default function PurchaseOrders() {
             toast({ title: t('procurement:orders.success.received', { defaultValue: 'Goods received' }) })
             setReceivingOrder(null)
             setReceiveQty('')
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
     }
 
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
         return (
             <div className="p-6">
                 <EmptyState
@@ -120,8 +121,8 @@ export default function PurchaseOrders() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading…' })}</div>
                     ) : orders && orders.length > 0 ? (

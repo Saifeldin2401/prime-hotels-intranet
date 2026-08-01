@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document details all the authentication and session management vulnerabilities that have been fixed in the Prime Hotels Intranet application.
+This document details all the authentication and session management vulnerabilities that have been fixed in the Altus Connect Intranet application.
 
 ---
 

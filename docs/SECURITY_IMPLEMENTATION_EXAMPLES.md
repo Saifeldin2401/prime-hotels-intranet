@@ -1,8 +1,8 @@
 # Security Implementation Examples
 
-## Real-World Patterns from PHG Connect Codebase
+## Real-World Patterns from Altus Connect Codebase
 
-This document provides concrete examples of security implementations used throughout the PHG Connect intranet platform.
+This document provides concrete examples of security implementations used throughout the Altus Connect intranet platform.
 
 ---
 
@@ -342,7 +342,7 @@ function RichTextContent({ html }: { html: string }) {
 ```typescript
 // From: src/lib/secureStorage.ts
 
-const SECURE_STORAGE_KEY = 'prime_secure_storage_key_v1'
+const SECURE_STORAGE_KEY = 'altus_secure_storage_key_v1'
 
 const encodeBase64 = (bytes: Uint8Array): string => {
   let binary = ''
@@ -1213,7 +1213,7 @@ const envSchema = z.object({
     }),
   VITE_ALLOWED_ORIGINS: z.string()
     .optional()
-    .default('https://phg-connect.com')
+    .default('https://altus-advisory.com')
 })
 
 export function validateEnvironment() {
@@ -1336,4 +1336,4 @@ When reviewing code, ensure:
 
 **Document Version:** 1.0  
 **Last Updated:** April 2025  
-**Owner:** PHG Security Team
+**Owner:** ALTUS Security Team

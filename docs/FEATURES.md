@@ -1,8 +1,8 @@
-# Prime Connect - Employee Portal
+# Altus Connect - Employee Portal
 
 ## Your All-in-One Workplace Hub
 
-**Prime Connect** is a comprehensive employee portal designed specifically for Prime Hotels Group. It brings together everything employees need to stay connected, informed, and productive—all in one place.
+**Altus Connect** is a comprehensive employee portal designed specifically for Altus Advisory Group. It brings together everything employees need to stay connected, informed, and productive—all in one place.
 
 ---
 
@@ -125,7 +125,7 @@
 
 ---
 
-## ✨ The Prime Connect Advantage
+## ✨ The Altus Connect Advantage
 
 ✅ **One Login** – Access everything you need  
 ✅ **Always Updated** – Real-time information  
@@ -135,4 +135,4 @@
 
 ---
 
-*Prime Connect – Connecting Prime Hotels, One Employee at a Time.*
+*Altus Connect – Connecting Altus Advisory, One Employee at a Time.*

@@ -1,4 +1,4 @@
-# Supabase CLI Helper Script for PHG Connect
+# Supabase CLI Helper Script for Altus Connect
 param(
     [Parameter(Mandatory=$true)]
     [string]$Command,

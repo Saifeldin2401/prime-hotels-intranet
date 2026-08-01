@@ -4,12 +4,12 @@ import * as Sentry from '@sentry/react'
 
 import App from './App'
 import './i18n/i18n'
-import './phg-kit/global.css'
+import './altus-kit/global.css'
 import './index.css'
 import './rtl.css'
 
 import { getSpaRedirectFromSearch } from '@/lib/authRedirect'
-import { clearPrimeHotelServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
+import { clearAltusServiceWorkersAndCaches } from '@/lib/runtimeRecovery'
 import { isValidSentryDsn } from '@/lib/sentry'
 
 if (typeof globalThis.t_ext !== 'function') {
@@ -19,11 +19,11 @@ if (typeof globalThis.t_ext !== 'function') {
 const LEGACY_SESSION_KEYS = [
   '__stale_module_reload_done__',
   '__stale_module_sw_reset_done__',
-  '__phg_boot_import_recovery__',
-  '__phg_version_reload_done__',
+  '__altus_boot_import_recovery__',
+  '__altus_version_reload_done__',
 ]
-const LEGACY_LOCAL_KEYS = ['__phg_app_version__']
-const LEGACY_SEARCH_PARAMS = ['__reload', '__boot_recover', '__phg_sw_cleanup']
+const LEGACY_LOCAL_KEYS = ['__altus_app_version__']
+const LEGACY_SEARCH_PARAMS = ['__reload', '__boot_recover', '__altus_sw_cleanup']
 const PWA_DISABLED_CLEANUP_KEY = '__pwa_disabled_cleanup_done__'
 
 const SENTRY_DSN = import.meta.env.VITE_SENTRY_DSN
@@ -117,7 +117,7 @@ async function cleanupLegacyPwaArtifacts() {
   }
 
   try {
-    await clearPrimeHotelServiceWorkersAndCaches()
+    await clearAltusServiceWorkersAndCaches()
   } catch (error) {
     if (sentryEnabled) {
       Sentry.captureException(error, {
@@ -133,7 +133,7 @@ restoreSpaRedirectFromSearch()
 stripLegacyRecoveryParams()
 
 ;(window as Window & { __ALTUS_FORCE_REFRESH__?: () => Promise<void> }).__ALTUS_FORCE_REFRESH__ = async () => {
-  await clearPrimeHotelServiceWorkersAndCaches()
+  await clearAltusServiceWorkersAndCaches()
   window.location.reload()
 }
 
@@ -164,7 +164,7 @@ try {
         </button>
       </div>
     </div>`
-  console.error('[PHG] Boot error:', bootError)
+  console.error('[ALTUS] Boot error:', bootError)
 }
 
 void cleanupLegacyPwaArtifacts()
@@ -186,7 +186,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
             newWorker.addEventListener('statechange', () => {
               if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                 // New version available
-                window.dispatchEvent(new CustomEvent('phg:update-available'))
+                window.dispatchEvent(new CustomEvent('altus:update-available'))
               }
             })
           }

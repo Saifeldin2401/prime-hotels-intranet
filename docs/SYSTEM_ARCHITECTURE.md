@@ -1,4 +1,4 @@
-# PRIME Connect: System Architecture Reference
+# ALTUS Connect: System Architecture Reference
 
 **Version**: 1.0
 **Status**: Production Ready
@@ -8,7 +8,7 @@
 
 ## 1. High-Level Topology
 
-PRIME Connect employs a **Serverless, JAMstack architecture** designed for high availability, low latency, and infinite scalability.
+ALTUS Connect employs a **Serverless, JAMstack architecture** designed for high availability, low latency, and infinite scalability.
 
 ```mermaid
 graph TD
@@ -43,7 +43,7 @@ graph TD
 
 ## 2. Database Design & Schema
 
-The database is the "Brain" of PRIME Connect. It uses a **Relational Model** with strict foreign key constraints.
+The database is the "Brain" of ALTUS Connect. It uses a **Relational Model** with strict foreign key constraints.
 
 ### Core Entity Relationship Diagram (ERD)
 
@@ -133,10 +133,10 @@ src/
 
 ## 5. Integration Architecture
 
-PRIME Connect interacts with external systems via **Edge Functions**.
+ALTUS Connect interacts with external systems via **Edge Functions**.
 
 ### A. Hotel PMS (Property Management System)
-*   **Direction**: One-way Sync (PMS -> PRIME).
+*   **Direction**: One-way Sync (PMS -> ALTUS).
 *   **Mechanism**: Nightly cron job triggers an Edge Function.
 *   **Data**: Occupancy rates, Arrivals, Departures.
 *   **Purpose**: Operational KPIs for Managers.
@@ -156,4 +156,4 @@ PRIME Connect interacts with external systems via **Edge Functions**.
 
 ---
 
-*Architected by PRIME Hotels IT Division.*
+*Architected by ALTUS Hotels IT Division.*

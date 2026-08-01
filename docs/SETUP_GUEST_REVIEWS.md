@@ -52,34 +52,34 @@ INSERT INTO public.guest_review_sources (
 );
 ```
 
-### Active PHG Source Links (Configured)
+### Active ALTUS Source Links (Configured)
 
-#### Medhal Qurtuba by Prime Hotels
-- Google: `https://www.google.com/maps/search/?api=1&query=Medhal+Qurtuba+by+Prime+Hotels+Riyadh`
+#### Medhal Qurtuba by Altus Advisory
+- Google: `https://www.google.com/maps/search/?api=1&query=Medhal+Qurtuba+by+Altus+Hotels+Riyadh`
 - Booking: `https://www.booking.com/hotel/sa/medhal-qurtuba-by-prime-hotels.html`
-- Expedia: `https://www.expedia.com/Riyadh-Hotels-Medhal-Qurtuba-By-Prime-Hotels.h125614688.Hotel-Information`
-- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g293995-d23854123-Reviews-Medhal_Qurtuba_by_Prime_Hotels-Riyadh_Riyadh_Province.html`
+- Expedia: `https://www.expedia.com/Riyadh-Hotels-Medhal-Qurtuba-By-Altus-Hotels.h125614688.Hotel-Information`
+- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g293995-d23854123-Reviews-Medhal_Qurtuba_by_Altus_Hotels-Riyadh_Riyadh_Province.html`
 - Hotels.com: `https://www.hotels.com/en/ho4020670016/`
 
-#### Prime Al Corniche Hotel Jeddah
-- Google: `https://www.google.com/maps/search/?api=1&query=Prime+Al+Corniche+Hotel+Jeddah`
+#### Altus Al Corniche Hotel Jeddah
+- Google: `https://www.google.com/maps/search/?api=1&query=Altus+Al+Corniche+Hotel+Jeddah`
 - Booking: `https://www.booking.com/hotel/sa/prime-alcorniche.html`
-- Expedia: `https://www.expedia.com/Jeddah-Hotels-Prime-Al-Corniche-Hotel.h95419817.Hotel-Information`
-- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g295419-d24183450-Reviews-Prime_Al_Corniche_Hotel-Jeddah_Makkah_Province.html`
+- Expedia: `https://www.expedia.com/Jeddah-Hotels-Altus-Al-Corniche-Hotel.h95419817.Hotel-Information`
+- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g295419-d24183450-Reviews-Altus_Al_Corniche_Hotel-Jeddah_Makkah_Province.html`
 - Hotels.com: `https://www.hotels.com/ho3054434144/prime-al-corniche-hotel-jeddah-saudi-arabia/`
 
-#### Prime Al Hamra Hotel Jeddah
-- Google: `https://www.google.com/maps/search/?api=1&query=Prime+Al+Hamra+Hotel+Jeddah`
+#### Altus Al Hamra Hotel Jeddah
+- Google: `https://www.google.com/maps/search/?api=1&query=Altus+Al+Hamra+Hotel+Jeddah`
 - Booking: `https://www.booking.com/hotel/sa/prime-jeddah-al-hamra.html`
-- Expedia: `https://www.expedia.com/Jeddah-Hotels-Prime-Hotel-Al-Hamra-Jeddah.h18152968.Hotel-Information`
-- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g295419-d12300665-Reviews-Prime_Al_Hamra_Hotel-Jeddah_Makkah_Province.html`
+- Expedia: `https://www.expedia.com/Jeddah-Hotels-Altus-Hotel-Al-Hamra-Jeddah.h18152968.Hotel-Information`
+- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g295419-d12300665-Reviews-Altus_Al_Hamra_Hotel-Jeddah_Makkah_Province.html`
 - Agoda: `https://www.agoda.com/en-in/prime-hotel-jaddah-al-hamra/reviews/jeddah-sa.html`
 - Hotels.com: `https://www.hotels.com/ho687934/prime-hotel-al-hamra-jeddah-jeddah-saudi-arabia/`
 
-#### Prime Al Hamra Hotel Riyadh
-- Google: `https://www.google.com/maps/search/?api=1&query=Prime+Al+Hamra+Hotel+Riyadh`
+#### Altus Al Hamra Hotel Riyadh
+- Google: `https://www.google.com/maps/search/?api=1&query=Altus+Al+Hamra+Hotel+Riyadh`
 - Booking: `https://www.booking.com/hotel/sa/imperial.html`
-- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g293995-d25064560-Reviews-Prime_Al_Hamra_Hotel-Riyadh_Riyadh_Province.html`
+- TripAdvisor: `https://www.tripadvisor.com/Hotel_Review-g293995-d25064560-Reviews-Altus_Al_Hamra_Hotel-Riyadh_Riyadh_Province.html`
 - Hotels.com: `https://www.hotels.com/ho3956093824/`
 
 ### Important Crawl Note

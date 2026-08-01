@@ -9,8 +9,8 @@
 const REDIRECT_PARAM = 'redirect'
 const REDIRECT_PARAM_ALT = '_redirect'
 const SPA_REDIRECT_PARAM = '__redirect'
-const POST_LOGIN_STORAGE_KEY = '__phg_post_login_redirect__'
-const COOKIE_NAME = 'phg_auth_redirect'
+const POST_LOGIN_STORAGE_KEY = '__altus_post_login_redirect__'
+const COOKIE_NAME = 'altus_auth_redirect'
 
 const AUTH_ROUTES = ['/login', '/forgot-password', '/reset-password', '/complete-invite', '/change-password']
 
@@ -185,7 +185,7 @@ export function registerGlobalDeeplinkHandler(navigate: (path: string) => void) 
     navigate(sanitized)
   }
 
-  ;(window as Window & { __PHG_HANDLE_DEEPLINK__?: (pathOrUrl: string) => void }).__PHG_HANDLE_DEEPLINK__ = handler
+  ;(window as Window & { __ALTUS_HANDLE_DEEPLINK__?: (pathOrUrl: string) => void }).__ALTUS_HANDLE_DEEPLINK__ = handler
 
   window.addEventListener('message', (event) => {
     try {

@@ -22,6 +22,7 @@ import { format } from 'date-fns'
 import { BookText, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 const entryTypeColors: Record<string, string> = {
     general: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
@@ -49,7 +50,7 @@ export default function DailyLogbook() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
-        if (!user || !propertyId) return
+        if (!user || !isRealPropertyId(propertyId)) return
         try {
             await createMutation.mutateAsync({
                 property_id: propertyId,
@@ -61,16 +62,16 @@ export default function DailyLogbook() {
             toast({ title: t('operations:logbook.success.created', { defaultValue: 'Logbook entry added' }) })
             setIsDialogOpen(false)
             resetForm()
-        } catch (error) {
+        } catch (error: any) {
             toast({
                 title: t('common:common.error', { defaultValue: 'Error' }),
-                description: error instanceof Error ? error.message : String(error),
+                description: error?.message || String(error),
                 variant: 'destructive'
             })
         }
     }
 
-    if (!propertyId) {
+    if (!isRealPropertyId(propertyId)) {
         return (
             <div className="p-6">
                 <EmptyState
@@ -95,8 +96,8 @@ export default function DailyLogbook() {
                 }
             />
 
-            <div className="prime-card">
-                <div className="prime-card-body">
+            <div className="altus-card">
+                <div className="altus-card-body">
                     {isLoading ? (
                         <div className="text-center py-8 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading…' })}</div>
                     ) : entries && entries.length > 0 ? (

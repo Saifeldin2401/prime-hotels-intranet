@@ -190,11 +190,11 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
     return (
         <form onSubmit={(e) => handleSubmit(e, 'draft')} className="space-y-6">
             {/* Basic Information */}
-            <div className="prime-card">
-                <div className="prime-card-header">
+            <div className="altus-card">
+                <div className="altus-card-header">
                     <h3 className="text-lg font-semibold">{t('sections.basic_info')}</h3>
                 </div>
-                <div className="prime-card-body space-y-4">
+                <div className="altus-card-body space-y-4">
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="title">{t('form.position_title')} *</Label>
                         <Popover open={openJobTitle} onOpenChange={setOpenJobTitle}>
@@ -410,11 +410,11 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
             </div>
 
             {/* Job Details */}
-            <div className="prime-card">
-                <div className="prime-card-header">
+            <div className="altus-card">
+                <div className="altus-card-header">
                     <h3 className="text-lg font-semibold">{t('sections.job_details')}</h3>
                 </div>
-                <div className="prime-card-body space-y-4">
+                <div className="altus-card-body space-y-4">
                     <div>
                         <Label htmlFor="description">{t('form.description')}</Label>
                         <Textarea
@@ -451,11 +451,11 @@ export function JobPostingForm({ job, onSuccess }: JobPostingFormProps) {
             </div>
 
             {/* Compensation & Closing */}
-            <div className="prime-card">
-                <div className="prime-card-header">
+            <div className="altus-card">
+                <div className="altus-card-header">
                     <h3 className="text-lg font-semibold">{t('sections.compensation')}</h3>
                 </div>
-                <div className="prime-card-body space-y-4">
+                <div className="altus-card-body space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <Label htmlFor="salary_min">{t('form.salary_min')}</Label>

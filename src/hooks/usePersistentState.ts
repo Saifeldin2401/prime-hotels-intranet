@@ -63,8 +63,8 @@ export function usePersistentState<T>(
 ): PersistentState<T> {
   const { key, backupKey, debounceMs = 300, debug = false } = options
   
-  const fullKey = `prime_persist_${key}`
-  const fullBackupKey = backupKey ? `prime_persist_${backupKey}` : null
+  const fullKey = `altus_persist_${key}`
+  const fullBackupKey = backupKey ? `altus_persist_${backupKey}` : null
   
   const [state, setState] = useState<T>(initialValue)
   const [isHydrated, setIsHydrated] = useState(false)

@@ -205,8 +205,8 @@ export function getTourStepsForRole(role: AppRole | string | undefined): TourSte
 }
 
 // Storage key prefixes (user ID will be appended)
-const WIZARD_COMPLETED_PREFIX = 'prime_wizard_completed_'
-const WIZARD_PENDING_KEY = 'prime_wizard_pending'  // Pending is always for current session
+const WIZARD_COMPLETED_PREFIX = 'altus_wizard_completed_'
+const WIZARD_PENDING_KEY = 'altus_wizard_pending'  // Pending is always for current session
 
 /**
  * Check if wizard should show for the given user

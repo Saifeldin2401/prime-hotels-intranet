@@ -1,8 +1,8 @@
-# PRIME Connect Employee Handbook
+# ALTUS Connect Employee Handbook
 
-**Welcome to PRIME Connect!**
+**Welcome to ALTUS Connect!**
 
-This guide will help you use the new employee portal for Prime Hotels Group. Whether you work in Housekeeping, Front Office, F&B, or Management, this system is designed to make your daily work easier.
+This guide will help you use the new employee portal for Altus Advisory Group. Whether you work in Housekeeping, Front Office, F&B, or Management, this system is designed to make your daily work easier.
 
 ---
 
@@ -24,12 +24,12 @@ This guide will help you use the new employee portal for Prime Hotels Group. Whe
 
 ### Logging In
 1.  Open your web browser (Chrome, Edge, or Safari).
-2.  Go to the PRIME Connect website.
+2.  Go to the ALTUS Connect website.
 3.  Enter your **Official Hotel Email** and **Password**.
 4.  Click **Sign In**.
 
 ### Changing Language (English / Arabic)
-PRIME Connect works fully in both languages.
+ALTUS Connect works fully in both languages.
 1.  Look for the **Globe Icon** 🌐 in the top-right corner.
 2.  Click it to switch between **English** and **العربية**.
 3.  The entire screen layout will adjust automatically.
@@ -140,7 +140,7 @@ Don't be a bottleneck while you are away.
 **Q: I forgot my password. What do I do?**
 A: On the login screen, click "Forgot Password". A reset link will be sent to your email.
 
-**Q: Can I use PRIME Connect on my phone?**
+**Q: Can I use ALTUS Connect on my phone?**
 A: Yes! Open the browser on your phone and go to the same website limit. It works perfectly on mobile.
 
 **Q: Who sees my personal documents?**

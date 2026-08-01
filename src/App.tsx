@@ -6,7 +6,7 @@ import { ErrorBoundary } from '@/components/common/ErrorBoundary'
 import { Button } from '@/components/ui/button'
 import { router } from '@/routes/router'
 
-const UPDATE_AVAILABLE_EVENT = 'phg:update-available'
+const UPDATE_AVAILABLE_EVENT = 'altus:update-available'
 
 const shouldEnableVercelInsights = () => {
   if (!import.meta.env.PROD) return false
@@ -23,7 +23,7 @@ const shouldEnableVercelInsights = () => {
 
 const hasPendingAppUpdate = () => {
   if (typeof window === 'undefined') return false
-  return Boolean((window as Window & { __PHG_UPDATE_AVAILABLE__?: boolean }).__PHG_UPDATE_AVAILABLE__)
+  return Boolean((window as Window & { __ALTUS_UPDATE_AVAILABLE__?: boolean }).__ALTUS_UPDATE_AVAILABLE__)
 }
 
 const applyPendingAppUpdate = async () => {

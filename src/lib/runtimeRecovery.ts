@@ -1,4 +1,4 @@
-const DEFAULT_CANONICAL_APP_URL = 'https://remal-connect.com'
+const DEFAULT_CANONICAL_APP_URL = 'https://phg-connect.com'
 
 const AUTH_SENSITIVE_PREFIXES = [
   '/login',
@@ -28,8 +28,8 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
     if (isLocalDevelopmentHost(parsed.hostname)) {
       return fallback.toString().replace(/\/$/, '')
     }
-    if (parsed.hostname === 'www.remal-connect.com') {
-      parsed.hostname = 'remal-connect.com'
+    if (parsed.hostname === 'www.phg-connect.com') {
+      parsed.hostname = 'phg-connect.com'
     }
     parsed.pathname = ''
     parsed.search = ''
@@ -42,7 +42,7 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
 
 export const CANONICAL_APP_URL = canonicalizeAppUrl(import.meta.env.VITE_APP_URL)
 export const CANONICAL_APP_HOST = new URL(CANONICAL_APP_URL).hostname
-const WWW_HOST_REDIRECT_ATTEMPTED_KEY = '__phg_www_host_redirect_attempted__'
+const WWW_HOST_REDIRECT_ATTEMPTED_KEY = '__altus_www_host_redirect_attempted__'
 
 export function normalizePathname(pathname: string): string {
   if (!pathname) return '/'
@@ -123,7 +123,7 @@ export function buildCanonicalUrl(
   return `${CANONICAL_APP_URL}${pathname}${search}${hash}`
 }
 
-export async function clearPrimeHotelServiceWorkersAndCaches(): Promise<boolean> {
+export async function clearAltusServiceWorkersAndCaches(): Promise<boolean> {
   let hadArtifacts = false
 
   if ('serviceWorker' in navigator) {
@@ -137,7 +137,7 @@ export async function clearPrimeHotelServiceWorkersAndCaches(): Promise<boolean>
   if ('caches' in window) {
     const cacheKeys = await caches.keys()
     const staleCacheKeys = cacheKeys.filter(
-      (key) => key.startsWith('prime-hotels-') || key.startsWith('phg-intranet-')
+      (key) => key.startsWith('altus-') || key.startsWith('altus-hotels-') || key.startsWith('altus-intranet-')
     )
     if (staleCacheKeys.length > 0) {
       hadArtifacts = true
@@ -147,3 +147,4 @@ export async function clearPrimeHotelServiceWorkersAndCaches(): Promise<boolean>
 
   return hadArtifacts
 }
+

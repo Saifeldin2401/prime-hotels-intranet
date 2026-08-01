@@ -1,5 +1,5 @@
 # Security Audit Checklist
-## Prime Hotels Intranet System
+## Altus Connect Intranet System
 
 **Audit Date:** _______________  
 **Auditor:** _______________  

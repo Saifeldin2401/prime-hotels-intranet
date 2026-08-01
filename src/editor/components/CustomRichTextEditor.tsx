@@ -74,7 +74,7 @@ export function CustomRichTextEditor({
     editable: !disabled,
     editorProps: {
       attributes: {
-        class: 'phg-editor-content prose max-w-none focus:outline-none',
+        class: 'altus-editor-content prose max-w-none focus:outline-none',
         dir: direction,
       },
       handleDrop: (view, event) => {
@@ -192,7 +192,7 @@ export function CustomRichTextEditor({
 
           chain.setVideo({ src: publicUrl }).run()
         }
-        toast.success('Video uploaded successfully to PRIME Cloud')
+        toast.success('Video uploaded successfully to Altus Cloud')
       } catch (error) {
         toast.error((error as Error).message || 'Video upload failed')
       } finally {
@@ -308,8 +308,8 @@ export function CustomRichTextEditor({
   return (
     <div
       className={cn(
-        'phg-rich-editor rounded-xl border bg-card shadow-sm',
-        isFullscreen && 'phg-rich-editor--fullscreen',
+        'altus-rich-editor rounded-xl border bg-card shadow-sm',
+        isFullscreen && 'altus-rich-editor--fullscreen',
         className,
       )}
       dir={direction}
@@ -350,7 +350,7 @@ export function CustomRichTextEditor({
         />
 
         <div
-          className="phg-editor-surface px-3 py-3"
+          className="altus-editor-surface px-3 py-3"
           style={{ minHeight }}
           onDoubleClick={handleDoubleClick}
         >

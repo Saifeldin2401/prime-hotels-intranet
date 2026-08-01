@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document details all security fixes implemented to address XSS vulnerabilities and frontend security issues in the PRIME Hotels Intranet application.
+This document details all security fixes implemented to address XSS vulnerabilities and frontend security issues in the ALTUS Hotels Intranet application.
 
 ## 1. XSS VULNERABILITY FIXES
 

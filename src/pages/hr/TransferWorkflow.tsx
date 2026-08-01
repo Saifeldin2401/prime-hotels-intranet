@@ -139,14 +139,14 @@ export default function TransferWorkflow() {
             />
 
             <form onSubmit={handleSubmit} className="max-w-2xl">
-                <div className="prime-card">
-                    <div className="prime-card-header">
+                <div className="altus-card">
+                    <div className="altus-card-header">
                         <div className="flex items-center gap-2">
                             <ArrowRightLeft className="h-5 w-5 text-blue-600" />
                             <h3 className="text-lg font-semibold">{t('transfer.details')}</h3>
                         </div>
                     </div>
-                    <div className="prime-card-body space-y-4">
+                    <div className="altus-card-body space-y-4">
                         <div>
                             <Label htmlFor="employee">{t('transfer.employee')} *</Label>
                             <Select

@@ -16,7 +16,7 @@ import { getAuthFlowRedirectPath } from '@/lib/authFlowState';
 import {
   AUTH_ROUTE_RECOVERY_MESSAGE,
   buildCanonicalUrl,
-  clearPrimeHotelServiceWorkersAndCaches,
+  clearAltusServiceWorkersAndCaches,
   normalizePathname,
   shouldProtectAuthEntry,
 } from '@/lib/runtimeRecovery';
@@ -242,7 +242,7 @@ export default function PublicHome() {
             // Ignore
           }
 
-          const clearedArtifacts = await clearPrimeHotelServiceWorkersAndCaches();
+          const clearedArtifacts = await clearAltusServiceWorkersAndCaches();
           if (!cancelled && clearedArtifacts) {
             window.location.replace(
               buildCanonicalUrl(window.location.pathname, window.location.search, window.location.hash)
@@ -325,7 +325,7 @@ export default function PublicHome() {
             <Button
               className="w-full"
               onClick={async () => {
-                await clearPrimeHotelServiceWorkersAndCaches();
+                await clearAltusServiceWorkersAndCaches();
                 window.location.replace(
                   buildCanonicalUrl(window.location.pathname, window.location.search, window.location.hash)
                 );

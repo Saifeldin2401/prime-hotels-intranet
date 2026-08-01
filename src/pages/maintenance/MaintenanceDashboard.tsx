@@ -380,7 +380,7 @@ export default function MaintenanceDashboard() {
           {canManageTickets && (
             <TabsContent value="assigned" className="space-y-4 animate-slide-up">
               {filteredTickets(assignedTickets || []).length === 0 ? (
-                <div className="prime-card p-12 rounded-xl text-center border-dashed border-2 border-border/60">
+                <div className="altus-card p-12 rounded-xl text-center border-dashed border-2 border-border/60">
                   <div className="w-48 h-48 mx-auto mb-6 opacity-90 hover:opacity-100 transition-opacity duration-300">
                     <img
                       src={emptyStateImage}

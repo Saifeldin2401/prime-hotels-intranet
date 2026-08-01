@@ -260,7 +260,7 @@ live DB state afterward (not just trusted from self-reports):
   backlog, not a regression). `training_assignment_rules`/`documents` policy bloat fixed.
 - **P1 foundation landed** (additive-only, so nothing existing could break): `companies`
   + `brands` tables, nullable `company_id`/`brand_id` on `properties`, all 9 properties
-  backfilled under one default company "Prime Hotels Group" (`PHG`). Minimal working
+  backfilled under one default company "Altus Advisory Group" (`ALTUS`). Minimal working
   frontend: `useCompanies.ts` + `/admin/companies` CRUD page. **The RBAC/RLS
   company-scoping retrofit itself is still open** — this round deliberately only added
   the hierarchy, it did not yet make existing policies company-aware.

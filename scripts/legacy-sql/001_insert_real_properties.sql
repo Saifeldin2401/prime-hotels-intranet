@@ -1,8 +1,8 @@
--- Insert Real Prime Hotels Properties
+-- Insert Real Altus Advisory Properties
 INSERT INTO properties (name, address, is_active, created_at, updated_at) VALUES 
-('Medhal Qurtuba by Prime Hotels', 'Riyadh, Saudi Arabia', true, NOW(), NOW()),
-('Prime Al Corniche Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
-('Prime Al Hamra Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
-('Prime Al Hamra Hotel Riyadh', 'Riyadh, Saudi Arabia', true, NOW(), NOW()),
-('PRIME Head Office', '123 Hotel Street', true, NOW(), NOW())
+('Medhal Qurtuba by Altus Advisory', 'Riyadh, Saudi Arabia', true, NOW(), NOW()),
+('Altus Al Corniche Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
+('Altus Al Hamra Hotel Jeddah', 'Jeddah, Saudi Arabia', true, NOW(), NOW()),
+('Altus Al Hamra Hotel Riyadh', 'Riyadh, Saudi Arabia', true, NOW(), NOW()),
+('ALTUS Head Office', '123 Hotel Street', true, NOW(), NOW())
 ON CONFLICT (name) DO NOTHING;

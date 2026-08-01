@@ -16,6 +16,7 @@ import { AlertCircle, CheckCircle, Eye, EyeOff, Loader2, Lock, ShieldCheck, User
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
+import { isRealPropertyId } from '@/lib/propertyScope'
 
 type SupportedOtpType = 'invite' | 'recovery' | 'signup' | 'magiclink' | 'email' | 'email_change'
 
@@ -325,7 +326,7 @@ export default function CompleteInvite() {
             return
         }
 
-        if (!propertyId) {
+        if (!isRealPropertyId(propertyId)) {
             setError('Please select your property.')
             return
         }
@@ -696,7 +697,7 @@ export default function CompleteInvite() {
                                 !doPasswordsMatch ||
                                 !fullName.trim() ||
                                 !dateOfBirth.trim() ||
-                                !propertyId
+                                !isRealPropertyId(propertyId)
                             }
                         >
                             {loading ? (

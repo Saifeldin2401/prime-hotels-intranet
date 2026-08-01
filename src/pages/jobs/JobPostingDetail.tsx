@@ -233,33 +233,33 @@ export default function JobPostingDetail() {
 
                         <TabsContent value="details" className="space-y-6">
                             {job.description && (
-                                <div className="prime-card">
-                                    <div className="prime-card-header">
+                                <div className="altus-card">
+                                    <div className="altus-card-header">
                                         <h3 className="text-lg font-semibold">{t('jobDescription')}</h3>
                                     </div>
-                                    <div className="prime-card-body">
+                                    <div className="altus-card-body">
                                         <p className="text-gray-700 whitespace-pre-wrap">{job.description}</p>
                                     </div>
                                 </div>
                             )}
 
                             {job.responsibilities && (
-                                <div className="prime-card">
-                                    <div className="prime-card-header">
+                                <div className="altus-card">
+                                    <div className="altus-card-header">
                                         <h3 className="text-lg font-semibold">{t('responsibilities')}</h3>
                                     </div>
-                                    <div className="prime-card-body">
+                                    <div className="altus-card-body">
                                         <p className="text-gray-700 whitespace-pre-wrap">{job.responsibilities}</p>
                                     </div>
                                 </div>
                             )}
 
                             {job.requirements && (
-                                <div className="prime-card">
-                                    <div className="prime-card-header">
+                                <div className="altus-card">
+                                    <div className="altus-card-header">
                                         <h3 className="text-lg font-semibold">{t('requirements')}</h3>
                                     </div>
-                                    <div className="prime-card-body">
+                                    <div className="altus-card-body">
                                         <p className="text-gray-700 whitespace-pre-wrap">{job.requirements}</p>
                                     </div>
                                 </div>
@@ -269,8 +269,8 @@ export default function JobPostingDetail() {
                         <TabsContent value="applications" className="space-y-4">
                             {applications && applications.length > 0 ? (
                                 applications.map((app) => (
-                                    <div key={app.id} className="prime-card">
-                                        <div className="prime-card-body">
+                                    <div key={app.id} className="altus-card">
+                                        <div className="altus-card-body">
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
                                                     <div className="flex items-center gap-3">
@@ -395,8 +395,8 @@ export default function JobPostingDetail() {
                                     </div>
                                 ))
                             ) : (
-                                <div className="prime-card">
-                                    <div className="prime-card-body text-center py-12">
+                                <div className="altus-card">
+                                    <div className="altus-card-body text-center py-12">
                                         <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                                         <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('noApplications')}</h3>
                                         <p className="text-gray-600">{t('noApplicationsDesc')}</p>
@@ -409,11 +409,11 @@ export default function JobPostingDetail() {
 
                 {/* Sidebar */}
                 <div className="space-y-6">
-                    <div className="prime-card">
-                        <div className="prime-card-header">
+                    <div className="altus-card">
+                        <div className="altus-card-header">
                             <h3 className="text-lg font-semibold">{t('jobInfo')}</h3>
                         </div>
-                        <div className="prime-card-body space-y-4">
+                        <div className="altus-card-body space-y-4">
                             <div>
                                 <p className="text-sm text-gray-600">{t('status.status')}</p>
                                 <Badge className={`${statusColors[job.status as keyof typeof statusColors]} mt-1`}>

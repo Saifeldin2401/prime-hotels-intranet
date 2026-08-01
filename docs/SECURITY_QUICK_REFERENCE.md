@@ -1,6 +1,6 @@
 # Security Quick Reference Guide
 
-## PHG Connect Intranet Platform - Developer Security Cheat Sheet
+## Altus Connect Intranet Platform - Developer Security Cheat Sheet
 
 ---
 

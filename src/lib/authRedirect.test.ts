@@ -12,12 +12,12 @@ describe('authRedirect', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/')
     window.sessionStorage.clear()
-    document.cookie = 'phg_auth_redirect=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+    document.cookie = 'altus_auth_redirect=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
   })
 
   afterEach(() => {
     window.sessionStorage.clear()
-    document.cookie = 'phg_auth_redirect=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
+    document.cookie = 'altus_auth_redirect=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/'
   })
 
   it('reads regular redirect params for protected destinations', () => {

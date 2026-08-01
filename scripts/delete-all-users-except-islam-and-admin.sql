@@ -1,5 +1,5 @@
 -- ============================================================================
--- DELETE ALL USERS EXCEPT ISLAM MAHROUS AND ADMIN@PRIME ACCOUNTS
+-- DELETE ALL USERS EXCEPT ISLAM MAHROUS AND ADMIN@ALTUS ACCOUNTS
 -- WARNING: This permanently deletes users and all their history
 -- Run this in Supabase Dashboard → SQL Editor with service_role permissions
 -- ============================================================================
@@ -18,7 +18,7 @@ BEGIN
        OR raw_user_meta_data->>'full_name' ILIKE '%islam%madi%'
        OR raw_user_meta_data->>'full_name' ILIKE '%islam%mady%';
     
-    -- Find admin@PRIME accounts (any email containing admin and prime)
+    -- Find admin@ALTUS accounts (any email containing admin and prime)
     SELECT id INTO v_admin_id 
     FROM auth.users 
     WHERE email ILIKE 'admin@prime%' 

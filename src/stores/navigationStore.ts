@@ -95,7 +95,7 @@ export const useNavigationStore = create<NavigationState>()(
             clearRecents: () => set({ recentlyVisited: [] }),
         }),
         {
-            name: 'phg-navigation-preferences',
+            name: 'altus-navigation-preferences',
             partialize: (state) => ({
                 isSidebarCollapsed: state.isSidebarCollapsed,
                 expandedGroups: state.expandedGroups,

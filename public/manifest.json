@@ -1,6 +1,6 @@
 {
-    "name": "Altus Advisory",
-    "short_name": "Altus",
+    "name": "Altus Connect",
+    "short_name": "Altus Connect",
     "description": "Altus Advisory Operating System",
     "start_url": "/",
     "display": "standalone",

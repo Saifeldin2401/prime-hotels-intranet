@@ -6,13 +6,13 @@ import { sentryVitePlugin } from "@sentry/vite-plugin"
 const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://va.vercel-scripts.com https://*.vercel-scripts.com", 
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://altus-connect.com https://www.altus-connect.com https://altus-advisory.com https://www.altus-advisory.com https://va.vercel-scripts.com https://*.vercel-scripts.com", 
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Needed for Tailwind and Google Fonts
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
     "worker-src 'self' blob:;",
     "media-src 'self' blob: data: https://*.supabase.co",
-    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://api.pwnedpasswords.com`,
+    `connect-src 'self' ${process.env.VITE_SUPABASE_URL || 'https://*.supabase.co'} wss://*.supabase.co https://phg-connect.com https://www.phg-connect.com https://altus-connect.com https://www.altus-connect.com https://api-inference.huggingface.co https://huggingface.co https://router.huggingface.co https://api.deepseek.com https://*.hf.co https://*.huggingface.co https://cdn.jsdelivr.net https://*.sentry.io https://date.nager.at https://va.vercel-scripts.at https://va.vercel-scripts.com https://*.vercel-scripts.com https://api.open-meteo.com https://api.aladhan.com https://fonts.googleapis.com https://fonts.gstatic.com https://images.unsplash.com https://api.pwnedpasswords.com`,
     // Allow YouTube, Vimeo video embeds and Supabase storage for document previews
     `frame-src 'self' https://www.youtube.com https://youtube.com https://www.youtube-nocookie.com https://player.vimeo.com https://vimeo.com https://*.supabase.co`,
     "frame-ancestors 'none'"
@@ -88,7 +88,7 @@ export default defineConfig({
     // Security: CORS configuration
     cors: {
       origin: process.env.NODE_ENV === 'production'
-        ? (process.env.VITE_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com'])
+        ? (process.env.VITE_ALLOWED_ORIGINS?.split(',').map((origin) => origin.trim()).filter(Boolean) || ['https://phg-connect.com', 'https://www.phg-connect.com', 'https://altus-connect.com', 'https://www.altus-connect.com'])
         : ['http://localhost:5173', 'http://localhost:3000'],
       credentials: true
     },

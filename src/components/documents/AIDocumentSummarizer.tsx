@@ -80,7 +80,7 @@ export function AIDocumentSummarizer() {
                             <CardDescription className="mt-1">
                                 Paste any long text, policy, or announcement to get an instant AI-generated summary.
                                 <br />
-                                <span className="text-xs text-muted-foreground">Powered by Prime AI Server • Zero downloads required</span>
+                                <span className="text-xs text-muted-foreground">Powered by Altus AI Server • Zero downloads required</span>
                             </CardDescription>
                         </div>
                         <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-lg">

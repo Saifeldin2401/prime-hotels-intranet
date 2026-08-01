@@ -7,7 +7,7 @@
 
 import { useCallback, useEffect, useState } from 'react'
 
-const STORAGE_KEY = 'prime_kb_last_viewed'
+const STORAGE_KEY = 'altus_kb_last_viewed'
 
 interface LastViewedMap {
     [documentId: string]: string // ISO timestamp

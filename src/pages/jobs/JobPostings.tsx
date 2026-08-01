@@ -154,8 +154,8 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
             )}
 
             {/* Filters */}
-            <div className="prime-card">
-                <div className="prime-card-body p-3 sm:p-4">
+            <div className="altus-card">
+                <div className="altus-card-body p-3 sm:p-4">
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                         <div className="flex-1">
                             <Input

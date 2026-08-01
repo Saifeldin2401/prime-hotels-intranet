@@ -1,4 +1,4 @@
--- Bulk User Creation Script for Prime Hotels Intranet
+-- Bulk User Creation Script for Altus Connect Intranet
 -- Run this in Supabase SQL Editor (Dashboard → SQL Editor)
 -- Make sure you're running this with service_role permissions
 
@@ -93,7 +93,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Front Office', true
     FROM properties p 
-    WHERE p.name = 'Prime Al Hamra Hotel Riyadh' 
+    WHERE p.name = 'Altus Al Hamra Hotel Riyadh' 
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Front Office'
@@ -102,7 +102,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Housekeeping', true
     FROM properties p 
-    WHERE p.name = 'Prime Al Hamra Hotel Riyadh' 
+    WHERE p.name = 'Altus Al Hamra Hotel Riyadh' 
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Housekeeping'
@@ -111,7 +111,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Maintenance', true
     FROM properties p 
-    WHERE p.name = 'Prime Al Hamra Hotel Riyadh' 
+    WHERE p.name = 'Altus Al Hamra Hotel Riyadh' 
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Maintenance'
@@ -121,7 +121,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Front Office', true
     FROM properties p 
-    WHERE p.name = 'Medhal Qurtuba by Prime Hotels' 
+    WHERE p.name = 'Medhal Qurtuba by Altus Advisory' 
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Front Office'
@@ -130,7 +130,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Housekeeping', true
     FROM properties p 
-    WHERE p.name = 'Medhal Qurtuba by Prime Hotels' 
+    WHERE p.name = 'Medhal Qurtuba by Altus Advisory' 
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Housekeeping'
@@ -140,7 +140,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Front Office', true
     FROM properties p 
-    WHERE p.name IN ('Prime Al Hamra Hotel Jeddah', 'Prime Al Corniche Hotel Jeddah')
+    WHERE p.name IN ('Altus Al Hamra Hotel Jeddah', 'Altus Al Corniche Hotel Jeddah')
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Front Office'
@@ -149,7 +149,7 @@ BEGIN
     INSERT INTO departments (property_id, name, is_active)
     SELECT p.id, 'Housekeeping', true
     FROM properties p 
-    WHERE p.name IN ('Prime Al Hamra Hotel Jeddah', 'Prime Al Corniche Hotel Jeddah')
+    WHERE p.name IN ('Altus Al Hamra Hotel Jeddah', 'Altus Al Corniche Hotel Jeddah')
     AND NOT EXISTS (
         SELECT 1 FROM departments d 
         WHERE d.property_id = p.id AND d.name = 'Housekeeping'
@@ -169,7 +169,7 @@ BEGIN
         '1991-08-01',
         'Full Time',
         'Front Office Manager',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Front Office',
         'department_head'
     );
@@ -182,7 +182,7 @@ BEGIN
         '1981-03-09',
         'Full Time',
         'House Keeping Manager',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Housekeeping',
         'property_hr'
     );
@@ -195,7 +195,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Agent',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Front Office',
         'staff'
     );
@@ -208,7 +208,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Agent',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Front Office',
         'staff'
     );
@@ -221,7 +221,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Supervisor',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Front Office',
         'department_head'
     );
@@ -234,7 +234,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Agent',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Front Office',
         'staff'
     );
@@ -247,7 +247,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Supervisor',
-        'Medhal Qurtuba by Prime Hotels',
+        'Medhal Qurtuba by Altus Advisory',
         'Front Office',
         'department_head'
     );
@@ -260,7 +260,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Agent',
-        'Medhal Qurtuba by Prime Hotels',
+        'Medhal Qurtuba by Altus Advisory',
         'Front Office',
         'staff'
     );
@@ -273,7 +273,7 @@ BEGIN
         NULL,
         'Full Time',
         'Front Office Agent',
-        'Medhal Qurtuba by Prime Hotels',
+        'Medhal Qurtuba by Altus Advisory',
         'Front Office',
         'staff'
     );
@@ -286,7 +286,7 @@ BEGIN
         NULL,
         'Full Time',
         'House Keeping Supervisor',
-        'Medhal Qurtuba by Prime Hotels',
+        'Medhal Qurtuba by Altus Advisory',
         'Housekeeping',
         'department_head'
     );
@@ -299,13 +299,13 @@ BEGIN
         NULL,
         'Full Time',
         'Maintenance',
-        'Prime Al Hamra Hotel Riyadh',
+        'Altus Al Hamra Hotel Riyadh',
         'Maintenance',
         'staff'
     );
     RAISE NOTICE '%', v_result;
 
-    -- Jeddah Users from PHG user creation forum1.xlsx
+    -- Jeddah Users from ALTUS user creation forum1.xlsx
     v_result := create_user_with_assignments(
         'Moustafamarzook7200416@gmail.com',
         'Moustafa mahmoud marzook',
@@ -313,7 +313,7 @@ BEGIN
         '1990-02-07',
         'Full Time',
         'Fo Supervioser',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'department_head'
     );
@@ -326,7 +326,7 @@ BEGIN
         '1993-04-03',
         'Full Time',
         'Fo Supervioser',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'department_head'
     );
@@ -339,7 +339,7 @@ BEGIN
         '1986-06-11',
         'Full Time',
         'HK Supervioser',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Housekeeping',
         'department_head'
     );
@@ -352,7 +352,7 @@ BEGIN
         '1974-05-05',
         'Full Time',
         'Laundry Supervioser',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Housekeeping',
         'department_head'
     );
@@ -365,7 +365,7 @@ BEGIN
         '1999-07-30',
         'Full Time',
         'Receptionist',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -378,7 +378,7 @@ BEGIN
         '1995-03-20',
         'Full Time',
         'Receptionist',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -391,7 +391,7 @@ BEGIN
         '2002-01-13',
         'Full Time',
         'Receptionist',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -404,7 +404,7 @@ BEGIN
         '1989-11-03',
         'Full Time',
         'Receptionist',
-        'Prime Al Hamra Hotel Jeddah',
+        'Altus Al Hamra Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -417,7 +417,7 @@ BEGIN
         '1967-07-01',
         'Full Time',
         'HK Supervioser',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Housekeeping',
         'department_head'
     );
@@ -430,7 +430,7 @@ BEGIN
         '1993-01-01',
         'Full Time',
         'FO Manager',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Front Office',
         'property_manager'
     );
@@ -443,7 +443,7 @@ BEGIN
         '1982-03-06',
         'Full Time',
         'Fo Supervioser',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Front Office',
         'department_head'
     );
@@ -456,7 +456,7 @@ BEGIN
         '2001-11-21',
         'Full Time',
         'Receptionist',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -469,7 +469,7 @@ BEGIN
         '2003-11-03',
         'Full Time',
         'Receptionist',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Front Office',
         'staff'
     );
@@ -482,7 +482,7 @@ BEGIN
         '1993-08-18',
         'Full Time',
         'Receptionist',
-        'Prime Al Corniche Hotel Jeddah',
+        'Altus Al Corniche Hotel Jeddah',
         'Front Office',
         'staff'
     );

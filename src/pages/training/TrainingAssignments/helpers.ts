@@ -3,7 +3,7 @@ import type { PersistLearningAssignmentsResult } from '@/lib/learningAssignmentM
 import { useTranslation } from 'react-i18next'
 import type { LearningAssignment, AssignmentStatus } from './types'
 
-export const isPriorityPropertyName = (name: string) => /head office|prime group/i.test(name)
+export const isPriorityPropertyName = (name: string) => /head office|altus group/i.test(name)
 
 export const sortPropertyNames = (a: string, b: string) => {
   if (isPriorityPropertyName(a) && !isPriorityPropertyName(b)) return -1

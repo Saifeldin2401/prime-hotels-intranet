@@ -1,5 +1,5 @@
 # Incident Response Quick Reference Card
-## Prime Hotels Intranet System
+## Altus Connect Intranet System
 
 **🚨 SECURITY HOTLINE: [24/7 NUMBER]**  
 **📧 security@prime-hotels.com**

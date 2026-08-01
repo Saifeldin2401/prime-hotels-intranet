@@ -1,4 +1,4 @@
-# PHG Connect - State Loss Fixes Summary
+# Altus Connect - State Loss Fixes Summary
 
 ## Overview
 Fixed critical state loss issues when users switch browser tabs or refresh pages. All major form editors now persist draft content to localStorage.

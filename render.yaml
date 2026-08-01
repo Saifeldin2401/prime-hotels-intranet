@@ -1,6 +1,6 @@
 services:
   - type: static
-    name: prime-hotels-intranet
+    name: altus-intranet
     buildCommand: bun install && bun run build
     staticPublishDir: dist
     envVars:

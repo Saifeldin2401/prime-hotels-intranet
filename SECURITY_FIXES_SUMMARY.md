@@ -1,7 +1,7 @@
 # Security Fixes Summary
 
 ## Overview
-This document summarizes all security fixes applied to the PHG Connect intranet application.
+This document summarizes all security fixes applied to the Altus Connect intranet application.
 
 ## Critical Issues Fixed
 
@@ -180,8 +180,8 @@ npm audit fix
 
 ### 1. Rotate Exposed API Keys
 The following keys were exposed in git history and **must be rotated immediately**:
-- [ ] Resend API Key (`re_eQhYG7XK_xWuoxmtwt2q3cu2XhVKnsgzn`)
-- [ ] Serper API Key (`88c094dee3b3009f6874a0396d85efaea7b25671`)
+- [ ] Resend API Key (`re_REDACTED_RESEND_KEY`)
+- [ ] Serper API Key (`REDACTED_SERPER_KEY`)
 
 ### 2. Set Environment Variables
 Set these in your deployment platform (Vercel/Netlify/Supabase):
@@ -194,7 +194,7 @@ VITE_SUPABASE_ANON_KEY=sb_publishable_xxx
 SERPER_API_KEY=your_serper_key
 RESEND_API_KEY=your_resend_key
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-ALLOWED_ORIGINS=https://phg-connect.com,https://www.phg-connect.com
+ALLOWED_ORIGINS=https://altus-advisory.com,https://www.altus-advisory.com
 ```
 
 ### 3. Local Development Setup
@@ -211,8 +211,8 @@ If you want to completely remove the exposed credentials from git history:
 ```bash
 # Use git-filter-repo or BFG Repo-Cleaner
 # WARNING: This rewrites history and requires force push
-git filter-repo --replace-text <(echo 're_eQhYG7XK_xWuoxmtwt2q3cu2XhVKnsgzn==>RESEND_API_KEY_PLACEHOLDER')
-git filter-repo --replace-text <(echo '88c094dee3b3009f6874a0396d85efaea7b25671==>SERPER_API_KEY_PLACEHOLDER')
+git filter-repo --replace-text <(echo 'REDACTED_RESEND_KEY==>RESEND_API_KEY_PLACEHOLDER')
+git filter-repo --replace-text <(echo 'REDACTED_SERPER_KEY==>SERPER_API_KEY_PLACEHOLDER')
 ```
 
 ---
@@ -254,4 +254,4 @@ grep -r "api[_-]?key\|secret\|password\|token" --include="*.ts" --include="*.tsx
 
 ## Contact
 
-For security concerns, contact: security@phg-connect.com
+For security concerns, contact: security@altus-advisory.com
