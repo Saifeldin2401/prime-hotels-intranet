@@ -49,7 +49,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 
-/* ─── Content Type Configuration ───────────────────────────── */
+/* â”€â”€â”€ Content Type Configuration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 const TYPE_CONFIG: Record<string, {
     icon: React.ElementType
     gradient: string
@@ -67,14 +67,14 @@ const TYPE_CONFIG: Record<string, {
 }
 
 const fadeUp = {
-    hidden: { opacity: 0, y: 16 },
+    hidden: { opacity: 0, y: 10 },
     visible: (i: number) => ({
         opacity: 1, y: 0,
-        transition: { delay: i * 0.06, duration: 0.45, ease: 'easeOut' as const }
+        transition: { delay: i * 0.05, duration: 0.4, ease: [0.23, 1, 0.32, 1] as [number, number, number, number] }
     })
 }
 
-/* ─── Helper ───────────────────────────────────────────────── */
+/* â”€â”€â”€ Helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function readTime(article: { estimated_read_time?: number; content?: string }): number {
     if (article.estimated_read_time && article.estimated_read_time > 0) return article.estimated_read_time
     if (!article.content) return 2
@@ -91,9 +91,9 @@ function timeAgo(dateStr: string): string {
     return `${Math.floor(days / 30)}mo ago`
 }
 
-/* ═══════════════════════════════════════════════════════════════
+/* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
    COMPONENT
-   ═══════════════════════════════════════════════════════════════ */
+   â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 export default function KnowledgeHome() {
     const { t } = useTranslation('knowledge')
     const navigate = useNavigate()
@@ -129,10 +129,10 @@ export default function KnowledgeHome() {
         { type: 'video', label: t('content_types.video'), desc: t('content_type_desc.video') },
     ], [t])
 
-    /* ─── Render ─────────────────────────────────────────────── */
+    /* â”€â”€â”€ Render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
     return (
         <div className="min-h-[calc(100vh-80px)] bg-gradient-to-b from-slate-50 to-white pb-16">
-            {/* ═══ HERO ═══════════════════════════════════════════ */}
+            {/* â•â•â• HERO â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */}
             <div className="relative overflow-hidden">
                 {/* Background */}
                 <div className="absolute inset-0 bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950" />
@@ -163,7 +163,7 @@ export default function KnowledgeHome() {
                             {t('subtitle', 'Your centralized hub for operational knowledge')}
                         </h1>
                         <p className="text-base md:text-lg text-white/50 max-w-xl mx-auto mb-10 leading-relaxed">
-                            {t('hero_description', 'Access SOPs, policies, guides, and training materials — everything your team needs in one place.')}
+                            {t('hero_description', 'Access SOPs, policies, guides, and training materials â€” everything your team needs in one place.')}
                         </p>
                     </motion.div>
 
@@ -188,7 +188,7 @@ export default function KnowledgeHome() {
                                 <Button
                                     type="submit"
                                     size="sm"
-                                    className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl px-3 sm:px-5 py-3 sm:py-5 text-xs sm:text-sm font-semibold transition-all shadow-lg shadow-indigo-500/20 shrink-0"
+                                    className="bg-indigo-500 hover:bg-indigo-400 text-white rounded-xl px-3 sm:px-5 py-3 sm:py-5 text-xs sm:text-sm font-semibold transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] shadow-lg shadow-indigo-500/20 shrink-0"
                                 >
                                     {t('search_button')}
                                 </Button>
@@ -225,10 +225,10 @@ export default function KnowledgeHome() {
                 </div>
             </div>
 
-            {/* ═══ MAIN CONTENT (Negative margin overlap) ═══════ */}
+            {/* â•â•â• MAIN CONTENT (Negative margin overlap) â•â•â•â•â•â•â• */}
             <div className="container mx-auto px-4 md:px-6 -mt-10 relative z-10">
 
-                {/* ── Required Reading Alert ────────────────────── */}
+                {/* â”€â”€ Required Reading Alert â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 {pendingRequired.length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, scale: 0.97 }}
@@ -256,7 +256,7 @@ export default function KnowledgeHome() {
                     </motion.div>
                 )}
 
-                {/* ── Category Cards ────────────────────────────── */}
+                {/* â”€â”€ Category Cards â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <section className="mb-12">
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
                         {categoryCards.map((cat, idx) => {
@@ -271,7 +271,7 @@ export default function KnowledgeHome() {
                                     animate="visible"
                                 >
                                     <Link to={`/knowledge/search?type=${cat.type}`}>
-                                        <div className="group relative bg-white rounded-2xl border border-gray-100 hover:border-gray-200 p-5 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
+                                        <div className="group relative bg-white rounded-2xl border border-gray-100 hover:border-gray-200 p-5 text-center transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] hover:shadow-lg hover:-translate-y-1 cursor-pointer">
                                             {/* Hover gradient glow */}
                                             <div className={cn(
                                                 'absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10 blur-xl',
@@ -296,10 +296,10 @@ export default function KnowledgeHome() {
                     </div>
                 </section>
 
-                {/* ── Two-Column Layout ─────────────────────────── */}
+                {/* â”€â”€ Two-Column Layout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                    {/* ▌LEFT COLUMN (8 cols) ────────────────────── */}
+                    {/* â–ŒLEFT COLUMN (8 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     <div className="lg:col-span-8 space-y-10">
 
                         {/* Gateway Tiles */}
@@ -307,7 +307,7 @@ export default function KnowledgeHome() {
                             {/* Browse Library */}
                             <Link to="/knowledge/search" className="group">
                                 <motion.div custom={0} variants={fadeUp} initial="hidden" animate="visible">
-                                    <Card className="h-full border-0 shadow-md hover:shadow-xl transition-all duration-300 bg-white overflow-hidden group-hover:-translate-y-1">
+                                    <Card className="h-full border-0 shadow-md hover:shadow-xl transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] bg-white overflow-hidden group-hover:-translate-y-1">
                                         <CardContent className="p-0">
                                             <div className="h-1.5 bg-gradient-to-r from-indigo-500 to-violet-500" />
                                             <div className="p-6 md:p-7">
@@ -331,7 +331,7 @@ export default function KnowledgeHome() {
                             {canCreate && (
                                 <Link to="/knowledge/create" className="group">
                                     <motion.div custom={1} variants={fadeUp} initial="hidden" animate="visible">
-                                        <Card className="h-full border-0 shadow-md hover:shadow-xl transition-all duration-300 bg-gradient-to-br from-gray-900 to-indigo-950 overflow-hidden group-hover:-translate-y-1">
+                                        <Card className="h-full border-0 shadow-md hover:shadow-xl transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] bg-gradient-to-br from-gray-900 to-indigo-950 overflow-hidden group-hover:-translate-y-1">
                                             <CardContent className="p-0">
                                                 <div className="h-1.5 bg-gradient-to-r from-violet-400 to-indigo-400" />
                                                 <div className="p-6 md:p-7">
@@ -353,7 +353,7 @@ export default function KnowledgeHome() {
                             )}
                         </div>
 
-                        {/* ── Featured Articles ────────────────────── */}
+                        {/* â”€â”€ Featured Articles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {featured && featured.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -368,7 +368,7 @@ export default function KnowledgeHome() {
                                     </Link>
                                 </div>
 
-                                {/* Feature card — first article large, rest in grid */}
+                                {/* Feature card â€” first article large, rest in grid */}
                                 <div className="space-y-4">
                                     {/* Hero Feature */}
                                     {featured[0] && (() => {
@@ -377,7 +377,7 @@ export default function KnowledgeHome() {
                                         const Icon = cfg?.icon || BookOpen
                                         return (
                                             <Link to={`/knowledge/${article.id}`} className="group block">
-                                                <Card className="border-0 shadow-md hover:shadow-lg transition-all bg-white overflow-hidden group-hover:-translate-y-0.5">
+                                                <Card className="border-0 shadow-md hover:shadow-lg transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] bg-white overflow-hidden group-hover:-translate-y-0.5">
                                                     <CardContent className="p-0">
                                                         <div className={cn('h-1 bg-gradient-to-r', cfg?.gradient || 'from-gray-400 to-gray-500')} />
                                                         <div className="p-6 md:p-7 flex gap-5">
@@ -444,7 +444,7 @@ export default function KnowledgeHome() {
                                                     animate="visible"
                                                 >
                                                     <Link to={`/knowledge/${article.id}`} className="group block h-full">
-                                                        <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-md p-4 transition-all duration-200 group-hover:-translate-y-0.5 h-full flex gap-3.5">
+                                                        <div className="bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-md p-4 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] group-hover:-translate-y-0.5 h-full flex gap-3.5">
                                                             <div className={cn(
                                                                 'w-10 h-10 rounded-lg flex items-center justify-center shrink-0',
                                                                 cfg?.bg
@@ -464,9 +464,9 @@ export default function KnowledgeHome() {
                                                                     {article.title}
                                                                 </h4>
                                                                 <span className="text-[11px] text-gray-400 mt-1.5 block">
-                                                                    {article.department?.name && `${article.department.name} � `}
-                                                                    {(article.last_editor?.full_name || t('home.unknown_editor', 'System admin')) && `${article.last_editor?.full_name || t('home.unknown_editor', 'System admin')} � `}
-                                                                    v{article.current_version || article.version || 1} � {timeAgo(article.updated_at)}
+                                                                    {article.department?.name && `${article.department.name} · `}
+                                                                    {(article.last_editor?.full_name || t('home.unknown_editor', 'System admin')) && `${article.last_editor?.full_name || t('home.unknown_editor', 'System admin')} · `}
+                                                                    v{article.current_version || article.version || 1} · {timeAgo(article.updated_at)}
                                                                 </span>
                                                             </div>
                                                         </div>
@@ -479,7 +479,7 @@ export default function KnowledgeHome() {
                             </section>
                         )}
 
-                        {/* ── Recently Updated ─────────────────────── */}
+                        {/* â”€â”€ Recently Updated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                         {recentArticles && recentArticles.length > 0 && (
                             <section>
                                 <div className="flex items-center justify-between mb-5">
@@ -519,7 +519,7 @@ export default function KnowledgeHome() {
                                                             {t(`content_types.${article.content_type}`)}
                                                         </span>
                                                         {article.department?.name && (
-                                                            <span className="text-[10px] text-gray-400">· {article.department.name}</span>
+                                                            <span className="text-[10px] text-gray-400">Â· {article.department.name}</span>
                                                         )}
                                                     </div>
                                                 </div>
@@ -537,7 +537,7 @@ export default function KnowledgeHome() {
                         )}
                     </div>
 
-                    {/* ▌RIGHT COLUMN (4 cols) ───────────────────── */}
+                    {/* â–ŒRIGHT COLUMN (4 cols) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
                     <div className="lg:col-span-4 space-y-6">
 
                         {/* AI Assistant */}
@@ -556,7 +556,7 @@ export default function KnowledgeHome() {
                                         </p>
                                         <button
                                             onClick={() => setIsAIAssistantOpen(true)}
-                                            className="w-full bg-white/15 hover:bg-white/25 border border-white/10 text-white font-semibold py-2.5 px-4 rounded-xl transition-all text-sm backdrop-blur"
+                                            className="w-full bg-white/15 hover:bg-white/25 border border-white/10 text-white font-semibold py-2.5 px-4 rounded-xl transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] text-sm backdrop-blur"
                                         >
                                             {t('ask_assistant')}
                                         </button>
@@ -604,7 +604,7 @@ export default function KnowledgeHome() {
                                             )}
                                         </div>
                                         <div className="px-4 pb-4">
-                                            <Button asChild variant="outline" size="sm" className="w-full border-gray-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-all rounded-xl">
+                                            <Button asChild variant="outline" size="sm" className="w-full border-gray-200 hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition-[transform,opacity,box-shadow] duration-200 active:scale-[0.97] rounded-xl">
                                                 <Link to={`/knowledge/search?department=${primaryDept.id}`}>
                                                     {t('explore_dept')} <ArrowRight className="ms-1.5 w-3.5 h-3.5" />
                                                 </Link>
@@ -680,4 +680,5 @@ export default function KnowledgeHome() {
         </div>
     )
 }
+
 

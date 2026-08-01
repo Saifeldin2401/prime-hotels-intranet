@@ -37,12 +37,7 @@ export interface LoginAttempt {
   success: boolean;
 }
 
-export interface MFASecret {
-  factorId: string;
-  secret: string;
-  qrCodeUrl: string;
-  backupCodes: string[];
-}
+
 
 export interface AccountLockoutStatus {
   isLocked: boolean;
@@ -64,12 +59,6 @@ export interface PasswordValidationResult {
 
 const SESSION_KEY = 'auth_session_fingerprint';
 const MAX_SESSION_AGE = 24 * 60 * 60 * 1000; // 24 hours
-const MFA_ENROLL_STORAGE_KEY = 'phg_mfa_enrollment';
-
-interface PendingMFAEnrollment {
-  userId: string;
-  factorId: string;
-}
 
 /**
  * Generate a hash of the current session context (IP + User-Agent)
@@ -446,186 +435,7 @@ export async function selfServiceUnlockAccount(email: string): Promise<{ success
   }
 }
 
-// =============================================================================
-// MFA (TOTP) SUPPORT
-// =============================================================================
 
-/**
- * Generate MFA secret for setup
- * Note: In production, use a proper TOTP library like otplib
- */
-export async function generateMFASecret(userId: string): Promise<MFASecret | null> {
-  try {
-    const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
-    if (listError) {
-      if (import.meta.env.DEV) {
-        console.warn('[MFA] Failed to list factors before enrollment:', listError);
-      }
-      return null;
-    }
-
-    const unverifiedTotpFactors = (factorList?.all ?? []).filter(
-      (factor) => factor.factor_type === 'totp' && factor.status === 'unverified',
-    );
-
-    for (const factor of unverifiedTotpFactors) {
-      await supabase.auth.mfa.unenroll({ factorId: factor.id });
-    }
-
-    const { data, error } = await supabase.auth.mfa.enroll({
-      factorType: 'totp',
-      friendlyName: 'Altus Connect',
-      issuer: 'Altus Connect',
-    });
-
-    if (error || !data?.id || !data.totp?.secret) {
-      if (import.meta.env.DEV) {
-        console.warn('[MFA] Failed to enroll TOTP factor:', error);
-      }
-      return null;
-    }
-
-    storePendingMFAEnrollment({ userId, factorId: data.id });
-
-    return {
-      factorId: data.id,
-      secret: data.totp.secret,
-      backupCodes: [],
-      qrCodeUrl: buildSupabaseQrCodeUrl(data.totp.qr_code, data.totp.uri, userId, data.totp.secret),
-    };
-  } catch (error) {
-    if (import.meta.env.DEV) {
-      console.warn('[MFA] Unexpected error during enrollment:', error);
-    }
-    return null;
-  }
-}
-
-/**
- * Enable MFA for a user after verification
- */
-export async function enableMFA(userId: string, code: string): Promise<boolean> {
-  try {
-    const enrollment = getPendingMFAEnrollment();
-    if (!enrollment || enrollment.userId !== userId) {
-      return false;
-    }
-
-    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
-      factorId: enrollment.factorId,
-      code,
-    });
-    if (error || !data) return false;
-
-    clearPendingMFAEnrollment();
-    await logSecurityEvent('mfa.enabled', { userId });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Disable MFA for a user
- */
-export async function disableMFA(userId: string, password: string): Promise<boolean> {
-  try {
-    const { data: userResult } = await supabase.auth.getUser();
-    const currentUser = userResult.user;
-    if (!currentUser?.email || currentUser.id !== userId) return false;
-
-    const { data: passwordCheck, error: passwordError } = await supabase.auth.signInWithPassword({
-      email: currentUser.email,
-      password,
-    });
-
-    if (passwordError || !passwordCheck.user || passwordCheck.user.id !== userId) {
-      return false;
-    }
-
-    const { data: factorList, error: listError } = await supabase.auth.mfa.listFactors();
-    if (listError) return false;
-
-    const verifiedTotpFactors = (factorList?.totp ?? []).filter((factor) => factor.status === 'verified');
-    if (verifiedTotpFactors.length === 0) return false;
-
-    const unenrollResults = await Promise.all(
-      verifiedTotpFactors.map((factor) => supabase.auth.mfa.unenroll({ factorId: factor.id })),
-    );
-
-    if (unenrollResults.some((result) => result.error)) return false;
-
-    await logSecurityEvent('mfa.disabled', { userId });
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Verify MFA code during login
- */
-export async function verifyMFACode(userId: string, code: string): Promise<boolean> {
-  try {
-    const factorId = await getPrimaryVerifiedTotpFactorId();
-    if (!factorId) {
-      return false;
-    }
-
-    const { data, error } = await supabase.auth.mfa.challengeAndVerify({
-      factorId,
-      code,
-    });
-    if (error || !data?.user || data.user.id !== userId) return false;
-    
-    if (data) {
-      await logSecurityEvent('mfa.verified', { userId });
-    } else {
-      await logSecurityEvent('mfa.verification_failed', { userId });
-    }
-    
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check if user has MFA enabled
- */
-export async function isMFAEnabled(userId: string): Promise<boolean> {
-  try {
-    const { data: userResult } = await supabase.auth.getUser();
-    if (!userResult.user || userResult.user.id !== userId) return false;
-
-    const { data, error } = await supabase.auth.mfa.listFactors();
-    if (error) return false;
-
-    return (data?.totp ?? []).some((factor) => factor.status === 'verified');
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Check if MFA is required for the user's role
- */
-export async function isMFARequired(userId: string): Promise<boolean> {
-  try {
-    const { data: roles, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-    
-    if (error || !roles) return false;
-    
-    // MFA required for admin roles
-    const adminRoles = ['corporate_admin', 'regional_admin', 'regional_hr'];
-    return roles.some(r => adminRoles.includes(r.role));
-  } catch {
-    return false;
-  }
-}
 
 // =============================================================================
 // PASSWORD SECURITY
@@ -952,131 +762,32 @@ async function hashString(input: string): Promise<string> {
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-function buildSupabaseQrCodeUrl(
-  qrCodeSvg: string | undefined,
-  uri: string | undefined,
-  accountId: string,
-  secret: string,
-): string {
-  if (uri) {
-    return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(uri)}`;
-  }
 
-  if (qrCodeSvg) {
-    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(qrCodeSvg)}`;
-  }
 
-  return buildMfaQrCodeUrl(accountId, secret);
-}
-
-function buildMfaQrCodeUrl(accountId: string, secret: string): string {
-  const otpauth = `otpauth://totp/Altus:${accountId}?secret=${secret}&issuer=Altus%20Connect`;
-  return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(otpauth)}`;
-}
-
-function storePendingMFAEnrollment(enrollment: PendingMFAEnrollment): void {
-  try {
-    sessionStorage.setItem(MFA_ENROLL_STORAGE_KEY, JSON.stringify(enrollment));
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-function getPendingMFAEnrollment(): PendingMFAEnrollment | null {
-  try {
-    const stored = sessionStorage.getItem(MFA_ENROLL_STORAGE_KEY);
-    if (!stored) return null;
-    return JSON.parse(stored) as PendingMFAEnrollment;
-  } catch {
-    return null;
-  }
-}
-
-function clearPendingMFAEnrollment(): void {
-  try {
-    sessionStorage.removeItem(MFA_ENROLL_STORAGE_KEY);
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-async function getPrimaryVerifiedTotpFactorId(): Promise<string | null> {
-  const { data, error } = await supabase.auth.mfa.listFactors();
-  if (error) return null;
-
-  const factor = (data?.totp ?? []).find((candidate) => candidate.status === 'verified');
-  return factor?.id ?? null;
-}
-
-async function getSecurityRequirementsFallback(
-  userId: string,
-  error: unknown,
-): Promise<{
-  mfaRequired: boolean;
-  mfaEnabled: boolean;
+/**
+ * Check if user needs to complete security setup
+ */
+export async function checkSecurityRequirements(userId: string): Promise<{
   passwordRotationRequired: boolean;
   passwordRotationDays?: number;
   setupComplete: boolean;
 }> {
-  if (import.meta.env.DEV) {
-    console.warn('[Security] Could not fetch security summary, using fallback:', error);
-  }
-
   try {
-    const [mfaRequired, mfaEnabled] = await Promise.all([
-      isMFARequired(userId),
-      isMFAEnabled(userId),
-    ]);
+    const passwordRotation = await isPasswordRotationRequired(userId);
 
     return {
-      mfaRequired,
-      mfaEnabled,
-      passwordRotationRequired: false,
-      setupComplete: !mfaRequired || mfaEnabled,
+      passwordRotationRequired: passwordRotation.required,
+      passwordRotationDays: passwordRotation.daysRemaining,
+      setupComplete: !passwordRotation.required,
     };
-  } catch (fallbackError) {
+  } catch (err) {
     if (import.meta.env.DEV) {
-      console.error('[Security] Fallback security requirements check failed:', fallbackError);
+      console.warn('[Security] Could not fetch security summary, using fallback:', err);
     }
-
     return {
-      mfaRequired: false,
-      mfaEnabled: false,
       passwordRotationRequired: false,
       setupComplete: true,
     };
-  }
-}
-
-/**
- * Check if user needs to complete security setup (MFA for admins)
- */
-/**
- * Check if user needs to complete security setup (MFA for admins)
- */
-export async function checkSecurityRequirements(userId: string): Promise<{
-  mfaRequired: boolean;
-  mfaEnabled: boolean;
-  passwordRotationRequired: boolean;
-  passwordRotationDays?: number;
-  setupComplete: boolean;
-}> {
-  try {
-    const [mfaRequired, mfaEnabled, passwordRotation] = await Promise.all([
-      isMFARequired(userId),
-      isMFAEnabled(userId),
-      isPasswordRotationRequired(userId),
-    ]);
-
-    return {
-      mfaRequired,
-      mfaEnabled,
-      passwordRotationRequired: passwordRotation.required,
-      passwordRotationDays: passwordRotation.daysRemaining,
-      setupComplete: (!mfaRequired || mfaEnabled) && !passwordRotation.required,
-    };
-  } catch (err) {
-    return getSecurityRequirementsFallback(userId, err);
   }
 }
 

@@ -15,9 +15,6 @@ const hmrFallback: AuthContextType = {
     signIn: async () => ({ error: new Error('AuthProvider not mounted') }),
     signOut: async () => {},
     refreshSession: async () => {},
-    verifyMFA: async () => false,
-    isMFAVerified: false,
-    pendingMFAUserId: null,
     securityRequirements: null,
 } as const
 

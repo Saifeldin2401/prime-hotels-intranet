@@ -567,7 +567,16 @@ export function IntegratedDashboard() {
 
       {/* TAB 1: OPERATIONAL OVERVIEW */}
       {activeTab === 'overview' && (
-        <Grid container spacing={3}>
+        <Grid 
+          container 
+          spacing={3}
+          sx={{
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            opacity: 1,
+            transform: 'scale(1)',
+            '@starting-style': { opacity: 0, transform: 'scale(0.97)' }
+          }}
+        >
           {/* Bento Stats Interactive Summary Row */}
           {visibleWidgets.bentoStats && (
             <Grid size={{ xs: 12 }}>
@@ -660,7 +669,16 @@ export function IntegratedDashboard() {
 
       {/* TAB 2: CLUSTER & HOTELS EXECUTIVE VIEW */}
       {activeTab === 'cluster' && (
-        <Grid container spacing={3}>
+        <Grid 
+          container 
+          spacing={3}
+          sx={{
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            opacity: 1,
+            transform: 'scale(1)',
+            '@starting-style': { opacity: 0, transform: 'scale(0.97)' }
+          }}
+        >
           {visibleWidgets.clusterOverview && (
             <Grid size={{ xs: 12 }}>
               <ClusterOverviewWidget />
@@ -694,7 +712,16 @@ export function IntegratedDashboard() {
 
       {/* TAB 3: PEOPLE & CULTURE */}
       {activeTab === 'people' && (
-        <Grid container spacing={3}>
+        <Grid 
+          container 
+          spacing={3}
+          sx={{
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            opacity: 1,
+            transform: 'scale(1)',
+            '@starting-style': { opacity: 0, transform: 'scale(0.97)' }
+          }}
+        >
           {visibleWidgets.employeeSpotlight && (
             <Grid size={{ xs: 12, lg: 7 }}>
               <EliteSpotlightWidget />
@@ -727,7 +754,15 @@ export function IntegratedDashboard() {
 
       {/* TAB 4: WORKSPACE UTILITIES & MODULE DIRECTORY */}
       {activeTab === 'modules' && (
-        <Box sx={{ spaceY: 3 }}>
+        <Box 
+          sx={{ 
+            spaceY: 3,
+            transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+            opacity: 1,
+            transform: 'scale(1)',
+            '@starting-style': { opacity: 0, transform: 'scale(0.97)' }
+          }}
+        >
           <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
             <Box>
               <Typography variant="h5">{t('widgets.workspace_modules', 'Workspace Utilities')}</Typography>
@@ -753,7 +788,15 @@ export function IntegratedDashboard() {
           </Box>
 
           {filteredModules.length === 0 ? (
-            <Box sx={{ py: 6 }}>
+            <Box 
+              sx={{ 
+                py: 6,
+                transition: 'opacity 200ms ease-out, transform 200ms ease-out',
+                opacity: 1,
+                transform: 'scale(1)',
+                '@starting-style': { opacity: 0, transform: 'scale(0.97)' }
+              }}
+            >
               <Card sx={{ p: 4, textAlign: 'center' }}>
                 <Typography variant="h6" color="text.secondary">
                   {t('no_modules_found', 'No utility tools found')}
@@ -790,11 +833,14 @@ export function IntegratedDashboard() {
                         borderRadius: 2,
                         border: (theme) => `solid 1px ${theme.vars.palette.divider}`,
                         bgcolor: 'background.neutral',
-                        transition: (theme) => theme.transitions.create(['background-color', 'box-shadow', 'transform']),
+                        transition: (theme) => `${theme.transitions.create(['background-color', 'box-shadow'])}, transform 160ms cubic-bezier(0.23, 1, 0.32, 1)`,
                         '&:hover': {
                           bgcolor: 'background.paper',
                           boxShadow: (theme) => theme.customShadows.z12,
                           transform: 'translateY(-2px)',
+                        },
+                        '&:active': {
+                          transform: 'scale(0.97) translateY(0)',
                         },
                         '&:focus-visible': {
                           outline: (theme) => `2px solid ${theme.vars.palette.primary.main}`,

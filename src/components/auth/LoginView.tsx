@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FloatingInput } from './FloatingInput';
 import { PasswordField } from './PasswordField';
@@ -21,11 +22,10 @@ import { usePasswordStrength } from '@/hooks/usePasswordStrength';
 import { cn } from '@/lib/utils';
 import { showErrorToast } from '@/lib/toastHelpers';
 import { useAuth } from '@/hooks/useAuth';
-import { MFAVerificationDialog } from './MFAVerificationDialog';
 import { getRemainingAttempts } from '@/lib/authSecurityService';
 import { safeLocalStorage } from '@/lib/storage';
 
-export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout' | 'mfa';
+export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout';
 
 export interface LoginViewProps {
   isRTL?: boolean;
@@ -36,7 +36,7 @@ export interface LoginViewProps {
 
 function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }: LoginViewProps) {
   const { t } = useTranslation('auth');
-  const { signIn, user, pendingMFAUserId } = useAuth();
+  const { signIn, user } = useAuth();
 
   const [email, setEmail] = useState(() => safeLocalStorage.getItem('remembered_email') || '');
   const [password, setPassword] = useState('');
@@ -48,7 +48,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
-  const [showMFADialog, setShowMFADialog] = useState(false);
   const [loginSuccess, setLoginSuccess] = useState(false);
 
   const passwordStrength = usePasswordStrength(password);
@@ -122,13 +121,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
     [error]
   );
 
-
-
-  const handleMFASuccess = useCallback(() => {
-    setShowMFADialog(false);
-    setLoginSuccess(true);
-  }, []);
-
   const handleSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
@@ -142,7 +134,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
       }
 
       try {
-        const { error: signInError, requiresMFA } = await signIn(
+        const { error: signInError } = await signIn(
           email, 
           password
         );
@@ -190,13 +182,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           return;
         }
 
-        // Check if MFA is required
-        if (requiresMFA) {
-          setShowMFADialog(true);
-          setLoading(false);
-          return;
-        }
-
         // Success
         setLoginSuccess(true);
       } catch (_err) {
@@ -222,7 +207,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
   }, [errorType]);
 
   // Show success state
-  if ((loginSuccess || user) && !showMFADialog && !pendingMFAUserId) {
+  if ((loginSuccess || user)) {
     return (
       <LazyMotion features={domAnimation}>
         <m.div
@@ -473,16 +458,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           </m.div>
         </m.form>
       </LazyMotion>
-
-      {/* MFA Verification Dialog */}
-      <MFAVerificationDialog
-        isOpen={showMFADialog}
-        onClose={() => {
-          setShowMFADialog(false);
-          setLoading(false);
-        }}
-        onSuccess={handleMFASuccess}
-      />
     </>
   );
 }

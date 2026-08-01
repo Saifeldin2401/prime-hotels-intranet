@@ -109,144 +109,6 @@ export type Database = {
         }
         Relationships: []
       }
-      admin_delegations: {
-        Row: {
-          allow_redelegate: boolean | null
-          approvals_used: number | null
-          auto_expired: boolean | null
-          created_at: string | null
-          delegate_id: string | null
-          delegation_type: string
-          delegator_id: string | null
-          ends_at: string
-          fallback_delegate_ids: string[] | null
-          id: string
-          is_active: boolean | null
-          max_approvals: number | null
-          notify_delegate: boolean | null
-          notify_delegator: boolean | null
-          notify_on_action: boolean | null
-          notify_on_expiry: boolean | null
-          paused_at: string | null
-          paused_by: string | null
-          permissions: string[] | null
-          reason: string | null
-          revoked_at: string | null
-          revoked_by: string | null
-          starts_at: string
-          updated_at: string | null
-        }
-        Insert: {
-          allow_redelegate?: boolean | null
-          approvals_used?: number | null
-          auto_expired?: boolean | null
-          created_at?: string | null
-          delegate_id?: string | null
-          delegation_type?: string
-          delegator_id?: string | null
-          ends_at: string
-          fallback_delegate_ids?: string[] | null
-          id?: string
-          is_active?: boolean | null
-          max_approvals?: number | null
-          notify_delegate?: boolean | null
-          notify_delegator?: boolean | null
-          notify_on_action?: boolean | null
-          notify_on_expiry?: boolean | null
-          paused_at?: string | null
-          paused_by?: string | null
-          permissions?: string[] | null
-          reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          starts_at: string
-          updated_at?: string | null
-        }
-        Update: {
-          allow_redelegate?: boolean | null
-          approvals_used?: number | null
-          auto_expired?: boolean | null
-          created_at?: string | null
-          delegate_id?: string | null
-          delegation_type?: string
-          delegator_id?: string | null
-          ends_at?: string
-          fallback_delegate_ids?: string[] | null
-          id?: string
-          is_active?: boolean | null
-          max_approvals?: number | null
-          notify_delegate?: boolean | null
-          notify_delegator?: boolean | null
-          notify_on_action?: boolean | null
-          notify_on_expiry?: boolean | null
-          paused_at?: string | null
-          paused_by?: string | null
-          permissions?: string[] | null
-          reason?: string | null
-          revoked_at?: string | null
-          revoked_by?: string | null
-          starts_at?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_delegations_delegate_id_fkey"
-            columns: ["delegate_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_delegate_id_fkey"
-            columns: ["delegate_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_delegator_id_fkey"
-            columns: ["delegator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_delegator_id_fkey"
-            columns: ["delegator_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_paused_by_fkey"
-            columns: ["paused_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_paused_by_fkey"
-            columns: ["paused_by"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "admin_delegations_revoked_by_fkey"
-            columns: ["revoked_by"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
       analytics_events: {
         Row: {
           category: string | null
@@ -1076,6 +938,398 @@ export type Database = {
           },
         ]
       }
+      brands: {
+        Row: {
+          code: string | null
+          company_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_deleted: boolean
+          name: string
+          name_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          name: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          name?: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brands_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      budgets: {
+        Row: {
+          allocated_amount: number
+          category: string
+          created_at: string
+          created_by: string
+          department_id: string | null
+          fiscal_year: number
+          id: string
+          notes: string | null
+          period_label: string | null
+          period_type: string
+          property_id: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_amount: number
+          category: string
+          created_at?: string
+          created_by: string
+          department_id?: string | null
+          fiscal_year: number
+          id?: string
+          notes?: string | null
+          period_label?: string | null
+          period_type?: string
+          property_id: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_amount?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          department_id?: string | null
+          fiscal_year?: number
+          id?: string
+          notes?: string | null
+          period_label?: string | null
+          period_type?: string
+          property_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "budgets_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "budgets_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capex_expenditures: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          expense_date: string
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          project_id: string
+          updated_at: string
+          vendor_name: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          project_id: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          expense_date?: string
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          project_id?: string
+          updated_at?: string
+          vendor_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capex_expenditures_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_expenditures_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "capex_expenditures_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "capex_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capex_milestones: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          owner_id: string | null
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id?: string | null
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          owner_id?: string | null
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capex_milestones_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_milestones_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "capex_milestones_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_milestones_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "capex_milestones_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "capex_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      capex_project_templates: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string | null
+          default_checklist: Json
+          description: string | null
+          id: string
+          is_active: boolean
+          template_name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_checklist?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          template_name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_checklist?: Json
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          template_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capex_project_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_project_templates_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      capex_projects: {
+        Row: {
+          allocated_budget: number
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          priority: string
+          project_manager_id: string | null
+          property_id: string | null
+          spent_amount: number
+          status: string
+          target_completion_date: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allocated_budget: number
+          category?: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          priority?: string
+          project_manager_id?: string | null
+          property_id?: string | null
+          spent_amount?: number
+          status?: string
+          target_completion_date?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allocated_budget?: number
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          priority?: string
+          project_manager_id?: string | null
+          property_id?: string | null
+          spent_amount?: number
+          status?: string
+          target_completion_date?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "capex_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_projects_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "capex_projects_project_manager_id_fkey"
+            columns: ["project_manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "capex_projects_project_manager_id_fkey"
+            columns: ["project_manager_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "capex_projects_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       categories: {
         Row: {
           created_at: string | null
@@ -1449,6 +1703,39 @@ export type Database = {
           },
         ]
       }
+      companies: {
+        Row: {
+          code: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_deleted: boolean
+          name: string
+          name_ar: string | null
+          updated_at: string
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          name: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_deleted?: boolean
+          name?: string
+          name_ar?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       conversation_participants: {
         Row: {
           conversation_id: string
@@ -1512,6 +1799,258 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      crm_accounts: {
+        Row: {
+          account_name: string
+          account_type: string
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string
+          id: string
+          industry: string | null
+          notes: string | null
+          owner_id: string | null
+          property_id: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_name: string
+          account_type?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          property_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_name?: string
+          account_type?: string
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          industry?: string | null
+          notes?: string | null
+          owner_id?: string | null
+          property_id?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "crm_accounts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_contracts: {
+        Row: {
+          account_id: string
+          contract_name: string
+          contract_value: number | null
+          created_at: string
+          created_by: string
+          document_url: string | null
+          end_date: string | null
+          id: string
+          property_id: string
+          start_date: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          contract_name: string
+          contract_value?: number | null
+          created_at?: string
+          created_by: string
+          document_url?: string | null
+          end_date?: string | null
+          id?: string
+          property_id: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          contract_name?: string
+          contract_value?: number | null
+          created_at?: string
+          created_by?: string
+          document_url?: string | null
+          end_date?: string | null
+          id?: string
+          property_id?: string
+          start_date?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_contracts_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_contracts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "crm_contracts_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_leads: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          created_by: string
+          estimated_value: number | null
+          expected_close_date: string | null
+          id: string
+          lead_name: string
+          notes: string | null
+          owner_id: string | null
+          property_id: string
+          source: string | null
+          stage: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          created_by: string
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          lead_name: string
+          notes?: string | null
+          owner_id?: string | null
+          property_id: string
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          created_by?: string
+          estimated_value?: number | null
+          expected_close_date?: string | null
+          id?: string
+          lead_name?: string
+          notes?: string | null
+          owner_id?: string | null
+          property_id?: string
+          source?: string | null
+          stage?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "crm_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "crm_leads_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "crm_leads_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       data_import_logs: {
         Row: {
@@ -1586,6 +2125,159 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "properties"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      delegations: {
+        Row: {
+          allow_redelegate: boolean
+          approvals_used: number
+          auto_expired: boolean
+          created_at: string
+          delegate_id: string
+          delegation_category: string
+          delegation_type: string | null
+          delegator_id: string
+          ends_at: string
+          entity_id: string | null
+          entity_type: string | null
+          fallback_delegate_ids: string[] | null
+          id: string
+          is_active: boolean
+          max_approvals: number | null
+          notify_delegate: boolean
+          notify_delegator: boolean
+          notify_on_action: boolean
+          notify_on_expiry: boolean
+          paused_at: string | null
+          paused_by: string | null
+          permissions: string[] | null
+          reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          scope_id: string | null
+          scope_type: string
+          starts_at: string
+          updated_at: string
+        }
+        Insert: {
+          allow_redelegate?: boolean
+          approvals_used?: number
+          auto_expired?: boolean
+          created_at?: string
+          delegate_id: string
+          delegation_category: string
+          delegation_type?: string | null
+          delegator_id: string
+          ends_at: string
+          entity_id?: string | null
+          entity_type?: string | null
+          fallback_delegate_ids?: string[] | null
+          id?: string
+          is_active?: boolean
+          max_approvals?: number | null
+          notify_delegate?: boolean
+          notify_delegator?: boolean
+          notify_on_action?: boolean
+          notify_on_expiry?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          permissions?: string[] | null
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope_id?: string | null
+          scope_type?: string
+          starts_at: string
+          updated_at?: string
+        }
+        Update: {
+          allow_redelegate?: boolean
+          approvals_used?: number
+          auto_expired?: boolean
+          created_at?: string
+          delegate_id?: string
+          delegation_category?: string
+          delegation_type?: string | null
+          delegator_id?: string
+          ends_at?: string
+          entity_id?: string | null
+          entity_type?: string | null
+          fallback_delegate_ids?: string[] | null
+          id?: string
+          is_active?: boolean
+          max_approvals?: number | null
+          notify_delegate?: boolean
+          notify_delegator?: boolean
+          notify_on_action?: boolean
+          notify_on_expiry?: boolean
+          paused_at?: string | null
+          paused_by?: string | null
+          permissions?: string[] | null
+          reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          scope_id?: string | null
+          scope_type?: string
+          starts_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegations_delegate_id_fkey"
+            columns: ["delegate_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegations_delegator_id_fkey"
+            columns: ["delegator_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "delegations_paused_by_fkey"
+            columns: ["paused_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegations_paused_by_fkey"
+            columns: ["paused_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delegations_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -4138,6 +4830,100 @@ export type Database = {
           },
         ]
       }
+      guest_requests: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          department_id: string | null
+          description: string | null
+          guest_name: string | null
+          id: string
+          priority: string
+          property_id: string
+          request_type: string
+          room_number: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          department_id?: string | null
+          description?: string | null
+          guest_name?: string | null
+          id?: string
+          priority?: string
+          property_id: string
+          request_type: string
+          room_number?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          department_id?: string | null
+          description?: string | null
+          guest_name?: string | null
+          id?: string
+          priority?: string
+          property_id?: string
+          request_type?: string
+          room_number?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_requests_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "guest_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_requests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "guest_requests_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "guest_requests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       holidays: {
         Row: {
           created_at: string | null
@@ -4225,6 +5011,97 @@ export type Database = {
         }
         Relationships: []
       }
+      housekeeping_tasks: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          priority: string
+          property_id: string
+          room_id: string
+          started_at: string | null
+          status: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          priority?: string
+          property_id: string
+          room_id: string
+          started_at?: string | null
+          status?: string
+          task_type: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          priority?: string
+          property_id?: string
+          room_id?: string
+          started_at?: string | null
+          status?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "housekeeping_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "housekeeping_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "housekeeping_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "housekeeping_tasks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "housekeeping_tasks_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "housekeeping_tasks_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inbound_emails: {
         Row: {
           attachment_downloads: Json
@@ -4302,6 +5179,235 @@ export type Database = {
           webhook_created_at?: string | null
         }
         Relationships: []
+      }
+      incidents: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          description: string
+          id: string
+          incident_type: string
+          location: string | null
+          property_id: string
+          reported_by: string
+          resolved_at: string | null
+          severity: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          description: string
+          id?: string
+          incident_type: string
+          location?: string | null
+          property_id: string
+          reported_by: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          description?: string
+          id?: string
+          incident_type?: string
+          location?: string | null
+          property_id?: string
+          reported_by?: string
+          resolved_at?: string | null
+          severity?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "incidents_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "incidents_reported_by_fkey"
+            columns: ["reported_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      inventory_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          item_name: string
+          last_updated_by: string | null
+          property_id: string
+          quantity_on_hand: number
+          reorder_threshold: number | null
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name: string
+          last_updated_by?: string | null
+          property_id: string
+          quantity_on_hand?: number
+          reorder_threshold?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          item_name?: string
+          last_updated_by?: string | null
+          property_id?: string
+          quantity_on_hand?: number
+          reorder_threshold?: number | null
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_items_last_updated_by_fkey"
+            columns: ["last_updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_items_last_updated_by_fkey"
+            columns: ["last_updated_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "inventory_items_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      invoices: {
+        Row: {
+          amount: number
+          created_at: string
+          department_id: string | null
+          due_date: string | null
+          id: string
+          invoice_date: string
+          invoice_number: string
+          property_id: string
+          purchase_order_id: string | null
+          status: string
+          submitted_by: string
+          supplier_id: string | null
+          updated_at: string
+          workflow_request_id: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          department_id?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number: string
+          property_id: string
+          purchase_order_id?: string | null
+          status?: string
+          submitted_by: string
+          supplier_id?: string | null
+          updated_at?: string
+          workflow_request_id?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          department_id?: string | null
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          invoice_number?: string
+          property_id?: string
+          purchase_order_id?: string | null
+          status?: string
+          submitted_by?: string
+          supplier_id?: string | null
+          updated_at?: string
+          workflow_request_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_submitted_by_fkey"
+            columns: ["submitted_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "invoices_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       job_applications: {
         Row: {
@@ -5158,6 +6264,148 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      logbook_entries: {
+        Row: {
+          content: string
+          created_at: string
+          created_by: string
+          department_id: string | null
+          entry_type: string
+          id: string
+          incident_id: string | null
+          property_id: string
+          shift: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          created_by: string
+          department_id?: string | null
+          entry_type?: string
+          id?: string
+          incident_id?: string | null
+          property_id: string
+          shift?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          created_by?: string
+          department_id?: string | null
+          entry_type?: string
+          id?: string
+          incident_id?: string | null
+          property_id?: string
+          shift?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logbook_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logbook_entries_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "logbook_entries_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logbook_entries_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logbook_entries_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lost_found_items: {
+        Row: {
+          claimed_at: string | null
+          claimed_by_guest_name: string | null
+          created_at: string
+          created_by: string
+          found_date: string
+          found_location: string | null
+          id: string
+          item_description: string
+          property_id: string
+          status: string
+          stored_location: string | null
+          updated_at: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimed_by_guest_name?: string | null
+          created_at?: string
+          created_by: string
+          found_date?: string
+          found_location?: string | null
+          id?: string
+          item_description: string
+          property_id: string
+          status?: string
+          stored_location?: string | null
+          updated_at?: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimed_by_guest_name?: string | null
+          created_at?: string
+          created_by?: string
+          found_date?: string
+          found_location?: string | null
+          id?: string
+          item_description?: string
+          property_id?: string
+          status?: string
+          stored_location?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lost_found_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lost_found_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "lost_found_items_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       maintenance_attachments: {
         Row: {
@@ -6954,6 +8202,142 @@ export type Database = {
           },
         ]
       }
+      po_receipts: {
+        Row: {
+          condition_notes: string | null
+          created_at: string
+          id: string
+          purchase_order_id: string
+          quantity_received: number
+          received_at: string
+          received_by: string
+        }
+        Insert: {
+          condition_notes?: string | null
+          created_at?: string
+          id?: string
+          purchase_order_id: string
+          quantity_received: number
+          received_at?: string
+          received_by: string
+        }
+        Update: {
+          condition_notes?: string | null
+          created_at?: string
+          id?: string
+          purchase_order_id?: string
+          quantity_received?: number
+          received_at?: string
+          received_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "po_receipts_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_receipts_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "po_receipts_received_by_fkey"
+            columns: ["received_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      pre_opening_checklist_items: {
+        Row: {
+          assigned_to: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string | null
+          id: string
+          phase: string
+          priority: string
+          project_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          phase?: string
+          priority?: string
+          project_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          phase?: string
+          priority?: string
+          project_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_opening_checklist_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_opening_checklist_items_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pre_opening_checklist_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_opening_checklist_items_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pre_opening_checklist_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "capex_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           account_status: string
@@ -7115,7 +8499,9 @@ export type Database = {
       properties: {
         Row: {
           address: string | null
+          brand_id: string | null
           city: string | null
+          company_id: string | null
           country: string | null
           created_at: string | null
           id: string
@@ -7128,7 +8514,9 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          brand_id?: string | null
           city?: string | null
+          company_id?: string | null
           country?: string | null
           created_at?: string | null
           id?: string
@@ -7141,7 +8529,9 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          brand_id?: string | null
           city?: string | null
+          company_id?: string | null
           country?: string | null
           created_at?: string | null
           id?: string
@@ -7152,7 +8542,194 @@ export type Database = {
           phone?: string | null
           property_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "properties_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "properties_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string
+          created_by: string
+          expected_delivery_date: string | null
+          id: string
+          order_date: string | null
+          po_number: string
+          property_id: string
+          purchase_request_id: string | null
+          status: string
+          supplier_id: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          expected_delivery_date?: string | null
+          id?: string
+          order_date?: string | null
+          po_number: string
+          property_id: string
+          purchase_request_id?: string | null
+          status?: string
+          supplier_id: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          expected_delivery_date?: string | null
+          id?: string
+          order_date?: string | null
+          po_number?: string
+          property_id?: string
+          purchase_request_id?: string | null
+          status?: string
+          supplier_id?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_purchase_request_id_fkey"
+            columns: ["purchase_request_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_requests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          department_id: string | null
+          estimated_cost: number | null
+          id: string
+          item_description: string
+          justification: string | null
+          property_id: string
+          quantity: number
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department_id?: string | null
+          estimated_cost?: number | null
+          id?: string
+          item_description: string
+          justification?: string | null
+          property_id: string
+          quantity: number
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          department_id?: string | null
+          estimated_cost?: number | null
+          id?: string
+          item_description?: string
+          justification?: string | null
+          property_id?: string
+          quantity?: number
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_requests_requested_by_fkey"
+            columns: ["requested_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       push_subscriptions: {
         Row: {
@@ -7956,6 +9533,53 @@ export type Database = {
         }
         Relationships: []
       }
+      rooms: {
+        Row: {
+          created_at: string
+          floor: string | null
+          id: string
+          is_active: boolean
+          notes: string | null
+          property_id: string
+          room_number: string
+          room_type: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          property_id: string
+          room_number: string
+          room_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          floor?: string | null
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          property_id?: string
+          room_number?: string
+          room_type?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salary_components: {
         Row: {
           created_at: string | null
@@ -8188,7 +9812,7 @@ export type Database = {
           location: string | null
           notes: string | null
           property_id: string | null
-          shift_type: string
+          shift_type: string | null
           start_time: string
           status: string | null
           updated_at: string | null
@@ -8204,7 +9828,7 @@ export type Database = {
           location?: string | null
           notes?: string | null
           property_id?: string | null
-          shift_type: string
+          shift_type?: string | null
           start_time: string
           status?: string | null
           updated_at?: string | null
@@ -8220,7 +9844,7 @@ export type Database = {
           location?: string | null
           notes?: string | null
           property_id?: string | null
-          shift_type?: string
+          shift_type?: string | null
           start_time?: string
           status?: string | null
           updated_at?: string | null
@@ -8499,6 +10123,63 @@ export type Database = {
           {
             foreignKeyName: "status_history_changed_by_fkey"
             columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      suppliers: {
+        Row: {
+          category: string | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          supplier_name: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          supplier_name: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          supplier_name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "suppliers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "user_message_stats"
             referencedColumns: ["user_id"]
@@ -8961,147 +10642,6 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "properties"
             referencedColumns: ["id"]
-          },
-        ]
-      }
-      temporary_approvers: {
-        Row: {
-          allow_redelegate: boolean | null
-          approvals_used: number | null
-          approver_id: string
-          created_at: string | null
-          delegate_id: string | null
-          delegator_id: string | null
-          end_at: string | null
-          end_date: string
-          entity_id: string | null
-          entity_type: string | null
-          fallback_delegate_ids: string[] | null
-          id: string
-          max_approvals: number | null
-          notify_delegate: boolean | null
-          notify_delegator: boolean | null
-          notify_on_action: boolean | null
-          notify_on_expiry: boolean | null
-          reason: string | null
-          scope_id: string | null
-          scope_type: string
-          start_at: string | null
-          start_date: string
-          status: string
-          temporary_approver_id: string
-          updated_at: string | null
-        }
-        Insert: {
-          allow_redelegate?: boolean | null
-          approvals_used?: number | null
-          approver_id: string
-          created_at?: string | null
-          delegate_id?: string | null
-          delegator_id?: string | null
-          end_at?: string | null
-          end_date: string
-          entity_id?: string | null
-          entity_type?: string | null
-          fallback_delegate_ids?: string[] | null
-          id?: string
-          max_approvals?: number | null
-          notify_delegate?: boolean | null
-          notify_delegator?: boolean | null
-          notify_on_action?: boolean | null
-          notify_on_expiry?: boolean | null
-          reason?: string | null
-          scope_id?: string | null
-          scope_type?: string
-          start_at?: string | null
-          start_date: string
-          status?: string
-          temporary_approver_id: string
-          updated_at?: string | null
-        }
-        Update: {
-          allow_redelegate?: boolean | null
-          approvals_used?: number | null
-          approver_id?: string
-          created_at?: string | null
-          delegate_id?: string | null
-          delegator_id?: string | null
-          end_at?: string | null
-          end_date?: string
-          entity_id?: string | null
-          entity_type?: string | null
-          fallback_delegate_ids?: string[] | null
-          id?: string
-          max_approvals?: number | null
-          notify_delegate?: boolean | null
-          notify_delegator?: boolean | null
-          notify_on_action?: boolean | null
-          notify_on_expiry?: boolean | null
-          reason?: string | null
-          scope_id?: string | null
-          scope_type?: string
-          start_at?: string | null
-          start_date?: string
-          status?: string
-          temporary_approver_id?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "temporary_approvers_approver_id_fkey"
-            columns: ["approver_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_approver_id_fkey"
-            columns: ["approver_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_delegate_id_fkey"
-            columns: ["delegate_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_delegate_id_fkey"
-            columns: ["delegate_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_delegator_id_fkey"
-            columns: ["delegator_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_delegator_id_fkey"
-            columns: ["delegator_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_temporary_approver_id_fkey"
-            columns: ["temporary_approver_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "temporary_approvers_temporary_approver_id_fkey"
-            columns: ["temporary_approver_id"]
-            isOneToOne: false
-            referencedRelation: "user_message_stats"
-            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -10385,6 +11925,49 @@ export type Database = {
         }
         Relationships: []
       }
+      user_companies: {
+        Row: {
+          company_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_companies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_companies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_companies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_dashboard_preferences: {
         Row: {
           created_at: string | null
@@ -10793,69 +12376,6 @@ export type Database = {
           },
         ]
       }
-      user_shifts: {
-        Row: {
-          created_at: string | null
-          created_by: string | null
-          department_id: string | null
-          end_time: string
-          id: string
-          notes: string | null
-          property_id: string | null
-          shift_date: string
-          shift_type: string | null
-          start_time: string
-          status: string | null
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          end_time: string
-          id?: string
-          notes?: string | null
-          property_id?: string | null
-          shift_date: string
-          shift_type?: string | null
-          start_time: string
-          status?: string | null
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          created_at?: string | null
-          created_by?: string | null
-          department_id?: string | null
-          end_time?: string
-          id?: string
-          notes?: string | null
-          property_id?: string | null
-          shift_date?: string
-          shift_type?: string | null
-          start_time?: string
-          status?: string | null
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "user_shifts_department_id_fkey"
-            columns: ["department_id"]
-            isOneToOne: false
-            referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "user_shifts_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       user_skills: {
         Row: {
           created_at: string | null
@@ -10957,6 +12477,73 @@ export type Database = {
           year?: number
         }
         Relationships: []
+      }
+      vip_guests: {
+        Row: {
+          arrival_date: string | null
+          created_at: string
+          departure_date: string | null
+          flagged_by: string
+          guest_name: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          property_id: string
+          room_number: string | null
+          updated_at: string
+          vip_tier: string | null
+        }
+        Insert: {
+          arrival_date?: string | null
+          created_at?: string
+          departure_date?: string | null
+          flagged_by: string
+          guest_name: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          property_id: string
+          room_number?: string | null
+          updated_at?: string
+          vip_tier?: string | null
+        }
+        Update: {
+          arrival_date?: string | null
+          created_at?: string
+          departure_date?: string | null
+          flagged_by?: string
+          guest_name?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          property_id?: string
+          room_number?: string | null
+          updated_at?: string
+          vip_tier?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vip_guests_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vip_guests_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "vip_guests_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       workflow_definitions: {
         Row: {
@@ -12798,6 +14385,7 @@ export type Database = {
           title: string
         }[]
       }
+      find_finance_approver: { Args: { property_id: string }; Returns: string }
       find_hr_assignee: { Args: { property_id: string }; Returns: string }
       fuzzy_search_documents: {
         Args: { p_limit?: number; p_query: string }

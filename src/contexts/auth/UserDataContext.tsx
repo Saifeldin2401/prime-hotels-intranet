@@ -67,7 +67,6 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const securityContext = useContext(AuthSecurityContext)
   const userId = identityContext?.user?.id ?? null
   const setUser = identityContext?.setUser ?? (() => {})
-  const pendingMFAUserId = securityContext?.pendingMFAUserId ?? null
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [roles, setRoles] = useState<UserRole[]>([])
@@ -154,10 +153,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    if (pendingMFAUserId === userId) {
-      resetUserData()
-      return
-    }
+
 
     if (!shouldRefreshUserData(userId)) return
 
@@ -166,7 +162,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         console.warn('[UserData] Failed to auto-load user data.')
       }
     })
-  }, [userId, pendingMFAUserId, loadUserData, resetUserData, shouldRefreshUserData])
+  }, [userId, loadUserData, resetUserData, shouldRefreshUserData])
 
   // ── Derived: primary role ─────────────────────────────────────────────────
   const primaryRole = useMemo(() => {

@@ -740,15 +740,19 @@ Deno.serve(async (req: Request) => {
 
     // 7. Create audit log entry
     try {
-      await adminClient.from("audit_logs").insert({
-        user_id: caller.id,
-        action: `account_action:${accountAction}`,
-        target_user_id: user_id,
-        details: {
-          action: accountAction,
-          reason: reason || null,
-          target_email: targetProfile.email,
-          target_name: targetProfile.full_name,
+      await adminClient.from("system_events").insert({
+        event_type: "audit",
+        actor_id: caller.id,
+        entity_type: "user",
+        entity_id: user_id,
+        metadata: {
+          action: `account_action:${accountAction}`,
+          details: {
+            action: accountAction,
+            reason: reason || null,
+            target_email: targetProfile.email,
+            target_name: targetProfile.full_name,
+          },
         },
       });
     } catch (auditErr) {

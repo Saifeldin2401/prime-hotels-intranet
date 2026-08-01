@@ -42,15 +42,10 @@ export interface AuthContextType {
   primaryRole: AppRole | null
   loading: boolean
   rolesLoading: boolean
-  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null; requiresMFA?: boolean; mfaUserId?: string }>
+  signIn: (email: string, password: string, captchaToken?: string) => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
-  verifyMFA: (code: string) => Promise<boolean>
-  isMFAVerified: boolean
-  pendingMFAUserId: string | null
   securityRequirements: {
-    mfaRequired: boolean
-    mfaEnabled: boolean
     passwordRotationRequired: boolean
     setupComplete: boolean
   } | null
@@ -62,9 +57,9 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 function AuthProviderInternal({ children }: { children: ReactNode }) {
   // Get state from individual contexts
   const { user, loading } = useAuthIdentity()
-  const { isMFAVerified, pendingMFAUserId, securityRequirements } = useAuthSecurity()
+  const { securityRequirements } = useAuthSecurity()
   const { profile, roles, properties, departments, rolesLoading, primaryRole } = useUserData()
-  const { signIn, signOut, refreshSession, verifyMFA } = useAuthActions()
+  const { signIn, signOut, refreshSession } = useAuthActions()
 
   // ── Memoized context value (backward compatible) ───────────────────────────
   const contextValue = useMemo(() => ({
@@ -79,9 +74,6 @@ function AuthProviderInternal({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     refreshSession,
-    verifyMFA,
-    isMFAVerified,
-    pendingMFAUserId,
     securityRequirements,
   }), [
     user,
@@ -95,9 +87,6 @@ function AuthProviderInternal({ children }: { children: ReactNode }) {
     signIn,
     signOut,
     refreshSession,
-    verifyMFA,
-    isMFAVerified,
-    pendingMFAUserId,
     securityRequirements,
   ])
 

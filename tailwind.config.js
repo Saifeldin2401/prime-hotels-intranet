@@ -109,11 +109,24 @@ export default {
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
-        }
+        },
+        altus: {
+          copper: "#C45B2F",
+          creamy: "#F7F5F1",
+          ivory: "#FAF7F2",
+          sand: "#D9C6A3",
+          slate: "#5B6775",
+          charcoal: "#1E2329",
+          "charcoal-alt": "#2A2F35",
+          emerald: "#2E7D5A",
+        },
       },
       fontFamily: {
-        sans: ["var(--font-body)", "Inter", "system-ui", "sans-serif"],
-        serif: ["var(--font-heading)", "Inter", "system-ui", "sans-serif"],
+        display: ["Canela", "Playfair Display", "Georgia", "serif"],
+        executive: ["Neue Haas Grotesk", "Plus Jakarta Sans", "Inter", "sans-serif"],
+        sans: ["Inter", "system-ui", "sans-serif"],
+        mono: ["IBM Plex Mono", "Consolas", "monospace"],
+        serif: ["Canela", "Playfair Display", "Georgia", "serif"],
       },
       borderRadius: {
         lg: "var(--radius)",

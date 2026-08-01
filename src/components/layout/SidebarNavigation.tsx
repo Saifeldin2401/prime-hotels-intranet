@@ -227,7 +227,7 @@ export function SidebarNavigation({
             >
               <GroupIcon className="h-4 w-4" />
               <span className="flex-1 text-start">
-                {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+                {t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })}
               </span>
               {hasActiveBadge && (
                 <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse flex-shrink-0" />
@@ -241,7 +241,7 @@ export function SidebarNavigation({
             </button>
           ) : (
             <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/40 whitespace-nowrap overflow-hidden">
-              {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+              {t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })}
             </div>
           )}
 
@@ -276,7 +276,7 @@ export function SidebarNavigation({
                 >
                   <GroupIcon className="h-3.5 w-3.5 text-hotel-gold/70 shrink-0" />
                   <span className="flex-1 text-start truncate">
-                    {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+                    {t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })}
                   </span>
                   {hasActiveBadge && (
                     <div className="w-2 h-2 rounded-full bg-hotel-gold animate-pulse flex-shrink-0" />
@@ -302,7 +302,7 @@ export function SidebarNavigation({
                 exit="hidden"
                 className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-gray-500 whitespace-nowrap overflow-hidden"
               >
-                {t(group.config.title, { defaultValue: group.config.id.replace('_', ' ') })}
+                {t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })}
               </m.div>
             )}
           </AnimatePresence>

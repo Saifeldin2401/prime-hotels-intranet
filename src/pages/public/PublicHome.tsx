@@ -31,7 +31,8 @@ import {
   ShieldCheck,
   X,
 } from 'lucide-react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { motion, useInView, useReducedMotion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,30 +41,152 @@ const InviteRouteRescue = lazy(() => import('@/pages/auth/CompleteInvite'));
 const ResetRouteRescue = lazy(() => import('@/pages/auth/ResetPassword'));
 
 /* ──────────────────────────── STYLE CONSTANTS ──────────────────────────── */
-const playfair = { fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif" };
+// 01 PRIMARY DISPLAY: Canela (Hero headlines, quotes, editorial highlights)
+const canela = { fontFamily: "'Canela', 'Playfair Display', Georgia, 'Times New Roman', serif" };
+
+// 02 EXECUTIVE SANS SERIF: Neue Haas Grotesk (Headings H1-H4, navigation, subtitles, labels)
+const neueHaas = { fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif" };
+
+// 03 READING TYPEFACE: Inter (Body copy, paragraphs, long-form content)
 const inter = { fontFamily: "'Inter', system-ui, sans-serif" };
 
+// 04 TECHNICAL TYPEFACE: IBM Plex Mono (Data, metrics, KPIs, financial info)
+const mono = { fontFamily: "'IBM Plex Mono', Consolas, monospace" };
+
+// Legacy alias for compatibility
+const playfair = canela;
+
+// ALTUS ADVISORY BRAND COLOR SYSTEM
 const COLOR = {
-  navy: '#0B1528',
-  navyDeep: '#060E1B',
-  cream: '#F5F1EA',
-  gold: '#C9A54D',
-  goldLight: '#D4B76A',
-  emerald: '#1B4332',
+  creamyWhite: '#F7F5F1', // Primary light background, open space (60%)
+  ivory: '#FAF7F2',       // Cards, elevated containers, subtle backgrounds (20%)
+  copper: '#C45B2F',      // Signature Transformation Copper (10%) - CTAs, highlights, key metrics
+  sand: '#D9C6A3',        // Warm Sand (5%) - Soft backgrounds, infographics, dividers
+  slate: '#5B6775',       // Slate Gray (3%) - Body copy, supporting copy
+  charcoal: '#1E2329',    // Executive Charcoal (1%) - Headings, strong text
+  charcoalDeep: '#16191E',// Dark background surface
+  emerald: '#2E7D5A',     // Success Emerald - Metrics, growth indicators
+  // Mapped aliases for exact brand match
+  navy: '#1E2329',
+  navyDeep: '#16191E',
+  cream: '#F7F5F1',
+  gold: '#C45B2F',
+  goldLight: '#C45B2F',
 } as const;
 
+/* ──────────────────────────── ANIMATION HELPERS ──────────────────────────── */
+const EASE_OUT: [number, number, number, number] = [0.23, 1, 0.32, 1];
+
+function FadeInSection({ children, className = '', delay = 0, y = 12, style }: {
+  children: React.ReactNode;
+  className?: string;
+  delay?: number;
+  y?: number;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-80px' });
+  const prefersReducedMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      style={style}
+      initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, transform: `translateY(${y}px)` }}
+      animate={isInView
+        ? { opacity: 1, transform: 'translateY(0px)' }
+        : prefersReducedMotion ? { opacity: 0 } : { opacity: 0, transform: `translateY(${y}px)` }
+      }
+      transition={{ duration: 0.5, ease: EASE_OUT, delay }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+function StaggerChildren({ children, className = '', staggerDelay = 0.05, style }: {
+  children: React.ReactNode;
+  className?: string;
+  staggerDelay?: number;
+  style?: React.CSSProperties;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: '-60px' });
+  const prefersReducedMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      ref={ref}
+      className={className}
+      style={style}
+      initial="hidden"
+      animate={isInView ? 'visible' : 'hidden'}
+      variants={{
+        hidden: {},
+        visible: { transition: { staggerChildren: prefersReducedMotion ? 0 : staggerDelay } },
+      }}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+const staggerItem = {
+  hidden: { opacity: 0, transform: 'translateY(8px)' },
+  visible: {
+    opacity: 1,
+    transform: 'translateY(0px)',
+    transition: { duration: 0.4, ease: EASE_OUT },
+  },
+};
+
+function CountUp({ target, suffix = '', duration = 1.5 }: { target: string; suffix?: string; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const isInView = useInView(ref, { once: true });
+  const prefersReducedMotion = useReducedMotion();
+  const [display, setDisplay] = useState(target);
+
+  useEffect(() => {
+    if (!isInView || prefersReducedMotion) return;
+    const numericStr = target.replace(/[^0-9.]/g, '');
+    const numericVal = parseFloat(numericStr);
+    if (isNaN(numericVal)) return;
+    const prefix = target.substring(0, target.indexOf(numericStr));
+    const suffixPart = target.substring(target.indexOf(numericStr) + numericStr.length);
+    const isDecimal = numericStr.includes('.');
+    const startTime = performance.now();
+    const durationMs = duration * 1000;
+
+    function tick(now: number) {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / durationMs, 1);
+      const eased = 1 - (1 - progress) * (1 - progress);
+      const current = eased * numericVal;
+      const formatted = isDecimal ? current.toFixed(1) : Math.round(current).toString();
+      setDisplay(`${prefix}${formatted}${suffixPart}`);
+      if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  }, [isInView, prefersReducedMotion, target, duration]);
+
+  return <span ref={ref}>{display}</span>;
+}
+
 /* ──────────────────────────── DECORATIVE SVG ──────────────────────────── */
-function GoldDivider({ className = '' }: { className?: string }) {
+function CopperDivider({ className = '' }: { className?: string }) {
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`}>
-      <div className="h-px w-8 bg-amber-600/30" />
-      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-amber-600/50">
+      <div className="h-px w-8 bg-[#C45B2F]/30" />
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none" className="text-[#C45B2F]/70">
         <path d="M6 0L7.5 4.5L12 6L7.5 7.5L6 12L4.5 7.5L0 6L4.5 4.5L6 0Z" fill="currentColor" />
       </svg>
-      <div className="h-px w-8 bg-amber-600/30" />
+      <div className="h-px w-8 bg-[#C45B2F]/30" />
     </div>
   );
 }
+
+const GoldDivider = CopperDivider;
 
 /* ──────────────────────────── MAIN COMPONENT ──────────────────────────── */
 export default function PublicHome() {
@@ -394,54 +517,61 @@ export default function PublicHome() {
 
       {/* ═══════════════════════ SECTION 1: HERO ═══════════════════════ */}
       <section
-        className="relative min-h-screen flex flex-col items-center justify-center pt-20 pb-20 px-4 text-center overflow-hidden"
-        style={{ background: `linear-gradient(to bottom, ${COLOR.navyDeep}, ${COLOR.navy})` }}
+        className="relative min-h-screen flex flex-col items-center justify-center pt-24 pb-20 px-4 text-center overflow-hidden"
+        style={{ background: `linear-gradient(to bottom, ${COLOR.charcoalDeep}, ${COLOR.charcoal})` }}
       >
         {/* Art Deco Background Image */}
         <div
-          className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-50 pointer-events-none"
+          className="absolute inset-0 bg-cover bg-top bg-no-repeat opacity-40 pointer-events-none"
           style={{ backgroundImage: "url('/hero-art-deco.png')" }}
         />
         {/* Subtle gradient overlay from bottom */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#0B1528] via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#16191E] via-transparent to-transparent pointer-events-none" />
 
         <div className="relative z-10 max-w-4xl mx-auto space-y-8">
+          {/* Subtitle / Brand Tag */}
+          <div
+            className="text-xs sm:text-sm uppercase tracking-[0.25em] font-semibold"
+            style={{ ...neueHaas, color: COLOR.copper }}
+          >
+            {isRTL ? 'معهد المعرفة وأداء الضيافة' : 'ACADEMY AND KNOWLEDGE PERFORMANCE'}
+          </div>
+
           {/* Main Headline */}
           <h1
-            className="text-5xl sm:text-6xl md:text-7xl lg:text-[5.5rem] text-white font-normal leading-[1.1] tracking-tight"
-            style={playfair}
+            className="text-5xl sm:text-6xl md:text-7xl lg:text-[4.75rem] text-white font-normal leading-[1.02] tracking-[-0.01em]"
+            style={canela}
           >
             {isRTL ? (
               <>
                 الارتقاء <br />
                 بالضيافة <br />
-                <span className="italic" style={{ color: COLOR.goldLight }}>و أداء</span> <br />
+                <span className="italic" style={{ color: COLOR.copper }}>و أداء</span> <br />
                 الأعمال.
               </>
             ) : (
               <>
-                Elevating <br />
-                hospitality <br />
-                <span className="italic" style={{ color: COLOR.goldLight }}>&amp; business</span> <br />
-                performance.
+                Knowledge. <br />
+                Performance. <br />
+                <span className="italic" style={{ color: COLOR.copper }}>Impact.</span>
               </>
             )}
           </h1>
 
           {/* Sub-headline */}
-          <p className="text-sm sm:text-[15px] font-light text-slate-400 max-w-xl mx-auto leading-relaxed" style={inter}>
+          <p className="text-base sm:text-lg font-normal max-w-2xl mx-auto leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>
             {isRTL
               ? 'منظومة استشارية نخبوية تجمع بين عمليات الضيافة الفاخرة وذكاء الأعمال المتقدم — مصممة للعقد القادم في المملكة العربية السعودية.'
               : 'A boutique strategy house at the intersection of elite hospitality operations and advanced business intelligence — engineered for the Kingdom\u2019s next decade.'}
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-2" style={inter}>
+          <div className="flex flex-wrap items-center justify-center gap-4 pt-2" style={neueHaas}>
             <Button
               size="lg"
               onClick={() => setBriefingOpen(true)}
-              className="h-12 px-8 rounded-none text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300"
-              style={{ background: COLOR.gold, color: '#0B1528' }}
+              className="h-12 px-8 rounded-none text-[11px] font-semibold tracking-[0.2em] uppercase transition-[box-shadow] duration-200 shadow-md hover:shadow-lg"
+              style={{ background: COLOR.copper, color: '#FFFFFF' }}
             >
               {isRTL ? 'طلب إحاطة شريك' : 'REQUEST A BRIEFING'}
             </Button>
@@ -453,37 +583,37 @@ export default function PublicHome() {
                 const el = document.querySelector('#practices');
                 if (el) el.scrollIntoView({ behavior: 'smooth' });
               }}
-              className="h-12 px-8 rounded-none border border-white/20 bg-transparent hover:bg-white/5 text-white/80 text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300"
+              className="h-12 px-8 rounded-none border border-white/25 bg-transparent hover:bg-white/10 text-white text-[11px] font-semibold tracking-[0.2em] uppercase transition-[background-color] duration-200"
             >
               {isRTL ? 'استكشف الخدمات' : 'EXPLORE THE PRACTICE'}
             </Button>
           </div>
         </div>
 
-        {/* Stats Counter Bar */}
-        <div className="relative z-10 w-full max-w-4xl mx-auto mt-20 pt-10 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center" style={inter}>
+        {/* Stats Counter Bar - IBM Plex Mono Technical Numbers */}
+        <StaggerChildren className="relative z-10 w-full max-w-4xl mx-auto mt-20 pt-10 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
           {[
             { value: '6.1M+', label: isRTL ? 'تأثير إيرادي' : 'Revenue impact' },
             { value: '12', label: isRTL ? 'أطر عمل استراتيجية' : 'Strategic frameworks' },
             { value: '13', label: isRTL ? 'أصل تحت الإشراف' : 'Assets under oversight' },
             { value: '2', label: isRTL ? 'أقسام ممارسة' : 'Practice divisions' },
           ].map((stat) => (
-            <div key={stat.label}>
-              <div className="text-3xl sm:text-4xl font-light tracking-tight" style={{ ...playfair, color: COLOR.goldLight }}>{stat.value}</div>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-slate-500 mt-2">{stat.label}</div>
-            </div>
+            <motion.div key={stat.label} variants={staggerItem}>
+              <div className="text-3xl sm:text-4xl font-semibold tracking-tight" style={{ ...mono, color: COLOR.copper }}><CountUp target={stat.value} /></div>
+              <div className="text-[11px] uppercase tracking-[0.2em] font-medium mt-2" style={{ ...neueHaas, color: '#94A3B8' }}>{stat.label}</div>
+            </motion.div>
           ))}
-        </div>
+        </StaggerChildren>
       </section>
 
-      {/* ═══════════════════ SECTION 2: FIDUCIARY (CREAM) ═══════════════════ */}
-      <section id="about" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
-        <div className="max-w-4xl mx-auto space-y-10 text-center">
-          <GoldDivider />
+      {/* ═══════════════════ SECTION 2: FIDUCIARY (CREAMY WHITE) ═══════════════════ */}
+      <section id="about" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
+        <FadeInSection className="max-w-4xl mx-auto space-y-10 text-center">
+          <CopperDivider />
 
           <h2
-            className="text-2xl sm:text-4xl md:text-[2.75rem] font-normal leading-[1.4] sm:leading-[1.35]"
-            style={{ ...playfair, color: '#1a1a1a' }}
+            className="text-2xl sm:text-4xl md:text-[2.6rem] font-normal leading-[1.35]"
+            style={{ ...canela, color: COLOR.charcoal }}
           >
             {isRTL ? (
               <>
@@ -501,7 +631,7 @@ export default function PublicHome() {
           </h2>
 
           {/* Three Columns */}
-          <div className="grid md:grid-cols-3 gap-8 pt-8 text-start border-t" style={{ borderColor: '#d4c9b8' }}>
+          <div className="grid md:grid-cols-3 gap-8 pt-8 text-start border-t" style={{ borderColor: COLOR.sand }}>
             {[
               {
                 title: isRTL ? 'في مصلحة المالك دائماً' : 'Owner-side, always.',
@@ -516,43 +646,43 @@ export default function PublicHome() {
                 desc: isRTL ? 'كل مهمة تنتهي بتوطين القدرات داخل المؤسسة.' : 'Every engagement ends with institutional capability, not a report on a shelf.',
               },
             ].map((col) => (
-              <div key={col.title} style={inter}>
-                <h4 className="text-[13px] font-bold uppercase tracking-wider mb-2" style={{ color: '#1a1a1a' }}>{col.title}</h4>
-                <p className="text-[13px] leading-relaxed" style={{ color: '#6b6b6b' }}>{col.desc}</p>
+              <div key={col.title}>
+                <h4 className="text-[13px] font-bold uppercase tracking-wider mb-2" style={{ ...neueHaas, color: COLOR.charcoal }}>{col.title}</h4>
+                <p className="text-sm leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{col.desc}</p>
               </div>
             ))}
           </div>
 
-          <p className="text-[13px] pt-4 leading-relaxed max-w-2xl mx-auto" style={{ ...inter, color: '#6b6b6b' }}>
+          <p className="text-sm pt-4 leading-relaxed max-w-2xl mx-auto" style={{ ...inter, color: COLOR.slate }}>
             {isRTL
               ? 'كل مهمة ينفذها الشركاء التنفيذيون مباشرة، تقاس بعوائد المالك، وتُؤسسن عبر التسليم المنظم.'
               : 'Every capability delivered by principals, measured against owner returns, and institutionalised through structured handover.'}
           </p>
-        </div>
+        </FadeInSection>
       </section>
 
       {/* ═══════════════ SECTION 2B: WHY ALTUS (THE EDGE) ═══════════════ */}
-      <section id="why-altus" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navyDeep }}>
-        <div className="max-w-6xl mx-auto">
+      <section id="why-altus" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoalDeep }}>
+        <FadeInSection className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '03 — ميزة ألتوس' : '03 — The Altus Edge'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>لماذا <span className="italic" style={{ color: COLOR.goldLight }}>ألتوس استشارات.</span></>
+                <>لماذا <span className="italic" style={{ ...canela, color: COLOR.copper }}>ألتوس استشارات.</span></>
               ) : (
-                <>Why <span className="italic" style={{ color: COLOR.goldLight }}>Altus Advisory.</span></>
+                <>Why <span className="italic" style={{ ...canela, color: COLOR.copper }}>Altus Advisory.</span></>
               )}
             </h2>
-            <p className="text-[13px] sm:text-sm text-slate-400 leading-relaxed mt-5" style={inter}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'يعمل قطاع الاستشارات غالباً بمعزل: العمليات التقليدية من جهة، والتحول الرقمي من جهة أخرى. صُممت ألتوس لسد هذه الفجوة الهيكلية بولاية واحدة متكاملة.'
                 : 'The consulting landscape too often operates in silos: traditional operations on one side, digital transformation on the other. Altus was engineered to close that structural gap with a single, integrated mandate.'}
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
             {[
               {
                 title: isRTL ? 'استشارات في صف المالك' : 'Owner-Side Advisory',
@@ -591,63 +721,64 @@ export default function PublicHome() {
                   : 'Hands-on guidance from first blueprint to sustained execution: a relationship that outlives the engagement itself.',
               },
             ].map((edge) => (
-              <div key={edge.title} className="p-8 sm:p-9 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.navyDeep }}>
-                <h4 className="text-base sm:text-lg text-white mb-3" style={playfair}>{edge.title}</h4>
-                <p className="text-[12.5px] leading-relaxed text-slate-400" style={inter}>{edge.desc}</p>
+              <div key={edge.title} className="p-8 sm:p-9 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <h4 className="text-lg text-white font-medium mb-3" style={neueHaas}>{edge.title}</h4>
+                <p className="text-sm leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>{edge.desc}</p>
               </div>
             ))}
-          </div>
+          </StaggerChildren>
 
-          <div className="mt-10 p-8 sm:p-10 border" style={{ borderColor: 'rgba(201,165,77,0.3)', backgroundColor: 'rgba(201,165,77,0.05)' }}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style={{ ...inter, color: COLOR.gold }}>
+          <div className="mt-10 p-8 sm:p-10 border" style={{ borderColor: `${COLOR.copper}40`, backgroundColor: `${COLOR.copper}0D` }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? 'عرض القيمة الفريد' : 'Unique Value Proposition'}
             </div>
-            <p className="text-base sm:text-lg leading-relaxed" style={{ ...playfair, color: '#fff' }}>
+            <p className="text-base sm:text-lg leading-relaxed text-white" style={canela}>
               {isRTL
                 ? 'تميّز تشغيلي رفيع في الضيافة، مندمج مع ذكاء إيرادي مدعوم بالذكاء الاصطناعي: أثر ملموس عبر وضوح استراتيجي، وانضباط تشغيلي، وابتكار رقمي متواصل.'
                 : 'High-level hospitality operational excellence, integrated with AI-driven revenue intelligence: delivering measurable impact through strategic clarity, operational rigour, and continuous digital innovation.'}
             </p>
           </div>
-        </div>
+        </FadeInSection>
       </section>
 
-      {/* ═══════════════ SECTION 3: TWO DIVISIONS (DARK) ═══════════════ */}
-      <section id="practices" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 3: TWO DIVISIONS (CHARCOAL) ═══════════════ */}
+      <section id="practices" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
-          <div className="mb-12">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+          <FadeInSection className="mb-12">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '04–05 — محفظة الخدمات' : '04–05 — Service Portfolio'}
             </div>
             <h2
               className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight"
-              style={playfair}
+              style={neueHaas}
             >
               {isRTL ? (
-                <>قسمان استشاريان. <span className="italic" style={{ color: COLOR.goldLight }}>منصة حصريّة واحدة.</span></>
+                <>قسمان استشاريان. <span className="italic" style={{ ...canela, color: COLOR.copper }}>منصة حصريّة واحدة.</span></>
               ) : (
-                <>Two divisions. <span className="italic" style={{ color: COLOR.goldLight }}>One proprietary platform.</span></>
+                <>Two divisions. <span className="italic" style={{ ...canela, color: COLOR.copper }}>One proprietary platform.</span></>
               )}
             </h2>
-          </div>
+          </FadeInSection>
 
-          <div className="grid md:grid-cols-2 gap-5">
+          <StaggerChildren className="grid md:grid-cols-2 gap-6">
             {practices.filter((pr) => pr.id !== 'hkp' && pr.id !== 'institutional').map((pr) => (
-              <div
+              <motion.div
+                variants={staggerItem}
                 key={pr.id}
-                className="p-8 sm:p-10 border border-white/10 hover:border-amber-500/30 transition-all duration-500 group relative overflow-hidden flex flex-col"
-                style={{ backgroundColor: '#0E1B30' }}
+                className="p-8 sm:p-10 border border-white/10 hover:border-[#C45B2F]/50 transition-[border-color,box-shadow] duration-200 group relative overflow-hidden flex flex-col shadow-sm hover:shadow-md"
+                style={{ backgroundColor: COLOR.charcoalDeep }}
               >
                 <div className="relative z-10 flex-1">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...inter, color: COLOR.gold }}>
+                  <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...neueHaas, color: COLOR.copper }}>
                     {pr.tag}
                   </div>
-                  <h3 className="text-xl sm:text-2xl text-white mb-3" style={playfair}>{pr.title}</h3>
-                  <p className="text-[13px] text-slate-400 leading-relaxed mb-6" style={inter}>{pr.desc}</p>
+                  <h3 className="text-xl sm:text-2xl text-white font-medium mb-3" style={neueHaas}>{pr.title}</h3>
+                  <p className="text-sm text-slate-300 leading-relaxed mb-6" style={{ ...inter, color: '#94A3B8' }}>{pr.desc}</p>
 
                   <ul className="space-y-2.5 mb-8 border-t pt-5" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
                     {pr.services.map((s) => (
-                      <li key={s} className="text-[12.5px] text-slate-300 flex items-start gap-2.5" style={inter}>
-                        <span className="mt-1.5 h-1 w-1 rounded-full shrink-0" style={{ backgroundColor: COLOR.gold }} />
+                      <li key={s} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2.5" style={inter}>
+                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: COLOR.copper }} />
                         {s}
                       </li>
                     ))}
@@ -656,39 +787,39 @@ export default function PublicHome() {
                   <button
                     onClick={() => setBriefingOpen(true)}
                     className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 group-hover:text-white transition-colors duration-300"
-                    style={{ ...inter, color: COLOR.gold }}
+                    style={{ ...neueHaas, color: COLOR.copper }}
                   >
                     <span>{isRTL ? 'استكشف' : 'EXPLORE'}</span>
                     <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
                   </button>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 3B: ALTUS HK&P PLATFORM (CREAM) ═══════════════ */}
-      <section id="platform" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 3B: ALTUS HK&P PLATFORM (CREAMY WHITE) ═══════════════ */}
+      <section id="platform" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl mb-14">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2.5 py-1" style={{ ...inter, color: '#fff', backgroundColor: COLOR.emerald }}>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 text-white" style={{ ...neueHaas, backgroundColor: COLOR.emerald }}>
                 {isRTL ? 'جديد' : 'NEW'}
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...inter, color: COLOR.gold }}>
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...neueHaas, color: COLOR.copper }}>
                 {isRTL ? '06 — المنصة الرقمية الحصرية' : '06 — Proprietary Digital Platform'}
               </span>
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
-              altus <span className="italic" style={{ color: COLOR.emerald }}>{isRTL ? 'للمعرفة والأداء' : 'Hospitality Knowledge & Performance'}</span>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
+              altus <span className="italic" style={{ ...canela, color: COLOR.emerald }}>{isRTL ? 'للمعرفة والأداء' : 'Hospitality Knowledge & Performance'}</span>
             </h2>
-            <p className="text-[13px] sm:text-sm leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'منتج استراتيجي حصري يحوّل ثلاثة عقود من الخبرة الفندقية ومعايير التشغيل إلى نظام رقمي منظم للتعلم وإدارة المعرفة وقياس الأداء، مصمم خصيصاً للفنادق المستقلة والشقق الفندقية والمنشآت الصغيرة والمتوسطة في المملكة والمنطقة العربية.'
                 : 'A strategic Altus product that converts three decades of hotel expertise and operating standards into a structured digital system for learning, knowledge management, and performance measurement — purpose-built for independent hotels, serviced apartments, and SME establishments across Saudi Arabia and the Arab region.'}
             </p>
-            <p className="text-base sm:text-lg italic mt-6 pl-5 border-l-2" style={{ ...playfair, color: '#1a1a1a', borderColor: COLOR.gold }}>
+            <p className="text-base sm:text-lg italic mt-6 pl-5 border-l-2" style={{ ...canela, color: COLOR.charcoal, borderColor: COLOR.copper }}>
               {isRTL
                 ? '"المعرفة الصحيحة، للشخص الصحيح، في الوقت الصحيح، مع دليل واضح على التعلّم والتحسّن."'
                 : '“The right knowledge, to the right person, at the right time, with clear evidence of learning and improvement.”'}
@@ -697,7 +828,7 @@ export default function PublicHome() {
 
           {/* Five integrated layers */}
           <div className="mb-16">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-6" style={{ ...inter, color: '#1a1a1a' }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? 'خمس طبقات متكاملة' : 'Five Integrated Layers'}
             </h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -728,10 +859,10 @@ export default function PublicHome() {
                   d: isRTL ? 'أمن وخصوصية، ضبط الإصدارات، خارطة طريق المنتج، قنوات ويب وجوال.' : 'Security and privacy, version control, product roadmap, web and mobile channels.',
                 },
               ].map((layer) => (
-                <div key={layer.n} className="p-6 bg-white border border-stone-200">
-                  <div className="text-2xl font-light mb-3" style={{ ...playfair, color: COLOR.gold }}>{layer.n}</div>
-                  <h4 className="text-sm font-bold mb-2" style={{ ...inter, color: '#1a1a1a' }}>{layer.t}</h4>
-                  <p className="text-[12px] leading-relaxed" style={{ ...inter, color: '#6b6b6b' }}>{layer.d}</p>
+                <div key={layer.n} className="p-6 border" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
+                  <div className="text-2xl font-semibold mb-3" style={{ ...mono, color: COLOR.copper }}>{layer.n}</div>
+                  <h4 className="text-sm font-bold mb-2" style={{ ...neueHaas, color: COLOR.charcoal }}>{layer.t}</h4>
+                  <p className="text-xs leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{layer.d}</p>
                 </div>
               ))}
             </div>
@@ -739,10 +870,10 @@ export default function PublicHome() {
 
           {/* Master curriculum */}
           <div className="mb-16">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style={{ ...inter, color: '#1a1a1a' }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-2" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? 'المنهج الرئيسي: عشرة مجالات مهنية' : 'Master Curriculum: Ten Professional Domains'}
             </h3>
-            <p className="text-[12px] mb-6" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-xs mb-6" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'نموذج محتوى منظم: المجال المهني ← المسار ← الوحدة ← الدرس ← التقييم والشهادة'
                 : 'Structured content model: Professional Domain → Track → Module → Lesson → Assessment & Certification'}
@@ -752,7 +883,7 @@ export default function PublicHome() {
                 ? ['أساسيات الفندقة', 'الاستقبال', 'التدبير المنزلي', 'الأطعمة والمشروبات', 'المطبخ', 'المبيعات والتسويق', 'الإيرادات والحجوزات', 'تجربة النزيل', 'الجودة والتدقيق', 'الأمن والسلامة']
                 : ['Hotel Fundamentals', 'Front Office', 'Housekeeping', 'Food & Beverage', 'Kitchen', 'Sales & Marketing', 'Revenue & Reservations', 'Guest Experience', 'Quality & Audit', 'Security & Safety']
               ).map((d) => (
-                <span key={d} className="text-[11.5px] px-3.5 py-2 border" style={{ ...inter, color: '#1a1a1a', borderColor: '#d4c9b8' }}>{d}</span>
+                <span key={d} className="text-xs px-3.5 py-2 border font-medium" style={{ ...neueHaas, color: COLOR.charcoal, backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>{d}</span>
               ))}
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-6">
@@ -763,15 +894,15 @@ export default function PublicHome() {
                 { t: isRTL ? 'دليل على التقدّم' : 'Evidence of progress', d: isRTL ? 'لوحات، تقارير، وشهادات' : 'Dashboards, reports, certification' },
               ].map((f) => (
                 <div key={f.t}>
-                  <h5 className="text-[12.5px] font-bold" style={{ ...inter, color: '#1a1a1a' }}>{f.t}</h5>
-                  <p className="text-[12px]" style={{ ...inter, color: '#6b6b6b' }}>{f.d}</p>
+                  <h5 className="text-xs font-bold" style={{ ...neueHaas, color: COLOR.charcoal }}>{f.t}</h5>
+                  <p className="text-xs" style={{ ...inter, color: COLOR.slate }}>{f.d}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Measurable value stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 pt-8 border-t" style={{ borderColor: '#d4c9b8' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 pt-8 border-t" style={{ borderColor: COLOR.sand }}>
             {[
               { v: '>40%', l: isRTL ? 'إعداد أسرع للموظفين' : 'faster onboarding readiness' },
               { v: '100%', l: isRTL ? 'حصانة من دوران الموظفين' : 'turnover immunity' },
@@ -779,25 +910,25 @@ export default function PublicHome() {
               { v: 'GOP ↑', l: isRTL ? 'رضا النزيل والأرباح' : 'guest satisfaction & profit' },
             ].map((s) => (
               <div key={s.l}>
-                <div className="text-3xl sm:text-4xl font-light" style={{ ...playfair, color: COLOR.emerald }}>{s.v}</div>
-                <div className="text-[11px] uppercase tracking-wide mt-2" style={{ ...inter, color: '#6b6b6b' }}>{s.l}</div>
+                <div className="text-3xl sm:text-4xl font-semibold tracking-tight" style={{ ...mono, color: COLOR.emerald }}>{s.v}</div>
+                <div className="text-[11px] uppercase tracking-wide font-medium mt-2" style={{ ...neueHaas, color: COLOR.slate }}>{s.l}</div>
               </div>
             ))}
           </div>
 
           {/* Competitive comparison */}
           <div>
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-6" style={{ ...inter, color: '#1a1a1a' }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? '07 — لماذا لا تقدّم أي شركة مماثلة هذا' : '07 — Why No Comparable Firm Offers This'}
             </h3>
-            <div className="overflow-x-auto border border-stone-300">
+            <div className="overflow-x-auto border" style={{ borderColor: COLOR.sand }}>
               <table className="w-full text-start" style={inter}>
                 <thead>
-                  <tr className="border-b border-stone-300" style={{ backgroundColor: '#EDE7DA' }}>
-                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: '#1a1a1a' }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
-                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: '#6b6b6b' }}>{isRTL ? 'الشركة الاستشارية التقليدية' : 'Typical Consultancy'}</th>
-                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: '#6b6b6b' }}>{isRTL ? 'أنظمة التدريب العامة' : 'Generic LMS / Vendor'}</th>
-                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: COLOR.emerald }}>Altus HK&P</th>
+                  <tr className="border-b" style={{ backgroundColor: COLOR.sand + '33', borderColor: COLOR.sand }}>
+                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.charcoal }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
+                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.slate }}>{isRTL ? 'الشركة الاستشارية التقليدية' : 'Typical Consultancy'}</th>
+                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.slate }}>{isRTL ? 'أنظمة التدريب العامة' : 'Generic LMS / Vendor'}</th>
+                    <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.emerald }}>Altus HK&P</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -833,11 +964,11 @@ export default function PublicHome() {
                       c: isRTL ? 'مساعد ذكاء اصطناعي محكوم يجيب من المحتوى المعتمد حصراً' : 'Governed AI assistant answering strictly from approved content',
                     },
                   ].map((row) => (
-                    <tr key={row.d} className="border-b border-stone-200 last:border-0">
-                      <td className="p-4 text-[12.5px] font-bold align-top" style={{ color: '#1a1a1a' }}>{row.d}</td>
-                      <td className="p-4 text-[12px] align-top" style={{ color: '#6b6b6b' }}>{row.a}</td>
-                      <td className="p-4 text-[12px] align-top" style={{ color: '#6b6b6b' }}>{row.b}</td>
-                      <td className="p-4 text-[12px] align-top font-medium" style={{ color: COLOR.emerald, backgroundColor: 'rgba(27,67,50,0.05)' }}>{row.c}</td>
+                    <tr key={row.d} className="border-b last:border-0" style={{ borderColor: COLOR.sand }}>
+                      <td className="p-4 text-xs font-bold align-top" style={{ ...neueHaas, color: COLOR.charcoal }}>{row.d}</td>
+                      <td className="p-4 text-xs align-top" style={{ ...inter, color: COLOR.slate }}>{row.a}</td>
+                      <td className="p-4 text-xs align-top" style={{ ...inter, color: COLOR.slate }}>{row.b}</td>
+                      <td className="p-4 text-xs align-top font-medium" style={{ ...inter, color: COLOR.emerald, backgroundColor: `${COLOR.emerald}0D` }}>{row.c}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -847,20 +978,20 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 3C: INDUSTRIES WE SERVE (DARK) ═══════════════ */}
-      <section id="industries" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 3C: INDUSTRIES WE SERVE (CHARCOAL) ═══════════════ */}
+      <section id="industries" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-5xl mx-auto text-center">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
             {isRTL ? '08 — تغطية القطاعات' : '08 — Sector Coverage'}
           </div>
-          <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight mb-6" style={playfair}>
+          <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight mb-6" style={neueHaas}>
             {isRTL ? (
-              <>القطاعات <span className="italic" style={{ color: COLOR.goldLight }}>التي نخدمها.</span></>
+              <>القطاعات <span className="italic" style={{ ...canela, color: COLOR.copper }}>التي نخدمها.</span></>
             ) : (
-              <>Industries <span className="italic" style={{ color: COLOR.goldLight }}>we serve.</span></>
+              <>Industries <span className="italic" style={{ ...canela, color: COLOR.copper }}>we serve.</span></>
             )}
           </h2>
-          <p className="text-[13px] text-slate-400 max-w-2xl mx-auto mb-14" style={inter}>
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-14" style={{ ...inter, color: '#94A3B8' }}>
             {isRTL
               ? 'فلسفة تشغيلية واحدة، مطبقة عبر القطاعات التي تقود تحول المملكة، أينما تحدّد الخدمة وأداء الأصل وتجربة النزيل النتيجة.'
               : 'One operating philosophy, applied across the sectors driving the Kingdom’s transformation, wherever service, asset performance, and guest experience decide the outcome.'}
@@ -873,15 +1004,15 @@ export default function PublicHome() {
             ).map((ind) => (
               <span
                 key={ind}
-                className="text-[12.5px] px-5 py-2.5 border border-white/15 text-slate-300 hover:border-amber-500/40 hover:text-white transition-colors duration-300"
-                style={inter}
+                className="text-xs px-5 py-2.5 border border-white/15 text-slate-300 hover:border-[#C45B2F] hover:text-white transition-colors duration-300 font-medium"
+                style={{ ...neueHaas, backgroundColor: COLOR.charcoalDeep }}
               >
                 {ind}
               </span>
             ))}
           </div>
 
-          <p className="text-[12px] text-slate-500 max-w-xl mx-auto mt-14 italic" style={inter}>
+          <p className="text-xs text-slate-400 max-w-xl mx-auto mt-14 italic" style={inter}>
             {isRTL
               ? 'ملتزمون في كل مقياس: من منشأة مستقلة بوتيكية في خطواتها الأولى، إلى محافظ وطنية ومؤسسات عالمية. العناية والتفاني والدقة الاستراتيجية ذاتها.'
               : 'Committed at every scale: from a boutique independent property taking its first steps, to national portfolios and global enterprises. The same exacting care, dedication, and strategic rigour.'}
@@ -889,42 +1020,44 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4: ALTUS ASCENT™ (CREAM) ═══════════════ */}
-      <section id="ascent" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 4: ALTUS ASCENT™ (CREAMY WHITE) ═══════════════ */}
+      <section id="ascent" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-5xl mx-auto">
-          <div className="text-center space-y-4 mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...inter, color: COLOR.gold }}>
+          <FadeInSection className="text-center space-y-4 mb-16">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '09 — المنهجية الحصرية' : '09 — Proprietary Methodology'}
             </div>
             <h2
               className="text-3xl sm:text-5xl md:text-6xl font-normal"
-              style={{ ...playfair, color: '#1a1a1a' }}
+              style={{ ...neueHaas, color: COLOR.charcoal }}
             >
-              The Altus <span className="italic" style={{ color: COLOR.emerald }}>Ascent™</span>
+              The Altus <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Ascent™</span>
             </h2>
-            <p className="text-[13px] max-w-xl mx-auto" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm max-w-xl mx-auto" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'انضباط تشغيلي سداسي المراحل ينقل كل تكليف من التشخيص الأول إلى أداء مأسسن ذاتي الاستدامة، بمعايير عبور، ومخرجات، وتوقيع مالك واضح في كل مرحلة.'
                 : 'A six-stage operating discipline that carries every mandate from first diagnostic to institutionalised, self-sustaining performance, with defined gates, deliverables, and owner sign-off at each stage.'}
             </p>
-          </div>
+          </FadeInSection>
 
-          <div className="space-y-4">
+          <StaggerChildren className="space-y-4" staggerDelay={0.06}>
             {ascentStages.map((stg) => (
-              <div
+              <motion.div
+                variants={staggerItem}
                 key={stg.num}
-                className="p-6 sm:p-8 bg-white border border-stone-200 flex flex-col sm:flex-row items-start gap-5 hover:shadow-lg transition-shadow duration-300"
+                className="p-6 sm:p-8 border flex flex-col sm:flex-row items-start gap-5 hover:shadow-md transition-shadow duration-300"
+                style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}
               >
-                <div className="text-3xl font-light shrink-0" style={{ ...playfair, color: COLOR.gold }}>{stg.num}</div>
+                <div className="text-3xl font-semibold shrink-0" style={{ ...mono, color: COLOR.copper }}>{stg.num}</div>
                 <div className="space-y-1.5">
-                  <h4 className="text-lg sm:text-xl" style={{ ...playfair, color: '#1a1a1a' }}>{stg.title}</h4>
-                  <p className="text-[13px] leading-relaxed" style={{ ...inter, color: '#6b6b6b' }}>{stg.desc}</p>
+                  <h4 className="text-lg sm:text-xl font-medium" style={{ ...neueHaas, color: COLOR.charcoal }}>{stg.title}</h4>
+                  <p className="text-sm leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{stg.desc}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </StaggerChildren>
 
-          <p className="text-center text-sm italic mt-10" style={{ ...playfair, color: '#1a1a1a' }}>
+          <p className="text-center text-sm italic mt-10" style={{ ...canela, color: COLOR.charcoal }}>
             {isRTL ? 'الدقة في التخطيط. التميّز في التنفيذ.' : 'Precision in planning. Excellence in execution.'}
           </p>
 
@@ -932,7 +1065,7 @@ export default function PublicHome() {
             <button
               onClick={() => setBriefingOpen(true)}
               className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 mx-auto transition-colors duration-300 hover:opacity-80"
-              style={{ ...inter, color: COLOR.emerald }}
+              style={{ ...neueHaas, color: COLOR.emerald }}
             >
               <span>{isRTL ? 'المنهجية الكاملة' : 'THE FULL METHODOLOGY'}</span>
               <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
@@ -941,21 +1074,21 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4B: STRATEGIC FRAMEWORKS (NAVY) ═══════════════ */}
-      <section id="frameworks" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 4B: STRATEGIC FRAMEWORKS (CHARCOAL) ═══════════════ */}
+      <section id="frameworks" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '10 — نماذج استشارية أصيلة' : '10 — Original Consulting Models'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>الأطر <span className="italic" style={{ color: COLOR.goldLight }}>الاستراتيجية.</span></>
+                <>الأطر <span className="italic" style={{ ...canela, color: COLOR.copper }}>الاستراتيجية.</span></>
               ) : (
-                <>Strategic <span className="italic" style={{ color: COLOR.goldLight }}>Frameworks.</span></>
+                <>Strategic <span className="italic" style={{ ...canela, color: COLOR.copper }}>Frameworks.</span></>
               )}
             </h2>
-            <p className="text-[13px] text-slate-400 leading-relaxed mt-5" style={inter}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'عدستان حصريتان تقرأ من خلالهما ألتوس أي أصل: تحديد موقعه على خريطة الأداء، ثم هندسة المسار نحو عوائد متراكمة.'
                 : 'Two proprietary lenses through which Altus reads an asset: locating it on the performance map, then engineering the route to compounding returns.'}
@@ -964,32 +1097,32 @@ export default function PublicHome() {
 
           {/* A. Altus Performance Matrix */}
           <div className="mb-20">
-            <h3 className="text-sm sm:text-base text-white mb-6" style={playfair}>
+            <h3 className="text-base sm:text-lg text-white font-medium mb-6" style={neueHaas}>
               A. {isRTL ? 'مصفوفة أداء ألتوس™' : 'The Altus Performance Matrix™'}
             </h3>
             <div className="grid grid-cols-2 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.1)' }}>
-              <div className="p-6 sm:p-8" style={{ backgroundColor: '#0E1B30' }}>
-                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={inter}>{isRTL ? 'المشغّل التقليدي' : 'Legacy Operator'}</div>
-                <p className="text-[12.5px] text-slate-400" style={inter}>{isRTL ? 'عمليات سليمة، محرك تجاري تناظري.' : 'Sound operations, analogue commercial engine.'}</p>
+              <div className="p-6 sm:p-8" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={neueHaas}>{isRTL ? 'المشغّل التقليدي' : 'Legacy Operator'}</div>
+                <p className="text-xs sm:text-sm text-slate-400" style={inter}>{isRTL ? 'عمليات سليمة، محرك تجاري تناظري.' : 'Sound operations, analogue commercial engine.'}</p>
               </div>
-              <div className="p-6 sm:p-8 border" style={{ backgroundColor: 'rgba(201,165,77,0.12)', borderColor: 'rgba(201,165,77,0.4)' }}>
-                <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ ...inter, color: COLOR.goldLight }}>{isRTL ? 'منطقة ألتوس' : 'The Altus Zone'}</div>
-                <p className="text-[12.5px] text-white" style={inter}>{isRTL ? 'تميّز تشغيلي × ذكاء رقمي: أداء متراكم.' : 'Operational mastery × digital intelligence: compounding performance.'}</p>
+              <div className="p-6 sm:p-8 border" style={{ backgroundColor: `${COLOR.copper}15`, borderColor: COLOR.copper }}>
+                <div className="text-[11px] font-bold uppercase tracking-wider mb-2" style={{ ...neueHaas, color: COLOR.copper }}>{isRTL ? 'منطقة ألتوس' : 'The Altus Zone'}</div>
+                <p className="text-xs sm:text-sm text-white font-medium" style={inter}>{isRTL ? 'تميّز تشغيلي × ذكاء رقمي: أداء متراكم.' : 'Operational mastery × digital intelligence: compounding performance.'}</p>
               </div>
-              <div className="p-6 sm:p-8" style={{ backgroundColor: '#0E1B30' }}>
-                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={inter}>{isRTL ? 'أصل دون إدارة كافية' : 'Undermanaged Asset'}</div>
-                <p className="text-[12.5px] text-slate-400" style={inter}>{isRTL ? 'رأس مال موظّف، إمكانات غير محققة.' : 'Capital deployed, potential unrealised.'}</p>
+              <div className="p-6 sm:p-8" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={neueHaas}>{isRTL ? 'أصل دون إدارة كافية' : 'Undermanaged Asset'}</div>
+                <p className="text-xs sm:text-sm text-slate-400" style={inter}>{isRTL ? 'رأس مال موظّف، إمكانات غير محققة.' : 'Capital deployed, potential unrealised.'}</p>
               </div>
-              <div className="p-6 sm:p-8" style={{ backgroundColor: '#0E1B30' }}>
-                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={inter}>{isRTL ? 'واجهة رقمية سطحية' : 'Digital Veneer'}</div>
-                <p className="text-[12.5px] text-slate-400" style={inter}>{isRTL ? 'تقنية معتمدة، عمليات غير مدعومة بما يكفي.' : 'Technology adopted, operations underpowered.'}</p>
+              <div className="p-6 sm:p-8" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <div className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-400" style={neueHaas}>{isRTL ? 'واجهة رقمية سطحية' : 'Digital Veneer'}</div>
+                <p className="text-xs sm:text-sm text-slate-400" style={inter}>{isRTL ? 'تقنية معتمدة، عمليات غير مدعومة بما يكفي.' : 'Technology adopted, operations underpowered.'}</p>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-3 text-[10px] uppercase tracking-widest text-slate-500" style={inter}>
+            <div className="flex items-center justify-between mt-3 text-[10px] uppercase tracking-widest text-slate-400 font-medium" style={neueHaas}>
               <span>{isRTL ? '↑ الدقة التشغيلية' : '↑ Operational Rigour'}</span>
               <span>{isRTL ? 'الذكاء الرقمي والتجاري →' : 'Digital & Commercial Intelligence →'}</span>
             </div>
-            <p className="text-[12.5px] text-slate-400 mt-4 max-w-lg" style={inter}>
+            <p className="text-xs sm:text-sm text-slate-400 mt-4 max-w-lg" style={inter}>
               {isRTL
                 ? 'مهمتنا: نقل كل أصل عميل إلى الأعلى واليمين، إلى داخل منطقة ألتوس.'
                 : 'Our mandate: move every client asset up and to the right, into the Altus Zone.'}
@@ -998,7 +1131,7 @@ export default function PublicHome() {
 
           {/* B. GOPPAR Value Stack */}
           <div>
-            <h3 className="text-sm sm:text-base text-white mb-6" style={playfair}>
+            <h3 className="text-base sm:text-lg text-white font-medium mb-6" style={neueHaas}>
               B. {isRTL ? 'حزمة قيمة GOPPAR™' : 'The GOPPAR Value Stack™'}
             </h3>
             <div className="space-y-2">
@@ -1023,14 +1156,14 @@ export default function PublicHome() {
                 <div
                   key={tier.t}
                   className="p-5 sm:p-6 border-s-4 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-6"
-                  style={{ backgroundColor: '#0E1B30', borderColor: COLOR.gold, opacity: 1 - i * 0.12 }}
+                  style={{ backgroundColor: COLOR.charcoalDeep, borderColor: COLOR.copper, opacity: 1 - i * 0.12 }}
                 >
-                  <div className="text-[11px] font-bold uppercase tracking-wider w-full sm:w-56 shrink-0" style={{ ...inter, color: COLOR.goldLight }}>{tier.t}</div>
-                  <div className="text-[12.5px] text-slate-400" style={inter}>{tier.d}</div>
-                </div>
-              ))}
-              <div className="p-5 sm:p-6 text-center" style={{ backgroundColor: COLOR.gold }}>
-                <div className="text-sm font-bold uppercase tracking-[0.2em]" style={{ ...inter, color: '#0B1528' }}>
+                  <div className="text-xs font-bold uppercase tracking-wider w-full sm:w-56 shrink-0" style={{ ...neueHaas, color: COLOR.copper }}>{tier.t}</div>
+                  <div className="text-xs sm:text-sm text-slate-300" style={inter}>{tier.d}</div>
+              </div>
+            ))}
+              <div className="p-5 sm:p-6 text-center" style={{ backgroundColor: COLOR.copper }}>
+                <div className="text-sm font-bold uppercase tracking-[0.2em] text-white" style={neueHaas}>
                   {isRTL ? 'توسّع GOPPAR' : 'GOPPAR Expansion'}
                 </div>
               </div>
@@ -1039,28 +1172,28 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4C: INSTITUTIONAL CAPABILITIES (CREAM) ═══════════════ */}
-      <section id="capabilities" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 4C: INSTITUTIONAL CAPABILITIES (CREAMY WHITE) ═══════════════ */}
+      <section id="capabilities" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '11 — ما نقدّمه' : '11 — What We Bring to the Table'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>القدرات <span className="italic" style={{ color: COLOR.emerald }}>المؤسسية.</span></>
+                <>القدرات <span className="italic" style={{ ...canela, color: COLOR.emerald }}>المؤسسية.</span></>
               ) : (
-                <>Institutional <span className="italic" style={{ color: COLOR.emerald }}>Capabilities.</span></>
+                <>Institutional <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Capabilities.</span></>
               )}
             </h2>
-            <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'ثماني مجموعات قدرات متكاملة، تُنشر بشكل انتقائي حسب كل تكليف، دائماً مجتمعة، ولا تُستخدم أبداً بمعزل عن غيرها.'
                 : 'Eight integrated capability sets, deployed selectively per mandate, always in combination, never in isolation.'}
             </p>
           </div>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ backgroundColor: '#d4c9b8' }}>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ backgroundColor: COLOR.sand }}>
             {[
               {
                 t: isRTL ? 'التشغيل' : 'Operational',
@@ -1095,14 +1228,14 @@ export default function PublicHome() {
                 d: isRTL ? 'إدارة التحول، بروتوكولات التغيير، الدمج بعد الاستحواذ، وبرامج الأداء على مستوى المؤسسة.' : 'Turnaround management, change protocols, post-merger integration, and enterprise-wide performance programmes.',
               },
             ].map((cap) => (
-              <div key={cap.t} className="p-6 sm:p-7 bg-white">
-                <h4 className="text-sm font-bold mb-2.5" style={{ ...inter, color: '#1a1a1a' }}>{cap.t}</h4>
-                <p className="text-[12px] leading-relaxed" style={{ ...inter, color: '#6b6b6b' }}>{cap.d}</p>
+              <div key={cap.t} className="p-6 sm:p-7" style={{ backgroundColor: COLOR.ivory }}>
+                <h4 className="text-sm font-bold mb-2.5" style={{ ...neueHaas, color: COLOR.charcoal }}>{cap.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{cap.d}</p>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-[13px] italic mt-10" style={{ ...playfair, color: '#1a1a1a' }}>
+          <p className="text-center text-sm italic mt-10" style={{ ...canela, color: COLOR.charcoal }}>
             {isRTL
               ? 'كل قدرة يقدّمها شركاء تنفيذيون مباشرة، لا تُفوَّض أبداً لمستشارين مبتدئين.'
               : 'Every capability is delivered by principals, never delegated to junior benches.'}
@@ -1110,21 +1243,21 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4D: SAUDI VISION 2030 (NAVY) ═══════════════ */}
-      <section id="vision2030" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 4D: SAUDI VISION 2030 (CHARCOAL) ═══════════════ */}
+      <section id="vision2030" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '12 — التوافق الوطني' : '12 — National Alignment'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>مهندسة لخدمة <span className="italic" style={{ color: COLOR.goldLight }}>رؤية السعودية 2030.</span></>
+                <>مهندسة لخدمة <span className="italic" style={{ ...canela, color: COLOR.copper }}>رؤية السعودية 2030.</span></>
               ) : (
-                <>Engineered for <span className="italic" style={{ color: COLOR.goldLight }}>Saudi Vision 2030.</span></>
+                <>Engineered for <span className="italic" style={{ ...canela, color: COLOR.copper }}>Saudi Vision 2030.</span></>
               )}
             </h2>
-            <p className="text-[13px] text-slate-400 leading-relaxed mt-5" style={inter}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'رؤية 2030 ليست مخططاً للمستقبل، بل تحوّل حي وعالمي النطاق. عملت ألتوس استشارات على مواءمة رسالتها وبنية خدماتها مع الركائز الأساسية للمملكة، بحيث لا يكتفي شركاؤنا بالمشاركة في هذا النمو التاريخي، بل يقودونه.'
                 : 'Vision 2030 is not a blueprint of the future. It is a live, global-scale transformation. Altus Advisory has aligned its mission and service architecture to directly support the Kingdom’s core pillars, so our partners do not merely participate in this historic growth: they lead it.'}
@@ -1162,16 +1295,16 @@ export default function PublicHome() {
                   : 'Vision 2030 prioritises SME contribution to GDP. We bring Tier-1 consulting standards, typically reserved for conglomerates, to Saudi start-ups and scale-ups, and we priced our platform deliberately for independent hotels and SME establishments, engineering resilience and growth from day one.',
               },
             ].map((pillar) => (
-              <div key={pillar.p} className="p-8 sm:p-9 border border-white/10" style={{ backgroundColor: '#0E1B30' }}>
-                <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...inter, color: COLOR.gold }}>{pillar.p}</div>
-                <h4 className="text-lg sm:text-xl text-white mb-3" style={playfair}>{pillar.t}</h4>
-                <p className="text-[12.5px] text-slate-400 leading-relaxed" style={inter}>{pillar.d}</p>
+              <div key={pillar.p} className="p-8 sm:p-9 border border-white/10" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...neueHaas, color: COLOR.copper }}>{pillar.p}</div>
+                <h4 className="text-lg sm:text-xl text-white font-medium mb-3" style={neueHaas}>{pillar.t}</h4>
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>{pillar.d}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-10 p-8 sm:p-10 text-center border" style={{ borderColor: 'rgba(201,165,77,0.3)', backgroundColor: 'rgba(201,165,77,0.05)' }}>
-            <p className="text-sm sm:text-base leading-relaxed max-w-3xl mx-auto" style={{ ...playfair, color: '#fff' }}>
+          <div className="mt-10 p-8 sm:p-10 text-center border" style={{ borderColor: `${COLOR.copper}40`, backgroundColor: `${COLOR.copper}0D` }}>
+            <p className="text-sm sm:text-base leading-relaxed max-w-3xl mx-auto text-white" style={canela}>
               {isRTL
                 ? 'ننظر إلى رؤية 2030 كمسؤولية وطنية مشتركة. من خلال العمل عند نقطة التقاء عمليات الضيافة الرفيعة وذكاء الأعمال المتقدم، والاستثمار في منتجات رقمية سعودية حصرية، نضمن أن شركاءنا في المملكة مؤهّلون تماماً لتشكيل مستقبل قطاعاتهم.'
                 : 'We regard Vision 2030 as a shared national responsibility. Working at the meeting point of elite hospitality operations and advanced business intelligence, and investing in proprietary Saudi-focused digital products, we ensure our partners in the Kingdom are fully equipped to shape the future of their sectors.'}
@@ -1180,33 +1313,33 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4E: MARKET OPPORTUNITY (CREAM) ═══════════════ */}
-      <section id="market" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 4E: MARKET OPPORTUNITY (CREAMY WHITE) ═══════════════ */}
+      <section id="market" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-5 gap-12 items-start mb-14">
             <div className="lg:col-span-3">
-              <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+              <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
                 {isRTL ? '13 — مسار النمو السعودي' : '13 — The Saudi Growth Runway'}
               </div>
-              <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
+              <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
                 {isRTL ? (
-                  <>فرصة <span className="italic" style={{ color: COLOR.emerald }}>السوق.</span></>
+                  <>فرصة <span className="italic" style={{ ...canela, color: COLOR.emerald }}>السوق.</span></>
                 ) : (
-                  <>Market <span className="italic" style={{ color: COLOR.emerald }}>Opportunity.</span></>
+                  <>Market <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Opportunity.</span></>
                 )}
               </h2>
-              <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+              <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
                 {isRTL
                   ? 'تنفّذ المملكة أطمح توسّع فندقي في العالم. الأرقام تحدد حجم الفرصة وعلاوة التنفيذ المنضبط لصالح المالك.'
                   : 'The Kingdom is executing the most ambitious hospitality build-out in the world. The numbers define both the scale of the opportunity and the premium on disciplined, owner-side execution.'}
               </p>
             </div>
             <div className="lg:col-span-2">
-              <img src="/altus-leadership.png" alt="" className="w-full h-full object-cover rounded-sm" style={{ maxHeight: '260px' }} />
+              <img src="/altus-leadership.png" alt="" className="w-full h-full object-cover rounded-sm border" style={{ maxHeight: '260px', borderColor: COLOR.sand }} />
             </div>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 pb-12 border-b" style={{ borderColor: '#d4c9b8' }}>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-16 pb-12 border-b" style={{ borderColor: COLOR.sand }}>
             {[
               { v: '122M', l: isRTL ? 'زيارة محلية ودولية 2025 (+5%)' : 'domestic & international visits in 2025 (+5% YoY)' },
               { v: 'SAR 300B', l: isRTL ? 'إجمالي الإنفاق السياحي 2025 (≈81 مليار دولار)' : 'total tourism spending in 2025 (≈ USD 81B)' },
@@ -1214,15 +1347,15 @@ export default function PublicHome() {
               { v: '78%', l: isRTL ? 'من خط الأنابيب فاخر وراقٍ' : 'of pipeline in luxury, upscale & upper-upscale' },
             ].map((s) => (
               <div key={s.l}>
-                <div className="text-3xl sm:text-4xl font-light" style={{ ...playfair, color: COLOR.emerald }}>{s.v}</div>
-                <div className="text-[11px] leading-snug mt-2" style={{ ...inter, color: '#6b6b6b' }}>{s.l}</div>
+                <div className="text-3xl sm:text-4xl font-semibold tracking-tight" style={{ ...mono, color: COLOR.emerald }}>{s.v}</div>
+                <div className="text-[11px] leading-snug font-medium mt-2" style={{ ...neueHaas, color: COLOR.slate }}>{s.l}</div>
               </div>
             ))}
           </div>
 
           {/* Visitor trajectory bar chart */}
           <div className="mb-16">
-            <h3 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-6" style={{ ...inter, color: '#1a1a1a' }}>
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? 'مسار الزوّار نحو هدف 150 مليون (بالملايين)' : 'Visitor Trajectory Toward the 150M Target (Millions of Visits)'}
             </h3>
             <div className="flex items-end gap-3 sm:gap-6 h-48">
@@ -1234,18 +1367,18 @@ export default function PublicHome() {
                 { y: '2030', v: 150, target: true },
               ].map((bar) => (
                 <div key={bar.y} className="flex-1 flex flex-col items-center gap-2">
-                  <div className="text-xs font-bold" style={{ ...inter, color: bar.target ? COLOR.emerald : '#1a1a1a' }}>{bar.v}</div>
+                  <div className="text-xs font-bold" style={{ ...mono, color: bar.target ? COLOR.emerald : COLOR.charcoal }}>{bar.v}</div>
                   <div
                     className="w-full"
                     style={{
                       height: `${(bar.v / 150) * 140}px`,
-                      backgroundColor: bar.target ? COLOR.emerald : COLOR.gold,
-                      opacity: bar.target ? 1 : 0.75,
+                      backgroundColor: bar.target ? COLOR.emerald : COLOR.copper,
+                      opacity: bar.target ? 1 : 0.85,
                     }}
                   />
-                  <div className="text-[11px]" style={{ ...inter, color: '#6b6b6b' }}>{bar.target ? (isRTL ? 'هدف 2030' : '2030 Target') : bar.y}</div>
-                </div>
-              ))}
+                  <div className="text-xs font-medium" style={{ ...neueHaas, color: COLOR.slate }}>{bar.target ? (isRTL ? 'هدف 2030' : '2030 Target') : bar.y}</div>
+              </div>
+            ))}
             </div>
           </div>
 
@@ -1267,8 +1400,8 @@ export default function PublicHome() {
                     <div className="h-2 bg-white border border-stone-300">
                       <div className="h-full" style={{ width: `${(row.v / 362) * 100}%`, backgroundColor: COLOR.emerald }} />
                     </div>
-                  </div>
-                ))}
+              </div>
+            ))}
               </div>
             </div>
             <div>
@@ -1297,28 +1430,28 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 4F: ILLUSTRATIVE CASE STUDIES (NAVY) ═══════════════ */}
-      <section id="case-studies" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 4F: ILLUSTRATIVE CASE STUDIES (CREAMY WHITE) ═══════════════ */}
+      <section id="case-studies" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+          <FadeInSection className="max-w-2xl mb-14">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '14–15 — إثبات المفهوم' : '14–15 — Proof of Concept'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>دراسات حالة <span className="italic" style={{ color: COLOR.emerald }}>توضيحية.</span></>
+                <>دراسات حالة <span className="italic" style={{ ...canela, color: COLOR.emerald }}>توضيحية.</span></>
               ) : (
-                <>Illustrative <span className="italic" style={{ color: COLOR.emerald }}>case studies.</span></>
+                <>Illustrative <span className="italic" style={{ ...canela, color: COLOR.emerald }}>case studies.</span></>
               )}
             </h2>
-            <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'تكليفات مركّبة، مجهّلة، وموسومة بوضوح كتوضيحية. كل منها يعكس مهام قادها شركاؤنا شخصياً داخل علامات عالمية ومحافظ مستقلة.'
                 : 'Composite engagements, anonymised and clearly labelled as illustrative. Each reflects mandates our principals have personally led inside global brands and independent portfolios.'}
             </p>
-          </div>
+          </FadeInSection>
 
-          <div className="grid md:grid-cols-2 gap-5">
+          <StaggerChildren className="grid md:grid-cols-2 gap-6">
             {[
               {
                 tag: isRTL ? 'منتجع رئيسي • مصر • تحويل الأداء' : 'Flagship Resort • Egypt • Turnaround',
@@ -1373,63 +1506,64 @@ export default function PublicHome() {
                 ],
               },
             ].map((cs) => (
-              <div key={cs.title} className="p-8 sm:p-9 bg-white border border-stone-200 hover:shadow-lg transition-shadow duration-300">
-                <div className="text-[10.5px] font-bold uppercase tracking-[0.15em] mb-3" style={{ ...inter, color: COLOR.emerald }}>{cs.tag}</div>
-                <h4 className="text-lg sm:text-xl mb-3" style={{ ...playfair, color: '#1a1a1a' }}>{cs.title}</h4>
-                <p className="text-[12.5px] leading-relaxed mb-6" style={{ ...inter, color: '#6b6b6b' }}>{cs.challenge}</p>
-                <div className="grid grid-cols-4 gap-2 pt-5 border-t" style={{ borderColor: '#e5ded0' }}>
+              <div key={cs.title} className="p-8 sm:p-9 border hover:shadow-md transition-shadow duration-300" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
+                <div className="text-xs font-bold uppercase tracking-[0.15em] mb-3" style={{ ...neueHaas, color: COLOR.emerald }}>{cs.tag}</div>
+                <h4 className="text-lg sm:text-xl font-medium mb-3" style={{ ...neueHaas, color: COLOR.charcoal }}>{cs.title}</h4>
+                <p className="text-sm leading-relaxed mb-6" style={{ ...inter, color: COLOR.slate }}>{cs.challenge}</p>
+                <div className="grid grid-cols-4 gap-2 pt-5 border-t" style={{ borderColor: COLOR.sand }}>
                   {cs.stats.map((s) => (
                     <div key={s.l}>
-                      <div className="text-base sm:text-lg font-light" style={{ ...playfair, color: COLOR.gold }}>{s.v}</div>
-                      <div className="text-[9.5px] uppercase tracking-wide leading-tight mt-1" style={{ ...inter, color: '#8a8478' }}>{s.l}</div>
-                    </div>
-                  ))}
+                      <div className="text-base sm:text-lg font-semibold" style={{ ...mono, color: COLOR.copper }}>{s.v}</div>
+                      <div className="text-[10px] uppercase tracking-wide leading-tight font-medium mt-1" style={{ ...neueHaas, color: COLOR.slate }}>{s.l}</div>
+              </div>
+            ))}
                 </div>
               </div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5: LEADERSHIP (DARK) ═══════════════ */}
-      <section id="leadership" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
-        <div className="max-w-5xl mx-auto text-center space-y-4 mb-14">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...inter, color: COLOR.gold }}>
+      {/* ═══════════════ SECTION 5: LEADERSHIP (CHARCOAL) ═══════════════ */}
+      <section id="leadership" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
+        <FadeInSection className="max-w-5xl mx-auto text-center space-y-4 mb-14">
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...neueHaas, color: COLOR.copper }}>
             {isRTL ? '16–17 — القيادة التنفيذية' : '16–17 — Executive Leadership'}
           </div>
           <h2
             className="text-3xl sm:text-5xl md:text-6xl text-white font-normal"
-            style={playfair}
+            style={neueHaas}
           >
-            Named. <span className="italic" style={{ color: COLOR.goldLight }}>Present.</span> Accountable.
+            Named. <span className="italic" style={{ ...canela, color: COLOR.copper }}>Present.</span> Accountable.
           </h2>
-        </div>
+        </FadeInSection>
 
-        <div className="max-w-5xl mx-auto">
+        <StaggerChildren className="max-w-5xl mx-auto">
           <div className="grid md:grid-cols-2 gap-6 text-start">
             {/* Islam Mahrous */}
-            <div className="p-8 sm:p-10 border border-white/10 space-y-6" style={{ backgroundColor: '#0E1B30' }}>
+            <motion.div variants={staggerItem} className="p-8 sm:p-10 border border-white/10 space-y-6" style={{ backgroundColor: COLOR.charcoalDeep }}>
               <div className="flex items-center gap-5">
                 <img
                   src="/founder-islam.jpg"
                   alt="Islam Mahrous"
-                  className="w-20 h-20 rounded-full object-cover object-top border-2 border-amber-600/30"
+                  className="w-20 h-20 rounded-full object-cover object-top border-2"
+                  style={{ borderColor: COLOR.copper }}
                 />
                 <div>
-                  <h3 className="text-xl text-white" style={playfair}>Islam Mahrous</h3>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider mt-1" style={{ ...inter, color: COLOR.gold }}>
+                  <h3 className="text-xl text-white font-medium" style={canela}>Islam Mahrous</h3>
+                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...neueHaas, color: COLOR.copper }}>
                     {isRTL ? 'مؤسس مشارك: العلامة، الاستراتيجية التجارية، والتحول الرقمي' : 'Co-Founder: Brand, Commercial Strategy & AI-Driven Digital Transformation'}
                   </p>
                 </div>
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed" style={inter}>
+              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>
                 {isRTL
                   ? 'إسلام هو مبتكر النمو في الشركة وحافتها التقنية المستقبلية: الجسر الحيوي بين نماذج الأعمال التقليدية ومتطلبات العصر الحديث. عبر ثلاثة عقود من القيادة متعددة العلامات مع ماريوت وIHG وستارووود وأكور، وإدارة أصول مستقلة عبر السعودية والخليج ومصر وشمال أفريقيا، أثبت للمستثمرين ورواد الأعمال أن التحديث الرقمي ووضوح العلامة محركان مباشران وقابلان للقياس لقيمة المؤسسة. وهو المهندس المنتِج لمنصة altus HK&P.'
                   : 'Islam is the firm’s growth innovator and its forward-looking technological edge: the vital bridge between traditional business models and the demands of the modern era. Across three decades of multi-brand leadership with Marriott, IHG, Starwood, and Accor, and independent asset management across Saudi Arabia, the GCC, Egypt, and North Africa, he has proven that digital modernisation and brand clarity are direct, measurable drivers of enterprise valuation. He is the product architect of the altus Hospitality Knowledge & Performance platform.'}
               </p>
 
               <div className="pt-5 border-t space-y-2.5" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                <h5 className="text-[10.5px] font-bold uppercase tracking-[0.15em] mb-1" style={{ ...inter, color: COLOR.gold }}>{isRTL ? 'السجل المهني' : 'Track Record'}</h5>
+                <h5 className="text-xs font-bold uppercase tracking-[0.15em] mb-1" style={{ ...neueHaas, color: COLOR.copper }}>{isRTL ? 'السجل المهني' : 'Track Record'}</h5>
                 {(isRTL
                   ? [
                       '30+ عاماً من القيادة الفندقية متعددة العلامات عبر الخليج ومصر وشمال أفريقيا: أنظمة ماريوت وIHG وستارووود وأكور.',
@@ -1448,46 +1582,47 @@ export default function PublicHome() {
                       'Oversaw a USD 10M+ capital renovation portfolio, delivering 7–20% cost savings with zero guest-experience disruption.',
                     ]
                 ).map((tr) => (
-                  <p key={tr} className="text-[12px] text-slate-400 flex items-start gap-2.5 leading-relaxed" style={inter}>
-                    <span className="mt-1.5 h-1 w-1 rounded-full shrink-0" style={{ backgroundColor: COLOR.gold }} />
+                  <p key={tr} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2.5 leading-relaxed" style={inter}>
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: COLOR.copper }} />
                     {tr}
                   </p>
                 ))}
               </div>
 
               <div className="pt-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                <h5 className="text-[10.5px] font-bold uppercase tracking-[0.15em] mb-2" style={{ ...inter, color: COLOR.gold }}>{isRTL ? 'التقدير' : 'Recognition'}</h5>
-                <p className="text-[11.5px] text-slate-400" style={inter}>
+                <h5 className="text-xs font-bold uppercase tracking-[0.15em] mb-2" style={{ ...neueHaas, color: COLOR.copper }}>{isRTL ? 'التقدير' : 'Recognition'}</h5>
+                <p className="text-xs text-slate-300" style={inter}>
                   {isRTL
                     ? 'جائزة المدير العام من ماريوت للتميّز في خدمة العملاء، الشرق الأوسط وأفريقيا، 2017 و2022 • أفضل مدير ابتكار تشغيلي من ستارووود، 2007'
                     : 'Marriott GM Award for Customer Service Excellence, MEA, 2017 & 2022 • Starwood Best Operational Innovation Manager, 2007'}
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Hossam Smadi */}
-            <div className="p-8 sm:p-10 border border-white/10 space-y-6" style={{ backgroundColor: '#0E1B30' }}>
+            <div className="p-8 sm:p-10 border border-white/10 space-y-6" style={{ backgroundColor: COLOR.charcoalDeep }}>
               <div className="flex items-center gap-5">
                 <img
                   src="/founder-hossam.png"
                   alt="Hossam Smadi"
-                  className="w-20 h-20 rounded-full object-cover object-top border-2 border-amber-600/30"
+                  className="w-20 h-20 rounded-full object-cover object-top border-2"
+                  style={{ borderColor: COLOR.copper }}
                 />
                 <div>
-                  <h3 className="text-xl text-white" style={playfair}>Hossam Smadi</h3>
-                  <p className="text-[11px] font-semibold uppercase tracking-wider mt-1" style={{ ...inter, color: COLOR.gold }}>
+                  <h3 className="text-xl text-white font-medium" style={canela}>Hossam Smadi</h3>
+                  <p className="text-xs font-bold uppercase tracking-wider mt-1" style={{ ...neueHaas, color: COLOR.copper }}>
                     {isRTL ? 'مؤسس مشارك: عمليات الضيافة وإدارة الأصول' : 'Co-Founder: Hospitality Operations & Asset Management'}
                   </p>
                 </div>
               </div>
-              <p className="text-[13px] text-slate-400 leading-relaxed" style={inter}>
+              <p className="text-sm text-slate-300 leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>
                 {isRTL
                   ? 'حسام هو المهندس التشغيلي للشركة. بخبرة عميقة في تعقيدات تشغيل الضيافة الدولية، يركّز على تحويل الأصول المادية إلى مؤسسات عالية العائد وخالية من العيوب التشغيلية. عبر أكثر من 30 عاماً من القيادة التنفيذية في عمليات الفنادق وإدارة الأصول في السعودية والأردن، عبر علامات عالمية ومجموعات مستقلة، يضمن تنفيذ الاستراتيجية الرفيعة بلا تهاون على أرض الواقع مع التزام صارم بمعايير الجودة.'
                   : 'Hossam is the firm’s operational architect. With deep expertise in the operating complexities of international hospitality, his focus is converting physical assets into high-yield, operationally flawless institutions. Across 30+ years of executive leadership in hotel operations and asset management throughout Saudi Arabia and Jordan, spanning global brands and independent groups, he ensures that high-level strategy is executed impeccably on the ground, with uncompromising adherence to quality standards.'}
               </p>
 
               <div className="pt-5 border-t space-y-2.5" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                <h5 className="text-[10.5px] font-bold uppercase tracking-[0.15em] mb-1" style={{ ...inter, color: COLOR.gold }}>{isRTL ? 'السجل المهني' : 'Track Record'}</h5>
+                <h5 className="text-xs font-bold uppercase tracking-[0.15em] mb-1" style={{ ...neueHaas, color: COLOR.copper }}>{isRTL ? 'السجل المهني' : 'Track Record'}</h5>
                 {(isRTL
                   ? [
                       '30+ عاماً من القيادة التنفيذية في عمليات الفنادق وإدارة الأصول عبر السعودية والأردن: علامات عالمية ومجموعات مستقلة.',
@@ -1506,16 +1641,16 @@ export default function PublicHome() {
                       'Directly governed Hotel Management Agreements (HMA), procurement and OS&E reviews, and operator building-handover processes.',
                     ]
                 ).map((tr) => (
-                  <p key={tr} className="text-[12px] text-slate-400 flex items-start gap-2.5 leading-relaxed" style={inter}>
-                    <span className="mt-1.5 h-1 w-1 rounded-full shrink-0" style={{ backgroundColor: COLOR.gold }} />
+                  <p key={tr} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2.5 leading-relaxed" style={inter}>
+                    <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: COLOR.copper }} />
                     {tr}
                   </p>
                 ))}
               </div>
 
               <div className="pt-5 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
-                <h5 className="text-[10.5px] font-bold uppercase tracking-[0.15em] mb-2" style={{ ...inter, color: COLOR.gold }}>{isRTL ? 'التقدير' : 'Recognition'}</h5>
-                <p className="text-[11.5px] text-slate-400" style={inter}>
+                <h5 className="text-xs font-bold uppercase tracking-[0.15em] mb-2" style={{ ...neueHaas, color: COLOR.copper }}>{isRTL ? 'التقدير' : 'Recognition'}</h5>
+                <p className="text-xs text-slate-300" style={inter}>
                   {isRTL
                     ? 'أفضل فندق اقتصادي في السعودية، كمدير عام • تقدير سفارة الولايات المتحدة في الرياض: أفضل إجراءات أمنية'
                     : 'Best Economy Hotel in Saudi Arabia, as General Manager • U.S. Embassy Riyadh recognition: Best Security Measures'}
@@ -1528,30 +1663,30 @@ export default function PublicHome() {
             <button
               onClick={() => setBriefingOpen(true)}
               className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 mx-auto transition-colors duration-300 hover:opacity-80"
-              style={{ ...inter, color: COLOR.gold }}
+              style={{ ...neueHaas, color: COLOR.copper }}
             >
               <span>{isRTL ? 'تعرف على الشركاء' : 'MEET THE FIRM'}</span>
               <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
             </button>
           </div>
-        </div>
+        </StaggerChildren>
       </section>
 
-      {/* ═══════════════ SECTION 5B: STRATEGIC PARTNERSHIPS (CREAM) ═══════════════ */}
-      <section id="partnerships" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 5B: STRATEGIC PARTNERSHIPS (CREAMY WHITE) ═══════════════ */}
+      <section id="partnerships" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '18 — المنظومة والتحالفات' : '18 — Ecosystem & Alliances'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>شراكات <span className="italic" style={{ color: COLOR.emerald }}>استراتيجية.</span></>
+                <>شراكات <span className="italic" style={{ ...canela, color: COLOR.emerald }}>استراتيجية.</span></>
               ) : (
-                <>Strategic <span className="italic" style={{ color: COLOR.emerald }}>partnerships.</span></>
+                <>Strategic <span className="italic" style={{ ...canela, color: COLOR.emerald }}>partnerships.</span></>
               )}
             </h2>
-            <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'تعمل ألتوس كمركز لمنظومة منتقاة بعناية: تُوائم بين المشغّلين، رأس المال، التقنية، والجهات الحكومية بحيث تستفيد كل مهمة من شركاء تنفيذ من الفئة الأولى.'
                 : 'Altus operates as the hub of a deliberately curated ecosystem: aligning operators, capital, technology, and government so that every mandate draws on best-in-class execution partners.'}
@@ -1577,18 +1712,18 @@ export default function PublicHome() {
                 d: isRTL ? 'تعامل بنّاء مع الوزارات وهيئات الوجهات وكيانات المشاريع العملاقة: مواءمة استراتيجية الأصول الخاصة مع أولويات السياحة الوطنية ورؤية 2030.' : 'Constructive engagement with ministries, destination authorities, and giga-project entities: aligning private asset strategy with national tourism and Vision 2030 priorities.',
               },
             ].map((p) => (
-              <div key={p.t} className="p-8 bg-white border border-stone-200">
-                <h4 className="text-base font-bold mb-2.5" style={{ ...inter, color: '#1a1a1a' }}>{p.t}</h4>
-                <p className="text-[12.5px] leading-relaxed" style={{ ...inter, color: '#6b6b6b' }}>{p.d}</p>
+              <div key={p.t} className="p-8 border" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
+                <h4 className="text-base font-bold mb-2.5" style={{ ...neueHaas, color: COLOR.charcoal }}>{p.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{p.d}</p>
               </div>
             ))}
           </div>
 
-          <div className="mt-8 p-8 sm:p-10 text-center" style={{ backgroundColor: COLOR.navyDeep }}>
-            <h5 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...inter, color: COLOR.gold }}>
+          <div className="mt-8 p-8 sm:p-10 text-center" style={{ backgroundColor: COLOR.charcoalDeep }}>
+            <h5 className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? 'مبدأ الاستقلالية' : 'The Independence Principle'}
             </h5>
-            <p className="text-sm sm:text-base leading-relaxed max-w-2xl mx-auto text-white" style={playfair}>
+            <p className="text-sm sm:text-base leading-relaxed max-w-2xl mx-auto text-white" style={canela}>
               {isRTL
                 ? 'لا نملك حصصاً في المشغّلين، ولا نتقاضى عمولات من الموردين، ولا نحمل ولاءً لأي علامة. شراكاتنا تخدم مصلحة واحدة فقط: مصلحة العميل. هذا الاستقلال هو أساس كل توصية نقدّمها.'
                 : 'We hold no equity in operators, take no vendor commissions, and carry no brand allegiance. Our partnerships exist to serve one interest only: the client’s. That independence is the foundation of every recommendation we make.'}
@@ -1597,28 +1732,28 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5C: OUR VALUES (NAVY) ═══════════════ */}
-      <section id="values" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 5C: OUR VALUES (CHARCOAL) ═══════════════ */}
+      <section id="values" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
-          <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+          <FadeInSection className="max-w-2xl mb-14">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '19 — ما نؤمن به' : '19 — What We Stand For'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>قيمنا <span className="italic" style={{ color: COLOR.goldLight }}>الأساسية.</span></>
+                <>قيمنا <span className="italic" style={{ ...canela, color: COLOR.copper }}>الأساسية.</span></>
               ) : (
-                <>Our <span className="italic" style={{ color: COLOR.goldLight }}>values.</span></>
+                <>Our <span className="italic" style={{ ...canela, color: COLOR.copper }}>values.</span></>
               )}
             </h2>
-            <p className="text-[13px] text-slate-400 leading-relaxed mt-5" style={inter}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'سبعة التزامات تحكم كيف ننصح، وكيف ننفّذ، وكيف نتصرّف حين لا يراقبنا أحد.'
                 : 'Seven commitments that govern how we advise, how we execute, and how we behave when no one is watching.'}
             </p>
-          </div>
+          </FadeInSection>
 
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-4 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
             {[
               {
                 t: isRTL ? 'النزاهة' : 'Integrity',
@@ -1649,27 +1784,27 @@ export default function PublicHome() {
                 d: isRTL ? 'تمكين محوره الإنسان: نبني جنباً إلى جنب مع فرق العميل والكفاءات المحلية، وننقل القدرات بدلاً من خلق الاعتماد.' : 'Human-centred empowerment: we build alongside client teams and local talent, transferring capability rather than creating dependency.',
               },
             ].map((v) => (
-              <div key={v.t} className="p-7 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.navy }}>
-                <h4 className="text-sm font-bold uppercase tracking-wide mb-2.5" style={{ ...inter, color: COLOR.goldLight }}>{v.t}</h4>
-                <p className="text-[12px] leading-relaxed text-slate-400" style={inter}>{v.d}</p>
+              <div key={v.t} className="p-7 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <h4 className="text-sm font-bold uppercase tracking-wide mb-2.5" style={{ ...neueHaas, color: COLOR.copper }}>{v.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed text-slate-300" style={{ ...inter, color: '#94A3B8' }}>{v.d}</p>
               </div>
             ))}
-          </div>
+          </StaggerChildren>
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5D: ESG & SUSTAINABILITY (CREAM, TEXTURED) ═══════════════ */}
-      <section id="esg" className="py-24 sm:py-32 px-4 relative overflow-hidden" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 5D: ESG & SUSTAINABILITY (CREAMY WHITE, TEXTURED) ═══════════════ */}
+      <section id="esg" className="py-24 sm:py-32 px-4 relative overflow-hidden" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: "url('/bg-pattern-dark.png')", backgroundSize: '280px' }} />
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.emerald }}>
               {isRTL ? '20 — أداء مسؤول' : '20 — Responsible Performance'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
-              ESG &amp; <span className="italic" style={{ color: COLOR.emerald }}>{isRTL ? 'الاستدامة' : 'Sustainability'}</span>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
+              ESG &amp; <span className="italic" style={{ ...canela, color: COLOR.emerald }}>{isRTL ? 'الاستدامة' : 'Sustainability'}</span>
             </h2>
-            <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'الأداء المستدام ليس تمريناً امتثالياً، بل استراتيجية قيمة للأصل. نُرسّخ الانضباط البيئي والاجتماعي والحوكمي داخل النموذج التشغيلي نفسه.'
                 : 'Sustainable performance is not a compliance exercise. It is an asset-value strategy. We embed environmental, social, and governance discipline into the operating model itself.'}
@@ -1695,14 +1830,14 @@ export default function PublicHome() {
                 d: isRTL ? 'كفاءة الطاقة والمياه والنفايات مُهندسة داخل إجراءات التشغيل وخطط الإنفاق الرأسمالي: ذكاء مرافق وتكلفة دورة حياة تقلّل البصمة وتوسّع أرباح الغرفة.' : 'Energy, water, and waste efficiency engineered into SOPs and capex plans: utilities intelligence and lifecycle costing that reduce footprint while expanding GOP.',
               },
             ].map((e) => (
-              <div key={e.t} className="p-8 bg-white border border-stone-200">
-                <h4 className="text-base font-bold mb-2.5" style={{ ...inter, color: '#1a1a1a' }}>{e.t}</h4>
-                <p className="text-[12.5px] leading-relaxed" style={{ ...inter, color: '#6b6b6b' }}>{e.d}</p>
+              <div key={e.t} className="p-8 border" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
+                <h4 className="text-base font-bold mb-2.5" style={{ ...neueHaas, color: COLOR.charcoal }}>{e.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{e.d}</p>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-sm italic mt-10" style={{ ...playfair, color: '#1a1a1a' }}>
+          <p className="text-center text-sm italic mt-10" style={{ ...canela, color: COLOR.charcoal }}>
             {isRTL
               ? 'الأصول التي تحترم وجهتها تتفوق على تلك التي تكتفي باحتلالها.'
               : 'Assets that respect their destination outperform those that merely occupy it.'}
@@ -1710,21 +1845,21 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5E: DIGITAL & AI (NAVY) ═══════════════ */}
-      <section id="digital-ai" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 5E: DIGITAL & AI (CHARCOAL) ═══════════════ */}
+      <section id="digital-ai" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '21 — طبقة الذكاء' : '21 — The Intelligence Layer'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>الرقمنة <span className="italic" style={{ color: COLOR.goldLight }}>والذكاء الاصطناعي.</span></>
+                <>الرقمنة <span className="italic" style={{ ...canela, color: COLOR.copper }}>والذكاء الاصطناعي.</span></>
               ) : (
-                <>Digital <span className="italic" style={{ color: COLOR.goldLight }}>&amp; AI.</span></>
+                <>Digital <span className="italic" style={{ ...canela, color: COLOR.copper }}>&amp; AI.</span></>
               )}
             </h2>
-            <p className="text-[13px] text-slate-400 leading-relaxed mt-5" style={inter}>
+            <p className="text-sm sm:text-base text-slate-300 leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'كل تكليف من ألتوس يأتي مزوّداً بطبقة ذكاء: الأدوات التي تحوّل العمليات إلى أدلة، والأدلة إلى ميزة تنافسية.'
                 : 'Every Altus mandate ships with an intelligence layer: the instrumentation that turns operations into evidence, and evidence into advantage.'}
@@ -1758,14 +1893,14 @@ export default function PublicHome() {
                 d: isRTL ? 'بنية CRM، الانتقال إلى السحابة، ومخططات تقنية متكاملة تخفض تكاليف تقنية المعلومات على المدى الطويل.' : 'CRM architecture, cloud migration, and integrated technology blueprints that cut long-run IT overheads.',
               },
             ].map((d) => (
-              <div key={d.t} className="p-7 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: '#0E1B30' }}>
-                <h4 className="text-sm font-bold mb-2.5" style={{ ...inter, color: COLOR.goldLight }}>{d.t}</h4>
-                <p className="text-[12px] leading-relaxed text-slate-400" style={inter}>{d.d}</p>
+              <div key={d.t} className="p-7 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.charcoalDeep }}>
+                <h4 className="text-sm font-bold uppercase tracking-wide mb-2.5" style={{ ...neueHaas, color: COLOR.copper }}>{d.t}</h4>
+                <p className="text-xs sm:text-sm leading-relaxed text-slate-300" style={{ ...inter, color: '#94A3B8' }}>{d.d}</p>
               </div>
             ))}
           </div>
 
-          <p className="text-center text-[13px] text-slate-400 mt-10 max-w-2xl mx-auto" style={inter}>
+          <p className="text-center text-xs sm:text-sm text-slate-400 mt-10 max-w-2xl mx-auto" style={inter}>
             {isRTL
               ? 'من الحدس إلى الحقيقة الميدانية. نستبدل الحدس بالتحليلات التجريبية: عمداً، وفي كل مكان.'
               : 'From gut feel to ground truth. We replace intuition with empirical analytics: deliberately, and everywhere.'}
@@ -1773,34 +1908,34 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5F: WHY CLIENTS CHOOSE ALTUS (CREAM) ═══════════════ */}
-      <section id="why-clients" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.cream }}>
+      {/* ═══════════════ SECTION 5F: WHY CLIENTS CHOOSE ALTUS (CREAMY WHITE) ═══════════════ */}
+      <section id="why-clients" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-14">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.emerald }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? '22 — القرار في صفحة واحدة' : '22 — The Decision in One Page'}
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...playfair, color: '#1a1a1a' }}>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
               {isRTL ? (
-                <>لماذا يختار العملاء <span className="italic" style={{ color: COLOR.emerald }}>ألتوس.</span></>
+                <>لماذا يختار العملاء <span className="italic" style={{ ...canela, color: COLOR.emerald }}>ألتوس.</span></>
               ) : (
-                <>Why clients choose <span className="italic" style={{ color: COLOR.emerald }}>Altus.</span></>
+                <>Why clients choose <span className="italic" style={{ ...canela, color: COLOR.emerald }}>Altus.</span></>
               )}
             </h2>
-            <p className="text-[13px] leading-relaxed mt-5" style={{ ...inter, color: '#6b6b6b' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
               {isRTL
                 ? 'مقارنة صريحة ومقصودة: العملاء يستحقون معرفة ما يشترونه بالضبط.'
                 : 'A candid comparison: how the Altus model differs from conventional consulting engagements, dimension by dimension.'}
             </p>
           </div>
 
-          <div className="overflow-x-auto border border-stone-300">
+          <div className="overflow-x-auto border" style={{ borderColor: COLOR.sand }}>
             <table className="w-full text-start" style={inter}>
               <thead>
-                <tr className="border-b border-stone-300" style={{ backgroundColor: '#EDE7DA' }}>
-                  <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: '#1a1a1a' }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
-                  <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: '#6b6b6b' }}>{isRTL ? 'الاستشارات التقليدية' : 'Traditional Consulting'}</th>
-                  <th className="p-4 text-[11px] uppercase tracking-wider font-bold text-start" style={{ color: COLOR.emerald }}>{isRTL ? 'ألتوس استشارات' : 'Altus Advisory'}</th>
+                <tr className="border-b" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.charcoal }}>{isRTL ? 'البُعد' : 'Dimension'}</th>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.slate }}>{isRTL ? 'الاستشارات التقليدية' : 'Traditional Consulting'}</th>
+                  <th className="p-4 text-xs uppercase tracking-wider font-bold text-start" style={{ ...neueHaas, color: COLOR.emerald }}>{isRTL ? 'ألتوس استشارات' : 'Altus Advisory'}</th>
                 </tr>
               </thead>
               <tbody>
@@ -1851,12 +1986,12 @@ export default function PublicHome() {
                     c: isRTL ? 'نجاح العميل أولاً: الشروط التجارية تتبع النتائج' : 'Client success first: commercial terms follow outcomes',
                   },
                 ].map((row) => (
-                  <tr key={row.d} className="border-b border-stone-200 last:border-0">
-                    <td className="p-4 text-[12.5px] font-bold align-top" style={{ color: '#1a1a1a' }}>{row.d}</td>
-                    <td className="p-4 text-[12px] align-top" style={{ color: '#6b6b6b' }}>
+                  <tr key={row.d} className="border-b last:border-0" style={{ borderColor: COLOR.sand }}>
+                    <td className="p-4 text-xs font-bold align-top" style={{ ...neueHaas, color: COLOR.charcoal }}>{row.d}</td>
+                    <td className="p-4 text-xs align-top" style={{ ...inter, color: COLOR.slate }}>
                       <span className="flex items-start gap-2"><X className="w-3.5 h-3.5 shrink-0 mt-0.5 text-red-400/70" />{row.a}</span>
                     </td>
-                    <td className="p-4 text-[12px] align-top font-medium" style={{ color: COLOR.emerald, backgroundColor: 'rgba(27,67,50,0.05)' }}>
+                    <td className="p-4 text-xs align-top font-medium" style={{ ...inter, color: COLOR.emerald, backgroundColor: `${COLOR.emerald}0D` }}>
                       <span className="flex items-start gap-2"><Check className="w-3.5 h-3.5 shrink-0 mt-0.5" style={{ color: COLOR.emerald }} />{row.c}</span>
                     </td>
                   </tr>
@@ -1865,12 +2000,12 @@ export default function PublicHome() {
             </table>
           </div>
 
-          <p className="text-center text-[13px] mt-8" style={{ ...inter, color: '#6b6b6b' }}>
+          <p className="text-center text-xs sm:text-sm mt-8" style={{ ...inter, color: COLOR.slate }}>
             {isRTL
               ? 'المقارنة صريحة بقصد: يستحق العملاء معرفة ما يشترونه بالضبط.'
               : 'The comparison is candid by intent: clients deserve to know exactly what they are buying.'}
           </p>
-          <p className="text-center text-base sm:text-lg italic mt-4 max-w-2xl mx-auto" style={{ ...playfair, color: '#1a1a1a' }}>
+          <p className="text-center text-base sm:text-lg italic mt-4 max-w-2xl mx-auto" style={{ ...canela, color: COLOR.charcoal }}>
             {isRTL
               ? '"الفارق الحقيقي لألتوس في جملة واحدة: نُقاس بعوائدكم، حاضرون في صفكم، ومسؤولون عن النتيجة، لا عن التقرير."'
               : '“The Altus difference in one sentence: we are measured by your returns, present at your side, and accountable for the result, not the report.”'}
@@ -1878,21 +2013,21 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 5G: THE ALTUS PORTAL (NAVY) ═══════════════ */}
-      <section id="portal" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.navy }}>
+      {/* ═══════════════ SECTION 5G: THE ALTUS PORTAL (CHARCOAL) ═══════════════ */}
+      <section id="portal" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto grid lg:grid-cols-5 gap-10 lg:gap-16 items-center">
           <div className="lg:col-span-3">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...inter, color: COLOR.gold }}>
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
               {isRTL ? 'الدخول الآمن' : 'Secure Access'}
             </div>
-            <h2 className="text-3xl sm:text-5xl text-white font-normal leading-tight mb-5" style={playfair}>
+            <h2 className="text-3xl sm:text-5xl text-white font-normal leading-tight mb-5" style={neueHaas}>
               {isRTL ? (
-                <>البوابة <span className="italic" style={{ color: COLOR.goldLight }}>الرقمية لألتوس.</span></>
+                <>البوابة <span className="italic" style={{ ...canela, color: COLOR.copper }}>الرقمية لألتوس.</span></>
               ) : (
-                <>The Altus <span className="italic" style={{ color: COLOR.goldLight }}>Portal.</span></>
+                <>The Altus <span className="italic" style={{ ...canela, color: COLOR.copper }}>Portal.</span></>
               )}
             </h2>
-            <p className="text-[13px] sm:text-sm text-slate-400 leading-relaxed mb-8 max-w-xl" style={inter}>
+            <p className="text-sm text-slate-300 leading-relaxed mb-8 max-w-xl" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'هذا الموقع هو أيضاً بوابتك: مساحة عمل آمنة لفرق ألتوس، والمنشآت الشريكة، وموظفي الخط الأمامي — تجمع بين الاستشارة والمنتج الرقمي في مكان واحد.'
                 : 'This site is also your gateway: a secure workspace for Altus teams, partner properties, and front-line staff — bringing the advisory and the digital product together in one place.'}
@@ -1908,8 +2043,8 @@ export default function PublicHome() {
                 isRTL ? 'التحقق العلني من صحة الشهادات الصادرة' : 'Public verification of issued certificates',
               ].map((f) => (
                 <div key={f} className="flex items-start gap-2.5">
-                  <Check className="w-4 h-4 shrink-0 mt-0.5" style={{ color: COLOR.gold }} />
-                  <span className="text-[12.5px] text-slate-300" style={inter}>{f}</span>
+                  <Check className="w-4 h-4 shrink-0 mt-0.5" style={{ color: COLOR.copper }} />
+                  <span className="text-xs sm:text-sm text-slate-300" style={inter}>{f}</span>
                 </div>
               ))}
             </div>
@@ -1917,8 +2052,8 @@ export default function PublicHome() {
             <div className="flex flex-wrap gap-4">
               <Button
                 onClick={() => navigate('/login')}
-                className="h-11 px-7 rounded-none text-[11px] font-semibold tracking-[0.2em] uppercase"
-                style={{ background: COLOR.gold, color: '#0B1528' }}
+                className="h-11 px-7 rounded-none text-xs font-bold tracking-[0.15em] uppercase text-white shadow-md hover:opacity-90"
+                style={{ background: COLOR.copper }}
               >
                 <Lock className="me-2 h-3.5 w-3.5" />
                 {isRTL ? 'الدخول إلى البوابة' : 'SIGN IN TO YOUR PORTAL'}
@@ -1926,24 +2061,25 @@ export default function PublicHome() {
               <Button
                 variant="outline"
                 onClick={() => navigate('/verify')}
-                className="h-11 px-7 rounded-none border border-white/20 bg-transparent hover:bg-white/5 text-white/80 text-[11px] font-semibold tracking-[0.2em] uppercase"
+                className="h-11 px-7 rounded-none border border-white/20 bg-transparent hover:bg-white/5 text-white/90 text-xs font-semibold tracking-[0.15em] uppercase"
+                style={neueHaas}
               >
                 {isRTL ? 'التحقق من شهادة' : 'VERIFY A CERTIFICATE'}
               </Button>
             </div>
           </div>
 
-          <div className="lg:col-span-2 p-8 sm:p-10 border" style={{ backgroundColor: '#0E1B30', borderColor: 'rgba(201,165,77,0.25)' }}>
+          <div className="lg:col-span-2 p-8 sm:p-10 border" style={{ backgroundColor: COLOR.charcoalDeep, borderColor: `${COLOR.copper}40` }}>
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: 'rgba(201,165,77,0.15)' }}>
-                <ShieldCheck className="w-5 h-5" style={{ color: COLOR.gold }} />
+              <div className="w-11 h-11 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${COLOR.copper}20` }}>
+                <ShieldCheck className="w-5 h-5" style={{ color: COLOR.copper }} />
               </div>
               <div>
-                <div className="text-white text-sm font-bold" style={inter}>{isRTL ? 'هل أنت مالك أو مستثمر جديد؟' : 'New owner or investor?'}</div>
-                <div className="text-[11px] text-slate-500" style={inter}>{isRTL ? 'ابدأ بمحادثة، لا حساب' : 'Start with a conversation, not an account'}</div>
+                <div className="text-white text-sm font-bold" style={neueHaas}>{isRTL ? 'هل أنت مالك أو مستثمر جديد؟' : 'New owner or investor?'}</div>
+                <div className="text-xs text-slate-400" style={inter}>{isRTL ? 'ابدأ بمحادثة، لا حساب' : 'Start with a conversation, not an account'}</div>
               </div>
             </div>
-            <p className="text-[12.5px] text-slate-400 leading-relaxed mb-6" style={inter}>
+            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-6" style={{ ...inter, color: '#94A3B8' }}>
               {isRTL
                 ? 'إن لم تكن بعد عميلاً أو عضواً في فريق منشأة شريكة، فإن نقطة البداية هي إحاطة سرية مع أحد الشركاء، وليس تسجيل الدخول.'
                 : 'If you’re not yet a client or a member of a partner property team, the right first step is a confidential briefing with a partner, not a login.'}
@@ -1951,7 +2087,8 @@ export default function PublicHome() {
             <Button
               onClick={() => setBriefingOpen(true)}
               variant="outline"
-              className="w-full h-11 rounded-none border border-amber-500/40 bg-transparent hover:bg-amber-500/10 text-amber-300 text-[11px] font-semibold tracking-[0.2em] uppercase"
+              className="w-full h-11 rounded-none border bg-transparent text-xs font-bold tracking-[0.15em] uppercase transition-[background-color] duration-200 hover:bg-amber-600/10"
+              style={{ borderColor: COLOR.copper, color: COLOR.copper }}
             >
               {isRTL ? 'طلب إحاطة شريك' : 'REQUEST A BRIEFING'}
             </Button>
@@ -1959,62 +2096,62 @@ export default function PublicHome() {
         </div>
       </section>
 
-      {/* ═══════════════ SECTION 6: CTA (DARK WITH ART DECO) ═══════════════ */}
-      <section className="relative py-32 sm:py-40 px-4 text-center overflow-hidden" style={{ backgroundColor: COLOR.navyDeep }}>
+      {/* ═══════════════ SECTION 6: CTA (CHARCOAL DEEP WITH ART DECO) ═══════════════ */}
+      <section className="relative py-32 sm:py-40 px-4 text-center overflow-hidden" style={{ backgroundColor: COLOR.charcoalDeep }}>
         {/* Bottom Art Deco background */}
         <div
-          className="absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-40 pointer-events-none"
+          className="absolute inset-0 bg-cover bg-bottom bg-no-repeat opacity-30 pointer-events-none"
           style={{ backgroundImage: "url('/cta-bottom-bg.png')" }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#060E1B] via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#16191E] via-transparent to-transparent pointer-events-none" />
 
-        <div className="relative z-10 max-w-3xl mx-auto space-y-6">
+        <FadeInSection className="relative z-10 max-w-3xl mx-auto space-y-6">
           <h2
             className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight"
-            style={playfair}
+            style={neueHaas}
           >
             {isRTL ? (
-              <>حوار خاص ومباشر <br /><span className="italic" style={{ color: COLOR.goldLight }}>مع أحد الشركاء.</span></>
+              <>حوار خاص ومباشر <br /><span className="italic" style={{ ...canela, color: COLOR.copper }}>مع أحد الشركاء.</span></>
             ) : (
-              <>A private conversation <br /><span className="italic" style={{ color: COLOR.goldLight }}>with a partner.</span></>
+              <>A private conversation <br /><span className="italic" style={{ ...canela, color: COLOR.copper }}>with a partner.</span></>
             )}
           </h2>
 
-          <p className="text-[13px] text-slate-400 max-w-md mx-auto" style={inter}>
+          <p className="text-sm sm:text-base text-slate-300 max-w-md mx-auto" style={{ ...inter, color: '#94A3B8' }}>
             {isRTL
               ? 'تُعالج جميع الاستفسارات بسرية تامة. سيتواصل معك أحد الشركاء التنفيذيين خلال يومي عمل.'
               : 'All enquiries are received in confidence. A partner will respond directly within two business days.'}
           </p>
 
-          <div className="pt-4" style={inter}>
+          <div className="pt-4" style={neueHaas}>
             <Button
               size="lg"
               onClick={() => setBriefingOpen(true)}
-              className="h-12 px-8 rounded-none text-[11px] font-semibold tracking-[0.2em] uppercase transition-all duration-300"
-              style={{ background: COLOR.gold, color: '#0B1528' }}
+              className="h-12 px-8 rounded-none text-xs font-bold tracking-[0.2em] uppercase text-white shadow-lg transition-opacity duration-200 hover:opacity-90"
+              style={{ background: COLOR.copper }}
             >
               {isRTL ? 'طلب إحاطة شريك' : 'REQUEST A BRIEFING'}
             </Button>
           </div>
-        </div>
+        </FadeInSection>
       </section>
 
       {/* ═══════════════ FOOTER ═══════════════ */}
-      <footer className="py-16 border-t" style={{ backgroundColor: COLOR.navyDeep, borderColor: 'rgba(255,255,255,0.06)' }}>
+      <footer className="py-16 border-t" style={{ backgroundColor: COLOR.charcoalDeep, borderColor: 'rgba(255,255,255,0.08)' }}>
         <div className="max-w-6xl mx-auto px-4">
           {/* Top: Logo + Tagline */}
           <div className="text-center mb-12">
             <div className="flex items-center justify-center gap-2.5 mb-4">
               <img src="/altus-emblem-icon.png" alt="" className="h-10 w-auto object-contain" />
-              <span className="text-white leading-none text-start" style={playfair}>
+              <span className="text-white leading-none text-start" style={canela}>
                 <span className="block text-xl tracking-wide">ALTUS</span>
-                <span className="block text-[10px] tracking-[0.3em] mt-0.5" style={{ color: COLOR.gold }}>ADVISORY</span>
+                <span className="block text-[10px] tracking-[0.3em] font-bold mt-0.5" style={{ ...neueHaas, color: COLOR.copper }}>ADVISORY</span>
               </span>
             </div>
-            <p className="text-[11px] uppercase tracking-[0.2em] font-medium mb-3" style={{ ...inter, color: COLOR.gold }}>
-              ELEVATING HOSPITALITY & BUSINESS PERFORMANCE
+            <p className="text-xs uppercase tracking-[0.2em] font-bold mb-3" style={{ ...neueHaas, color: COLOR.copper }}>
+              ELEVATING HOSPITALITY &amp; BUSINESS PERFORMANCE
             </p>
-            <p className="text-[11px] text-slate-500 max-w-md mx-auto" style={inter}>
+            <p className="text-xs text-slate-400 max-w-md mx-auto" style={inter}>
               {isRTL
                 ? 'منظومة استشارية نخبوية تعمل عند تقاطع عمليات الضيافة الفاخرة وذكاء الأعمال المتقدم — مصممة للعقد القادم في المملكة.'
                 : 'A boutique strategy house operating at the intersection of elite hospitality operations and advanced business intelligence — built for the Kingdom\u2019s next decade.'}
@@ -2022,67 +2159,67 @@ export default function PublicHome() {
           </div>
 
           {/* Link Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12 pt-8 border-t" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-12 pt-8 border-t" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-[11px]" style={inter}>
+              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-xs" style={neueHaas}>
                 {isRTL ? 'الشركة' : 'FIRM'}
               </h5>
-              <ul className="space-y-2 text-slate-500 text-[11px]" style={inter}>
-                <li><a href="#about" className="hover:text-amber-400 transition-colors">{isRTL ? 'من نحن' : 'About'}</a></li>
-                <li><a href="#about" className="hover:text-amber-400 transition-colors">{isRTL ? 'لماذا ألتوس' : 'Why Altus'}</a></li>
-                <li><a href="#leadership" className="hover:text-amber-400 transition-colors">{isRTL ? 'القيادة' : 'Leadership'}</a></li>
+              <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
+                <li><a href="#about" className="hover:text-amber-500 transition-colors">{isRTL ? 'من نحن' : 'About'}</a></li>
+                <li><a href="#about" className="hover:text-amber-500 transition-colors">{isRTL ? 'لماذا ألتوس' : 'Why Altus'}</a></li>
+                <li><a href="#leadership" className="hover:text-amber-500 transition-colors">{isRTL ? 'القيادة' : 'Leadership'}</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-[11px]" style={inter}>
+              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-xs" style={neueHaas}>
                 {isRTL ? 'الخدمات' : 'SERVICES'}
               </h5>
-              <ul className="space-y-2 text-slate-500 text-[11px]" style={inter}>
-                <li><a href="#practices" className="hover:text-amber-400 transition-colors">{isRTL ? 'حلول الضيافة' : 'Hospitality Solutions'}</a></li>
-                <li><a href="#practices" className="hover:text-amber-400 transition-colors">{isRTL ? 'نمو الأعمال' : 'Business Growth'}</a></li>
-                <li><a href="#practices" className="hover:text-amber-400 transition-colors">{isRTL ? 'منصة HK&P' : 'HK&P Platform'}</a></li>
+              <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
+                <li><a href="#practices" className="hover:text-amber-500 transition-colors">{isRTL ? 'حلول الضيافة' : 'Hospitality Solutions'}</a></li>
+                <li><a href="#practices" className="hover:text-amber-500 transition-colors">{isRTL ? 'نمو الأعمال' : 'Business Growth'}</a></li>
+                <li><a href="#practices" className="hover:text-amber-500 transition-colors">{isRTL ? 'منصة HK&P' : 'HK&P Platform'}</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-[11px]" style={inter}>
+              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-xs" style={neueHaas}>
                 {isRTL ? 'المنهجية' : 'METHODOLOGY'}
               </h5>
-              <ul className="space-y-2 text-slate-500 text-[11px]" style={inter}>
-                <li><a href="#ascent" className="hover:text-amber-400 transition-colors">{isRTL ? 'ألتوس أسنت™' : 'Altus Ascent™'}</a></li>
-                <li><a href="#ascent" className="hover:text-amber-400 transition-colors">{isRTL ? 'رؤية 2030' : 'Saudi Vision 2030'}</a></li>
+              <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
+                <li><a href="#ascent" className="hover:text-amber-500 transition-colors">{isRTL ? 'ألتوس أسنت™' : 'Altus Ascent™'}</a></li>
+                <li><a href="#ascent" className="hover:text-amber-500 transition-colors">{isRTL ? 'رؤية 2030' : 'Saudi Vision 2030'}</a></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-[11px]" style={inter}>
+              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-xs" style={neueHaas}>
                 {isRTL ? 'الموارد' : 'RESOURCES'}
               </h5>
-              <ul className="space-y-2 text-slate-500 text-[11px]" style={inter}>
-                <li><button onClick={() => navigate('/verify')} className="hover:text-amber-400 transition-colors">{isRTL ? 'التحقق من الشهادات' : 'Verify Credentials'}</button></li>
-                <li><button onClick={() => setBriefingOpen(true)} className="hover:text-amber-400 transition-colors">{isRTL ? 'تواصل معنا' : 'Contact'}</button></li>
+              <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
+                <li><button onClick={() => navigate('/verify')} className="hover:text-amber-500 transition-colors">{isRTL ? 'التحقق من الشهادات' : 'Verify Credentials'}</button></li>
+                <li><button onClick={() => setBriefingOpen(true)} className="hover:text-amber-500 transition-colors">{isRTL ? 'تواصل معنا' : 'Contact'}</button></li>
               </ul>
             </div>
             <div>
-              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-[11px]" style={inter}>
+              <h5 className="font-bold text-white uppercase tracking-wider mb-3 text-xs" style={neueHaas}>
                 {isRTL ? 'البوابة' : 'PORTAL'}
               </h5>
-              <ul className="space-y-2 text-slate-500 text-[11px]" style={inter}>
-                <li><button onClick={() => navigate('/login')} className="hover:text-amber-400 transition-colors flex items-center gap-1"><Lock className="w-3 h-3" />{isRTL ? 'الدخول المؤسسي' : 'Enterprise Access'}</button></li>
+              <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
+                <li><button onClick={() => navigate('/login')} className="hover:text-amber-500 transition-colors flex items-center gap-1"><Lock className="w-3 h-3" />{isRTL ? 'الدخول المؤسسي' : 'Enterprise Access'}</button></li>
               </ul>
             </div>
           </div>
 
           {/* Bottom Bar */}
-          <div className="border-t pt-6 flex flex-col sm:flex-row justify-between items-center text-[10px] text-slate-600" style={{ ...inter, borderColor: 'rgba(255,255,255,0.06)' }}>
+          <div className="border-t pt-6 flex flex-col sm:flex-row justify-between items-center text-xs text-slate-400" style={{ ...inter, borderColor: 'rgba(255,255,255,0.08)' }}>
             <p>© {new Date().getFullYear()} ALTUS ADVISORY. ALL RIGHTS RESERVED.</p>
             <div className="flex items-center gap-4 mt-2 sm:mt-0">
-              <span className="hover:text-slate-400 cursor-pointer">{isRTL ? 'الخصوصية' : 'PRIVACY'}</span>
-              <span className="hover:text-slate-400 cursor-pointer">{isRTL ? 'الشروط' : 'TERMS'}</span>
+              <span className="hover:text-slate-200 cursor-pointer">{isRTL ? 'الخصوصية' : 'PRIVACY'}</span>
+              <span className="hover:text-slate-200 cursor-pointer">{isRTL ? 'الشروط' : 'TERMS'}</span>
               <a
                 href="https://www.linkedin.com/company/altus-advisory-firm"
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="Altus Advisory on LinkedIn"
-                className="text-slate-500 hover:text-amber-400 transition-colors"
+                className="text-slate-400 hover:text-amber-400 transition-colors"
               >
                 <Linkedin className="w-4 h-4" />
               </a>

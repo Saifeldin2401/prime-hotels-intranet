@@ -43,8 +43,8 @@ export function PublicNavbar() {
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-500 ${scrolled
-        ? 'bg-[#0B1528]/95 backdrop-blur-md shadow-lg'
+      className={`fixed top-0 inset-x-0 z-50 transition-[background-color,box-shadow,backdrop-filter] duration-300 ${scrolled
+        ? 'bg-[#1E2329]/95 backdrop-blur-md border-b border-[#D9C6A3]/20 shadow-lg'
         : 'bg-transparent'
         }`}
     >
@@ -59,10 +59,15 @@ export function PublicNavbar() {
             />
             <span
               className="text-white leading-none"
-              style={{ fontFamily: "'Playfair Display', Georgia, serif" }}
+              style={{ fontFamily: "'Canela', 'Playfair Display', Georgia, serif" }}
             >
-              <span className="block text-lg tracking-wide">ALTUS</span>
-              <span className="block text-[9px] tracking-[0.3em] text-amber-400/90 -mt-0.5">ADVISORY</span>
+              <span className="block text-lg tracking-wide font-normal">ALTUS</span>
+              <span
+                className="block text-[9px] tracking-[0.3em] text-[#C45B2F] font-medium -mt-0.5"
+                style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', sans-serif" }}
+              >
+                ADVISORY
+              </span>
             </span>
           </Link>
 
@@ -72,8 +77,8 @@ export function PublicNavbar() {
               <button
                 key={item.href}
                 onClick={() => handleNavClick(item.href)}
-                className="text-white/60 hover:text-white text-[13px] font-normal tracking-wide transition-colors duration-300"
-                style={{ fontFamily: "'Inter', sans-serif" }}
+                className="text-white/70 hover:text-[#C45B2F] text-[13px] font-medium tracking-wide transition-colors duration-300"
+                style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', 'Inter', sans-serif" }}
               >
                 {item.label}
               </button>
@@ -84,15 +89,15 @@ export function PublicNavbar() {
           <div className="flex items-center gap-3">
             <LanguageSwitcher
               variant="ghost"
-              className="text-white/60 hover:text-white hover:bg-white/5"
+              className="text-white/70 hover:text-white hover:bg-white/5"
               showLabel={false}
             />
 
             <Button
               onClick={() => navigate('/login')}
               size="sm"
-              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-transparent border border-amber-500/40 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300 rounded-none transition-all duration-300"
-              style={{ fontFamily: "'Inter', sans-serif" }}
+              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-transparent border border-[#C45B2F]/60 text-[#C45B2F] hover:bg-[#C45B2F]/10 hover:text-white rounded-none transition-[background-color,color] duration-200"
+              style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', sans-serif" }}
             >
               {t('nav.contact', 'Contact')}
             </Button>
@@ -100,8 +105,8 @@ export function PublicNavbar() {
             <Button
               onClick={() => navigate('/login')}
               size="sm"
-              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-amber-500/20 border border-amber-500/50 text-amber-300 hover:bg-amber-500/30 rounded-none transition-all duration-300"
-              style={{ fontFamily: "'Inter', sans-serif" }}
+              className="hidden sm:flex h-9 px-5 text-[11px] font-semibold tracking-[0.15em] uppercase bg-[#C45B2F] text-white hover:bg-[#C45B2F]/90 rounded-none transition-[background-color] duration-200 shadow-sm"
+              style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', sans-serif" }}
             >
               {t('login_button', 'REQUEST BRIEFING')}
             </Button>
@@ -118,14 +123,14 @@ export function PublicNavbar() {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden bg-[#0B1528]/98 backdrop-blur-md border-t border-white/10">
+          <div className="lg:hidden bg-[#1E2329]/98 backdrop-blur-md border-t border-white/10">
             <nav className="py-4 space-y-1">
               {navItems.map((item) => (
                 <button
                   key={item.href}
                   onClick={() => handleNavClick(item.href)}
-                  className="block w-full py-3 px-2 text-white/70 hover:text-white hover:bg-white/5 text-sm font-normal border-b border-white/5 last:border-0 text-start transition-colors"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
+                  className="block w-full py-3 px-2 text-white/80 hover:text-[#C45B2F] hover:bg-white/5 text-sm font-medium border-b border-white/5 last:border-0 text-start transition-colors"
+                  style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', sans-serif" }}
                 >
                   {item.label}
                 </button>
@@ -133,7 +138,8 @@ export function PublicNavbar() {
               <div className="pt-3 px-1 flex gap-2">
                 <Button
                   onClick={() => { navigate('/login'); setMobileMenuOpen(false) }}
-                  className="flex-1 h-10 bg-amber-500/20 border border-amber-500/50 text-amber-300 font-semibold text-xs tracking-wider uppercase rounded-none"
+                  className="flex-1 h-10 bg-[#C45B2F] text-white font-semibold text-xs tracking-wider uppercase rounded-none"
+                  style={{ fontFamily: "'Neue Haas Grotesk', 'Plus Jakarta Sans', sans-serif" }}
                 >
                   {t('login_button', 'REQUEST BRIEFING')}
                 </Button>

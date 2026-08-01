@@ -33,18 +33,12 @@ const log = {
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface SecurityRequirements {
-  mfaRequired: boolean
-  mfaEnabled: boolean
   passwordRotationRequired: boolean
   setupComplete: boolean
 }
 
 export interface AuthSecurityContextType {
-  isMFAVerified: boolean
-  pendingMFAUserId: string | null
   securityRequirements: SecurityRequirements | null
-  setIsMFAVerified: (verified: boolean) => void
-  setPendingMFAUserId: (userId: string | null) => void
   setSecurityRequirements: (requirements: SecurityRequirements | null) => void
   resetSecurityState: () => void
 }
@@ -71,15 +65,11 @@ export function AuthSecurityProvider({ children }: { children: ReactNode }) {
   const userId = identityContext?.user?.id
   const setUser = identityContext?.setUser
 
-  const [isMFAVerified, setIsMFAVerified] = useState(false)
-  const [pendingMFAUserId, setPendingMFAUserId] = useState<string | null>(null)
   const [securityRequirements, setSecurityRequirements] = useState<SecurityRequirements | null>(null)
 
   const sessionSecurityIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const resetSecurityState = useCallback(() => {
-    setIsMFAVerified(false)
-    setPendingMFAUserId(null)
     setSecurityRequirements(null)
     clearSessionFingerprint()
   }, [])
@@ -169,14 +159,10 @@ export function AuthSecurityProvider({ children }: { children: ReactNode }) {
   }, [userId])
 
   const value = useMemo(() => ({
-    isMFAVerified,
-    pendingMFAUserId,
     securityRequirements,
-    setIsMFAVerified,
-    setPendingMFAUserId,
     setSecurityRequirements,
     resetSecurityState,
-  }), [isMFAVerified, pendingMFAUserId, securityRequirements, resetSecurityState])
+  }), [securityRequirements, resetSecurityState])
 
   return (
     <AuthSecurityContext.Provider value={value}>

@@ -24,7 +24,6 @@ import {
   initializeSessionSecurity,
   checkPasswordBreach,
   checkSecurityRequirements,
-  verifyMFACode,
   logSecurityEvent,
   getRemainingAttempts,
 } from '@/lib/authSecurityService'
@@ -52,8 +51,6 @@ const log = {
 // ─── Types ───────────────────────────────────────────────────────────────────
 export interface SignInResult {
   error: Error | null
-  requiresMFA?: boolean
-  mfaUserId?: string
   requiresCaptcha?: boolean
 }
 
@@ -61,7 +58,6 @@ export interface AuthActionsContextType {
   signIn: (email: string, password: string, captchaToken?: string) => Promise<SignInResult>
   signOut: () => Promise<void>
   refreshSession: () => Promise<void>
-  verifyMFA: (code: string) => Promise<boolean>
 }
 
 export const AuthActionsContext = createContext<AuthActionsContextType | undefined>(undefined)
@@ -82,14 +78,6 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
   const userDataContext = useContext(UserDataContext)
   
   const { clearLocalSession } = useAuthSession()
-
-  // Use refs to access current state without triggering re-renders
-  const pendingMFAUserIdRef = useRef<string | null>(null)
-
-  // Keep refs in sync with context values
-  if (securityContext) {
-    pendingMFAUserIdRef.current = securityContext.pendingMFAUserId
-  }
 
   // ── Sign In ───────────────────────────────────────────────────────────────
   const signIn = useCallback(async (email: string, password: string, captchaToken?: string): Promise<SignInResult> => {
@@ -176,24 +164,7 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
           if (requirements) securityContext?.setSecurityRequirements(requirements)
         } catch (err) {
           log.warn('[AuthActions] Security requirements check failed (non-critical):', err)
-          requirements = { mfaRequired: false, mfaEnabled: false, setupComplete: true, passwordRotationRequired: false }
-        }
-
-        if (requirements.mfaRequired && !requirements.mfaEnabled) {
-          // MFA is required but not set up
-          securityContext?.setPendingMFAUserId(data.user.id)
-          identityContext?.setUser(data.user)
-          identityContext?.setLoading(false)
-          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
-        }
-
-        if (requirements.mfaEnabled) {
-          // MFA is enabled - need to verify
-          securityContext?.setPendingMFAUserId(data.user.id)
-          identityContext?.setUser(data.user)
-          securityContext?.setIsMFAVerified(false)
-          identityContext?.setLoading(false)
-          return { error: null, requiresMFA: true, mfaUserId: data.user.id }
+          requirements = { setupComplete: true, passwordRotationRequired: false }
         }
 
         identityContext?.setUser(data.user)
@@ -224,38 +195,6 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [identityContext, securityContext, userDataContext])
 
-  // ── MFA Verification ──────────────────────────────────────────────────────
-  const verifyMFA = useCallback(async (code: string): Promise<boolean> => {
-    const currentPendingId = pendingMFAUserIdRef.current
-    if (!currentPendingId) return false
-
-    try {
-      const verified = await verifyMFACode(currentPendingId, code)
-      if (!verified) {
-        await logSecurityEvent('mfa.verification_failed', {
-          userId: currentPendingId,
-        })
-        return false
-      }
-
-      securityContext?.setIsMFAVerified(true)
-      securityContext?.setPendingMFAUserId(null)
-
-      // Load user data after MFA verification
-      if (userDataContext) {
-        userDataContext.loadUserData(currentPendingId).catch(() => {
-          log.warn('[AuthActions] Error loading user data after MFA verification.')
-        })
-      }
-
-      await auditLog.login()
-      await logSecurityEvent('login.success_with_mfa', { userId: currentPendingId })
-
-      return true
-    } catch {
-      return false
-    }
-  }, [securityContext, userDataContext])
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
@@ -331,13 +270,11 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
     }
   }, [clearLocalSession, identityContext, userDataContext, securityContext])
 
-  // Stable context value - reference never changes!
   const value = useMemo(() => ({
     signIn,
     signOut,
     refreshSession,
-    verifyMFA,
-  }), [signIn, signOut, refreshSession, verifyMFA])
+  }), [signIn, signOut, refreshSession])
 
   return (
     <AuthActionsContext.Provider value={value}>

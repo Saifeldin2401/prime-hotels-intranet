@@ -762,9 +762,9 @@ export const learningService = {
             ? await Promise.all([
                 supabase
                     .from('training_progress')
-                    .select('*')
+                    .select('*, content_id:training_id, content_type:lp_content_type')
                     .eq('user_id', user.id)
-                    .in('content_id', contentIds),
+                    .in('training_id', contentIds),
                 supabase
                     .from('learning_assignment_exemptions')
                     .select('*')

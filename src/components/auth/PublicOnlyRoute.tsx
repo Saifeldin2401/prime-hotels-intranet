@@ -10,22 +10,22 @@ interface PublicOnlyRouteProps {
 }
 
 export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
-    const { user, loading, pendingMFAUserId } = useAuth()
+    const { user, loading } = useAuth()
     const location = useLocation()
     const { t } = useTranslation('extracted')
 
     const pendingAuthFlowPath = getAuthFlowRedirectPath()
     const redirectPath = getRedirectFromSearch(location.search)
     const storedRedirect = peekPostLoginRedirect()
-    const destination = user && !pendingMFAUserId
+    const destination = user
         ? pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/home'
         : null
 
     useEffect(() => {
-        if (user && !pendingMFAUserId && pendingAuthFlowPath) {
+        if (user && pendingAuthFlowPath) {
             clearAuthFlowState()
         }
-    }, [user, pendingAuthFlowPath, pendingMFAUserId])
+    }, [user, pendingAuthFlowPath])
 
     if (loading) {
         return (
