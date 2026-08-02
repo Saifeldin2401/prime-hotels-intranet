@@ -8,7 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { enterpriseErpService, TaxReturn } from '@/services/enterpriseErpService'
+import { enterpriseErpService, type TaxReturn } from '@/services/enterpriseErpService'
 import { FileText, ShieldCheck, Download, Calculator, CheckCircle2 } from 'lucide-react'
 
 interface Props {

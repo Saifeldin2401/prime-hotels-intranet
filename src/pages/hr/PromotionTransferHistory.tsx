@@ -34,6 +34,8 @@ import {
     User,
     XCircle
 } from 'lucide-react'
+import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { EosbCalculatorModal } from '@/components/hr/EosbCalculatorModal'
 import { Scale } from 'lucide-react'
 

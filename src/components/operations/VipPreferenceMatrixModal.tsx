@@ -7,7 +7,7 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog'
 import { Badge } from '@/components/ui/badge'
-import { enterpriseErpService, VipGuestPreference } from '@/services/enterpriseErpService'
+import { enterpriseErpService, type VipGuestPreference } from '@/services/enterpriseErpService'
 import { Crown, Sparkles, Utensils, BedDouble, Shield } from 'lucide-react'
 
 interface Props {
