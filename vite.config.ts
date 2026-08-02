@@ -144,33 +144,8 @@ export default defineConfig({
           if (id.includes('/node_modules/exceljs')) return 'vendor-excel'
           if (id.includes('/node_modules/@tiptap/')) return 'vendor-editor'
 
-          // Mobile-heavy / commonly large bundles
-          if (id.includes('/node_modules/lucide-react')) return 'vendor-icons'
-          if (id.includes('/node_modules/framer-motion')) return 'vendor-motion'
-          if (id.includes('/node_modules/recharts')) return 'vendor-charts'
-
-          // Core framework dependencies (keep main small)
-          if (id.includes('/node_modules/@supabase/')) return 'vendor-supabase'
-          if (id.includes('/node_modules/@tanstack/react-table')) return 'vendor-table'
-          if (id.includes('/node_modules/@tanstack/react-query')) return 'vendor-query'
-          if (id.includes('/node_modules/react-router') || id.includes('/node_modules/@remix-run/router')) return 'vendor-router'
-          if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next')) return 'vendor-i18n'
-
-          // Shared UI primitives and React core (must be together to prevent circular dependency TDZ errors)
-          if (
-            id.includes('/node_modules/react/') ||
-            id.includes('/node_modules/react-dom/') ||
-            id.includes('/node_modules/scheduler/') ||
-            id.includes('/node_modules/@radix-ui/') ||
-            id.includes('/node_modules/class-variance-authority') ||
-            id.includes('/node_modules/clsx') ||
-            id.includes('/node_modules/tailwind-merge')
-          ) {
-            return 'vendor-ui'
-          }
-
-          // Catch-all vendor chunk
-          return 'vendor'
+          // Let Vite/Rollup handle the rest automatically to prevent circular dependencies
+          return undefined;
         }
       }
     }
