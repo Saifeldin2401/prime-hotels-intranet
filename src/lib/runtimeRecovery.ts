@@ -1,4 +1,4 @@
-const DEFAULT_CANONICAL_APP_URL = 'https://phg-connect.com'
+const DEFAULT_CANONICAL_APP_URL = 'https://altus-advisory.com'
 
 const AUTH_SENSITIVE_PREFIXES = [
   '/login',
@@ -28,8 +28,8 @@ export function canonicalizeAppUrl(candidate: string | null | undefined): string
     if (isLocalDevelopmentHost(parsed.hostname)) {
       return fallback.toString().replace(/\/$/, '')
     }
-    if (parsed.hostname === 'www.phg-connect.com') {
-      parsed.hostname = 'phg-connect.com'
+    if (parsed.hostname.startsWith('www.')) {
+      parsed.hostname = parsed.hostname.slice('www.'.length)
     }
     parsed.pathname = ''
     parsed.search = ''

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
 import { useProfiles } from '@/hooks/useUsers'
 import { createCertificate } from '@/services/certificateService'
 import { supabase } from '@/lib/supabase'
@@ -18,6 +19,7 @@ type CertificateType = 'training' | 'sop_quiz' | 'compliance' | 'achievement'
 export default function ManualCertificateGenerator() {
     const { t } = useTranslation('admin')
     const { profile } = useAuth()
+    const { currentProperty } = useProperty()
     const { data: users, isLoading: usersLoading } = useProfiles()
     const { data: trainingModules = [], isLoading: modulesLoading } = useQuery({
         queryKey: ['manual-certificate-training-modules'],
@@ -73,7 +75,12 @@ export default function ManualCertificateGenerator() {
                 completionDate: new Date(completionDate),
                 passingScore: selectedModule?.passing_score_percentage ?? undefined,
                 trainingModuleId: selectedModule?.id ?? undefined,
-                propertyId: selectedUser.properties?.[0]?.id || undefined,
+                // Prefer the property the admin is currently working in when the target
+                // employee is assigned to it (common case); otherwise fall back to the
+                // employee's first assigned property for multi-property staff.
+                propertyId: selectedUser.properties?.find(p => p.id === currentProperty?.id)?.id
+                    ?? selectedUser.properties?.[0]?.id
+                    ?? undefined,
                 departmentId: selectedUser.departments?.[0]?.id || undefined,
                 issuedBy: profile?.id
             })

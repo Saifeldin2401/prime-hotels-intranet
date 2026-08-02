@@ -89,20 +89,26 @@ Deno.serve(async (req: Request) => {
     // Read body once for both verification and parsing
     const rawBody = await req.text();
 
-    // Verify request signature
-    if (signingSecret) {
-      const isValid = await verifySlackRequest(req, signingSecret, rawBody);
-      if (!isValid) {
-        console.error("Invalid Slack signature");
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+    // Verify request signature. A missing signing secret must fail closed --
+    // never process an unverified webhook (previously this fell through and
+    // treated any forged payload as legitimate).
+    if (!signingSecret) {
+      console.error("No SLACK_SIGNING_SECRET configured - rejecting request");
+      return new Response(
+        JSON.stringify({ error: "Signature verification unavailable" }),
+        {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } else {
-      console.warn(
-        "No SLACK_SIGNING_SECRET configured - skipping signature verification",
+        },
       );
+    }
+    const isValid = await verifySlackRequest(req, signingSecret, rawBody);
+    if (!isValid) {
+      console.error("Invalid Slack signature");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Parse request body
@@ -515,7 +521,7 @@ async function handleMemberJoined(
     buildActions([
       buildButton("View My Training", "welcome_training", { style: "primary" }),
       buildButton("Open PHG Connect", "welcome_phg", {
-        url: "https://www.phg-connect.com",
+        url: "https://www.altus-advisory.com",
       }),
     ]),
     buildContext("You can DM me anytime for quick updates!"),
@@ -627,7 +633,7 @@ async function handleReactionAdded(
           ),
           buildActions([
             buildButton("View in PHG Connect", `view_task_${task.id}`, {
-              url: `https://www.phg-connect.com/tasks/${task.id}`,
+              url: `https://www.altus-advisory.com/tasks/${task.id}`,
             }),
           ]),
         ],

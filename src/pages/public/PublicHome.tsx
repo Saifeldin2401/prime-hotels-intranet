@@ -1,5 +1,9 @@
 import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { RevealUp } from '@/components/public/RevealUp';
+import { FloatingConciergeBadge } from '@/components/public/FloatingConciergeBadge';
 import { Button } from '@/components/ui/button';
+
+
 import {
   Dialog,
   DialogContent,
@@ -528,7 +532,15 @@ export default function PublicHome() {
         {/* Subtle gradient overlay from bottom */}
         <div className="absolute inset-0 bg-gradient-to-t from-[#16191E] via-transparent to-transparent pointer-events-none" />
 
-        <div className="relative z-10 max-w-4xl mx-auto space-y-8">
+        {/* Floating Concierge Badge Special Component */}
+        <div className="absolute bottom-10 right-8 z-20 hidden md:block">
+          <FloatingConciergeBadge
+            number={isRTL ? '٠١' : '01'}
+            label={isRTL ? 'مختارات • الكونسييرج' : 'CONCIERGE • SELECTION'}
+          />
+        </div>
+
+        <RevealUp className="relative z-10 max-w-4xl mx-auto space-y-8">
           {/* Subtitle / Brand Tag */}
           <div
             className="text-xs sm:text-sm uppercase tracking-[0.25em] font-semibold"
@@ -588,7 +600,8 @@ export default function PublicHome() {
               {isRTL ? 'استكشف الخدمات' : 'EXPLORE THE PRACTICE'}
             </Button>
           </div>
-        </div>
+        </RevealUp>
+
 
         {/* Stats Counter Bar - IBM Plex Mono Technical Numbers */}
         <StaggerChildren className="relative z-10 w-full max-w-4xl mx-auto mt-20 pt-10 border-t border-white/10 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
@@ -1021,6 +1034,7 @@ export default function PublicHome() {
       </section>
 
       {/* ═══════════════ SECTION 4: ALTUS ASCENT™ (CREAMY WHITE) ═══════════════ */}
+
       <section id="ascent" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-5xl mx-auto">
           <FadeInSection className="text-center space-y-4 mb-16">

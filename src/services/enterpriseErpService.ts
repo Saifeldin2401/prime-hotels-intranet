@@ -69,10 +69,7 @@ export const enterpriseErpService = {
             .order('created_at', { ascending: false })
             .limit(20)
 
-        if (error) {
-            console.error('Error fetching journal entries:', error)
-            return []
-        }
+        if (error) throw error
         return data || []
     },
 
@@ -82,10 +79,7 @@ export const enterpriseErpService = {
             .select('*')
             .order('created_at', { ascending: false })
 
-        if (error) {
-            console.error('Error fetching tax returns:', error)
-            return []
-        }
+        if (error) throw error
         return data || []
     },
 
@@ -95,24 +89,18 @@ export const enterpriseErpService = {
             .select('*')
             .order('lifetime_spend_sar', { ascending: false })
 
-        if (error) {
-            console.error('Error fetching VIP preferences:', error)
-            return []
-        }
+        if (error) throw error
         return data || []
     },
 
-    async createVipPreference(pref: Omit<VipGuestPreference, 'id'>): Promise<VipGuestPreference | null> {
+    async createVipPreference(pref: Omit<VipGuestPreference, 'id'>): Promise<VipGuestPreference> {
         const { data, error } = await supabase
             .from('vip_guest_preferences')
             .insert(pref)
             .select()
             .single()
 
-        if (error) {
-            console.error('Error creating VIP preference:', error)
-            return null
-        }
+        if (error) throw error
         return data
     },
 

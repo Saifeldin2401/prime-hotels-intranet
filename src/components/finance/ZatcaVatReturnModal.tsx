@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { enterpriseErpService, type TaxReturn } from '@/services/enterpriseErpService'
 import { FileText, ShieldCheck, Download, Calculator, CheckCircle2 } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Props {
     open: boolean
@@ -22,10 +23,14 @@ export function ZatcaVatReturnModal({ open, onOpenChange }: Props) {
 
     useEffect(() => {
         if (open) {
-            enterpriseErpService.fetchTaxReturns().then(data => {
-                setReturns(data)
-                setLoading(false)
-            })
+            setLoading(true)
+            enterpriseErpService.fetchTaxReturns()
+                .then(data => setReturns(data))
+                .catch(error => {
+                    console.error('Error fetching tax returns:', error)
+                    toast.error('Failed to load ZATCA tax returns')
+                })
+                .finally(() => setLoading(false))
         }
     }, [open])
 

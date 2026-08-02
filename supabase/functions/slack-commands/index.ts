@@ -88,13 +88,17 @@ Deno.serve(async (req: Request) => {
     // Read body once for both verification and parsing
     const rawBody = await req.text();
 
-    // Verify Slack signature if secret is available
-    if (signingSecret) {
-      const isValid = await verifySlackRequest(req, signingSecret, rawBody);
-      if (!isValid) {
-        console.warn("Invalid Slack signature received");
-        return buildErrorResponse("Invalid request signature");
-      }
+    // Verify Slack signature. A missing signing secret must fail closed --
+    // never process an unverified webhook (previously this fell through and
+    // treated any forged payload as legitimate).
+    if (!signingSecret) {
+      console.error("No SLACK_SIGNING_SECRET configured - rejecting request");
+      return buildErrorResponse("Signature verification unavailable");
+    }
+    const isValid = await verifySlackRequest(req, signingSecret, rawBody);
+    if (!isValid) {
+      console.warn("Invalid Slack signature received");
+      return buildErrorResponse("Invalid request signature");
     }
 
     // Parse urlencoded body
@@ -372,7 +376,7 @@ async function handleTrainingCommand(
     buildActions([
       buildButton("Open PHG Learning", "training_phg", {
         style: "primary",
-        url: "https://www.phg-connect.com/learning/my-learning",
+        url: "https://www.altus-advisory.com/learning/my-learning",
       }),
     ]),
   );
@@ -507,7 +511,7 @@ async function handleReviewsCommand(
       buildActions([
         buildButton("View All Reviews", "reviews_phg", {
           style: "primary",
-          url: "https://www.phg-connect.com/guest-reviews",
+          url: "https://www.altus-advisory.com/guest-reviews",
         }),
       ]),
     );
@@ -562,7 +566,7 @@ async function handleOpsCommand(
       {
         actions: [
           buildButton("View Ops Dashboard", "ops_dashboard", {
-            url: "https://www.phg-connect.com/operations",
+            url: "https://www.altus-advisory.com/operations",
           }),
         ],
       },
@@ -582,13 +586,13 @@ async function handleOpsCommand(
     buildDivider(),
     buildActions([
       buildButton("Maintenance", "ops_maintenance", {
-        url: "https://www.phg-connect.com/maintenance",
+        url: "https://www.altus-advisory.com/maintenance",
       }),
       buildButton("Incidents", "ops_incidents", {
-        url: "https://www.phg-connect.com/incidents",
+        url: "https://www.altus-advisory.com/incidents",
       }),
       buildButton("Tasks", "ops_tasks", {
-        url: "https://www.phg-connect.com/tasks",
+        url: "https://www.altus-advisory.com/tasks",
       }),
     ]),
   ];
@@ -675,7 +679,7 @@ async function handleWhoAmICommand(
     buildDivider(),
     buildActions([
       buildButton("Edit Profile", "whoami_edit", {
-        url: "https://www.phg-connect.com/profile",
+        url: "https://www.altus-advisory.com/profile",
       }),
     ]),
     buildContext("Your Slack account is linked to this PHG profile"),

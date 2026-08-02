@@ -100,14 +100,22 @@ Deno.serve(async (req: Request) => {
       supabase,
       "SLACK_SIGNING_SECRET",
     );
-    if (signingSecret) {
-      const isValid = await verifySlackRequest(req, signingSecret, rawBody);
-      if (!isValid) {
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
+    if (!signingSecret) {
+      console.error("No SLACK_SIGNING_SECRET configured - rejecting request");
+      return new Response(
+        JSON.stringify({ error: "Signature verification unavailable" }),
+        {
           status: 401,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+        },
+      );
+    }
+    const isValid = await verifySlackRequest(req, signingSecret, rawBody);
+    if (!isValid) {
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Parse payload (Slack sends form data with "payload" field)
@@ -639,7 +647,7 @@ async function handleWelcomeAction(
           ]),
       buildActions([
         buildButton("Go to Learning", "training_phg", {
-          url: "https://www.phg-connect.com/learning/my-learning",
+          url: "https://www.altus-advisory.com/learning/my-learning",
         }),
       ]),
     ];

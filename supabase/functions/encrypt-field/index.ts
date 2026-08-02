@@ -1,12 +1,7 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { getVaultSecret } from "../_shared/vault.ts";
-
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 function uint8ArrayToBase64(bytes: Uint8Array): string {
   const binary = Array.from(bytes).map((byte) => String.fromCharCode(byte)).join('');
@@ -23,6 +18,8 @@ function base64ToUint8Array(base64: string): Uint8Array {
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
+
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -44,10 +41,33 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
     const { data: { user } } = await supabaseClient.auth.getUser();
-    
+
     if (!user) {
       return new Response(JSON.stringify({ error: 'Unauthorized' }), {
         status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    // This is a generic encrypt/decrypt oracle -- there is no ownership or
+    // record-level check on what's being encrypted/decrypted, only who is
+    // calling. It currently has zero real callers in the frontend, so the
+    // safest fix is to restrict it to admin roles rather than leave it open
+    // to any authenticated user (which would let any staff member decrypt
+    // arbitrary ciphertext with the single global FIELD_ENCRYPTION_KEY).
+    // If this is ever wired to a real feature, it MUST additionally bind
+    // decrypt access to the caller's actual authorization over the specific
+    // record being decrypted -- a role check alone is not sufficient for a
+    // free-form decryption oracle.
+    const { data: roles } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .in('role', ['regional_admin', 'corporate_admin', 'super_admin']);
+
+    if (!roles || roles.length === 0) {
+      return new Response(JSON.stringify({ error: 'Admin permission required' }), {
+        status: 403,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }

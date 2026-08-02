@@ -38,6 +38,38 @@ function getSupabaseClient(authHeader: string) {
   });
 }
 
+// Requires the caller to be authenticated. The client is built with the
+// service-role key (needed for privileged writes further down), so unlike a
+// normal anon/authenticated client, nothing here is implicitly RLS-gated --
+// every handler MUST call this (or requireAdmin) before touching data.
+async function requireAuth(supabase: any) {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return { user: null, errorResponse: jsonResponse({ error: "Unauthorized" }, 401) };
+  }
+  return { user, errorResponse: null };
+}
+
+// Requires the caller to hold an admin role, matching the check already
+// used by enableAction/disableAction.
+async function requireAdmin(supabase: any) {
+  const { user, errorResponse } = await requireAuth(supabase);
+  if (errorResponse) return { user: null, errorResponse };
+
+  const { data: roles } = await supabase
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", user.id)
+    .in("role", ["regional_admin", "corporate_admin"]);
+
+  if (!roles || roles.length === 0) {
+    return { user: null, errorResponse: jsonResponse({ error: "Admin permission required" }, 403) };
+  }
+  return { user, errorResponse: null };
+}
+
 // ============================================================================
 // MAIN HANDLER
 // ============================================================================
@@ -89,6 +121,9 @@ Deno.serve(async (req) => {
 // ============================================================================
 
 async function listActions(supabase: any, params: any) {
+  const { errorResponse } = await requireAuth(supabase);
+  if (errorResponse) return errorResponse;
+
   const { category, is_system, search, limit = 50, offset = 0 } = params;
 
   let query = supabase
@@ -121,6 +156,9 @@ async function listActions(supabase: any, params: any) {
 }
 
 async function getAction(supabase: any, params: any) {
+  const { errorResponse } = await requireAuth(supabase);
+  if (errorResponse) return errorResponse;
+
   const { action_type, scope_type = "global", scope_id = null } = params;
 
   // Get action definition
@@ -312,11 +350,11 @@ async function executeAction(supabase: any, params: any) {
     sync = false,
   } = params;
 
-  // Get current user
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return jsonResponse({ error: "Unauthorized" }, 401);
+  // Executing an action can send real emails / inject notifications, so it
+  // requires the same admin role enable/disable already require -- not just
+  // "is logged in".
+  const { user, errorResponse } = await requireAdmin(supabase);
+  if (errorResponse) return errorResponse;
 
   // Check if action is enabled
   const { data: isEnabled, error: enabledError } = await supabase.rpc(
@@ -619,6 +657,11 @@ async function handleRequestApproval(
 }
 
 async function getExecutionHistory(supabase: any, params: any) {
+  // Execution history can include config/result payloads with PII, target
+  // user IDs, and email bodies -- admin-only, same as enable/disable/execute.
+  const { errorResponse } = await requireAdmin(supabase);
+  if (errorResponse) return errorResponse;
+
   const {
     action_type,
     status,
@@ -656,6 +699,9 @@ async function getExecutionHistory(supabase: any, params: any) {
 }
 
 async function getEffectiveConfig(supabase: any, params: any) {
+  const { errorResponse } = await requireAuth(supabase);
+  if (errorResponse) return errorResponse;
+
   const { action_type, scope_type = "global", scope_id = null } = params;
 
   const { data, error } = await supabase.rpc("get_action_config", {
@@ -675,6 +721,9 @@ async function getEffectiveConfig(supabase: any, params: any) {
 }
 
 async function getCategories(supabase: any) {
+  const { errorResponse } = await requireAuth(supabase);
+  if (errorResponse) return errorResponse;
+
   const { data, error } = await supabase
     .from("action_definitions")
     .select("action_category, color, icon")

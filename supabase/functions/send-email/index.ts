@@ -198,7 +198,7 @@ serve(async (req) => {
       profileData?.full_name ??
         user?.email ??
         cleanedRecipients[0] ??
-        "team@phg-connect.com",
+        "team@altus-advisory.com",
       runtimeConfig.appBaseUrl,
       profileData?.language || "en",
     );

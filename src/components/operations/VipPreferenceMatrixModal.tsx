@@ -9,6 +9,7 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { enterpriseErpService, type VipGuestPreference } from '@/services/enterpriseErpService'
 import { Crown, Sparkles, Utensils, BedDouble, Shield } from 'lucide-react'
+import { toast } from 'sonner'
 
 interface Props {
     open: boolean
@@ -21,10 +22,14 @@ export function VipPreferenceMatrixModal({ open, onOpenChange }: Props) {
 
     useEffect(() => {
         if (open) {
-            enterpriseErpService.fetchVipPreferences().then(data => {
-                setPreferences(data)
-                setLoading(false)
-            })
+            setLoading(true)
+            enterpriseErpService.fetchVipPreferences()
+                .then(data => setPreferences(data))
+                .catch(error => {
+                    console.error('Error fetching VIP preferences:', error)
+                    toast.error('Failed to load VIP guest preferences')
+                })
+                .finally(() => setLoading(false))
         }
     }, [open])
 

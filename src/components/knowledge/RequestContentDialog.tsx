@@ -11,6 +11,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
+import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { Lightbulb, Loader2, Send } from 'lucide-react'
 import { useEffect, useState } from 'react'
@@ -26,6 +28,7 @@ interface RequestContentDialogProps {
 export function RequestContentDialog({ isOpen, onClose, searchQuery = '' }: RequestContentDialogProps) {
     const { t } = useTranslation('knowledge')
     const { user, profile } = useAuth()
+    const { currentProperty, propertyIds } = useProperty()
     const [title, setTitle] = useState(searchQuery)
     const [description, setDescription] = useState('')
     const [isSubmitting, setIsSubmitting] = useState(false)
@@ -43,7 +46,7 @@ export function RequestContentDialog({ isOpen, onClose, searchQuery = '' }: Requ
 
         setIsSubmitting(true)
         try {
-            const propertyId = profile?.properties?.[0]?.id ?? null
+            const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty.id : (propertyIds[0] ?? null)
             const departmentId = profile?.departments?.[0]?.id ?? null
 
             const { error: requestError } = await supabase.rpc('request_knowledge_content', {

@@ -53,6 +53,22 @@ export interface PoReceipt {
     created_at: string
 }
 
+export interface GoodsReceivedNote {
+    id: string
+    grn_number: string
+    po_id: string | null
+    supplier_id: string | null
+    property_id: string | null
+    received_date: string
+    inspection_status: 'pending' | 'passed' | 'partially_rejected' | 'rejected'
+    matching_status: 'unmatched' | 'matched' | 'variance_flagged'
+    received_by: string | null
+    notes: string | null
+    created_at: string
+    purchase_order: { po_number: string; total_amount: number } | null
+    supplier: { supplier_name: string } | null
+}
+
 export interface InventoryItem {
     id: string
     property_id: string

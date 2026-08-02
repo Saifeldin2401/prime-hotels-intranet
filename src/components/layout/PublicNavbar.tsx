@@ -43,11 +43,12 @@ export function PublicNavbar() {
 
   return (
     <header
-      className={`fixed top-0 inset-x-0 z-50 transition-[background-color,box-shadow,backdrop-filter] duration-300 ${scrolled
-        ? 'bg-[#1E2329]/95 backdrop-blur-md border-b border-[#D9C6A3]/20 shadow-lg'
-        : 'bg-transparent'
+      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${scrolled
+        ? 'bg-[#1E2329]/90 backdrop-blur-[12px] border-b border-[#e4a4bd]/20 shadow-xl'
+        : 'bg-[#1E2329]/60 backdrop-blur-md border-b border-white/5'
         }`}
     >
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-[72px]">
           {/* Logo */}

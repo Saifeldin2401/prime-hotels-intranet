@@ -1,15 +1,15 @@
 import { LoginForm } from '@/components/auth/LoginForm'
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { motion, useReducedMotion } from 'framer-motion'
-import { ChevronRight, Clock, Fingerprint, Shield, Sparkles, Users } from 'lucide-react'
+import { Building2, ChevronRight, ShieldCheck, Sparkles, UserCheck, Users, Zap } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-// Animated background particles
+// Animated ambient background particles
 function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; size: number }) {
   return (
     <motion.div
-      className="absolute rounded-full bg-white/20"
+      className="absolute rounded-full bg-amber-300/30 blur-[1px]"
       style={{
         width: size,
         height: size,
@@ -18,12 +18,12 @@ function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; 
       }}
       initial={{ opacity: 0, scale: 0 }}
       animate={{
-        opacity: [0, 0.4, 0],
-        scale: [0, 1, 0],
-        y: [0, -100, -200],
+        opacity: [0, 0.7, 0],
+        scale: [0, 1.2, 0],
+        y: [0, -80, -160],
       }}
       transition={{
-        duration: 8,
+        duration: 9,
         delay,
         repeat: Infinity,
         ease: "easeOut",
@@ -32,65 +32,35 @@ function Particle({ delay, x, y, size }: { delay: number; x: string; y: string; 
   )
 }
 
-// Feature item component with enhanced hover effects
-function FeatureItem({
+// Feature Card tailored for staff and internal employee operations
+function FeatureCard({
   icon: Icon,
-  text,
+  title,
+  subtitle,
   delay,
-  subtitle
 }: {
   icon: React.ElementType;
-  text: string;
+  title: string;
+  subtitle: string;
   delay: number;
-  subtitle?: string;
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, x: -30 }}
-      animate={{ opacity: 1, x: 0 }}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] }}
-      whileHover={{ x: 8, transition: { duration: 0.2 } }}
-      className="group flex items-start gap-4 text-white/90 cursor-default"
+      whileHover={{ y: -4, transition: { duration: 0.2 } }}
+      style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(16px)' }}
+      className="group p-5 rounded-2xl border border-amber-500/40 hover:border-amber-400 transition-all duration-300 shadow-2xl flex flex-col justify-between h-38"
     >
-      <div className="relative">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-white/20 to-white/5 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-lg group-hover:shadow-white/20 transition-all duration-500 group-hover:scale-110">
-          <Icon className="w-5 h-5 text-white drop-shadow-md" />
-        </div>
-        <motion.div
-          className="absolute inset-0 rounded-2xl bg-white/30 blur-xl"
-          initial={{ opacity: 0 }}
-          whileHover={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        />
+      <div className="w-11 h-11 rounded-xl border border-amber-400/50 bg-amber-500/10 flex items-center justify-center text-amber-400 shadow-inner group-hover:scale-105 transition-transform">
+        <Icon className="w-5 h-5" />
       </div>
-      <div className="flex-1 pt-1">
-        <span className="text-sm font-semibold tracking-wide block">{text}</span>
-        {subtitle && (
-          <span className="text-xs text-white/50 mt-0.5 block">{subtitle}</span>
-        )}
+      <div>
+        <h4 className="text-xs font-extrabold uppercase tracking-wider text-white mb-1">{title}</h4>
+        <p className="text-[11px] text-slate-300 font-normal leading-relaxed">{subtitle}</p>
       </div>
     </motion.div>
-  )
-}
-
-// Glass card component for the right side
-function GlassCard({ children, className = '' }: { children: React.ReactNode; className?: string }) {
-  return (
-    <div className={`relative ${className}`}>
-      {/* Glow effect behind card */}
-      <div className="absolute -inset-1 bg-gradient-to-r from-primary/20 via-accent/20 to-primary/20 rounded-[2rem] blur-2xl opacity-60" />
-
-      {/* Main card */}
-      <div className="relative bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/50 overflow-hidden">
-        {/* Inner gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-gray-50/50 dark:from-gray-800/50 dark:to-gray-900/50 pointer-events-none" />
-
-        {/* Content */}
-        <div className="relative z-10">
-          {children}
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -101,8 +71,7 @@ export default function Login() {
   const prefersReducedMotion = useReducedMotion()
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-  // Mouse parallax effect — throttled to one update per animation frame so we don't
-  // call setState on every pixel of movement. Disabled entirely under reduced-motion.
+  // Mouse movement parallax effect
   useEffect(() => {
     if (prefersReducedMotion) return
 
@@ -112,8 +81,8 @@ export default function Login() {
       frame = window.requestAnimationFrame(() => {
         frame = 0
         setMousePosition({
-          x: (e.clientX / window.innerWidth - 0.5) * 20,
-          y: (e.clientY / window.innerHeight - 0.5) * 20,
+          x: (e.clientX / window.innerWidth - 0.5) * 12,
+          y: (e.clientY / window.innerHeight - 0.5) * 12,
         })
       })
     }
@@ -124,291 +93,202 @@ export default function Login() {
     }
   }, [prefersReducedMotion])
 
-  // Generate particles — kept light (5) for low paint cost; suppressed under reduced-motion.
+  // Particles generator
   const particles = useMemo(
     () =>
       prefersReducedMotion
         ? []
-        : Array.from({ length: 5 }, (_, i) => ({
+        : Array.from({ length: 6 }, (_, i) => ({
             id: i,
-            delay: i * 0.8,
+            delay: i * 1.2,
             x: `${Math.random() * 100}%`,
             y: `${Math.random() * 100}%`,
-            size: Math.random() * 4 + 2,
+            size: Math.random() * 5 + 3,
           })),
     [prefersReducedMotion]
   )
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 overflow-hidden bg-gray-50 dark:bg-gray-950">
-      {/* Left Side - Brand Experience */}
-      <div className="hidden lg:flex flex-col justify-between relative overflow-hidden">
-        {/* Layered Background */}
-        <div className="absolute inset-0 bg-black" />
+    <div className="min-h-screen grid lg:grid-cols-12 overflow-hidden bg-slate-950 font-sans text-slate-100 relative">
+      {/* Background Resort Photography Layer */}
+      <motion.div
+        initial={{ scale: 1.05 }}
+        animate={{ scale: 1 }}
+        transition={{ duration: 25, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
+        className="absolute inset-0 bg-cover bg-center"
+        style={{
+          backgroundImage: "url('/hero-resort.png')",
+        }}
+      />
 
-        {/* Animated Background Image with Ken Burns effect */}
-        <motion.div
-          initial={{ scale: 1.1 }}
-          animate={{ scale: 1 }}
-          transition={{ duration: 25, repeat: Infinity, repeatType: "reverse", ease: "linear" }}
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: "url('/hero-banner.png')",
-          }}
+      {/* Dark Vignette Overlay for Crisp Readability */}
+      <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/75 to-slate-950/50" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/60" />
+
+      {/* Parallax Ambient Orbs */}
+      <motion.div
+        animate={{
+          x: mousePosition.x * 2,
+          y: mousePosition.y * 2,
+        }}
+        transition={{ type: "spring", stiffness: 40, damping: 25 }}
+        className="absolute top-1/3 start-1/4 w-[400px] h-[400px] bg-amber-500/15 rounded-full blur-[120px] pointer-events-none"
+      />
+
+      {/* Floating Particles */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {particles.map((p) => (
+          <Particle key={p.id} {...p} />
+        ))}
+      </div>
+
+      {/* Fixed Top Right Language Switcher Position with Zero Overlap */}
+      <div className="absolute top-5 end-6 lg:top-8 lg:end-10 z-40">
+        <LanguageSwitcher
+          variant="outline"
+          className="bg-slate-900/90 border-slate-700 text-white hover:bg-slate-800 rounded-full px-4 py-2 text-xs backdrop-blur-md shadow-xl"
         />
+      </div>
 
-        {/* Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-br from-black/95 via-black/70 to-black/80 backdrop-blur-[2px]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/30" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent" />
-
-        {/* Animated Orbs */}
+      {/* Top Left Branding Logo */}
+      <div className="absolute top-6 start-6 lg:top-8 lg:start-10 z-30 pointer-events-auto">
         <motion.div
-          animate={{
-            x: mousePosition.x * 2,
-            y: mousePosition.y * 2,
-          }}
-          transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute top-1/4 end-1/4 w-[500px] h-[500px] bg-hotel-gold/20 rounded-full blur-[100px]"
-        />
-        <motion.div
-          animate={{
-            x: -mousePosition.x * 1.5,
-            y: -mousePosition.y * 1.5,
-          }}
-          transition={{ type: "spring", stiffness: 50, damping: 30 }}
-          className="absolute bottom-1/4 start-1/4 w-[600px] h-[600px] bg-hotel-gold-light/10 rounded-full blur-[120px]"
-        />
-
-        {/* Floating Particles */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {particles.map((p) => (
-            <Particle key={p.id} {...p} />
-          ))}
-        </div>
-
-        {/* Grid Pattern Overlay */}
-        <div
-          className="absolute inset-0 opacity-[0.03]"
-          style={{
-            backgroundImage: `linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
-                              linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px)`,
-            backgroundSize: '50px 50px',
-          }}
-        />
-
-        {/* Header */}
-        <div className="relative z-10 p-10 xl:p-14">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="flex items-start justify-between"
-          >
-            {/* Logo */}
-            <div className="flex items-center gap-4">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <img
-                  src="/altus-logo-web.png"
-                  alt="Altus Advisory"
-                  className="h-20 w-auto opacity-95 drop-shadow-2xl object-contain"
-                />
-              </motion.div>
-            </div>
-
-            {/* Language Switcher */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.6, delay: 0.3 }}
-            >
-              <LanguageSwitcher
-                variant="ghost"
-                className="text-white/90 hover:text-white hover:bg-white/10 border border-white/20 backdrop-blur-md rounded-full px-4 py-2 transition-all duration-300"
-              />
-            </motion.div>
-          </motion.div>
-        </div>
-
-        {/* Main Content */}
-        <div className="relative z-10 px-10 xl:px-14 space-y-10 flex-1 flex flex-col justify-center max-w-3xl">
-          {/* Badge */}
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            transition={{ duration: 0.6, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-          >
-            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-gradient-to-r from-white/15 to-white/5 backdrop-blur-md border border-white/25 shadow-lg">
-              <motion.div
-                animate={{ rotate: [0, 15, -15, 0] }}
-                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
-              >
-                <Sparkles className="w-4 h-4 text-yellow-300" />
-              </motion.div>
-              <span className="text-sm font-medium text-white/95 tracking-wide">Altus Connect</span>
-              <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
-            </div>
-          </motion.div>
-
-          {/* Heading */}
-          <div className="space-y-5">
-            <motion.h1
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="text-5xl xl:text-6xl font-bold tracking-tight text-white leading-[1.1] font-heading"
-            >
-              {t('welcome_title')}
-            </motion.h1>
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.7, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
-              className="text-white/65 text-lg xl:text-xl leading-relaxed font-light max-w-xl"
-            >
-              {t('welcome_subtitle')}
-            </motion.p>
-          </div>
-
-          {/* Feature Grid */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
-            className="grid grid-cols-1 gap-5 pt-4"
-          >
-            <FeatureItem
-              icon={Shield}
-              text={isRTL ? "وصول آمن ومحمي" : "Secure & Protected Access"}
-              subtitle={isRTL ? "تشفير على مستوى المؤسسات" : "Enterprise-grade encryption"}
-              delay={0.6}
-            />
-            <FeatureItem
-              icon={Clock}
-              text={isRTL ? "متوفر على مدار الساعة" : "Available 24/7"}
-              subtitle={isRTL ? "وصول فوري في أي وقت" : "Instant access anytime"}
-              delay={0.7}
-            />
-            <FeatureItem
-              icon={Users}
-              text={isRTL ? "تواصل مع فريقك" : "Connect with Your Team"}
-              subtitle={isRTL ? "تعاون سلس" : "Seamless collaboration"}
-              delay={0.8}
-            />
-            <FeatureItem
-              icon={Fingerprint}
-              text={isRTL ? "تجربة سلسة" : "Seamless Experience"}
-              subtitle={isRTL ? "واجهة بديهية" : "Intuitive interface"}
-              delay={0.9}
-            />
-          </motion.div>
-        </div>
-
-        {/* Footer */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.6, delay: 1 }}
-          className="relative z-10 p-10 xl:p-14"
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.7 }}
         >
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-white/40 font-medium">
-              {t('copyright', { year })}
-            </span>
-            <div className="flex items-center gap-2 text-white/30">
-              <span className="text-xs uppercase tracking-[0.2em] font-medium">ALTUS</span>
-              <ChevronRight className="w-3 h-3" />
-            </div>
-          </div>
+          <img
+            src="/altus-logo-web.png"
+            alt="ALTUS Advisory"
+            className="h-12 sm:h-14 w-auto object-contain filter drop-shadow-2xl brightness-110"
+          />
         </motion.div>
       </div>
 
-      {/* Right Side - Login Form */}
-      <div className="relative flex items-center justify-center p-4 sm:p-6 md:p-8 min-h-screen lg:min-h-0">
-        {/* Background Effects */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          {/* Gradient orbs */}
-          <motion.div
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{ duration: 8, repeat: Infinity }}
-            className="absolute top-0 end-0 w-[600px] h-[600px] bg-gradient-to-br from-primary/10 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
-          />
-          <motion.div
-            animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.2, 0.4, 0.2],
-            }}
-            transition={{ duration: 10, repeat: Infinity }}
-            className="absolute bottom-0 start-0 w-[500px] h-[500px] bg-gradient-to-tr from-accent/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2"
-          />
+      {/* Left Main Experience Content (7 Columns) */}
+      <div className="hidden lg:flex lg:col-span-7 flex-col justify-between relative z-10 p-10 xl:p-14 pt-28 pb-12">
+        {/* Middle Hero Section */}
+        <div className="my-auto space-y-8 max-w-3xl">
+          {/* Top Badge & Headline layout split with Circular Staff Widget */}
+          <div className="grid grid-cols-12 gap-6 items-center">
+            {/* Left Headline (7 cols) */}
+            <div className="col-span-7 space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 backdrop-blur-md text-amber-300 text-[11px] font-bold uppercase tracking-wider"
+              >
+                <UserCheck className="w-3.5 h-3.5 text-amber-300" />
+                <span>{isRTL ? "بوابة الموظفين والخدمات الفندقية" : "INTERNAL EMPLOYEE & STAFF PORTAL"}</span>
+              </motion.div>
 
-          {/* Subtle grid */}
-          <div
-            className="absolute inset-0 opacity-[0.015]"
-            style={{
-              backgroundImage: `linear-gradient(gray 1px, transparent 1px),
-                                linear-gradient(90deg, gray 1px, transparent 1px)`,
-              backgroundSize: '60px 60px',
-            }}
-          />
-        </div>
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="text-4xl xl:text-5xl font-serif text-white font-normal leading-[1.15] drop-shadow-md"
+              >
+                {t('welcome_title')}
+              </motion.h1>
 
-        {/* Mobile Header */}
-        <div className="absolute top-0 inset-x-0 p-4 lg:hidden z-30">
-          <div className="flex items-center justify-between">
-            <img
-              src="/altus-emblem-icon.png"
-              alt="Altus"
-              className="h-8 w-8 object-contain"
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.4 }}
+                className="text-slate-300 text-xs xl:text-sm leading-relaxed font-normal drop-shadow-sm max-w-md"
+              >
+                {t('welcome_subtitle')}
+              </motion.p>
+            </div>
+
+            {/* Right Circular Staff Widget (5 cols) */}
+            <div className="col-span-5 flex justify-center">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.7, delay: 0.45 }}
+                style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(16px)' }}
+                className="w-52 h-52 rounded-full border border-amber-500/40 p-4 flex flex-col items-center justify-center text-center shadow-2xl"
+              >
+                <div className="w-10 h-10 rounded-xl border border-amber-400/50 bg-amber-500/15 flex items-center justify-center text-amber-400 mb-2">
+                  <Zap className="w-5 h-5" />
+                </div>
+                <h4 className="text-xs font-bold text-white tracking-wide mb-1">
+                  ALTUS Advisory<br />Staff Network
+                </h4>
+                <div className="flex items-center gap-1 my-0.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                  <span className="text-emerald-400 font-extrabold text-sm">ONLINE</span>
+                </div>
+                <span className="text-[9px] font-extrabold tracking-widest text-slate-400 uppercase">SYSTEMS ACTIVE</span>
+                <p className="text-[9px] text-slate-400 mt-1 max-w-[140px] leading-tight">
+                  Internal HR, Operations & Department Portal
+                </p>
+              </motion.div>
+            </div>
+          </div>
+
+          {/* Bottom 3 Employee Feature Cards */}
+          <div className="grid grid-cols-3 gap-4 pt-4">
+            <FeatureCard
+              icon={UserCheck}
+              title={isRTL ? "الخدمات الذاتية" : "EMPLOYEE SERVICES"}
+              subtitle={isRTL ? "إدارة طلبات الموارد البشرية والرواتب والمسيرات" : "Access HR records, payroll, leave requests & SOPs"}
+              delay={0.55}
             />
-            <LanguageSwitcher />
+            <FeatureCard
+              icon={ShieldCheck}
+              title={isRTL ? "العمليات اليومية" : "DAILY OPERATIONS"}
+              subtitle={isRTL ? "متابعة المهام الفندقية وإدارة النزلاء" : "Manage hotel tasks, housekeeping & guest requests"}
+              delay={0.65}
+            />
+            <FeatureCard
+              icon={Users}
+              title={isRTL ? "دليل الفنادق" : "PROPERTY DIRECTORY"}
+              subtitle={isRTL ? "التواصل مع فروع وموظفي ألتوس" : "Connect with hotel properties & department teams"}
+              delay={0.75}
+            />
           </div>
         </div>
 
-        {/* Login Card */}
+        {/* Footer info */}
+        <div className="relative z-10 pt-6 flex items-center justify-between border-t border-white/15 text-xs text-slate-300">
+          <span>{t('copyright', { year })}</span>
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-amber-300 tracking-wider">ALTUS ADVISORY INTRANET</span>
+            <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
+          </div>
+        </div>
+      </div>
+
+      {/* Right Column - Login Card Container (5 Columns) */}
+      <div className="lg:col-span-5 flex flex-col justify-center items-center p-4 sm:p-8 lg:p-10 relative z-20 min-h-screen lg:min-h-0 pt-28 lg:pt-16">
         <motion.div
-          initial={{ opacity: 0, y: 40, scale: 0.95 }}
+          initial={{ opacity: 0, y: 30, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
-          className="w-full max-w-[440px] relative z-10"
+          transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+          className="bg-white rounded-[32px] p-8 sm:p-10 shadow-2xl border-t-4 border-amber-500 w-full max-w-[420px] relative overflow-hidden mt-6 lg:mt-0"
         >
-          <GlassCard className="p-8 sm:p-10">
-            {/* Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="text-center mb-8"
-            >
+          {/* Header Branding Logo */}
+          <div className="text-center mb-6">
+            <img
+              src="/altus-logo-web.png"
+              alt="ALTUS Advisory"
+              className="h-16 sm:h-20 w-auto object-contain mx-auto mb-3 filter drop-shadow-sm"
+            />
 
+            <h2 className="text-2xl font-bold tracking-tight text-slate-900 mb-1 font-sans">
+              {t('sign_in_title')}
+            </h2>
+            <p className="text-slate-500 text-xs leading-relaxed max-w-xs mx-auto">
+              {t('sign_in_subtitle')}
+            </p>
+          </div>
 
-              {/* Title */}
-              <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 dark:text-white font-heading mb-2">
-                {t('sign_in_title')}
-              </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">
-                {t('sign_in_subtitle')}
-              </p>
-            </motion.div>
-
-            {/* Login Form */}
-            <LoginForm />
-
-            {/* Mobile Footer */}
-            <div className="text-center text-xs text-gray-400 lg:hidden mt-8 pt-6 border-t border-gray-100 dark:border-gray-800">
-              {t('copyright', { year })}
-            </div>
-          </GlassCard>
+          {/* Integrated Login Form */}
+          <LoginForm />
         </motion.div>
-
-        {/* Bottom decoration for mobile */}
-        <div className="absolute bottom-0 inset-x-0 h-32 bg-gradient-to-t from-gray-100/50 to-transparent lg:hidden pointer-events-none" />
       </div>
     </div>
   )

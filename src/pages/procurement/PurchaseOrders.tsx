@@ -242,7 +242,7 @@ export default function PurchaseOrders() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-            <GrnVerificationModal open={isGrnModalOpen} onOpenChange={setIsGrnModalOpen} />
+            <GrnVerificationModal open={isGrnModalOpen} onOpenChange={setIsGrnModalOpen} propertyId={propertyId} />
         </div>
     )
 }

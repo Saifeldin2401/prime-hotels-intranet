@@ -11,6 +11,7 @@ import {
   WifiOff,
   Lock,
   ShieldAlert,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -315,19 +316,18 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
               transition={{ duration: 0.5, delay: 0.5 }}
               className="flex items-center justify-between"
             >
-              <div className="flex items-center gap-2.5">
-                <Checkbox
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
                   id="remember"
                   checked={rememberMe}
-                  onCheckedChange={(checked) =>
-                    setRememberMe(checked as boolean)
-                  }
-                  className="border-gray-300 data-[state=checked]:bg-primary data-[state=checked]:border-primary rounded-md"
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 bg-white text-amber-600 focus:ring-amber-500/20 accent-amber-600 cursor-pointer"
                   aria-label={t('remember_me')}
                 />
                 <label
                   htmlFor="remember"
-                  className="text-sm text-gray-600 dark:text-gray-400 font-medium cursor-pointer select-none"
+                  className="text-xs text-slate-600 font-medium cursor-pointer select-none"
                 >
                   {t('remember_me')}
                 </label>
@@ -336,7 +336,7 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
               <button
                 type="button"
                 onClick={onForgotPassword}
-                className="text-sm font-semibold text-primary hover:text-primary/80 transition-colors hover:underline underline-offset-4"
+                className="text-xs font-semibold text-amber-600 hover:text-amber-700 transition-colors hover:underline underline-offset-4"
               >
                 {t('forgot_password.title')}
               </button>
@@ -351,39 +351,39 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
                 animate={{ opacity: 1, height: 'auto', scale: 1 }}
                 exit={{ opacity: 0, height: 0, scale: 0.95 }}
                 className={cn(
-                  'text-sm p-4 rounded-xl flex items-start gap-3 border',
+                  'text-xs p-3.5 rounded-2xl flex items-start gap-3 border shadow-sm',
                   errorType === 'network' &&
-                    'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800',
+                    'bg-amber-50 text-amber-800 border-amber-200',
                   (errorType === 'rate' || errorType === 'lockout') &&
-                    'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-400 dark:border-orange-800',
+                    'bg-orange-50 text-orange-800 border-orange-200',
                   errorType === 'auth' &&
-                    'bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800'
+                    'bg-rose-50 text-rose-800 border-rose-200'
                 )}
                 role="alert"
                 aria-live="assertive"
               >
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0',
-                    errorType === 'network' && 'bg-amber-100 dark:bg-amber-800/30',
-                    (errorType === 'rate' || errorType === 'lockout') && 'bg-orange-100 dark:bg-orange-800/30',
-                    errorType === 'auth' && 'bg-red-100 dark:bg-red-800/30'
+                    'w-7 h-7 rounded-xl flex items-center justify-center shrink-0 shadow-inner',
+                    errorType === 'network' && 'bg-amber-100 text-amber-600',
+                    (errorType === 'rate' || errorType === 'lockout') && 'bg-orange-100 text-orange-600',
+                    errorType === 'auth' && 'bg-rose-100 text-rose-600'
                   )}
                 >
                   {getErrorIcon()}
                 </div>
                 <div className="flex-1 pt-0.5">
-                  <p className="font-semibold">{t('errors.title')}</p>
-                  <p className="text-sm opacity-90 mt-0.5">{error}</p>
+                  <p className="font-bold text-slate-900">{t('errors.title')}</p>
+                  <p className="text-xs text-slate-600 mt-0.5">{error}</p>
                   {/* Self-service unlock CTA for locked accounts */}
                   {errorType === 'lockout' && onUnlockAccount && (
                     <button
                       type="button"
                       onClick={() => onUnlockAccount(email)}
-                      className="mt-3 w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-orange-600 hover:bg-orange-700 text-white text-sm font-semibold transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1"
+                      className="mt-2.5 w-full flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold transition-colors duration-200 shadow-md"
                       aria-label={t('account_locked.unlock_button')}
                     >
-                      <ShieldAlert className="h-4 w-4 shrink-0" aria-hidden="true" />
+                      <ShieldAlert className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                       {t('account_locked.unlock_button')}
                     </button>
                   )}
@@ -400,23 +400,23 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           >
             <Button
               type="submit"
-              className="w-full h-14 bg-primary text-primary-foreground text-base font-semibold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all duration-300 relative overflow-hidden group disabled:opacity-60 disabled:cursor-not-allowed"
+              className="w-full h-12 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-sm rounded-full shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition-all relative overflow-hidden border-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               disabled={loading || emailValid === false}
             >
               {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
               {loading ? (
-                <div className="flex items-center gap-2">
-                  <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-                  <span>{t('logging_in')}</span>
+                <div className="flex items-center gap-2 justify-center">
+                  <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
+                  <span className="tracking-wide text-white font-bold">{t('logging_in')}</span>
                 </div>
               ) : (
-                <div className="flex items-center gap-2">
-                  <span>{t('sign_in_button')}</span>
+                <div className="flex items-center gap-2 justify-center">
+                  <span className="tracking-wide text-white font-bold">{t('sign_in_button')}</span>
                   <ArrowRight
                     className={cn(
-                      'h-5 w-5 transition-transform group-hover:translate-x-1',
+                      'h-4 w-4 text-white transition-transform group-hover:translate-x-1',
                       isRTL && 'rotate-180 group-hover:-translate-x-1'
                     )}
                     aria-hidden="true"
@@ -431,28 +431,26 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
-            className="pt-4 border-t border-gray-100 dark:border-gray-800"
+            className="pt-4 border-t border-slate-100"
           >
-            <div className="flex items-center gap-2 text-xs text-gray-400 mb-3">
-              <div className="w-6 h-6 rounded-lg bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-                <Shield className="h-3 w-3" aria-hidden="true" />
+            <div className="flex items-center justify-between text-xs text-slate-400 mb-2.5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-5 h-5 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Shield className="h-3 w-3" aria-hidden="true" />
+                </div>
+                <span className="font-bold uppercase tracking-wider text-[10px] text-slate-700">
+                  {t('security_tips.title')}
+                </span>
               </div>
-              <span className="font-semibold uppercase tracking-wider">
-                {t('security_tips.title')}
+              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                KSA Enterprise Verified
               </span>
             </div>
-            <ul className="text-xs text-gray-400 space-y-1.5">
+            <ul className="text-xs text-slate-500 space-y-1.5">
               <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-gray-300" aria-hidden="true" />
+                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
                 {t('security_tips.never_share')}
-              </li>
-              <li className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-gray-300" aria-hidden="true" />
-                {t('security_tips.logout')}
-              </li>
-              <li className="flex items-center gap-2">
-                <Lock className="h-3 w-3 text-gray-300" />
-                {t('security_tips.encrypted', { defaultValue: 'Secure, encrypted connection' })}
               </li>
             </ul>
           </m.div>

@@ -1,1 +1,1 @@
-export { Dashboard, default } from './Dashboard'
+export { IntegratedDashboard, IntegratedDashboard as Dashboard, default } from './Dashboard'

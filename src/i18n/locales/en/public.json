@@ -167,9 +167,47 @@
             "expired": "Expired"
         },
         "invalid_title": "Invalid Certificate",
-        "recipient": "Recipient",
-        "course": "Course",
-        "issued_on": "Issued On",
         "id": "Certificate ID"
+    },
+    "super_travel": {
+        "brand": "SUPER TRAVEL",
+        "brand_subtitle": "PRIME HOTELS INTRANET",
+        "badge_number": "01",
+        "badge_text": "CONCIERGE • SELECTION",
+        "hero_headline_1": "ELEVATE YOUR",
+        "hero_headline_italic": "sanctuary",
+        "hero_headline_2": "EXPERIENCE",
+        "hero_subtitle": "An elite hospitality portal engineered for executive operations, luxury property intelligence, and flawless guest experience management across the Kingdom of Saudi Arabia.",
+        "hero_cta": "EXPLORE PORTAL",
+        "hero_cta_alt": "ACCESS INTRANET",
+        "services_badge": "EXCELLENCE IN MOTION",
+        "services_title": "SERVICES & OPERATIONS",
+        "service_1_title": "LUXURY PROPERTY MANAGEMENT",
+        "service_1_desc": "Integrated suite for tracking room inventories, VIP guest amenities, housekeeping shifts, and property maintenance schedules across KSA resorts.",
+        "service_2_title": "EXECUTIVE HUMAN CAPITAL",
+        "service_2_desc": "Empower hotel staff with seamless leave workflows, automated shift scheduling, performance scorecards, and continuous Saudi hospitality accreditation.",
+        "service_3_title": "KNOWLEDGE & SOP COMPLIANCE",
+        "service_3_desc": "Centralized repository for 5-star brand standards, emergency response playbooks, food safety compliance, and property audit checklists.",
+        "portfolio_badge": "PORTFOLIO & PROPERTIES",
+        "portfolio_title": "FLAGSHIP ASSETS",
+        "portfolio_view_case": "View Case",
+        "portfolio_item_1_category": "ROYAL SUITES & PALACE",
+        "portfolio_item_1_title": "The Grand Riyadh Palace",
+        "portfolio_item_1_tags": "Riyadh • 320 Suites • 5-Star Superior",
+        "portfolio_item_2_category": "COASTAL RESORT & SPA",
+        "portfolio_item_2_title": "Jeddah Corniche Sanctuary",
+        "portfolio_item_2_tags": "Jeddah • 210 Rooms • Private Marina",
+        "portfolio_item_3_category": "HERITAGE DESERT RETREAT",
+        "portfolio_item_3_title": "AlUla Oasis Pavilions",
+        "portfolio_item_3_tags": "AlUla • 85 Villas • Wellness Resort",
+        "portfolio_item_4_category": "EXECUTIVE URBAN TOWER",
+        "portfolio_item_4_title": "KAFD Executive Residences",
+        "portfolio_item_4_tags": "KAFD Riyadh • 150 Residence Suites • Sky Club"
+    },
+    "gallery": {
+        "badge": "SUPER TRAVEL COLLECTION",
+        "title": "CURATED DESTINATIONS",
+        "drag_hint": "SCROLL DOWN TO EXPLORE"
     }
 }
+
