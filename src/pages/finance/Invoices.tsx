@@ -43,6 +43,8 @@ const GL_CODES = [
     { code: 'GL-9100', name: 'General Administration' }
 ]
 
+import { ZatcaVatReturnModal } from '@/components/finance/ZatcaVatReturnModal'
+
 export default function Invoices() {
     const { t } = useTranslation(['finance', 'common'])
     const { toast } = useToast()
@@ -56,6 +58,7 @@ export default function Invoices() {
     const markPaidMutation = useMarkInvoicePaid()
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isZatcaModalOpen, setIsZatcaModalOpen] = useState(false)
     const [formData, setFormData] = useState({ supplier_id: '', invoice_number: '', amount: '', due_date: '', gl_code: 'GL-4100', po_number: '' })
 
     const supplierNameFor = (supplierId: string | null) => suppliers?.find((s) => s.id === supplierId)?.supplier_name
@@ -190,10 +193,16 @@ export default function Invoices() {
                 title={t('finance:invoices.title', { defaultValue: 'Invoices & AP' })}
                 description={t('finance:invoices.description', { defaultValue: 'Vendor invoices routed through 3-way PO matching and approval workflow.' })}
                 actions={
-                    <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white shadow-sm">
-                        <Plus className="w-4 h-4 me-2" />
-                        {t('finance:invoices.record_invoice', { defaultValue: 'Record Invoice' })}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIsZatcaModalOpen(true)} className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                            <ShieldCheck className="w-4 h-4 me-2 text-emerald-600" />
+                            ZATCA VAT Return Audit
+                        </Button>
+                        <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white shadow-sm">
+                            <Plus className="w-4 h-4 me-2" />
+                            {t('finance:invoices.record_invoice', { defaultValue: 'Record Invoice' })}
+                        </Button>
+                    </div>
                 }
             />
 
@@ -320,6 +329,7 @@ export default function Invoices() {
                     </form>
                 </DialogContent>
             </Dialog>
+            <ZatcaVatReturnModal open={isZatcaModalOpen} onOpenChange={setIsZatcaModalOpen} />
         </div>
     )
 }

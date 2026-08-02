@@ -22,6 +22,8 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { isRealPropertyId } from '@/lib/propertyScope'
 
+import { VipPreferenceMatrixModal } from '@/components/operations/VipPreferenceMatrixModal'
+
 export default function VipGuests() {
     const { t } = useTranslation(['operations', 'common'])
     const { toast } = useToast()
@@ -33,6 +35,7 @@ export default function VipGuests() {
     const deactivateMutation = useDeactivateVipGuest()
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isMatrixOpen, setIsMatrixOpen] = useState(false)
     const [formData, setFormData] = useState({
         guest_name: '',
         room_number: '',
@@ -88,10 +91,16 @@ export default function VipGuests() {
                 title={t('operations:vip_guests.title', { defaultValue: 'VIP Guests' })}
                 description={t('operations:vip_guests.description', { defaultValue: 'Flag guests for special attention during their stay.' })}
                 actions={
-                    <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
-                        <Plus className="w-4 h-4 me-2" />
-                        {t('operations:vip_guests.flag_guest', { defaultValue: 'Flag Guest' })}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIsMatrixOpen(true)} className="border-amber-500/40 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40">
+                            <Crown className="w-4 h-4 me-2 text-amber-500" />
+                            VIP Preference Matrix
+                        </Button>
+                        <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white">
+                            <Plus className="w-4 h-4 me-2" />
+                            {t('operations:vip_guests.flag_guest', { defaultValue: 'Flag Guest' })}
+                        </Button>
+                    </div>
                 }
             />
 
@@ -196,6 +205,7 @@ export default function VipGuests() {
                     </form>
                 </DialogContent>
             </Dialog>
+            <VipPreferenceMatrixModal open={isMatrixOpen} onOpenChange={setIsMatrixOpen} />
         </div>
     )
 }

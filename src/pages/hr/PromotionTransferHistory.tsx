@@ -34,8 +34,8 @@ import {
     User,
     XCircle
 } from 'lucide-react'
-import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { EosbCalculatorModal } from '@/components/hr/EosbCalculatorModal'
+import { Scale } from 'lucide-react'
 
 interface PromotionRecord {
     type: 'promotion'
@@ -82,6 +82,7 @@ type HistoryRecord = PromotionRecord | TransferRecord
 export default function PromotionTransferHistory() {
     const { t, i18n } = useTranslation(['hr', 'common'])
     const [searchTerm, setSearchTerm] = useState('')
+    const [isEosbOpen, setIsEosbOpen] = useState(false)
     const { primaryRole } = useAuth()
     const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
@@ -258,22 +259,30 @@ export default function PromotionTransferHistory() {
             <PageHeader
                 title={t('history.title', { defaultValue: 'Promotions & Transfers' })} // Updated Title
                 description={t('history.description', { defaultValue: 'View past and upcoming employee movements' })}
-                actions={canInitiate ? (
+                actions={
                     <div className="flex items-center gap-2">
-                        <PromoteEmployeeDialog onSuccess={() => { refetchPromos(); }}>
-                            <Button className="bg-purple-600 hover:bg-purple-700">
-                                <ArrowUp className="h-4 w-4 me-2" />
-                                {t('history.promote_button')}
-                            </Button>
-                        </PromoteEmployeeDialog>
-                        <TransferEmployeeDialog onSuccess={() => { refetchTransfers(); }}>
-                            <Button className="bg-blue-600 hover:bg-blue-700">
-                                <Target className="h-4 w-4 me-2" />
-                                {t('history.transfer_button')}
-                            </Button>
-                        </TransferEmployeeDialog>
+                        <Button variant="outline" onClick={() => setIsEosbOpen(true)} className="border-emerald-600/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+                            <Scale className="h-4 w-4 me-2 text-emerald-600" />
+                            KSA EOSB Calculator
+                        </Button>
+                        {canInitiate && (
+                            <>
+                                <PromoteEmployeeDialog onSuccess={() => { refetchPromos(); }}>
+                                    <Button className="bg-purple-600 hover:bg-purple-700">
+                                        <ArrowUp className="h-4 w-4 me-2" />
+                                        {t('history.promote_button')}
+                                    </Button>
+                                </PromoteEmployeeDialog>
+                                <TransferEmployeeDialog onSuccess={() => { refetchTransfers(); }}>
+                                    <Button className="bg-blue-600 hover:bg-blue-700">
+                                        <Target className="h-4 w-4 me-2" />
+                                        {t('history.transfer_button')}
+                                    </Button>
+                                </TransferEmployeeDialog>
+                            </>
+                        )}
                     </div>
-                ) : undefined}
+                }
             />
 
             <div className="altus-card">
@@ -468,6 +477,7 @@ export default function PromotionTransferHistory() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+            <EosbCalculatorModal open={isEosbOpen} onOpenChange={setIsEosbOpen} />
         </div>
     )
 }

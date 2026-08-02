@@ -32,6 +32,9 @@ const statusColors: Record<string, string> = {
     cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-200'
 }
 
+import { GrnVerificationModal } from '@/components/procurement/GrnVerificationModal'
+import { PackageCheck } from 'lucide-react'
+
 export default function PurchaseOrders() {
     const { t } = useTranslation(['procurement', 'common'])
     const { toast } = useToast()
@@ -44,6 +47,7 @@ export default function PurchaseOrders() {
     const receiveMutation = useReceivePurchaseOrder()
 
     const [isDialogOpen, setIsDialogOpen] = useState(false)
+    const [isGrnModalOpen, setIsGrnModalOpen] = useState(false)
     const [receivingOrder, setReceivingOrder] = useState<PurchaseOrder | null>(null)
     const [formData, setFormData] = useState({ supplier_id: '', po_number: '', total_amount: '' })
     const [receiveQty, setReceiveQty] = useState('')
@@ -114,10 +118,16 @@ export default function PurchaseOrders() {
                 title={t('procurement:orders.title', { defaultValue: 'Purchase Orders' })}
                 description={t('procurement:orders.description', { defaultValue: 'Track orders placed with suppliers and receive goods.' })}
                 actions={
-                    <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white" disabled={!suppliers || suppliers.length === 0}>
-                        <Plus className="w-4 h-4 me-2" />
-                        {t('procurement:orders.new_order', { defaultValue: 'New Order' })}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIsGrnModalOpen(true)} className="border-blue-600/40 text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40">
+                            <PackageCheck className="w-4 h-4 me-2 text-blue-600" />
+                            GRN 3-Way Matching Audit
+                        </Button>
+                        <Button onClick={() => { resetForm(); setIsDialogOpen(true) }} className="bg-hotel-gold hover:bg-hotel-gold-dark text-white" disabled={!suppliers || suppliers.length === 0}>
+                            <Plus className="w-4 h-4 me-2" />
+                            {t('procurement:orders.new_order', { defaultValue: 'New Order' })}
+                        </Button>
+                    </div>
                 }
             />
 
@@ -232,6 +242,7 @@ export default function PurchaseOrders() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+            <GrnVerificationModal open={isGrnModalOpen} onOpenChange={setIsGrnModalOpen} />
         </div>
     )
 }
