@@ -156,8 +156,11 @@ export default defineConfig({
           if (id.includes('/node_modules/react-router') || id.includes('/node_modules/@remix-run/router')) return 'vendor-router'
           if (id.includes('/node_modules/i18next') || id.includes('/node_modules/react-i18next')) return 'vendor-i18n'
 
-          // Shared UI primitives (Radix, etc.)
+          // Shared UI primitives and React core (must be together to prevent circular dependency TDZ errors)
           if (
+            id.includes('/node_modules/react/') ||
+            id.includes('/node_modules/react-dom/') ||
+            id.includes('/node_modules/scheduler/') ||
             id.includes('/node_modules/@radix-ui/') ||
             id.includes('/node_modules/class-variance-authority') ||
             id.includes('/node_modules/clsx') ||
