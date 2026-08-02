@@ -10,8 +10,7 @@ import { exportRowsToXlsx } from '@/lib/excel'
 import { supabase } from '@/lib/supabase'
 import { formatRelativeTime } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import type { jsPDF as JsPDFType } from 'jspdf'
 import {
     Building2,
     CheckCircle, Clock,
@@ -237,9 +236,11 @@ export default function EmployeeReferrals() {
     }
   }
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
     if (!referrals?.length) return
     const rows = buildExportRows()
+    const { default: jsPDF } = await import('jspdf')
+    const { default: autoTable } = await import('jspdf-autotable')
     const doc = new jsPDF('p', 'pt')
     doc.setFontSize(14)
     doc.text('Employee Referrals Report', 40, 40)

@@ -147,7 +147,12 @@ export default function PurchaseOrders() {
                                             <p className="font-medium text-gray-900">{order.po_number}</p>
                                             <div className="flex items-center gap-3 text-sm text-gray-500">
                                                 <span>{supplierNameFor(order.supplier_id)}</span>
-                                                <span>· {order.total_amount.toLocaleString()}</span>
+                                                <span>· SAR {order.total_amount.toLocaleString()}</span>
+                                                {order.items && order.items.length > 0 && (
+                                                    <span className="text-xs bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded font-mono">
+                                                        {order.items.length} item{order.items.length > 1 ? 's' : ''}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>

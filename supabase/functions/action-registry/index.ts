@@ -257,7 +257,7 @@ async function enableAction(supabase: any, params: any) {
   if (error) throw error;
 
   // Log the change
-  await supabase.from("audit_logs").insert({
+  await supabase.from("system_events").insert({
     action: "action_enabled",
     entity_type: "action_definition",
     entity_id: action_type,
@@ -323,7 +323,7 @@ async function disableAction(supabase: any, params: any) {
   if (error) throw error;
 
   // Log the change
-  await supabase.from("audit_logs").insert({
+  await supabase.from("system_events").insert({
     action: "action_disabled",
     entity_type: "action_definition",
     entity_id: action_type,

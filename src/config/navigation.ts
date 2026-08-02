@@ -56,6 +56,7 @@ import {
     Shield,
     Target,
     Truck,
+    Upload,
     User,
     Users,
     Wallet,
@@ -396,10 +397,19 @@ export const ROUTES: RouteConfig[] = [
         path: '/operations',
         title: 'operations_dashboard',
         icon: BarChart3,
-        description: 'PMS integration and operational analytics',
+        description: 'Data import and operational metrics',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
         group: 'hotel_operations',
         order: 11,
+    },
+    {
+        path: '/operations/import',
+        title: 'data_import',
+        icon: Upload,
+        description: 'Upload and validate CSV operations data',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
+        group: 'hotel_operations',
+        order: 12,
     },
 
     // -------------------------------------------------------------------------
@@ -422,6 +432,15 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
         group: 'finance_revenue',
         order: 2,
+    },
+    {
+        path: '/finance/chart-of-accounts',
+        title: 'chart_of_accounts',
+        icon: BookOpen,
+        description: 'Master General Ledger chart of accounts catalog',
+        allowedRoles: ['corporate_admin', 'regional_admin', 'property_manager'],
+        group: 'finance_revenue',
+        order: 3,
     },
     {
         path: '/procurement/requests',
@@ -814,15 +833,7 @@ export const ROUTES: RouteConfig[] = [
         group: 'administration',
         order: 12,
     },
-    {
-        path: '/admin/compliance',
-        title: 'compliance_center',
-        icon: Shield,
-        description: 'Audit logs, PII access tracking, and compliance exports',
-        allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        group: 'administration',
-        order: 13,
-    },
+
     {
         path: '/admin/audit',
         title: 'audit_logs',

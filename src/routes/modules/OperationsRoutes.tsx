@@ -6,8 +6,7 @@ import { Route } from 'react-router-dom'
 
 const OperationsDashboard = lazy(() => import('@/pages/operations/OperationsDashboard'))
 const DataImport = lazy(() => import('@/pages/operations/DataImport'))
-const OperationsAnalytics = lazy(() => import('@/pages/operations/OperationsAnalytics'))
-const DailyFlashReport = lazy(() => import('@/pages/operations/DailyFlashReport'))
+
 const GuestRequests = lazy(() => import('@/pages/operations/GuestRequests'))
 const Incidents = lazy(() => import('@/pages/operations/Incidents'))
 const DailyLogbook = lazy(() => import('@/pages/operations/DailyLogbook'))
@@ -65,30 +64,7 @@ export const OperationsRoutes = () => (
                 </ProtectedRoute>
             }
         />
-        <Route
-            path="/operations/analytics"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <OperationsAnalytics />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/operations/flash-report"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <DailyFlashReport />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
+
         <Route
             path="/operations/guest-requests"
             element={

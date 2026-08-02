@@ -6,6 +6,7 @@ import { Route } from 'react-router-dom'
 
 const Budgets = lazy(() => import('@/pages/finance/Budgets'))
 const Invoices = lazy(() => import('@/pages/finance/Invoices'))
+const ChartOfAccounts = lazy(() => import('@/pages/finance/ChartOfAccounts'))
 
 export const FinanceRoutes = () => (
     <>
@@ -28,6 +29,18 @@ export const FinanceRoutes = () => (
                     <AppLayout>
                         <MotionWrapper>
                             <Invoices />
+                        </MotionWrapper>
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/finance/chart-of-accounts"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'property_manager']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <ChartOfAccounts />
                         </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>

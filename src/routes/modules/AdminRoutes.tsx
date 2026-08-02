@@ -30,7 +30,6 @@ const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPo
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
 const AuditsControlCenter = lazy(() => import('@/components/audits/AuditsControlCenter').then(m => ({ default: m.AuditsControlCenter })))
-const ComplianceDashboard = lazy(() => import('@/pages/compliance/ComplianceDashboard'))
 
 export const AdminRoutes = () => (
     <>
@@ -314,29 +313,6 @@ export const AdminRoutes = () => (
                 </ProtectedRoute>
             }
         />
-        <Route
-            path="/admin/compliance"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <ComplianceDashboard />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/compliance"
-            element={
-                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <ComplianceDashboard />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
+
     </>
 )

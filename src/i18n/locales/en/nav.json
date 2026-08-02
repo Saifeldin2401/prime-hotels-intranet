@@ -41,6 +41,7 @@
     "inventory": "Inventory",
     "budgets": "Budgets",
     "invoices": "Invoices",
+    "chart_of_accounts": "Chart of Accounts",
     "tickets": "Tickets",
     "directory": "Directory",
     "job_titles": "Job Titles",

@@ -33,7 +33,7 @@ import { supabase } from '@/lib/supabase'
 import type { Profile } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
@@ -341,28 +341,30 @@ export default function UserManagement() {
   }
 
   // Filter users by search + status
-  const filteredUsers = users?.filter((user) => {
-    const includesSearch = (value?: string | null) =>
-      (value || '').toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesSearch =
-      includesSearch(user.full_name) ||
-      includesSearch(user.email)
+  const filteredUsers = useMemo(() => {
+    return users?.filter((user) => {
+      const includesSearch = (value?: string | null) =>
+        (value || '').toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesSearch =
+        includesSearch(user.full_name) ||
+        includesSearch(user.email)
 
-    if (!matchesSearch) return false
+      if (!matchesSearch) return false
 
-    switch (statusFilter) {
-      case 'active':
-        return user.is_active && (user.account_status === 'active' || !user.account_status)
-      case 'suspended':
-        return user.account_status === 'suspended'
-      case 'locked':
-        return user.account_status === 'locked'
-      case 'inactive':
-        return !user.is_active
-      default:
-        return true
-    }
-  })
+      switch (statusFilter) {
+        case 'active':
+          return user.is_active && (user.account_status === 'active' || !user.account_status)
+        case 'suspended':
+          return user.account_status === 'suspended'
+        case 'locked':
+          return user.account_status === 'locked'
+        case 'inactive':
+          return !user.is_active
+        default:
+          return true
+      }
+    })
+  }, [users, searchTerm, statusFilter])
 
   const handleEdit = (user: Profile) => {
     setSelectedUser(user)
@@ -494,17 +496,17 @@ export default function UserManagement() {
   }
 
   // Status counts
-  const statusCounts = {
+  const statusCounts = useMemo(() => ({
     all: users?.length || 0,
     active: users?.filter(u => u.is_active && (u.account_status === 'active' || !u.account_status)).length || 0,
     suspended: users?.filter(u => u.account_status === 'suspended').length || 0,
     locked: users?.filter(u => u.account_status === 'locked').length || 0,
     inactive: users?.filter(u => !u.is_active).length || 0,
-  }
+  }), [users])
 
-  const selectedResetCount = filteredUsers
+  const selectedResetCount = useMemo(() => filteredUsers
     ? filteredUsers.filter((u) => selectedUserIds.has(u.id) && u.force_password_reset).length
-    : 0
+    : 0, [filteredUsers, selectedUserIds])
 
   if (showForm) {
     return (

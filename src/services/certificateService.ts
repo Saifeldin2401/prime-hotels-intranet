@@ -9,7 +9,7 @@
  * - Audit trail integration
  */
 
-import { jsPDF } from 'jspdf'
+import type { jsPDF } from 'jspdf'
 import { supabase } from '@/lib/supabase'
 
 export interface CertificateData {
@@ -130,6 +130,8 @@ export async function generateCertificatePDF(
     certificate: Certificate,
     logoDataUrl?: string
 ): Promise<Blob> {
+    const { jsPDF } = await import('jspdf')
+    
     // Create PDF in landscape A4
     const doc = new jsPDF({
         orientation: 'landscape',

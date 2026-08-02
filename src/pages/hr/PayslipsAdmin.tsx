@@ -357,6 +357,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.period_start', 'Period Start')}</Label>
               <Input
                 type="date"
+                max={form.period_end || undefined}
                 value={form.period_start}
                 onChange={(event) => setForm(prev => ({ ...prev, period_start: event.target.value }))}
               />
@@ -366,6 +367,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.period_end', 'Period End')}</Label>
               <Input
                 type="date"
+                min={form.period_start || undefined}
                 value={form.period_end}
                 onChange={(event) => setForm(prev => ({ ...prev, period_end: event.target.value }))}
               />
@@ -393,6 +395,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.basic_salary', 'Basic Salary')}</Label>
               <Input
                 type="number"
+                min="0"
                 value={form.basic_salary}
                 onChange={(event) => setForm(prev => ({ ...prev, basic_salary: event.target.value }))}
               />
@@ -402,6 +405,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.gross_salary', 'Gross Salary')}</Label>
               <Input
                 type="number"
+                min="0"
                 value={form.gross_salary}
                 onChange={(event) => setForm(prev => ({ ...prev, gross_salary: event.target.value }))}
               />
@@ -411,6 +415,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.deductions', 'Deductions')}</Label>
               <Input
                 type="number"
+                min="0"
                 value={form.deductions}
                 onChange={(event) => setForm(prev => ({ ...prev, deductions: event.target.value }))}
               />
@@ -420,6 +425,7 @@ export default function PayslipsAdmin() {
               <Label>{t('hr_admin.fields.net_salary', 'Net Salary')}</Label>
               <Input
                 type="number"
+                min="0"
                 value={form.net_salary}
                 onChange={(event) => setForm(prev => ({ ...prev, net_salary: event.target.value }))}
               />

@@ -34,14 +34,7 @@ const statusColors: Record<string, string> = {
     paid: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200'
 }
 
-const GL_CODES = [
-    { code: 'GL-4100', name: 'Food & Beverage' },
-    { code: 'GL-5200', name: 'Utilities & Energy' },
-    { code: 'GL-6100', name: 'Payroll & Benefits' },
-    { code: 'GL-7300', name: 'Maintenance & Repairs' },
-    { code: 'GL-8100', name: 'Marketing & Sales' },
-    { code: 'GL-9100', name: 'General Administration' }
-]
+import { useChartOfAccounts } from '@/hooks/useChartOfAccounts'
 
 import { ZatcaVatReturnModal } from '@/components/finance/ZatcaVatReturnModal'
 
@@ -53,6 +46,7 @@ export default function Invoices() {
     const propertyId = currentProperty?.id
     const { data: invoices, isLoading } = useInvoices(propertyId)
     const { data: suppliers } = useSuppliers()
+    const { data: chartOfAccounts } = useChartOfAccounts()
     const createMutation = useCreateInvoice()
     const submitMutation = useSubmitInvoiceForApproval()
     const markPaidMutation = useMarkInvoicePaid()
@@ -299,8 +293,8 @@ export default function Invoices() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {GL_CODES.map((gl) => (
-                                            <SelectItem key={gl.code} value={gl.code}>{gl.code} - {gl.name}</SelectItem>
+                                        {chartOfAccounts?.map((gl) => (
+                                            <SelectItem key={gl.id} value={gl.account_code}>{gl.account_code} - {gl.account_name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>

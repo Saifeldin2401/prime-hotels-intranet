@@ -8,7 +8,7 @@ export function usePurchaseOrders(propertyId?: string) {
         queryFn: async () => {
             let query = supabase
                 .from('purchase_orders')
-                .select('*')
+                .select('*, items:purchase_order_items(*)')
                 .order('created_at', { ascending: false })
 
             if (propertyId) {
@@ -34,14 +34,33 @@ export function useCreatePurchaseOrder() {
             order_date?: string
             expected_delivery_date?: string
             created_by: string
+            items?: { item_description: string; quantity: number; unit_price: number; unit?: string }[]
         }) => {
+            const { items, ...poPayload } = payload
             const { data, error } = await supabase
                 .from('purchase_orders')
-                .insert([payload])
+                .insert([poPayload])
                 .select()
                 .single()
 
             if (error) throw error
+
+            if (items && items.length > 0) {
+                const itemPayloads = items.map((item) => ({
+                    purchase_order_id: data.id,
+                    item_description: item.item_description,
+                    quantity: item.quantity,
+                    unit_price: item.unit_price,
+                    unit: item.unit || 'pcs',
+                }))
+
+                const { error: itemsError } = await supabase
+                    .from('purchase_order_items')
+                    .insert(itemPayloads)
+
+                if (itemsError) throw itemsError
+            }
+
             return data as PurchaseOrder
         },
         onSuccess: () => {

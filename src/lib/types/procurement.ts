@@ -28,6 +28,18 @@ export interface PurchaseRequest {
     updated_at: string
 }
 
+export interface PurchaseOrderItem {
+    id: string
+    purchase_order_id: string
+    item_description: string
+    quantity: number
+    unit_price: number
+    total_price: number
+    unit: string
+    created_at: string
+    updated_at: string
+}
+
 export interface PurchaseOrder {
     id: string
     purchase_request_id: string | null
@@ -41,6 +53,7 @@ export interface PurchaseOrder {
     created_by: string
     created_at: string
     updated_at: string
+    items?: PurchaseOrderItem[]
 }
 
 export interface PoReceipt {

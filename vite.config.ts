@@ -166,7 +166,8 @@ export default defineConfig({
             return 'vendor-ui'
           }
 
-          return undefined
+          // Catch-all vendor chunk
+          return 'vendor'
         }
       }
     }

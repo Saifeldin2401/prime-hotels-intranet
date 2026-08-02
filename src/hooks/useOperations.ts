@@ -2,14 +2,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type {
-    DailyOccupancy,
-    DailyRevenue,
-    DataImportLog,
-    MarketSegment,
-    OperationsKPIs,
-    RoomInventory
-} from '@/types/operations'
+import type { DataImportLog } from '@/types/operations'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // ============================================================================
@@ -29,99 +22,6 @@ export function useProperties() {
             if (error) throw error
             return data
         }
-    })
-}
-
-// ============================================================================
-// PMS SYSTEMS — removed: pms_systems table dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns an empty array. */
-export function usePMSSystems(_options?: { includeInactive?: boolean }) {
-    return useQuery({
-        queryKey: ['pms-systems-removed'],
-        queryFn: async () => [] as never[],
-        staleTime: Infinity,
-    })
-}
-
-// ============================================================================
-// DAILY OCCUPANCY — removed: daily_occupancy table dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns an empty array. */
-export function useDailyOccupancy(_filters?: {
-    propertyId?: string
-    startDate?: string
-    endDate?: string
-}) {
-    return useQuery({
-        queryKey: ['daily-occupancy-removed'],
-        queryFn: async () => [] as DailyOccupancy[],
-        staleTime: Infinity,
-    })
-}
-
-/** @deprecated PMS module has been removed. Mutation is a no-op. */
-export function useUpsertOccupancy() {
-    return useMutation({
-        mutationFn: async (_data: Partial<DailyOccupancy>) => null,
-    })
-}
-
-// ============================================================================
-// DAILY REVENUE — removed: daily_revenue table dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns an empty array. */
-export function useDailyRevenue(_filters?: {
-    propertyId?: string
-    startDate?: string
-    endDate?: string
-}) {
-    return useQuery({
-        queryKey: ['daily-revenue-removed'],
-        queryFn: async () => [] as DailyRevenue[],
-        staleTime: Infinity,
-    })
-}
-
-/** @deprecated PMS module has been removed. Mutation is a no-op. */
-export function useUpsertRevenue() {
-    return useMutation({
-        mutationFn: async (_data: Partial<DailyRevenue>) => null,
-    })
-}
-
-// ============================================================================
-// MARKET SEGMENTS — removed: market_segments table dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns an empty array. */
-export function useMarketSegments(_filters?: {
-    propertyId?: string
-    businessDate?: string
-}) {
-    return useQuery({
-        queryKey: ['market-segments-removed'],
-        queryFn: async () => [] as MarketSegment[],
-        staleTime: Infinity,
-    })
-}
-
-// ============================================================================
-// ROOM INVENTORY — removed: room_inventory table dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns an empty array. */
-export function useRoomInventory(_filters?: {
-    propertyId?: string
-    businessDate?: string
-}) {
-    return useQuery({
-        queryKey: ['room-inventory-removed'],
-        queryFn: async () => [] as RoomInventory[],
-        staleTime: Infinity,
     })
 }
 
@@ -191,36 +91,8 @@ export function useDeleteImportLog() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
-            queryClient.invalidateQueries({ queryKey: ['daily-occupancy'] })
-            queryClient.invalidateQueries({ queryKey: ['daily-revenue'] })
-            queryClient.invalidateQueries({ queryKey: ['operations-kpis'] })
             crudToasts.delete.success('Import history and associated data')
         },
         onError: () => crudToasts.delete.error('import history')
-    })
-}
-
-// ============================================================================
-// OPERATIONS KPIs — removed: underlying PMS tables dropped
-// ============================================================================
-
-/** @deprecated PMS module has been removed. Always returns zero-value KPIs. */
-export function useOperationsKPIs(_filters?: {
-    propertyId?: string
-    businessDate?: string
-}) {
-    return useQuery({
-        queryKey: ['operations-kpis-removed'],
-        queryFn: async (): Promise<OperationsKPIs> => ({
-            totalRooms: 0,
-            roomsSold: 0,
-            occupancyRate: 0,
-            adr: 0,
-            revpar: 0,
-            totalRevenue: 0,
-            roomRevenue: 0,
-            fbRevenue: 0,
-        }),
-        staleTime: Infinity,
     })
 }

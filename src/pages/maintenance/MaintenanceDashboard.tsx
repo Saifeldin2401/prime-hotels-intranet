@@ -1,4 +1,3 @@
-import emptyStateImage from '@/assets/maintenance-empty.png'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +15,7 @@ import {
     Calendar,
     Clock,
     Droplets,
+    Inbox,
     Plus,
     Search,
     Thermometer,
@@ -338,12 +338,8 @@ export default function MaintenanceDashboard() {
           <TabsContent value="my-tickets" className="space-y-4 animate-slide-up">
             {filteredTickets(myTickets || []).length === 0 ? (
               <div className="bg-card border-2 dashed border-border p-12 rounded-lg text-center">
-                <div className="w-48 h-48 mx-auto mb-6 opacity-90 transition-opacity duration-300">
-                  <img
-                    src={emptyStateImage}
-                    alt="No tickets"
-                    className="w-full h-full object-contain filter drop-shadow-sm"
-                  />
+                <div className="w-24 h-24 mx-auto mb-6 opacity-90 transition-opacity duration-300 flex items-center justify-center bg-gray-50 rounded-full dark:bg-gray-800">
+                  <Inbox className="w-12 h-12 text-gray-400" />
                 </div>
                 <h3 className="text-xl font-semibold mb-2 text-foreground">{t('dashboard.no_tickets')}</h3>
                 <p className="text-gray-600 mb-6 max-w-sm mx-auto">
@@ -381,12 +377,8 @@ export default function MaintenanceDashboard() {
             <TabsContent value="assigned" className="space-y-4 animate-slide-up">
               {filteredTickets(assignedTickets || []).length === 0 ? (
                 <div className="altus-card p-12 rounded-xl text-center border-dashed border-2 border-border/60">
-                  <div className="w-48 h-48 mx-auto mb-6 opacity-90 hover:opacity-100 transition-opacity duration-300">
-                    <img
-                      src={emptyStateImage}
-                      alt="No tickets"
-                      className="w-full h-full object-contain filter drop-shadow-xl"
-                    />
+                  <div className="w-24 h-24 mx-auto mb-6 opacity-90 hover:opacity-100 transition-opacity duration-300 flex items-center justify-center bg-gray-50 rounded-full dark:bg-gray-800">
+                    <Inbox className="w-12 h-12 text-gray-400" />
                   </div>
                   <h3 className="text-xl font-bold mb-2 text-foreground">{t('dashboard.no_assigned_tickets')}</h3>
                   <p className="text-gray-600 max-w-sm mx-auto">

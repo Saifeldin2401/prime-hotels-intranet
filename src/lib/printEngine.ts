@@ -10,13 +10,14 @@
  * - Deterministic output with corporate naming convention
  */
 
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
+import type { jsPDF } from 'jspdf'
 
 type ExtendedJsPdf = jsPDF & {
     lastAutoTable?: { finalY?: number }
     getImageProperties?: (dataUrl: string) => { width?: number; height?: number }
 }
+
+let autoTableFn: any = null;
 
 // ========== TYPES ==========
 
@@ -104,6 +105,9 @@ export async function generateReport(
 ): Promise<Blob> {
     // Determine orientation based on table width
     const orientation = config.orientation || 'portrait'
+
+    const { jsPDF } = await import('jspdf')
+    autoTableFn = (await import('jspdf-autotable')).default
 
     const doc = new jsPDF({
         orientation,
@@ -333,7 +337,7 @@ function drawTableSection(
     }
 
     // Use autoTable for professional table rendering
-    autoTable(doc, {
+    autoTableFn(doc, {
         startY: yPos,
         head: [table.headers],
         body: bodyRows,
