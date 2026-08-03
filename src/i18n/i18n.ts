@@ -55,7 +55,6 @@ import enUsers from './locales/en/users.json';
 
 import arAiTools from './locales/ar/ai_tools.json';
 import arCapex from './locales/ar/capex.json';
-import arCompliance from './locales/ar/compliance.json';
 import arErrors from './locales/ar/errors.json';
 import arExtracted from './locales/ar/extracted.json';
 import arLearning from './locales/ar/learning.json';
@@ -63,7 +62,6 @@ import arOperations from './locales/ar/operations.json';
 import arRequests from './locales/ar/requests.json';
 import enAiTools from './locales/en/ai_tools.json';
 import enCapex from './locales/en/capex.json';
-import enCompliance from './locales/en/compliance.json';
 import enErrors from './locales/en/errors.json';
 import enExtracted from './locales/en/extracted.json';
 import enLearning from './locales/en/learning.json';
@@ -102,7 +100,6 @@ const resources = {
     requests: enRequests,
     extracted: enExtracted,
     media: enMedia,
-    compliance: enCompliance,
     capex: enCapex,
   },
   ar: {
@@ -135,7 +132,6 @@ const resources = {
     requests: arRequests,
     extracted: arExtracted,
     media: arMedia,
-    compliance: arCompliance,
     capex: arCapex,
   },
 };

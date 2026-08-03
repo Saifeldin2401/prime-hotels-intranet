@@ -7,11 +7,11 @@ const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (
-  Deno.env.get("APP_BASE_URL") ?? "https://www.altus-advisory.com"
+  Deno.env.get("APP_BASE_URL") ?? "https://www.phg-connect.com"
 ).replace(/\/+$/, "");
-const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "Altus Advisory";
+const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "Altus Hospitality";
 const ENV_DEFAULT_FROM_EMAIL =
-  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@altus-advisory.com";
+  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
 const RESEND_MAX_RETRIES = 3;
 const RESEND_RETRY_BASE_MS = 750;
 const RESEND_MIN_INTERVAL_MS = 550;
@@ -328,18 +328,18 @@ function buildContext(
     message: asText(
       body.message,
       isAr
-        ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A PHG Connect."
-        : "You have a new update in PHG Connect.",
+        ? "\u0644\u062F\u064A\u0643 \u062A\u062D\u062F\u064A\u062B \u062C\u062F\u064A\u062F \u0641\u064A Altus Connect."
+        : "You have a new update in Altus Connect.",
     ),
     action_url: actionUrl,
     action_label: asText(
       body.actionLabel,
       isAr
         ? "\u0641\u062A\u062D \u0627\u0644\u0645\u0646\u0635\u0629"
-        : "Open PHG Connect",
+        : "Open Altus Connect",
     ),
     app_url: appBaseUrl,
-    logo_url: `${appBaseUrl}/prime-logo-white-full.png`, // Standard premium logo
+    logo_url: asText(body.variables?.logo_url, `${appBaseUrl}/altus-logo-official.png`),
     recipient_name: fallbackRecipient,
     lang: language,
     dir: isAr ? "rtl" : "ltr",
@@ -350,13 +350,13 @@ function buildContext(
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
     footer_text: isAr
-      ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 PHG Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
-      : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
+      ? "\u0625\u0634\u0639\u0627\u0631 \u062A\u0644\u0642\u0627\u0626\u064A \u0645\u0646 Altus Connect. \u062A\u0645 \u0627\u0644\u0625\u0631\u0633\u0627\u0644 \u0628\u0646\u0627\u0621\u064B \u0639\u0644\u0649 \u0625\u062C\u0631\u0627\u0621 \u062F\u0627\u062E\u0644 \u0627\u0644\u0642\u0633\u0645 \u0623\u0648 \u0645\u0647\u0645\u0629/\u0627\u0639\u062A\u0645\u0627\u062F \u0645\u0631\u062A\u0628\u0637 \u0628\u0643."
+      : "Automated notification from Altus Connect. Sent based on an action in your department or an assignment.",
     has_data_box: body.variables?.data_box ? "true" : "false",
     data_box_content: asText(body.variables?.data_box, ""),
     greeting_hello: isAr ? "\u0645\u0631\u062D\u0628\u0627\u064B " : "Hello ",
     trouble_clicking: isAr
-      ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0645\u062A\u0635\u0641\u062D\u0643:"
+      ? "\u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631\u060C \u0642\u0645 \u0628\u0646\u0633\u062E \u0627\u0644\u0631\u0627\u0628\u0637 \u0627\u0644\u062A\u0627\u0644\u064A \u0648\u0644\u0635\u0642\u0647 \u0641\u064A \u0625\u0630\u0627 \u0648\u0627\u062C\u0647\u062A \u0645\u0634\u0643\u0644\u0629 \u0641\u064A \u0627\u0644\u0646\u0642\u0631 \u0639\u0644\u0649 \u0627\u0644\u0632\u0631:"
       : "If you're having trouble clicking the button, copy and paste the URL below into your web browser:",
     dashboard_link_text: isAr
       ? "\u0644\u0648\u062D\u0629 \u0627\u0644\u0642\u064A\u0627\u062F\u0629"
@@ -625,7 +625,7 @@ function defaultHtmlTemplate(): string {
     <div class="wrapper">
         <div class="container">
             <div class="header">
-                <img src="{{logo_url}}" alt="PRIME Connect Logo">
+                <img src="{{logo_url}}" alt="Altus Logo">
                 <br>
                 <div class="business-unit">{{business_unit_label}}</div>
             </div>
@@ -659,7 +659,7 @@ function defaultHtmlTemplate(): string {
                     <a href="{{app_url}}">{{dashboard_link_text}}</a> &bull; 
                     <a href="{{app_url}}/knowledge-base">{{help_link_text}}</a>
                 </div>
-                <p style="margin-top: 16px;">&copy; {{year}} PRIME Hotels. {{rights_reserved}}</p>
+                <p style="margin-top: 16px;">&copy; {{year}} Altus Hospitality. {{rights_reserved}}</p>
             </div>
         </div>
     </div>
@@ -668,7 +668,7 @@ function defaultHtmlTemplate(): string {
 }
 
 function defaultTextTemplate(): string {
-  return "PHG Connect | {{title}}\n\n{{message}}\n\n{{action_url}}";
+  return "Altus Connect | {{title}}\n\n{{message}}\n\n{{action_url}}";
 }
 
 function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {

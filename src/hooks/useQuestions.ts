@@ -6,6 +6,7 @@
 
 import { useAuth } from '@/hooks/useAuth'
 import { crudToasts } from '@/lib/toastHelpers'
+import { supabase } from '@/lib/supabase'
 import * as QuestionService from '@/services/questionService'
 import type {
     AIQuestionGenerationRequest,
@@ -15,28 +16,6 @@ import type {
 } from '@/types/questions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-
-function secureRandomIndex(maxExclusive: number): number {
-    if (maxExclusive <= 1) return 0
-    const cryptoApi = globalThis.crypto
-    if (cryptoApi?.getRandomValues) {
-        const random = new Uint32Array(1)
-        cryptoApi.getRandomValues(random)
-        return random[0] % maxExclusive
-    }
-    return Math.floor(Math.random() * maxExclusive)
-}
-
-function shuffledCopy<T>(items: T[]): T[] {
-    const clone = [...items]
-    for (let i = clone.length - 1; i > 0; i -= 1) {
-        const j = secureRandomIndex(i + 1)
-        const temp = clone[i]
-        clone[i] = clone[j]
-        clone[j] = temp
-    }
-    return clone
-}
 
 // ============================================================================
 // QUESTIONS QUERIES
@@ -372,6 +351,15 @@ export function useQuestionAnalytics(questionId: string | undefined) {
     })
 }
 
+export function useQuestionsPassRates(questionIds: string[]) {
+    const sortedIds = [...questionIds].sort()
+    return useQuery({
+        queryKey: ['questions-pass-rates', sortedIds],
+        queryFn: () => QuestionService.getQuestionsPassRates(sortedIds),
+        enabled: sortedIds.length > 0
+    })
+}
+
 export function useUserQuestionStats() {
     const { user } = useAuth()
 
@@ -387,15 +375,25 @@ export function useUserQuestionStats() {
 // ============================================================================
 
 export function useDailyChallenge() {
+    const { user } = useAuth()
+
     return useQuery({
-        queryKey: ['daily-challenge', new Date().toDateString()],
+        queryKey: ['daily-challenge', user?.id, new Date().toDateString()],
         queryFn: async () => {
-            // Get 3 random published questions for daily challenge
-            const { questions } = await QuestionService.getQuestions({ status: 'published' }, 1, 20)
-            // Shuffle and take 3
-            const shuffled = shuffledCopy(questions)
-            return shuffled.slice(0, 3)
+            // Adaptive selection: prioritizes never-attempted and previously-missed
+            // questions over recently-mastered ones (see get_daily_challenge_question_ids),
+            // instead of shuffling within the first 20 published questions in the bank.
+            const { data: ranked, error } = await supabase.rpc('get_daily_challenge_question_ids', { p_count: 3 })
+            if (error) throw error
+
+            const ids = (ranked || []).map(r => r.id)
+            if (ids.length === 0) return []
+
+            const questions = await QuestionService.getQuestionsByIds(ids)
+            const byId = new Map(questions.map(q => [q.id, q]))
+            return ids.map(id => byId.get(id)).filter((q): q is NonNullable<typeof q> => !!q)
         },
+        enabled: !!user?.id,
         staleTime: 1000 * 60 * 60 * 24 // Cache for 24 hours
     })
 }

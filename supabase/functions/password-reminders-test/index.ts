@@ -74,10 +74,10 @@ Deno.serve(async (req: Request) => {
         .replace(/{{action_url}}/g, "https://www.altus-advisory.com/login");
 
       return {
-        from: "PRIME Connect Security <notifications@altus-advisory.com>",
+        from: "Altus Security <notifications@phg-connect.com>",
         to: [user.email],
         subject:
-          "PRIME Connect | Password Update Required - مطلوب تحديث كلمة المرور",
+          "Altus Connect | Password Update Required - مطلوب تحديث كلمة المرور",
         html: html,
         text: text,
       };

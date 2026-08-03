@@ -93,6 +93,34 @@ export async function getUserQuestionStats(userId: string): Promise<{
     }
 }
 
+export interface QuestionPassRate {
+    totalAttempts: number
+    correctAttempts: number
+    accuracyRate: number
+}
+
+// Bulk pass-rate lookup for a list of questions (e.g. a QuestionLibrary page) in a single
+// call, instead of N+1 calls to getQuestionAnalytics. Delegates to get_questions_pass_rates,
+// which returns aggregate counts only (never which user answered what) and is gated to the
+// question's author or admin/reviewer roles -- unified_question_attempts itself is only
+// readable as your own rows, so a direct client-side query here would silently return nothing.
+export async function getQuestionsPassRates(questionIds: string[]): Promise<Record<string, QuestionPassRate>> {
+    if (questionIds.length === 0) return {}
+
+    const { data, error } = await supabase.rpc('get_questions_pass_rates', { p_question_ids: questionIds })
+    if (error) throw error
+
+    const byQuestion: Record<string, QuestionPassRate> = {}
+    for (const row of data || []) {
+        byQuestion[row.question_id] = {
+            totalAttempts: row.total_attempts,
+            correctAttempts: row.correct_attempts,
+            accuracyRate: Number(row.accuracy_rate) || 0
+        }
+    }
+    return byQuestion
+}
+
 export async function getDailyChallengeStatus(userId: string): Promise<{ completed: boolean }> {
     const today = new Date().toISOString().split('T')[0]
 

@@ -9,8 +9,9 @@
  * - Audit trail integration
  */
 
-import type { jsPDF } from 'jspdf'
+import QRCode from 'qrcode'
 import { supabase } from '@/lib/supabase'
+import { buildCertificateHtml, CERTIFICATE_TEMPLATE_STYLES, CERTIFICATE_HEIGHT_PX, CERTIFICATE_WIDTH_PX } from '@/lib/certificateTemplate'
 
 export interface CertificateData {
     // Recipient
@@ -109,252 +110,110 @@ function resolveCertificateStatus(
     return expiryTime <= Date.now() ? 'expired' : normalizedStatus
 }
 
-// Brand colors for Altus Advisory
-const _BRAND_COLORS = {
-    navy: '#0B1C3E',      // Altus Navy
-    gold: '#C39A45',      // Altus Mid-Tone Gold
-    darkGold: '#75531B',  // Altus Deep Bronze
-    lightGold: '#F2D888', // Altus Highlight Gold
-    white: '#ffffff',
-    lightGray: '#f8f9fa',
-    darkGray: '#2d3748',
-    text: '#1a202c'
-}
-
 const CERTIFICATE_VERIFY_URL = import.meta.env.VITE_CERTIFICATE_VERIFY_URL || 'altus-advisory.com/verify'
 
 /**
- * Generate a professional PDF certificate
+ * Generate a luxury enterprise PDF certificate.
+ *
+ * Renders the premium HTML/CSS template (src/lib/certificateTemplate.ts) off-screen and
+ * rasterizes it to an A4-landscape PDF via html2pdf.js. This replaced the previous jsPDF
+ * vector-drawing implementation, which couldn't express custom display typography, layered
+ * gradients, or a real CSS Grid layout.
  */
 export async function generateCertificatePDF(
     certificate: Certificate,
     logoDataUrl?: string
 ): Promise<Blob> {
-    const { jsPDF } = await import('jspdf')
-    
-    // Create PDF in landscape A4
-    const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
+    const qrDataUrl = await createQRCodeDataUrl(`https://${CERTIFICATE_VERIFY_URL}?code=${certificate.verificationCode}`)
+
+    const html = buildCertificateHtml({
+        recipientName: certificate.recipientName,
+        title: certificate.title,
+        completionDateLabel: formatDate(certificate.completionDate),
+        certificateNumber: certificate.certificateNumber,
+        verificationCode: certificate.verificationCode,
+        verifyUrl: CERTIFICATE_VERIFY_URL,
+        score: certificate.score,
+        passingScore: certificate.passingScore,
+        issuedByName: certificate.issuedByName,
+        logoDataUrl,
+        qrDataUrl: qrDataUrl || undefined
     })
 
-    const pageWidth = doc.internal.pageSize.getWidth()
-    const pageHeight = doc.internal.pageSize.getHeight()
+    let styleEl: HTMLStyleElement | null = null
+    let container: HTMLDivElement | null = null
 
-    // ===== BACKGROUND =====
-    // Cream/off-white background
-    doc.setFillColor(252, 251, 248)
-    doc.rect(0, 0, pageWidth, pageHeight, 'F')
+    try {
+        styleEl = document.createElement('style')
+        styleEl.textContent = CERTIFICATE_TEMPLATE_STYLES
+        document.head.appendChild(styleEl)
 
-    // Decorative border - outer gold
-    doc.setDrawColor(201, 165, 77) // Gold
-    doc.setLineWidth(2)
-    doc.rect(8, 8, pageWidth - 16, pageHeight - 16, 'S')
+        container = document.createElement('div')
+        container.style.position = 'fixed'
+        container.style.left = '-99999px'
+        container.style.top = '0'
+        container.innerHTML = html
+        document.body.appendChild(container)
 
-    // Inner decorative border
-    doc.setDrawColor(11, 21, 40) // Navy
-    doc.setLineWidth(0.5)
-    doc.rect(12, 12, pageWidth - 24, pageHeight - 24, 'S')
+        const renderElement = container.firstElementChild as HTMLElement | null
+        if (!renderElement) throw new Error('Failed to prepare certificate for rendering')
 
-    // Corner decorations
-    drawCornerDecoration(doc, 15, 15, 'tl')
-    drawCornerDecoration(doc, pageWidth - 15, 15, 'tr')
-    drawCornerDecoration(doc, 15, pageHeight - 15, 'bl')
-    drawCornerDecoration(doc, pageWidth - 15, pageHeight - 15, 'br')
-
-    // ===== HEADER SECTION =====
-    let yPos = 25
-
-    // Logo placeholder - center top
-    if (logoDataUrl) {
-        try {
-            doc.addImage(logoDataUrl, 'PNG', pageWidth / 2 - 30, yPos, 60, 20)
-            yPos += 28
-        } catch (e) {
-            console.warn('Could not add logo:', e)
-            // Fallback text logo
-            doc.setTextColor(11, 21, 40)
-            doc.setFontSize(24)
-            doc.setFont('helvetica', 'bold')
-            doc.text('ALTUS ADVISORY', pageWidth / 2, yPos + 10, { align: 'center' })
-            yPos += 20
+        // Let @font-face requests for the display fonts settle before html2canvas
+        // rasterizes text, or the PDF can be captured with fallback system fonts.
+        if (document.fonts?.ready) {
+            await document.fonts.ready
         }
-    } else {
-        // Text logo fallback
-        doc.setTextColor(11, 21, 40)
-        doc.setFontSize(24)
-        doc.setFont('helvetica', 'bold')
-        doc.text('ALTUS ADVISORY', pageWidth / 2, yPos + 10, { align: 'center' })
-        yPos += 20
-    }
 
-    // Certificate type header
-    yPos += 5
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(156, 120, 53) // Dark gold
-    const typeLabel = getCertificateTypeLabel(certificate.certificateType)
-    doc.text(typeLabel, pageWidth / 2, yPos, { align: 'center' })
+        // Rasterize with html2canvas directly (rather than the html2pdf.js wrapper) and place
+        // the single resulting image onto one jsPDF page ourselves. html2pdf.js's own pagination
+        // logic was splitting this onto two pages even though the content fits on one -- driving
+        // straight through html2canvas + jsPDF removes that page-break heuristic entirely.
+        const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+            import('html2canvas'),
+            import('jspdf')
+        ])
 
-    // Main title - "CERTIFICATE OF COMPLETION"
-    yPos += 12
-    doc.setFontSize(32)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(11, 21, 40) // Navy
-    doc.text('CERTIFICATE OF COMPLETION', pageWidth / 2, yPos, { align: 'center' })
+        const canvas = await html2canvas(renderElement, {
+            scale: 3,
+            useCORS: true,
+            logging: false,
+            backgroundColor: '#FDFBF6',
+            width: CERTIFICATE_WIDTH_PX,
+            height: CERTIFICATE_HEIGHT_PX,
+            windowWidth: CERTIFICATE_WIDTH_PX,
+            windowHeight: CERTIFICATE_HEIGHT_PX
+        })
 
-    // Decorative line under title
-    yPos += 6
-    doc.setDrawColor(201, 165, 77)
-    doc.setLineWidth(1)
-    doc.line(pageWidth / 2 - 60, yPos, pageWidth / 2 + 60, yPos)
+        const imageDataUrl = canvas.toDataURL('image/jpeg', 0.98)
+        const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' })
+        const pageWidth = doc.internal.pageSize.getWidth()
+        const pageHeight = doc.internal.pageSize.getHeight()
+        doc.addImage(imageDataUrl, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST')
 
-    // ===== RECIPIENT SECTION =====
-    yPos += 15
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(45, 55, 72)
-    doc.text('This is to certify that', pageWidth / 2, yPos, { align: 'center' })
-
-    // Recipient name - large and prominent
-    yPos += 14
-    doc.setFontSize(28)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(11, 21, 40)
-    doc.text(certificate.recipientName, pageWidth / 2, yPos, { align: 'center' })
-
-    // Underline for name
-    yPos += 3
-    doc.setDrawColor(201, 165, 77)
-    doc.setLineWidth(0.5)
-    const nameWidth = doc.getTextWidth(certificate.recipientName)
-    doc.line(pageWidth / 2 - nameWidth / 2 - 5, yPos, pageWidth / 2 + nameWidth / 2 + 5, yPos)
-
-    // ===== ACHIEVEMENT SECTION =====
-    yPos += 12
-    doc.setFontSize(12)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(45, 55, 72)
-    doc.text('has successfully completed', pageWidth / 2, yPos, { align: 'center' })
-
-    // Course/Training title
-    yPos += 12
-    doc.setFontSize(18)
-    doc.setFont('helvetica', 'bold')
-    doc.setTextColor(11, 21, 40)
-
-    // Handle long titles with word wrap
-    const maxTitleWidth = pageWidth - 80
-    const titleLines = doc.splitTextToSize(certificate.title, maxTitleWidth)
-    doc.text(titleLines, pageWidth / 2, yPos, { align: 'center' })
-    yPos += titleLines.length * 8
-
-    // Score if applicable
-    if (certificate.score !== undefined && certificate.score !== null) {
-        yPos += 6
-        doc.setFontSize(14)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(45, 55, 72)
-        const scoreText = `Score: ${certificate.score}%${certificate.passingScore ? ` (Passing: ${certificate.passingScore}%)` : ''}`
-        doc.text(scoreText, pageWidth / 2, yPos, { align: 'center' })
-    }
-
-    // ===== DATE SECTION =====
-    yPos += 12
-    doc.setFontSize(11)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(45, 55, 72)
-    const dateStr = formatDate(certificate.completionDate)
-    doc.text(`Completed on ${dateStr}`, pageWidth / 2, yPos, { align: 'center' })
-
-    // Expiry date if applicable
-    if (certificate.expiryDate) {
-        yPos += 6
-        doc.setFontSize(10)
-        const expiryStr = formatDate(certificate.expiryDate)
-        doc.text(`Valid until ${expiryStr}`, pageWidth / 2, yPos, { align: 'center' })
-    }
-
-    // ===== FOOTER SECTION =====
-    const footerY = pageHeight - 35
-
-    // Property/Department info
-    if (certificate.propertyName || certificate.departmentName) {
-        doc.setFontSize(9)
-        doc.setFont('helvetica', 'normal')
-        doc.setTextColor(100, 100, 100)
-        let contextText = ''
-        if (certificate.propertyName && certificate.departmentName) {
-            contextText = `${certificate.departmentName} | ${certificate.propertyName}`
-        } else {
-            contextText = certificate.propertyName || certificate.departmentName || ''
-        }
-        doc.text(contextText, pageWidth / 2, footerY - 8, { align: 'center' })
-    }
-
-    // Certificate number and verification code
-    doc.setFontSize(8)
-    doc.setFont('helvetica', 'normal')
-    doc.setTextColor(120, 120, 120)
-
-    // Left: Certificate number
-    doc.text(`Certificate No: ${certificate.certificateNumber}`, 20, footerY + 5)
-
-    // Center: Verification instructions
-    doc.text(`Verify at: ${CERTIFICATE_VERIFY_URL}`, pageWidth / 2, footerY + 5, { align: 'center' })
-
-    // Right: Verification code
-    doc.text(`Code: ${certificate.verificationCode}`, pageWidth - 20, footerY + 5, { align: 'right' })
-
-    // QR-code-style verification hint
-    doc.setFontSize(7)
-    doc.setTextColor(150, 150, 150)
-    doc.text('This certificate can be verified using the code above', pageWidth / 2, footerY + 10, { align: 'center' })
-
-    // Return as blob
-    return doc.output('blob')
-}
-
-/**
- * Draw decorative corner flourish
- */
-function drawCornerDecoration(doc: jsPDF, x: number, y: number, corner: 'tl' | 'tr' | 'bl' | 'br') {
-    const size = 8
-    doc.setDrawColor(201, 165, 77) // Gold
-    doc.setLineWidth(0.5)
-
-    switch (corner) {
-        case 'tl':
-            doc.line(x, y + size, x, y)
-            doc.line(x, y, x + size, y)
-            break
-        case 'tr':
-            doc.line(x - size, y, x, y)
-            doc.line(x, y, x, y + size)
-            break
-        case 'bl':
-            doc.line(x, y - size, x, y)
-            doc.line(x, y, x + size, y)
-            break
-        case 'br':
-            doc.line(x - size, y, x, y)
-            doc.line(x, y, x, y - size)
-            break
+        return doc.output('blob')
+    } finally {
+        if (container?.parentNode) container.parentNode.removeChild(container)
+        if (styleEl?.parentNode) styleEl.parentNode.removeChild(styleEl)
     }
 }
 
 /**
- * Get display label for certificate type
+ * Generate real ISO-compliant scannable QR Code Data URL
  */
-function getCertificateTypeLabel(type: string): string {
-    const labels: Record<string, string> = {
-        'training': 'PROFESSIONAL TRAINING',
-        'sop_quiz': 'STANDARD OPERATING PROCEDURES',
-        'compliance': 'COMPLIANCE CERTIFICATION',
-        'achievement': 'ACHIEVEMENT RECOGNITION'
+export async function createQRCodeDataUrl(text: string): Promise<string> {
+    try {
+        return await QRCode.toDataURL(text, {
+            width: 240,
+            margin: 1,
+            color: {
+                dark: '#0B1C3E',
+                light: '#FAF8F5'
+            }
+        })
+    } catch (e) {
+        console.warn('QR Code generation error:', e)
+        return ''
     }
-    return labels[type] || 'CERTIFICATION'
 }
 
 /**
@@ -588,7 +447,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
                 body: {
                     to: data.recipientEmail,
                     userId: data.userId,
-                    templateKey: 'certificate_earned',
+                    templateKey: 'training_certificate_earned',
                     subject: 'Your Certificate of Completion: ' + data.title,
                     title: 'Certificate Attained',
                     message: `Congratulations ${data.recipientName}! You have successfully earned the ${data.title} certificate.`,

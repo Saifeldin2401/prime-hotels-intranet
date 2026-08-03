@@ -16,11 +16,13 @@ import {
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useApproveQuestion, useDeleteQuestion, usePendingReviewQuestions, useQuestions, useRejectQuestion } from '@/hooks/useQuestions'
+import { useApproveQuestion, useDeleteQuestion, usePendingReviewQuestions, useQuestions, useQuestionsPassRates, useRejectQuestion } from '@/hooks/useQuestions'
+import type { QuestionPassRate } from '@/services/questionService'
 import type { KnowledgeQuestion, QuestionStatus, QuestionType } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG, STATUS_CONFIG } from '@/types/questions'
 import {
     Archive,
+    AlertTriangle,
     Brain,
     CheckCircle,
     Clock,
@@ -62,6 +64,9 @@ export function QuestionLibrary() {
     const approveQuestion = useApproveQuestion()
     const rejectQuestion = useRejectQuestion()
     const deleteQuestion = useDeleteQuestion()
+
+    const visibleQuestionIds = data?.questions?.map(q => q.id) || []
+    const { data: passRates } = useQuestionsPassRates(visibleQuestionIds)
 
     const handleTabChange = (value: string) => {
         const newParams = new URLSearchParams(searchParams)
@@ -236,6 +241,7 @@ export function QuestionLibrary() {
                                 <QuestionCard
                                     key={question.id}
                                     question={question}
+                                    passRate={passRates?.[question.id]}
                                     onApprove={() => approveQuestion.mutate({ id: question.id })}
                                     onReject={(notes) => rejectQuestion.mutate({ id: question.id, notes })}
                                     onDelete={() => deleteQuestion.mutate(question.id)}
@@ -250,19 +256,25 @@ export function QuestionLibrary() {
     )
 }
 
+// Minimum sample size before a low pass rate is flagged as likely-ambiguous rather than noise.
+const MIN_ATTEMPTS_FOR_FLAG = 5
+
 // Question Card Component
 interface QuestionCardProps {
     question: KnowledgeQuestion
+    passRate?: QuestionPassRate
     onApprove: () => void
     onReject: (notes: string) => void
     onDelete: () => void
     isApproving?: boolean
 }
 
-function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCardProps) {
+function QuestionCard({ question, passRate, onApprove, onDelete, isApproving }: QuestionCardProps) {
+    const { t } = useTranslation(['knowledge', 'common'])
     const statusConfig = STATUS_CONFIG[question.status]
     const typeConfig = QUESTION_TYPE_CONFIG[question.question_type]
     const difficultyConfig = DIFFICULTY_CONFIG[question.difficulty_level]
+    const isLowPassRate = !!passRate && passRate.totalAttempts >= MIN_ATTEMPTS_FOR_FLAG && passRate.accuracyRate < 50
 
     return (
         <Card className="hover:border-gray-300 transition-colors">
@@ -283,6 +295,16 @@ function QuestionCard({ question, onApprove, onDelete, isApproving }: QuestionCa
                                 <Badge className="bg-purple-100 text-purple-700">
                                     <Sparkles className="h-3 w-3 me-1" />
                                     AI
+                                </Badge>
+                            )}
+                            {passRate && passRate.totalAttempts > 0 && (
+                                <Badge
+                                    variant="outline"
+                                    className={isLowPassRate ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-600'}
+                                    title={isLowPassRate ? t('question_library.low_pass_rate_hint', 'Low pass rate — may be ambiguous or the content may need clarifying') : undefined}
+                                >
+                                    {isLowPassRate && <AlertTriangle className="h-3 w-3 me-1" />}
+                                    {Math.round(passRate.accuracyRate)}% {t('question_library.pass_rate', 'pass')} ({passRate.totalAttempts})
                                 </Badge>
                             )}
                         </div>

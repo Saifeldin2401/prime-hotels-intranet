@@ -15,7 +15,7 @@ import {
     useVerifyCertificate
 } from '@/hooks/useCertificates'
 import { usePermissions } from '@/hooks/usePermissions'
-import type { Certificate } from '@/services/certificateService'
+import { createQRCodeDataUrl, type Certificate } from '@/services/certificateService'
 import { format } from 'date-fns'
 import { ar, enUS } from 'date-fns/locale'
 import {
@@ -30,7 +30,7 @@ import {
     Search,
     Shield
 } from 'lucide-react'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 export default function TrainingCertificates() {
@@ -46,6 +46,17 @@ export default function TrainingCertificates() {
   const [verificationCode, setVerificationCode] = useState('')
   const [selectedCertificate, setSelectedCertificate] = useState<Certificate | null>(null)
   const [showCertificateDialog, setShowCertificateDialog] = useState(false)
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('')
+
+  useEffect(() => {
+    if (selectedCertificate?.verificationCode) {
+      createQRCodeDataUrl(`https://altus-advisory.com/verify?code=${selectedCertificate.verificationCode}`)
+        .then(setQrCodeDataUrl)
+        .catch(() => setQrCodeDataUrl(''))
+    } else {
+      setQrCodeDataUrl('')
+    }
+  }, [selectedCertificate])
 
   // Hooks
   const { data: myCertificates, isLoading: myLoading } = useMyCertificates()
@@ -297,62 +308,216 @@ export default function TrainingCertificates() {
 
       {/* Preview Dialog */}
       <Dialog open={showCertificateDialog} onOpenChange={setShowCertificateDialog}>
-        <DialogContent className="max-w-4xl bg-stone-100 p-0 overflow-hidden border-hotel-gold">
+        <DialogContent className="max-w-5xl bg-[#FAF8F5] p-0 overflow-hidden border-4 border-[#C5A059] shadow-2xl rounded-lg print:border-none print:shadow-none print:p-0">
           {selectedCertificate && (
-            <div className="flex flex-col h-full">
-              <div className="p-8 bg-white m-4 border-8 border-hotel-gold shadow-2xl relative">
-                {/* Visual Frame */}
-                <div className="absolute inset-2 border-2 border-hotel-navy/20 pointer-events-none" />
-
-                <div className="text-center space-y-8 relative z-10 py-12">
-                  <div className="flex justify-center">
-                    <div className="w-24 h-24 rounded-full bg-hotel-gold/10 flex items-center justify-center border-2 border-hotel-gold">
-                      <Award className="w-12 h-12 text-hotel-gold" />
-                    </div>
+            <div className="flex flex-col h-full print:m-0">
+              {/* Outer Golden Foil Border Container */}
+              <div className="p-2 bg-gradient-to-br from-[#C5A059] via-[#F2D888] to-[#8C6B28] m-3 rounded shadow-xl print:m-0 print:p-1">
+                <div className="p-6 md:p-10 bg-[#FDFBF7] border-2 border-[#0B1C3E] relative shadow-inner overflow-hidden select-none rounded-sm">
+                  
+                  {/* Subtle Background Watermark Motif */}
+                  <div className="absolute inset-0 opacity-[0.025] pointer-events-none flex items-center justify-center">
+                    <img src="/altus-logo-web.png" alt="Watermark" className="w-[550px] object-contain" />
                   </div>
 
-                  <div className="space-y-2">
-                    <h1 className="text-hotel-navy font-serif text-4xl font-bold tracking-widest">{t('certificateOfCompletion', 'CERTIFICATE OF COMPLETION')}</h1>
-                    <div className="h-1 w-32 bg-hotel-gold mx-auto" />
+                  {/* Corner Art-Deco Ornaments (Top-Left, Top-Right, Bottom-Left, Bottom-Right) */}
+                  <div className="absolute top-2 left-2 w-10 h-10 border-t-2 border-l-2 border-[#C5A059] pointer-events-none flex items-start justify-start p-0.5">
+                    <div className="w-3 h-3 border-t border-l border-[#0B1C3E]" />
+                  </div>
+                  <div className="absolute top-2 right-2 w-10 h-10 border-t-2 border-r-2 border-[#C5A059] pointer-events-none flex items-start justify-end p-0.5">
+                    <div className="w-3 h-3 border-t border-r border-[#0B1C3E]" />
+                  </div>
+                  <div className="absolute bottom-2 left-2 w-10 h-10 border-b-2 border-l-2 border-[#C5A059] pointer-events-none flex items-end justify-start p-0.5">
+                    <div className="w-3 h-3 border-b border-l border-[#0B1C3E]" />
+                  </div>
+                  <div className="absolute bottom-2 right-2 w-10 h-10 border-b-2 border-r-2 border-[#C5A059] pointer-events-none flex items-end justify-end p-0.5">
+                    <div className="w-3 h-3 border-b border-r border-[#0B1C3E]" />
                   </div>
 
-                  <p className="text-muted-foreground font-serif italic text-lg">{t('thisIsToCertifyThat', 'This is to certify that')}</p>
+                  {/* Bottom Border Diamond Accent */}
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-4 h-4 bg-[#C5A059] rotate-45 border border-[#0B1C3E] z-20 pointer-events-none" />
 
-                  <h2 className="text-hotel-navy text-5xl font-bold border-b-2 border-hotel-gold/30 inline-block px-12 pb-2 min-w-[300px]">
-                    {selectedCertificate.recipientName}
-                  </h2>
+                  {/* Inner Fine Gold Inset Line */}
+                  <div className="absolute inset-2 border border-[#E8D29B]/80 pointer-events-none rounded-sm" />
 
-                  <p className="text-muted-foreground font-serif">{t('successfullyCompletedModule', 'has successfully completed the training module')}</p>
-
-                  <h3 className="text-hotel-navy text-2xl font-bold max-w-2xl mx-auto">{selectedCertificate.title}</h3>
-
-                  <div className="flex justify-center gap-12 pt-12 border-t border-muted max-w-md mx-auto">
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('issuedOn')}</p>
-                      <p className="font-bold text-hotel-navy">{format(new Date(selectedCertificate.completionDate), 'PPP', { locale: dateLocale })}</p>
+                  <div className="text-center space-y-5 relative z-10 py-2 px-2">
+                    
+                    {/* Header Logo & Subheader */}
+                    <div className="flex flex-col items-center justify-center space-y-1">
+                      <img src="/altus-logo-web.png" alt="Altus Advisory" className="h-12 md:h-14 w-auto object-contain" />
+                      <span className="text-[#C5A059] text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase pt-1">
+                        PROFESSIONAL STANDARD CERTIFICATION
+                      </span>
                     </div>
-                    <div className="text-center">
-                      <p className="text-xs text-muted-foreground uppercase tracking-wider">{t('certificateNumber')}</p>
-                      <p className="font-mono font-bold text-hotel-navy">{selectedCertificate.certificateNumber}</p>
-                    </div>
-                  </div>
 
-                  <div className="pt-8 opacity-50 text-[10px] uppercase tracking-[0.2em]">
-                    Verified by remal-connect.com/verify
+                    {/* Title Block with Ornate Gold Divider */}
+                    <div className="space-y-2 pt-1 max-w-3xl mx-auto">
+                      <div className="flex items-center justify-center gap-3">
+                        <div className="h-[1px] w-24 bg-[#C5A059]" />
+                        <span className="text-[#C5A059] text-xs">◆</span>
+                        <div className="h-[1px] w-24 bg-[#C5A059]" />
+                      </div>
+                      
+                      <h1 className="text-[#0B1C3E] font-serif text-3xl md:text-5xl font-extrabold tracking-[0.1em] uppercase drop-shadow-xs">
+                        CERTIFICATE OF COMPLETION
+                      </h1>
+
+                      <div className="flex items-center justify-center gap-3 pt-1">
+                        <div className="h-[1px] w-36 bg-[#C5A059]" />
+                        <span className="text-[#C5A059] text-xs">◇ ◆ ◇</span>
+                        <div className="h-[1px] w-36 bg-[#C5A059]" />
+                      </div>
+                    </div>
+
+                    {/* Middle Section: Left Laurel Wreath Shield + Right Recipient & Course Area */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-center gap-4 py-2 max-w-4xl mx-auto">
+                      
+                      {/* Left: Gold Laurel Wreath Shield Emblem */}
+                      <div className="md:col-span-3 flex flex-col items-center justify-center border-b md:border-b-0 md:border-r border-[#C5A059]/40 pe-0 md:pe-6 py-2">
+                        <div className="relative w-24 h-24 flex items-center justify-center text-[#C5A059]">
+                          {/* Laurel Wreath Graphic */}
+                          <div className="absolute inset-0 border-2 border-dashed border-[#C5A059]/50 rounded-full animate-spin-slow" />
+                          <div className="w-20 h-20 rounded-full border-2 border-[#C5A059] flex items-center justify-center bg-[#FAF5E8]/80 shadow-md">
+                            <div className="flex flex-col items-center text-[#75531B]">
+                              <span className="text-xs font-serif font-bold">✦</span>
+                              <Award className="w-10 h-10 text-[#C5A059] drop-shadow" />
+                              <span className="text-[8px] font-bold tracking-widest uppercase">QUALITY</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: Recipient & Course Credentials */}
+                      <div className="md:col-span-9 space-y-4 text-center md:text-center ps-0 md:ps-2">
+                        
+                        {/* Recipient */}
+                        <div className="space-y-1.5">
+                          <p className="text-slate-600 font-serif italic text-sm md:text-base">
+                            This official certificate is proudly presented to
+                          </p>
+                          <h2 className="text-[#0B1C3E] text-3xl md:text-4xl lg:text-5xl font-black font-serif tracking-wider uppercase pt-0.5">
+                            {selectedCertificate.recipientName}
+                          </h2>
+                          <div className="flex items-center justify-center gap-2 max-w-md mx-auto pt-1">
+                            <div className="h-[1.5px] w-full bg-[#C5A059]" />
+                            <span className="text-[#C5A059] text-[10px]">◆</span>
+                            <div className="h-[1.5px] w-full bg-[#C5A059]" />
+                          </div>
+                        </div>
+
+                        {/* Course Achievement */}
+                        <div className="space-y-1.5 pt-1">
+                          <p className="text-slate-600 font-serif italic text-xs md:text-sm">
+                            has successfully completed and demonstrated mastery in
+                          </p>
+                          <h3 className="text-[#0B1C3E] text-xl md:text-2xl lg:text-3xl font-extrabold font-serif tracking-wider uppercase">
+                            {selectedCertificate.title}
+                          </h3>
+                          <div className="text-[#C5A059] text-xs pt-0.5">◆</div>
+                        </div>
+
+                        {/* Completion Date */}
+                        <p className="text-xs font-serif italic text-slate-500 pt-1">
+                          Completed on {format(new Date(selectedCertificate.completionDate), 'MMMM d, yyyy')}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Footer Row: Signature (Left), Verification Card (Center), Official Seal (Right) */}
+                    <div className="grid grid-cols-1 md:grid-cols-12 items-end pt-4 border-t border-[#C5A059]/40 max-w-4xl mx-auto gap-4 mt-2">
+                      
+                      {/* Left: Authorized Executive Signature */}
+                      <div className="md:col-span-4 text-center md:text-start space-y-1">
+                        <div className="font-serif italic font-bold text-[#0B1C3E] text-2xl ps-1 tracking-wide">
+                          Saifeldin M.
+                        </div>
+                        <div className="flex items-center gap-1 w-44">
+                          <div className="h-[1px] w-full bg-[#C5A059]" />
+                          <span className="text-[#C5A059] text-[8px]">◇</span>
+                          <div className="h-[1px] w-full bg-[#C5A059]" />
+                        </div>
+                        <p className="text-[11px] font-black text-[#0B1C3E] uppercase tracking-wider">SAIFELDIN M.</p>
+                        <p className="text-[10px] font-bold text-[#C5A059] uppercase tracking-wider">VP OF LEARNING & QUALITY</p>
+                        <p className="text-[10px] text-slate-600">PRIME Hotels & Resorts / Altus Advisory</p>
+                        <p className="text-[9px] font-mono text-slate-400 pt-0.5">Cert ID: {selectedCertificate.certificateNumber}</p>
+                      </div>
+
+                      {/* Center: Structured Secure Verification Card */}
+                      <div className="md:col-span-5 flex justify-center">
+                        <div className="w-full max-w-md p-2.5 bg-white/90 border-2 border-[#C5A059] rounded-xl shadow-sm flex items-center gap-3 text-start">
+                          {/* QR Image */}
+                          <div className="p-1 bg-white border border-[#C5A059] rounded flex-shrink-0">
+                            {qrCodeDataUrl ? (
+                              <img 
+                                src={qrCodeDataUrl}
+                                alt="QR Verification"
+                                className="w-16 h-16 object-contain"
+                              />
+                            ) : (
+                              <div className="w-16 h-16 bg-slate-100 flex items-center justify-center text-[9px] text-slate-400">QR</div>
+                            )}
+                          </div>
+                          {/* Card Verification Details */}
+                          <div className="space-y-0.5 text-[10px] text-slate-700 min-w-0">
+                            <span className="text-[10px] font-black text-[#0B1C3E] uppercase tracking-wider block border-b border-slate-200 pb-0.5 mb-1">
+                              SECURE VERIFICATION
+                            </span>
+                            <div className="flex items-center gap-1 text-[9.5px]">
+                              <span className="text-green-600 font-bold">☑</span>
+                              <span className="font-semibold text-slate-600">Certificate ID:</span>
+                              <span className="font-mono font-bold text-[#0B1C3E] truncate">{selectedCertificate.certificateNumber}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[9.5px]">
+                              <span className="text-blue-600">📅</span>
+                              <span className="font-semibold text-slate-600">Issued On:</span>
+                              <span className="font-medium text-[#0B1C3E]">{format(new Date(selectedCertificate.completionDate), 'MMMM d, yyyy')}</span>
+                            </div>
+                            <div className="flex items-center gap-1 text-[9.5px]">
+                              <span className="text-amber-600">🌐</span>
+                              <span className="font-semibold text-slate-600">Verify at:</span>
+                              <span className="font-mono text-blue-700 underline text-[9px]">verify.altusadvisory.com</span>
+                            </div>
+                            <div className="pt-0.5">
+                              <span className="text-[8.5px] font-bold text-slate-500 block">🔒 Verification Code:</span>
+                              <span className="font-mono font-bold text-[9px] text-[#0B1C3E] tracking-tighter block truncate">
+                                {selectedCertificate.verificationCode}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right: 3D Embossed Gold Seal Stamp Medallion */}
+                      <div className="md:col-span-3 flex justify-center md:justify-end">
+                        <div className="relative w-28 h-28 rounded-full bg-gradient-to-br from-[#F2D888] via-[#C5A059] to-[#6A4915] p-1 shadow-2xl flex items-center justify-center">
+                          {/* Outer Serrated Ring Detail */}
+                          <div className="w-full h-full rounded-full border-2 border-dashed border-[#0B1C3E]/60 flex flex-col items-center justify-center text-center p-1 bg-gradient-to-br from-[#FAF5E8] via-[#E5C378] to-[#9A7635] text-[#0B1C3E] shadow-inner">
+                            <span className="text-[7.5px] font-black uppercase tracking-widest text-[#0B1C3E]">OFFICIAL SEAL</span>
+                            <img src="/altus-logo-web.png" alt="Seal Crest" className="h-4 w-auto object-contain my-0.5" />
+                            <span className="text-[7px] font-extrabold text-[#573C11] uppercase tracking-wider">ALTUS VERIFIED</span>
+                            <span className="text-[6.5px] font-bold text-[#0B1C3E] uppercase tracking-tighter leading-none mt-0.5">EXCELLENCE IN EDUCATION</span>
+                            <span className="text-[7px] font-bold text-[#0B1C3E] pt-0.5">★ ★ ★</span>
+                            <span className="text-[6.5px] font-black text-[#573C11] uppercase tracking-widest mt-0.5">ALTUS ADVISORY</span>
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-white/80 backdrop-blur p-4 flex justify-center gap-4 border-t border-hotel-gold/20">
-                <Button className="bg-hotel-gold text-white hover:bg-hotel-gold-dark" onClick={() => handleDownload(selectedCertificate.id)} disabled={downloadMutation.isPending}>
+              {/* Action Buttons */}
+              <div className="bg-white/90 backdrop-blur p-4 flex justify-center gap-4 border-t border-[#C5A059]/30">
+                <Button className="bg-[#C5A059] text-white hover:bg-[#A37F38] shadow-md font-semibold px-6" onClick={() => handleDownload(selectedCertificate.id)} disabled={downloadMutation.isPending}>
                   <Download className="w-4 h-4 me-2" />
                   {t('download')}
                 </Button>
-                <Button variant="outline" onClick={() => window.print()}>
+                <Button variant="outline" className="border-slate-300 text-slate-700 hover:bg-slate-50" onClick={() => window.print()}>
                   <Printer className="w-4 h-4 me-2" />
                   {t('printCertificate')}
                 </Button>
-                <Button variant="outline" onClick={() => setShowCertificateDialog(false)}>
+                <Button variant="outline" className="border-slate-300" onClick={() => setShowCertificateDialog(false)}>
                   {t('common:actions.close')}
                 </Button>
               </div>

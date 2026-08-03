@@ -48,11 +48,11 @@ export const toDurationSeconds = (minutes?: number | null) => {
   return Math.round(minutes * 60)
 }
 
-export const normalizeEstimatedDuration = (value?: number | null) => {
+export const normalizeEstimatedDuration = (value?: number | null): string => {
   if (value === null || value === undefined || Number.isNaN(value)) return ''
   if (value <= 0) return ''
-  if (value > 240) return Math.max(1, Math.round(value / 60))
-  return Math.round(value)
+  if (value > 240) return String(Math.max(1, Math.round(value / 60)))
+  return String(Math.round(value))
 }
 
 export const estimateBlockDurationMinutes = (block: ContentBlockForm) => {

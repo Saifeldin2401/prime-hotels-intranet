@@ -54,6 +54,49 @@ const FALLBACK_MODELS = [
     'Qwen/Qwen2.5-7B-Instruct'
 ]
 
+const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'sops', 'sop', 'ksa'])
+
+function extractKeywords(query: string): string[] {
+    const keywords = query.toLowerCase()
+        .replace(/[?.,!]/g, '')
+        .split(/\s+/)
+        .filter(w => w.length > 2 && !STOPWORDS.has(w))
+    return keywords.length > 0 ? keywords : [query]
+}
+
+// Picks the paragraph(s) most relevant to the search keywords instead of the
+// document's first N characters, so the AI sees the matching section rather
+// than whatever happens to be the preamble.
+function extractRelevantChunks(content: string, keywords: string[], maxChars = 1500): string {
+    if (!content) return ''
+
+    const chunks = content.split(/\n\s*\n+/).map(c => c.trim()).filter(Boolean)
+    if (chunks.length === 0) return content.slice(0, maxChars)
+
+    const lowerKeywords = keywords.map(k => k.toLowerCase())
+    const scored = chunks.map((chunk, index) => {
+        const lowerChunk = chunk.toLowerCase()
+        const score = lowerKeywords.reduce((sum, kw) => sum + (lowerChunk.split(kw).length - 1), 0)
+        return { chunk, index, score }
+    })
+
+    const matched = scored.filter(c => c.score > 0)
+    const pool = matched.length > 0 ? matched.sort((a, b) => b.score - a.score) : scored
+
+    // Take the top-scoring chunks, then restore document order for readability
+    const chosen = pool.slice(0, 6).sort((a, b) => a.index - b.index)
+
+    let result = ''
+    for (const c of chosen) {
+        if (result.length + c.chunk.length > maxChars) {
+            result += (result ? '\n\n' : '') + c.chunk.slice(0, Math.max(0, maxChars - result.length))
+            break
+        }
+        result += (result ? '\n\n' : '') + c.chunk
+    }
+    return result || content.slice(0, maxChars)
+}
+
 export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantProps) {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const [messages, setMessages] = useState<Message[]>([])
@@ -91,56 +134,52 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
 
     const searchKnowledgeBase = async (query: string): Promise<ArticleSource[]> => {
         try {
-            const keywords = query.toLowerCase()
-                .replace(/[?.,!]/g, '')
-                .split(/\s+/)
-                .filter(w => w.length > 2 && !['the', 'and', 'for', 'with', 'this', 'that', 'from', 'sops', 'sop', 'ksa'].includes(w))
+            const searchTerms = extractKeywords(query)
+            const tsQuery = searchTerms.join(' OR ')
 
-            const searchTerms = keywords.length > 0 ? keywords : [query]
-
-            const orFilter = searchTerms.map(term =>
-                `title.ilike.%${term}%,content.ilike.%${term}%,description.ilike.%${term}%`
-            ).join(',')
-
-            const { data, error } = await supabase
-                .from('documents')
-                .select('id, title, content, content_type, description')
-                .or(orFilter)
-                .eq('status', 'PUBLISHED')
-                .eq('is_deleted', false)
-                .order('created_at', { ascending: false })
-                .limit(8)
-
-            if (error) throw error
-
-            const scoredResults = (data || []).map(doc => {
-                let score = 0
-                const docTitle = (doc.title || '').toLowerCase()
-                const docContent = (doc.content || '').toLowerCase()
-
-                searchTerms.forEach(term => {
-                    if (docTitle.includes(term)) score += 10
-                    if (docContent.includes(term)) score += 2
-                })
-
-                return {
-                    id: doc.id,
-                    title: doc.title,
-                    content_type: doc.content_type || 'document',
-                    relevance: score
-                }
+            // Ranked full-text search over title/tags/description/body via
+            // documents.search_vector (RLS-respecting RPC), instead of ilike
+            // substring matching that missed anything only mentioned in the body.
+            const { data: ranked, error: rankError } = await supabase.rpc('search_knowledge_articles', {
+                p_query: tsQuery,
+                p_status: 'PUBLISHED',
+                p_limit: 5,
+                p_offset: 0
             })
 
-            return scoredResults
-                .sort((a, b) => b.relevance - a.relevance)
-                .slice(0, 5)
+            if (rankError) throw rankError
+
+            const rankedRows = ranked || []
+            if (rankedRows.length === 0) return []
+
+            const { data: docs, error: docsError } = await supabase
+                .from('documents')
+                .select('id, title, content_type')
+                .in('id', rankedRows.map(r => r.id))
+
+            if (docsError) throw docsError
+
+            const byId = new Map((docs || []).map(d => [d.id, d]))
+
+            return rankedRows
+                .map(row => {
+                    const doc = byId.get(row.id)
+                    if (!doc) return null
+                    return {
+                        id: doc.id,
+                        title: doc.title,
+                        content_type: doc.content_type || 'document',
+                        relevance: row.rank
+                    }
+                })
+                .filter((s): s is ArticleSource => !!s)
         } catch (error) {
             console.error('Knowledge base search failed:', error)
             return []
         }
     }
 
-    const getArticleContext = async (articleIds: string[]): Promise<string> => {
+    const getArticleContext = async (articleIds: string[], keywords: string[]): Promise<string> => {
         try {
             const { data, error } = await supabase
                 .from('documents')
@@ -150,7 +189,7 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
             if (error) throw error
 
             return (data || [])
-                .map(doc => `### ${doc.title}\n${doc.description || ''}\n${doc.content?.substring(0, 1500) || ''}`)
+                .map(doc => `### ${doc.title}\n${doc.description || ''}\n${extractRelevantChunks(doc.content || '', keywords)}`)
                 .join('\n\n---\n\n')
         } catch (error) {
             console.error('Failed to get article context:', error)
@@ -206,7 +245,7 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
                 return
             }
 
-            const context = await getArticleContext(sources.map(s => s.id))
+            const context = await getArticleContext(sources.map(s => s.id), extractKeywords(question))
             const targetLanguage = i18n.language === 'ar' ? 'Arabic' : 'English'
 
             const prompt = `You are a helpful multilingual Knowledge Base Assistant for a hotel chain.

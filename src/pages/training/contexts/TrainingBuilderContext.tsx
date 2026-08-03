@@ -504,115 +504,12 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const [pendingTemplate, setPendingTemplate] = useState<TrainingTemplate | null>(null)
 
   // -------------------------------------------------------------------------
-  // Draft persistence via useFormPersistence
+  // Draft persistence state
   // -------------------------------------------------------------------------
 
-  const [hasMounted, setHasMounted] = useState(false)
+  const [hasMounted, setHasMounted] = useState(true)
   const [showRestorePrompt, setShowRestorePrompt] = useState(false)
   const restoredDraftRef = useRef(false)
-
-  const formPersistence = useFormPersistence<{
-    title: string
-    description: string
-    estimatedDuration: string
-    useEstimatedDuration: boolean
-    validityPeriod: string
-    passingScore: string
-    maxAttempts: string
-    allowRetake: boolean
-    category: string
-    difficultyLevel: string
-    audience: string
-    contentLanguage: string
-    templatePreset: string
-    certificateEnabled: boolean
-    timeLimit: number | null
-    showFeedback: boolean
-    autoAdvance: boolean
-    randomizeQuestions: boolean
-    showAnswers: boolean
-    sections: TrainingSection[]
-  }>({
-    key: `training_builder_${id || 'new'}`,
-    enabled: isNewRoute,
-    debounceMs: 1000,
-    version: 1,
-  })
-  const { loadDraft, saveDraft, clearDraft } = formPersistence
-
-  useEffect(() => {
-    if (!isNewRoute) {
-      setHasMounted(true)
-      return
-    }
-
-    const draft = loadDraft()
-    if (draft) {
-      if (draft.title) setTitle(draft.title)
-      if (draft.description) setDescription(draft.description)
-      if (draft.estimatedDuration) setEstimatedDuration(draft.estimatedDuration)
-      if (draft.useEstimatedDuration !== undefined) setUseEstimatedDuration(draft.useEstimatedDuration)
-      if (draft.validityPeriod) setValidityPeriod(draft.validityPeriod)
-      if (draft.passingScore) setPassingScore(draft.passingScore)
-      if (draft.maxAttempts) setMaxAttempts(draft.maxAttempts)
-      if (draft.allowRetake !== undefined) setAllowRetake(draft.allowRetake)
-      if (draft.category) setCategory(draft.category)
-      if (draft.difficultyLevel) setDifficultyLevel(draft.difficultyLevel)
-      if (draft.audience) setAudience(draft.audience)
-      if (draft.contentLanguage) setContentLanguage(draft.contentLanguage)
-      if (draft.templatePreset) setTemplatePreset(draft.templatePreset)
-      if (draft.certificateEnabled !== undefined) setCertificateEnabled(draft.certificateEnabled)
-      if (draft.timeLimit !== undefined) setTimeLimit(draft.timeLimit)
-      if (draft.showFeedback !== undefined) setShowFeedback(draft.showFeedback)
-      if (draft.autoAdvance !== undefined) setAutoAdvance(draft.autoAdvance)
-      if (draft.randomizeQuestions !== undefined) setRandomizeQuestions(draft.randomizeQuestions)
-      if (draft.showAnswers !== undefined) setShowAnswers(draft.showAnswers)
-      if (draft.sections && draft.sections.length > 0) {
-        setSections(draft.sections)
-      }
-
-      if (!restoredDraftRef.current) {
-        restoredDraftRef.current = true
-        setShowRestorePrompt(true)
-        setTimeout(() => setShowRestorePrompt(false), 8000)
-      }
-    }
-    setHasMounted(true)
-  }, [isNewRoute, loadDraft])
-
-  useEffect(() => {
-    if (!hasMounted || !isNewRoute) return
-
-    saveDraft({
-      title,
-      description,
-      estimatedDuration,
-      useEstimatedDuration,
-      validityPeriod,
-      passingScore,
-      maxAttempts,
-      allowRetake,
-      category,
-      difficultyLevel,
-      audience,
-      contentLanguage,
-      templatePreset,
-      certificateEnabled,
-      timeLimit,
-      showFeedback,
-      autoAdvance,
-      randomizeQuestions,
-      showAnswers,
-      sections,
-    })
-  }, [
-    hasMounted, isNewRoute, saveDraft,
-    title, description, estimatedDuration, useEstimatedDuration,
-    validityPeriod, passingScore, maxAttempts, allowRetake,
-    category, difficultyLevel, audience, contentLanguage, templatePreset,
-    certificateEnabled, timeLimit, showFeedback, autoAdvance,
-    randomizeQuestions, showAnswers, sections,
-  ])
 
   // -------------------------------------------------------------------------
   // AI dialog state
@@ -925,6 +822,15 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const draftRestoreRef = useRef(false)
   const skipAutosaveRef = useRef(true)
 
+  const clearDraft = useCallback(() => {
+    try {
+      const storage = (window as any).safeLocalStorage || { removeItem: (k: string) => localStorage.removeItem(k) }
+      storage.removeItem(draftKey)
+    } catch(e) {}
+    setAutosaveStatus('idle')
+    setLastAutosaveAt(null)
+  }, [draftKey])
+
   useEffect(() => {
     if (!isNewRoute || moduleId || draftRestoreRef.current || templateFromQuery) {
       skipAutosaveRef.current = false
@@ -952,11 +858,11 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         setContentLanguage(draft.contentLanguage || 'bilingual')
         setTemplatePreset(draft.templatePreset || 'none')
         setSections(draft.sections || [])
-        setActiveSection(draft.activeSection || null)
-        toast({
-          title: t('builder.draftRestored'),
-          description: t('builder.draftRestoredDesc')
-        })
+        if (draft.activeSection) {
+            setActiveSection(draft.activeSection)
+        }
+        setShowRestorePrompt(true)
+        setTimeout(() => setShowRestorePrompt(false), 8000)
       } catch (error) {
         const errorDetails = getUserFriendlyError(error)
         console.warn('Failed to restore training draft:', errorDetails.message)
@@ -1480,23 +1386,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }
     }
 
-    if (blocksToInsert.length === 0) {
-      for (const block of contentBlocks) {
-        blocksToInsert.push({
-          training_module_id: targetId,
-          type: block.type,
-          title: block.title || null,
-          content: block.content || block.title || '',
-          content_url: block.content_url || null,
-          content_data: block.content_data || {},
-          source_document_id: (block.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
-          order: orderIndex++,
-          is_mandatory: block.is_mandatory ?? true,
-          duration_seconds: toDurationSeconds(block.duration),
-          points: block.points
-        })
-      }
-    }
+    // Fallback removed to prevent sync issues where clearing sections restores initial contentBlocks
 
     return blocksToInsert
   }, [contentBlocks, sections])

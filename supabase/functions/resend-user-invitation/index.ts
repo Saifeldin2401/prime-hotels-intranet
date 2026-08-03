@@ -13,7 +13,8 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
 });
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://www.altus-advisory.com",
+  "https://www.phg-connect.com",
+  "https://phg-connect.com",
   "https://www.altus-advisory.com",
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -94,7 +95,7 @@ function resolveAppUrl(req: Request, appUrlFromBody: unknown): string {
     }
   }
 
-  return "https://www.altus-advisory.com";
+  return "https://www.phg-connect.com";
 }
 
 Deno.serve(async (req: Request) => {
@@ -241,10 +242,10 @@ Deno.serve(async (req: Request) => {
       },
       body: JSON.stringify({
         to: invitation.email,
-        subject: "You are invited to PHG Connect",
+        subject: "You are invited to Altus Connect",
         title: "Complete your account setup",
         message:
-          "You have been invited to PHG Connect. Open the link below to set your password and complete your profile.",
+          "You have been invited to Altus Connect. Open the link below to set your password and complete your profile.",
         actionUrl: inviteUrl,
         actionLabel: "Complete Account Setup",
         businessDomain: "user_management",

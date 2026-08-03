@@ -6,6 +6,8 @@ export const DEFAULT_ALLOWED_ORIGINS = [
   "https://www.altus-advisory.com",
   "https://connect.altusadvisory.com",
   "https://prime-hotels-intranet.vercel.app",
+  "https://www.phg-connect.com",
+  "https://phg-connect.com"
 ] as const;
 
 export function getAllowedOrigins(): string[] {

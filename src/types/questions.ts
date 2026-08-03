@@ -8,7 +8,7 @@
 // ENUMS
 // ============================================================================
 
-export type QuestionType = 'mcq' | 'mcq_multi' | 'true_false' | 'fill_blank' | 'scenario'
+export type QuestionType = 'mcq' | 'mcq_multi' | 'true_false' | 'fill_blank' | 'scenario' | 'ordering' | 'matching'
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'expert'
 
@@ -35,6 +35,7 @@ export interface KnowledgeQuestion {
 
     // Answers & Feedback
     correct_answer?: string
+    accepted_answers?: string[]
     explanation?: string
     explanation_ar?: string
     hint?: string
@@ -97,6 +98,9 @@ export interface QuestionOption {
     feedback?: string
     feedback_ar?: string
     created_at: string
+    // matching question_type only: the right-hand answer item this (left/prompt) option pairs with
+    match_value?: string | null
+    match_value_ar?: string | null
 }
 
 export interface QuestionUsage {
@@ -224,6 +228,7 @@ export interface QuestionFormData {
     question_type: QuestionType
     difficulty_level: QuestionDifficulty
     correct_answer?: string
+    accepted_answers?: string[]
     explanation?: string
     explanation_ar?: string
     hint?: string
@@ -240,6 +245,7 @@ export interface QuestionFormData {
         is_correct: boolean
         feedback?: string
         feedback_ar?: string
+        match_value?: string
     }>
 }
 
@@ -326,6 +332,18 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, {
         icon: 'GitBranch',
         color: 'orange',
         description: 'Multi-step interactive exercise'
+    },
+    ordering: {
+        label: 'Ordering',
+        icon: 'ListOrdered',
+        color: 'teal',
+        description: 'Arrange steps in the correct sequence'
+    },
+    matching: {
+        label: 'Matching',
+        icon: 'Shuffle',
+        color: 'pink',
+        description: 'Pair each item with its correct match'
     }
 }
 

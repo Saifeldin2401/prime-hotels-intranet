@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
+import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch'
 import { cn } from '@/lib/utils'
 import type { KnowledgeQuestion, QuestionOption } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
@@ -137,8 +138,7 @@ export function QuestionRenderer({
                 return selectedAnswer === question.correct_answer
             }
             case 'fill_blank': {
-                return (selectedAnswer as string).toLowerCase().trim() ===
-                    question.correct_answer?.toLowerCase().trim()
+                return isFreeTextAnswerCorrect(selectedAnswer as string, question.correct_answer, question.accepted_answers)
             }
             case 'mcq': {
                 const selected = shuffledOptions.find(o => o.id === selectedAnswer)
@@ -155,8 +155,7 @@ export function QuestionRenderer({
                     const selected = shuffledOptions.find(o => o.id === selectedAnswer)
                     return selected?.is_correct
                 }
-                return (selectedAnswer as string).toLowerCase().trim() ===
-                    question.correct_answer?.toLowerCase().trim()
+                return isFreeTextAnswerCorrect(selectedAnswer as string, question.correct_answer, question.accepted_answers)
             }
             default: {
                 return undefined

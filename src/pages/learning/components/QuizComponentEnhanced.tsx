@@ -28,6 +28,8 @@ import { useAuth } from '@/hooks/useAuth'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
+import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch'
+import { decodeMatchingAnswer, encodeMatchingAnswer, isMatchingAnswerCorrect, isOrderingAnswerCorrect } from '@/lib/questionOrderingMatching'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
@@ -35,8 +37,10 @@ import type { LearningProgress, LearningQuiz } from '@/types/learning'
 import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion'
 import {
     AlertCircle,
+    ArrowDown,
     ArrowLeft,
     ArrowRight,
+    ArrowUp,
     Award,
     Brain,
     CheckCircle2,
@@ -53,8 +57,21 @@ import {
     XCircle,
     Zap
 } from 'lucide-react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+// Deterministic-enough shuffle for presenting ordering/matching options -- doesn't need to be
+// cryptographically random, just not the already-correct order.
+function shuffleArrayStable<T>(items: T[]): T[] {
+    const clone = [...items]
+    for (let i = clone.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1))
+        const temp = clone[i]
+        clone[i] = clone[j]
+        clone[j] = temp
+    }
+    return clone
+}
 
 // --- Types ---
 
@@ -606,12 +623,23 @@ export function QuizComponentEnhanced({
                     return !!selectedOption?.is_correct
                 }
                 const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return selected.toLowerCase().trim() === (question.correct_answer || '').toLowerCase().trim()
+                return isFreeTextAnswerCorrect(selected, question.correct_answer, question.accepted_answers)
             }
-            case 'true_false':
-            case 'fill_blank': {
+            case 'true_false': {
                 const selected = typeof userAnswer === 'string' ? userAnswer : ''
                 return selected.toLowerCase().trim() === (question.correct_answer || '').toLowerCase().trim()
+            }
+            case 'fill_blank': {
+                const selected = typeof userAnswer === 'string' ? userAnswer : ''
+                return isFreeTextAnswerCorrect(selected, question.correct_answer, question.accepted_answers)
+            }
+            case 'ordering': {
+                const selected = Array.isArray(userAnswer) ? userAnswer : []
+                return isOrderingAnswerCorrect(selected, question.options)
+            }
+            case 'matching': {
+                const selected = typeof userAnswer === 'string' ? userAnswer : ''
+                return isMatchingAnswerCorrect(selected, question.options)
             }
             default:
                 return false
@@ -631,11 +659,29 @@ export function QuizComponentEnhanced({
         question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>,
         userAnswer: string | string[] | undefined
     ) => {
+        // Ordering answers are persisted the same way as any other array answer (either the raw
+        // array, or comma-joined once results are snapshotted), so reuse the same parsing.
         const selectedValues = Array.isArray(userAnswer)
             ? userAnswer
             : (typeof userAnswer === 'string' && userAnswer.length > 0
                 ? userAnswer.split(',').map(value => value.trim()).filter(Boolean)
                 : [])
+
+        if (question.question_type === 'ordering') {
+            const labels = selectedValues
+                .map(id => question.options?.find(option => option.id === id)?.option_text)
+                .filter((value): value is string => typeof value === 'string' && value.length > 0)
+            return labels.length > 0 ? labels.map((label, idx) => `${idx + 1}. ${label}`).join('  ') : '(No answer)'
+        }
+
+        if (question.question_type === 'matching') {
+            const mapping = decodeMatchingAnswer(typeof userAnswer === 'string' ? userAnswer : undefined)
+            const labels = (question.options || [])
+                .filter(option => !!option.match_value)
+                .map(option => `${option.option_text} → ${mapping[option.id] || '?'}`)
+            return labels.length > 0 ? labels.join('  ') : '(No answer)'
+        }
+
         const hasOptions =
             question.question_type === 'mcq' ||
             question.question_type === 'mcq_multi' ||
@@ -657,6 +703,20 @@ export function QuizComponentEnhanced({
     const getCorrectAnswerDisplay = useCallback((
         question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>
     ) => {
+        if (question.question_type === 'ordering') {
+            const labels = [...(question.options || [])]
+                .sort((a, b) => a.display_order - b.display_order)
+                .map((option, idx) => `${idx + 1}. ${option.option_text}`)
+            return labels.length > 0 ? labels.join('  ') : '(No answer)'
+        }
+
+        if (question.question_type === 'matching') {
+            const labels = (question.options || [])
+                .filter(option => !!option.match_value)
+                .map(option => `${option.option_text} → ${option.match_value}`)
+            return labels.length > 0 ? labels.join('  ') : '(No answer)'
+        }
+
         const hasOptions =
             question.question_type === 'mcq' ||
             question.question_type === 'mcq_multi' ||
@@ -1059,6 +1119,24 @@ export function QuizComponentEnhanced({
         if (!translationTarget || !translatedCurrent?.options) return fallback
         return translatedCurrent.options[optionId || ''] || fallback
     }
+
+    // Stable-per-question shuffles so 'ordering'/'matching' don't hand the learner the
+    // options already in the correct order/pairing.
+    const orderingShuffledIds = useMemo(() => {
+        if (currentQuestion?.question?.question_type !== 'ordering') return []
+        const ids = (currentQuestion.question.options || []).map(o => o.id)
+        return shuffleArrayStable(ids)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentQuestion?.question_id])
+
+    const matchingShuffledValues = useMemo(() => {
+        if (currentQuestion?.question?.question_type !== 'matching') return []
+        const values = (currentQuestion.question.options || [])
+            .map(o => o.match_value)
+            .filter((v): v is string => !!v)
+        return shuffleArrayStable(values)
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentQuestion?.question_id])
 
     const feedbackOverlay = (
         <FeedbackOverlay
@@ -1520,6 +1598,119 @@ export function QuizComponentEnhanced({
                                             />
                                         )
                                     )}
+
+                                    {currentQuestion.question?.question_type === 'ordering' && (
+                                        (currentQuestion.question.options?.length || 0) > 0 ? (() => {
+                                            const currentOrder = Array.isArray(answers[currentQuestion.question_id]) && (answers[currentQuestion.question_id] as string[]).length > 0
+                                                ? answers[currentQuestion.question_id] as string[]
+                                                : orderingShuffledIds
+                                            const optionsById = new Map(currentQuestion.question.options?.map(o => [o.id, o]))
+
+                                            const moveItem = (index: number, direction: -1 | 1) => {
+                                                const next = [...currentOrder]
+                                                const target = index + direction
+                                                if (target < 0 || target >= next.length) return
+                                                ;[next[index], next[target]] = [next[target], next[index]]
+                                                setAnswers({ ...answers, [currentQuestion.question_id]: next })
+                                            }
+
+                                            return (
+                                                <div className="space-y-2">
+                                                    <p className="text-sm text-slate-500">{t('training:quizzes.player.ordering_hint', 'Arrange these in the correct order:')}</p>
+                                                    {currentOrder.map((optionId, index) => {
+                                                        const opt = optionsById.get(optionId)
+                                                        if (!opt) return null
+                                                        return (
+                                                            <div
+                                                                key={optionId}
+                                                                className="flex items-center gap-3 border-2 border-slate-100 bg-white p-4 rounded-xl"
+                                                            >
+                                                                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-hotel-navy/5 font-bold text-hotel-navy">
+                                                                    {index + 1}
+                                                                </span>
+                                                                <span className={cn("flex-1 text-base text-slate-700", isRTL && "text-right")}>
+                                                                    {displayOptionText(opt.id, opt.option_text)}
+                                                                </span>
+                                                                <div className="flex flex-col gap-1">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6"
+                                                                        disabled={index === 0}
+                                                                        onClick={() => moveItem(index, -1)}
+                                                                        aria-label="Move up"
+                                                                    >
+                                                                        <ArrowUp className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6"
+                                                                        disabled={index === currentOrder.length - 1}
+                                                                        onClick={() => moveItem(index, 1)}
+                                                                        aria-label="Move down"
+                                                                    >
+                                                                        <ArrowDown className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )
+                                        })() : (
+                                            <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                {t('training:quizzes.player.no_options')}
+                                            </p>
+                                        )
+                                    )}
+
+                                    {currentQuestion.question?.question_type === 'matching' && (
+                                        (currentQuestion.question.options?.length || 0) > 0 ? (() => {
+                                            const mapping = decodeMatchingAnswer(
+                                                typeof answers[currentQuestion.question_id] === 'string'
+                                                    ? answers[currentQuestion.question_id] as string
+                                                    : undefined
+                                            )
+                                            const setPair = (optionId: string, value: string) => {
+                                                const next = { ...mapping, [optionId]: value }
+                                                setAnswers({ ...answers, [currentQuestion.question_id]: encodeMatchingAnswer(next) })
+                                            }
+
+                                            return (
+                                                <div className="space-y-3">
+                                                    {(currentQuestion.question.options || []).filter(o => !!o.match_value).map((opt) => (
+                                                        <div
+                                                            key={opt.id}
+                                                            className="flex flex-col sm:flex-row sm:items-center gap-3 border-2 border-slate-100 bg-white p-4 rounded-xl"
+                                                        >
+                                                            <span className={cn("flex-1 text-base font-medium text-slate-700", isRTL && "text-right")}>
+                                                                {displayOptionText(opt.id, opt.option_text)}
+                                                            </span>
+                                                            <select
+                                                                className="flex-1 rounded-lg border-2 border-slate-200 bg-white p-2.5 text-sm"
+                                                                value={mapping[opt.id] || ''}
+                                                                onChange={(e) => setPair(opt.id, e.target.value)}
+                                                            >
+                                                                <option value="" disabled>
+                                                                    {t('training:quizzes.player.select_match', 'Select a match...')}
+                                                                </option>
+                                                                {matchingShuffledValues.map((value) => (
+                                                                    <option key={value} value={value}>{value}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )
+                                        })() : (
+                                            <p className="rounded-xl border-2 border-dashed border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                                                {t('training:quizzes.player.no_options')}
+                                            </p>
+                                        )
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -1706,25 +1897,8 @@ function QuizResultsScreen({
                         {result.gradedAnswers?.map((answer, index) => {
                             const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
                             if (!question) return null
-                            const selectedValues = answer.answer
-                                ? answer.answer.split(',').map(v => v.trim()).filter(Boolean)
-                                : []
-                            const hasOptions = question.question_type === 'mcq' || question.question_type === 'mcq_multi' || (question.question_type === 'scenario' && (question.options?.length || 0) > 0)
-                            const userAnswerDisplay = hasOptions
-                                ? (selectedValues.length > 0
-                                    ? selectedValues
-                                        .map((id) => question.options?.find(o => o.id === id)?.option_text)
-                                        .filter(Boolean)
-                                        .join(', ')
-                                    : '(No answer)')
-                                : (answer.answer || '(No answer)')
-                            const correctAnswerDisplay = hasOptions
-                                ? (question.options || [])
-                                    .filter(o => o.is_correct)
-                                    .map(o => o.option_text)
-                                    .filter(Boolean)
-                                    .join(', ')
-                                : question.correct_answer
+                            const userAnswerDisplay = typeof answer.answer === 'object' ? JSON.stringify(answer.answer) : String(answer.answer || '')
+                            const correctAnswerDisplay = typeof question.correct_answer === 'object' ? JSON.stringify(question.correct_answer) : String(question.correct_answer || '')
 
                             return (
                                 <m.div

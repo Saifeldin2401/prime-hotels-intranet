@@ -21,11 +21,11 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
-import { useCreateQuestion, useQuestion, useUpdateQuestion } from '@/hooks/useQuestions'
+import { useCreateQuestion, useQuestion, useQuestionsPassRates, useUpdateQuestion } from '@/hooks/useQuestions'
 import type { QuestionDifficulty } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { AlertCircle, ArrowLeft, GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
+import { AlertCircle, ArrowDown, ArrowLeft, ArrowUp, GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect } from 'react'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
@@ -34,7 +34,7 @@ import * as z from 'zod'
 
 const questionSchema = z.object({
     question_text: z.string().min(5, 'Question text must be at least 5 characters'),
-    question_type: z.enum(['mcq', 'mcq_multi', 'true_false', 'fill_blank', 'scenario']),
+    question_type: z.enum(['mcq', 'mcq_multi', 'true_false', 'fill_blank', 'scenario', 'ordering', 'matching']),
     difficulty_level: z.enum(['easy', 'medium', 'hard', 'expert']),
     status: z.enum(['draft', 'published', 'pending_review']),
     points: z.coerce.number().min(1),
@@ -42,11 +42,13 @@ const questionSchema = z.object({
     explanation: z.string().optional(),
     hint: z.string().optional(),
     correct_answer: z.string().optional(), // For fill_blank and true_false
+    accepted_answers: z.array(z.string()).optional(), // Alternate accepted phrasings for fill_blank
     options: z.array(z.object({
         option_text: z.string().min(1, 'Option text is required'),
         is_correct: z.boolean(),
         feedback: z.string().optional(),
-        display_order: z.number()
+        display_order: z.number(),
+        match_value: z.string().optional() // 'matching' type only: the right-hand answer this option pairs with
     })).optional()
 })
 
@@ -62,6 +64,8 @@ export function QuestionEditor() {
     const { data: question, isLoading: isLoadingQuestion } = useQuestion(id || '')
     const createQuestion = useCreateQuestion()
     const updateQuestion = useUpdateQuestion()
+    const { data: passRates } = useQuestionsPassRates(isEditMode ? [id!] : [])
+    const passRate = id ? passRates?.[id] : undefined
 
     const form = useForm<QuestionFormValues>({
         resolver: zodResolver(questionSchema) as any,
@@ -74,6 +78,7 @@ export function QuestionEditor() {
             estimated_time_seconds: 30,
             explanation: '',
             hint: '',
+            accepted_answers: [],
             options: [
                 { option_text: '', is_correct: false, display_order: 1 },
                 { option_text: '', is_correct: false, display_order: 2 }
@@ -100,11 +105,13 @@ export function QuestionEditor() {
                 explanation: question.explanation || '',
                 hint: question.hint || '',
                 correct_answer: question.correct_answer,
+                accepted_answers: question.accepted_answers || [],
                 options: question.options?.map(o => ({
                     option_text: o.option_text,
                     is_correct: o.is_correct,
                     feedback: o.feedback || '',
-                    display_order: o.display_order
+                    display_order: o.display_order,
+                    match_value: o.match_value || ''
                 }))
             })
         }
@@ -153,11 +160,38 @@ export function QuestionEditor() {
             }
         }
 
+        if (data.question_type === 'ordering') {
+            if (!data.options || data.options.length < 2) {
+                form.setError('root', { message: 'At least 2 items are required for an Ordering question' })
+                return
+            }
+        }
+
+        if (data.question_type === 'matching') {
+            if (!data.options || data.options.length < 2) {
+                form.setError('root', { message: 'At least 2 pairs are required for a Matching question' })
+                return
+            }
+            const missingMatch = data.options.some(o => !o.match_value?.trim())
+            if (missingMatch) {
+                form.setError('root', { message: 'Every item needs a matching value' })
+                return
+            }
+        }
+
         const payload = {
             ...data,
             // Clean up unrelated fields based on type
-            options: (data.question_type === 'mcq' || data.question_type === 'mcq_multi') ? data.options : [],
-            correct_answer: (data.question_type === 'fill_blank' || data.question_type === 'true_false') ? data.correct_answer : undefined
+            options:
+                data.question_type === 'mcq' || data.question_type === 'mcq_multi'
+                    ? data.options
+                    : data.question_type === 'ordering'
+                        ? data.options?.map((o, index) => ({ option_text: o.option_text, is_correct: false, display_order: index + 1 }))
+                        : data.question_type === 'matching'
+                            ? data.options?.map((o, index) => ({ option_text: o.option_text, is_correct: false, display_order: index + 1, match_value: o.match_value }))
+                            : [],
+            correct_answer: (data.question_type === 'fill_blank' || data.question_type === 'true_false') ? data.correct_answer : undefined,
+            accepted_answers: data.question_type === 'fill_blank' ? (data.accepted_answers || []).filter(a => a.trim().length > 0) : []
         } as any // Cast to any to resolve type mismatch with QuestionFormData
 
         if (isEditMode) {
@@ -217,10 +251,19 @@ export function QuestionEditor() {
                     <ArrowLeft className="h-4 w-4 me-2" />
                     Back
                 </Button>
-                <div>
+                <div className="flex-1">
                     <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Question' : 'Create Question'}</h1>
                     <p className="text-gray-500">Define the question content, options, and settings</p>
                 </div>
+                {passRate && passRate.totalAttempts > 0 && (
+                    <Badge
+                        variant="outline"
+                        className={passRate.totalAttempts >= 5 && passRate.accuracyRate < 50 ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-600'}
+                    >
+                        {passRate.totalAttempts >= 5 && passRate.accuracyRate < 50 && <AlertCircle className="h-3 w-3 me-1" />}
+                        {Math.round(passRate.accuracyRate)}% pass rate ({passRate.totalAttempts} attempts)
+                    </Badge>
+                )}
             </div>
 
             <Form onSubmit={form.handleSubmit(onSubmit)}>
@@ -482,22 +525,198 @@ export function QuestionEditor() {
                             )}
 
                             {watchedType === 'fill_blank' && (
-                                <FormField
-                                    control={form.control}
-                                    name="correct_answer"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Correct Answer</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Enter the exact correct text match" {...field} />
-                                            </FormControl>
-                                            <FormDescription>
-                                                Case-insensitive matching will be applied.
-                                            </FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
+                                <>
+                                    <FormField
+                                        control={form.control}
+                                        name="correct_answer"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Correct Answer</FormLabel>
+                                                <FormControl>
+                                                    <Input placeholder="Enter the primary correct answer" {...field} />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Case and punctuation-insensitive matching will be applied.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <FormField
+                                        control={form.control}
+                                        name="accepted_answers"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Alternate Accepted Answers (optional)</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        placeholder={'One alternate phrasing per line, e.g.\n15 mins\nfifteen minutes'}
+                                                        value={(field.value || []).join('\n')}
+                                                        onChange={(e) => field.onChange(
+                                                            e.target.value.split('\n').map(line => line.trim()).filter(Boolean)
+                                                        )}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Any of these will also be marked correct, alongside the primary answer above.
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </>
+                            )}
+
+                            {watchedType === 'ordering' && (
+                                <div className="space-y-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        The order below is the correct sequence — learners will see these items shuffled and must arrange them to match.
+                                    </p>
+                                    {fields.map((field, index) => (
+                                        <div key={field.id} className="flex gap-3 items-center p-4 border rounded-lg bg-gray-50/50">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-200 font-bold text-gray-600">
+                                                {index + 1}
+                                            </span>
+                                            <FormField
+                                                control={form.control}
+                                                name={`options.${index}.option_text`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1">
+                                                        <FormControl>
+                                                            <Input placeholder={`Step ${index + 1}`} {...field} />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <div className="flex flex-col gap-1">
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    disabled={index === 0}
+                                                    onClick={() => {
+                                                        const current = form.getValues('options') || []
+                                                        const next = [...current]
+                                                        ;[next[index - 1], next[index]] = [next[index], next[index - 1]]
+                                                        form.setValue('options', next)
+                                                    }}
+                                                    aria-label="Move up"
+                                                >
+                                                    <ArrowUp className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-6 w-6"
+                                                    disabled={index === fields.length - 1}
+                                                    onClick={() => {
+                                                        const current = form.getValues('options') || []
+                                                        const next = [...current]
+                                                        ;[next[index], next[index + 1]] = [next[index + 1], next[index]]
+                                                        form.setValue('options', next)
+                                                    }}
+                                                    aria-label="Move down"
+                                                >
+                                                    <ArrowDown className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                aria-label={t('accessibility.delete_option', 'Delete step')}
+                                                className="text-red-500 hover:text-red-600 h-10 w-10"
+                                                onClick={() => remove(index)}
+                                                disabled={fields.length <= 2}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => append({ option_text: '', is_correct: false, display_order: fields.length + 1 })}
+                                    >
+                                        <Plus className="h-4 w-4 me-2" />
+                                        Add Step
+                                    </Button>
+                                    {form.formState.errors.root && (
+                                        <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {form.formState.errors.root.message}
+                                        </div>
                                     )}
-                                />
+                                </div>
+                            )}
+
+                            {watchedType === 'matching' && (
+                                <div className="space-y-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        Each row is one pair — learners see the left item and choose the matching right item from a shuffled list.
+                                    </p>
+                                    {fields.map((field, index) => (
+                                        <div key={field.id} className="flex gap-4 items-start p-4 border rounded-lg bg-gray-50/50">
+                                            <div className="flex-1 grid grid-cols-2 gap-3">
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`options.${index}.option_text`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                <Input placeholder={`Item ${index + 1}`} {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                                <FormField
+                                                    control={form.control}
+                                                    name={`options.${index}.match_value`}
+                                                    render={({ field }) => (
+                                                        <FormItem>
+                                                            <FormControl>
+                                                                <Input placeholder={`Matches with...`} {...field} />
+                                                            </FormControl>
+                                                            <FormMessage />
+                                                        </FormItem>
+                                                    )}
+                                                />
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                aria-label={t('accessibility.delete_option', 'Delete pair')}
+                                                className="text-red-500 hover:text-red-600 h-10 w-10"
+                                                onClick={() => remove(index)}
+                                                disabled={fields.length <= 2}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => append({ option_text: '', is_correct: false, display_order: fields.length + 1, match_value: '' })}
+                                    >
+                                        <Plus className="h-4 w-4 me-2" />
+                                        Add Pair
+                                    </Button>
+                                    {form.formState.errors.root && (
+                                        <div className="flex items-center gap-2 text-red-600 text-sm mt-2">
+                                            <AlertCircle className="h-4 w-4" />
+                                            {form.formState.errors.root.message}
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </CardContent>
                     </Card>

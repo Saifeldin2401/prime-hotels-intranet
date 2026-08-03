@@ -12,7 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { useArticles, useFeedbackStats, useFeedbackTrends, useRecentFeedback } from '@/hooks/useKnowledge'
+import { useArticles, useFailedSearches, useFeedbackStats, useFeedbackTrends, useRecentFeedback } from '@/hooks/useKnowledge'
 import { cn } from '@/lib/utils'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
 import {
@@ -427,7 +427,63 @@ export default function KnowledgeAnalytics() {
                     </Table>
                 </CardContent>
             </Card>
+
+            {/* Content Gaps: searches that came back empty */}
+            <ContentGapsCard />
         </div>
+    )
+}
+
+function ContentGapsCard() {
+    const { t } = useTranslation(['knowledge', 'common'])
+    const { data: failedSearches, isLoading } = useFailedSearches(30, 15)
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                    {t('analytics.content_gaps_title', 'Content Gaps')}
+                </CardTitle>
+                <CardDescription>
+                    {t('analytics.content_gaps_desc', 'Searches in the last 30 days that returned no results — the strongest signal for what to write next.')}
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? (
+                    <div className="space-y-2">
+                        {[1, 2, 3].map(i => <Skeleton key={i} className="h-10 w-full" />)}
+                    </div>
+                ) : !failedSearches || failedSearches.length === 0 ? (
+                    <p className="text-sm text-gray-500 py-6 text-center">
+                        {t('analytics.content_gaps_empty', 'No unanswered searches in this period.')}
+                    </p>
+                ) : (
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead>{t('analytics.table.search_query', 'Search Query')}</TableHead>
+                                <TableHead className="text-right">{t('analytics.table.times_searched', 'Times Searched')}</TableHead>
+                                <TableHead className="text-right">{t('analytics.table.last_searched', 'Last Searched')}</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {failedSearches.map((row) => (
+                                <TableRow key={row.query}>
+                                    <TableCell className="font-medium text-gray-900">{row.query}</TableCell>
+                                    <TableCell className="text-right">
+                                        <Badge variant="outline">{row.count}</Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right text-sm text-gray-500">
+                                        {new Date(row.lastSearchedAt).toLocaleDateString()}
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                )}
+            </CardContent>
+        </Card>
     )
 }
 

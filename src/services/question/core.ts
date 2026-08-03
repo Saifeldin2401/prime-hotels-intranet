@@ -59,6 +59,30 @@ export async function getQuestions(
     }
 }
 
+// Read directly from unified_questions (domain-agnostic -- the knowledge_questions view
+// filters to source_domain='knowledge' only, which would silently drop e.g. training-domain
+// questions such as those used by the adaptive daily challenge).
+export async function getQuestionsByIds(ids: string[]): Promise<KnowledgeQuestion[]> {
+    if (ids.length === 0) return []
+
+    const { data, error } = await supabase
+        .from('unified_questions')
+        .select(`
+      id, question_text, question_text_ar, question_type,
+      difficulty_level:difficulty,
+      correct_answer, accepted_answers, explanation, explanation_ar, hint, hint_ar,
+      linked_sop_id, linked_sop_section, tags, estimated_time_seconds, points,
+      ai_generated, ai_model_used, ai_confidence_score, ai_prompt_used,
+      status, version, reviewed_by, reviewed_at, review_notes,
+      created_by, created_at, updated_at, training_module_id, training_section_id,
+      options:unified_question_options(*)
+    `)
+        .in('id', ids)
+
+    if (error) throw error
+    return (data || []) as unknown as KnowledgeQuestion[]
+}
+
 // Read via backward-compat view
 export async function getQuestionById(id: string): Promise<KnowledgeQuestion | null> {
     const { data, error } = await supabase

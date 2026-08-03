@@ -66,15 +66,21 @@ describe('knowledgeService', () => {
         { id: '2', title: 'Another Article', is_deleted: false },
       ]
 
+      // Queries with a search term go through the search_knowledge_articles RPC
+      // (ranked full-text search), then fetch the joined article rows by id.
+      vi.mocked(supabase.rpc).mockResolvedValue({
+        data: [
+          { id: '1', rank: 0.5, total_count: 2 },
+          { id: '2', rank: 0.3, total_count: 2 },
+        ],
+        error: null,
+      } as any)
+
       vi.mocked(supabase.from).mockReturnValue({
         select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        or: vi.fn().mockReturnThis(),
-        range: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
+        in: vi.fn().mockResolvedValue({
           data: mockArticles,
           error: null,
-          count: 2,
         }),
       } as any)
 

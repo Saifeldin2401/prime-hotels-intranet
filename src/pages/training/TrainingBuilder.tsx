@@ -74,9 +74,12 @@ function TrainingBuilderInner() {
         onAddContent={(type, sectionId) => ctx.addContent(type, sectionId)}
         onEditContent={(sectionId, contentId) => {
           const block = ctx.contentBlocks.find(c => c.id === contentId)
-          if (block) ctx.openContentDialogForBlock({ ...block }, { selected: block })
-          const item = ctx.sections.find(s => s.id === sectionId)?.items.find(i => i.id === contentId)
-          if (item) ctx.openContentDialogForBlock(item, { selected: item, sectionId })
+          if (block) {
+            ctx.openContentDialogForBlock({ ...block }, { selected: block })
+          } else {
+            const item = ctx.sections.find(s => s.id === sectionId)?.items.find(i => i.id === contentId)
+            if (item) ctx.openContentDialogForBlock(item, { selected: item, sectionId })
+          }
         }}
         onDeleteContent={ctx.deleteContent}
         onReorderSection={ctx.handleReorderSection} onReorderContent={ctx.handleReorderContent}
@@ -130,14 +133,14 @@ function TrainingBuilderInner() {
             <div className="flex items-center gap-2">
               <Loader2 className="w-5 h-5 text-amber-600" />
               <span className="text-sm text-amber-800 dark:text-amber-300">
-                Draft training module restored from previous session
+                {t('builder.draftRestoredBanner', 'Draft training module restored from previous session')}
               </span>
             </div>
             <div className="flex gap-2">
-              <Button variant="ghost" size="sm" onClick={() => ctx.setShowRestorePrompt(false)}>Keep</Button>
+              <Button variant="ghost" size="sm" onClick={() => ctx.setShowRestorePrompt(false)}>{t('builder.keepDraft', 'Keep')}</Button>
               <Button variant="outline" size="sm" onClick={() => {
                 ctx.clearDraft(); ctx.setTitle(''); ctx.setDescription(''); ctx.setSections([]); ctx.setShowRestorePrompt(false)
-              }}>Clear Draft</Button>
+              }}>{t('builder.clearDraftBtn', 'Clear Draft')}</Button>
             </div>
           </div>
         </div>
@@ -151,7 +154,7 @@ function TrainingBuilderInner() {
       />
 
       {/* Step navigation bar */}
-      <div className="border-b bg-white/80">
+      <div className="border-b bg-white/80 dark:bg-background/80">
         <div className={`container py-4 ${ctx.isRTL ? 'text-right' : 'text-left'}`}>
           <div className="flex flex-col gap-3">
             <div className={cn("flex items-center justify-between gap-4", ctx.isRTL ? "flex-row-reverse" : "")}>

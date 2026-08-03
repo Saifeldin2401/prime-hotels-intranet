@@ -36,9 +36,9 @@ const ENV_RESEND_API_KEY = Deno.env.get("RESEND_API_KEY") ?? "";
 const ENV_APP_BASE_URL = (
   Deno.env.get("APP_BASE_URL") ?? "https://www.altus-advisory.com"
 ).replace(/\/+$/, "");
-const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "PHG Connect";
+const ENV_DEFAULT_FROM_NAME = Deno.env.get("EMAIL_FROM_NAME") ?? "Altus Hospitality";
 const ENV_DEFAULT_FROM_EMAIL =
-  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@altus-advisory.com";
+  Deno.env.get("EMAIL_FROM_ADDRESS") ?? "notifications@phg-connect.com";
 const RESEND_MIN_INTERVAL_MS = 550;
 const RESEND_MAX_RETRIES = 3;
 const RESEND_RETRY_BASE_MS = 750;
@@ -207,11 +207,11 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     template_key: "user_management_welcome",
     business_domain: "user_management",
     notification_type: "system",
-    subject_template: "Welcome to PHG Connect - {{title}}",
+    subject_template: "Welcome to Altus Connect - {{title}}",
     html_template:
-      '<h1>{{title}}</h1><p>Hello {{recipient_name}},</p><p>{{message}}</p><p><a href="{{action_url}}">Open PHG Connect</a></p><p>altus-advisory.com</p>',
+      '<h1>{{title}}</h1><p>Hello {{recipient_name}},</p><p>{{message}}</p><p><a href="{{action_url}}">Open Altus Connect</a></p><p>altus-advisory.com</p>',
     text_template: "Welcome | {{title}}\n\n{{message}}\n\n{{action_url}}",
-    from_name: "PHG Connect",
+    from_name: "Altus Team",
     from_email: "notifications@altus-advisory.com",
   },
   operations_incident_alert: {
@@ -223,7 +223,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
       '<h1>{{title}}</h1><p>{{message}}</p><p>Priority: {{priority}}</p><p><a href="{{action_url}}">Review Incident</a></p>',
     text_template:
       "Operations Alert | {{title}}\n\n{{message}}\nPriority: {{priority}}\n\n{{action_url}}",
-    from_name: "PHG Connect Operations",
+    from_name: "Altus Operations",
     from_email: "notifications@altus-advisory.com",
   },
   hr_employee_update: {
@@ -234,7 +234,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
     html_template:
       '<h1>{{title}}</h1><p>{{message}}</p><p><a href="{{action_url}}">View HR Workflow</a></p>',
     text_template: "HR Update | {{title}}\n\n{{message}}\n\n{{action_url}}",
-    from_name: "PHG Connect HR",
+    from_name: "Altus HR",
     from_email: "notifications@altus-advisory.com",
   },
   finance_approval_alert: {

@@ -17,6 +17,9 @@ export default defineConfig([
     '.codex',
     'supabase/functions',
     'supabase/migrations',
+    // Local-only vendored UI templates (already git-ignored). Not application
+    // code -- linting it produced 74 parse errors and drowned real findings.
+    'scratch',
   ]),
   {
     files: ['**/*.{ts,tsx}'],

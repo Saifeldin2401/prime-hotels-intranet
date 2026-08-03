@@ -1,3 +1,5 @@
+import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch';
+import { isMatchingAnswerCorrect, isOrderingAnswerCorrect } from '@/lib/questionOrderingMatching';
 import { supabase } from '@/lib/supabase';
 import type { AnswerSubmission, QuestionAttempt, QuizSession } from '@/types/questions';
 import { getQuestionById } from './core';
@@ -20,10 +22,11 @@ export async function recordAttempt(
             break
         }
         case 'fill_blank': {
-            // Case-insensitive, trimmed comparison
-            const userAnswer = (submission.selected_answer || '').trim().toLowerCase()
-            const correctAnswer = (question.correct_answer || '').trim().toLowerCase()
-            isCorrect = userAnswer === correctAnswer
+            isCorrect = isFreeTextAnswerCorrect(
+                submission.selected_answer,
+                question.correct_answer,
+                question.accepted_answers
+            )
             break
         }
         case 'mcq': {
@@ -47,10 +50,20 @@ export async function recordAttempt(
                 isCorrect = selectedOption?.is_correct ?? false
                 feedback = selectedOption?.feedback
             } else {
-                const userAnswer = (submission.selected_answer || '').trim().toLowerCase()
-                const correctAnswer = (question.correct_answer || '').trim().toLowerCase()
-                isCorrect = userAnswer === correctAnswer
+                isCorrect = isFreeTextAnswerCorrect(
+                    submission.selected_answer,
+                    question.correct_answer,
+                    question.accepted_answers
+                )
             }
+            break
+        }
+        case 'ordering': {
+            isCorrect = isOrderingAnswerCorrect(submission.selected_options, question.options)
+            break
+        }
+        case 'matching': {
+            isCorrect = isMatchingAnswerCorrect(submission.selected_answer, question.options)
             break
         }
         default: {

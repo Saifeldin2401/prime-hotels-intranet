@@ -299,6 +299,18 @@ export function useContentTypeCounts() {
 }
 
 // ============================================================================
+// CONTENT GAP ANALYTICS (failed / zero-result searches)
+// ============================================================================
+
+export function useFailedSearches(days = 30, limit = 20) {
+    return useQuery({
+        queryKey: ['knowledge-failed-searches', days, limit],
+        queryFn: () => KnowledgeService.getFailedSearches(days, limit),
+        staleTime: 1000 * 60 * 5
+    })
+}
+
+// ============================================================================
 // DEPARTMENT-SPECIFIC CONTENT
 // ============================================================================
 

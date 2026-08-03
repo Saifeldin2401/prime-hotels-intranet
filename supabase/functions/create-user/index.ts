@@ -612,7 +612,7 @@ Deno.serve(async (req: Request) => {
       try {
         console.log(`Sending welcome email to ${normalizedEmail}...`);
         const welcomeMsg =
-          "Welcome to PHG Connect. Your account is now active and ready for first-time access.";
+          "Welcome to Altus Connect. Your account is now active and ready for first-time access.";
 
         const emailResponse = await fetch(
           supabaseUrl + "/functions/v1/send-email",
@@ -627,7 +627,7 @@ Deno.serve(async (req: Request) => {
               templateKey: "user_management_welcome",
               title: "Portal Access Credentials",
               message: welcomeMsg,
-              actionLabel: "Sign In to PHG Connect",
+              actionLabel: "Sign In to Altus Connect",
               variables: {
                 recipient_name: normalizedFullName,
                 credential_email: normalizedEmail,
@@ -672,7 +672,7 @@ Deno.serve(async (req: Request) => {
 
       try {
         const inviteMessage =
-          "You have been invited to PHG Connect. Open the link below to set your password and complete your profile.";
+          "You have been invited to Altus Connect. Open the link below to set your password and complete your profile.";
         const emailResponse = await fetch(
           supabaseUrl + "/functions/v1/send-email",
           {
@@ -683,7 +683,7 @@ Deno.serve(async (req: Request) => {
             },
             body: JSON.stringify({
               to: normalizedEmail,
-              subject: "You are invited to PHG Connect",
+              subject: "You are invited to Altus Connect",
               title: "Complete your account setup",
               message: inviteMessage,
               actionUrl: inviteUrl,

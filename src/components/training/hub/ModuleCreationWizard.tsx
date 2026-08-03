@@ -72,7 +72,7 @@ export function ModuleCreationWizard({
           description: values.description,
           category: values.category,
           difficulty_level: values.difficulty,
-          estimated_duration: values.estimatedDuration,
+          estimated_duration_minutes: parseInt(values.estimatedDuration || '30'),
           validity_period_days: parseInt(values.validityPeriod || '365'),
           certificate_enabled: values.certificateEnabled,
           passing_score_percentage: parseInt(values.passingScore || '80'),

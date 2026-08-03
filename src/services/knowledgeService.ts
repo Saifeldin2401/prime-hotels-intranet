@@ -124,15 +124,7 @@ export function expandSearchQuery(query: string): string[] {
 // ARTICLES
 // ============================================================================
 
-export async function getArticles(
-    filters: KnowledgeSearchFilters,
-    page = 1,
-    pageSize = 20
-): Promise<KnowledgeSearchResult> {
-    try {
-        let query = supabase
-            .from('documents')
-            .select(`
+const ARTICLE_LIST_SELECT = `
           id, title, description,
           status, content_type,
           visibility,
@@ -147,20 +139,148 @@ export async function getArticles(
           last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
           department:departments(id, name),
           category:categories!documents_category_id_fkey(id, name)
-        `, { count: 'exact' })
+        `
+
+function toRealUuid(value?: string): string | null {
+    return value && value !== 'undefined' && value.length === 36 ? value : null
+}
+
+// Fire-and-forget: records a zero-result KB search for content-gap analytics.
+// Never blocks or fails the search itself.
+function logFailedSearch(query: string, departmentId?: string, propertyId?: string): void {
+    supabase.auth.getUser()
+        .then(({ data }) => supabase.from('search_logs').insert({
+            user_id: data.user?.id || null,
+            query,
+            result_count: 0,
+            department_id: toRealUuid(departmentId),
+            property_id: toRealUuid(propertyId)
+        }))
+        .then(({ error }) => {
+            if (error) console.warn('Failed to log search miss:', error.message)
+        })
+        .catch(() => { /* best-effort logging only */ })
+}
+
+export interface FailedSearchSummary {
+    query: string
+    count: number
+    lastSearchedAt: string
+}
+
+export async function getFailedSearches(days = 30, limit = 20): Promise<FailedSearchSummary[]> {
+    const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString()
+
+    const { data, error } = await supabase
+        .from('search_logs')
+        .select('query, created_at')
+        .gte('created_at', since)
+        .order('created_at', { ascending: false })
+        .limit(2000)
+
+    if (error) {
+        console.warn('getFailedSearches error:', error.message)
+        return []
+    }
+
+    const byQuery = new Map<string, FailedSearchSummary>()
+    for (const row of data || []) {
+        const key = row.query.trim().toLowerCase()
+        if (!key) continue
+        const existing = byQuery.get(key)
+        if (existing) {
+            existing.count += 1
+        } else {
+            byQuery.set(key, { query: row.query.trim(), count: 1, lastSearchedAt: row.created_at })
+        }
+    }
+
+    return Array.from(byQuery.values())
+        .sort((a, b) => b.count - a.count)
+        .slice(0, limit)
+}
+
+// Ranked full-text search path (used whenever a query string is present).
+// Delegates ranking + filtering + pagination to search_knowledge_articles (RLS-respecting,
+// SECURITY INVOKER RPC over documents.search_vector, which covers title/tags/folder/
+// description/body content) then fetches the full joined article records for just that page.
+async function searchArticlesRanked(
+    filters: KnowledgeSearchFilters,
+    page: number,
+    pageSize: number
+): Promise<KnowledgeSearchResult> {
+    const expandedTerms = expandSearchQuery(filters.query!)
+    const rpcQuery = expandedTerms.join(' OR ')
+    const from = (page - 1) * pageSize
+
+    const { data: ranked, error: rankError } = await supabase.rpc('search_knowledge_articles', {
+        p_query: rpcQuery,
+        p_content_type: filters.content_type || null,
+        p_status: filters.status || null,
+        p_department_id: toRealUuid(filters.department_id),
+        p_property_id: toRealUuid(filters.property_id),
+        p_requires_acknowledgment: filters.requires_acknowledgment ?? null,
+        p_limit: pageSize,
+        p_offset: from
+    })
+
+    if (rankError) {
+        console.warn('Ranked search error:', rankError.message)
+        return { articles: [], total: 0, page, page_size: pageSize }
+    }
+
+    const rankedRows = ranked || []
+    const total = Number(rankedRows[0]?.total_count ?? 0)
+    const rankedIds = rankedRows.map(r => r.id)
+
+    if (rankedIds.length === 0) {
+        if (page === 1) {
+            logFailedSearch(filters.query!, filters.department_id, filters.property_id)
+        }
+        return { articles: [], total, page, page_size: pageSize }
+    }
+
+    const { data, error } = await supabase
+        .from('documents')
+        .select(ARTICLE_LIST_SELECT)
+        .in('id', rankedIds)
+
+    if (error) {
+        console.warn('Articles fetch error:', error.message)
+        return { articles: [], total: 0, page, page_size: pageSize }
+    }
+
+    // Re-apply relevance order (the .in() fetch does not preserve it)
+    const byId = new Map((data || []).map(row => [row.id, row]))
+    const ordered = rankedIds.map(id => byId.get(id)).filter((row): row is NonNullable<typeof row> => !!row)
+
+    const hydrated = await hydratePublishedSnapshotsForList(ordered)
+
+    return {
+        articles: hydrated.map(formatArticle),
+        total,
+        page,
+        page_size: pageSize
+    }
+}
+
+export async function getArticles(
+    filters: KnowledgeSearchFilters,
+    page = 1,
+    pageSize = 20
+): Promise<KnowledgeSearchResult> {
+    try {
+        if (filters.query && filters.query.trim()) {
+            return await searchArticlesRanked(filters, page, pageSize)
+        }
+
+        let query = supabase
+            .from('documents')
+            .select(ARTICLE_LIST_SELECT, { count: 'exact' })
 
         // Filter out deleted items
         query = query.eq('is_deleted', false)
 
-        // Apply filters
-        if (filters.query) {
-            // Expand search query with hotel jargon synonyms
-            const expandedTerms = expandSearchQuery(filters.query)
-            const searchConditions = expandedTerms
-                .map(term => `title.ilike.%${term}%,description.ilike.%${term}%`)
-                .join(',')
-            query = query.or(searchConditions)
-        }
         if (filters.content_type) {
             query = query.eq('content_type', filters.content_type)
         }
@@ -182,7 +302,7 @@ export async function getArticles(
         // visibility not accessible by scope name directly if enum matches, assuming simple match
         if (filters.visibility_scope) {
             // Mapping visibility scope to visibility column if compatible, otherwise skip
-            // query = query.eq('visibility', filters.visibility_scope) 
+            // query = query.eq('visibility', filters.visibility_scope)
         }
 
         // Pagination
