@@ -68,6 +68,9 @@ import enLearning from './locales/en/learning.json';
 import enOperations from './locales/en/operations.json';
 import enRequests from './locales/en/requests.json';
 
+import arHousekeeping from './locales/ar/housekeeping.json';
+import enHousekeeping from './locales/en/housekeeping.json';
+
 // Define the resources
 const resources = {
   en: {
@@ -101,6 +104,7 @@ const resources = {
     extracted: enExtracted,
     media: enMedia,
     capex: enCapex,
+    housekeeping: enHousekeeping,
   },
   ar: {
     common: arCommon,
@@ -133,6 +137,7 @@ const resources = {
     extracted: arExtracted,
     media: arMedia,
     capex: arCapex,
+    housekeeping: arHousekeeping,
   },
 };
 

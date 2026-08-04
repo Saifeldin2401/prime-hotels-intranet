@@ -107,6 +107,8 @@
     "access_denied_desc": "You don't have permission to access role management."
   },
   "email_writer": "Email Writer",
+  "email_templates": "Email Templates",
+  "email_analytics": "Email Analytics",
   "email_writer.title": "Email Writer",
   "email_writer.description": "Compose branded system emails with in-app copies and delivery tracking.",
   "email_writer.ai_draft": "AI Draft",

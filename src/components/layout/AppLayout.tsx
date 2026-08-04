@@ -5,6 +5,8 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useNavigation } from '@/hooks/useNavigation'
 import { useNotifications } from '@/hooks/useNotifications'
+import { usePermissions } from '@/hooks/usePermissions'
+import { getNotificationLink } from '@/lib/notificationLinks'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { DashboardLayout } from '@/altus-kit/layouts/dashboard'
 import { Iconify } from '@/altus-kit/components/iconify'
@@ -33,7 +35,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation(['nav', 'common'])
   const { groupedNavigation } = useNavigation()
   const { profile, user, signOut } = useAuth()
-  const { notifications } = useNotifications()
+  const { notifications, markAsRead, markAllAsRead } = useNotifications()
+  const { hasPermission } = usePermissions()
   const { currentProperty, availableProperties, switchProperty } = useProperty()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
@@ -159,6 +162,32 @@ export function AppLayout({ children }: AppLayoutProps) {
     navigate('/login')
   }, [navigate, signOut])
 
+  const handleNotificationClick = useCallback(
+    (notification: { id: string; type: string; title: string; isUnRead: boolean }) => {
+      // Find the original notification to get full data for link resolution
+      const original = notifications?.find((n) => n.id === notification.id)
+      if (original && !original.is_read) {
+        markAsRead.mutate(original.id)
+      }
+      const link = getNotificationLink(
+        { type: notification.type, title: notification.title, link: original?.link },
+        { hasPermission }
+      )
+      if (link) {
+        navigate(link)
+      }
+    },
+    [notifications, markAsRead, navigate, hasPermission]
+  )
+
+  const handleMarkAllRead = useCallback(() => {
+    markAllAsRead.mutate()
+  }, [markAllAsRead])
+
+  const handleViewAllNotifications = useCallback(() => {
+    navigate('/notifications')
+  }, [navigate])
+
   const shouldRenderDeferredChrome = deferredChromeReady || commandPaletteOpen
 
   return (
@@ -169,6 +198,9 @@ export function AppLayout({ children }: AppLayoutProps) {
       currentWorkspaceId={currentProperty?.id}
       onChangeWorkspace={switchProperty}
       notifications={notificationItems}
+      onNotificationClick={handleNotificationClick}
+      onMarkAllRead={handleMarkAllRead}
+      onViewAllNotifications={handleViewAllNotifications}
       accountLinks={accountLinks}
       account={{
         displayName: profile?.full_name ?? user?.email ?? 'User',

@@ -480,8 +480,23 @@ export default function EmployeeDirectory() {
       </Card>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse border-slate-200">
+              <CardHeader className="flex flex-row items-center gap-4 pb-2">
+                <div className="h-12 w-12 rounded-full bg-muted" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 w-3/4 bg-muted rounded" />
+                  <div className="h-3 w-1/2 bg-muted rounded" />
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="h-3 w-full bg-muted rounded" />
+                <div className="h-3 w-4/5 bg-muted rounded" />
+                <div className="h-3 w-2/3 bg-muted rounded" />
+              </CardContent>
+            </Card>
+          ))}
         </div>
       ) : viewMode === 'org' ? (
         <div className="overflow-x-auto content-contain">
@@ -496,7 +511,19 @@ export default function EmployeeDirectory() {
       ) : filteredEmployees.length === 0 ? (
         <div className="text-center py-12 border rounded-lg bg-muted/20">
           <User className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium">{t('no_results')}</h3>
+          <h3 className="text-lg font-medium mb-4">{t('no_results')}</h3>
+          <Button
+            onClick={() => {
+              setSearch('')
+              setPropertyFilter('all')
+              setDepartmentFilter('all')
+              setRoleFilter('all')
+              setManagementLevel('all')
+              setStatusFilter('active')
+            }}
+          >
+            {t('reset_filters', 'Reset Filters')}
+          </Button>
         </div>
       ) : shouldVirtualizeEmployees ? (
         <Card className="border-slate-200">

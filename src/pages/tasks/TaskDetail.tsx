@@ -15,6 +15,7 @@ import { ArrowLeft, Calendar, Loader2, Send, Trash2, User } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
+import { toast } from 'sonner'
 
 const priorityColors = {
   low: 'bg-green-100 text-green-800',
@@ -69,10 +70,12 @@ export default function TaskDetail() {
 
   const handleStatusChange = async (newStatus: string) => {
     await updateTask.mutateAsync({ id: task.id, status: newStatus as any })
+    toast.success(t('status_updated', 'Status updated successfully'))
   }
 
   const handlePriorityChange = async (newPriority: string) => {
     await updateTask.mutateAsync({ id: task.id, priority: newPriority as any })
+    toast.success(t('priority_updated', 'Priority updated successfully'))
   }
 
   const handleAddComment = async () => {
@@ -85,6 +88,7 @@ export default function TaskDetail() {
         author_id: user.id
       })
       setComment('')
+      toast.success(t('comment_added', 'Comment added successfully'))
     } finally {
       setIsSubmittingComment(false)
     }
@@ -94,16 +98,16 @@ export default function TaskDetail() {
     <div className="container mx-auto py-6 max-w-5xl space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="icon" onClick={() => navigate('/tasks')} aria-label={t('accessibility.back', 'Back')}>
+        <Button variant="outline" className="bg-card border-border text-muted-foreground hover:bg-muted rounded-md transition-colors" size="icon" onClick={() => navigate('/tasks')} aria-label={t('accessibility.back', 'Back')}>
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="flex-1">
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-2xl font-bold">{task.title}</h1>
             <Badge className={priorityColors[task.priority]}>{t(`priorities.${task.priority}`)}</Badge>
-            <Badge className="bg-gray-100 text-gray-800 border border-gray-600 rounded-md">{t(`kanban.${task.status}`)}</Badge>
+            <Badge className="bg-muted text-foreground border border-border rounded-md">{t(`kanban.${task.status}`)}</Badge>
           </div>
-          <p className="text-sm text-gray-600 flex items-center gap-4">
+          <p className="text-sm text-muted-foreground flex items-center gap-4">
             <span className="flex items-center gap-1">
               <User className="w-3 h-3" /> {task.assigned_to?.full_name || t('unassigned')}
             </span>
@@ -179,7 +183,7 @@ export default function TaskDetail() {
                       <div className="flex-1 bg-muted/50 p-3 rounded-lg">
                         <div className="flex justify-between items-center mb-1">
                           <span className="font-semibold text-sm">{comment.author?.full_name}</span>
-                          <span className="text-xs text-gray-600">{format(new Date(comment.created_at), 'MMM d, h:mm a')}</span>
+                          <span className="text-xs text-muted-foreground">{format(new Date(comment.created_at), 'MMM d, h:mm a')}</span>
                         </div>
                         <p className="text-sm">{comment.content}</p>
                       </div>
@@ -187,7 +191,7 @@ export default function TaskDetail() {
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-600">{t('no_comments')}</p>
+                <p className="text-sm text-muted-foreground">{t('no_comments')}</p>
               )}
 
               <div className="flex gap-3 pt-4">
@@ -225,7 +229,7 @@ export default function TaskDetail() {
             </CardHeader>
             <CardContent className="space-y-4">
               <div>
-                <span className="text-xs text-gray-600 block mb-1">{t('priority_label')}</span>
+                <span className="text-xs text-muted-foreground block mb-1">{t('priority_label')}</span>
                 <Select value={task.priority} onValueChange={handlePriorityChange}>
                   <SelectTrigger>
                     <SelectValue />
@@ -240,7 +244,7 @@ export default function TaskDetail() {
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">{t('assigned_to')}</span>
+                <span className="text-xs text-muted-foreground block mb-1">{t('assigned_to')}</span>
                 <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/20">
                   <Avatar className="w-6 h-6">
                     <AvatarImage src={task.assigned_to?.avatar_url || ''} />
@@ -251,14 +255,14 @@ export default function TaskDetail() {
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">{t('created_by')}</span>
+                <span className="text-xs text-muted-foreground block mb-1">{t('created_by')}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-sm">{task.created_by?.full_name}</span>
                 </div>
               </div>
 
               <div>
-                <span className="text-xs text-gray-600 block mb-1">{t('created_at')}</span>
+                <span className="text-xs text-muted-foreground block mb-1">{t('created_at')}</span>
                 <span className="text-sm">{format(new Date(task.created_at), 'PPP p')}</span>
               </div>
             </CardContent>

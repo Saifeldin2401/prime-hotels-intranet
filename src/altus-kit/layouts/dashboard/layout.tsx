@@ -39,6 +39,9 @@ export type DashboardLayoutProps = LayoutBaseProps & {
   currentWorkspaceId?: string;
   onChangeWorkspace?: (id: string) => void;
   notifications?: NotificationsPopoverProps['data'];
+  onNotificationClick?: NotificationsPopoverProps['onNotificationClick'];
+  onMarkAllRead?: NotificationsPopoverProps['onMarkAllRead'];
+  onViewAllNotifications?: NotificationsPopoverProps['onViewAll'];
   account?: AccountPopoverProps['account'];
   accountLinks?: AccountPopoverProps['data'];
   onLogout?: () => void;
@@ -60,6 +63,9 @@ export function DashboardLayout({
   currentWorkspaceId,
   onChangeWorkspace,
   notifications = [],
+  onNotificationClick,
+  onMarkAllRead,
+  onViewAllNotifications,
   account,
   accountLinks = [],
   onLogout,
@@ -107,7 +113,12 @@ export function DashboardLayout({
           <Searchbar onCommandOpen={onCommandOpen} />
 
           {/** @slot Notifications popover */}
-          <NotificationsPopover data={notifications} />
+          <NotificationsPopover
+            data={notifications}
+            onNotificationClick={onNotificationClick}
+            onMarkAllRead={onMarkAllRead}
+            onViewAll={onViewAllNotifications}
+          />
 
           {/** @slot Account drawer */}
           <AccountPopover data={accountLinks} account={account} onLogout={onLogout} />
@@ -162,8 +173,8 @@ export function DashboardLayout({
         {
           [`& .${layoutClasses.sidebarContainer}`]: {
             [theme.breakpoints.up(layoutQuery)]: {
-              pl: 'var(--layout-nav-vertical-width)',
-              transition: theme.transitions.create(['padding-left'], {
+              paddingInlineStart: 'var(--layout-nav-vertical-width)',
+              transition: theme.transitions.create(['padding-left', 'padding-right'], {
                 easing: 'var(--layout-transition-easing)',
                 duration: 'var(--layout-transition-duration)',
               }),

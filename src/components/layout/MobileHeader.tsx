@@ -118,7 +118,7 @@ export function MobileHeader({
               onClick={handleBack}
               aria-label={t('accessibility.go_back', 'Go back')}
             >
-              <ChevronLeft className="h-6 w-6" />
+              <ChevronLeft className="h-6 w-6 rtl:rotate-180" />
             </Button>
           ) : onMenuClick ? (
             <Button

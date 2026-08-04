@@ -161,15 +161,25 @@
     height: auto;
   }
 
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6 {
+  h1:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)),
+  h2:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)),
+  h3:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)),
+  h4:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)),
+  h5:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)),
+  h6:not(:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *)) {
     @apply font-serif font-bold text-hotel-navy dark:text-hotel-gold;
     letter-spacing: -0.01em;
     /* Subtle architectural compression */
+  }
+
+  h1:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *),
+  h2:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *),
+  h3:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *),
+  h4:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *),
+  h5:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *),
+  h6:where(.bg-hotel-navy *, .bg-hotel-navy-dark *, header *) {
+    @apply font-serif font-bold;
+    letter-spacing: -0.01em;
   }
 
   h1,

@@ -20,6 +20,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import { buildCertificateHtml, CERTIFICATE_TEMPLATE_STYLES } from '@/lib/certificateTemplate'
 
 interface CertificateTemplate {
   id: string
@@ -46,7 +47,10 @@ interface CertificateFormData {
   course_name: string
   completion_date: string
   score: number
-  instructor_name: string
+  issuedByName: string
+  issuedByTitle: string
+  secondarySignatoryName: string
+  secondarySignatoryTitle: string
   custom_message: string
   include_signature: boolean
   include_seal: boolean
@@ -125,9 +129,12 @@ export function TrainingCertificateGenerator({
   const [certificateData, setCertificateData] = useState<CertificateFormData>({
     recipient_name: '',
     course_name: '',
-    completion_date: format(new Date(), 'yyyy-MM-dd'),
+    completion_date: new Date().toISOString().split('T')[0],
     score: 100,
-    instructor_name: '',
+    issuedByName: 'Saifeldin M.',
+    issuedByTitle: 'VP of Learning & Quality',
+    secondarySignatoryName: 'Dr. Khalid Al-Mansoor',
+    secondarySignatoryTitle: 'Executive Managing Director',
     custom_message: '',
     include_signature: true,
     include_seal: true,
@@ -205,25 +212,22 @@ export function TrainingCertificateGenerator({
   })
 
   const generateCertificateHTML = (template: CertificateTemplate, data: CertificateFormData) => {
-    const safeFontFamily = sanitizeFontFamily(template.font_family, 'serif')
-    const safeFontQuery = encodeURIComponent(safeFontFamily)
-    const safeBackgroundColor = sanitizeCssColor(template.background_color, '#ffffff')
-    const safeTextColor = sanitizeCssColor(template.text_color, '#111827')
-    const safeAccentColor = sanitizeCssColor(template.accent_color, '#1f2937')
-    const safeLogoUrl = sanitizeExternalUrl(template.logo_url)
-
-    const safeRecipientName = escapeHtml(data.recipient_name.trim())
-    const safeCourseName = escapeHtml(data.course_name.trim())
-    const safeInstructorName = escapeHtml(data.instructor_name.trim())
-    const safeCustomMessage = escapeHtml(data.custom_message.trim())
-    const safeScore = Number.isFinite(data.score) ? Math.min(100, Math.max(0, Math.round(data.score))) : 0
-    const safeCategory = escapeHtml(trainingCompletion?.training_module?.category || t('categories.general'))
-    const safeCertificateId = escapeHtml(trainingCompletion?.id || 'N/A')
-    const safeDuration = Number.isFinite(trainingCompletion?.training_module?.estimated_duration_minutes)
-      ? String(trainingCompletion?.training_module?.estimated_duration_minutes)
-      : '60'
-    const completionDateLabel = safeFormattedDate(data.completion_date)
-    const issuedOnLabel = format(new Date(), 'MMMM dd, yyyy')
+    const safeCertificateId = escapeHtml(trainingCompletion?.id || 'PREVIEW-CERT-001')
+    
+    const htmlBody = buildCertificateHtml({
+      recipientName: data.recipient_name || '',
+      title: data.course_name || '',
+      completionDateLabel: format(new Date(data.completion_date || Date.now()), 'MMMM dd, yyyy'),
+      certificateNumber: safeCertificateId,
+      verificationCode: 'PREVIEW-VERIFY-001',
+      verifyUrl: 'verify.altusadvisory.com',
+      score: data.score,
+      issuedByName: data.issuedByName,
+      issuedByTitle: data.issuedByTitle,
+      secondarySignatoryName: data.secondarySignatoryName,
+      secondarySignatoryTitle: data.secondarySignatoryTitle,
+      // Logo could be injected here if available
+    })
 
     return `
       <!DOCTYPE html>
@@ -233,184 +237,24 @@ export function TrainingCertificateGenerator({
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Certificate of Completion</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=${safeFontQuery}&display=swap');
-
+            ${CERTIFICATE_TEMPLATE_STYLES}
             body {
               margin: 0;
               padding: 0;
-              font-family: '${safeFontFamily}', serif;
-              background-color: ${safeBackgroundColor};
-              color: ${safeTextColor};
-            }
-
-            .certificate {
-              width: 100%;
-              max-width: 800px;
-              margin: 0 auto;
-              padding: 40px;
-              position: relative;
-              min-height: 600px;
-              border: 10px solid ${safeAccentColor};
-              box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            }
-
-            .certificate-header {
-              text-align: center;
-              margin-bottom: 30px;
-            }
-
-            .certificate-title {
-              font-size: 36px;
-              font-weight: bold;
-              color: ${safeAccentColor};
-              margin-bottom: 10px;
-              text-transform: uppercase;
-              letter-spacing: 2px;
-            }
-
-            .certificate-subtitle {
-              font-size: 18px;
-              font-style: italic;
-              margin-bottom: 40px;
-            }
-
-            .certificate-body {
-              text-align: center;
-              margin-bottom: 40px;
-            }
-
-            .recipient-name {
-              font-size: 28px;
-              font-weight: bold;
-              margin-bottom: 20px;
-              color: ${safeAccentColor};
-            }
-
-            .certificate-text {
-              font-size: 16px;
-              line-height: 1.6;
-              margin-bottom: 30px;
-            }
-
-            .course-name {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 20px;
-              color: ${safeAccentColor};
-            }
-
-            .certificate-details {
+              background-color: transparent;
               display: flex;
-              justify-content: space-between;
-              margin-top: 50px;
-              font-size: 14px;
-            }
-
-            .certificate-footer {
-              text-align: center;
-              margin-top: 40px;
-              font-size: 12px;
-              color: ${safeTextColor}80;
-            }
-
-            .seal {
-              position: absolute;
-              bottom: 40px;
-              right: 40px;
-              width: 100px;
-              height: 100px;
-              border-radius: 50%;
-              border: 3px solid ${safeAccentColor};
-              display: flex;
-              align-items: center;
               justify-content: center;
-              font-weight: bold;
-              color: ${safeAccentColor};
-            }
-
-            .signature {
-              position: absolute;
-              bottom: 40px;
-              left: 40px;
-              text-align: center;
-            }
-
-            .signature-line {
-              border-bottom: 2px solid ${safeTextColor};
-              width: 200px;
-              margin-bottom: 5px;
-            }
-
-            .signature-text {
-              font-size: 12px;
-              color: ${safeTextColor}80;
-            }
-
-            @media print {
-              body { margin: 0; }
-              .certificate {
-                box-shadow: none;
-                border: 5px solid ${safeAccentColor};
-              }
+              align-items: center;
             }
           </style>
         </head>
         <body>
-          <div class="certificate">
-            ${safeLogoUrl ? `<img src="${safeLogoUrl}" alt="Logo" style="max-width: 150px; margin-bottom: 20px;">` : ''}
-
-            <div class="certificate-header">
-              <div class="certificate-title">${escapeHtml(t('certificateGenerator.certificateOfCompletion'))}</div>
-              <div class="certificate-subtitle">${escapeHtml(t('certificateGenerator.certifyThat'))}</div>
-            </div>
-
-            <div class="certificate-body">
-              <div class="recipient-name">${safeRecipientName}</div>
-              <div class="certificate-text">
-                ${escapeHtml(t('certificateGenerator.completedCourse'))}
-              </div>
-              <div class="course-name">${safeCourseName}</div>
-              <div class="certificate-text">
-                ${escapeHtml(t('certificateGenerator.withScoreOf'))} ${safeScore}% ${escapeHtml(t('certificateGenerator.on'))} ${completionDateLabel}
-              </div>
-              ${safeCustomMessage ? `<div class="certificate-text" style="font-style: italic;">${safeCustomMessage}</div>` : ''}
-            </div>
-
-            <div class="certificate-details">
-              <div>
-                <strong>${escapeHtml(t('certificateGenerator.courseDuration'))}:</strong> ${safeDuration} ${escapeHtml(t('minutes'))}
-              </div>
-              <div>
-                <strong>${escapeHtml(t('wizard.category'))}:</strong> ${safeCategory}
-              </div>
-              <div>
-                <strong>${escapeHtml(t('certificateGenerator.completionDate'))}:</strong> ${completionDateLabel}
-              </div>
-            </div>
-
-            ${data.include_signature && safeInstructorName ? `
-              <div class="signature">
-                <div class="signature-line"></div>
-                <div class="signature-text">${safeInstructorName}</div>
-                <div class="signature-text">${escapeHtml(t('certificateGenerator.instructor'))}</div>
-              </div>
-            ` : ''}
-
-            ${data.include_seal ? `
-              <div class="seal">
-                <div>${escapeHtml(t('certificateGenerator.official'))}</div>
-                <div>${escapeHtml(t('certificateGenerator.seal'))}</div>
-              </div>
-            ` : ''}
-
-            <div class="certificate-footer">
-              ${escapeHtml(t('certificateGenerator.certificateNumber'))}: ${safeCertificateId} |
-              ${escapeHtml(t('certificateGenerator.issuedOn'))} ${issuedOnLabel}
-            </div>
-          </div>
+          ${htmlBody}
         </body>
       </html>
     `
+  }
+
   }
 
   const handleDownloadCertificate = async () => {
@@ -422,7 +266,7 @@ export function TrainingCertificateGenerator({
       const certificateHtml = generateCertificateHTML(template, certificateData)
       const parser = new DOMParser()
       const parsed = parser.parseFromString(certificateHtml, 'text/html')
-      const parsedCertificate = parsed.querySelector('.certificate')
+      const parsedCertificate = parsed.querySelector('.certificate-root')
       if (!parsedCertificate) {
         throw new Error('Invalid certificate HTML structure')
       }
@@ -626,12 +470,41 @@ export function TrainingCertificateGenerator({
             </div>
 
             <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
-              <Label htmlFor="instructor_name">{t('certificateGenerator.instructorName')}</Label>
+              <Label htmlFor="issuedByName">{t('certificateGenerator.issuedByName', 'Left Signatory Name')}</Label>
               <Input
-                id="instructor_name"
-                value={certificateData.instructor_name}
-                onChange={(e) => setCertificateData({ ...certificateData, instructor_name: e.target.value })}
-                placeholder={t('certificateGenerator.instructorNamePlaceholder')}
+                id="issuedByName"
+                value={certificateData.issuedByName}
+                onChange={(e) => setCertificateData({ ...certificateData, issuedByName: e.target.value })}
+                className={isRTL ? 'text-right' : 'text-left'}
+              />
+            </div>
+
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="issuedByTitle">{t('certificateGenerator.issuedByTitle', 'Left Signatory Title')}</Label>
+              <Input
+                id="issuedByTitle"
+                value={certificateData.issuedByTitle}
+                onChange={(e) => setCertificateData({ ...certificateData, issuedByTitle: e.target.value })}
+                className={isRTL ? 'text-right' : 'text-left'}
+              />
+            </div>
+
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="secondarySignatoryName">{t('certificateGenerator.secondarySignatoryName', 'Right Signatory Name')}</Label>
+              <Input
+                id="secondarySignatoryName"
+                value={certificateData.secondarySignatoryName}
+                onChange={(e) => setCertificateData({ ...certificateData, secondarySignatoryName: e.target.value })}
+                className={isRTL ? 'text-right' : 'text-left'}
+              />
+            </div>
+
+            <div className={`space-y-2 ${isRTL ? 'text-right' : 'text-left'}`}>
+              <Label htmlFor="secondarySignatoryTitle">{t('certificateGenerator.secondarySignatoryTitle', 'Right Signatory Title')}</Label>
+              <Input
+                id="secondarySignatoryTitle"
+                value={certificateData.secondarySignatoryTitle}
+                onChange={(e) => setCertificateData({ ...certificateData, secondarySignatoryTitle: e.target.value })}
                 className={isRTL ? 'text-right' : 'text-left'}
               />
             </div>

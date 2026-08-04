@@ -1,6 +1,9 @@
 import type { IconButtonProps } from '@mui/material/IconButton';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { formatDistanceToNow } from 'date-fns';
+import { arSA, enUS } from 'date-fns/locale';
 
 import Box from '@mui/material/Box';
 import List from '@mui/material/List';
@@ -17,7 +20,7 @@ import ListSubheader from '@mui/material/ListSubheader';
 import ListItemAvatar from '@mui/material/ListItemAvatar';
 import ListItemButton from '@mui/material/ListItemButton';
 
-import { fToNow } from '@/altus-kit/utils/format-time';
+// removed fToNow import
 
 import { Iconify } from '@/altus-kit/components/iconify';
 import { Scrollbar } from '@/altus-kit/components/scrollbar';
@@ -36,12 +39,26 @@ type NotificationItemProps = {
 
 export type NotificationsPopoverProps = IconButtonProps & {
   data?: NotificationItemProps[];
+  /** Called when a notification item is clicked. Receives the notification object. */
+  onNotificationClick?: (notification: NotificationItemProps) => void;
+  /** Called when "Mark all as read" is clicked. */
+  onMarkAllRead?: () => void;
+  /** Called when the "View all" button is clicked. */
+  onViewAll?: () => void;
 };
 
-export function NotificationsPopover({ data = [], sx, ...other }: NotificationsPopoverProps) {
-  const [notifications, setNotifications] = useState(data);
+export function NotificationsPopover({
+  data = [],
+  onNotificationClick,
+  onMarkAllRead,
+  onViewAll,
+  sx,
+  ...other
+}: NotificationsPopoverProps) {
+  const { t, i18n } = useTranslation(['nav', 'common', 'notifications']);
+  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS;
 
-  const totalUnRead = notifications.filter((item) => item.isUnRead === true).length;
+  const totalUnRead = data.filter((item) => item.isUnRead === true).length;
 
   const [openPopover, setOpenPopover] = useState<HTMLButtonElement | null>(null);
 
@@ -54,13 +71,21 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
   }, []);
 
   const handleMarkAllAsRead = useCallback(() => {
-    const updatedNotifications = notifications.map((notification) => ({
-      ...notification,
-      isUnRead: false,
-    }));
+    onMarkAllRead?.();
+  }, [onMarkAllRead]);
 
-    setNotifications(updatedNotifications);
-  }, [notifications]);
+  const handleNotificationClick = useCallback(
+    (notification: NotificationItemProps) => {
+      onNotificationClick?.(notification);
+      setOpenPopover(null);
+    },
+    [onNotificationClick]
+  );
+
+  const handleViewAll = useCallback(() => {
+    onViewAll?.();
+    setOpenPopover(null);
+  }, [onViewAll]);
 
   return (
     <>
@@ -102,14 +127,14 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
           }}
         >
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle1">Notifications</Typography>
+            <Typography variant="subtitle1">{t('nav:notifications', 'Notifications')}</Typography>
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              You have {totalUnRead} unread messages
+              {t('notifications:unread_messages', 'You have {{count}} unread messages', { count: totalUnRead })}
             </Typography>
           </Box>
 
           {totalUnRead > 0 && (
-            <Tooltip title=" Mark all as read">
+            <Tooltip title={t('notifications:mark_all_read', 'Mark all as read') as string}>
               <IconButton color="primary" onClick={handleMarkAllAsRead}>
                 <Iconify icon="eva:done-all-fill" />
               </IconButton>
@@ -124,12 +149,17 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
             disablePadding
             subheader={
               <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                New
+                {t('common:new', 'New')}
               </ListSubheader>
             }
           >
-            {notifications.slice(0, 2).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
+            {data.slice(0, 2).map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onClick={handleNotificationClick}
+                dateLocale={dateLocale}
+              />
             ))}
           </List>
 
@@ -137,12 +167,17 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
             disablePadding
             subheader={
               <ListSubheader disableSticky sx={{ py: 1, px: 2.5, typography: 'overline' }}>
-                Before that
+                {t('notifications:before_that', 'Before that')}
               </ListSubheader>
             }
           >
-            {notifications.slice(2, 5).map((notification) => (
-              <NotificationItem key={notification.id} notification={notification} />
+            {data.slice(2, 5).map((notification) => (
+              <NotificationItem
+                key={notification.id}
+                notification={notification}
+                onClick={handleNotificationClick}
+                dateLocale={dateLocale}
+              />
             ))}
           </List>
         </Scrollbar>
@@ -150,8 +185,8 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
         <Divider sx={{ borderStyle: 'dashed' }} />
 
         <Box sx={{ p: 1 }}>
-          <Button fullWidth disableRipple color="inherit">
-            View all
+          <Button fullWidth disableRipple color="inherit" onClick={handleViewAll}>
+            {t('common:view_all', 'View all')}
           </Button>
         </Box>
       </Popover>
@@ -161,11 +196,20 @@ export function NotificationsPopover({ data = [], sx, ...other }: NotificationsP
 
 // ----------------------------------------------------------------------
 
-function NotificationItem({ notification }: { notification: NotificationItemProps }) {
+function NotificationItem({
+  notification,
+  onClick,
+  dateLocale,
+}: {
+  notification: NotificationItemProps;
+  onClick?: (notification: NotificationItemProps) => void;
+  dateLocale?: any;
+}) {
   const { avatarUrl, title } = renderContent(notification);
 
   return (
     <ListItemButton
+      onClick={() => onClick?.(notification)}
       sx={{
         py: 1.5,
         px: 2.5,
@@ -192,7 +236,7 @@ function NotificationItem({ notification }: { notification: NotificationItemProp
             }}
           >
             <Iconify width={14} icon="solar:clock-circle-outline" />
-            {fToNow(notification.postedAt)}
+            {notification.postedAt ? formatDistanceToNow(new Date(notification.postedAt), { addSuffix: true, locale: dateLocale }) : ''}
           </Typography>
         }
       />

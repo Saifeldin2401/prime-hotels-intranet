@@ -1,7 +1,8 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY");
+const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
 Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
@@ -19,7 +20,6 @@ Deno.serve(async (req: Request) => {
   // Security Check
   const authHeader = req.headers.get("Authorization");
   const apikeyHeader = req.headers.get("apikey");
-  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   // Check both Authorization and apikey headers for service role key
   const authValue =
@@ -39,11 +39,9 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const supabaseClient = createClient(
-    Deno.env.get("SUPABASE_URL") ?? "",
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } },
-  );
+  const supabaseClient = createClient(supabaseUrl, serviceRoleKey, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
 
   try {
     console.log("Fetching users with temporary passwords...");
@@ -65,80 +63,80 @@ Deno.serve(async (req: Request) => {
     }
 
     console.log(
-      `Found ${users.length} users with temp passwords. Fetching template...`,
+      `Found ${users.length} users with temp passwords. Sending reminders via send-email...`,
     );
 
-    const { data: template, error: tmplError } = await supabaseClient
-      .from("notification_email_templates")
-      .select("html_template, text_template")
-      .eq("template_key", "auth_password_reminder")
-      .maybeSingle();
-
-    if (tmplError || !template) {
-      throw new Error("Template 'auth_password_reminder' not found");
-    }
-
-    // Build Batch Payload
-    const batchPayload = users.map((user) => {
-      const recipientName = user.full_name || "PRIME User";
-      let html = template.html_template
-        .replace(/{{recipient_name}}/g, recipientName)
-        .replace(/{{action_url}}/g, "https://www.altus-advisory.com/login")
-        .replace(
-          /{{logo_url}}/g,
-          "https://www.altus-advisory.com/prime-logo-white-full.png",
-        )
-        .replace(/{{title}}/g, "Password Update Required")
-        .replace(/{{year}}/g, new Date().getFullYear().toString())
-        .replace(/{{dir}}/g, "ltr")
-        .replace(/{{lang}}/g, "en");
-
-      let text = (template.text_template || "")
-        .replace(/{{recipient_name}}/g, recipientName)
-        .replace(/{{action_url}}/g, "https://www.altus-advisory.com/login");
-
-      return {
-        from: "Altus Security <notifications@phg-connect.com>",
-        to: [user.email],
-        subject:
-          "Altus Connect | Password Update Required - مطلوب تحديث كلمة المرور",
-        html: html,
-        text: text,
-      };
-    });
-
-    // Send using Resend Batch API
+    // Route each email through the central send-email function for consistent
+    // branding, delivery tracking, retry logic, and template rendering.
     let sentCount = 0;
-    const BATCH_SIZE = 100;
+    let failedCount = 0;
+    const sendEmailUrl = `${supabaseUrl}/functions/v1/send-email`;
 
-    for (let i = 0; i < batchPayload.length; i += BATCH_SIZE) {
-      const chunk = batchPayload.slice(i, i + BATCH_SIZE);
-      console.log(`Sending batch of ${chunk.length} emails...`);
+    for (const user of users) {
+      try {
+        const recipientName = user.full_name || "Altus Team Member";
 
-      const resendRes = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${RESEND_API_KEY}`,
-        },
-        body: JSON.stringify(chunk),
-      });
+        const emailResponse = await fetch(sendEmailUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${serviceRoleKey}`,
+            apikey: serviceRoleKey,
+          },
+          body: JSON.stringify({
+            to: user.email,
+            templateKey: "auth_password_reminder",
+            title: "Password Update Required",
+            subject:
+              "Altus Connect | Password Update Required - مطلوب تحديث كلمة المرور",
+            message:
+              "Your account is still using a temporary password. For your security, please update your password as soon as possible by signing in and following the prompts.",
+            actionUrl: "/",
+            actionLabel: "Sign In & Update Password",
+            businessDomain: "user_management",
+            notificationType: "system",
+            userId: user.id,
+            variables: {
+              recipient_name: recipientName,
+            },
+          }),
+        });
 
-      if (!resendRes.ok) {
-        const errorText = await resendRes.text();
-        console.error("Batch send failed:", errorText);
-        throw new Error(`Failed to send batch: ${errorText}`);
+        if (emailResponse.ok) {
+          sentCount++;
+        } else {
+          failedCount++;
+          const errorData = await emailResponse.json().catch(() => ({}));
+          console.error(
+            `Failed to send reminder to ${user.email}:`,
+            errorData,
+          );
+        }
+      } catch (emailErr) {
+        failedCount++;
+        console.error(
+          `Error sending reminder to ${user.email}:`,
+          emailErr,
+        );
       }
 
-      sentCount += chunk.length;
+      // Small delay between emails to respect rate limits
+      if (sentCount + failedCount < users.length) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
 
-    console.log(`Successfully sent ${sentCount} reminders.`);
+    console.log(
+      `Finished: ${sentCount} sent, ${failedCount} failed out of ${users.length} total.`,
+    );
 
-    return new Response(JSON.stringify({ success: true, count: sentCount }), {
-      headers: { "Content-Type": "application/json" },
-      status: 200,
-    });
+    return new Response(
+      JSON.stringify({ success: true, sent: sentCount, failed: failedCount }),
+      {
+        headers: { "Content-Type": "application/json" },
+        status: 200,
+      },
+    );
   } catch (err: any) {
     console.error("Error sending reminders:", err);
     return new Response(JSON.stringify({ error: err.message }), {
@@ -147,3 +145,4 @@ Deno.serve(async (req: Request) => {
     });
   }
 });
+

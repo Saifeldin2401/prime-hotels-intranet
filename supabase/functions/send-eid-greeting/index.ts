@@ -170,49 +170,54 @@ serve(async (req) => {
 
     console.log(`Sending Eid greeting to ${emailsToSend.length} recipients...`);
 
-    // We use Resend Batch API to send 100 emails at once, preventing edge function timeout
-    const BATCH_SIZE = 100;
-    const allResults = [];
+    // Route through the central send-email function for delivery tracking,
+    // retry logic, and consistent email infrastructure.
+    const sendEmailUrl = `${SUPABASE_URL}/functions/v1/send-email`;
+    let sentCount = 0;
+    let failedCount = 0;
 
-    for (let i = 0; i < emailsToSend.length; i += BATCH_SIZE) {
-      const batchRecipients = emailsToSend.slice(i, i + BATCH_SIZE);
+    for (const email of emailsToSend) {
+      try {
+        const response = await fetch(sendEmailUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+            apikey: SUPABASE_SERVICE_ROLE_KEY!,
+          },
+          body: JSON.stringify({
+            to: email,
+            subject: "Eid Mubarak from Altus Hospitality | عيد مبارك",
+            html: htmlTemplate,
+            businessDomain: "management",
+            notificationType: "system",
+          }),
+        });
 
-      const payload = batchRecipients.map((email) => ({
-        from: `${fromName} <${fromEmail}>`,
-        to: [email],
-        subject: "Eid Mubarak from PRIME Hotels | عيد مبارك",
-        html: htmlTemplate,
-        tags: [{ name: "campaign", value: "eid_greeting_system" }],
-      }));
+        if (response.ok) {
+          sentCount++;
+        } else {
+          failedCount++;
+          const errorData = await response.json().catch(() => ({}));
+          console.error(`Failed to send Eid greeting to ${email}:`, errorData);
+        }
+      } catch (err) {
+        failedCount++;
+        console.error(`Error sending Eid greeting to ${email}:`, err);
+      }
 
-      // Fire to Resend Batch API
-      const response = await fetch("https://api.resend.com/emails/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${resendApiKey}`,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const result = await response.json().catch(() => ({}));
-      allResults.push({
-        status: response.status,
-        chunk: i / BATCH_SIZE,
-        data: result,
-      });
-
-      // small delay to respect rate limits if we have thousands
-      if (i + BATCH_SIZE < emailsToSend.length) {
-        await new Promise((r) => setTimeout(r, 500));
+      // Small delay between emails to respect rate limits
+      if (sentCount + failedCount < emailsToSend.length) {
+        await new Promise((r) => setTimeout(r, 200));
       }
     }
 
     return jsonResponse(
       {
         success: true,
-        sent_count: emailsToSend.length,
-        runs: allResults,
+        sent_count: sentCount,
+        failed_count: failedCount,
+        total: emailsToSend.length,
       },
       200,
       corsHeaders,

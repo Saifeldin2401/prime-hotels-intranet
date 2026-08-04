@@ -135,7 +135,10 @@ export async function generateCertificatePDF(
         verifyUrl: CERTIFICATE_VERIFY_URL,
         score: certificate.score,
         passingScore: certificate.passingScore,
-        issuedByName: certificate.issuedByName,
+        issuedByName: certificate.issuedByName || (certificate.metadata?.issuedByName as string | undefined),
+        issuedByTitle: (certificate.metadata?.issuedByTitle as string | undefined),
+        secondarySignatoryName: (certificate.metadata?.secondarySignatoryName as string | undefined),
+        secondarySignatoryTitle: (certificate.metadata?.secondarySignatoryTitle as string | undefined),
         logoDataUrl,
         qrDataUrl: qrDataUrl || undefined
     })

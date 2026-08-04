@@ -43,11 +43,11 @@ const STATUS_CONFIG: Record<Room['status'], { label: string; bg: string; border:
 const STATUS_COLUMNS: Room['status'][] = ['dirty', 'clean', 'inspected', 'occupied', 'vacant', 'out_of_order']
 
 const INSPECTION_ITEMS = [
-    { id: 'linens', label: 'Linens & Bedding Freshly Changed & Crisp' },
-    { id: 'bathroom', label: 'Bathroom Sanitized, Mirror Cleared & Towels Restocked' },
-    { id: 'minibar', label: 'Minibar Inventory Verified & Refreshment Seal Applied' },
-    { id: 'ac', label: 'AC Thermostat & Remote Electronics Function Verified' },
-    { id: 'amenities', label: 'VIP Guest Amenities, Stationary & Safety Cards Set' }
+    { id: 'linens', fallback: 'Linens & bedding freshly changed and crisp' },
+    { id: 'bathroom', fallback: 'Bathroom fully sanitized, polished, and re-stocked' },
+    { id: 'minibar', fallback: 'Minibar inventory verified and sealed' },
+    { id: 'ac', fallback: 'AC thermostat set to welcome temperature' },
+    { id: 'amenities', fallback: 'VIP guest welcome amenities & card placed' }
 ]
 
 export default function RoomStatusBoard() {
@@ -61,6 +61,7 @@ export default function RoomStatusBoard() {
 
     const [searchQuery, setSearchQuery] = useState('')
     const [selectedFloor, setSelectedFloor] = useState<string>('all')
+    const [activeTab, setActiveTab] = useState<Room['status'] | 'all'>('all')
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [formData, setFormData] = useState({ room_number: '', floor: '', room_type: '' })
 
@@ -282,6 +283,29 @@ export default function RoomStatusBoard() {
                 )}
             </div>
 
+            {/* Mobile Tab Switcher */}
+            <div className="md:hidden flex overflow-x-auto pb-2 gap-2 snap-x hide-scrollbar">
+                <Button 
+                    variant={activeTab === 'all' ? 'default' : 'outline'}
+                    onClick={() => setActiveTab('all')}
+                    size="sm"
+                    className="snap-start shrink-0"
+                >
+                    {t('housekeeping:columns.all', { defaultValue: 'All Rooms' })}
+                </Button>
+                {STATUS_COLUMNS.map(st => (
+                    <Button
+                        key={st}
+                        variant={activeTab === st ? 'default' : 'outline'}
+                        onClick={() => setActiveTab(st)}
+                        size="sm"
+                        className="snap-start shrink-0 capitalize"
+                    >
+                        {t(`housekeeping:rooms.status_${st}`, { defaultValue: STATUS_CONFIG[st].label })}
+                    </Button>
+                ))}
+            </div>
+
             {/* Status Board Columns */}
             {isLoading ? (
                 <div className="text-center py-12 text-muted-foreground">{t('common:common.loading', { defaultValue: 'Loading room status…' })}</div>
@@ -290,9 +314,10 @@ export default function RoomStatusBoard() {
                     {STATUS_COLUMNS.map((statusKey) => {
                         const config = STATUS_CONFIG[statusKey]
                         const columnRooms = roomsByStatus[statusKey] || []
+                        const isHiddenOnMobile = activeTab !== 'all' && activeTab !== statusKey
 
                         return (
-                            <div key={statusKey} className={cn('rounded-xl border p-3.5 space-y-3 min-h-[350px] flex flex-col', config.bg, config.border)}>
+                            <div key={statusKey} className={cn('rounded-xl border p-3.5 space-y-3 min-h-[350px] flex-col', config.bg, config.border, isHiddenOnMobile ? 'hidden md:flex' : 'flex')}>
                                 {/* Header */}
                                 <div className="pb-2 border-b border-gray-200/60 flex items-center justify-between">
                                     <h4 className={cn('font-semibold text-sm capitalize flex items-center gap-1.5', config.text)}>
@@ -388,10 +413,10 @@ export default function RoomStatusBoard() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-blue-700">
                             <ClipboardCheck className="w-5 h-5 text-blue-600" />
-                            Room {inspectingRoom?.room_number} Quality Inspection Audit
+                            {t('housekeeping:audit.title', { defaultValue: 'Supervisor Quality Audit' })} - Room {inspectingRoom?.room_number}
                         </DialogTitle>
                         <DialogDescription>
-                            Verify all 5 quality checklist items below before certifying room for guest arrival.
+                            {t('housekeeping:audit.subtitle', { defaultValue: 'Verify all room standards before certifying for guest check-in.' })}
                         </DialogDescription>
                     </DialogHeader>
 
@@ -405,7 +430,7 @@ export default function RoomStatusBoard() {
                                     className="mt-0.5"
                                 />
                                 <Label htmlFor={item.id} className="text-xs font-medium text-gray-800 leading-snug cursor-pointer">
-                                    {item.label}
+                                    {t(`housekeeping:audit.items.${item.id}`, { defaultValue: item.fallback })}
                                 </Label>
                             </div>
                         ))}

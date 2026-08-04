@@ -209,7 +209,7 @@ export default function OperationsDashboard() {
                                     <Button
                                         variant="ghost"
                                         size="icon"
-                                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full opacity-0 group-hover:opacity-100 transition-all"
+                                        className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full transition-all"
                                         onClick={() => setLogToDelete(log.id)}
                                         aria-label={t('accessibility.delete_import_log', 'Delete import log')}
                                     >

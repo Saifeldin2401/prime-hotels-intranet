@@ -23,8 +23,11 @@ const DelegationSettings = lazy(() => import('@/pages/admin/DelegationSettings')
 const SystemSettings = lazy(() => import('@/pages/admin/SystemSettings'))
 const SLASettings = lazy(() => import('@/pages/admin/SLASettings'))
 const ManualCertificateGenerator = lazy(() => import('@/pages/admin/ManualCertificateGenerator'))
+const TrainingCertificates = lazy(() => import('@/pages/training/TrainingCertificates'))
 const EmailWriter = lazy(() => import('@/pages/admin/EmailWriter'))
+const EmailAnalytics = lazy(() => import('@/pages/admin/EmailAnalytics'))
 const InboundEmails = lazy(() => import('@/pages/admin/InboundEmails'))
+const EmailTemplateEditor = lazy(() => import('@/pages/admin/EmailTemplateEditor'))
 const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
@@ -164,6 +167,26 @@ export const AdminRoutes = () => (
             }
         />
         <Route
+            path="/admin/email-analytics"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <EmailAnalytics />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/email-templates"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <EmailTemplateEditor />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
             path="/admin/inbound-emails"
             element={
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr']}>
@@ -241,6 +264,16 @@ export const AdminRoutes = () => (
                 <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <SystemSettings />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/admin/certificates"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager']}>
+                    <AppLayout>
+                        <TrainingCertificates />
                     </AppLayout>
                 </ProtectedRoute>
             }

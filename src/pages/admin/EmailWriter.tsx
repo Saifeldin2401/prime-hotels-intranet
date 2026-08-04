@@ -1700,9 +1700,14 @@ Return ONLY valid JSON:
                     {body}
                   </div>
                 )}
-                {contentMode === 'custom_html' && htmlBody?.trim() && (
+                {htmlBody?.trim() && (
                   <div className="mt-4">
-                    <div className="text-xs text-muted-foreground mb-2">HTML preview</div>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="text-xs text-muted-foreground">HTML preview</div>
+                      <Button variant="ghost" size="sm" className="h-6 text-[10px]" onClick={() => setFullPreviewOpen(true)}>
+                        {t('email_writer.full_preview', { ns: 'admin', defaultValue: 'View fullscreen' })}
+                      </Button>
+                    </div>
                     <div className="rounded-md border overflow-hidden bg-white">
                       <iframe title="email-preview" className="w-full h-[640px]" srcDoc={htmlBody} />
                     </div>

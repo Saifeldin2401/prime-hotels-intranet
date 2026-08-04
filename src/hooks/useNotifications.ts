@@ -26,8 +26,8 @@ export function useNotifications() {
       return data.map((n) => ({
         ...n,
         is_read: !!n.read_at,
-        entity_type: n.metadata?.entity_type || null,
-        entity_id: n.metadata?.entity_id || null,
+        entity_type: n.entity_type || (n.metadata as any)?.entity_type || null,
+        entity_id: n.entity_id || (n.metadata as any)?.entity_id || null,
       })) as Notification[]
     },
     enabled: !!user,
@@ -74,12 +74,29 @@ export function useNotifications() {
     }
   })
 
+  // Delete notification mutation
+  const deleteNotification = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      queryClient.invalidateQueries({ queryKey: ['notifications-count'] })
+    }
+  })
+
   return {
     notifications,
     unreadCount,
     isLoading,
     markAsRead,
     markAllAsRead,
+    deleteNotification,
     isMarkingRead: markAsRead.isPending || markAllAsRead.isPending
   }
 }

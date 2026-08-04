@@ -45,6 +45,10 @@ export default function ManualCertificateGenerator() {
     const [selectedTrainingModuleId, setSelectedTrainingModuleId] = useState<string>('')
     const [title, setTitle] = useState('')
     const [completionDate, setCompletionDate] = useState<string>(new Date().toISOString().split('T')[0])
+    const [issuedByName, setIssuedByName] = useState('')
+    const [issuedByTitle, setIssuedByTitle] = useState('')
+    const [secondarySignatoryName, setSecondarySignatoryName] = useState('')
+    const [secondarySignatoryTitle, setSecondarySignatoryTitle] = useState('')
 
     const handleGenerate = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -82,7 +86,13 @@ export default function ManualCertificateGenerator() {
                     ?? selectedUser.properties?.[0]?.id
                     ?? undefined,
                 departmentId: selectedUser.departments?.[0]?.id || undefined,
-                issuedBy: profile?.id
+                issuedBy: profile?.id,
+                metadata: {
+                    issuedByName: issuedByName || undefined,
+                    issuedByTitle: issuedByTitle || undefined,
+                    secondarySignatoryName: secondarySignatoryName || undefined,
+                    secondarySignatoryTitle: secondarySignatoryTitle || undefined
+                }
             })
 
             // Invalidate the cache so it appears in the list immediately!
@@ -203,6 +213,51 @@ export default function ManualCertificateGenerator() {
                                 </Select>
                             </div>
                         )}
+
+                        <div className="pt-4 border-t mt-6">
+                            <h3 className="text-lg font-semibold text-hotel-navy mb-4">Signatory Overrides (Optional)</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                                Leave these fields blank to use the global template defaults.
+                            </p>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label className="text-hotel-navy font-semibold">Left Signatory Name</Label>
+                                    <Input
+                                        value={issuedByName}
+                                        onChange={(e) => setIssuedByName(e.target.value)}
+                                        placeholder="e.g. Saifeldin M."
+                                        className="bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-hotel-navy font-semibold">Left Signatory Title</Label>
+                                    <Input
+                                        value={issuedByTitle}
+                                        onChange={(e) => setIssuedByTitle(e.target.value)}
+                                        placeholder="e.g. VP of Learning & Quality"
+                                        className="bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-hotel-navy font-semibold">Right Signatory Name</Label>
+                                    <Input
+                                        value={secondarySignatoryName}
+                                        onChange={(e) => setSecondarySignatoryName(e.target.value)}
+                                        placeholder="e.g. Dr. Khalid Al-Mansoor"
+                                        className="bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label className="text-hotel-navy font-semibold">Right Signatory Title</Label>
+                                    <Input
+                                        value={secondarySignatoryTitle}
+                                        onChange={(e) => setSecondarySignatoryTitle(e.target.value)}
+                                        placeholder="e.g. Executive Managing Director"
+                                        className="bg-white"
+                                    />
+                                </div>
+                            </div>
+                        </div>
 
                         <div className="pt-4 flex justify-end">
                             <Button

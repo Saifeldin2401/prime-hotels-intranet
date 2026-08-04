@@ -1,0 +1,37 @@
+{
+  "title": "Room Status & Housekeeping",
+  "description": "Manage room cleaning, supervisor inspections, and property maintenance statuses.",
+  "kpis": {
+    "clean": "Clean & Ready",
+    "dirty": "Needs Cleaning",
+    "inspected": "Supervisor Inspected",
+    "ooo": "Out of Order"
+  },
+  "columns": {
+    "all": "All Rooms",
+    "clean": "Clean",
+    "dirty": "Dirty",
+    "inspected": "Inspected",
+    "occupied": "Occupied",
+    "vacant": "Vacant",
+    "ooo": "Out of Order"
+  },
+  "actions": {
+    "inspect": "Inspect",
+    "mark_clean": "Mark Clean",
+    "mark_inspected": "Certify & Mark Inspected",
+    "mark_ooo": "Mark Out of Order",
+    "change_status": "Change Status"
+  },
+  "audit": {
+    "title": "Supervisor Quality Audit",
+    "subtitle": "Verify all room standards before certifying for guest check-in.",
+    "items": {
+      "linens": "Linens & bedding freshly changed and crisp",
+      "bathroom": "Bathroom fully sanitized, polished, and re-stocked",
+      "minibar": "Minibar inventory verified and sealed",
+      "ac": "AC thermostat set to welcome temperature (22°C)",
+      "amenities": "VIP guest welcome amenities & card placed"
+    }
+  }
+}

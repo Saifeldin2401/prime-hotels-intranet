@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useToast } from '@/components/ui/use-toast'
 import { useNotifications } from '@/hooks/useNotifications'
 import { usePermissions } from '@/hooks/usePermissions'
 import { getNotificationLink } from '@/lib/notificationLinks'
@@ -32,12 +33,13 @@ import { useNavigate } from 'react-router-dom'
 type FilterType = 'all' | 'unread' | 'approval' | 'training' | 'maintenance' | 'announcement'
 
 export default function Notifications() {
-    const { notifications, unreadCount, markAsRead, markAllAsRead, isLoading } = useNotifications()
+    const { notifications, unreadCount, markAsRead, markAllAsRead, deleteNotification, isLoading } = useNotifications()
     const { hasPermission } = usePermissions()
     const [filter, setFilter] = useState<FilterType>('all')
     const [searchQuery, setSearchQuery] = useState('')
     const navigate = useNavigate()
     const { t } = useTranslation('common')
+    const { toast } = useToast()
 
     const filteredNotifications = useMemo(() => {
         return notifications
@@ -310,9 +312,16 @@ export default function Notifications() {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    className="opacity-0 group-hover:opacity-100 h-8 w-8 text-gray-400 hover:text-red-500 transition-opacity shrink-0"
+                                                    className="h-8 w-8 text-gray-400 hover:text-red-500 transition-opacity shrink-0"
                                                     onClick={(e) => {
                                                         e.stopPropagation()
+                                                        deleteNotification.mutate(notification.id, {
+                                                            onSuccess: () => {
+                                                                toast({
+                                                                    title: t('notifications_page.delete_success', 'Notification deleted'),
+                                                                })
+                                                            }
+                                                        })
                                                     }}
                                                     aria-label={t('accessibility.delete', 'Delete')}
                                                 >

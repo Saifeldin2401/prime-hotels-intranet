@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { getCodeTemplate } from "../_shared/email-templates.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
@@ -210,12 +211,14 @@ serve(async (req) => {
           "PHG Connect Notification - {{title}}",
         context,
       );
+    // Fallback chain: caller HTML → DB template → code template → generic default
+    const resolvedHtmlTemplate =
+      sanitizedTemplate?.html_template ||
+      (body.templateKey ? getCodeTemplate(body.templateKey) : null) ||
+      defaultHtmlTemplate();
     const html =
       body.html ||
-      renderTemplate(
-        sanitizedTemplate?.html_template || defaultHtmlTemplate(),
-        context,
-      );
+      renderTemplate(resolvedHtmlTemplate, context);
     const text =
       body.text ||
       renderTemplate(
@@ -364,6 +367,10 @@ function buildContext(
     help_link_text: isAr
       ? "\u0645\u0631\u0643\u0632 \u0627\u0644\u0645\u0633\u0627\u0639\u062F\u0629"
       : "Help Center",
+    preferences_url: resolveAbsoluteUrl("/settings/notifications", appBaseUrl),
+    preferences_link_text: isAr
+      ? "\u0625\u062F\u0627\u0631\u0629 \u062A\u0641\u0636\u064A\u0644\u0627\u062A \u0627\u0644\u0625\u0634\u0639\u0627\u0631\u0627\u062A"
+      : "Manage Email Preferences",
     rights_reserved: isAr
       ? "\u062C\u0645\u064A\u0639 \u0627\u0644\u062D\u0642\u0648\u0642 \u0645\u062D\u0641\u0648\u0638\u0629."
       : "All rights reserved.",
@@ -493,182 +500,331 @@ function sanitizeHtmlTemplate(html: string): string {
 
 function defaultHtmlTemplate(): string {
   return `<!DOCTYPE html>
-<html lang="{{lang}}" dir="{{dir}}">
+<html lang="{{lang}}" dir="{{dir}}" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta name="color-scheme" content="light dark">
+    <meta name="supported-color-schemes" content="light dark">
     <title>{{title}}</title>
+    <!--[if mso]>
+    <noscript>
+        <xml>
+            <o:OfficeDocumentSettings>
+                <o:AllowPNG/>
+                <o:PixelsPerInch>96</o:PixelsPerInch>
+            </o:OfficeDocumentSettings>
+        </xml>
+    </noscript>
+    <![endif]-->
     <style>
+        :root { color-scheme: light dark; supported-color-schemes: light dark; }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             line-height: 1.6;
             margin: 0;
             padding: 0;
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
             color: #334155;
             -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
+
+        /* Preheader — hidden text shown as email preview */
+        .preheader {
+            display: none !important;
+            visibility: hidden;
+            mso-hide: all;
+            font-size: 1px;
+            line-height: 1px;
+            max-height: 0;
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+
         .wrapper {
             width: 100%;
-            background-color: #f8fafc;
+            background-color: #f1f5f9;
             padding: 40px 0;
         }
+
         .container {
             max-width: 600px;
             margin: 0 auto;
             background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-radius: 16px;
+            box-shadow: 0 4px 24px rgba(11, 28, 62, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
             overflow: hidden;
         }
+
+        /* ── Header ────────────────────────────── */
         .header {
             background: {{brand_gradient}};
-            padding: 32px 40px;
+            padding: 36px 40px 32px;
             text-align: center;
         }
         .header img {
-            max-height: 48px;
+            max-height: 44px;
             width: auto;
         }
         .business-unit {
             display: inline-block;
-            margin-top: 16px;
-            padding: 4px 12px;
-            background-color: rgba(255, 255, 255, 0.2);
+            margin-top: 14px;
+            padding: 5px 16px;
+            background-color: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(4px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 9999px;
             color: #ffffff;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 0.5px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 1.2px;
             text-transform: uppercase;
         }
+
+        /* ── Content ───────────────────────────── */
         .content {
-            padding: 40px;
+            padding: 40px 40px 32px;
             text-align: {{align}};
         }
         .title {
-            color: #0f172a;
-            font-size: 24px;
+            color: #0B1C3E;
+            font-size: 22px;
             font-weight: 700;
-            margin-top: 0;
-            margin-bottom: 24px;
+            margin: 0 0 24px 0;
+            letter-spacing: -0.3px;
+            line-height: 1.3;
         }
         .greeting {
             font-size: 16px;
-            margin-bottom: 16px;
+            margin: 0 0 16px 0;
             color: #475569;
         }
         .message {
-            font-size: 16px;
+            font-size: 15px;
             color: #475569;
-            margin-bottom: 32px;
+            margin: 0 0 28px 0;
+            line-height: 1.7;
         }
+
+        /* ── Data box ──────────────────────────── */
+        .data-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-{{align}}: 4px solid {{brand_color}};
+            border-radius: 8px;
+            padding: 20px 24px;
+            margin-bottom: 28px;
+            font-size: 14px;
+            color: #334155;
+            text-align: {{align}};
+            line-height: 1.6;
+        }
+
+        /* ── CTA Button ────────────────────────── */
         .button-wrapper {
             margin: 32px 0;
             text-align: {{align}};
         }
         .button {
             display: inline-block;
-            background-color: {{brand_color}};
+            background: {{brand_gradient}};
             color: #ffffff !important;
-            font-weight: 600;
+            font-weight: 700;
             text-decoration: none;
-            padding: 14px 28px;
+            padding: 14px 32px;
             border-radius: 8px;
-            font-size: 16px;
-            transition: opacity 0.2s;
+            font-size: 15px;
+            letter-spacing: 0.3px;
+            box-shadow: 0 2px 8px rgba(11, 28, 62, 0.2);
+            mso-padding-alt: 0;
         }
-        .button:hover {
-            opacity: 0.9;
-        }
-        .footer {
-            background-color: #f1f5f9;
-            padding: 32px 40px;
-            text-align: center;
+
+        /* ── Divider ───────────────────────────── */
+        .section-divider {
+            border: none;
             border-top: 1px solid #e2e8f0;
+            margin: 32px 0 24px 0;
+        }
+
+        /* ── Trouble clicking ──────────────────── */
+        .trouble-section {
+            font-size: 13px;
+            color: #94a3b8;
+            margin-top: 0;
+            padding-top: 0;
+            line-height: 1.5;
+        }
+        .trouble-section a {
+            color: {{brand_color}};
+            word-break: break-all;
+            text-decoration: underline;
+            display: inline-block;
+            margin-top: 6px;
+        }
+
+        /* ── Footer ────────────────────────────── */
+        .footer {
+            background-color: #0B1C3E;
+            padding: 28px 40px;
+            text-align: center;
         }
         .footer p {
             margin: 0;
             font-size: 13px;
-            color: #64748b;
-            line-height: 1.5;
+            color: rgba(255, 255, 255, 0.6);
+            line-height: 1.6;
         }
         .footer-links {
             margin-top: 16px;
+            margin-bottom: 16px;
         }
         .footer-links a {
-            color: {{brand_color}};
+            color: #D4AF37;
             text-decoration: none;
             font-size: 13px;
-            margin: 0 8px;
+            font-weight: 600;
+            margin: 0 12px;
+            letter-spacing: 0.3px;
         }
-        .data-box {
-            background-color: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 32px;
-            font-size: 15px;
-            color: #334155;
-            text-align: {{align}};
+        .footer-divider {
+            border: none;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            margin: 16px 0;
         }
-        
-        @media only screen and (max-width: 600px) {
-            .wrapper { padding: 20px 10px; }
-            .content { padding: 30px 20px; }
-            .header { padding: 30px 20px; }
-            .footer { padding: 24px 20px; }
+        .footer-copyright {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.4);
         }
+
+        /* ── Responsive ────────────────────────── */
+        @media only screen and (max-width: 620px) {
+            .wrapper { padding: 16px 8px !important; }
+            .container { border-radius: 12px !important; }
+            .content { padding: 28px 20px 24px !important; }
+            .header { padding: 28px 20px 24px !important; }
+            .footer { padding: 24px 20px !important; }
+            .title { font-size: 20px !important; }
+            .button { padding: 12px 24px !important; font-size: 14px !important; }
+            .data-box { padding: 16px !important; }
+        }
+
+        /* ── Dark Mode ─────────────────────────── */
+        @media (prefers-color-scheme: dark) {
+            body, .wrapper { background-color: #0f172a !important; }
+            .container { background-color: #1e293b !important; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important; }
+            .title { color: #f1f5f9 !important; }
+            .greeting, .message { color: #cbd5e1 !important; }
+            .data-box {
+                background-color: #0f172a !important;
+                border-color: #334155 !important;
+                color: #cbd5e1 !important;
+            }
+            .trouble-section { color: #64748b !important; }
+            .footer { background-color: #020617 !important; }
+        }
+
+        /* Outlook dark mode (Windows) */
+        [data-ogsc] .title { color: #f1f5f9 !important; }
+        [data-ogsc] .greeting, [data-ogsc] .message { color: #cbd5e1 !important; }
     </style>
 </head>
 <body>
+    <!-- Preheader text (shows as preview in email clients) -->
+    <div class="preheader">{{message}} &zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;</div>
+
     <div class="wrapper">
+        <!--[if mso]>
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" align="center" style="width:600px;">
+        <tr><td>
+        <![endif]-->
         <div class="container">
+            <!-- Header -->
             <div class="header">
-                <img src="{{logo_url}}" alt="Altus Logo">
+                <img src="{{logo_url}}" alt="Altus Hospitality">
                 <br>
                 <div class="business-unit">{{business_unit_label}}</div>
             </div>
-            
+
+            <!-- Content -->
             <div class="content">
                 <h1 class="title">{{title}}</h1>
-                
+
                 <p class="greeting">{{greeting_hello}}{{recipient_name}},</p>
-                
+
                 <p class="message">{{message}}</p>
-                
+
                 {{#if has_data_box}}
                 <div class="data-box">
                     {{data_box_content}}
                 </div>
                 {{/if}}
-                
+
+                <!-- CTA Button (with VML fallback for Outlook) -->
                 <div class="button-wrapper">
+                    <!--[if mso]>
+                    <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="{{action_url}}" style="height:48px;v-text-anchor:middle;width:220px;" arcsize="17%" fillcolor="{{brand_color}}" stroke="f">
+                      <w:anchorlock/>
+                      <center style="color:#ffffff;font-family:sans-serif;font-size:15px;font-weight:bold;">{{action_label}}</center>
+                    </v:roundrect>
+                    <![endif]-->
+                    <!--[if !mso]><!-->
                     <a href="{{action_url}}" class="button">{{action_label}}</a>
+                    <!--<![endif]-->
                 </div>
-                
-                <p style="font-size: 14px; color: #64748b; margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 24px;">
+
+                <hr class="section-divider">
+
+                <p class="trouble-section">
                     {{trouble_clicking}}<br>
-                    <a href="{{action_url}}" style="color: {{brand_color}}; word-break: break-all; text-decoration: underline; margin-top: 8px; display: inline-block;">{{action_url}}</a>
+                    <a href="{{action_url}}">{{action_url}}</a>
                 </p>
             </div>
-            
+
+            <!-- Footer -->
             <div class="footer">
                 <p>{{footer_text}}</p>
                 <div class="footer-links">
-                    <a href="{{app_url}}">{{dashboard_link_text}}</a> &bull; 
-                    <a href="{{app_url}}/knowledge-base">{{help_link_text}}</a>
+                    <a href="{{app_url}}">{{dashboard_link_text}}</a>
+                    &bull;
+                    <a href="{{app_url}}/knowledge">{{help_link_text}}</a>
+                    &bull;
+                    <a href="{{preferences_url}}">{{preferences_link_text}}</a>
                 </div>
-                <p style="margin-top: 16px;">&copy; {{year}} Altus Hospitality. {{rights_reserved}}</p>
+                <hr class="footer-divider">
+                <p class="footer-copyright">&copy; {{year}} Altus Hospitality. {{rights_reserved}}</p>
             </div>
         </div>
+        <!--[if mso]>
+        </td></tr>
+        </table>
+        <![endif]-->
     </div>
 </body>
 </html>`;
 }
 
 function defaultTextTemplate(): string {
-  return "Altus Connect | {{title}}\n\n{{message}}\n\n{{action_url}}";
+  return `{{title}}
+
+{{greeting_hello}}{{recipient_name}},
+
+{{message}}
+
+{{action_label}}: {{action_url}}
+
+---
+{{footer_text}}
+
+{{preferences_link_text}}: {{preferences_url}}
+
+© {{year}} Altus Hospitality. {{rights_reserved}}`;
 }
 
 function resolveAbsoluteUrl(pathOrUrl: string, appBaseUrl: string): string {

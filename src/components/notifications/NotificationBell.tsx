@@ -11,6 +11,7 @@ import { bellVariants } from '@/lib/motion'
 import { getNotificationLink } from '@/lib/notificationLinks'
 import type { Notification } from '@/lib/types'
 import { formatDistanceToNow } from 'date-fns'
+import { arSA, enUS } from 'date-fns/locale'
 import { motion, useAnimation } from 'framer-motion'
 import { Bell } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
@@ -22,9 +23,10 @@ export function NotificationBell() {
   const { hasPermission } = usePermissions()
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
-  const { t } = useTranslation(['common', 'notifications'])
+  const { t, i18n } = useTranslation(['common', 'notifications', 'nav'])
   const controls = useAnimation()
   const prevUnreadCount = useRef(unreadCount)
+  const dateLocale = i18n.language.startsWith('ar') ? arSA : enUS
 
   // Trigger shake only on NEW unread notifications
   useEffect(() => {
@@ -39,9 +41,12 @@ export function NotificationBell() {
       markAsRead.mutate(notification.id)
     }
     const link = getNotificationLink(notification, { hasPermission })
+    setOpen(false)
     if (link) {
       navigate(link)
-      setOpen(false)
+    } else {
+      // Fallback to notifications center if no specific link could be resolved
+      navigate('/notifications')
     }
   }
 
@@ -70,7 +75,7 @@ export function NotificationBell() {
       </PopoverTrigger>
       <PopoverContent className="w-80 p-0" align="end">
         <div className="flex items-center justify-between p-4 border-b">
-          <h4 className="font-semibold text-sm">Notifications</h4>
+          <h4 className="font-semibold text-sm">{t('nav:notifications', 'Notifications')}</h4>
           <div className="flex gap-2">
             {unreadCount > 0 && (
               <Button
@@ -80,7 +85,7 @@ export function NotificationBell() {
                 onClick={() => markAllAsRead.mutate()}
                 disabled={isMarkingRead}
               >
-                Mark all read
+                {t('notifications:mark_all_read', 'Mark all read')}
               </Button>
             )}
           </div>
@@ -88,7 +93,7 @@ export function NotificationBell() {
         <div className="h-[300px] overflow-y-auto">
           {(!notifications || notifications.length === 0) ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
-              No notifications
+              {t('notifications:no_notifications', 'No notifications')}
             </div>
           ) : (
             <div className="flex flex-col">
@@ -111,7 +116,7 @@ export function NotificationBell() {
                     {notification.message}
                   </p>
                   <span className="text-[10px] text-muted-foreground mt-1">
-                    {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
+                    {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true, locale: dateLocale })}
                   </span>
                 </button>
               ))}
