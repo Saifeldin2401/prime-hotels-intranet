@@ -255,8 +255,6 @@ export function TrainingCertificateGenerator({
     `
   }
 
-  }
-
   const handleDownloadCertificate = async () => {
     const template = templates?.find(tpl => tpl.id === selectedTemplate)
     if (!template) return

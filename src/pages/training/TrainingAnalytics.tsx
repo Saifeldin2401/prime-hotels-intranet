@@ -17,6 +17,9 @@ import {
     SelectValue
 } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useDepartments } from '@/hooks/useDepartments'
+import { useProperty } from '@/contexts/PropertyContext'
+import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
@@ -27,15 +30,17 @@ import {
     Brain,
     CheckCircle,
     Target,
-    TrendingUp
+    TrendingUp,
+    Users
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface AnalyticsSummary {
-    totalAssignments: number
+    totalAssignees: number
     completedAssignments: number
     inProgressAssignments: number
+    notStartedAssignments: number
     overdueAssignments: number
     completionRate: number
     averageScore: number
@@ -53,7 +58,7 @@ interface ModulePerformance {
 }
 
 interface KnowledgeGap {
-    category: string
+    label: string
     questionCount: number
     averageAccuracy: number
     weakAreas: string[]
@@ -97,42 +102,32 @@ export default function TrainingAnalytics() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
-    const [departmentFilter, _setDepartmentFilter] = useState<string>('all')
+    const [departmentFilter, setDepartmentFilter] = useState<string>('all')
+    const { currentProperty } = useProperty()
+    const { departments } = useDepartments()
 
-    // Fetch summary stats
+    const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty!.id : null
+    const departmentId = departmentFilter !== 'all' ? departmentFilter : null
+
+    // Fetch summary stats -- resolves each assignment rule's real target audience
+    // (people, not rule count) via get_training_analytics_summary. See migration
+    // 20260805000000_training_analytics_correctness.sql for why this replaced a
+    // client-side rules/progress-row computation that was wrong on both counts.
     const { data: summary } = useQuery({
-        queryKey: ['training-analytics-summary', timeRange, departmentFilter],
+        queryKey: ['training-analytics-summary', timeRange, departmentId, propertyId],
         queryFn: async (): Promise<AnalyticsSummary> => {
-            // Get date filter
             const startDate = timeRange === 'all'
                 ? null
-                : format(subDays(new Date(), parseInt(timeRange)), 'yyyy-MM-dd')
+                : subDays(new Date(), parseInt(timeRange)).toISOString()
 
-            // Fetch assignments
-            let assignmentQuery = supabase
-                .from('training_assignment_rules')
-                .select('id, content_type, created_at')
+            const { data, error } = await supabase.rpc('get_training_analytics_summary', {
+                p_start_date: startDate,
+                p_department_id: departmentId,
+                p_property_id: propertyId
+            })
+            if (error) throw error
+            const row = data?.[0]
 
-            if (startDate) {
-                assignmentQuery = assignmentQuery.gte('created_at', startDate)
-            }
-
-            const { data: assignments, error: assignmentError } = await assignmentQuery
-            if (assignmentError) throw assignmentError
-
-            // Fetch progress
-            let progressQuery = supabase
-                .from('training_progress')
-                .select('id, status, score_percentage, completed_at')
-
-            if (startDate) {
-                progressQuery = progressQuery.gte('created_at', startDate)
-            }
-
-            const { data: progress, error: progressError } = await progressQuery
-            if (progressError) throw progressError
-
-            // Fetch modules & quizzes count
             const { count: moduleCount } = await supabase
                 .from('training_modules')
                 .select('*', { count: 'exact', head: true })
@@ -142,35 +137,19 @@ export default function TrainingAnalytics() {
                 .select('*', { count: 'exact', head: true })
                 .eq('status', 'published')
 
-            // Fetch onboarding tasks for correlation
             const { data: onboardingTasks } = await supabase
                 .from('onboarding_tasks')
                 .select('link_id, process_id')
                 .eq('link_type', 'training')
 
-            // Calculate metrics
-            const completed = progress?.filter(p => p.status === 'completed') || []
-            const inProgress = progress?.filter(p => p.status === 'in_progress') || []
-            // training_status enum uses 'expired' (there is no 'overdue' value)
-            const overdue = progress?.filter(p => p.status === 'expired') || []
-
-            const scores = completed
-                .map(p => p.score_percentage)
-                .filter((s): s is number => s !== null && s !== undefined)
-
-            const averageScore = scores.length > 0
-                ? scores.reduce((a, b) => a + b, 0) / scores.length
-                : 0
-
             return {
-                totalAssignments: assignments?.length || 0,
-                completedAssignments: completed.length,
-                inProgressAssignments: inProgress.length,
-                overdueAssignments: overdue.length,
-                completionRate: assignments?.length
-                    ? Math.round((completed.length / assignments.length) * 100)
-                    : 0,
-                averageScore: Math.round(averageScore),
+                totalAssignees: row?.total_assignees || 0,
+                completedAssignments: row?.completed_count || 0,
+                inProgressAssignments: row?.in_progress_count || 0,
+                notStartedAssignments: row?.not_started_count || 0,
+                overdueAssignments: row?.overdue_count || 0,
+                completionRate: row?.completion_rate ? Math.round(Number(row.completion_rate)) : 0,
+                averageScore: row?.average_score ? Math.round(Number(row.average_score)) : 0,
                 totalModules: moduleCount || 0,
                 totalQuizzes: quizCount || 0,
                 onboardingAssignments: onboardingTasks?.length || 0
@@ -178,60 +157,36 @@ export default function TrainingAnalytics() {
         }
     })
 
-    // Fetch module performance
+    // Fetch module performance -- one round trip instead of the old 2N-query loop,
+    // and now actually ordered before the top-10 cut.
     const { data: modulePerformance } = useQuery({
-        queryKey: ['training-module-performance', timeRange],
+        queryKey: ['training-module-performance', departmentId, propertyId],
         queryFn: async (): Promise<ModulePerformance[]> => {
-            const { data: modules, error } = await supabase
-                .from('training_modules')
-                .select('id, title')
-                .limit(10)
-
+            const { data, error } = await supabase.rpc('get_training_module_performance', {
+                p_department_id: departmentId,
+                p_property_id: propertyId,
+                p_limit: 10
+            })
             if (error) throw error
 
-            // For each module, get assignment/completion stats
-            const performance: ModulePerformance[] = []
-
-            for (const module of modules || []) {
-                const { data: assignments } = await supabase
-                    .from('training_assignment_rules')
-                    .select('id')
-                    .eq('content_id', module.id)
-                    .eq('content_type', 'module')
-
-                const { data: progress } = await supabase
-                    .from('training_progress')
-                    .select('status, score_percentage')
-                    .eq('training_id', module.id)
-                    .eq('lp_content_type', 'module')
-
-                const completed = progress?.filter(p => p.status === 'completed') || []
-                const scores = completed
-                    .map(p => p.score_percentage)
-                    .filter((s): s is number => s !== null)
-
-                performance.push({
-                    id: module.id,
-                    title: module.title,
-                    assignmentCount: assignments?.length || 0,
-                    completionRate: progress?.length
-                        ? Math.round((completed.length / progress.length) * 100)
-                        : 0,
-                    averageScore: scores.length
-                        ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length)
-                        : 0
-                })
-            }
-
-            return performance.sort((a, b) => b.assignmentCount - a.assignmentCount)
+            return (data || []).map(row => ({
+                id: row.module_id,
+                title: row.title,
+                assignmentCount: Number(row.assignee_count),
+                completionRate: row.completion_rate ? Math.round(Number(row.completion_rate)) : 0,
+                averageScore: row.average_score ? Math.round(Number(row.average_score)) : 0
+            }))
         }
     })
 
-    // Fetch knowledge gaps (based on question attempts)
+    // Fetch knowledge gaps (based on question attempts). Questions don't carry a real
+    // category (knowledge_questions.category_id is hardcoded NULL -- categories were
+    // removed from this domain), so group by the training module the question is
+    // linked to instead, which both exists and is the more actionable grouping for a
+    // training-admin audience ("which module's questions are people missing").
     const { data: knowledgeGaps } = useQuery({
         queryKey: ['knowledge-gaps'],
         queryFn: async (): Promise<KnowledgeGap[]> => {
-            // Get question attempts with accuracy
             const { data: attempts, error } = await supabase
                 .from('knowledge_question_attempts')
                 .select(`
@@ -239,10 +194,12 @@ export default function TrainingAnalytics() {
                     question:knowledge_questions(
                         id,
                         question_text,
-                        category_id,
-                        category:categories(name)
+                        training_module_id,
+                        tags,
+                        training_module:training_modules(title)
                     )
                 `)
+                .order('created_at', { ascending: false })
                 .limit(500)
 
             if (error) {
@@ -250,40 +207,36 @@ export default function TrainingAnalytics() {
                 return []
             }
 
-            // Group by category
-            const categoryStats: Record<string, { correct: number; total: number; questions: string[] }> = {}
+            const stats: Record<string, { correct: number; total: number; questions: string[] }> = {}
 
             for (const attempt of attempts || []) {
                 const question = attempt.question as any
                 if (!question) continue
 
-                const categoryName = question.category?.name || 'Uncategorized'
+                const label = question.training_module?.title
+                    || question.tags?.[0]
+                    || 'General'
 
-                if (!categoryStats[categoryName]) {
-                    categoryStats[categoryName] = { correct: 0, total: 0, questions: [] }
+                if (!stats[label]) {
+                    stats[label] = { correct: 0, total: 0, questions: [] }
                 }
 
-                categoryStats[categoryName].total++
+                stats[label].total++
                 if (attempt.is_correct) {
-                    categoryStats[categoryName].correct++
-                } else {
-                    // Track weak questions
-                    if (!categoryStats[categoryName].questions.includes(question.question_text)) {
-                        categoryStats[categoryName].questions.push(question.question_text)
-                    }
+                    stats[label].correct++
+                } else if (!stats[label].questions.includes(question.question_text)) {
+                    stats[label].questions.push(question.question_text)
                 }
             }
 
-            return Object.entries(categoryStats)
-                .map(([category, stats]) => ({
-                    category,
-                    questionCount: stats.total,
-                    averageAccuracy: stats.total > 0
-                        ? Math.round((stats.correct / stats.total) * 100)
-                        : 0,
-                    weakAreas: stats.questions.slice(0, 3) // Top 3 weak questions
+            return Object.entries(stats)
+                .map(([label, s]) => ({
+                    label,
+                    questionCount: s.total,
+                    averageAccuracy: s.total > 0 ? Math.round((s.correct / s.total) * 100) : 0,
+                    weakAreas: s.questions.slice(0, 3)
                 }))
-                .filter(g => g.averageAccuracy < 70) // Only show gaps (below 70% accuracy)
+                .filter(g => g.averageAccuracy < 70)
                 .sort((a, b) => a.averageAccuracy - b.averageAccuracy)
         }
     })
@@ -295,6 +248,17 @@ export default function TrainingAnalytics() {
                 description={t('analytics.description')}
                 actions={
                     <div className="flex items-center gap-3">
+                        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                            <SelectTrigger className="w-[180px]">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">{t('analytics.allDepartments', 'All Departments')}</SelectItem>
+                                {departments.map((dept) => (
+                                    <SelectItem key={dept.id} value={dept.id}>{dept.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                         <Select value={timeRange} onValueChange={(v) => setTimeRange(v as '7d' | '30d' | '90d' | 'all')}>
                             <SelectTrigger className="w-[140px]">
                                 <SelectValue />
@@ -313,9 +277,9 @@ export default function TrainingAnalytics() {
             {/* Summary Stats */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <StatCard
-                    title={t('totalAssignments')}
-                    value={summary?.totalAssignments || 0}
-                    icon={BookOpen}
+                    title={t('analytics.totalAssignees', 'People Assigned')}
+                    value={summary?.totalAssignees || 0}
+                    icon={Users}
                     color="blue"
                 />
                 <StatCard
@@ -453,7 +417,7 @@ export default function TrainingAnalytics() {
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className="font-medium text-orange-900">
-                                                    {gap.category}
+                                                    {gap.label}
                                                 </h4>
                                                 <Badge variant="destructive">
                                                     {t('analytics.accuracy', { percent: gap.averageAccuracy })}
