@@ -157,7 +157,7 @@ export default function EmailTemplateEditor() {
         title="Email Template Editor"
         description="Manage the HTML and Text structures for system email templates."
         backTo="/admin"
-        action={
+        actions={
           <Button onClick={handleSave} disabled={isSaving}>
             <Save className="w-4 h-4 mr-2" />
             {t('actions.save', { ns: 'common', defaultValue: 'Save Template' })}
