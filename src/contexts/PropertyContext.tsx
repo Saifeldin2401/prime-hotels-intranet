@@ -74,8 +74,8 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
 
                 // Add Group-level option for corporate users (also acts as Head Office)
                 const allOption = createPseudoProperty(
-                    'Consolidated (Cluster)',
-                    'Corporate Headquarters & Global Operations'
+                    'All Properties (Group Portfolio)',
+                    'ALTUS Group Portfolio & Regional Operations'
                 )
 
                 // Filter out redundant head office and deduplicate properties by ID
@@ -105,7 +105,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 if (uniqueProperties.length > 1) {
                     const clusterNames = uniqueProperties.map((property) => property.name).join(' & ')
                     const clusterOption = createPseudoProperty(
-                        'Consolidated (Cluster)',
+                        'All Properties (Group Portfolio)',
                         clusterNames
                     )
                     props = [clusterOption, ...uniqueProperties]

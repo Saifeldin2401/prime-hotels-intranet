@@ -989,6 +989,25 @@
     "moduleClonedDesc": "Module has been cloned successfully",
     "cloneError": "Error cloning module",
     "clone": "Clone",
+    "pending_review": "Pending Review",
+    "review": {
+        "submitForReview": "Submit for Review",
+        "submitted": "Submitted for Review",
+        "submittedDesc": "Reviewers have been notified.",
+        "submitError": "Error submitting module for review",
+        "approve": "Approve",
+        "approved": "Module Approved",
+        "approvedDesc": "The module is now published.",
+        "approveError": "Error approving module",
+        "reject": "Reject",
+        "rejected": "Module Rejected",
+        "rejectedDesc": "The module was sent back to draft.",
+        "rejectError": "Error rejecting module",
+        "rejectDialogTitle": "Reject Module",
+        "rejectDialogDesc": "Send \"{{title}}\" back to draft. Optionally tell the author what needs to change.",
+        "rejectReasonPlaceholder": "Reason for rejection (optional)",
+        "rejectDialogConfirm": "Reject"
+    },
     "hub": {
         "templates": {
             "title": "Choose a Template",

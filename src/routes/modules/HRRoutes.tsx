@@ -1,6 +1,7 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
+import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
 import { Route } from 'react-router-dom'
 
@@ -143,6 +144,10 @@ export const HRRoutes = () => (
             }
         />
         <Route
+            path="/hr/shifts"
+            element={<PreserveQueryNavigate to="/hr/scheduling" />}
+        />
+        <Route
             path="/hr/leave"
             element={
                 <ProtectedRoute>
@@ -151,6 +156,10 @@ export const HRRoutes = () => (
                     </AppLayout>
                 </ProtectedRoute>
             }
+        />
+        <Route
+            path="/hr/my-leave"
+            element={<PreserveQueryNavigate to="/hr/leave" />}
         />
         <Route
             path="/hr/request/:id"

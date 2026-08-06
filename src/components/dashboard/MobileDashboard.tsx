@@ -15,6 +15,8 @@
 
 // MobileStatsGrid import removed - not currently used
 import { ActionSheet, QuickActionButton, QuickActionGrid } from '@/components/mobile/ActionSheet'
+import { QuickTaskModal } from '@/components/dashboard/modals/QuickTaskModal'
+import { getTimeBasedGreeting } from '@/lib/greetingUtils'
 import { PullToRefresh } from '@/components/mobile/PullToRefresh'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -87,15 +89,8 @@ export function MobileDashboard() {
 
     const [showQuickActions, setShowQuickActions] = useState(false)
     const [showProfile, setShowProfile] = useState(false)
-    const [greeting, setGreeting] = useState(getGreeting())
-
-    // Update greeting based on time
-    function getGreeting() {
-        const hour = new Date().getHours()
-        if (hour < 12) return t('good_morning', 'Good Morning')
-        if (hour < 17) return t('good_afternoon', 'Good Afternoon')
-        return t('good_evening', 'Good Evening')
-    }
+    const { greetingText } = getTimeBasedGreeting(t)
+    const greeting = greetingText
 
     const shortDate = format(new Date(), 'EEE, MMM d')
 

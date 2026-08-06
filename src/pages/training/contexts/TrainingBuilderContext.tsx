@@ -913,6 +913,20 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         console.warn('Failed to autosave training draft:', errorDetails.message)
         setAutosaveStatus('idle')
       }
+
+      // Once a module has been saved at least once, also autosave its metadata to the
+      // server -- not just localStorage -- so a co-author or a different device sees fresh
+      // content instead of whatever was last explicitly saved. Content blocks are intentionally
+      // left out of this path (still saved on explicit Save / step transitions) to keep every
+      // autosave tick a single lightweight update rather than a full block diff/replace.
+      if (moduleId) {
+        saveModuleMutation.mutate(undefined, {
+          onError: (error) => {
+            const errorDetails = getUserFriendlyError(error)
+            console.warn('Failed to autosave module metadata to server:', errorDetails.message)
+          }
+        })
+      }
     }, 1200)
 
     return () => {
@@ -921,7 +935,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   }, [
     title, description, category, difficultyLevel, estimatedDuration, useEstimatedDuration,
     validityPeriod, passingScore, certificateEnabled, audience, contentLanguage,
-    templatePreset, sections, activeSection, draftKey
+    templatePreset, sections, activeSection, draftKey, moduleId
   ])
 
   // -------------------------------------------------------------------------
@@ -1665,6 +1679,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
           })
           .eq('id', savedModuleId)
         if (error) throw error
+
+        // Version history is a nice-to-have audit trail, not a publish blocker -- a
+        // snapshot failure shouldn't prevent the module from going live.
+        try {
+          await supabase.rpc('snapshot_training_module_version', { p_module_id: savedModuleId })
+        } catch (_versionError) {
+          // Non-critical; publish already succeeded.
+        }
       }
 
       setModuleStatus('published')

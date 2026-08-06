@@ -2,21 +2,27 @@ import React from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useTranslation } from "react-i18next"
-import { BarChart3, TrendingUp } from 'lucide-react'
+import { BarChart3 } from 'lucide-react'
 import { usePerformanceTimeline } from '@/hooks/usePerformanceTimeline'
 
 export function PerformanceChart() {
   const { t } = useTranslation('dashboard')
-  const { data: timelineData, isLoading } = usePerformanceTimeline()
+  const { data, isLoading } = usePerformanceTimeline()
 
-  const points = timelineData || []
+  const points = data?.points || []
+  const overallScore = data?.overallScore ?? 0
+  const targetScore = data?.targetScore ?? 85
+  const trendPercentage = data?.trendPercentage ?? 0
+  const rating = data?.rating || 'Needs Focus'
 
   // SVG coordinates calculation
   const width = 360
   const height = 140
   const padding = 20
 
-  const getX = (index: number) => padding + (index * (width - 2 * padding)) / (points.length - 1)
+  const getX = (index: number) => 
+    points.length <= 1 ? padding : padding + (index * (width - 2 * padding)) / (points.length - 1)
+  
   const getY = (val: number) => height - padding - (val * (height - 2 * padding)) / 100
 
   const perfD = points.reduce((acc, p, i) => {
@@ -25,10 +31,18 @@ export function PerformanceChart() {
     return i === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`
   }, '')
 
-  const targetY = getY(65)
+  const targetY = getY(targetScore)
   const targetD = `M ${padding} ${targetY} L ${width - padding} ${targetY}`
 
-  const areaD = `${perfD} L ${getX(points.length - 1)} ${height - padding} L ${getX(0)} ${height - padding} Z`
+  const areaD = points.length > 0 
+    ? `${perfD} L ${getX(points.length - 1)} ${height - padding} L ${getX(0)} ${height - padding} Z`
+    : ''
+
+  const getRatingColor = (r: string) => {
+    if (r === 'Excellent') return 'text-emerald-600 dark:text-emerald-400'
+    if (r === 'Good') return 'text-blue-600 dark:text-blue-400'
+    return 'text-amber-600 dark:text-amber-400'
+  }
 
   return (
     <Card className="border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[24px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden h-full flex flex-col justify-between">
@@ -81,27 +95,29 @@ export function PerformanceChart() {
                 <path d={targetD} fill="none" stroke="#10b981" strokeWidth="2" strokeDasharray="4 4" />
 
                 {/* Performance area fill */}
-                <path d={areaD} fill="url(#perfGradient)" />
+                {areaD && <path d={areaD} fill="url(#perfGradient)" />}
 
                 {/* Performance line */}
-                <path d={perfD} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                {perfD && <path d={perfD} fill="none" stroke="#3b82f6" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />}
 
                 {/* Data points */}
                 {points.map((p, i) => (
                   <circle
-                    key={i}
+                    key={p.day + i}
                     cx={getX(i)}
                     cy={getY(p.perf)}
                     r="4"
                     className="fill-blue-600 stroke-white dark:stroke-slate-900 stroke-2 hover:r-6 transition-all"
-                  />
+                  >
+                    <title>{`${p.day}: ${p.perf}%`}</title>
+                  </circle>
                 ))}
               </svg>
 
               {/* Day Labels */}
               <div className="flex items-center justify-between px-3 text-[10px] font-bold text-slate-400 dark:text-slate-500 pt-1">
-                {points.map((p) => (
-                  <span key={p.day}>{p.day}</span>
+                {points.map((p, i) => (
+                  <span key={p.day + i}>{p.day}</span>
                 ))}
               </div>
             </div>
@@ -124,7 +140,7 @@ export function PerformanceChart() {
                 />
                 <path
                   className="text-blue-600"
-                  strokeDasharray="92, 100"
+                  strokeDasharray={`${overallScore}, 100`}
                   strokeWidth="3.5"
                   strokeLinecap="round"
                   stroke="currentColor"
@@ -134,17 +150,25 @@ export function PerformanceChart() {
               </svg>
               <div className="absolute flex flex-col items-center">
                 <span className="text-xl font-black text-slate-800 dark:text-slate-100">
-                  92%
+                  {overallScore}%
                 </span>
-                <span className="text-[9px] font-extrabold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded">
-                  +6%
+                <span className={`text-[9px] font-extrabold px-1.5 py-0.2 rounded ${
+                  trendPercentage >= 0 
+                    ? 'text-emerald-600 bg-emerald-50 dark:bg-emerald-950/60' 
+                    : 'text-rose-600 bg-rose-50 dark:bg-rose-950/60'
+                }`}>
+                  {trendPercentage >= 0 ? `+${trendPercentage}%` : `${trendPercentage}%`}
                 </span>
               </div>
             </div>
 
             <div className="flex items-center justify-between w-full text-[10px] font-bold pt-1 border-t border-slate-200/60 dark:border-slate-800">
-              <span className="text-emerald-600">{t('performance.excellent', 'Excellent')}</span>
-              <span className="text-slate-400">{t('performance.target_val', 'Target: 85%')}</span>
+              <span className={getRatingColor(rating)}>
+                {t(`performance.rating_${rating.toLowerCase().replace(' ', '_')}`, rating)}
+              </span>
+              <span className="text-slate-400">
+                {t('performance.target_val', `Target: ${targetScore}%`)}
+              </span>
             </div>
           </div>
 

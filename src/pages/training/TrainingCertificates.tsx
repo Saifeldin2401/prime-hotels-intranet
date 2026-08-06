@@ -204,12 +204,13 @@ export default function TrainingCertificates() {
               <div className="max-w-md space-y-2">
                 <Label>{t('enterVerificationCode')}</Label>
                 <div className="flex gap-2">
-                  <Input
-                    placeholder="e.g. ABC123XYZ"
-                    value={verificationCode}
-                    onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
-                  />
-                  <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleVerify} disabled={verifyMutation.isPending}>
+                    <Input
+                        placeholder={t('enterCodeToVerify')}
+                        value={verificationCode}
+                        onChange={(e) => setVerificationCode(e.target.value.toUpperCase())}
+                        className="font-mono text-center text-lg tracking-wider uppercase"
+                    />
+                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white" onClick={handleVerify} disabled={verifyMutation.isPending}>
                     {verifyMutation.isPending ? t('common:actions.processing') : t('verifyButton')}
                   </Button>
                 </div>

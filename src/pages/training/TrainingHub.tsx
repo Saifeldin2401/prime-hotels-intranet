@@ -4,12 +4,15 @@ import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCa
 import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
 import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
 import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
+import { AssignTrainingWizardModal } from '@/components/training/AssignTrainingWizardModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
+import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -41,7 +44,7 @@ import { TrainingBuilder } from './TrainingBuilder'
 // Lazy load heavy chart component
 const TrainingProgressVisualization = lazy(() => import('@/components/training/TrainingProgressVisualization').then(m => ({ default: m.TrainingProgressVisualization })))
 
-type ModuleStatus = 'draft' | 'published' | 'archived'
+type ModuleStatus = 'draft' | 'pending_review' | 'published' | 'archived'
 type ViewMode = 'list' | 'builder' | 'assignments' | 'insights'
 
 interface TrainingModule {
@@ -57,7 +60,7 @@ interface TrainingModule {
 }
 
 export default function TrainingHub() {
-  const { profile, primaryRole } = useAuth()
+  const { primaryRole } = useAuth()
   const navigate = useNavigate()
   const { id: moduleId } = useParams()
   const [searchParams] = useSearchParams()
@@ -68,6 +71,7 @@ export default function TrainingHub() {
 
   const canManageModules = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'].includes(primaryRole || '')
   const canAssignTraining = ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].includes(primaryRole || '')
+  const canReviewModules = ['corporate_admin', 'regional_admin', 'regional_hr'].includes(primaryRole || '')
 
   // View mode: 'list' | 'builder' | 'assignments' | 'insights'
   const rawViewParam = searchParams.get('view')
@@ -118,10 +122,15 @@ export default function TrainingHub() {
   // Dialog states
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
   const [showWizardDialog, setShowWizardDialog] = useState(false)
+  const [assignWizardOpen, setAssignWizardOpen] = useState(false)
 
   // Delete states
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [moduleToDelete, setModuleToDelete] = useState<TrainingModule | null>(null)
+
+  // Review states
+  const [moduleToReject, setModuleToReject] = useState<TrainingModule | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
 
 
   // Data fetching
@@ -225,6 +234,50 @@ export default function TrainingHub() {
     }
   })
 
+  const submitForReviewMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('submit_training_module_for_review', { p_module_id: id })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      toast({ title: t('review.submitted'), description: t('review.submittedDesc') })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('review.submitError'), variant: 'destructive' })
+    }
+  })
+
+  const approveModuleMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.rpc('approve_training_module', { p_module_id: id })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      toast({ title: t('review.approved'), description: t('review.approvedDesc') })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('review.approveError'), variant: 'destructive' })
+    }
+  })
+
+  const rejectModuleMutation = useMutation({
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase.rpc('reject_training_module', { p_module_id: id, p_reason: reason || null })
+      if (error) throw error
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+      toast({ title: t('review.rejected'), description: t('review.rejectedDesc') })
+      setModuleToReject(null)
+      setRejectReason('')
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('review.rejectError'), variant: 'destructive' })
+    }
+  })
+
   // Event handlers
   const handleStartFromScratch = () => {
     setViewMode('builder', { moduleId: 'new' })
@@ -264,40 +317,11 @@ export default function TrainingHub() {
 
   const handleClone = async (module: TrainingModule) => {
     try {
-      const { data: cloned, error } = await supabase
-        .from('training_modules')
-        .insert({
-          title: `${module.title} (Copy)`,
-          description: module.description,
-          estimated_duration_minutes: module.estimated_duration_minutes ?? null,
-          created_by: profile?.id
-        })
-        .select()
-        .single()
-
+      // duplicate_training_module deep-copies every module setting (certificate config,
+      // passing score, recertification validity, retake rules, etc.) and its content
+      // blocks -- the previous client-side clone only copied title/description/duration.
+      const { error } = await supabase.rpc('duplicate_training_module', { p_module_id: module.id })
       if (error) throw error
-
-      // Clone content blocks if they exist.
-      // training_content_blocks consolidated into documents (content_type='training_block').
-      const { data: contentBlocks } = await supabase
-        .from('documents')
-        .select('*')
-        .eq('content_type', 'training_block')
-        .eq('training_module_id', module.id)
-
-      if (contentBlocks && contentBlocks.length > 0) {
-        await supabase
-          .from('documents')
-          .insert(
-            contentBlocks.map((block: Record<string, unknown>) => ({
-              ...block,
-              id: undefined,
-              training_module_id: cloned.id,
-              created_at: undefined,
-              updated_at: undefined
-            }))
-          )
-      }
 
       queryClient.invalidateQueries({ queryKey: ['training-modules'] })
       toast({
@@ -311,6 +335,25 @@ export default function TrainingHub() {
         description: t('cloneError'),
         variant: 'destructive'
       })
+    }
+  }
+
+  const handleSubmitForReview = (module: TrainingModule) => {
+    submitForReviewMutation.mutate(module.id)
+  }
+
+  const handleApprove = (module: TrainingModule) => {
+    approveModuleMutation.mutate(module.id)
+  }
+
+  const handleRequestReject = (module: TrainingModule) => {
+    setModuleToReject(module)
+    setRejectReason('')
+  }
+
+  const confirmReject = () => {
+    if (moduleToReject) {
+      rejectModuleMutation.mutate({ id: moduleToReject.id, reason: rejectReason })
     }
   }
 
@@ -356,6 +399,13 @@ export default function TrainingHub() {
       if (!canManageModules) return null
       return (
         <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
+          <Button
+            onClick={() => setAssignWizardOpen(true)}
+            className={cn("w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black shadow-md border-none", isRTL ? "flex-row-reverse" : "")}
+          >
+            <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+            {t('assign_wizard', 'Assign Training & Onboarding')}
+          </Button>
           <Button
             variant="outline"
             onClick={() => setViewMode('insights')}
@@ -559,7 +609,7 @@ export default function TrainingHub() {
                 ) : modules && modules.length > 0 ? (
                   modules.map((module) => (
                     <Card key={module.id} className="group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border-gray-100 overflow-hidden bg-white/50 backdrop-blur-sm">
-                      <div className={cn("h-2 w-full", module.status === 'published' ? 'bg-hotel-navy' : module.status === 'archived' ? 'bg-red-400' : 'bg-gray-300')} />
+                      <div className={cn("h-2 w-full", module.status === 'published' ? 'bg-hotel-navy' : module.status === 'archived' ? 'bg-red-400' : module.status === 'pending_review' ? 'bg-amber-400' : 'bg-gray-300')} />
                       <CardHeader className="pb-3 pt-5">
                         <div className="flex items-start justify-between gap-4">
                           <div className="flex-1 space-y-1">
@@ -572,7 +622,7 @@ export default function TrainingHub() {
                           </div>
                         </div>
                         <div className="flex flex-wrap gap-2 mt-3">
-                          <Badge variant="secondary" className={cn("rounded-sm font-normal", module.status === 'published' ? 'bg-green-100 text-green-800' : module.status === 'archived' ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-800')}>
+                          <Badge variant="secondary" className={cn("rounded-sm font-normal", module.status === 'published' ? 'bg-green-100 text-green-800' : module.status === 'archived' ? 'bg-red-100 text-red-800' : module.status === 'pending_review' ? 'bg-amber-100 text-amber-800' : 'bg-gray-100 text-gray-800')}>
                             {t(module.status || 'draft')}
                           </Badge>
                           {assignedModuleIds.has(module.id) && (
@@ -599,6 +649,9 @@ export default function TrainingHub() {
                           onAssign={() => handleAssign(module.id)}
                           onClone={() => handleClone(module)}
                           onDelete={() => handleDelete(module)}
+                          onSubmitForReview={module.status === 'draft' ? () => handleSubmitForReview(module) : undefined}
+                          onApprove={module.status === 'pending_review' && canReviewModules ? () => handleApprove(module) : undefined}
+                          onReject={module.status === 'pending_review' && canReviewModules ? () => handleRequestReject(module) : undefined}
                         />
                       </CardContent>
                     </Card>
@@ -723,6 +776,46 @@ export default function TrainingHub() {
         title={t('deleteModule')}
         description={t('deleteModuleDesc')}
         itemName={moduleToDelete?.title}
+      />
+
+      <Dialog open={!!moduleToReject} onOpenChange={(open) => !open && setModuleToReject(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('review.rejectDialogTitle')}</DialogTitle>
+            <DialogDescription>
+              {t('review.rejectDialogDesc', { title: moduleToReject?.title })}
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            value={rejectReason}
+            onChange={(e) => setRejectReason(e.target.value)}
+            placeholder={t('review.rejectReasonPlaceholder')}
+            rows={4}
+            className={isRTL ? 'text-right' : 'text-left'}
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setModuleToReject(null)}>
+              {t('common:action.cancel')}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmReject}
+              disabled={rejectModuleMutation.isPending}
+            >
+              {rejectModuleMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                t('review.rejectDialogConfirm')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AssignTrainingWizardModal
+        open={assignWizardOpen}
+        onOpenChange={setAssignWizardOpen}
+        onSuccess={() => queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })}
       />
     </div>
   )

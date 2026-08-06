@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle2, FileQuestion, Layers, ListChecks, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { BuilderStep } from './trainingBuilderTypes'
+import { VersionHistoryCard } from './VersionHistoryCard'
 
 interface RightPanelProps {
   builderStep: BuilderStep
@@ -190,6 +191,7 @@ export function RightPanel({
             ))}
           </CardContent>
         </Card>
+        <VersionHistoryCard moduleId={moduleId} isRTL={isRTL} />
       </div>
     )
   }

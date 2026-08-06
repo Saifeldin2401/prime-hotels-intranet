@@ -841,18 +841,36 @@ export async function getFeedbackTrends(days = 30): Promise<{ date: string; help
 }
 
 export async function getCategories(departmentId?: string) {
-    let query = supabase
-        .from('document_categories')
-        .select('*')
-        .order('name')
+    try {
+        let query = supabase
+            .from('document_categories')
+            .select('*')
+            .order('name')
 
-    if (departmentId) {
-        query = query.eq('department_id', departmentId)
+        if (departmentId) {
+            query = query.eq('department_id', departmentId)
+        }
+
+        const { data, error } = await query
+        if (!error && data && data.length > 0) return data
+
+        // Fallback to categories table if document_categories is empty or not found
+        let fallbackQuery = supabase
+            .from('categories')
+            .select('*')
+            .order('name')
+
+        if (departmentId) {
+            fallbackQuery = fallbackQuery.eq('department_id', departmentId)
+        }
+
+        const { data: fallbackData, error: fallbackError } = await fallbackQuery
+        if (!fallbackError && fallbackData) return fallbackData
+
+        return data || []
+    } catch {
+        return []
     }
-
-    const { data, error } = await query
-    if (error) return []
-    return data
 }
 
 export async function getContentTypeCounts(propertyId?: string): Promise<Record<string, number>> {

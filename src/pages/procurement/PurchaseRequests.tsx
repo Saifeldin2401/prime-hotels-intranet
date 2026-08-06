@@ -70,7 +70,15 @@ export default function PurchaseRequests() {
 
     const handleDecide = (id: string, status: 'approved' | 'rejected') => {
         if (!user) return
-        decideMutation.mutate({ id, status, approved_by: user.id })
+        decideMutation.mutate({ id, status }, {
+            onError: (error: any) => {
+                toast({
+                    title: t('common:common.error', { defaultValue: 'Error' }),
+                    description: error?.message || String(error),
+                    variant: 'destructive'
+                })
+            }
+        })
     }
 
     if (!isRealPropertyId(propertyId)) {
@@ -120,7 +128,7 @@ export default function PurchaseRequests() {
                                     </div>
                                     <div className="flex items-center gap-3">
                                         <Badge className={statusColors[request.status]}>{request.status.replace('_', ' ')}</Badge>
-                                        {request.status === 'pending' && (
+                                        {request.status === 'pending' && request.requested_by !== user?.id && (
                                             <>
                                                 <Button size="sm" variant="outline" onClick={() => handleDecide(request.id, 'approved')} disabled={decideMutation.isPending}>
                                                     {t('procurement:requests.approve', { defaultValue: 'Approve' })}

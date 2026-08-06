@@ -104,7 +104,7 @@ interface ArticleFormData {
     checklist_items: ChecklistItem[]
     faq_items: FAQItem[]
     video_url: string
-    images
+    images: Array<{ id: string; url: string; caption: string; order: number }>
     // AI Auto-tagging fields
     ai_tags: string[]
     ai_category: string

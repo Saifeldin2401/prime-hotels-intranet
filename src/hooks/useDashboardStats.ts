@@ -563,6 +563,62 @@ export function useHRStats(options?: { propertyId?: string; enabled?: boolean })
     })
 }
 
+// Bento Stats Row (top-of-dashboard mini cards, shown to every role)
+export interface BentoStats {
+    totalStaff: number
+    openVacancies: number
+    maintenanceIssues: number
+    openTickets: number
+}
+
+export function useBentoStats() {
+    const { currentProperty, propertyIds } = useProperty()
+
+    return useQuery({
+        queryKey: ['bento-stats', currentProperty?.id, propertyIds.slice().sort()],
+        queryFn: async (): Promise<BentoStats> => {
+            const isScoped = isRealPropertyId(currentProperty?.id)
+
+            const bentoSettled = await Promise.allSettled([
+                (() => {
+                    const q = supabase.from('user_properties').select('user_id', { count: 'exact', head: true })
+                    if (isScoped && currentProperty) { q.eq('property_id', currentProperty.id) }
+                    else if (propertyIds.length > 0) { q.in('property_id', propertyIds) }
+                    return q
+                })(),
+                (() => {
+                    const q = supabase.from('job_postings').select('id', { count: 'exact', head: true }).eq('status', 'open')
+                    if (isScoped && currentProperty) { q.eq('property_id', currentProperty.id) }
+                    else if (propertyIds.length > 0) { q.in('property_id', propertyIds) }
+                    return q
+                })(),
+                (() => {
+                    const q = supabase.from('maintenance_tickets').select('id', { count: 'exact', head: true }).not('status', 'in', '(completed,closed,cancelled)')
+                    if (isScoped && currentProperty) { q.eq('property_id', currentProperty.id) }
+                    else if (propertyIds.length > 0) { q.in('property_id', propertyIds) }
+                    return q
+                })(),
+                (() => {
+                    const q = supabase.from('guest_requests').select('id', { count: 'exact', head: true }).not('status', 'in', '(completed,cancelled)')
+                    if (isScoped && currentProperty) { q.eq('property_id', currentProperty.id) }
+                    else if (propertyIds.length > 0) { q.in('property_id', propertyIds) }
+                    return q
+                })(),
+            ])
+
+            return {
+                totalStaff: getSettledCount(bentoSettled[0], 'Bento total staff'),
+                openVacancies: getSettledCount(bentoSettled[1], 'Bento open vacancies'),
+                maintenanceIssues: getSettledCount(bentoSettled[2], 'Bento maintenance issues'),
+                openTickets: getSettledCount(bentoSettled[3], 'Bento open tickets'),
+            }
+        },
+        refetchInterval: 300000,
+        refetchIntervalInBackground: false,
+        staleTime: 120000,
+    })
+}
+
 // Area Manager Dashboard Stats
 export interface AreaManagerStats {
     totalProperties: number

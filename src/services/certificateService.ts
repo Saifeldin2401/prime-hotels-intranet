@@ -321,6 +321,24 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             }
         }
 
+        // Recertification: a module's validity_period_days is authored in the builder but was
+        // never actually applied to issued certificates, so nothing ever expired. Compute it here
+        // rather than requiring every caller to pass expiryDate explicitly.
+        if (!data.expiryDate && resolvedTrainingModuleId) {
+            const { data: validityInfo } = await supabase
+                .from('training_modules')
+                .select('validity_period_days')
+                .eq('id', resolvedTrainingModuleId)
+                .maybeSingle()
+
+            const validityDays = validityInfo?.validity_period_days
+            if (typeof validityDays === 'number' && validityDays > 0) {
+                const expiry = new Date(data.completionDate)
+                expiry.setDate(expiry.getDate() + validityDays)
+                data = { ...data, expiryDate: expiry }
+            }
+        }
+
         if (resolvedTrainingProgressId) {
             const { data: existingCert, error: existingCertError } = await supabase
                 .from('certificates')

@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { Copy, Edit, Eye, MoreVertical, Trash2, Users } from 'lucide-react'
+import { CheckCircle2, Copy, Edit, Eye, MoreVertical, SendHorizonal, Trash2, Users, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrainingModule {
@@ -22,6 +22,9 @@ interface ModuleQuickActionsProps {
   onAssign: () => void
   onClone: () => void
   onDelete: () => void
+  onSubmitForReview?: () => void
+  onApprove?: () => void
+  onReject?: () => void
 }
 
 export function ModuleQuickActions({
@@ -30,7 +33,10 @@ export function ModuleQuickActions({
   onView,
   onAssign,
   onClone,
-  onDelete
+  onDelete,
+  onSubmitForReview,
+  onApprove,
+  onReject
 }: ModuleQuickActionsProps) {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -68,6 +74,25 @@ export function ModuleQuickActions({
             <Copy className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('clone')}
           </DropdownMenuItem>
+          {(onSubmitForReview || onApprove || onReject) && <DropdownMenuSeparator />}
+          {onSubmitForReview && (
+            <DropdownMenuItem onClick={onSubmitForReview} className={cn(isRTL ? "flex-row-reverse" : "")}>
+              <SendHorizonal className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+              {t('review.submitForReview')}
+            </DropdownMenuItem>
+          )}
+          {onApprove && (
+            <DropdownMenuItem onClick={onApprove} className={cn("text-green-700 focus:text-green-700", isRTL ? "flex-row-reverse" : "")}>
+              <CheckCircle2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+              {t('review.approve')}
+            </DropdownMenuItem>
+          )}
+          {onReject && (
+            <DropdownMenuItem onClick={onReject} className={cn("text-amber-700 focus:text-amber-700", isRTL ? "flex-row-reverse" : "")}>
+              <XCircle className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+              {t('review.reject')}
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             onClick={onDelete}

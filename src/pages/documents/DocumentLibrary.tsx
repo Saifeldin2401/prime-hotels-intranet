@@ -20,6 +20,7 @@ import {
     useDocumentBulkMove,
     useDocumentBulkRestore,
     useDocumentBulkUnarchive,
+    useCreateDocumentFolder,
     useDocumentFolders,
     useDocuments,
     useDocumentStats,
@@ -141,6 +142,8 @@ export default function DocumentLibrary() {
   const [selectedForAI, setSelectedForAI] = useState<Document | null>(null)
   const [selectedForPublish, setSelectedForPublish] = useState<Document | null>(null)
   const [publishDialogOpen, setPublishDialogOpen] = useState(false)
+  const [newFolderDialogOpen, setNewFolderDialogOpen] = useState(false)
+  const [newFolderName, setNewFolderName] = useState('')
   const virtualListParentRef = useRef<HTMLDivElement | null>(null)
 
   useEffect(() => {
@@ -169,6 +172,27 @@ export default function DocumentLibrary() {
     contentType: null, // Show all types including 'sop', 'policy', 'guide', etc.
   })
 
+  const [sortBy, setSortBy] = useState<'recent' | 'name' | 'size' | 'expiry'>('recent')
+
+  const sortedDocuments = useMemo(() => {
+    const sorted = [...documents]
+    switch (sortBy) {
+      case 'name':
+        return sorted.sort((a, b) => a.title.localeCompare(b.title))
+      case 'size':
+        return sorted.sort((a, b) => (b.file_size || 0) - (a.file_size || 0))
+      case 'expiry':
+        return sorted.sort((a, b) => {
+          if (!a.expires_at) return 1
+          if (!b.expires_at) return -1
+          return new Date(a.expires_at).getTime() - new Date(b.expires_at).getTime()
+        })
+      case 'recent':
+      default:
+        return sorted.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    }
+  }, [documents, sortBy])
+
   const { data: stats } = useDocumentStats()
   const { data: folders = [] } = useDocumentFolders()
   const { data: tags = [] } = useDocumentTags()
@@ -180,6 +204,7 @@ export default function DocumentLibrary() {
   const updateDocument = useUpdateDocument()
   const deleteDocument = useDeleteDocument()
   const restoreDocument = useRestoreDocument()
+  const createFolder = useCreateDocumentFolder()
   const permanentDelete = usePermanentDeleteDocument()
   const toggleFavorite = useToggleFavorite()
   const { mutate: recordViewMutate } = useRecordDocumentView()
@@ -984,7 +1009,12 @@ export default function DocumentLibrary() {
                   <FolderOpen className="w-4 h-4" />
                   {t('folders.title')}
                 </h3>
-                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={() => setNewFolderDialogOpen(true)}
+                >
                   <Plus className="w-4 h-4" />
                 </Button>
               </div>
@@ -1093,11 +1123,15 @@ export default function DocumentLibrary() {
                     {documents.length > 0 && (
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-gray-400">{t('sort.label')}</span>
-                        <select className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer">
-                          <option>{t('sort.recently_added')}</option>
-                          <option>{t('sort.name')}</option>
-                          <option>{t('sort.size')}</option>
-                          <option>{t('sort.expiry_date')}</option>
+                        <select
+                          value={sortBy}
+                          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+                          className="text-xs border-none bg-transparent focus:ring-0 cursor-pointer"
+                        >
+                          <option value="recent">{t('sort.recently_added')}</option>
+                          <option value="name">{t('sort.name')}</option>
+                          <option value="size">{t('sort.size')}</option>
+                          <option value="expiry">{t('sort.expiry_date')}</option>
                         </select>
                       </div>
                     )}
@@ -1121,7 +1155,7 @@ export default function DocumentLibrary() {
                         />
                       ) : viewMode === 'grid' ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                          {documents.map(renderDocumentCard)}
+                          {sortedDocuments.map(renderDocumentCard)}
                         </div>
                       ) : shouldVirtualizeDocumentList ? (
                         <div ref={virtualListParentRef} className="h-[70vh] overflow-auto">
@@ -1130,7 +1164,7 @@ export default function DocumentLibrary() {
                             style={{ height: `${documentRowVirtualizer.getTotalSize()}px` }}
                           >
                             {documentRowVirtualizer.getVirtualItems().map((virtualRow) => {
-                              const doc = documents[virtualRow.index]
+                              const doc = sortedDocuments[virtualRow.index]
                               if (!doc) return null
                               const rowContent = renderDocumentRow(doc)
 
@@ -1148,7 +1182,7 @@ export default function DocumentLibrary() {
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {documents.map(renderDocumentRow)}
+                          {sortedDocuments.map(renderDocumentRow)}
                         </div>
                       )}
                     </LoadingTransition>
@@ -1315,6 +1349,52 @@ export default function DocumentLibrary() {
               disabled={!editForm.title.trim() || updateDocument.isPending}
             >
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Folder Dialog */}
+      <Dialog
+        open={newFolderDialogOpen}
+        onOpenChange={(open) => {
+          setNewFolderDialogOpen(open)
+          if (!open) setNewFolderName('')
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t('folders.new_folder', 'New Folder')}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="new-folder-name">{t('folders.name', 'Name')}</Label>
+            <Input
+              id="new-folder-name"
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setNewFolderDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              disabled={!newFolderName.trim() || createFolder.isPending}
+              onClick={() => {
+                createFolder.mutate(
+                  { name: newFolderName.trim(), parent_id: filters.folderId },
+                  {
+                    onSuccess: () => {
+                      setNewFolderDialogOpen(false)
+                      setNewFolderName('')
+                    }
+                  }
+                )
+              }}
+            >
+              {t('folders.create', 'Create')}
             </Button>
           </DialogFooter>
         </DialogContent>

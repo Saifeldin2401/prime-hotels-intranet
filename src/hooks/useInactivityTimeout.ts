@@ -23,8 +23,10 @@ export function useInactivityTimeout({
 }: UseInactivityTimeoutOptions = {}) {
     const { sessionTimeoutMinutes } = useSecuritySettings()
 
-    const timeoutMs = customTimeoutMs ?? sessionTimeoutMinutes * 60 * 1000
-    const warningMs = customWarningMs ?? Math.max(0, timeoutMs - 5 * 60 * 1000)
+    // Default: 30 minute timeout if setting is undefined, warning shows 2 minutes before timeout
+    const defaultTimeoutMs = (sessionTimeoutMinutes && sessionTimeoutMinutes > 0 ? sessionTimeoutMinutes : 30) * 60 * 1000
+    const timeoutMs = customTimeoutMs ?? defaultTimeoutMs
+    const warningMs = customWarningMs ?? Math.max(10000, timeoutMs - 2 * 60 * 1000)
 
     const { user, signOut } = useAuth()
     const navigate = useNavigate()
@@ -48,6 +50,20 @@ export function useInactivityTimeout({
     const handleTimeout = useCallback(async () => {
         clearAllTimers()
         setShowWarning(false)
+
+        if (!user) return
+
+        // Verify multi-tab activity before logging out
+        const lastActivityStr = localStorage.getItem(STORAGE_KEY)
+        if (lastActivityStr) {
+            const elapsed = Date.now() - parseInt(lastActivityStr, 10)
+            if (elapsed < timeoutMs - 5000) {
+                // User was active in another tab within the timeout window — do not log out
+                return
+            }
+        }
+
+        // Clean up storage key
         localStorage.removeItem(STORAGE_KEY)
 
         if (onTimeout) {
@@ -55,45 +71,21 @@ export function useInactivityTimeout({
             return
         }
 
-        // Before logging out, verify the session is actually expired server-side.
-        // On mobile, timers are suspended during backgrounding — the user may have
-        // been active on another tab or the session may have been refreshed.
         try {
-            const { data, error } = await supabase.auth.getUser()
-            if (error || !data?.user) {
-                // Session truly expired — proceed with logout
-                await signOut()
-                navigate('/login')
-            } else {
-                // Session is still valid — try refreshing activity from other tabs
-                const otherTabActivity = localStorage.getItem(STORAGE_KEY)
-                if (otherTabActivity) {
-                    const elapsed = Date.now() - parseInt(otherTabActivity, 10)
-                    if (elapsed < timeoutMs) {
-                        // Another tab was active — don't log out, just reset timers
-                        // This will be handled by the visibility change handler
-                        return
-                    }
-                }
-                // User genuinely inactive but session valid — still log them out for security
-                await signOut()
-                navigate('/login')
-            }
-        } catch {
-            // Network error — don't logout, user might just have flaky connection
-            // Re-check when network is available
-            if (import.meta.env.DEV) {
-                console.warn('[InactivityTimeout] Network error during session check, deferring logout')
-            }
+            await signOut()
+            navigate('/login', { replace: true })
+        } catch (err) {
+            console.error('[InactivityTimeout] Error signing out on timeout:', err)
         }
-    }, [clearAllTimers, onTimeout, signOut, navigate, timeoutMs])
+    }, [user, clearAllTimers, onTimeout, signOut, navigate, timeoutMs])
 
     const handleWarning = useCallback(() => {
+        if (!user) return
+
         const now = Date.now()
         const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
         const elapsed = now - lastActivity
 
-        // If we already passed the warning threshold but haven't timed out yet
         if (elapsed >= warningMs && elapsed < timeoutMs) {
             setShowWarning(true)
             const remaining = Math.max(0, timeoutMs - elapsed)
@@ -118,9 +110,9 @@ export function useInactivityTimeout({
                 onWarning()
             }
         } else if (elapsed >= timeoutMs) {
-            handleTimeout()
+            void handleTimeout()
         }
-    }, [timeoutMs, warningMs, onWarning, handleTimeout])
+    }, [user, timeoutMs, warningMs, onWarning, handleTimeout])
 
     const resetTimers = useCallback((isExternalUpdate = false) => {
         if (!enabled || !user) return
@@ -135,24 +127,29 @@ export function useInactivityTimeout({
         lastActivityRef.current = now
 
         // Set warning timer
-        warningRef.current = setTimeout(handleWarning, warningMs)
+        warningRef.current = setTimeout(handleWarning, Math.max(1000, warningMs))
 
         // Set timeout timer
-        timeoutRef.current = setTimeout(handleTimeout, timeoutMs)
+        timeoutRef.current = setTimeout(handleTimeout, Math.max(5000, timeoutMs))
     }, [enabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
 
-    const extendSession = useCallback(() => {
+    const extendSession = useCallback(async () => {
+        try {
+            await supabase.auth.refreshSession()
+        } catch {
+            // Ignore background refresh errors
+        }
         resetTimers()
     }, [resetTimers])
 
-    // Activity event handler
+    // Activity event handler with 5-second throttle
     const handleActivity = useCallback(() => {
-        // Throttle: only reset if more than 1 second since last activity or if warning is showing
+        if (!enabled || !user) return
         const now = Date.now()
-        if (showWarning || now - lastActivityRef.current > 1000) {
+        if (showWarning || now - lastActivityRef.current > 5000) {
             resetTimers()
         }
-    }, [resetTimers, showWarning])
+    }, [enabled, user, resetTimers, showWarning])
 
     useEffect(() => {
         if (!enabled || !user) {
@@ -167,48 +164,35 @@ export function useInactivityTimeout({
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
-                // When hidden, we don't clear timers because we want the background timeout to fire
-                // if the tab stays open in the background.
                 return
             }
 
-            // Returning to the tab: check if we timed out while away.
-            // Use a small delay on mobile to let localStorage sync from other tabs
-            // and network to stabilize after backgrounding.
-            const checkAfterResume = () => {
-                const now = Date.now()
-                const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
-                const elapsed = now - lastActivity
+            // Tab became visible — check elapsed inactivity time
+            const now = Date.now()
+            const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
+            const elapsed = now - lastActivity
 
-                if (elapsed >= timeoutMs) {
-                    handleTimeout()
-                } else if (elapsed >= warningMs) {
-                    handleWarning()
-                } else {
-                    // Not even in warning zone, just reset timers based on the synchronized last activity
-                    resetTimers(true)
-                }
-            }
-
-            // Brief delay allows localStorage cross-tab sync to complete
-            setTimeout(checkAfterResume, 100)
-        }
-
-        // Listen for activity in other tabs
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === STORAGE_KEY && e.newValue) {
-                // Activity happened in another tab
+            if (elapsed >= timeoutMs) {
+                void handleTimeout()
+            } else if (elapsed >= warningMs) {
+                handleWarning()
+            } else {
                 resetTimers(true)
             }
         }
 
-        // Set up timers after effect commit to avoid synchronous state updates in effect body.
-        const initTimerId = window.setTimeout(() => {
-            resetTimers(true)
-        }, 0)
+        // Listen for activity in other browser tabs
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === STORAGE_KEY && e.newValue) {
+                resetTimers(true)
+            }
+        }
 
-        // Listen for user activity
-        const events = ['mousedown', 'keydown', 'scroll', 'touchstart', 'mousemove']
+        // Start timers
+        resetTimers(true)
+
+        // User activity listeners
+        const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
         events.forEach(event => {
             window.addEventListener(event, handleActivity, { passive: true })
         })
@@ -216,7 +200,6 @@ export function useInactivityTimeout({
         window.addEventListener('storage', handleStorageChange)
 
         return () => {
-            clearTimeout(initTimerId)
             clearAllTimers()
             events.forEach(event => {
                 window.removeEventListener(event, handleActivity)
@@ -229,8 +212,8 @@ export function useInactivityTimeout({
     return {
         showWarning,
         remainingTime,
-        remainingMinutes: Math.ceil(remainingTime / 60000),
-        remainingSeconds: Math.ceil(remainingTime / 1000),
+        remainingMinutes: Math.max(0, Math.ceil(remainingTime / 60000)),
+        remainingSeconds: Math.max(0, Math.ceil(remainingTime / 1000)),
         extendSession,
         signOutNow: handleTimeout
     }

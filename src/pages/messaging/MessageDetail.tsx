@@ -24,7 +24,6 @@ import {
     CheckSquare,
     Clock,
     Forward,
-    Paperclip,
     Reply,
     Send,
     User
@@ -257,32 +256,6 @@ export default function MessageDetail() {
               {message.content}
             </div>
           </div>
-
-          {/* Attachments */}
-          {message.attachments && message.attachments.length > 0 && (
-            <div className="mt-6 pt-6 border-t">
-              <h4 className="font-medium mb-3 flex items-center gap-2">
-                <Paperclip className="w-4 h-4" />
-                {t('attachments')} ({message.attachments.length})
-              </h4>
-              <div className="space-y-2">
-                {message.attachments.map((attachment) => (
-                  <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                    <div className="flex items-center gap-2">
-                      <Paperclip className="w-4 h-4 text-gray-500" />
-                      <span className="font-medium">{attachment.file_name}</span>
-                      <span className="text-sm text-gray-500">
-                        ({(attachment.file_size / 1024).toFixed(1)} KB)
-                      </span>
-                    </div>
-                    <Button className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 rounded-md transition-colors" size="sm">
-                      {t('download')}
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Parent Message (if reply) */}
           {message.parent_message && (

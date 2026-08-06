@@ -41,10 +41,11 @@ function getAnnouncementProfile(profile: AnnouncementProfile | AnnouncementProfi
 export default function AnnouncementDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
-    const { profile } = useAuth()
+    const { profile, roles } = useAuth()
     const queryClient = useQueryClient()
     const { t, i18n } = useTranslation('announcements')
     const [newComment, setNewComment] = useState('')
+    const [showAllAcknowledgments, setShowAllAcknowledgments] = useState(false)
 
     // Fetch announcement details
     const { data: announcement, isLoading, error } = useQuery({
@@ -260,8 +261,8 @@ export default function AnnouncementDetail() {
 
     // Check if current user can view analytics (creator or manager roles)
     const canViewAnalytics = profile?.id === announcement.created_by ||
-        ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].some(
-            role => ((profile as any)?.roles || []).includes(role)
+        roles.some(userRole =>
+            ['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'].includes(userRole.role)
         )
 
     return (
@@ -405,13 +406,13 @@ export default function AnnouncementDetail() {
                                 <div className="mt-4">
                                     <button
                                         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-                                        onClick={() => { }}
+                                        onClick={() => setShowAllAcknowledgments((prev) => !prev)}
                                     >
                                         <Users className="w-4 h-4" />
                                         {t('detail.acknowledgments_count', { count: acknowledgments.length })} ({acknowledgments.length})
                                     </button>
                                     <div className="mt-2 flex flex-wrap gap-2">
-                                        {acknowledgments.slice(0, 10).map((ack) => (
+                                        {(showAllAcknowledgments ? acknowledgments : acknowledgments.slice(0, 10)).map((ack) => (
                                             <div key={ack.id} className="flex items-center gap-1.5 bg-muted rounded-full px-2 py-1 text-xs">
                                                 <Avatar className="h-4 w-4">
                                                     <AvatarImage src={ack.user?.avatar_url} />
@@ -422,10 +423,13 @@ export default function AnnouncementDetail() {
                                                 <span>{ack.user?.full_name}</span>
                                             </div>
                                         ))}
-                                        {acknowledgments.length > 10 && (
-                                            <span className="text-xs text-muted-foreground">
+                                        {!showAllAcknowledgments && acknowledgments.length > 10 && (
+                                            <button
+                                                className="text-xs text-muted-foreground hover:text-foreground underline"
+                                                onClick={() => setShowAllAcknowledgments(true)}
+                                            >
                                                 +{acknowledgments.length - 10} more
-                                            </span>
+                                            </button>
                                         )}
                                     </div>
                                 </div>

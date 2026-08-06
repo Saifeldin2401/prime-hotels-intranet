@@ -122,12 +122,12 @@ export default function OperationsDashboard() {
                         {isConsolidatedPropertyId(currentProperty?.id) && (
                             <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100 border-blue-200 text-xs font-semibold px-2.5 py-0.5 rounded-full dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800 flex items-center gap-1">
                                 <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse"></span>
-                                {t('operations:dashboard.all_properties', 'Consolidated (Cluster)')}
+                                {t('operations:dashboard.all_properties', 'Group Portfolio (All Properties)')}
                             </Badge>
                         )}
                     </div>
                     <p className="text-muted-foreground">
-                        {currentProperty?.name || t('operations:dashboard.all_properties', 'Consolidated (Cluster)')} — {format(new Date(), 'EEEE, MMMM d, yyyy')}
+                        {currentProperty?.name || t('operations:dashboard.all_properties', 'Group Portfolio (All Properties)')} — {format(new Date(), 'EEEE, MMMM d, yyyy')}
                     </p>
                 </div>
                 <div className="flex items-center gap-2">

@@ -7,6 +7,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useDepartments } from '@/hooks/useDepartments'
 import { useArticles } from '@/hooks/useKnowledge'
 import { cn } from '@/lib/utils'
 import type { KnowledgeContentType } from '@/types/knowledge'
@@ -29,7 +30,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 const CONTENT_TYPES: {
     type: KnowledgeContentType
-    icon
+    icon: any
     color: string
     gradient: string
 }[] = [
@@ -95,11 +96,18 @@ export default function KnowledgeBrowse() {
     const departmentId = searchParams.get('department')
     const typeFilter = searchParams.get('type')
 
+    const { departments } = useDepartments()
     const { data: articles, isLoading } = useArticles({
         limit: 100,
         departmentId: departmentId || undefined,
         type: typeFilter || undefined
     })
+
+    const activeDepartmentName = departmentId
+        ? departments?.find(d => d.id === departmentId)?.name
+            || articles?.find(a => a.department_id === departmentId)?.department?.name
+            || t('departments', 'Department')
+        : null
 
     // Count articles by type
     const typeCounts = articles?.reduce((acc, article) => {
@@ -127,7 +135,7 @@ export default function KnowledgeBrowse() {
                         {departmentId && (
                             <Badge variant="secondary" className="flex items-center gap-1">
                                 <BookOpen className="h-3 w-3" />
-                                {t('search_page.filters.all_departments')} {/* Placeholder for Active Dept Name if available, or just generic */}
+                                {activeDepartmentName}
                                 <Link
                                     to="/knowledge/browse"
                                     className="ms-1 hover:text-red-600"

@@ -41,8 +41,9 @@ export interface CertificateTemplateData {
     qrDataUrl?: string
 }
 
-function escapeHtml(value: string): string {
-    return value
+function escapeHtml(value?: string | null): string {
+    if (!value) return ''
+    return String(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
@@ -344,17 +345,17 @@ export const CERTIFICATE_TEMPLATE_STYLES = `
 `
 
 export function buildCertificateHtml(data: CertificateTemplateData): string {
-    const recipientName = escapeHtml(data.recipientName.toUpperCase())
-    const courseTitle = escapeHtml(data.title.toUpperCase())
+    const recipientName = escapeHtml((data.recipientName || 'CERTIFICATE HOLDER').toUpperCase())
+    const courseTitle = escapeHtml((data.title || 'ACCREDITATION PROGRAM').toUpperCase())
     const orgName = escapeHtml(data.orgName || 'ALTUS ADVISORY')
     const brandLine = escapeHtml(data.brandLine || 'ENTERPRISE HOSPITALITY & EXECUTIVE EDUCATION')
     const issuedByName = escapeHtml(data.issuedByName || 'Saifeldin M.')
     const issuedByTitle = escapeHtml(data.issuedByTitle || 'VP of Learning & Quality')
     const secondarySignatoryName = escapeHtml(data.secondarySignatoryName || 'Dr. Khalid Al-Mansoor')
     const secondarySignatoryTitle = escapeHtml(data.secondarySignatoryTitle || 'Executive Managing Director')
-    const completionDateLabel = escapeHtml(data.completionDateLabel)
-    const certificateNumber = escapeHtml(data.certificateNumber)
-    const verificationCode = escapeHtml(data.verificationCode)
+    const completionDateLabel = escapeHtml(data.completionDateLabel || new Date().toLocaleDateString('en-US'))
+    const certificateNumber = escapeHtml(data.certificateNumber || data.verificationCode || 'ALTUS-CERT-2026')
+    const verificationCode = escapeHtml(data.verificationCode || data.certificateNumber || 'ALTUS-CERT-2026')
     const verifyUrl = escapeHtml(data.verifyUrl || 'verify.altusadvisory.com')
 
     const nameFontSize = scaledFontSize(recipientName, 44, 26, 22)

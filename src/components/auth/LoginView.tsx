@@ -45,7 +45,22 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
-  const [emailValid, setEmailValid] = useState<boolean | null>(() => safeLocalStorage.hasItem('remembered_email'));
+  const [emailValid, setEmailValid] = useState<boolean | null>(() => {
+    const savedEmail = safeLocalStorage.getItem('remembered_email');
+    if (savedEmail) {
+      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(savedEmail);
+    }
+    return null;
+  });
+
+  // Keep remembered_email in local storage reactively synchronized whenever email or rememberMe changes
+  useEffect(() => {
+    if (rememberMe && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      safeLocalStorage.setItem('remembered_email', email);
+    } else if (!rememberMe) {
+      safeLocalStorage.removeItem('remembered_email');
+    }
+  }, [rememberMe, email]);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);

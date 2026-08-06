@@ -1,4 +1,5 @@
 import { QuickCreateMenu } from '@/components/dashboard/QuickCreateMenu'
+import { getTimeBasedGreeting } from '@/lib/greetingUtils'
 import { Button } from '@/components/ui/button'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
@@ -81,15 +82,8 @@ export function WelcomeHeader({
 
   const highPriorityTaskCount = tasks?.filter(t => t.priority === 'high' || t.priority === 'urgent').length || 0
 
-  const getGreeting = () => {
-    const hour = new Date().getHours()
-    let greeting = ""
-    if (hour < 12) greeting = t("welcome_header.good_morning", "Good morning")
-    else if (hour < 17) greeting = t("welcome_header.good_afternoon", "Good afternoon")
-    else greeting = t("welcome_header.good_evening", "Good evening")
-    
-    return greeting
-  }
+  const { greetingText, emoji } = getTimeBasedGreeting(t)
+  const greeting = greetingText
 
   const rawFirstName = profile?.full_name?.split(' ')[0] || user?.email?.split('@')[0] || 'Team'
   const firstName = rawFirstName.charAt(0).toUpperCase() + rawFirstName.slice(1).toLowerCase()

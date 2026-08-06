@@ -7,8 +7,12 @@
 
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { ChartViewport } from '@/components/ui/ChartViewport'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
     Select,
     SelectContent,
@@ -21,6 +25,7 @@ import { useDepartments } from '@/hooks/useDepartments'
 import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
+import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { format, subDays } from 'date-fns'
 import {
@@ -29,12 +34,15 @@ import {
     BookOpen,
     Brain,
     CheckCircle,
+    ListFilter,
     Target,
+    TrendingDown,
     TrendingUp,
     Users
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 interface AnalyticsSummary {
     totalAssignees: number
@@ -55,6 +63,16 @@ interface ModulePerformance {
     assignmentCount: number
     completionRate: number
     averageScore: number
+}
+
+interface ExpiringCertificate {
+    certificateId: string
+    userId: string
+    recipientName: string
+    title: string
+    trainingModuleId: string | null
+    expiryDate: string
+    daysUntilExpiry: number
 }
 
 interface KnowledgeGap {
@@ -98,23 +116,121 @@ const StatCard = ({
     </Card>
 )
 
+interface FunnelBlock {
+    blockId: string
+    title: string
+    type: string
+    order: number
+    completedCount: number
+    completionRate: number
+}
+
+function ModuleFunnelDialog({
+    moduleId,
+    moduleTitle,
+    open,
+    onOpenChange
+}: {
+    moduleId: string | null
+    moduleTitle: string
+    open: boolean
+    onOpenChange: (open: boolean) => void
+}) {
+    const { t } = useTranslation('training')
+    const { data: funnel, isLoading } = useQuery({
+        queryKey: ['training-module-funnel', moduleId],
+        queryFn: async (): Promise<FunnelBlock[]> => {
+            const { data, error } = await supabase.rpc('get_training_module_funnel', { p_module_id: moduleId! })
+            if (error) throw error
+            return (data || []).map(row => ({
+                blockId: row.block_id,
+                title: row.block_title || t('untitledBlock', 'Untitled block'),
+                type: row.block_type || '',
+                order: row.block_order,
+                completedCount: Number(row.completed_count),
+                completionRate: row.completion_rate ? Number(row.completion_rate) : 0
+            }))
+        },
+        enabled: !!moduleId && open
+    })
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>{t('analytics.dropOffTitle', 'Drop-off Funnel')}</DialogTitle>
+                    <DialogDescription>{moduleTitle}</DialogDescription>
+                </DialogHeader>
+                {isLoading ? (
+                    <p className="text-center text-sm text-muted-foreground py-6">{t('loading', 'Loading...')}</p>
+                ) : !funnel || funnel.length === 0 ? (
+                    <p className="text-center text-sm text-muted-foreground py-6">
+                        {t('analytics.noFunnelData', 'No content blocks or activity yet.')}
+                    </p>
+                ) : (
+                    <div className="space-y-3">
+                        {funnel.map((block, index) => {
+                            const prevRate = index > 0 ? funnel[index - 1].completionRate : 100
+                            const drop = prevRate - block.completionRate
+                            return (
+                                <div key={block.blockId}>
+                                    {index > 0 && drop > 15 && (
+                                        <div className="flex items-center gap-1.5 text-xs text-rose-600 mb-1.5 ps-1">
+                                            <TrendingDown className="w-3.5 h-3.5" />
+                                            {t('analytics.dropOffAmount', '{{percent}}% drop-off here', { percent: Math.round(drop) })}
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between mb-1">
+                                        <span className="text-sm font-medium truncate pe-2">
+                                            {index + 1}. {block.title}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground shrink-0">
+                                            {block.completedCount} · {block.completionRate}%
+                                        </span>
+                                    </div>
+                                    <Progress value={block.completionRate} className="h-2" />
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </DialogContent>
+        </Dialog>
+    )
+}
+
 export default function TrainingAnalytics() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
     const [timeRange, setTimeRange] = useState<'7d' | '30d' | '90d' | 'all'>('30d')
     const [departmentFilter, setDepartmentFilter] = useState<string>('all')
+    const [myTeamOnly, setMyTeamOnly] = useState(false)
+    const [funnelModule, setFunnelModule] = useState<{ id: string; title: string } | null>(null)
     const { currentProperty } = useProperty()
     const { departments } = useDepartments()
 
     const propertyId = isRealPropertyId(currentProperty?.id) ? currentProperty!.id : null
     const departmentId = departmentFilter !== 'all' ? departmentFilter : null
 
+    // No employee-level manager relationship exists in this schema -- "my team" is built on
+    // departments.manager_id (an existing, already-editable relationship in
+    // DepartmentControlCenter.tsx that was never used for scoping anything until now).
+    const { data: managedDepartments } = useQuery({
+        queryKey: ['my-managed-departments'],
+        queryFn: async () => {
+            const { data, error } = await supabase.rpc('get_my_managed_department_ids')
+            if (error) throw error
+            return data || []
+        }
+    })
+    const isManager = !!managedDepartments && managedDepartments.length > 0
+
     // Fetch summary stats -- resolves each assignment rule's real target audience
     // (people, not rule count) via get_training_analytics_summary. See migration
     // 20260805000000_training_analytics_correctness.sql for why this replaced a
     // client-side rules/progress-row computation that was wrong on both counts.
     const { data: summary } = useQuery({
-        queryKey: ['training-analytics-summary', timeRange, departmentId, propertyId],
+        queryKey: ['training-analytics-summary', timeRange, departmentId, propertyId, myTeamOnly],
         queryFn: async (): Promise<AnalyticsSummary> => {
             const startDate = timeRange === 'all'
                 ? null
@@ -123,7 +239,8 @@ export default function TrainingAnalytics() {
             const { data, error } = await supabase.rpc('get_training_analytics_summary', {
                 p_start_date: startDate,
                 p_department_id: departmentId,
-                p_property_id: propertyId
+                p_property_id: propertyId,
+                p_my_team_only: myTeamOnly
             })
             if (error) throw error
             const row = data?.[0]
@@ -241,6 +358,49 @@ export default function TrainingAnalytics() {
         }
     })
 
+    // Certificates approaching expiry (recertification is auto-processed nightly by
+    // process_certificate_expirations -- this is the "who's coming due" early-warning view).
+    const { data: expiringCertificates } = useQuery({
+        queryKey: ['expiring-certificates', departmentId, propertyId],
+        queryFn: async (): Promise<ExpiringCertificate[]> => {
+            const { data, error } = await supabase.rpc('get_expiring_certificates', {
+                p_within_days: 90,
+                p_department_id: departmentId,
+                p_property_id: propertyId
+            })
+            if (error) throw error
+
+            return (data || []).map(row => ({
+                certificateId: row.certificate_id,
+                userId: row.user_id,
+                recipientName: row.recipient_name,
+                title: row.title,
+                trainingModuleId: row.training_module_id,
+                expiryDate: row.expiry_date,
+                daysUntilExpiry: row.days_until_expiry
+            }))
+        }
+    })
+
+    // Weekly completion trend -- everything else on this page was a snapshot; this is the
+    // first real "are we getting better" signal, backed by actual completed_at history.
+    const { data: completionTrend, isLoading: isTrendLoading } = useQuery({
+        queryKey: ['training-completion-trend', departmentId, propertyId, myTeamOnly],
+        queryFn: async () => {
+            const { data, error } = await supabase.rpc('get_training_completion_trend', {
+                p_weeks: 12,
+                p_department_id: departmentId,
+                p_property_id: propertyId,
+                p_my_team_only: myTeamOnly
+            })
+            if (error) throw error
+            return (data || []).map(row => ({
+                week: row.week_start,
+                completed: Number(row.completed_count)
+            }))
+        }
+    })
+
     return (
         <div className={`space-y-6 ${isRTL ? 'text-right' : 'text-left'}`}>
             <PageHeader
@@ -248,7 +408,21 @@ export default function TrainingAnalytics() {
                 description={t('analytics.description')}
                 actions={
                     <div className="flex items-center gap-3">
-                        <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                        {isManager && (
+                            <Button
+                                variant={myTeamOnly ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => {
+                                    setMyTeamOnly(prev => !prev)
+                                    setDepartmentFilter('all')
+                                }}
+                                className={myTeamOnly ? 'bg-hotel-navy hover:bg-hotel-navy-dark' : ''}
+                            >
+                                <Users className="w-4 h-4 me-1.5" />
+                                {t('analytics.myTeam', 'My Team')}
+                            </Button>
+                        )}
+                        <Select value={departmentFilter} onValueChange={setDepartmentFilter} disabled={myTeamOnly}>
                             <SelectTrigger className="w-[180px]">
                                 <SelectValue />
                             </SelectTrigger>
@@ -309,6 +483,58 @@ export default function TrainingAnalytics() {
                 />
             </div>
 
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-blue-600" />
+                        {t('analytics.completionTrendTitle', 'Completions Over Time (12 Weeks)')}
+                    </CardTitle>
+                    <CardDescription>
+                        {t('analytics.completionTrendDesc', 'Modules completed per week, based on actual completion history.')}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {isTrendLoading ? (
+                        <Skeleton className="h-[220px] w-full" />
+                    ) : !completionTrend || completionTrend.every(w => w.completed === 0) ? (
+                        <p className="text-center text-sm text-muted-foreground py-10">
+                            {t('analytics.noTrendData', 'No completions recorded in this period yet.')}
+                        </p>
+                    ) : (
+                        <ChartViewport className="h-[220px] min-w-[300px]" minHeight={220}>
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={completionTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                                    <defs>
+                                        <linearGradient id="colorCompletions" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#0B1C3E" stopOpacity={0.6} />
+                                            <stop offset="95%" stopColor="#0B1C3E" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                    <XAxis
+                                        dataKey="week"
+                                        tickFormatter={(str) => {
+                                            const d = new Date(str)
+                                            return `${d.getDate()}/${d.getMonth() + 1}`
+                                        }}
+                                        stroke="#9ca3af"
+                                        fontSize={12}
+                                        tickLine={false}
+                                        axisLine={false}
+                                    />
+                                    <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} allowDecimals={false} />
+                                    <Tooltip
+                                        contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        labelFormatter={(label) => new Date(label).toLocaleDateString()}
+                                    />
+                                    <Area type="monotone" dataKey="completed" stroke="#0B1C3E" strokeWidth={2} fill="url(#colorCompletions)" name={t('completed', 'Completed')} />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </ChartViewport>
+                    )}
+                </CardContent>
+            </Card>
+
             {/* Tabs for different views */}
             <Tabs defaultValue="modules" className="space-y-4">
                 <TabsList>
@@ -319,6 +545,13 @@ export default function TrainingAnalytics() {
                     <TabsTrigger value="gaps" className="gap-2">
                         <Brain className="w-4 h-4" />
                         {t('analytics.knowledgeGaps')}
+                    </TabsTrigger>
+                    <TabsTrigger value="expiring" className="gap-2">
+                        <Award className="w-4 h-4" />
+                        {t('analytics.expiringCertifications', 'Expiring Certifications')}
+                        {expiringCertificates && expiringCertificates.length > 0 && (
+                            <Badge variant="destructive" className="ms-1">{expiringCertificates.length}</Badge>
+                        )}
                     </TabsTrigger>
                 </TabsList>
 
@@ -344,9 +577,20 @@ export default function TrainingAnalytics() {
                                         >
                                             <div className="flex items-center justify-between mb-2">
                                                 <h4 className="font-medium">{module.title}</h4>
-                                                <Badge variant="outline">
-                                                    {t('analytics.assignedCount', { count: module.assignmentCount })}
-                                                </Badge>
+                                                <div className="flex items-center gap-2">
+                                                    <Badge variant="outline">
+                                                        {t('analytics.assignedCount', { count: module.assignmentCount })}
+                                                    </Badge>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-7 px-2 text-xs"
+                                                        onClick={() => setFunnelModule({ id: module.id, title: module.title })}
+                                                    >
+                                                        <ListFilter className="w-3.5 h-3.5 me-1" />
+                                                        {t('analytics.dropOffTitle', 'Drop-off Funnel')}
+                                                    </Button>
+                                                </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
                                                 <div>
@@ -447,7 +691,66 @@ export default function TrainingAnalytics() {
                         </CardContent>
                     </Card>
                 </TabsContent>
+
+                <TabsContent value="expiring">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Award className="w-5 h-5 text-amber-500" />
+                                {t('analytics.expiringCertificationsTitle', 'Certifications Expiring Soon')}
+                            </CardTitle>
+                            <CardDescription>
+                                {t('analytics.expiringCertificationsDesc', 'Certificates expiring within 90 days. Recertification is assigned automatically once a certificate lapses.')}
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-3">
+                                {!expiringCertificates || expiringCertificates.length === 0 ? (
+                                    <div className="text-center py-8">
+                                        <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                                        <p className="font-medium text-green-700">
+                                            {t('analytics.noExpiringCertifications', 'No certifications expiring soon.')}
+                                        </p>
+                                    </div>
+                                ) : (
+                                    expiringCertificates.map((cert) => {
+                                        const urgent = cert.daysUntilExpiry <= 30
+                                        return (
+                                            <div
+                                                key={cert.certificateId}
+                                                className={cn(
+                                                    "flex items-center justify-between p-4 border rounded-lg",
+                                                    urgent ? "border-rose-200 bg-rose-50" : "border-amber-200 bg-amber-50"
+                                                )}
+                                            >
+                                                <div>
+                                                    <h4 className="font-medium text-slate-900">{cert.recipientName}</h4>
+                                                    <p className="text-sm text-muted-foreground">{cert.title}</p>
+                                                </div>
+                                                <div className="text-right">
+                                                    <Badge variant={urgent ? 'destructive' : 'outline'}>
+                                                        {t('analytics.expiresInDays', { count: cert.daysUntilExpiry, defaultValue: '{{count}} days left' })}
+                                                    </Badge>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {format(new Date(cert.expiryDate), 'MMM d, yyyy')}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        )
+                                    })
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
             </Tabs>
+
+            <ModuleFunnelDialog
+                moduleId={funnelModule?.id || null}
+                moduleTitle={funnelModule?.title || ''}
+                open={!!funnelModule}
+                onOpenChange={(open) => { if (!open) setFunnelModule(null) }}
+            />
         </div>
     )
 }

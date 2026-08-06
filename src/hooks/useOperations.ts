@@ -82,16 +82,14 @@ export function useDeleteImportLog() {
 
     return useMutation({
         mutationFn: async (id: string) => {
-            const { error } = await supabase.rpc('delete_operations_import', {
-                import_log_id: id,
-            })
+            const { error } = await supabase.from('data_import_logs').delete().eq('id', id)
 
             if (error) throw error
             return id
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['data-import-logs'] })
-            crudToasts.delete.success('Import history and associated data')
+            crudToasts.delete.success('Import history')
         },
         onError: () => crudToasts.delete.error('import history')
     })

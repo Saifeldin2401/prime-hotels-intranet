@@ -308,8 +308,10 @@ export default function MaintenanceDashboard() {
               <SelectItem value="all">{t('all_status')}</SelectItem>
               <SelectItem value="open">{t('dashboard.open')}</SelectItem>
               <SelectItem value="in_progress">{t('dashboard.in_progress')}</SelectItem>
-              <SelectItem value="resolved">{t('dashboard.resolved')}</SelectItem>
+              <SelectItem value="pending_parts">{t('dashboard.pending_parts', 'Pending Parts')}</SelectItem>
+              <SelectItem value="completed">{t('dashboard.completed', 'Completed')}</SelectItem>
               <SelectItem value="closed">{t('dashboard.closed')}</SelectItem>
+              <SelectItem value="cancelled">{t('dashboard.cancelled', 'Cancelled')}</SelectItem>
             </SelectContent>
           </Select>
           <Select value={priorityFilter} onValueChange={setPriorityFilter}>

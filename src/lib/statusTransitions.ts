@@ -20,7 +20,8 @@ const STATUS_TRANSITIONS: Record<EntityType, Record<string, EntityStatus[]>> = {
     task: {
         todo: ['in_progress', 'open', 'cancelled'], // Initial state (same as open)
         open: ['in_progress', 'cancelled'],
-        in_progress: ['completed', 'cancelled', 'on_hold'],
+        in_progress: ['review', 'completed', 'cancelled', 'on_hold'],
+        review: ['completed', 'in_progress', 'cancelled'],
         on_hold: ['in_progress', 'cancelled'],
         completed: [], // Terminal state
         cancelled: [], // Terminal state

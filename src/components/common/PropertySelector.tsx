@@ -43,7 +43,7 @@ export function PropertySelector({
       <div className="flex items-center gap-2 p-2 border rounded-md">
         <Building className="w-4 h-4" />
         <span className="text-sm font-medium">
-          {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'Consolidated (Cluster)') : property.name}
+          {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'All Properties (Group Portfolio)') : property.name}
         </span>
       </div>
     )
@@ -61,9 +61,9 @@ export function PropertySelector({
             {consolidatedProperties.map((property) => (
               <SelectItem key={property.id} value={property.id}>
                 <div className="flex items-center gap-2">
-                  <LayoutDashboard className="w-4 h-4" />
+                  <LayoutDashboard className="w-4 h-4 text-indigo-500" />
                   <span>
-                    {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'Consolidated (Cluster)') : property.name}
+                    {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'All Properties (Group Portfolio)') : property.name}
                   </span>
                 </div>
               </SelectItem>
@@ -112,7 +112,7 @@ export function PropertyAccessBadge({ propertyId, showDetails = false }: Propert
   const { canAccessProperty } = usePermissions()
 
   if (!propertyId || isConsolidatedPropertyId(propertyId)) {
-    return <Badge variant="outline">{t_ext('consolidated_view_all', 'Consolidated (Cluster)')}</Badge>
+    return <Badge variant="outline">{t_ext('consolidated_view_all', 'All Properties (Group Portfolio)')}</Badge>
   }
 
   const property = properties.find(p => p.id === propertyId)

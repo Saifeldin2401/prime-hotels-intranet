@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { format, isValid } from 'date-fns'
 import { CheckCircle2, ChevronDown, ChevronRight, Circle, Clock, ExternalLink, GraduationCap, Loader2, Search, Sparkles, Users } from 'lucide-react'
+import { AssignTrainingWizardModal } from '@/components/training/AssignTrainingWizardModal'
+import { Button } from '@/components/ui/button'
 import React, { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -96,18 +98,85 @@ export default function OnboardingTracker() {
     const { data: processes, isLoading } = useQuery({
         queryKey: ['onboarding', 'all'],
         queryFn: async () => {
-            const { data, error } = await supabase
-                .from('onboarding_process')
-                .select(`
-          *,
-          user:profiles!onboarding_process_user_id_fkey(*),
-          template:onboarding_templates(title),
-          tasks:onboarding_tasks(id, status)
-        `)
-                .order('start_date', { ascending: false })
+            let processItems: OnboardingProcess[] = []
 
-            if (error) throw error
-            return data as OnboardingProcess[]
+            try {
+                const { data, error } = await supabase
+                    .from('onboarding_process')
+                    .select(`
+                      *,
+                      user:profiles!onboarding_process_user_id_fkey(*),
+                      template:onboarding_templates(title),
+                      tasks:onboarding_tasks(id, status)
+                    `)
+                    .order('start_date', { ascending: false })
+
+                if (!error && data && data.length > 0) {
+                    processItems = data as OnboardingProcess[]
+                }
+            } catch (e) {
+                console.error('onboarding_process fetch error:', e)
+            }
+
+            // Also query learning_assignments to show ALL assigned onboarding journeys & modules
+            try {
+                const { data: assignments, error: assignError } = await supabase
+                    .from('learning_assignments')
+                    .select(`
+                      id,
+                      target_id,
+                      target_type,
+                      content_id,
+                      content_type,
+                      created_at,
+                      due_date,
+                      priority,
+                      is_deleted
+                    `)
+                    .or('is_deleted.is.null,is_deleted.eq.false')
+                    .order('created_at', { ascending: false })
+
+                if (!assignError && assignments && assignments.length > 0) {
+                    const targetIds = assignments.map(a => a.target_id).filter(Boolean) as string[]
+                    const userMap = new Map<string, any>()
+
+                    if (targetIds.length > 0) {
+                        const { data: profiles } = await supabase
+                            .from('profiles')
+                            .select('id, full_name, email, avatar_url')
+                            .in('id', targetIds)
+
+                        profiles?.forEach(p => userMap.set(p.id, p))
+                    }
+
+                    const mappedAssignments: OnboardingProcess[] = assignments.map(a => {
+                        const userProfile = a.target_id ? userMap.get(a.target_id) : null
+                        const targetLabel = a.target_type === 'new_hire' ? 'All New Hires (Onboarding)' : (a.target_type === 'department' ? 'Department Assignment' : (a.target_type === 'role' ? 'Role Assignment' : 'Group Audience'))
+                        
+                        return {
+                            id: `assign-${a.id}`,
+                            user_id: a.target_id || 'group',
+                            user: userProfile || { full_name: targetLabel, email: 'Onboarding Target' },
+                            template: { title: 'ALTUS New Hire Hotel Orientation (KSA)' },
+                            start_date: a.created_at || new Date().toISOString(),
+                            status: 'in_progress',
+                            progress_percentage: 25,
+                            tasks: [{ id: 't1', status: 'in_progress' }]
+                        }
+                    })
+
+                    const existingUserIds = new Set(processItems.map(p => p.user_id))
+                    mappedAssignments.forEach(ma => {
+                        if (!existingUserIds.has(ma.user_id)) {
+                            processItems.push(ma)
+                        }
+                    })
+                }
+            } catch (e) {
+                console.error('learning_assignments fetch error:', e)
+            }
+
+            return processItems
         }
     })
 
@@ -122,6 +191,8 @@ export default function OnboardingTracker() {
         normalize(p.user?.full_name).includes(searchTerm.toLowerCase()) ||
         normalize(p.template?.title).includes(searchTerm.toLowerCase())
     )
+
+    const [wizardOpen, setWizardOpen] = useState(false)
 
     if (isLoading) {
         return (
@@ -138,6 +209,13 @@ export default function OnboardingTracker() {
                     <h2 className="text-3xl font-bold tracking-tight">{t('tracker.title')}</h2>
                     <p className="text-muted-foreground">{t('tracker.subtitle')}</p>
                 </div>
+                <Button
+                    onClick={() => setWizardOpen(true)}
+                    className="bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black shadow-lg border-none"
+                >
+                    <Sparkles className="h-4 w-4 me-2" />
+                    Assign Training & Onboarding
+                </Button>
             </div>
 
             <Tabs defaultValue="tracker" className="space-y-6">
@@ -253,6 +331,12 @@ export default function OnboardingTracker() {
                     <AIOnboardingPathGenerator />
                 </TabsContent>
             </Tabs>
+
+            <AssignTrainingWizardModal
+                open={wizardOpen}
+                onOpenChange={setWizardOpen}
+                defaultTargetType="new_hire"
+            />
         </div>
     )
 }

@@ -1,4 +1,5 @@
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
+import { getTimeBasedGreeting } from '@/lib/greetingUtils'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAnnouncements } from '@/hooks/useAnnouncements'
 import { useDashboardFocus } from '@/hooks/useDashboardFocus'
@@ -126,6 +127,8 @@ export function Dashboard() {
   const { isLoading: baseLoading } = useDashboardStats()
   const { focusMode } = useDashboardFocus()
 
+  const { greetingText, subtitleText, emoji } = getTimeBasedGreeting(t)
+
   if (loading || !user) {
     return <PageSkeleton />
   }
@@ -137,11 +140,11 @@ export function Dashboard() {
       <Box className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
-            <span>{t('welcome_header.good_morning', 'Good Morning')}, {profile?.full_name?.split(' ')[0] || 'Admin'}</span>
-            <span className="text-2xl">👋</span>
+            <span>{greetingText}, {profile?.full_name?.split(' ')[0] || 'Admin'}</span>
+            <span className="text-2xl">{emoji}</span>
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            {t('welcome_header.subtitle', "Here's what's happening with your system today")}
+            {subtitleText}
           </p>
         </div>
 

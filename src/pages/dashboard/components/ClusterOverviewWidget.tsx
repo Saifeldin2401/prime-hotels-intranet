@@ -6,7 +6,7 @@ import {
     useCorporateStats,
     useHRStats,
 } from '@/hooks/useDashboardStats'
-import { isRealPropertyId } from '@/lib/propertyScope'
+import { isRealPropertyId, CONSOLIDATED_PROPERTY_ID } from '@/lib/propertyScope'
 import { getBusinessRoleForAppRole, type BusinessRole } from '@/lib/organizationalRoles'
 import { cn } from '@/lib/utils'
 import { LazyMotion, domAnimation, m } from 'framer-motion'
@@ -26,7 +26,8 @@ import {
     AlertCircle,
     CheckCircle2,
     Building,
-    ClipboardList
+    ClipboardList,
+    Layers
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
@@ -53,10 +54,10 @@ interface ClusterMetricCard {
     alert?: boolean
 }
 
-// Cluster General Manager View
+// Group Portfolio General Manager View
 function ClusterGMOverview() {
     const { t } = useTranslation('dashboard')
-    const { currentProperty, propertyIds, availableProperties } = useProperty()
+    const { currentProperty, availableProperties, switchProperty } = useProperty()
     const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
     const navigate = useNavigate()
 
@@ -68,8 +69,10 @@ function ClusterGMOverview() {
 
     const cards: ClusterMetricCard[] = [
         {
-            label: t('cluster.properties_in_cluster', 'Properties in Cluster'),
-            value: propertyCount,
+            label: isConsolidatedView 
+                ? t('cluster.active_properties', 'Active Hotel Properties')
+                : t('cluster.current_hotel', 'Hotel Establishment'),
+            value: isConsolidatedView ? propertyCount : (currentProperty?.name || '1 Hotel'),
             icon: Building2,
             theme: 'navy'
         },
@@ -115,40 +118,57 @@ function ClusterGMOverview() {
         <div className="space-y-4">
             {/* Scope Banner */}
             <div className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border",
+                "flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border transition-all shadow-sm",
                 isConsolidatedView
-                    ? "bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200"
-                    : "bg-slate-50 border-slate-200"
+                    ? "bg-gradient-to-r from-indigo-50/80 via-blue-50/50 to-indigo-50/80 dark:from-indigo-950/40 dark:to-slate-900/40 border-indigo-200/80 dark:border-indigo-800/40"
+                    : "bg-slate-50/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800/80"
             )}>
-                <div className={cn(
-                    "p-2 rounded-lg",
-                    isConsolidatedView ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-600"
-                )}>
-                    {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                <div className="flex items-center gap-3">
+                    <div className={cn(
+                        "p-2.5 rounded-xl border shadow-sm",
+                        isConsolidatedView 
+                            ? "bg-indigo-600 text-white border-indigo-500" 
+                            : "bg-amber-500 text-slate-950 border-amber-400"
+                    )}>
+                        {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                    </div>
+                    <div>
+                        <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <span>
+                                {isConsolidatedView
+                                    ? t('cluster.consolidated_view', 'ALTUS Group Portfolio (All Properties)')
+                                    : t('cluster.property_view', 'Hotel Performance: {{name}}', { name: currentProperty?.name })
+                                }
+                            </span>
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {isConsolidatedView
+                                ? t('cluster.viewing_all_properties', 'Viewing aggregated operational metrics across all {{count}} group properties', { count: propertyCount })
+                                : t('cluster.viewing_single_property', 'Viewing operational metrics for {{name}}', { name: currentProperty?.name })
+                            }
+                        </p>
+                    </div>
                 </div>
-                <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-700">
-                        {isConsolidatedView
-                            ? t('cluster.consolidated_view', 'Consolidated (Cluster)')
-                            : t('cluster.property_view', 'Property View: {{name}}', { name: currentProperty?.name })
-                        }
-                    </p>
-                    <p className="text-xs text-slate-500">
-                        {isConsolidatedView
-                            ? t('cluster.viewing_all_properties', 'Viewing aggregated data across all {{count}} properties', { count: propertyCount })
-                            : t('cluster.viewing_single_property', 'Viewing data for selected property only')
-                        }
-                    </p>
+
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                    {isConsolidatedView ? (
+                        <button
+                            onClick={() => navigate('/operations/analytics')}
+                            className="text-xs font-bold text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-100/80 dark:bg-indigo-900/60 hover:bg-indigo-200 transition-colors border border-indigo-200/60"
+                        >
+                            {t('cluster.compare_properties', 'Compare Hotels')}
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                        </button>
+                    ) : (
+                        <button
+                            onClick={() => switchProperty(CONSOLIDATED_PROPERTY_ID)}
+                            className="text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-800 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-amber-100/80 dark:bg-amber-900/60 hover:bg-amber-200 transition-colors border border-amber-200/60"
+                        >
+                            <Layers className="w-3.5 h-3.5" />
+                            {t('cluster.switch_to_group', 'Switch to Group Portfolio')}
+                        </button>
+                    )}
                 </div>
-                {isConsolidatedView && (
-                    <button
-                        onClick={() => navigate('/operations/analytics')}
-                        className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 transition-colors"
-                    >
-                        {t('cluster.compare_properties', 'Compare')}
-                        <ArrowRightLeft className="w-3 h-3" />
-                    </button>
-                )}
             </div>
 
             {/* Metrics Grid */}
@@ -160,10 +180,10 @@ function ClusterGMOverview() {
     )
 }
 
-// Cluster Department Head (Regional HR) View
+// Group Portfolio Regional HR View
 function ClusterHROverview() {
     const { t } = useTranslation('dashboard')
-    const { currentProperty, availableProperties } = useProperty()
+    const { currentProperty, availableProperties, switchProperty } = useProperty()
     const { data: stats, isLoading } = useHRStats({ propertyId: currentProperty?.id })
 
     const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
@@ -174,8 +194,10 @@ function ClusterHROverview() {
 
     const cards: ClusterMetricCard[] = [
         {
-            label: t('cluster.properties_managed', 'Properties Managed'),
-            value: propertyCount,
+            label: isConsolidatedView 
+                ? t('cluster.properties_managed', 'Hotel Properties Managed')
+                : t('cluster.current_hotel', 'Hotel Establishment'),
+            value: isConsolidatedView ? propertyCount : (currentProperty?.name || '1 Hotel'),
             icon: Building2,
             theme: 'navy'
         },
@@ -218,31 +240,47 @@ function ClusterHROverview() {
         <div className="space-y-4">
             {/* Scope Banner */}
             <div className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border",
+                "flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl border transition-all shadow-sm",
                 isConsolidatedView
-                    ? "bg-gradient-to-r from-purple-50 to-pink-50 border-purple-200"
-                    : "bg-slate-50 border-slate-200"
+                    ? "bg-gradient-to-r from-purple-50/80 via-pink-50/50 to-purple-50/80 dark:from-purple-950/40 dark:to-slate-900/40 border-purple-200/80 dark:border-purple-800/40"
+                    : "bg-slate-50/80 dark:bg-slate-900/80 border-slate-200/80 dark:border-slate-800/80"
             )}>
-                <div className={cn(
-                    "p-2 rounded-lg",
-                    isConsolidatedView ? "bg-purple-100 text-purple-600" : "bg-slate-200 text-slate-600"
-                )}>
-                    {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                <div className="flex items-center gap-3">
+                    <div className={cn(
+                        "p-2.5 rounded-xl border shadow-sm",
+                        isConsolidatedView 
+                            ? "bg-purple-600 text-white border-purple-500" 
+                            : "bg-emerald-600 text-white border-emerald-500"
+                    )}>
+                        {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
+                    </div>
+                    <div>
+                        <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                            <span>
+                                {isConsolidatedView
+                                    ? t('cluster.hr_cluster_view', 'Group Portfolio HR Overview')
+                                    : t('cluster.hr_property_view', 'Hotel HR Overview: {{name}}', { name: currentProperty?.name })
+                                }
+                            </span>
+                        </p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                            {isConsolidatedView
+                                ? t('cluster.hr_viewing_all', 'HR metrics across all {{count}} hotel properties', { count: propertyCount })
+                                : t('cluster.hr_viewing_single', 'HR metrics for {{name}}', { name: currentProperty?.name })
+                            }
+                        </p>
+                    </div>
                 </div>
-                <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-700">
-                        {isConsolidatedView
-                            ? t('cluster.hr_cluster_view', 'Consolidated (Cluster) HR Overview')
-                            : t('cluster.hr_property_view', 'Property HR: {{name}}', { name: currentProperty?.name })
-                        }
-                    </p>
-                    <p className="text-xs text-slate-500">
-                        {isConsolidatedView
-                            ? t('cluster.hr_viewing_all', 'HR metrics across all {{count}} properties', { count: propertyCount })
-                            : t('cluster.hr_viewing_single', 'HR metrics for selected property')
-                        }
-                    </p>
-                </div>
+
+                {!isConsolidatedView && (
+                    <button
+                        onClick={() => switchProperty(CONSOLIDATED_PROPERTY_ID)}
+                        className="text-xs font-bold text-purple-700 dark:text-purple-300 hover:text-purple-800 flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-purple-100/80 dark:bg-purple-900/60 hover:bg-purple-200 transition-colors border border-purple-200/60 self-end sm:self-auto"
+                    >
+                        <Layers className="w-3.5 h-3.5" />
+                        {t('cluster.switch_to_group', 'Switch to Group Portfolio')}
+                    </button>
+                )}
             </div>
 
             {/* Metrics Grid */}
@@ -258,7 +296,6 @@ function ClusterMetricsGrid({ cards }: { cards: ClusterMetricCard[] }) {
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {cards.map((card, index) => {
                     const Icon = card.icon
-                    const theme = colorMap[card.theme]
 
                     return (
                         <m.div
@@ -289,7 +326,7 @@ function ClusterMetricsGrid({ cards }: { cards: ClusterMetricCard[] }) {
                                     </div>
                                     
                                     <div className="flex items-baseline gap-1 pt-1">
-                                        <span className="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight">
+                                        <span className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-slate-100 tracking-tight truncate max-w-full">
                                             {card.value}
                                         </span>
                                         {card.suffix && (
@@ -315,7 +352,7 @@ function ClusterMetricsGrid({ cards }: { cards: ClusterMetricCard[] }) {
     )
 }
 
-// Cluster Alerts Component
+// Group Portfolio Alerts Component
 function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenanceEfficiency: number; openVacancies: number } }) {
     const { t } = useTranslation('dashboard')
 
@@ -324,7 +361,7 @@ function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenance
     if (stats.complianceRate < 70) {
         alerts.push({
             type: 'warning' as const,
-            message: t('cluster.alerts.low_compliance', 'Training compliance is below 70% across the cluster'),
+            message: t('cluster.alerts.low_compliance', 'Training compliance is below 70% across group properties'),
             icon: GraduationCap
         })
     }
@@ -332,7 +369,7 @@ function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenance
     if (stats.maintenanceEfficiency < 60) {
         alerts.push({
             type: 'critical' as const,
-            message: t('cluster.alerts.maintenance_backlog', 'Maintenance efficiency has dropped below 60%'),
+            message: t('cluster.alerts.maintenance_backlog', 'Maintenance efficiency has dropped below 60% across properties'),
             icon: BarChart3
         })
     }
@@ -340,17 +377,17 @@ function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenance
     if (stats.openVacancies > 20) {
         alerts.push({
             type: 'info' as const,
-            message: t('cluster.alerts.high_vacancies', '{{count}} open positions across the cluster', { count: stats.openVacancies }),
+            message: t('cluster.alerts.high_vacancies', '{{count}} open positions across group properties', { count: stats.openVacancies }),
             icon: Briefcase
         })
     }
 
     if (alerts.length === 0) {
         return (
-            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span className="text-sm font-medium text-emerald-700">
-                    {t('cluster.all_clear', 'All cluster metrics are within target ranges')}
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900/50">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                <span className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                    {t('cluster.all_clear', 'All property metrics are within healthy target ranges')}
                 </span>
             </div>
         )
@@ -361,21 +398,21 @@ function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenance
             {alerts.map((alert, index) => {
                 const Icon = alert.icon
                 const styles = {
-                    critical: 'bg-rose-50 border-rose-200 text-rose-700',
-                    warning: 'bg-amber-50 border-amber-200 text-amber-700',
-                    info: 'bg-blue-50 border-blue-200 text-blue-700'
+                    critical: 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300',
+                    warning: 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50 text-amber-700 dark:text-amber-300',
+                    info: 'bg-blue-50 dark:bg-blue-950/40 border-blue-200 dark:border-blue-900/50 text-blue-700 dark:text-blue-300'
                 }
 
                 return (
                     <div
                         key={index}
                         className={cn(
-                            "flex items-start gap-2 p-3 rounded-xl border",
+                            "flex items-start gap-2 p-3 rounded-xl border text-xs sm:text-sm font-semibold",
                             styles[alert.type]
                         )}
                     >
                         <Icon className="w-4 h-4 mt-0.5 shrink-0" />
-                        <span className="text-sm font-medium">{alert.message}</span>
+                        <span>{alert.message}</span>
                     </div>
                 )
             })}
@@ -383,43 +420,40 @@ function ClusterAlerts({ stats }: { stats: { complianceRate: number; maintenance
     )
 }
 
-// Staff view - simplified, personal-relevant information
+// Staff view - simplified, property-relevant information
 function ClusterStaffOverview() {
     const { t } = useTranslation('dashboard')
     const { currentProperty, availableProperties, switchProperty } = useProperty()
-    const { profile, primaryRole } = useAuth()
-    const navigate = useNavigate()
-
-    const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
     const realProperties = availableProperties.filter(p => isRealPropertyId(p.id))
     const propertyCount = realProperties.length
+    const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
 
     return (
         <div className="space-y-4">
             {/* Welcome Banner for Staff */}
             <div className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border",
+                "flex items-center gap-3 p-3.5 rounded-xl border",
                 isConsolidatedView
-                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200"
-                    : "bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-200"
+                    ? "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/40 dark:to-indigo-950/40 border-blue-200 dark:border-blue-900"
+                    : "bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950/40 dark:to-teal-950/40 border-emerald-200 dark:border-emerald-900"
             )}>
                 <div className={cn(
                     "p-2 rounded-lg",
-                    isConsolidatedView ? "bg-blue-100 text-blue-600" : "bg-emerald-100 text-emerald-600"
+                    isConsolidatedView ? "bg-blue-100 text-blue-600 dark:bg-blue-900 dark:text-blue-300" : "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300"
                 )}>
                     {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <MapPin className="w-5 h-5" />}
                 </div>
                 <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-700">
+                    <p className="text-sm font-extrabold text-slate-800 dark:text-slate-100">
                         {isConsolidatedView
-                            ? t('cluster.staff.all_properties', 'Working across {{count}} properties', { count: propertyCount })
-                            : t('cluster.staff.at_property', 'Currently at: {{name}}', { name: currentProperty?.name })
+                            ? t('cluster.staff.all_properties', 'Assigned across {{count}} hotel properties', { count: propertyCount })
+                            : t('cluster.staff.at_property', 'Active Hotel: {{name}}', { name: currentProperty?.name })
                         }
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
                         {isConsolidatedView
-                            ? t('cluster.staff.viewing_all', 'Viewing your assignments across all properties')
-                            : t('cluster.staff.property_view', 'Viewing property-specific information')
+                            ? t('cluster.staff.viewing_all', 'Viewing your tasks and metrics across all group properties')
+                            : t('cluster.staff.property_view', 'Viewing metrics for selected hotel')
                         }
                     </p>
                 </div>
@@ -437,267 +471,100 @@ function ClusterStaffOverview() {
                         className={cn(
                             "flex items-center gap-3 p-3 rounded-xl border text-left transition-all",
                             currentProperty?.id === prop.id
-                                ? "bg-emerald-50 border-emerald-200 shadow-sm"
-                                : "bg-white border-slate-200 hover:border-slate-300 hover:shadow-sm"
+                                ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800 shadow-sm"
+                                : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700"
                         )}
                     >
                         <div className={cn(
                             "p-2 rounded-lg",
-                            currentProperty?.id === prop.id ? "bg-emerald-100 text-emerald-600" : "bg-slate-100 text-slate-500"
+                            currentProperty?.id === prop.id ? "bg-emerald-100 text-emerald-600 dark:bg-emerald-900 dark:text-emerald-300" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                         )}>
                             <Building className="w-4 h-4" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-slate-700 truncate">{prop.name}</p>
-                            {prop.address && (
-                                <p className="text-xs text-slate-500 truncate">{prop.address}</p>
-                            )}
+                            <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{prop.name}</p>
+                            <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate">{prop.address || 'Active Establishment'}</p>
                         </div>
-                        {currentProperty?.id === prop.id && (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                        )}
                     </m.button>
                 ))}
             </div>
-
-            {/* Quick Actions for Staff */}
-            <div className="pt-2 border-t border-slate-100">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
-                    {t('cluster.staff.quick_actions', 'Quick Actions')}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                    <button
-                        onClick={() => navigate('/tasks')}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                        <ClipboardList className="w-4 h-4 text-blue-500" />
-                        {t('cluster.staff.my_tasks', 'My Tasks')}
-                    </button>
-                    <button
-                        onClick={() => navigate('/learning/my')}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                        <GraduationCap className="w-4 h-4 text-emerald-500" />
-                        {t('cluster.staff.my_training', 'My Training')}
-                    </button>
-                    <button
-                        onClick={() => navigate('/documents')}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                        <FileCheck className="w-4 h-4 text-amber-500" />
-                        {t('cluster.staff.documents', 'Documents')}
-                    </button>
-                    <button
-                        onClick={() => navigate('/hr/scheduling')}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-slate-200 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                    >
-                        <Calendar className="w-4 h-4 text-purple-500" />
-                        {t('cluster.staff.my_schedule', 'My Schedule')}
-                    </button>
-                </div>
-            </div>
         </div>
     )
 }
 
-// Loading Skeleton
 function ClusterOverviewSkeleton() {
     return (
         <div className="space-y-4">
-            <Skeleton className="h-16 w-full rounded-xl" />
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                    <Card key={i} className="border border-slate-200 rounded-xl">
-                        <CardContent className="p-3 space-y-2">
-                            <Skeleton className="h-3 w-20" />
-                            <Skeleton className="h-6 w-12" />
-                        </CardContent>
-                    </Card>
+            <Skeleton className="h-14 w-full rounded-xl" />
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {[...Array(6)].map((_, i) => (
+                    <Skeleton key={i} className="h-28 rounded-2xl" />
                 ))}
             </div>
         </div>
     )
 }
 
-// Main Export
 export function ClusterOverviewWidget() {
-    const { t } = useTranslation('dashboard')
     const { primaryRole } = useAuth()
-    const { isMultiPropertyUser, availableProperties } = useProperty()
+    const { currentProperty, availableProperties, switchProperty } = useProperty()
+    const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
+
+    const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
+    const propertyCount = availableProperties.filter(p => isRealPropertyId(p.id)).length
     const businessRole = getBusinessRoleForAppRole(primaryRole)
 
-    // Only show for users with multiple properties
-    if (!isMultiPropertyUser) return null
+    if (isLoading) return <ClusterOverviewSkeleton />
+    if (!stats) return null
 
-    const isClusterGM = businessRole === 'cluster_general_manager'
-    const isClusterHR = businessRole === 'cluster_department_head'
-    const isPropertyManager = businessRole === 'property_general_manager'
-    const isDeptHead = businessRole === 'department_head'
-    const isSupervisor = businessRole === 'supervisor'
-    const isStaff = businessRole === 'staff' || !businessRole
-
-    // Determine which view to show
-    let ViewComponent = ClusterStaffOverview
-    if (isClusterGM) ViewComponent = ClusterGMOverview
-    else if (isClusterHR) ViewComponent = ClusterHROverview
-    else if (isPropertyManager || isDeptHead || isSupervisor) ViewComponent = ClusterManagerOverview
-
-    // Get appropriate subtitle
-    let subtitle = t('cluster.staff_subtitle', 'Your cross-property overview')
-    if (isClusterGM) subtitle = t('cluster.gm_subtitle', 'Multi-property operational dashboard')
-    else if (isClusterHR) subtitle = t('cluster.hr_subtitle', 'Cross-property HR metrics')
-    else if (isPropertyManager) subtitle = t('cluster.manager_subtitle', 'Your assigned properties overview')
-    else if (isDeptHead) subtitle = t('cluster.dept_subtitle', 'Department overview across properties')
-    else if (isSupervisor) subtitle = t('cluster.supervisor_subtitle', 'Team overview across properties')
+    const renderRoleSpecificContent = () => {
+        switch (businessRole) {
+            case 'GENERAL_MANAGER':
+            case 'EXECUTIVE':
+                return <ClusterGMOverview />
+            case 'DEPARTMENT_HEAD':
+                return <ClusterHROverview />
+            default:
+                return <ClusterStaffOverview />
+        }
+    }
 
     return (
-        <Card className="border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <CardHeader className="pb-3 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle className="text-lg font-bold text-slate-800 flex items-center gap-2">
-                            <Building2 className="w-5 h-5 text-indigo-500" />
-                            {t('cluster.title', 'Cluster Overview')}
-                        </CardTitle>
-                        <CardDescription className="text-sm text-slate-500 mt-1">
-                            {subtitle}
-                        </CardDescription>
-                    </div>
-                    <div className="text-xs font-medium text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
-                        {availableProperties.filter(p => isRealPropertyId(p.id)).length} {t('cluster.properties', 'properties')}
-                    </div>
+        <Card className="border border-slate-200/60 dark:border-slate-800/60 shadow-md rounded-[24px] bg-white/90 dark:bg-slate-900/90 backdrop-blur-md overflow-hidden">
+            <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/50 dark:bg-slate-950/20 px-6 flex flex-row items-center justify-between">
+                <div>
+                    <CardTitle className="text-xs font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase flex items-center gap-2 font-sans">
+                        <Building2 className="w-4 h-4 text-indigo-500" />
+                        {isConsolidatedView
+                            ? 'ALTUS Group Portfolio Overview'
+                            : `Hotel Performance — ${currentProperty?.name || 'Operational Overview'}`
+                        }
+                    </CardTitle>
+                    <CardDescription className="text-xs text-slate-400 mt-0.5">
+                        {isConsolidatedView
+                            ? 'Aggregated operational metrics across all hotel properties'
+                            : `Live operational metrics for ${currentProperty?.name}`
+                        }
+                    </CardDescription>
+                </div>
+
+                <div className="flex items-center gap-2">
+                    <span className={cn(
+                        "text-[10px] font-bold px-2.5 py-1 rounded-full uppercase tracking-wider border",
+                        isConsolidatedView
+                            ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/60"
+                            : "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/60"
+                    )}>
+                        {isConsolidatedView ? 'Group Scope' : 'Single Hotel Scope'}
+                    </span>
                 </div>
             </CardHeader>
-            <CardContent className="pt-4">
-                <ViewComponent />
+
+            <CardContent className="p-6 space-y-4">
+                {renderRoleSpecificContent()}
             </CardContent>
         </Card>
     )
 }
 
-// Manager/Department Head view - operational metrics
-function ClusterManagerOverview() {
-    const { t } = useTranslation('dashboard')
-    const { currentProperty, availableProperties } = useProperty()
-    const { data: stats, isLoading } = useCorporateStats({ propertyId: currentProperty?.id })
-    const navigate = useNavigate()
-
-    const isConsolidatedView = !isRealPropertyId(currentProperty?.id)
-    const propertyCount = availableProperties.filter(p => isRealPropertyId(p.id)).length
-
-    if (isLoading) return <ClusterOverviewSkeleton />
-    if (!stats) return null
-
-    const cards: ClusterMetricCard[] = [
-        {
-            label: t('cluster.your_properties', 'Your Properties'),
-            value: propertyCount,
-            icon: Building2,
-            theme: 'navy'
-        },
-        {
-            label: t('cluster.total_staff', 'Total Staff'),
-            value: stats.totalStaff,
-            icon: Users,
-            theme: 'blue'
-        },
-        {
-            label: t('cluster.compliance_rate', 'Compliance Rate'),
-            value: stats.complianceRate,
-            suffix: '%',
-            icon: GraduationCap,
-            theme: 'emerald',
-            trend: stats.complianceRate >= 80 ? 'up' : 'neutral'
-        },
-        {
-            label: t('cluster.maintenance_efficiency', 'Maintenance Efficiency'),
-            value: stats.maintenanceEfficiency,
-            suffix: '%',
-            icon: BarChart3,
-            theme: 'amber',
-            alert: stats.maintenanceEfficiency < 70
-        },
-        {
-            label: t('cluster.open_vacancies', 'Open Vacancies'),
-            value: stats.openVacancies,
-            icon: Briefcase,
-            theme: 'purple'
-        },
-        {
-            label: t('cluster.active_tickets', 'Active Tickets'),
-            value: stats.totalTickets,
-            icon: TrendingUp,
-            theme: 'rose'
-        },
-    ]
-
-    return (
-        <div className="space-y-4">
-            {/* Scope Banner */}
-            <div className={cn(
-                "flex items-center gap-3 p-3 rounded-xl border",
-                isConsolidatedView
-                    ? "bg-gradient-to-r from-indigo-50 to-blue-50 border-indigo-200"
-                    : "bg-slate-50 border-slate-200"
-            )}>
-                <div className={cn(
-                    "p-2 rounded-lg",
-                    isConsolidatedView ? "bg-indigo-100 text-indigo-600" : "bg-slate-200 text-slate-600"
-                )}>
-                    {isConsolidatedView ? <Building2 className="w-5 h-5" /> : <Building className="w-5 h-5" />}
-                </div>
-                <div className="flex-1">
-                    <p className="text-sm font-semibold text-slate-700">
-                        {isConsolidatedView
-                            ? t('cluster.my_cluster_view', 'Consolidated (Cluster) View')
-                            : t('cluster.property_view', 'Property: {{name}}', { name: currentProperty?.name })
-                        }
-                    </p>
-                    <p className="text-xs text-slate-500">
-                        {isConsolidatedView
-                            ? t('cluster.viewing_your_properties', 'Viewing data across your {{count}} assigned properties', { count: propertyCount })
-                            : t('cluster.viewing_single_property', 'Viewing data for selected property')
-                        }
-                    </p>
-                </div>
-                {isConsolidatedView && propertyCount > 1 && (
-                    <button
-                        onClick={() => navigate('/operations/analytics')}
-                        className="text-xs font-medium text-indigo-600 hover:text-indigo-700 flex items-center gap-1 px-3 py-1.5 rounded-lg bg-indigo-100 hover:bg-indigo-200 transition-colors"
-                    >
-                        {t('cluster.compare', 'Compare')}
-                        <ArrowRightLeft className="w-3 h-3" />
-                    </button>
-                )}
-            </div>
-
-            {/* Metrics Grid */}
-            <ClusterMetricsGrid cards={cards} />
-
-            {/* Quick Property Switcher for Managers */}
-            {propertyCount > 1 && (
-                <div className="pt-2 border-t border-slate-100">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                        {t('cluster.your_properties_list', 'Your Properties')}
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                        {availableProperties.filter(p => isRealPropertyId(p.id)).map(prop => (
-                            <button
-                                key={prop.id}
-                                onClick={() => navigate(`/operations/property/${prop.id}`)}
-                                className={cn(
-                                    "text-xs px-3 py-1.5 rounded-lg border transition-colors",
-                                    currentProperty?.id === prop.id
-                                        ? "bg-indigo-50 border-indigo-200 text-indigo-700 font-medium"
-                                        : "bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
-                                )}
-                            >
-                                {prop.name}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </div>
-    )
-}
+export default ClusterOverviewWidget

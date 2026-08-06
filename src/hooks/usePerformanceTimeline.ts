@@ -11,44 +11,68 @@ export interface PerformancePoint {
   target: number
 }
 
+export interface PerformanceTimelineResult {
+  points: PerformancePoint[]
+  overallScore: number
+  targetScore: number
+  trendPercentage: number
+  rating: 'Excellent' | 'Good' | 'Needs Focus'
+}
+
 export function usePerformanceTimeline() {
   const { user } = useAuth()
   const { i18n } = useTranslation()
   const isRTL = i18n.dir() === 'rtl'
 
   return useQuery({
-    queryKey: ['performance-timeline', user?.id],
-    queryFn: async () => {
-      if (!user) return []
+    queryKey: ['performance-timeline', user?.id, isRTL],
+    queryFn: async (): Promise<PerformanceTimelineResult> => {
+      if (!user) {
+        return {
+          points: [],
+          overallScore: 0,
+          targetScore: 85,
+          trendPercentage: 0,
+          rating: 'Needs Focus'
+        }
+      }
 
       // Look back 6 days + today = 7 days
       const startDate = startOfDay(subDays(new Date(), 6)).toISOString()
 
-      // Fetch tasks updated in the last 7 days
-      const { data, error } = await supabase
+      // Fetch real tasks assigned to user updated in the last 7 days
+      const { data: tasksData, error: tasksError } = await supabase
         .from('tasks')
         .select('updated_at, status')
         .eq('assigned_to_id', user.id)
         .gte('updated_at', startDate)
 
-      if (error) throw error
+      if (tasksError) {
+        console.error('[PerformanceTimeline] Error fetching tasks:', tasksError)
+      }
 
-      // Initialize the 7 days array
-      const points: PerformancePoint[] = []
+      // Fetch real training progress completed by user in the last 7 days
+      const { data: trainingData } = await supabase
+        .from('training_progress')
+        .select('updated_at, is_completed, status')
+        .eq('user_id', user.id)
+        .gte('updated_at', startDate)
+
+      // Map completion activity by day
       const countsByDay: Record<string, { total: number; completed: number }> = {}
+      const daysList: { dayKey: string; dayLabel: string }[] = []
 
       for (let i = 6; i >= 0; i--) {
         const date = subDays(new Date(), i)
         const dayKey = format(date, 'yyyy-MM-dd')
-        const dayLabel = format(date, 'EEE', { locale: isRTL ? ar : undefined }) // Mon, Tue, etc.
+        const dayLabel = format(date, 'EEE', { locale: isRTL ? ar : undefined })
         
+        daysList.push({ dayKey, dayLabel })
         countsByDay[dayKey] = { total: 0, completed: 0 }
-        points.push({ day: dayLabel, perf: 0, target: 65 })
       }
 
-      const TARGET_TASKS_PER_DAY = 5;
-
-      data?.forEach((task) => {
+      // Process real task records
+      tasksData?.forEach((task) => {
         if (!task.updated_at) return
         const dayKey = format(new Date(task.updated_at), 'yyyy-MM-dd')
         if (countsByDay[dayKey]) {
@@ -59,24 +83,65 @@ export function usePerformanceTimeline() {
         }
       })
 
-      // Calculate score
-      return points.map((p, index) => {
-        const dateKey = format(subDays(new Date(), 6 - index), 'yyyy-MM-dd')
-        const stats = countsByDay[dateKey]
-        
-        // Calculate performance as a percentage of target
+      // Process real training progress records
+      trainingData?.forEach((tp) => {
+        if (!tp.updated_at) return
+        const dayKey = format(new Date(tp.updated_at), 'yyyy-MM-dd')
+        if (countsByDay[dayKey]) {
+          countsByDay[dayKey].total += 1
+          if (tp.is_completed || tp.status === 'completed') {
+            countsByDay[dayKey].completed += 1
+          }
+        }
+      })
+
+      const TARGET_SCORE = 85
+      const points: PerformancePoint[] = daysList.map(({ dayKey, dayLabel }) => {
+        const stats = countsByDay[dayKey]
         let perfScore = 0
-        if (stats && stats.completed > 0) {
-          perfScore = Math.min(100, Math.round((stats.completed / TARGET_TASKS_PER_DAY) * 100))
+
+        if (stats && stats.total > 0) {
+          perfScore = Math.min(100, Math.round((stats.completed / stats.total) * 100))
         } else {
-          // Add a small baseline so the chart isn't completely flat if no tasks exist
-          perfScore = Math.floor(Math.random() * 20) + 10 
+          // Accurate zero score for days without activity
+          perfScore = 0
         }
 
-        return { ...p, perf: perfScore }
+        return {
+          day: dayLabel,
+          perf: perfScore,
+          target: TARGET_SCORE
+        }
       })
+
+      // Calculate real overall average performance score
+      const activeDays = points.filter(p => p.perf > 0)
+      const sumPerf = points.reduce((acc, p) => acc + p.perf, 0)
+      const overallScore = activeDays.length > 0
+        ? Math.round(sumPerf / activeDays.length)
+        : (points.length > 0 ? Math.round(sumPerf / points.length) : 0)
+
+      // Calculate real trend percentage (first 3 days vs last 3 days)
+      const firstHalfAvg = (points[0].perf + points[1].perf + points[2].perf) / 3
+      const secondHalfAvg = (points[4].perf + points[5].perf + points[6].perf) / 3
+      const trendPercentage = Math.round(secondHalfAvg - firstHalfAvg)
+
+      let rating: 'Excellent' | 'Good' | 'Needs Focus' = 'Needs Focus'
+      if (overallScore >= 85) {
+        rating = 'Excellent'
+      } else if (overallScore >= 60) {
+        rating = 'Good'
+      }
+
+      return {
+        points,
+        overallScore,
+        targetScore: TARGET_SCORE,
+        trendPercentage,
+        rating
+      }
     },
     enabled: !!user,
-    staleTime: 5 * 60 * 1000 // 5 minutes
+    staleTime: 2 * 60 * 1000 // 2 minutes
   })
 }

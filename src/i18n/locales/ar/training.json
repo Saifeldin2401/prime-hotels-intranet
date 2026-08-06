@@ -989,6 +989,25 @@
     "moduleClonedDesc": "تم نسخ الوحدة بنجاح",
     "cloneError": "خطأ في نسخ الوحدة",
     "clone": "نسخ",
+    "pending_review": "قيد المراجعة",
+    "review": {
+        "submitForReview": "إرسال للمراجعة",
+        "submitted": "تم الإرسال للمراجعة",
+        "submittedDesc": "تم إخطار المراجعين.",
+        "submitError": "خطأ في إرسال الوحدة للمراجعة",
+        "approve": "اعتماد",
+        "approved": "تم اعتماد الوحدة",
+        "approvedDesc": "الوحدة منشورة الآن.",
+        "approveError": "خطأ في اعتماد الوحدة",
+        "reject": "رفض",
+        "rejected": "تم رفض الوحدة",
+        "rejectedDesc": "أُعيدت الوحدة إلى المسودة.",
+        "rejectError": "خطأ في رفض الوحدة",
+        "rejectDialogTitle": "رفض الوحدة",
+        "rejectDialogDesc": "إعادة \"{{title}}\" إلى المسودة. يمكنك إخبار المؤلف بما يلزم تغييره.",
+        "rejectReasonPlaceholder": "سبب الرفض (اختياري)",
+        "rejectDialogConfirm": "رفض"
+    },
     "hub": {
         "templates": {
             "title": "اختر قالباً",

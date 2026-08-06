@@ -52,12 +52,8 @@ export function useCreatePurchaseRequest() {
 export function useDecidePurchaseRequest() {
     const queryClient = useQueryClient()
     return useMutation({
-        mutationFn: async ({ id, status, approved_by }: { id: string; status: 'approved' | 'rejected'; approved_by: string }) => {
-            const { error } = await supabase
-                .from('purchase_requests')
-                .update({ status, approved_by, approved_at: new Date().toISOString() })
-                .eq('id', id)
-
+        mutationFn: async ({ id, status }: { id: string; status: 'approved' | 'rejected' }) => {
+            const { error } = await supabase.rpc('decide_purchase_request', { p_id: id, p_status: status })
             if (error) throw error
         },
         onSuccess: () => {

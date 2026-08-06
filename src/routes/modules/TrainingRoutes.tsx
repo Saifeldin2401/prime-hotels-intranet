@@ -12,6 +12,7 @@ const TrainingAssignmentRules = lazy(() => import('@/pages/training/TrainingAssi
 const TrainingPaths = lazy(() => import('@/pages/training/TrainingPaths'))
 const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
 const TrainingAnalytics = lazy(() => import('@/pages/training/TrainingAnalytics'))
+const SkillsMatrix = lazy(() => import('@/pages/training/SkillsMatrix'))
 const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
 const QuizList = lazy(() => import('@/pages/learning/QuizList'))
 const QuizBuilder = lazy(() => import('@/pages/learning/QuizBuilder'))
@@ -107,6 +108,17 @@ export const TrainingRoutes = () => (
                 </ProtectedRoute>
             }
             errorElement={<RouteErrorBoundary section="Training Rules" />}
+        />
+        <Route
+            path="/training/skills"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
+                    <AppLayout>
+                        <SkillsMatrix />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Skills Matrix" />}
         />
         <Route
             path="/training/paths"

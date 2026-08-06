@@ -49,7 +49,7 @@ export function DashboardCustomizeModal({
         { key: 'announcements', label: 'Property & Chain Announcements', icon: Bell },
         { key: 'tasks', label: 'Active Work Queue & Tasks', icon: CheckCircle },
         { key: 'maintenance', label: 'Property Maintenance Tickets', icon: Wrench },
-        { key: 'clusterOverview', label: 'Multi-Property Cluster Portfolio', icon: Building2 },
+        { key: 'clusterOverview', label: 'ALTUS Group & Hotel Portfolio', icon: Building2 },
         { key: 'propertyComparison', label: 'Property Comparison Matrix', icon: BarChart3 },
         { key: 'performanceChart', label: 'Performance Analytics Chart', icon: BarChart3 },
         { key: 'employeeSpotlight', label: 'Elite Spotlight & Recognitions', icon: Star },

@@ -11842,6 +11842,55 @@ export type Database = {
           },
         ]
       }
+      training_module_versions: {
+        Row: {
+          created_at: string
+          id: string
+          published_by: string | null
+          snapshot: Json
+          training_module_id: string
+          version_number: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          published_by?: string | null
+          snapshot: Json
+          training_module_id: string
+          version_number: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          published_by?: string | null
+          snapshot?: Json
+          training_module_id?: string
+          version_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "training_module_versions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "training_module_versions_published_by_fkey"
+            columns: ["published_by"]
+            isOneToOne: false
+            referencedRelation: "user_message_stats"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "training_module_versions_training_module_id_fkey"
+            columns: ["training_module_id"]
+            isOneToOne: false
+            referencedRelation: "training_modules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       training_modules: {
         Row: {
           allow_retake: boolean | null
@@ -14950,6 +14999,10 @@ export type Database = {
         Args: { p_approve?: boolean; p_user_id: string }
         Returns: Json
       }
+      approve_training_module: {
+        Args: { p_module_id: string }
+        Returns: undefined
+      }
       archive_expired_documents: { Args: never; Returns: number }
       assign_maintenance_ticket: {
         Args: {
@@ -15040,6 +15093,14 @@ export type Database = {
           approver_id: string
           request_department_id: string
           request_property_id: string
+        }
+        Returns: boolean
+      }
+      can_approve_purchase_request: {
+        Args: {
+          _approver_id: string
+          _department_id: string
+          _property_id: string
         }
         Returns: boolean
       }
@@ -15173,6 +15234,10 @@ export type Database = {
         }
         Returns: string
       }
+      decide_purchase_request: {
+        Args: { p_id: string; p_status: string }
+        Returns: undefined
+      }
       detect_pii_access_anomalies: {
         Args: { p_lookback_days?: number; p_threshold_multiplier?: number }
         Returns: {
@@ -15187,6 +15252,10 @@ export type Database = {
       disable_mfa: {
         Args: { p_password: string; p_user_id: string }
         Returns: boolean
+      }
+      duplicate_training_module: {
+        Args: { p_module_id: string }
+        Returns: string
       }
       enable_mfa: {
         Args: { p_user_id: string; p_verification_code: string }
@@ -15466,6 +15535,22 @@ export type Database = {
           type: string
         }[]
       }
+      get_expiring_certificates: {
+        Args: {
+          p_department_id?: string
+          p_property_id?: string
+          p_within_days?: number
+        }
+        Returns: {
+          certificate_id: string
+          days_until_expiry: number
+          expiry_date: string
+          recipient_name: string
+          title: string
+          training_module_id: string
+          user_id: string
+        }[]
+      }
       get_expiring_documents: {
         Args: { p_days_ahead?: number }
         Returns: {
@@ -15501,6 +15586,13 @@ export type Database = {
           uploader_name: string
           usage_count: number
           usages: Json
+        }[]
+      }
+      get_my_managed_department_ids: {
+        Args: never
+        Returns: {
+          department_id: string
+          department_name: string
         }[]
       }
       get_my_roles: {
@@ -15564,6 +15656,10 @@ export type Database = {
           level: number
         }[]
       }
+      get_role_priority: {
+        Args: { _role: Database["public"]["Enums"]["app_role"] }
+        Returns: number
+      }
       get_search_metrics: {
         Args: { days_ago?: number }
         Returns: {
@@ -15612,6 +15708,24 @@ export type Database = {
         }
         Returns: Json
       }
+      get_skills_matrix: {
+        Args: {
+          p_department_id?: string
+          p_my_team_only?: boolean
+          p_property_id?: string
+        }
+        Returns: {
+          department_name: string
+          has_skill: boolean
+          proficiency_level: number
+          skill_category: string
+          skill_id: string
+          skill_name: string
+          user_id: string
+          user_name: string
+          verified: boolean
+        }[]
+      }
       get_task_completion_metrics: {
         Args: { p_end_date?: string; p_start_date?: string; p_user_id?: string }
         Returns: {
@@ -15623,32 +15737,17 @@ export type Database = {
           total_tasks: number
         }[]
       }
-      get_task_stats:
-        | {
-            Args: { user_id_param: string }
-            Returns: {
-              completed_tasks: number
-              in_progress_tasks: number
-              overdue_tasks: number
-              review_tasks: number
-              todo_tasks: number
-              total_tasks: number
-            }[]
-          }
-        | {
-            Args: {
-              department_id_param?: string
-              property_id_param?: string
-              user_id_param?: string
-            }
-            Returns: {
-              completed_tasks: number
-              high_priority_tasks: number
-              overdue_tasks: number
-              pending_tasks: number
-              total_tasks: number
-            }[]
-          }
+      get_task_stats: {
+        Args: { user_id_param: string }
+        Returns: {
+          completed_tasks: number
+          in_progress_tasks: number
+          overdue_tasks: number
+          review_tasks: number
+          todo_tasks: number
+          total_tasks: number
+        }[]
+      }
       get_todays_birthdays: {
         Args: { p_property_id?: string }
         Returns: {
@@ -15683,6 +15782,7 @@ export type Database = {
       get_training_analytics_summary: {
         Args: {
           p_department_id?: string
+          p_my_team_only?: boolean
           p_property_id?: string
           p_start_date?: string
         }
@@ -15694,6 +15794,29 @@ export type Database = {
           not_started_count: number
           overdue_count: number
           total_assignees: number
+        }[]
+      }
+      get_training_completion_trend: {
+        Args: {
+          p_department_id?: string
+          p_my_team_only?: boolean
+          p_property_id?: string
+          p_weeks?: number
+        }
+        Returns: {
+          completed_count: number
+          week_start: string
+        }[]
+      }
+      get_training_module_funnel: {
+        Args: { p_module_id: string }
+        Returns: {
+          block_id: string
+          block_order: number
+          block_title: string
+          block_type: string
+          completed_count: number
+          completion_rate: number
         }[]
       }
       get_training_module_performance: {
@@ -15739,6 +15862,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
       }
+      get_user_role_priority: { Args: { _user_id: string }; Returns: number }
       get_user_sessions: { Args: { p_user_id: string }; Returns: Json }
       get_vacation_balance: {
         Args: { user_uuid: string; year_filter?: number }
@@ -15895,6 +16019,7 @@ export type Database = {
         Args: { notification_id: string }
         Returns: undefined
       }
+      process_certificate_expirations: { Args: never; Returns: number }
       process_due_promotions: { Args: never; Returns: number }
       process_due_transfers: { Args: never; Returns: number }
       process_notification_batch: {
@@ -15933,6 +16058,10 @@ export type Database = {
           request_id: string
         }
         Returns: Json
+      }
+      reject_training_module: {
+        Args: { p_module_id: string; p_reason?: string }
+        Returns: undefined
       }
       reorder_user_pins: {
         Args: { p_pin_orders: Json; p_user_id: string }
@@ -16208,6 +16337,10 @@ export type Database = {
         Args: { p_disposition?: string; p_media_asset_id: string }
         Returns: boolean
       }
+      snapshot_training_module_version: {
+        Args: { p_module_id: string }
+        Returns: string
+      }
       submit_promotion_request:
         | {
             Args: {
@@ -16230,6 +16363,10 @@ export type Database = {
             }
             Returns: Json
           }
+      submit_training_module_for_review: {
+        Args: { p_module_id: string }
+        Returns: undefined
+      }
       submit_transfer_request: {
         Args: {
           p_effective_date: string

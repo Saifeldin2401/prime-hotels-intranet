@@ -19,7 +19,7 @@ import { useBudgets, useCreateBudget } from '@/hooks/useBudgets'
 import { useProperty } from '@/contexts/PropertyContext'
 import type { Budget } from '@/lib/types/finance'
 import { isRealPropertyId } from '@/lib/propertyScope'
-import { Wallet, Plus, Download, AlertTriangle, TrendingUp, DollarSign, Layers } from 'lucide-react'
+import { Wallet, Plus, Download, AlertTriangle, DollarSign, Layers } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { BudgetCharts } from '@/components/finance/BudgetCharts'
@@ -104,8 +104,7 @@ export default function Budgets() {
                 { header: 'GL Category', key: 'category', width: 35 },
                 { header: 'Fiscal Year', key: 'fiscal_year', width: 15 },
                 { header: 'Period', key: 'period_type', width: 15 },
-                { header: 'Allocated (SAR)', key: 'allocated_amount', width: 20 },
-                { header: 'Status', key: 'status', width: 18 }
+                { header: 'Allocated (SAR)', key: 'allocated_amount', width: 20 }
             ]
 
             budgets.forEach(b => {
@@ -113,8 +112,7 @@ export default function Budgets() {
                     category: b.category,
                     fiscal_year: b.fiscal_year,
                     period_type: b.period_type,
-                    allocated_amount: Number(b.allocated_amount),
-                    status: 'On Target'
+                    allocated_amount: Number(b.allocated_amount)
                 })
             })
 
@@ -171,17 +169,6 @@ export default function Budgets() {
                 </div>
             )
         },
-        {
-            id: 'variance',
-            header: 'GL Variance Status',
-            cell: ({ row }) => {
-                return (
-                    <Badge className="bg-emerald-100 text-emerald-800 font-medium">
-                        On Target (0% Variance)
-                    </Badge>
-                )
-            }
-        }
     ]
 
     if (!isRealPropertyId(propertyId)) {
@@ -228,7 +215,7 @@ export default function Budgets() {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="grid gap-4 md:grid-cols-3"
+                className="grid gap-4 md:grid-cols-2"
             >
                 <div className="p-5 bg-white border rounded-xl shadow-sm flex items-center gap-4 border-l-4 border-l-amber-500">
                     <div className="w-12 h-12 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
@@ -250,18 +237,6 @@ export default function Budgets() {
                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Active GL Accounts</p>
                         <p className="text-2xl font-bold text-gray-900 mt-0.5">
                             {budgets?.length || 0} Lines
-                        </p>
-                    </div>
-                </div>
-
-                <div className="p-5 bg-white border rounded-xl shadow-sm flex items-center gap-4 border-l-4 border-l-emerald-500">
-                    <div className="w-12 h-12 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                        <TrendingUp className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider">Overall Variance</p>
-                        <p className="text-2xl font-bold text-emerald-600 mt-0.5">
-                            0.0% <span className="text-xs font-normal text-gray-500">(On Target)</span>
                         </p>
                     </div>
                 </div>
