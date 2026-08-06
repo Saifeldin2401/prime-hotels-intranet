@@ -95,12 +95,12 @@ const conditionSchema = z.object({
 
 const payloadSchema = z
   .object({
-    user_id: z.string().uuid().optional(),
-    department_id: z.string().uuid().optional(),
+    user_id: z.string().uuid().nullish(),
+    department_id: z.string().uuid().nullish(),
     source_id: z.string().optional(),
     source_type: z.string().optional(),
     affected_users: z.array(z.string().uuid()).optional(),
-    property_id: z.string().uuid().optional(),
+    property_id: z.string().uuid().nullish(),
     metadata: z.record(z.unknown()).optional(),
   })
   .catchall(z.unknown());

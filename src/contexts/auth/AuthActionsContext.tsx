@@ -108,20 +108,14 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
       identityContext?.setLoading(true)
       userDataContext?.setRolesLoading(true)
 
-      // Check for password breach before attempting sign in (with timeout)
-      void Promise.race([
+      // Kick off the password breach check in parallel with sign-in (with timeout), but don't
+      // act on it yet -- logSecurityEvent requires an authenticated session, and this promise
+      // can resolve before signInWithPassword below establishes one. We only log the result
+      // once sign-in has actually succeeded (see below).
+      const breachCheckPromise = Promise.race([
         checkPasswordBreach(password),
         new Promise<{ breached: false }>((resolve) => setTimeout(() => resolve({ breached: false }), 2000))
-      ]).then(async (breachCheck) => {
-        if ('breached' in breachCheck && breachCheck.breached) {
-          await logSecurityEvent('password.breached_detected', {
-            email: normalizedEmail,
-            breachCount: (breachCheck as { count?: number }).count,
-          })
-        }
-      }).catch(() => {
-        // Ignore breach check errors
-      })
+      ]).catch(() => ({ breached: false as const }))
 
       const { data, error } = await supabase.auth.signInWithPassword({
         email: normalizedEmail,
@@ -182,6 +176,16 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
         await logSecurityEvent('login.success', { email: normalizedEmail })
         await analytics.identify(data.user.id).catch((error) => {
           log.warn('[AuthActions] Failed to initialize analytics identity:', error)
+        })
+
+        // Now that a session exists, act on the breach check kicked off above
+        void breachCheckPromise.then(async (breachCheck) => {
+          if ('breached' in breachCheck && breachCheck.breached) {
+            await logSecurityEvent('password.breached_detected', {
+              email: normalizedEmail,
+              breachCount: (breachCheck as { count?: number }).count,
+            })
+          }
         })
       } else {
         identityContext?.setLoading(false)
