@@ -53,6 +53,7 @@ import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { env, supabase } from '@/lib/supabase'
 import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
+import { resolveDocumentUrl } from '@/lib/secureFileAccess'
 import { cn } from '@/lib/utils'
 import '@/styles/knowledge-ui.css'
 import { STATUS_CONFIG } from '@/types/knowledge'
@@ -154,6 +155,21 @@ export default function KnowledgeViewer() {
 
     // Ensure useKnowledgeArticle handles the 'documents' table correctly via knowledgeService
     const { data: article, isLoading, error, refetch: refetchArticle } = useKnowledgeArticle(id)
+
+    // The stored file_url points at a private storage bucket, so it can't be used directly --
+    // resolve it to a short-lived signed URL for viewing/downloading/PDF rendering.
+    const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null)
+    useEffect(() => {
+        if (!article?.id || !article.file_url) {
+            setResolvedFileUrl(null)
+            return
+        }
+        let cancelled = false
+        resolveDocumentUrl(article.id, article.file_url).then((url) => {
+            if (!cancelled) setResolvedFileUrl(url)
+        })
+        return () => { cancelled = true }
+    }, [article?.id, article?.file_url])
 
     // Stubbed/Empty hooks if backend not ready
     const { data: comments } = useComments(id)
@@ -1497,11 +1513,11 @@ export default function KnowledgeViewer() {
                                     </div>
                                 </div>
                                 <div className="flex w-full sm:w-auto gap-2">
-                                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                    <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
                                         <Eye className="h-4 w-4 me-2" />
                                         {t('viewer.view')}
                                     </Button>
-                                    <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white" onClick={() => window.open(article.file_url, '_blank')}>
+                                    <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
                                         <Download className="h-4 w-4 me-2" />
                                         {t('viewer.download')}
                                     </Button>
@@ -1510,9 +1526,9 @@ export default function KnowledgeViewer() {
                         )}
 
                         {/* PDF Viewer if applicable */}
-                        {article.file_url?.toLowerCase().endsWith('.pdf') && (
+                        {article.file_url?.toLowerCase().endsWith('.pdf') && resolvedFileUrl && (
                             <div className="mt-4 rounded-xl overflow-hidden shadow-sm border border-slate-200">
-                                <PdfViewer url={article.file_url} />
+                                <PdfViewer url={resolvedFileUrl} />
                             </div>
                         )}
 

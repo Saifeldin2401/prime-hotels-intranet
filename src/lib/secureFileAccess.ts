@@ -106,9 +106,28 @@ export async function resolveDocumentUrl(documentId: string, fallbackUrl?: strin
     }
     return fallbackUrl || null
   }
-  
+
+  const value = data as string
+
+  // The 'documents' storage bucket is private -- a bare object path (no scheme) means
+  // the RPC resolved it to our own bucket, so mint a short-lived signed URL for it.
+  if (!/^https?:\/\//i.test(value)) {
+    const { data: signed, error: signError } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(value, 300)
+
+    if (signError || !signed?.signedUrl) {
+      console.error('resolveDocumentUrl: failed to sign storage path', signError)
+      await logFileAccess('document', sanitizedId, false, signError?.message)
+      return fallbackUrl || null
+    }
+
+    await logFileAccess('document', sanitizedId, true)
+    return signed.signedUrl
+  }
+
   await logFileAccess('document', sanitizedId, true)
-  return data as string
+  return value
 }
 
 export async function resolveDocumentVersionUrl(versionId: string, fallbackUrl?: string | null): Promise<string | null> {
