@@ -29,12 +29,19 @@ export function VersionHistoryCard({ moduleId, isRTL }: { moduleId: string | nul
 
             if (error) throw error
 
-            return (data || []).map((row) => ({
-                id: row.id,
-                versionNumber: row.version_number,
-                publishedByName: Array.isArray(row.published_by) ? row.published_by[0]?.full_name : row.published_by?.full_name,
-                createdAt: row.created_at
-            }))
+            return (data || []).map((row) => {
+                const publishedBy = (row as any).published_by
+                const publishedByName = Array.isArray(publishedBy) 
+                    ? publishedBy[0]?.full_name 
+                    : publishedBy?.full_name
+                
+                return {
+                    id: row.id,
+                    versionNumber: row.version_number,
+                    publishedByName,
+                    createdAt: row.created_at
+                }
+            })
         },
         enabled: !!moduleId
     })

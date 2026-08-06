@@ -519,10 +519,10 @@ export function ClusterOverviewWidget() {
 
     const renderRoleSpecificContent = () => {
         switch (businessRole) {
-            case 'GENERAL_MANAGER':
-            case 'EXECUTIVE':
+            case 'cluster_general_manager':
                 return <ClusterGMOverview />
-            case 'DEPARTMENT_HEAD':
+            case 'cluster_department_head':
+            case 'department_head':
                 return <ClusterHROverview />
             default:
                 return <ClusterStaffOverview />

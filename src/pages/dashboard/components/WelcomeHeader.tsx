@@ -218,7 +218,7 @@ export function WelcomeHeader({
               <m.div className="space-y-2" initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}>
                 <div className="space-y-1">
                   <h4 className="text-sm font-semibold text-[#a5b4fc] tracking-wide flex items-center gap-1.5 font-sans">
-                    {getGreeting()}
+                    {greeting}
                     <span className="w-1.5 h-1.5 rounded-full bg-[#C39A45]" />
                   </h4>
                   <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-white leading-tight font-sans">

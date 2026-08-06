@@ -156,12 +156,38 @@ export default function OnboardingTracker() {
                         return {
                             id: `assign-${a.id}`,
                             user_id: a.target_id || 'group',
-                            user: userProfile || { full_name: targetLabel, email: 'Onboarding Target' },
-                            template: { title: 'ALTUS New Hire Hotel Orientation (KSA)' },
-                            start_date: a.created_at || new Date().toISOString(),
+                            template_id: null,
                             status: 'in_progress',
-                            progress_percentage: 25,
-                            tasks: [{ id: 't1', status: 'in_progress' }]
+                            progress_percent: 25,
+                            created_at: a.created_at,
+                            updated_at: a.created_at,
+                            user: userProfile || { full_name: targetLabel, email: 'Onboarding Target' },
+                            template: { 
+                                id: '',
+                                title: 'ALTUS New Hire Hotel Orientation (KSA)',
+                                role: null,
+                                job_title: null,
+                                department_id: null,
+                                tasks: [],
+                                required_training_ids: [],
+                                is_active: true,
+                                created_at: a.created_at,
+                                updated_at: a.created_at
+                            },
+                            start_date: a.created_at || new Date().toISOString(),
+                            tasks: [{
+                                id: 't1',
+                                process_id: `assign-${a.id}`,
+                                title: 'Onboarding Task',
+                                description: null,
+                                status: 'in_progress',
+                                assigned_to_id: a.target_id || 'group',
+                                due_date: a.due_date || null,
+                                is_completed: false,
+                                completed_at: null,
+                                created_at: a.created_at,
+                                updated_at: a.created_at
+                            }]
                         }
                     })
 
