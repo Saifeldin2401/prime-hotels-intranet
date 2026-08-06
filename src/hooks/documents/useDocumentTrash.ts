@@ -30,8 +30,6 @@ export function useDocumentTrash() {
           role,
           requires_acknowledgment,
           current_version,
-          storage_bucket,
-          storage_path,
           view_count,
           download_count,
           is_archived,
@@ -103,14 +101,15 @@ export function usePermanentDeleteDocument() {
     mutationFn: async (documentId: string) => {
       const { data: doc } = await supabase
         .from('documents')
-        .select('storage_bucket, storage_path')
+        .select('file_url')
         .eq('id', documentId)
         .single()
 
-      if (doc?.storage_bucket && doc?.storage_path) {
-        await supabase.storage
-          .from(doc.storage_bucket)
-          .remove([doc.storage_path])
+      // Uploads always go to the 'documents' bucket (see DocumentUploadDialog); the storage
+      // path is the segment of the public URL after '/object/public/documents/'.
+      const storagePath = doc?.file_url?.split('/object/public/documents/')[1]
+      if (storagePath) {
+        await supabase.storage.from('documents').remove([decodeURIComponent(storagePath)])
       }
 
       const { error } = await supabase

@@ -146,8 +146,6 @@ export function useDocumentsPaginated(
             role,
             requires_acknowledgment,
             current_version,
-            storage_bucket,
-            storage_path,
             content,
             view_count,
             download_count,

@@ -214,8 +214,6 @@ function UploadTab({
       const newDoc = await createDocument.mutateAsync({
         title: file.name.replace(/\.[^/.]+$/, ''),
         file_url: urlData.publicUrl,
-        storage_bucket: 'documents',
-        storage_path: filePath,
         file_size: file.size,
         file_extension: fileExt.toLowerCase(),
         property_id: scopedPropertyId,
