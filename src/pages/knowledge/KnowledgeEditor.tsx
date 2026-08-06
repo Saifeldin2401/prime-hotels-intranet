@@ -828,6 +828,7 @@ export default function KnowledgeEditor() {
                             summary: data.summary || '',
                             content: data.content || '',
                             file_url: data.file_url || '',
+                            storage_path: '',
                             content_type: data.content_type || 'document',
                             visibility: data.visibility || 'all_properties',
                             requires_acknowledgment: data.requires_acknowledgment || false,
