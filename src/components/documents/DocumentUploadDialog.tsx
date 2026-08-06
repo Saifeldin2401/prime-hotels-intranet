@@ -105,14 +105,14 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         title: string
         description: string | null
         file_url: string
-        storage_bucket: string
-        storage_path: string
         visibility: DocumentVisibility
         status: DocumentStatus
         requires_acknowledgment: boolean
         created_by: string
         current_version: number
         file_size: number
+        file_type: string
+        file_extension?: string
         content_type: string
         property_id?: string
         department_id?: string
@@ -120,14 +120,14 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         title,
         description: description || null,
         file_url: fileUrl,
-        storage_bucket: 'documents',
-        storage_path: filePath,
         visibility,
         status: 'DRAFT' as DocumentStatus,
         requires_acknowledgment: requiresAcknowledgment,
         created_by: profile.id,
         current_version: 1,
         file_size: file.size,
+        file_type: file.type,
+        file_extension: fileExt,
         content_type: 'document', // Mark as file document (not knowledge base article)
       }
 
@@ -159,8 +159,6 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         document_id: document.id,
         version_number: 1,
         file_url: fileUrl,
-        storage_bucket: 'documents',
-        storage_path: filePath,
         change_summary: 'Initial version',
         created_by: profile.id,
       })

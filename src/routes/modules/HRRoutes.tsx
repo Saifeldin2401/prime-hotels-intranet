@@ -174,7 +174,7 @@ export const HRRoutes = () => (
         <Route
             path="/hr/inbox"
             element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']}>
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_hr', 'property_manager', 'department_head']}>
                     <AppLayout>
                         <RequestsInbox />
                     </AppLayout>
