@@ -108,27 +108,6 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
   })
 }
 
-export function useCreatePIIAccessLog() {
-  const queryClient = useQueryClient()
-
-  return useMutation({
-    mutationFn: async (logData: Omit<PIIAccessLog, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('pii_access_logs_v')
-        .insert(logData)
-        .select()
-        .single()
-
-      if (error) throw error
-      return data as PIIAccessLog
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pii-access-logs'] })
-      queryClient.invalidateQueries({ queryKey: ['pii-access-summary'] })
-    }
-  })
-}
-
 export function useApprovePIIAccess() {
   const queryClient = useQueryClient()
 
@@ -178,10 +157,13 @@ export function useDeletePIIAccessLog() {
 
   return useMutation({
     mutationFn: async (logId: string) => {
+      // pii_access_logs_v is a read-only view over system_events; delete the
+      // underlying row directly, same pattern as useApprovePIIAccess's update.
       const { error } = await supabase
-        .from('pii_access_logs_v')
+        .from('system_events')
         .delete()
         .eq('id', logId)
+        .eq('event_type', 'pii_access')
 
       if (error) throw error
     },

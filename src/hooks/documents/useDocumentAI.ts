@@ -252,10 +252,11 @@ Format as plain text.`,
       setSummary(result)
 
       if (result) {
-        await supabase
+        const { error: updateError } = await supabase
           .from('documents')
-          .update({ ai_summary: result })
+          .update({ summary: result })
           .eq('id', documentId)
+        if (updateError) console.error('Failed to persist AI summary:', updateError)
       }
 
       return result

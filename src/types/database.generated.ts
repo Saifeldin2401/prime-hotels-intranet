@@ -8337,6 +8337,7 @@ export type Database = {
           id: string
           is_active: boolean | null
           job_title: string | null
+          required_training_ids: string[]
           role: Database["public"]["Enums"]["app_role"] | null
           tasks: Json
           title: string
@@ -8348,6 +8349,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           job_title?: string | null
+          required_training_ids?: string[]
           role?: Database["public"]["Enums"]["app_role"] | null
           tasks?: Json
           title: string
@@ -8359,6 +8361,7 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           job_title?: string | null
+          required_training_ids?: string[]
           role?: Database["public"]["Enums"]["app_role"] | null
           tasks?: Json
           title?: string
@@ -12086,6 +12089,7 @@ export type Database = {
           target_role: Database["public"]["Enums"]["app_role"] | null
           target_user_ids: string[] | null
           title: string
+          updated_at: string
         }
         Insert: {
           certificate_enabled?: boolean | null
@@ -12102,6 +12106,7 @@ export type Database = {
           target_role?: Database["public"]["Enums"]["app_role"] | null
           target_user_ids?: string[] | null
           title: string
+          updated_at?: string
         }
         Update: {
           certificate_enabled?: boolean | null
@@ -12118,6 +12123,7 @@ export type Database = {
           target_role?: Database["public"]["Enums"]["app_role"] | null
           target_user_ids?: string[] | null
           title?: string
+          updated_at?: string
         }
         Relationships: [
           {

@@ -42,9 +42,8 @@ export function useCreateDocument() {
           created_by: user.id,
           status: canAutoPublish ? 'PUBLISHED' : 'DRAFT',
           ...(canAutoPublish && {
-            last_published_at: now,
+            published_at: now,
             last_published_by: user.id,
-            published_version_number: document.current_version || 1,
           }),
         })
         .select()

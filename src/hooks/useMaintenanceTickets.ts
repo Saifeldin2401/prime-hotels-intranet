@@ -466,8 +466,6 @@ export function useUploadMaintenanceAttachment() {
           uploaded_by_id: user.id,
           file_name: file.name,
           file_path: publicUrl || fileName,
-          storage_bucket: 'maintenance-attachments',
-          storage_path: fileName,
           file_type: file.type,
           file_size: file.size,
           description: description || null

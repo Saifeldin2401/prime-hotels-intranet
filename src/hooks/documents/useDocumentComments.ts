@@ -81,8 +81,7 @@ export function useUpdateDocumentComment() {
         .from('document_comments')
         .update({
           content,
-          is_edited: true,
-          edited_at: new Date().toISOString()
+          updated_at: new Date().toISOString()
         })
         .eq('id', id)
         .select()

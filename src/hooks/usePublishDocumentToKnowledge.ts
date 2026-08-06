@@ -79,8 +79,6 @@ export function usePublishDocumentToKnowledge() {
           content: input.content || `<p>Document reference: <a href="${document.file_url}" target="_blank">${document.title}</a></p>`,
           content_type: 'document',
           file_url: document.file_url,
-          storage_bucket: document.storage_bucket,
-          storage_path: document.storage_path,
           visibility: input.visibility,
           property_id: input.propertyId || currentProperty?.id,
           department_id: input.departmentId,
@@ -89,11 +87,8 @@ export function usePublishDocumentToKnowledge() {
           status: finalStatus,
           created_by: user.id,
           current_version: 1,
-          published_version_number: finalStatus === 'PUBLISHED' ? 1 : null,
-          last_published_at: finalStatus === 'PUBLISHED' ? new Date().toISOString() : null,
+          published_at: finalStatus === 'PUBLISHED' ? new Date().toISOString() : null,
           last_published_by: finalStatus === 'PUBLISHED' ? user.id : null,
-          // Link back to original document
-          source_document_id: document.id,
         };
 
         // 5. Insert the knowledge base article
@@ -113,15 +108,9 @@ export function usePublishDocumentToKnowledge() {
           .insert({
             document_id: article.id,
             version_number: 1,
-            title: articleData.title,
-            description: articleData.description,
-            content: articleData.content,
             file_url: articleData.file_url,
-            storage_bucket: articleData.storage_bucket,
-            storage_path: articleData.storage_path,
             change_summary: `Published from document library (source: ${document.id})`,
             created_by: user.id,
-            status: finalStatus,
           });
 
         if (versionError) {
@@ -131,16 +120,33 @@ export function usePublishDocumentToKnowledge() {
 
         // 7. Handle tags if provided
         if (input.tags && input.tags.length > 0) {
-          // Create tag assignments
-          const tagAssignments = input.tags.map(tagName => ({
-            document_id: article.id,
-            tag: tagName,
-          }));
+          try {
+            const { data: existingTags } = await supabase
+              .from('document_tags')
+              .select('id, name')
+              .in('name', input.tags);
 
-          await supabase
-            .from('document_tags')
-            .insert(tagAssignments)
-            .then(() => {}, (err) => console.warn('Failed to add tags:', err));
+            const existingByName = new Map((existingTags || []).map((t) => [t.name, t.id]));
+            const missingNames = input.tags.filter((name) => !existingByName.has(name));
+
+            if (missingNames.length > 0) {
+              const { data: createdTags, error: createTagsError } = await supabase
+                .from('document_tags')
+                .insert(missingNames.map((name) => ({ name, created_by: user.id })))
+                .select('id, name');
+              if (createTagsError) throw createTagsError;
+              for (const tag of createdTags || []) existingByName.set(tag.name, tag.id);
+            }
+
+            const tagIds = input.tags.map((name) => existingByName.get(name)).filter((id): id is string => !!id);
+            if (tagIds.length > 0) {
+              await supabase
+                .from('document_tag_assignments')
+                .insert(tagIds.map((tagId) => ({ document_id: article.id, tag_id: tagId })));
+            }
+          } catch (err) {
+            console.warn('Failed to add tags:', err);
+          }
         }
 
         // 8. Log audit event
@@ -257,8 +263,6 @@ export function useSyncKnowledgeArticle() {
         .from('documents')
         .update({
           file_url: sourceDoc.file_url,
-          storage_bucket: sourceDoc.storage_bucket,
-          storage_path: sourceDoc.storage_path,
           updated_at: new Date().toISOString(),
           updated_by: user.id,
         })
@@ -270,15 +274,9 @@ export function useSyncKnowledgeArticle() {
       await supabase.from('document_versions').insert({
         document_id: articleId,
         version_number: (article.current_version || 0) + 1,
-        title: article.title,
-        description: article.description,
-        content: article.content,
         file_url: sourceDoc.file_url,
-        storage_bucket: sourceDoc.storage_bucket,
-        storage_path: sourceDoc.storage_path,
         change_summary: `Synced from source document (${documentId})`,
         created_by: user.id,
-        status: article.status,
       });
 
       return true;

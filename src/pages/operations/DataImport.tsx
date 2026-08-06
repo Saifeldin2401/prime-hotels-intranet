@@ -558,8 +558,8 @@ export default function DataImport() {
                     console.error(`Critical import failure for property ${pid}:`, err)
                     if (importLogId) {
                         await supabase.from('data_import_logs').update({
-                            status: 'error',
-                            error_log: String(err),
+                            status: 'failed',
+                            error_details: { message: err instanceof Error ? err.message : String(err) },
                             completed_at: new Date().toISOString()
                         }).eq('id', importLogId)
                     }

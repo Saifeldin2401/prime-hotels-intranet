@@ -4,21 +4,14 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface AuditRetentionPolicy {
     id: string
-    policy_name: string
+    name: string
     description: string | null
-    default_retention_days: number
-    max_retention_days: number
-    min_retention_days: number
-    pdf_retention_days: number | null
-    excel_retention_days: number | null
-    csv_retention_days: number | null
-    json_retention_days: number | null
-    auto_soft_delete: boolean
-    auto_purge_after_days: number
-    corporate_admin_retention_days: number | null
-    compliance_officer_retention_days: number | null
-    is_active: boolean
+    retention_days: number
+    applies_to_formats: string[]
+    auto_delete: boolean
+    notify_before_delete_days: number | null
     is_default: boolean
+    created_by: string | null
     created_at: string
     updated_at: string
 }

@@ -402,8 +402,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
             if (courseConfig.requirePrerequisites && courseConfig.prerequisiteModules.length > 0) {
                 const prerequisites = courseConfig.prerequisiteModules.map(prereqId => ({
                     module_id: module.id,
-                    prerequisite_module_id: prereqId,
-                    is_required: true
+                    prerequisite_module_id: prereqId
                 }))
                 
                 await supabase

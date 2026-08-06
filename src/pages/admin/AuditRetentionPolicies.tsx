@@ -2,15 +2,17 @@ import { FloatingAdminAI } from '@/components/admin/AdminAIAssistant'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Switch } from '@/components/ui/switch'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from '@/components/ui/textarea'
 import { useAuditRetention, type AuditRetentionPolicy } from '@/hooks/admin/useAuditRetention'
-import { AlertTriangle, CheckCircle2, Clock, DatabaseZap, Edit2, FileJson, FileSpreadsheet, FileText, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, Clock, DatabaseZap, Edit2, Plus, ShieldCheck, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+
+const EXPORT_FORMATS = ['pdf', 'excel', 'csv', 'json']
 
 export default function AuditRetentionPolicies() {
     const { t } = useTranslation(['admin', 'common'])
@@ -20,33 +22,31 @@ export default function AuditRetentionPolicies() {
 
     const handleCreateNew = () => {
         setSelectedPolicy({
-            policy_name: '',
+            name: '',
             description: '',
-            default_retention_days: 90,
-            max_retention_days: 365,
-            min_retention_days: 30,
-            pdf_retention_days: 180,
-            excel_retention_days: 90,
-            csv_retention_days: 30,
-            json_retention_days: 90,
-            auto_soft_delete: true,
-            auto_purge_after_days: 7,
-            corporate_admin_retention_days: 365,
-            compliance_officer_retention_days: 180,
-            is_active: true,
+            retention_days: 90,
+            applies_to_formats: [...EXPORT_FORMATS],
+            auto_delete: false,
+            notify_before_delete_days: 7,
             is_default: false
         })
         setIsEditing(true)
     }
 
+    const toggleFormat = (format: string, checked: boolean) => {
+        setSelectedPolicy(prev => {
+            if (!prev) return prev
+            const formats = new Set(prev.applies_to_formats || [])
+            if (checked) formats.add(format)
+            else formats.delete(format)
+            return { ...prev, applies_to_formats: Array.from(formats) }
+        })
+    }
+
     const handleSave = () => {
-        if (!selectedPolicy?.policy_name) return
+        if (!selectedPolicy?.name) return
 
-        // Clamp logic
         const p = { ...selectedPolicy }
-        if (p.default_retention_days! > p.max_retention_days!) p.default_retention_days = p.max_retention_days!
-        if (p.default_retention_days! < p.min_retention_days!) p.default_retention_days = p.min_retention_days!
-
         if (p.id) {
             updatePolicy.mutate(p as any, {
                 onSuccess: () => {
@@ -84,7 +84,7 @@ export default function AuditRetentionPolicies() {
                         Audit Export Retention Policies
                     </h1>
                     <p className="text-muted-foreground mt-1">
-                        Control cryptographic storage lifecycles and compliance deletion bounds for exported audit trails.
+                        Control how long exported audit trails are kept and when they're deleted.
                     </p>
                 </div>
                 {!isEditing && (
@@ -114,13 +114,13 @@ export default function AuditRetentionPolicies() {
                                 <Card key={policy.id} className={`overflow-hidden transition-all hover:border-indigo-400 ${policy.is_default ? 'border-2 border-indigo-500 shadow-md ring-1 ring-indigo-200' : ''}`}>
                                     {policy.is_default && (
                                         <div className="bg-indigo-600 text-white text-xs font-bold text-center py-1 flex items-center justify-center gap-1">
-                                            <CheckCircle2 className="h-3 w-3" /> PRIMARY DATA GOVERNANCE 
+                                            <CheckCircle2 className="h-3 w-3" /> PRIMARY DATA GOVERNANCE
                                         </div>
                                     )}
                                     <CardHeader className="p-4 pb-2">
                                         <div className="flex justify-between items-start">
                                             <div>
-                                                <CardTitle className="text-base font-semibold text-slate-800">{policy.policy_name}</CardTitle>
+                                                <CardTitle className="text-base font-semibold text-slate-800">{policy.name}</CardTitle>
                                                 <CardDescription className="text-xs line-clamp-2 mt-1">{policy.description}</CardDescription>
                                             </div>
                                             <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { setSelectedPolicy(policy); setIsEditing(true); }} aria-label={t('accessibility.edit_policy', 'Edit Policy')}>
@@ -131,26 +131,21 @@ export default function AuditRetentionPolicies() {
                                     <CardContent className="p-4 pt-2">
                                         <div className="flex gap-2 flex-wrap mb-4">
                                             <Badge variant="secondary" className="bg-blue-50 text-blue-700 border-blue-200">
-                                                Base: {policy.default_retention_days} Days
+                                                Retention: {policy.retention_days} Days
                                             </Badge>
-                                            <Badge variant="secondary" className="bg-amber-50 text-amber-700 border-amber-200">
-                                                Max: {policy.max_retention_days} Days
-                                            </Badge>
+                                            {policy.auto_delete && (
+                                                <Badge variant="secondary" className="bg-red-50 text-red-700 border-red-200">
+                                                    Auto-delete
+                                                </Badge>
+                                            )}
                                         </div>
-                                        <div className="text-xs text-muted-foreground flex flex-col gap-1">
-                                            <div className="flex justify-between"><span>PDF Retention:</span> <span className="font-mono text-slate-700">{policy.pdf_retention_days}d</span></div>
-                                            <div className="flex justify-between"><span>CSV Retention:</span> <span className="font-mono text-slate-700">{policy.csv_retention_days}d</span></div>
-                                            <div className="flex justify-between"><span>JSON Retention:</span> <span className="font-mono text-slate-700">{policy.json_retention_days}d</span></div>
+                                        <div className="text-xs text-muted-foreground flex flex-wrap gap-1">
+                                            {(policy.applies_to_formats || []).map(fmt => (
+                                                <Badge key={fmt} variant="outline" className="uppercase text-[10px]">{fmt}</Badge>
+                                            ))}
                                         </div>
                                     </CardContent>
-                                    <CardFooter className="p-3 border-t bg-slate-50 flex justify-between items-center text-xs">
-                                        <div className="flex items-center space-x-2">
-                                            <Switch 
-                                                checked={policy.is_active} 
-                                                onCheckedChange={(checked) => updatePolicy.mutate({ id: policy.id, is_active: checked })}
-                                            />
-                                            <span>Active</span>
-                                        </div>
+                                    <CardFooter className="p-3 border-t bg-slate-50 flex justify-end items-center text-xs">
                                         <Button size="icon" variant="ghost" className={`h-8 w-8 ${policy.is_default ? 'opacity-20 cursor-not-allowed' : 'hover:text-red-600'}`} disabled={policy.is_default} onClick={() => handleDelete(policy.id, policy.is_default)} aria-label={t('accessibility.delete_policy', 'Delete Policy')}>
                                             <Trash2 className="h-3 w-3" />
                                         </Button>
@@ -166,167 +161,90 @@ export default function AuditRetentionPolicies() {
                     {isEditing && selectedPolicy ? (
                         <Card className="border-t-4 border-t-indigo-600 shadow-xl overflow-hidden">
                             <CardHeader className="bg-slate-50 border-b pb-6">
-                                <CardTitle className="text-xl text-slate-800">{selectedPolicy.id ? 'Tune Compliance Engine' : 'Configure New Lifecycle Policy'}</CardTitle>
-                                <CardDescription>Establish precise boundaries ensuring exported documents are soft-deleted from storage networks after mandated business timescales.</CardDescription>
+                                <CardTitle className="text-xl text-slate-800">{selectedPolicy.id ? 'Edit Retention Policy' : 'New Retention Policy'}</CardTitle>
+                                <CardDescription>Set how long exported audit files are kept before being deleted.</CardDescription>
                             </CardHeader>
-                            <CardContent className="pt-6">
-                                
-                                <Tabs defaultValue="general" className="w-full">
-                                    <TabsList className="grid w-full grid-cols-3 mb-6 bg-slate-100">
-                                        <TabsTrigger value="general">Core Config</TabsTrigger>
-                                        <TabsTrigger value="formats">Formats (PDF/CSV)</TabsTrigger>
-                                        <TabsTrigger value="purge">Purge Limits</TabsTrigger>
-                                    </TabsList>
+                            <CardContent className="pt-6 space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2 col-span-2">
+                                        <Label>Policy Name</Label>
+                                        <Input value={selectedPolicy.name || ''} onChange={e => setSelectedPolicy({ ...selectedPolicy, name: e.target.value })} placeholder="e.g. EU-GDPR Storage Policy" className="font-medium" />
+                                    </div>
+                                    <div className="space-y-2 col-span-2">
+                                        <Label>Description</Label>
+                                        <Textarea value={selectedPolicy.description || ''} onChange={e => setSelectedPolicy({ ...selectedPolicy, description: e.target.value })} placeholder="Explain why this exists..." rows={2} />
+                                    </div>
+                                </div>
 
-                                    {/* GENERAL TAB */}
-                                    <TabsContent value="general" className="space-y-5">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="space-y-2 col-span-2">
-                                                <Label>Ruleset Nomenclature</Label>
-                                                <Input value={selectedPolicy.policy_name || ''} onChange={e => setSelectedPolicy({...selectedPolicy, policy_name: e.target.value})} placeholder="e.g. EU-GDPR Storage Law" className="font-medium" />
+                                <div className="p-4 rounded-lg bg-indigo-50/50 border border-indigo-100 space-y-2">
+                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Retention Period (Days)</Label>
+                                    <Input type="number" min={1} value={selectedPolicy.retention_days ?? 90} onChange={e => setSelectedPolicy({ ...selectedPolicy, retention_days: parseInt(e.target.value) || 0 })} className="font-mono max-w-[150px]" />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Applies To Formats</Label>
+                                    <div className="flex gap-4 flex-wrap">
+                                        {EXPORT_FORMATS.map(fmt => (
+                                            <div key={fmt} className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id={`fmt-${fmt}`}
+                                                    checked={(selectedPolicy.applies_to_formats || []).includes(fmt)}
+                                                    onCheckedChange={(checked) => toggleFormat(fmt, checked === true)}
+                                                />
+                                                <Label htmlFor={`fmt-${fmt}`} className="uppercase text-sm font-normal">{fmt}</Label>
                                             </div>
-                                            <div className="space-y-2 col-span-2">
-                                                <Label>Internal Description</Label>
-                                                <Textarea value={selectedPolicy.description || ''} onChange={e => setSelectedPolicy({...selectedPolicy, description: e.target.value})} placeholder="Explain why this exists..." rows={2} />
-                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="flex p-4 rounded-lg bg-red-50 border border-red-200 gap-4">
+                                    <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
+                                    <div className="flex-1 space-y-4">
+                                        <div>
+                                            <h4 className="text-sm font-bold text-red-900 leading-none">Automated Deletion</h4>
+                                            <p className="text-xs text-red-700 mt-2">When enabled, matching audit exports are deleted once the retention period has passed.</p>
                                         </div>
-                                        
-                                        <div className="p-4 rounded-lg bg-indigo-50/50 border border-indigo-100 space-y-4">
-                                            <h4 className="text-sm font-semibold text-indigo-900 border-b border-indigo-200 pb-2">Base Boundary Framework (Days)</h4>
-                                            <div className="grid grid-cols-3 gap-6">
-                                                <div className="space-y-2 text-center">
-                                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground text-left block">Absolute Minimum</Label>
-                                                    <Input type="number" min={1} value={selectedPolicy.min_retention_days || 30} onChange={e => setSelectedPolicy({...selectedPolicy, min_retention_days: parseInt(e.target.value) || 0})} className="font-mono text-center text-lg" />
-                                                </div>
-                                                <div className="space-y-2 text-center">
-                                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground text-left block">Standard Default</Label>
-                                                    <Input type="number" min={1} value={selectedPolicy.default_retention_days || 90} onChange={e => setSelectedPolicy({...selectedPolicy, default_retention_days: parseInt(e.target.value) || 0})} className="font-mono text-center text-lg border-indigo-300" />
-                                                </div>
-                                                <div className="space-y-2 text-center">
-                                                    <Label className="text-xs uppercase tracking-wider text-muted-foreground text-left block">Absolute Maximum</Label>
-                                                    <Input type="number" min={1} value={selectedPolicy.max_retention_days || 365} onChange={e => setSelectedPolicy({...selectedPolicy, max_retention_days: parseInt(e.target.value) || 0})} className="font-mono text-center text-lg text-red-600 bg-red-50 focus-visible:ring-red-500" />
-                                                </div>
-                                            </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Switch
+                                                id="autoDelete"
+                                                checked={Boolean(selectedPolicy.auto_delete)}
+                                                onCheckedChange={c => setSelectedPolicy({ ...selectedPolicy, auto_delete: c })}
+                                            />
+                                            <Label htmlFor="autoDelete" className="font-medium">Enable Automatic Deletion</Label>
                                         </div>
-                                    </TabsContent>
-
-                                    {/* FORMATS TAB */}
-                                    <TabsContent value="formats" className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="p-4 border rounded-lg bg-white shadow-sm flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-red-100 rounded text-red-600"><FileText className="h-5 w-5" /></div>
-                                                    <div>
-                                                        <Label className="font-medium">PDF Documents</Label>
-                                                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Signed formal records.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="w-24">
-                                                    <Input type="number" value={selectedPolicy.pdf_retention_days || 180} onChange={e => setSelectedPolicy({...selectedPolicy, pdf_retention_days: parseInt(e.target.value) || 0})} className="font-mono" />
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="p-4 border rounded-lg bg-white shadow-sm flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-green-100 rounded text-green-700"><FileSpreadsheet className="h-5 w-5" /></div>
-                                                    <div>
-                                                        <Label className="font-medium">Excel (.xlsx)</Label>
-                                                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Formatted data sheets.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="w-24">
-                                                    <Input type="number" value={selectedPolicy.excel_retention_days || 90} onChange={e => setSelectedPolicy({...selectedPolicy, excel_retention_days: parseInt(e.target.value) || 0})} className="font-mono" />
-                                                </div>
-                                            </div>
-
-                                            <div className="p-4 border rounded-lg bg-white shadow-sm flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-slate-100 rounded text-slate-600"><DatabaseZap className="h-5 w-5" /></div>
-                                                    <div>
-                                                        <Label className="font-medium">CSV Data</Label>
-                                                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Raw unstructured text.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="w-24">
-                                                    <Input type="number" value={selectedPolicy.csv_retention_days || 30} onChange={e => setSelectedPolicy({...selectedPolicy, csv_retention_days: parseInt(e.target.value) || 0})} className="font-mono" />
-                                                </div>
-                                            </div>
-
-                                            <div className="p-4 border rounded-lg bg-white shadow-sm flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="p-2 bg-yellow-100 rounded text-yellow-600"><FileJson className="h-5 w-5" /></div>
-                                                    <div>
-                                                        <Label className="font-medium">JSON Payloads</Label>
-                                                        <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">API system outputs.</p>
-                                                    </div>
-                                                </div>
-                                                <div className="w-24">
-                                                    <Input type="number" value={selectedPolicy.json_retention_days || 90} onChange={e => setSelectedPolicy({...selectedPolicy, json_retention_days: parseInt(e.target.value) || 0})} className="font-mono" />
-                                                </div>
-                                            </div>
+                                        <div className="space-y-2">
+                                            <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-slate-400" /> Notify Before Delete (Days)</Label>
+                                            <Input type="number" min={0} value={selectedPolicy.notify_before_delete_days ?? 7} onChange={e => setSelectedPolicy({ ...selectedPolicy, notify_before_delete_days: parseInt(e.target.value) || 0 })} className="font-mono max-w-[150px]" />
                                         </div>
-                                    </TabsContent>
-
-                                    {/* PURGE TAB */}
-                                    <TabsContent value="purge" className="space-y-6">
-                                        <div className="flex p-4 rounded-lg bg-red-50 border border-red-200 gap-4">
-                                            <AlertTriangle className="h-6 w-6 text-red-500 shrink-0 mt-0.5" />
-                                            <div>
-                                                <h4 className="text-sm font-bold text-red-900 leading-none">Automated Hard Deletion</h4>
-                                                <p className="text-xs text-red-700 mt-2">When enabled, cron jobs will actively destroy physical bucket files and row data once timelines are eclipsed.</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-6 items-start">
-                                            <div className="space-y-3">
-                                                <div className="flex items-center space-x-2">
-                                                    <Switch 
-                                                        id="autoSoftDelete" 
-                                                        checked={Boolean(selectedPolicy.auto_soft_delete)} 
-                                                        onCheckedChange={c => setSelectedPolicy({...selectedPolicy, auto_soft_delete: c})}
-                                                    />
-                                                    <Label htmlFor="autoSoftDelete" className="font-medium">Enable Automatic Expiration</Label>
-                                                </div>
-                                                <p className="text-[11px] text-muted-foreground">Changes database status to `expired` preventing further UI visibility via soft-delete logic.</p>
-                                            </div>
-
-                                            <div className="space-y-3">
-                                                <Label className="flex items-center gap-2"><Clock className="h-4 w-4 text-slate-400" /> Hard Purge Grace Period (Days)</Label>
-                                                <Input type="number" value={selectedPolicy.auto_purge_after_days || 7} onChange={e => setSelectedPolicy({...selectedPolicy, auto_purge_after_days: parseInt(e.target.value) || 0})} className="font-mono max-w-[150px]" />
-                                                <p className="text-[11px] text-muted-foreground">Number of days to wait after soft deletion before executing absolute cryptographic purge from the storage drives.</p>
-                                            </div>
-                                        </div>
-                                    </TabsContent>
-                                    
-                                </Tabs>
+                                    </div>
+                                </div>
 
                                 <div className="mt-8 pt-6 border-t flex flex-col sm:flex-row justify-between items-center gap-4">
                                     <div className="flex items-center space-x-2 bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-200">
                                         <Switch
                                             id="defaultStatus"
                                             checked={Boolean(selectedPolicy.is_default)}
-                                            onCheckedChange={checked => setSelectedPolicy({...selectedPolicy, is_default: checked})}
+                                            onCheckedChange={checked => setSelectedPolicy({ ...selectedPolicy, is_default: checked })}
                                         />
-                                        <Label htmlFor="defaultStatus" className="text-indigo-900 font-semibold cursor-pointer">Enforce as Application Default</Label>
+                                        <Label htmlFor="defaultStatus" className="text-indigo-900 font-semibold cursor-pointer">Set as Default Policy</Label>
                                     </div>
-                                    
+
                                     <div className="flex gap-2 shrink-0">
                                         <Button variant="outline" onClick={() => { setIsEditing(false); setSelectedPolicy(null) }}>
                                             Discard Changes
                                         </Button>
-                                        <Button onClick={handleSave} disabled={createPolicy.isPending || updatePolicy.isPending || !selectedPolicy.policy_name} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
-                                            {createPolicy.isPending || updatePolicy.isPending ? 'Propagating...' : 'Commit Protocol'}
+                                        <Button onClick={handleSave} disabled={createPolicy.isPending || updatePolicy.isPending || !selectedPolicy.name} className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-md">
+                                            {createPolicy.isPending || updatePolicy.isPending ? 'Saving...' : 'Save Policy'}
                                         </Button>
                                     </div>
                                 </div>
-
                             </CardContent>
                         </Card>
                     ) : (
                         <div className="h-full min-h-[500px] flex flex-col items-center justify-center border-2 border-dashed rounded-xl bg-slate-50/50 text-muted-foreground p-8">
                             <ShieldCheck className="w-16 h-16 mb-4 opacity-10 text-indigo-600" />
-                            <h3 className="text-xl font-medium text-slate-800">Retention Matrix</h3>
-                            <p className="text-sm text-center max-w-sm mt-3 leading-relaxed">Select a governance framework from the registry to manipulate legal file expiration constraints, or draft a localized regulation protocol.</p>
+                            <h3 className="text-xl font-medium text-slate-800">Retention Policies</h3>
+                            <p className="text-sm text-center max-w-sm mt-3 leading-relaxed">Select a policy from the list to edit it, or draft a new one.</p>
                         </div>
                     )}
                 </div>
