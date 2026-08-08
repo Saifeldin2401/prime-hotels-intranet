@@ -540,13 +540,16 @@ export async function verifyCertificate(verificationCode: string): Promise<{
         isValid: Boolean(result.is_valid) && resolvedStatus === 'active',
         certificate: {
             certificateNumber: result.certificate_number,
+            verificationCode: result.verification_code,
             recipientName: result.recipient_name,
             title: result.title,
             certificateType: result.certificate_type,
             completionDate: new Date(result.completion_date),
             expiryDate: result.expiry_date ? new Date(result.expiry_date) : undefined,
             status: resolvedStatus,
-            createdAt: new Date(result.issued_at)
+            createdAt: new Date(result.issued_at),
+            propertyName: result.property_name ?? undefined,
+            departmentName: result.department_name ?? undefined
         }
     }
 }

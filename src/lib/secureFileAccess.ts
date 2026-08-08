@@ -68,6 +68,28 @@ async function logFileAccess(
   }
 }
 
+/**
+ * Private-bucket helper: if `value` looks like a bare storage object path (no
+ * scheme), mint a short-lived signed URL for it in the given bucket. Otherwise
+ * (already a full URL) return it unchanged.
+ */
+async function signStoragePath(bucket: string, value: string, ttlSeconds = 300): Promise<string | null> {
+  if (!/^https?:\/\//i.test(value)) {
+    const { data: signed, error: signError } = await supabase.storage
+      .from(bucket)
+      .createSignedUrl(value, ttlSeconds)
+
+    if (signError || !signed?.signedUrl) {
+      console.error(`signStoragePath: failed to sign storage path for bucket "${bucket}"`, signError)
+      return null
+    }
+
+    return signed.signedUrl
+  }
+
+  return value
+}
+
 export async function resolveDocumentUrl(documentId: string, fallbackUrl?: string | null): Promise<string | null> {
   if (!documentId) return fallbackUrl || null
   
@@ -158,7 +180,9 @@ export async function resolveDocumentVersionUrl(versionId: string, fallbackUrl?:
     }
     return fallbackUrl || null
   }
-  return data as string
+
+  const signedUrl = await signStoragePath('documents', data as string)
+  return signedUrl || fallbackUrl || null
 }
 
 export async function resolveMaintenanceAttachmentUrl(attachmentId: string, fallbackUrl?: string | null): Promise<string | null> {
@@ -178,7 +202,9 @@ export async function resolveMaintenanceAttachmentUrl(attachmentId: string, fall
   if (error || !data) {
     return fallbackUrl || null
   }
-  return data as string
+
+  const signedUrl = await signStoragePath('maintenance-attachments', data as string)
+  return signedUrl || fallbackUrl || null
 }
 
 export async function resolveExpenseReceiptUrl(claimId: string, fallbackUrl?: string | null): Promise<string | null> {
@@ -198,7 +224,9 @@ export async function resolveExpenseReceiptUrl(claimId: string, fallbackUrl?: st
   if (error || !data) {
     return fallbackUrl || null
   }
-  return data as string
+
+  const signedUrl = await signStoragePath('expense-receipts', data as string)
+  return signedUrl || fallbackUrl || null
 }
 
 export async function resolveReportRunUrl(runId: string, fallbackUrl?: string | null): Promise<string | null> {
@@ -218,7 +246,42 @@ export async function resolveReportRunUrl(runId: string, fallbackUrl?: string | 
   if (error || !data) {
     return fallbackUrl || null
   }
-  return data as string
+
+  const signedUrl = await signStoragePath('reports-exports', data as string)
+  return signedUrl || fallbackUrl || null
+}
+
+export async function resolveMediaUrl(mediaAssetId: string, fallbackUrl?: string | null): Promise<string | null> {
+  if (!mediaAssetId) return fallbackUrl || null
+
+  // SECURITY: Validate UUID format
+  const sanitizedId = sanitizeUUID(mediaAssetId)
+  if (!sanitizedId) {
+    console.error('resolveMediaUrl: Invalid media asset ID format')
+    return fallbackUrl || null
+  }
+
+  const { data, error } = await supabase.rpc('get_secure_media_url', {
+    p_media_asset_id: sanitizedId,
+  })
+
+  if (error || !data) {
+    if (error) {
+      const e = error as RpcErrorDetails
+      console.error('resolveMediaUrl: get_secure_media_url RPC failed', {
+        mediaAssetId: sanitizedId,
+        code: e?.code,
+        message: e?.message,
+        details: e?.details,
+        hint: e?.hint,
+        status: e?.status,
+      })
+    }
+    return fallbackUrl || null
+  }
+
+  const signedUrl = await signStoragePath('media', data as string)
+  return signedUrl || fallbackUrl || null
 }
 
 export function openUrlInNewTab(url: string | null) {

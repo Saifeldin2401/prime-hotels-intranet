@@ -30,6 +30,8 @@ export function useCreateCrmContract() {
             property_id: string
             contract_name: string
             contract_value?: number
+            rate_type?: 'LRA' | 'NLRA' | 'Group Rate' | 'Government'
+            annual_room_nights_goal?: number
             start_date?: string
             end_date?: string
             created_by: string

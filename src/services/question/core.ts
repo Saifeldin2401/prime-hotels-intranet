@@ -107,13 +107,16 @@ export async function createQuestion(
     userId: string,
     aiGenerated = false
 ): Promise<KnowledgeQuestion> {
-    const { options, ...questionData } = formData
+    const { options, difficulty_level, ...questionData } = formData
 
     // Insert question into unified_questions
+    // Note: QuestionFormData uses `difficulty_level` (matches the read-side alias exposed by
+    // the knowledge_questions VIEW), but the actual column on unified_questions is `difficulty`.
     const { data: question, error: qError } = await supabase
         .from('unified_questions')
         .insert({
             ...questionData,
+            difficulty: difficulty_level,
             source_domain: 'knowledge',
             created_by: userId,
             ai_generated: aiGenerated,
@@ -148,13 +151,16 @@ export async function updateQuestion(
     formData: Partial<QuestionFormData>,
     _userId: string
 ): Promise<KnowledgeQuestion> {
-    const { options, ...questionData } = formData
+    const { options, difficulty_level, ...questionData } = formData
 
     // Update question
+    // Note: QuestionFormData uses `difficulty_level` (matches the read-side alias exposed by
+    // the knowledge_questions VIEW), but the actual column on unified_questions is `difficulty`.
     const { data: question, error: qError } = await supabase
         .from('unified_questions')
         .update({
             ...questionData,
+            ...(difficulty_level !== undefined ? { difficulty: difficulty_level } : {}),
             updated_at: new Date().toISOString()
         })
         .eq('id', id)

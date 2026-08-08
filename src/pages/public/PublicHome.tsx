@@ -2,6 +2,7 @@ import { PublicNavbar } from '@/components/layout/PublicNavbar';
 import { RevealUp } from '@/components/public/RevealUp';
 import { FloatingConciergeBadge } from '@/components/public/FloatingConciergeBadge';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/lib/supabase';
 
 
 import {
@@ -209,6 +210,7 @@ export default function PublicHome() {
   );
   const [secureEntryRecoveryFailed, setSecureEntryRecoveryFailed] = useState(false);
   const [briefingOpen, setBriefingOpen] = useState(false);
+  const [isSubmittingBriefing, setIsSubmittingBriefing] = useState(false);
 
   const [briefingForm, setBriefingForm] = useState({
     name: '',
@@ -278,15 +280,44 @@ export default function PublicHome() {
     }
   }, [authUser, navigate, pendingAuthFlowPath, secureEntryRecoveryNeeded]);
 
-  const handleBriefingSubmit = (e: React.FormEvent) => {
+  const handleBriefingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast.success(
-      isRTL
-        ? 'تم استلام طلب الإحاطة بنجاح. سيتواصل معك أحد الشركاء خلال يومي عمل.'
-        : 'Briefing request received. A partner will respond directly within two business days.'
-    );
-    setBriefingOpen(false);
-    setBriefingForm({ name: '', email: '', phone: '', organization: '', mandateType: 'Hospitality Solutions', notes: '' });
+    if (isSubmittingBriefing) return;
+
+    const name = briefingForm.name.trim();
+    const email = briefingForm.email.trim();
+    if (!name || !email) return;
+
+    setIsSubmittingBriefing(true);
+    try {
+      const { error } = await supabase.from('partner_briefing_requests').insert({
+        name,
+        email,
+        phone: briefingForm.phone.trim() || null,
+        organization: briefingForm.organization.trim() || null,
+        mandate_type: briefingForm.mandateType || null,
+        message: briefingForm.notes.trim() || null,
+      });
+
+      if (error) throw error;
+
+      toast.success(
+        isRTL
+          ? 'تم استلام طلب الإحاطة بنجاح. سيتواصل معك أحد الشركاء خلال يومي عمل.'
+          : 'Briefing request received. A partner will respond directly within two business days.'
+      );
+      setBriefingOpen(false);
+      setBriefingForm({ name: '', email: '', phone: '', organization: '', mandateType: 'Hospitality Solutions', notes: '' });
+    } catch (err) {
+      console.error('Failed to submit partner briefing request:', err);
+      toast.error(
+        isRTL
+          ? 'تعذر إرسال الطلب. يرجى المحاولة مرة أخرى.'
+          : 'We couldn’t submit your request. Please try again.'
+      );
+    } finally {
+      setIsSubmittingBriefing(false);
+    }
   };
 
   /* ── Auth rescue screens (unchanged logic) ── */
@@ -482,31 +513,35 @@ export default function PublicHome() {
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleBriefingSubmit} className="space-y-4 mt-4 text-start">
+        <form onSubmit={(e) => void handleBriefingSubmit(e)} className="space-y-4 mt-4 text-start">
           <div>
             <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'الاسم الكامل' : 'Full Name'}</Label>
-            <Input required placeholder={isRTL ? 'مثال: عبد المحسن السعد' : 'e.g. Sultan Al-Rashid'} value={briefingForm.name} onChange={(e) => setBriefingForm({ ...briefingForm, name: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+            <Input required disabled={isSubmittingBriefing} placeholder={isRTL ? 'مثال: عبد المحسن السعد' : 'e.g. Sultan Al-Rashid'} value={briefingForm.name} onChange={(e) => setBriefingForm({ ...briefingForm, name: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'البريد الإلكتروني' : 'Corporate Email'}</Label>
-              <Input required type="email" placeholder="name@company.sa" value={briefingForm.email} onChange={(e) => setBriefingForm({ ...briefingForm, email: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+              <Input required disabled={isSubmittingBriefing} type="email" placeholder="name@company.sa" value={briefingForm.email} onChange={(e) => setBriefingForm({ ...briefingForm, email: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
             </div>
             <div>
               <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'رقم الهاتف' : 'Phone Number'}</Label>
-              <Input placeholder="+966 50 000 0000" value={briefingForm.phone} onChange={(e) => setBriefingForm({ ...briefingForm, phone: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+              <Input disabled={isSubmittingBriefing} placeholder="+966 50 000 0000" value={briefingForm.phone} onChange={(e) => setBriefingForm({ ...briefingForm, phone: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
             </div>
           </div>
           <div>
             <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'اسم الشركة / الأصل' : 'Organization / Asset'}</Label>
-            <Input placeholder={isRTL ? 'شركة الفنادق والضيافة' : 'Hospitality Group / Asset Co.'} value={briefingForm.organization} onChange={(e) => setBriefingForm({ ...briefingForm, organization: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+            <Input disabled={isSubmittingBriefing} placeholder={isRTL ? 'شركة الفنادق والضيافة' : 'Hospitality Group / Asset Co.'} value={briefingForm.organization} onChange={(e) => setBriefingForm({ ...briefingForm, organization: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
           </div>
           <div>
             <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'تفاصيل المهمة والاستشارة' : 'Mandate Overview'}</Label>
-            <Textarea rows={3} placeholder={isRTL ? 'صف النطاق التشغيلي أو الاستثماري المطلوب...' : 'Briefly describe your operational or advisory mandate...'} value={briefingForm.notes} onChange={(e) => setBriefingForm({ ...briefingForm, notes: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+            <Textarea rows={3} disabled={isSubmittingBriefing} placeholder={isRTL ? 'صف النطاق التشغيلي أو الاستثماري المطلوب...' : 'Briefly describe your operational or advisory mandate...'} value={briefingForm.notes} onChange={(e) => setBriefingForm({ ...briefingForm, notes: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
           </div>
-          <Button type="submit" className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider mt-2 rounded-none">
-            <Send className="me-2 h-4 w-4" />
+          <Button type="submit" disabled={isSubmittingBriefing} className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider mt-2 rounded-none disabled:opacity-60">
+            {isSubmittingBriefing ? (
+              <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="me-2 h-4 w-4" />
+            )}
             {isRTL ? 'إرسال طلب الإحاطة' : 'Submit Confidential Inquiry'}
           </Button>
         </form>

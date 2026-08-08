@@ -504,6 +504,7 @@ export function useSearch(query: string, options: UseSearchOptions = {}) {
             let ticketsQuery = supabase
               .from('maintenance_tickets')
               .select('id, title, description, status, priority, room_number')
+              .eq('is_deleted', false)
               .or(`title.ilike.%${escapedQuery}%,description.ilike.%${escapedQuery}%,room_number.ilike.%${escapedQuery}%`)
 
             ticketsQuery = applyIdsScope(ticketsQuery, 'property_id', scopedPropertyIds)

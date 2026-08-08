@@ -77,6 +77,8 @@ export default function ContractsList() {
                 property_id: propertyId,
                 contract_name: `${formData.contract_name} [${formData.rate_type}]`,
                 contract_value: formData.contract_value ? Number(formData.contract_value) : undefined,
+                rate_type: formData.rate_type as 'LRA' | 'NLRA' | 'Group Rate' | 'Government',
+                annual_room_nights_goal: formData.room_nights_commitment ? Number(formData.room_nights_commitment) : undefined,
                 start_date: formData.start_date || undefined,
                 end_date: formData.end_date || undefined,
                 created_by: user.id
@@ -172,14 +174,23 @@ export default function ContractsList() {
         {
             id: 'agreement_type',
             header: 'Rate Agreement Tier',
-            cell: ({ row }) => (
-                <div className="flex items-center gap-1.5">
-                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[11px]">
-                        LRA Corporate
-                    </Badge>
-                    <span className="text-[11px] font-medium text-gray-500">300 RNs/Yr</span>
-                </div>
-            )
+            cell: ({ row }) => {
+                const c = row.original
+                return (
+                    <div className="flex items-center gap-1.5">
+                        {c.rate_type ? (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-[11px]">
+                                {c.rate_type}
+                            </Badge>
+                        ) : (
+                            <span className="text-gray-400">—</span>
+                        )}
+                        <span className="text-[11px] font-medium text-gray-500">
+                            {c.annual_room_nights_goal != null ? `${c.annual_room_nights_goal} RNs/Yr` : '—'}
+                        </span>
+                    </div>
+                )
+            }
         },
         {
             accessorKey: 'contract_value',

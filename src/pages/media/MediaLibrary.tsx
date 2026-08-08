@@ -35,6 +35,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { useMedia } from '@/hooks/useMedia';
 import { useProperties } from '@/hooks/useProperties';
+import { resolveMediaUrl } from '@/lib/secureFileAccess';
 import { cn, formatFileSize } from '@/lib/utils';
 import type { MediaAsset, MediaAssetFormData, MediaCategory, MediaType } from '@/lib/types/media';
 import {
@@ -65,7 +66,7 @@ import {
   Video,
   X,
 } from 'lucide-react';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
 
@@ -115,11 +116,34 @@ const MediaCard = React.memo(function MediaCard({
   const TypeIcon = typeConfig.icon;
   const typeLabel = t(`mediaTypes.${asset.media_type}`);
 
+  // asset.public_url is a signed URL captured at upload time (1 hour TTL) and stops
+  // working shortly after. Resolve a fresh signed URL for display/open/copy instead
+  // of relying on the stored value.
+  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    resolveMediaUrl(asset.id, asset.public_url).then((url) => {
+      if (!cancelled) setResolvedUrl(url);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [asset.id, asset.public_url]);
+
+  const activeUrl = resolvedUrl || asset.public_url;
+
   const handleCopyUrl = useCallback(() => {
-    navigator.clipboard.writeText(asset.public_url);
-    onCopyUrl(asset.public_url);
+    navigator.clipboard.writeText(activeUrl);
+    onCopyUrl(activeUrl);
     toast.success(t('notifications.urlCopied'));
-  }, [asset.public_url, onCopyUrl, t]);
+  }, [activeUrl, onCopyUrl, t]);
+
+  const handleOpenUrl = useCallback(() => {
+    window.open(activeUrl, '_blank');
+  }, [activeUrl]);
 
   if (viewMode === 'list') {
     return (
@@ -163,7 +187,7 @@ const MediaCard = React.memo(function MediaCard({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); window.open(asset.public_url, '_blank'); }}>
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleOpenUrl(); }}>
                 <ExternalLink className="w-4 h-4 me-2" />
                 {t('actions.open')}
               </DropdownMenuItem>
@@ -196,8 +220,12 @@ const MediaCard = React.memo(function MediaCard({
         <div className="relative aspect-video bg-muted">
           {asset.thumbnail_url ? (
             <img src={asset.thumbnail_url} alt={asset.title} className="w-full h-full object-cover" />
+          ) : asset.media_type === 'image' && resolvedUrl ? (
+            <img src={resolvedUrl} alt={asset.title} className="w-full h-full object-cover" />
           ) : asset.media_type === 'image' ? (
-            <img src={asset.public_url} alt={asset.title} className="w-full h-full object-cover" />
+            <div className="w-full h-full flex items-center justify-center">
+              <RefreshCw className="w-6 h-6 text-muted-foreground animate-spin" />
+            </div>
           ) : (
             <div className="w-full h-full flex items-center justify-center">
               <div className={cn('w-16 h-16 rounded-xl flex items-center justify-center', typeConfig.bg)}>
