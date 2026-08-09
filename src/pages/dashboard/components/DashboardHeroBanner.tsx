@@ -112,7 +112,7 @@ export function DashboardHeroBanner({ onStatusClick }: DashboardHeroBannerProps)
                 <Calendar className="w-4 h-4 text-blue-400" />
                 <span>{t('hero.shift_schedule', 'Shift Scheduling')}</span>
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate('/tasks')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
+              <DropdownMenuItem onClick={() => navigate(user?.id ? `/tasks?assignedToIds=${user.id}` : '/tasks')} className="cursor-pointer flex items-center gap-2.5 px-3 py-2 text-xs font-semibold hover:bg-blue-950/80 rounded-xl text-slate-200 hover:text-white">
                 <CheckSquare className="w-4 h-4 text-emerald-400" />
                 <span>{t('hero.my_tasks_queue', 'My Task Queue')}</span>
               </DropdownMenuItem>

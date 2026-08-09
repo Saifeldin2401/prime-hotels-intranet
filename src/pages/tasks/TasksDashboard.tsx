@@ -90,6 +90,7 @@ export default function TasksDashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const teamMemberIdsParam = searchParams.get('assignedToIds')
   const teamFilterIds = teamMemberIdsParam ? teamMemberIdsParam.split(',').filter(Boolean) : null
+  const createdByParam = searchParams.get('createdBy')
   const [filters, setFilters] = useState<Record<string, unknown>>({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { track } = useAnalytics()
@@ -103,6 +104,15 @@ export default function TasksDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teamMemberIdsParam])
 
+  // Deep-linked "delegated by me" view (Dashboard's Delegated Tasks widget) - same
+  // pre-scoping approach as assignedToIds above, just for the createdBy filter.
+  useEffect(() => {
+    if (createdByParam) {
+      setFilters(prev => ({ ...prev, createdBy: createdByParam }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [createdByParam])
+
   const clearTeamFilter = () => {
     setFilters(prev => {
       const { assignedToIds: _omit, ...rest } = prev
@@ -110,6 +120,16 @@ export default function TasksDashboard() {
     })
     const next = new URLSearchParams(searchParams)
     next.delete('assignedToIds')
+    setSearchParams(next, { replace: true })
+  }
+
+  const clearCreatedByFilter = () => {
+    setFilters(prev => {
+      const { createdBy: _omit, ...rest } = prev
+      return rest
+    })
+    const next = new URLSearchParams(searchParams)
+    next.delete('createdBy')
     setSearchParams(next, { replace: true })
   }
 
@@ -129,6 +149,18 @@ export default function TasksDashboard() {
             {t('filtered_to_team', { defaultValue: 'Showing tasks assigned to your team ({{count}} member(s))', count: teamFilterIds.length })}
           </span>
           <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={clearTeamFilter}>
+            <X className="h-3 w-3" />
+            {t('clear_filter', { defaultValue: 'Clear' })}
+          </Button>
+        </div>
+      )}
+      {createdByParam && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-hotel-gold/30 bg-hotel-gold/10 px-4 py-2.5 text-sm">
+          <span className="flex items-center gap-2 text-hotel-navy font-medium">
+            <Users className="h-4 w-4" />
+            {t('filtered_to_delegated', { defaultValue: 'Showing tasks you delegated to others' })}
+          </span>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={clearCreatedByFilter}>
             <X className="h-3 w-3" />
             {t('clear_filter', { defaultValue: 'Clear' })}
           </Button>

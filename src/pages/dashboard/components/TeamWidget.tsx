@@ -4,34 +4,68 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { Skeleton } from '@/components/ui/skeleton'
-import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
-import { useDepartmentStaff } from '@/hooks/useDepartmentStaff'
-import { useProfiles } from '@/hooks/useUsers'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import { Award, Users, UserX } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 
+interface TeamWidgetMember {
+  id: string
+  full_name: string | null
+  avatar_url: string | null
+  job_title: string | null
+  role?: string | null
+  department_name?: string | null
+  department_id?: string | null
+}
+
 export function TeamWidget() {
-  const { profile } = useAuth()
-  const { currentProperty } = useProperty()
+  const { user } = useAuth()
   const navigate = useNavigate()
-  
-  // Get department staff if department exists
-  const { staff: departmentStaff, loading: isLoadingDept } = useDepartmentStaff(
-    profile?.department_id,
-    currentProperty?.id
-  )
-  
-  // Fallback to all profiles if no department
-  const { data: allProfiles, isLoading: isLoadingAll } = useProfiles({
-    property_id: currentProperty?.id,
-    limit: 10
+
+  // "Open Team Hub" below routes to /hr/team (MyTeam.tsx), which shows the current
+  // user's direct reports (profiles.reporting_to = user.id) - NOT department/property
+  // colleagues. Query the same direct-reports set here so this preview accurately
+  // reflects what the button actually opens.
+  const { data: teamMembers = [], isLoading } = useQuery({
+    queryKey: ['team-widget-direct-reports', user?.id],
+    queryFn: async (): Promise<TeamWidgetMember[]> => {
+      if (!user?.id) return []
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          full_name,
+          avatar_url,
+          job_title,
+          department:user_departments(departments(id, name))
+        `)
+        .eq('reporting_to', user.id)
+        .eq('is_active', true)
+        .order('full_name')
+        .limit(10)
+
+      if (error) throw error
+
+      return (data || []).map((member) => {
+        const deptEntry = Array.isArray(member.department) ? member.department[0] : member.department
+        const dept = Array.isArray(deptEntry?.departments) ? deptEntry.departments[0] : deptEntry?.departments
+        return {
+          id: member.id,
+          full_name: member.full_name,
+          avatar_url: member.avatar_url,
+          job_title: member.job_title,
+          department_name: dept?.name || null,
+          department_id: dept?.id || null,
+        }
+      })
+    },
+    enabled: !!user?.id
   })
-  
-  const isLoading = isLoadingDept || isLoadingAll
-  const teamMembers = departmentStaff?.length > 0 ? departmentStaff : (allProfiles || [])
   
   // Get online status (in real app, this would come from a presence system)
   const getStatus = (index: number) => {
@@ -87,7 +121,7 @@ export function TeamWidget() {
               Team Members
             </CardTitle>
             <CardDescription>
-              {currentProperty?.name || 'Your team'} - {teamMembers.length} members
+              Your direct reports - {teamMembers.length} {teamMembers.length === 1 ? 'member' : 'members'}
             </CardDescription>
           </div>
           <Button variant="outline" size="sm" onClick={() => navigate('/hr/team')}>

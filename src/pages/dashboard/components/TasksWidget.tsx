@@ -90,7 +90,16 @@ export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFo
             </CardDescription>
           </div>
           <Button asChild variant="ghost" size="sm" className="gap-1 text-slate-500 hover:text-slate-900 font-semibold h-8 rounded-full px-4 hover:bg-slate-100 transition-colors">
-            <Link to="/tasks">
+            {/* Carry the same scope shown in this widget (assignedTo for "My Tasks",
+                createdBy for "Delegated Tasks") into the Tasks dashboard via its query
+                params, instead of silently dropping to the fully unscoped board. */}
+            <Link to={
+              user?.id
+                ? focusMode === 'my_work'
+                  ? `/tasks?assignedToIds=${user.id}`
+                  : `/tasks?createdBy=${user.id}`
+                : '/tasks'
+            }>
               {t('actions.view_all', 'View All')} <ArrowRight className={cn("w-4 h-4", isRTL && "rotate-180")} />
             </Link>
           </Button>

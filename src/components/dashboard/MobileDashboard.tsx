@@ -98,12 +98,16 @@ export function MobileDashboard() {
     const quickStats = useMemo(() => [
         {
             label: t('tasks', 'Tasks'),
+            // pendingTasks comes from get_dashboard_summary, which counts tasks assigned to
+            // THIS user only - carry that same scope into the destination link (via the
+            // assignedToIds param the Tasks dashboard already supports) instead of landing
+            // on the fully unscoped board, which would show everyone's tasks.
             value: stats?.pendingTasks || 0,
             icon: Briefcase,
             color: 'from-blue-500 to-blue-600',
             bgColor: 'bg-blue-50',
             textColor: 'text-blue-600',
-            href: '/tasks',
+            href: user?.id ? `/tasks?assignedToIds=${user.id}` : '/tasks',
         },
         {
             label: t('training', 'Training'),
@@ -132,7 +136,7 @@ export function MobileDashboard() {
             textColor: 'text-red-600',
             href: '/approvals',
         },
-    ], [stats, t])
+    ], [stats, t, user?.id])
 
     // Map notifications to activities
     const recentActivities: ActivityItem[] = useMemo(() => {

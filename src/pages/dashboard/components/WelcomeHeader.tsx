@@ -262,7 +262,16 @@ export function WelcomeHeader({
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.2 }}
                 className="p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 hover:border-[#C39A45]/30 shadow-lg min-w-[250px] lg:min-w-[280px] xl:min-w-[320px] transition-all duration-300 cursor-pointer overflow-hidden relative group backdrop-blur-md"
-                onClick={() => navigate(unreadCount > 0 ? '/notifications' : '/tasks')}
+                onClick={() => {
+                  if (unreadCount > 0) {
+                    navigate('/notifications')
+                    return
+                  }
+                  // "Address {{count}} high-priority tasks" below is computed from tasks
+                  // assigned to THIS user (see useTasks call above) - carry that same scope
+                  // through instead of dropping to the fully unscoped Tasks board.
+                  navigate(user?.id ? `/tasks?assignedToIds=${user.id}` : '/tasks')
+                }}
               >
                 <div className="absolute top-0 end-0 p-2 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform duration-500">
                   <Sparkles className="w-14 h-14 text-[#C39A45]" />
