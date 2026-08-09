@@ -3,7 +3,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/components/ui/use-toast'
-import { useDeleteEmployeeDocument, useDownloadEmployeeDocument, useEmployeeDocuments, type EmployeeDocument } from '@/hooks/useEmployeeDocuments'
+import { useDeleteEmployeeDocument, useDownloadEmployeeDocument, useEmployeeDocumentPermissions, useEmployeeDocuments, type EmployeeDocument } from '@/hooks/useEmployeeDocuments'
 import { cn } from '@/lib/utils'
 import { format } from 'date-fns'
 import { AlertCircle, Download, FileText, Loader2, Plus, Trash2 } from 'lucide-react'
@@ -14,6 +14,9 @@ import { useTranslation } from 'react-i18next'
 export default function EmployeeDocuments({ userId }: { userId?: string }) {
     const [isUploaderOpen, setIsUploaderOpen] = useState(false)
     const { data: documents, isLoading } = useEmployeeDocuments(userId)
+    const { data: permissions } = useEmployeeDocumentPermissions(userId)
+    const canManage = permissions?.canManage ?? false
+    const canDelete = permissions?.canDelete ?? false
     const deleteDocument = useDeleteEmployeeDocument()
     const downloadDocument = useDownloadEmployeeDocument()
     const { toast } = useToast()
@@ -64,12 +67,18 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-lg font-semibold tracking-tight">{t('employee_documents.title')}</h2>
-                    <p className="text-sm text-muted-foreground">{t('employee_documents.description')}</p>
+                    <p className="text-sm text-muted-foreground">
+                        {canManage
+                            ? t('employee_documents.description')
+                            : t('employee_documents.read_only_description', 'You can view and download these documents. Only this employee, their HR team, or an admin can add or remove files.')}
+                    </p>
                 </div>
-                <Button onClick={() => setIsUploaderOpen(true)}>
-                    <Plus className="me-2 h-4 w-4" />
-                    {t('employee_documents.upload_button')}
-                </Button>
+                {canManage && (
+                    <Button onClick={() => setIsUploaderOpen(true)}>
+                        <Plus className="me-2 h-4 w-4" />
+                        {t('employee_documents.upload_button')}
+                    </Button>
+                )}
             </div>
 
             <Card>
@@ -89,9 +98,11 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
                             <FileText className="mx-auto h-12 w-12 text-muted-foreground/30 mb-3" />
                             <h3 className="text-lg font-medium text-foreground">{t('employee_documents.no_documents')}</h3>
                             <p className="text-muted-foreground mb-4">{t('employee_documents.no_documents_hint')}</p>
-                            <Button variant="outline" onClick={() => setIsUploaderOpen(true)}>
-                                {t('employee_documents.upload_first')}
-                            </Button>
+                            {canManage && (
+                                <Button variant="outline" onClick={() => setIsUploaderOpen(true)}>
+                                    {t('employee_documents.upload_first')}
+                                </Button>
+                            )}
                         </div>
                     ) : (
                         <div className="space-y-4">
@@ -160,15 +171,17 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
                                         >
                                             <Download className="h-4 w-4 text-gray-500" />
                                         </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                                            onClick={() => handleDelete(doc)}
-                                            aria-label={t('accessibility.delete', 'Delete')}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {canDelete && (
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                onClick={() => handleDelete(doc)}
+                                                aria-label={t('accessibility.delete', 'Delete')}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        )}
                                     </div>
                                 </div>
                             ))}
@@ -180,6 +193,7 @@ export default function EmployeeDocuments({ userId }: { userId?: string }) {
             <DocumentUploader
                 open={isUploaderOpen}
                 onOpenChange={setIsUploaderOpen}
+                targetUserId={userId}
             />
         </div>
     )

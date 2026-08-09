@@ -150,11 +150,11 @@ export default function MyProfile() {
             const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`
 
             const { error: uploadError } = await supabase.storage
-                .from('documents')
+                .from('avatars')
                 .upload(filePath, file, { cacheControl: '3600', upsert: false })
             if (uploadError) throw uploadError
 
-            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+            const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
 
             const { error: updateError } = await supabase
                 .from('profiles')

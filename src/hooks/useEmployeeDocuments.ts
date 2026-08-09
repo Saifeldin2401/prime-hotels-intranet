@@ -37,6 +37,40 @@ export function useEmployeeDocuments(userId?: string) {
     })
 }
 
+/**
+ * Mirrors the DB's can_view_employee_document/can_manage_employee_document RLS
+ * helpers so the UI can gate the Upload/Delete affordances before the user even
+ * tries the action, rather than surfacing an RLS error after the fact.
+ */
+export function useEmployeeDocumentPermissions(targetUserId?: string) {
+    const { user } = useAuth()
+    const isSelf = !!user?.id && !!targetUserId && user.id === targetUserId
+
+    return useQuery({
+        queryKey: ['employee-documents-permissions', targetUserId, user?.id],
+        enabled: !!targetUserId && !!user?.id,
+        queryFn: async () => {
+            // canDelete mirrors the DB's DELETE policy, which - unlike SELECT/INSERT -
+            // was intentionally left self-only (no HR/admin override exists today).
+            if (isSelf) return { canView: true, canManage: true, canDelete: true, isSelf: true }
+
+            const [{ data: canView, error: viewError }, { data: canManage, error: manageError }] = await Promise.all([
+                supabase.rpc('can_view_employee_document', { p_target_user_id: targetUserId }),
+                supabase.rpc('can_manage_employee_document', { p_target_user_id: targetUserId }),
+            ])
+
+            if (viewError) throw viewError
+            if (manageError) throw manageError
+            return { canView: Boolean(canView), canManage: Boolean(canManage), canDelete: false, isSelf: false }
+        },
+        // Self is always fully permitted without a round trip; everyone else defaults
+        // to "no access" while the RPCs resolve, matching the DB's own default-deny.
+        initialData: isSelf
+            ? { canView: true, canManage: true, canDelete: true, isSelf: true }
+            : { canView: false, canManage: false, canDelete: false, isSelf: false },
+    })
+}
+
 export function useUploadEmployeeDocument() {
     const queryClient = useQueryClient()
     const { user } = useAuth()
@@ -47,19 +81,22 @@ export function useUploadEmployeeDocument() {
             category,
             title,
             expiry_date,
-            document_number
+            document_number,
+            targetUserId
         }: {
             file: File,
             category: string,
             title?: string,
             expiry_date?: string,
-            document_number?: string
+            document_number?: string,
+            targetUserId?: string
         }) => {
             if (!user) throw new Error('User must be authenticated')
+            const ownerId = targetUserId || user.id
 
             // 1. Upload file to storage
             const fileExt = file.name.split('.').pop()
-            const fileName = `${user.id}/${Date.now()}.${fileExt}`
+            const fileName = `${ownerId}/${Date.now()}.${fileExt}`
             const filePath = `${fileName}`
 
             const { error: uploadError } = await supabase.storage
@@ -72,7 +109,7 @@ export function useUploadEmployeeDocument() {
             const { data, error: dbError } = await supabase
                 .from('employee_documents')
                 .insert({
-                    user_id: user.id,
+                    user_id: ownerId,
                     title: title || file.name,
                     category,
                     file_path: filePath,
@@ -85,7 +122,12 @@ export function useUploadEmployeeDocument() {
                 .select()
                 .single()
 
-            if (dbError) throw dbError
+            if (dbError) {
+                // Upload succeeded but the insert was rejected (e.g. RLS denied an
+                // unauthorized on-behalf-of upload) - don't leave an orphaned file.
+                await supabase.storage.from('employee-documents').remove([filePath])
+                throw dbError
+            }
             return data
         },
         onSuccess: () => {

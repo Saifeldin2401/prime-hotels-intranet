@@ -1,0 +1,11 @@
+-- The 'avatars' bucket was documented as the one intentionally PUBLIC bucket in this project
+-- (full-supabase-system-audit-2026-06-22.md: "Public: avatars."), but a later storage-hardening
+-- pass (20260612112255_storage_bucket_hardening.sql) flipped it to private along with every
+-- other bucket, without updating any of the ~42 call sites across the app that read
+-- profiles.avatar_url directly as an <img src> (sidebar, org chart, employee directory,
+-- messaging, dashboards, etc.) expecting a permanently-valid public URL. Avatars are low-
+-- sensitivity, company-wide-visible assets by design -- unlike documents/payslips/etc, there is
+-- no legitimate case for restricting who can view a colleague's profile photo. Restoring public
+-- read matches the original documented design and avoids a 42-file signed-URL refactor for an
+-- asset class that was never meant to be access-controlled.
+UPDATE storage.buckets SET public = true WHERE id = 'avatars';

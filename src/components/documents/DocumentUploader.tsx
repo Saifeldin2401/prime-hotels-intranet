@@ -14,9 +14,11 @@ import { useTranslation } from 'react-i18next'
 interface DocumentUploaderProps {
     open: boolean
     onOpenChange: (open: boolean) => void
+    /** Profile this document is being added to. Defaults to the uploader's own profile. */
+    targetUserId?: string
 }
 
-export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) {
+export function DocumentUploader({ open, onOpenChange, targetUserId }: DocumentUploaderProps) {
     // Component initialization
     const [file, setFile] = useState<File | null>(null)
     const [_uploadProgress, _setUploadProgress] = useState<number | null>(null)
@@ -82,7 +84,8 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                 category,
                 title: title || file.name,
                 expiry_date: expiryDate,
-                document_number: documentNumber
+                document_number: documentNumber,
+                targetUserId
             })
 
             toast({
@@ -113,7 +116,9 @@ export function DocumentUploader({ open, onOpenChange }: DocumentUploaderProps) 
                 <DialogHeader>
                     <DialogTitle>Upload Document</DialogTitle>
                     <DialogDescription>
-                        Add a new document to your employee profile.
+                        {targetUserId
+                            ? 'Add a new document to this employee\'s profile.'
+                            : 'Add a new document to your employee profile.'}
                     </DialogDescription>
                 </DialogHeader>
 

@@ -45,6 +45,7 @@
     "employee_documents": {
         "title": "My Documents",
         "description": "Manage your personal documents and records.",
+        "read_only_description": "You can view and download these documents. Only this employee, their HR team, or an admin can add or remove files.",
         "upload_button": "Upload Document",
         "uploaded_title": "Uploaded Documents",
         "uploaded_description": "Documents you have uploaded to your profile.",
