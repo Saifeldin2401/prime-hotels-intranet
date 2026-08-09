@@ -49,7 +49,7 @@ interface AssignTrainingWizardModalProps {
 type AudienceType = 'user' | 'department' | 'role' | 'new_hire' | 'property'
 type ContentCategory = 'onboarding' | 'paths' | 'compliance' | 'modules'
 
-interface SampleContentItem {
+interface ContentPackageItem {
   id: string
   title: string
   category: ContentCategory
@@ -58,75 +58,6 @@ interface SampleContentItem {
   difficulty: 'Beginner' | 'Intermediate' | 'Advanced'
   isMandatory?: boolean
 }
-
-const SAMPLE_CONTENT_PACKAGES: SampleContentItem[] = [
-  {
-    id: 'a1000000-0000-4000-a000-000000000001',
-    title: 'ALTUS New Hire Hotel Orientation (KSA)',
-    category: 'onboarding',
-    duration: '14 Days Journey',
-    moduleCount: 6,
-    difficulty: 'Beginner',
-    isMandatory: true
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000002',
-    title: 'Front Desk & Guest Services Onboarding',
-    category: 'onboarding',
-    duration: '7 Days Journey',
-    moduleCount: 4,
-    difficulty: 'Beginner',
-    isMandatory: true
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000003',
-    title: 'Front Office Operational Excellence Track',
-    category: 'paths',
-    duration: '4 Hours',
-    moduleCount: 5,
-    difficulty: 'Intermediate'
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000004',
-    title: 'Luxury Housekeeping & Room Inspection Standards',
-    category: 'paths',
-    duration: '3 Hours',
-    moduleCount: 4,
-    difficulty: 'Intermediate'
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000005',
-    title: 'Saudi Food Safety & Kitchen Hygiene Standards (SFDA)',
-    category: 'compliance',
-    duration: '2 Hours',
-    moduleCount: 3,
-    difficulty: 'Intermediate',
-    isMandatory: true
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000006',
-    title: 'Emergency Response & Hotel Fire Evacuation SOP',
-    category: 'compliance',
-    duration: '1 Hour',
-    moduleCount: 2,
-    difficulty: 'Beginner',
-    isMandatory: true
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000007',
-    title: 'Opera PMS Express Guest Check-in & Check-out',
-    category: 'modules',
-    duration: '45 Mins',
-    difficulty: 'Beginner'
-  },
-  {
-    id: 'a1000000-0000-4000-a000-000000000008',
-    title: 'Front Desk Room Upselling & Revenue Optimization',
-    category: 'modules',
-    duration: '30 Mins',
-    difficulty: 'Advanced'
-  }
-]
 
 const DEPARTMENTS_LIST = [
   'Front Office',
@@ -167,8 +98,11 @@ export function AssignTrainingWizardModal({
   const [searchQuery, setSearchQuery] = useState('')
 
   // Step 2: Content Package Selection
-  const [contentCategory, setContentCategory] = useState<ContentCategory>('onboarding')
-  const [selectedPackage, setSelectedPackage] = useState<SampleContentItem | null>(SAMPLE_CONTENT_PACKAGES[0])
+  // Defaults to 'modules' since that is the only category currently backed by real,
+  // assignable content (training_modules). The other tabs show an honest empty state
+  // until real onboarding/path/compliance content sources are wired up.
+  const [contentCategory, setContentCategory] = useState<ContentCategory>('modules')
+  const [selectedPackage, setSelectedPackage] = useState<ContentPackageItem | null>(null)
 
   // Step 3: Due Date & Schedule
   const [dueDays, setDueDays] = useState<number>(14)
@@ -215,19 +149,21 @@ export function AssignTrainingWizardModal({
     enabled: open && audienceType === 'user'
   })
 
-  const filteredContentPackages = useMemo(() => {
-    const staticPackages = SAMPLE_CONTENT_PACKAGES.filter(pkg => pkg.category === contentCategory)
-    if (contentCategory === 'modules' && dbModules && dbModules.length > 0) {
-      const mappedDbModules: SampleContentItem[] = dbModules.map(mod => ({
-        id: mod.id,
-        title: mod.title,
-        category: 'modules',
-        duration: mod.estimated_duration_minutes ? `${mod.estimated_duration_minutes} Mins` : '30 Mins',
-        difficulty: (mod.difficulty_level as any) || 'Intermediate'
-      }))
-      return [...mappedDbModules, ...staticPackages]
-    }
-    return staticPackages
+  // Only the "modules" tab is backed by a real content source (training_modules).
+  // Onboarding/Paths/Compliance packages were previously hardcoded placeholder data
+  // that didn't exist in the database - selecting one and submitting created a
+  // broken assignment pointing at a content_id nothing else in the app could resolve.
+  // Until those categories have a real backing query, they show an honest empty state.
+  const filteredContentPackages = useMemo((): ContentPackageItem[] => {
+    if (contentCategory !== 'modules') return []
+    if (!dbModules || dbModules.length === 0) return []
+    return dbModules.map(mod => ({
+      id: mod.id,
+      title: mod.title,
+      category: 'modules',
+      duration: mod.estimated_duration_minutes ? `${mod.estimated_duration_minutes} Mins` : '30 Mins',
+      difficulty: (mod.difficulty_level as any) || 'Intermediate'
+    }))
   }, [contentCategory, dbModules])
 
   const handleNextStep = () => {
@@ -254,7 +190,7 @@ export function AssignTrainingWizardModal({
       const payload = [{
         target_type: audienceType,
         target_id: audienceType === 'new_hire' ? null : (selectedTargetId || null),
-        content_type: selectedPackage.category === 'onboarding' ? 'path' : 'module',
+        content_type: 'module',
         content_id: selectedPackage.id,
         assigned_by: user?.id || null,
         due_date: calculatedDueDate,
@@ -557,6 +493,19 @@ export function AssignTrainingWizardModal({
               </Tabs>
 
               {/* Content Package List */}
+              {filteredContentPackages.length === 0 ? (
+                <div className="flex flex-col items-center justify-center text-center py-10 px-6 rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/30">
+                  <AlertCircle className="w-8 h-8 text-slate-400 mb-3" />
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                    No content packages found in this category
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm">
+                    {contentCategory === 'modules'
+                      ? 'No published training modules were found. Create one in Training Hub first.'
+                      : 'This category is not yet backed by real, assignable content. Use the Modules tab to assign an existing training module.'}
+                  </p>
+                </div>
+              ) : (
               <div className="space-y-3">
                 {filteredContentPackages.map((pkg) => (
                   <button
@@ -612,6 +561,7 @@ export function AssignTrainingWizardModal({
                   </button>
                 ))}
               </div>
+              )}
             </div>
           )}
 

@@ -55,12 +55,6 @@ interface DetailItemProps {
     highlight?: boolean
 }
 
-const SAMPLE_DEMO_CODES = [
-    'CERT-2026-EXCELLENCE',
-    'SOP-SAUDI-9901',
-    'PH-CERT-2026-001'
-]
-
 export default function VerifyCertificate() {
     const { code: urlCode } = useParams<{ code?: string }>()
     const { t, i18n } = useTranslation('public')
@@ -295,25 +289,6 @@ export default function VerifyCertificate() {
                                                             </button>
                                                         )}
                                                     </div>
-                                                </div>
-
-                                                {/* Demo Sample Chips */}
-                                                <div className="flex flex-wrap items-center gap-2 pt-2 text-xs">
-                                                    <span className="text-slate-400 font-medium me-1">Try sample code:</span>
-                                                    {SAMPLE_DEMO_CODES.map((sampleCode) => (
-                                                        <button
-                                                            key={sampleCode}
-                                                            type="button"
-                                                            onClick={() => {
-                                                                setCode(sampleCode)
-                                                                void handleVerify(undefined, sampleCode)
-                                                            }}
-                                                            style={{ backgroundColor: '#1E293B', borderColor: '#334155' }}
-                                                            className="hover:bg-amber-500/20 text-slate-200 hover:text-amber-300 border rounded-lg px-3 py-1.5 font-mono transition-all duration-200"
-                                                        >
-                                                            {sampleCode}
-                                                        </button>
-                                                    ))}
                                                 </div>
                                             </div>
 
