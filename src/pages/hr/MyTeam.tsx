@@ -314,7 +314,7 @@ export default function MyTeam() {
                                 </Link>
                             </Button>
                             <Button asChild variant="secondary" className="h-auto min-h-14 justify-between px-4 py-3 text-left whitespace-normal bg-white/10 text-white border border-white/10 hover:bg-white/15">
-                                <Link to="/tasks">
+                                <Link to={teamMemberIds.length > 0 ? `/tasks?assignedToIds=${teamMemberIds.join(',')}` : '/tasks'}>
                                     <span>{t('team.open_tasks', 'Open Team Tasks')}</span>
                                     <FolderKanban className="h-4 w-4" />
                                 </Link>

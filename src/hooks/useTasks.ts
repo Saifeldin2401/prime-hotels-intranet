@@ -16,6 +16,7 @@ export function useTasks(filters?: {
   statuses?: string[]
   priority?: string
   assignedTo?: string
+  assignedToIds?: string[]
   createdBy?: string
   propertyId?: string
   departmentId?: string
@@ -50,6 +51,9 @@ export function useTasks(filters?: {
       }
       if (filters?.assignedTo) {
         query = query.eq('assigned_to_id', filters.assignedTo)
+      }
+      if (filters?.assignedToIds && filters.assignedToIds.length > 0) {
+        query = query.in('assigned_to_id', filters.assignedToIds)
       }
       if (filters?.createdBy) {
         query = query.eq('created_by_id', filters.createdBy)

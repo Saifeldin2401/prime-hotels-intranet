@@ -20,10 +20,13 @@ import {
     List as ListIcon,
     ListTodo,
     Loader2,
-    Plus
+    Plus,
+    Users,
+    X
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSearchParams } from 'react-router-dom'
 
 const statConfig = [
   {
@@ -84,9 +87,31 @@ export default function TasksDashboard() {
   const [view, setView] = useState<'list' | 'kanban'>(() =>
     typeof window !== 'undefined' && window.innerWidth < 1024 ? 'list' : 'kanban'
   )
-  const [filters, setFilters] = useState({})
+  const [searchParams, setSearchParams] = useSearchParams()
+  const teamMemberIdsParam = searchParams.get('assignedToIds')
+  const teamFilterIds = teamMemberIdsParam ? teamMemberIdsParam.split(',').filter(Boolean) : null
+  const [filters, setFilters] = useState<Record<string, unknown>>({})
   const [showCreateDialog, setShowCreateDialog] = useState(false)
   const { track } = useAnalytics()
+
+  // Deep-linked "team" view (e.g. from My Team's "Open Team Tasks") - pre-scope to the
+  // linking manager's direct reports instead of silently showing the generic personal list.
+  useEffect(() => {
+    if (teamFilterIds && teamFilterIds.length > 0) {
+      setFilters(prev => ({ ...prev, assignedToIds: teamFilterIds, assignedTo: undefined }))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teamMemberIdsParam])
+
+  const clearTeamFilter = () => {
+    setFilters(prev => {
+      const { assignedToIds: _omit, ...rest } = prev
+      return rest
+    })
+    const next = new URLSearchParams(searchParams)
+    next.delete('assignedToIds')
+    setSearchParams(next, { replace: true })
+  }
 
   const { data: tasks = [], isLoading } = useTasks(filters)
   const { data: stats } = useTaskStats(user?.id)
@@ -97,6 +122,18 @@ export default function TasksDashboard() {
 
   return (
     <div className="space-y-6 container mx-auto py-4 px-4 sm:py-6 sm:px-6">
+      {teamFilterIds && teamFilterIds.length > 0 && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-hotel-gold/30 bg-hotel-gold/10 px-4 py-2.5 text-sm">
+          <span className="flex items-center gap-2 text-hotel-navy font-medium">
+            <Users className="h-4 w-4" />
+            {t('filtered_to_team', { defaultValue: 'Showing tasks assigned to your team ({{count}} member(s))', count: teamFilterIds.length })}
+          </span>
+          <Button variant="ghost" size="sm" className="h-7 text-xs gap-1" onClick={clearTeamFilter}>
+            <X className="h-3 w-3" />
+            {t('clear_filter', { defaultValue: 'Clear' })}
+          </Button>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">{t('tasks')}</h1>
