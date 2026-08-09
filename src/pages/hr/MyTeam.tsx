@@ -26,6 +26,8 @@ interface TeamMember {
     department?: Array<{ departments?: { name?: string | null } | null }> | null
 }
 
+type AtRiskReason = 'low_completion' | 'low_score' | 'overdue_training' | 'cert_expiring'
+
 interface TeamLearningTracking {
     assignedModules: number
     completedModules: number
@@ -34,7 +36,10 @@ interface TeamLearningTracking {
     avgScore: number | null
     certificatesCount: number
     lastActivity: string | null
+    overdueCount: number
+    expiringCertCount: number
     atRisk: boolean
+    atRiskReasons: AtRiskReason[]
 }
 
 interface TeamLearningTrackingSnapshot {
@@ -45,13 +50,24 @@ interface TeamLearningTrackingSnapshot {
         overallCompletionRate: number
         certificatesCount: number
         atRiskCount: number
+        overdueCount: number
+        expiringCertCount: number
     }
+}
+
+const CERT_EXPIRY_LOOKAHEAD_DAYS = 30
+const AT_RISK_REASON_LABELS: Record<AtRiskReason, string> = {
+    low_completion: 'Low completion rate',
+    low_score: 'Low quiz scores',
+    overdue_training: 'Has expired/overdue training',
+    cert_expiring: 'Certificate expiring soon'
 }
 
 export default function MyTeam() {
     const { t } = useTranslation(['hr', 'common'])
     const { user } = useAuth()
     const [searchTerm, setSearchTerm] = useState('')
+    const [atRiskOnly, setAtRiskOnly] = useState(false)
 
     // Fetch direct reports
     const { data: teamMembers, isLoading } = useQuery({
@@ -127,12 +143,16 @@ export default function MyTeam() {
                         completedModules: 0,
                         overallCompletionRate: 0,
                         certificatesCount: 0,
-                        atRiskCount: 0
+                        atRiskCount: 0,
+                        overdueCount: 0,
+                        expiringCertCount: 0
                     }
                 } satisfies TeamLearningTrackingSnapshot
             }
 
-            const [progressResult, certResult] = await Promise.all([
+            const expiryHorizon = new Date(Date.now() + CERT_EXPIRY_LOOKAHEAD_DAYS * 24 * 60 * 60 * 1000).toISOString()
+
+            const [progressResult, certResult, expiringCertResult] = await Promise.all([
                 supabase
                     .from('training_progress')
                     .select('user_id, status, score_percentage, updated_at, content_type:lp_content_type')
@@ -143,16 +163,34 @@ export default function MyTeam() {
                     .select('user_id')
                     .eq('certificate_type', 'training')
                     .eq('status', 'active')
+                    .in('user_id', teamMemberIds),
+                // Certs expiring soon are still "active" until they lapse - a separate,
+                // narrower fetch keeps the certificatesCount above meaning "currently valid".
+                supabase
+                    .from('certificates')
+                    .select('user_id')
+                    .eq('status', 'active')
                     .in('user_id', teamMemberIds)
+                    .not('expiry_date', 'is', null)
+                    .lte('expiry_date', expiryHorizon)
+                    .gte('expiry_date', new Date().toISOString())
             ])
 
             if (progressResult.error) throw progressResult.error
             if (certResult.error) throw certResult.error
+            if (expiringCertResult.error) throw expiringCertResult.error
 
             const progressRows = progressResult.data || []
             const certRows = certResult.data || []
+            const expiringCertRows = expiringCertResult.data || []
 
             const certsByUser = certRows.reduce<Record<string, number>>((acc, row) => {
+                if (!row.user_id) return acc
+                acc[row.user_id] = (acc[row.user_id] || 0) + 1
+                return acc
+            }, {})
+
+            const expiringCertsByUser = expiringCertRows.reduce<Record<string, number>>((acc, row) => {
                 if (!row.user_id) return acc
                 acc[row.user_id] = (acc[row.user_id] || 0) + 1
                 return acc
@@ -163,6 +201,7 @@ export default function MyTeam() {
                 const assignedModules = userRows.length
                 const completedModules = userRows.filter((row) => row.status === 'completed').length
                 const inProgressModules = userRows.filter((row) => row.status === 'in_progress').length
+                const overdueCount = userRows.filter((row) => row.status === 'expired').length
                 const completionRate = assignedModules > 0
                     ? Math.round((completedModules / assignedModules) * 100)
                     : 0
@@ -180,7 +219,13 @@ export default function MyTeam() {
                     : null
 
                 const certificatesCount = certsByUser[userId] || 0
-                const atRisk = assignedModules > 0 && (completionRate < 50 || (avgScore !== null && avgScore < 70))
+                const expiringCertCount = expiringCertsByUser[userId] || 0
+
+                const atRiskReasons: AtRiskReason[] = []
+                if (assignedModules > 0 && completionRate < 50) atRiskReasons.push('low_completion')
+                if (avgScore !== null && avgScore < 70) atRiskReasons.push('low_score')
+                if (overdueCount > 0) atRiskReasons.push('overdue_training')
+                if (expiringCertCount > 0) atRiskReasons.push('cert_expiring')
 
                 acc[userId] = {
                     assignedModules,
@@ -190,7 +235,10 @@ export default function MyTeam() {
                     avgScore,
                     certificatesCount,
                     lastActivity,
-                    atRisk
+                    overdueCount,
+                    expiringCertCount,
+                    atRisk: atRiskReasons.length > 0,
+                    atRiskReasons
                 }
                 return acc
             }, {})
@@ -199,6 +247,8 @@ export default function MyTeam() {
             const completedModules = Object.values(byUser).reduce((sum, row) => sum + row.completedModules, 0)
             const certificatesCount = Object.values(byUser).reduce((sum, row) => sum + row.certificatesCount, 0)
             const atRiskCount = Object.values(byUser).filter((row) => row.atRisk).length
+            const overdueCount = Object.values(byUser).reduce((sum, row) => sum + row.overdueCount, 0)
+            const expiringCertCount = Object.values(byUser).reduce((sum, row) => sum + row.expiringCertCount, 0)
 
             return {
                 byUser,
@@ -207,17 +257,14 @@ export default function MyTeam() {
                     completedModules,
                     overallCompletionRate: assignedModules > 0 ? Math.round((completedModules / assignedModules) * 100) : 0,
                     certificatesCount,
-                    atRiskCount
+                    atRiskCount,
+                    overdueCount,
+                    expiringCertCount
                 }
             } satisfies TeamLearningTrackingSnapshot
         },
         enabled: teamMemberIds.length > 0
     })
-
-    const filteredTeam = teamMembers?.filter(member =>
-        member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        member.job_title?.toLowerCase().includes(searchTerm.toLowerCase())
-    ) || []
 
     const trackingByUser = teamLearningTracking?.byUser || {}
     const trackingSummary = teamLearningTracking?.summary || {
@@ -225,8 +272,15 @@ export default function MyTeam() {
         completedModules: 0,
         overallCompletionRate: 0,
         certificatesCount: 0,
-        atRiskCount: 0
+        atRiskCount: 0,
+        overdueCount: 0,
+        expiringCertCount: 0
     }
+
+    const filteredTeam = (teamMembers?.filter(member =>
+        member.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        member.job_title?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || []).filter(member => !atRiskOnly || trackingByUser[member.id]?.atRisk)
 
     return (
         <div className="space-y-6">
@@ -365,7 +419,13 @@ export default function MyTeam() {
                     </CardContent>
                 </Card>
 
-                <Card className="bg-white border-slate-200 shadow-sm rounded-2xl">
+                <Card
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setAtRiskOnly(prev => !prev)}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setAtRiskOnly(prev => !prev) } }}
+                    className={`border-slate-200 shadow-sm rounded-2xl cursor-pointer transition-colors ${atRiskOnly ? 'bg-rose-50 border-rose-200 ring-1 ring-rose-200' : 'bg-white hover:border-rose-200'}`}
+                >
                     <CardHeader className="pb-3">
                         <CardTitle className="text-sm font-semibold text-slate-500 flex items-center gap-2">
                             <AlertTriangle className="w-4 h-4 text-rose-500" />
@@ -377,7 +437,12 @@ export default function MyTeam() {
                             {isLoadingLearning ? <Loader2 className="w-6 h-6 animate-spin text-slate-400" /> : trackingSummary.atRiskCount}
                         </div>
                         <p className="text-sm text-slate-500 mt-1">
-                            {t('team.low_progress_or_score', 'Low completion or low quiz scores')}
+                            {isLoadingLearning
+                                ? t('team.low_progress_or_score', 'Low completion or low quiz scores')
+                                : `${trackingSummary.overdueCount} ${t('team.overdue_short', 'overdue')} · ${trackingSummary.expiringCertCount} ${t('team.expiring_short', 'certs expiring')}`}
+                        </p>
+                        <p className="text-[11px] text-rose-500 mt-1 font-medium">
+                            {atRiskOnly ? t('team.click_to_show_all', 'Click to show everyone') : t('team.click_to_filter', 'Click to filter the list below')}
                         </p>
                     </CardContent>
                 </Card>
@@ -394,6 +459,16 @@ export default function MyTeam() {
                     />
                 </div>
                 <div className="flex items-center gap-2">
+                    {atRiskOnly && (
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"
+                            onClick={() => setAtRiskOnly(false)}
+                        >
+                            {t('team.clear_at_risk_filter', 'Clear at-risk filter')}
+                        </Button>
+                    )}
                     <Badge variant="secondary" className="text-sm py-1">
                         {filteredTeam.length} {t('team.members_count', 'Members')}
                     </Badge>
@@ -410,9 +485,11 @@ export default function MyTeam() {
                         <Users className="h-12 w-12 text-muted-foreground mb-4 opacity-50" />
                         <h3 className="text-lg font-medium text-gray-900">{t('team.no_members', 'No team members found')}</h3>
                         <p className="text-sm text-gray-500 mt-1 max-w-sm">
-                            {searchTerm
-                                ? t('team.no_search_results', 'No team members match your search criteria.')
-                                : t('team.no_direct_reports', 'You do not have any direct reports assigned to you in the organizational structure.')}
+                            {atRiskOnly
+                                ? t('team.no_at_risk', 'Nobody on your team currently needs follow-up.')
+                                : searchTerm
+                                    ? t('team.no_search_results', 'No team members match your search criteria.')
+                                    : t('team.no_direct_reports', 'You do not have any direct reports assigned to you in the organizational structure.')}
                         </p>
                     </CardContent>
                 </Card>
@@ -465,7 +542,11 @@ export default function MyTeam() {
                                                 {t('team.learning_tracking', 'Learning Tracking')}
                                             </div>
                                             {trackingByUser[member.id]?.atRisk && (
-                                                <Badge variant="destructive" className="text-[10px] px-2 py-0">
+                                                <Badge
+                                                    variant="destructive"
+                                                    className="text-[10px] px-2 py-0"
+                                                    title={trackingByUser[member.id].atRiskReasons.map(r => AT_RISK_REASON_LABELS[r]).join(' · ')}
+                                                >
                                                     {t('team.at_risk', 'At risk')}
                                                 </Badge>
                                             )}
@@ -480,6 +561,20 @@ export default function MyTeam() {
                                             <span>{`${t('team.avg_score', 'Avg score')}: ${trackingByUser[member.id]?.avgScore ?? '-'}`}</span>
                                             <span>{`${t('team.certificates', 'Certificates')}: ${trackingByUser[member.id]?.certificatesCount || 0}`}</span>
                                         </div>
+                                        {((trackingByUser[member.id]?.overdueCount ?? 0) > 0 || (trackingByUser[member.id]?.expiringCertCount ?? 0) > 0) && (
+                                            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                                {(trackingByUser[member.id]?.overdueCount ?? 0) > 0 && (
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-rose-200 text-rose-700 bg-rose-50">
+                                                        {`${trackingByUser[member.id].overdueCount} ${t('team.overdue_short', 'overdue')}`}
+                                                    </Badge>
+                                                )}
+                                                {(trackingByUser[member.id]?.expiringCertCount ?? 0) > 0 && (
+                                                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 border-amber-200 text-amber-700 bg-amber-50">
+                                                        {`${trackingByUser[member.id].expiringCertCount} ${t('team.expiring_short', 'certs expiring')}`}
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        )}
                                         {trackingByUser[member.id]?.lastActivity && (
                                             <div className="text-[11px] text-slate-400">
                                                 {`${t('team.last_activity', 'Last activity')}: ${new Date(trackingByUser[member.id].lastActivity as string).toLocaleDateString()}`}
