@@ -22,12 +22,14 @@ import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleView
 import { SmartObserver } from '@/components/training/SmartObserver'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useCheckAchievement } from '@/hooks/useAchievements'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
 import { awardCertificationPathCertificates } from '@/services/certificationPathService'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { sanitizeHtml } from '@/lib/sanitize'
+import { resolveStorageUrl } from '@/lib/secureFileAccess'
 import { safeLocalStorage } from '@/lib/storage'
 import { evaluateTrainingCompletion, getQuizProgressKey } from '@/lib/trainingCompletion'
 import type { TrainingContentBlock } from '@/lib/types'
@@ -36,11 +38,14 @@ import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponent
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import {
+    Award,
     ArrowLeft,
     BookOpen,
     CheckCircle,
+    CheckCircle2,
     ChevronLeft,
     ChevronRight,
+    Circle,
     Eye,
     FileText,
     Gamepad2,
@@ -52,9 +57,11 @@ import {
     Loader2,
     Menu,
     MousePointer2,
+    Sparkles,
     Trophy,
     Video as VideoIcon,
-    X
+    X,
+    XCircle
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -123,6 +130,13 @@ type ModuleCompletionOverrides = {
     quizScore?: number | null
     lastBlockId?: string | null
     lastBlockIndex?: number
+}
+
+// Only these two achievement types have real, implemented qualification logic server-side
+// (check_and_award_achievement) that a training completion can actually satisfy.
+const TRAINING_ACHIEVEMENT_LABELS: Record<string, { title: string; description: string; icon: typeof Award }> = {
+    training_master: { title: 'Training Master', description: 'Completed 10 training modules', icon: Award },
+    perfect_completion: { title: 'Perfect Score', description: 'Scored 100% on a training module', icon: Sparkles },
 }
 
 const isValidUuid = (value?: string | null) =>
@@ -374,6 +388,117 @@ function VideoPlayer({ src, blockId, onMarkWatched, onTrackProgress, onRegisterS
     )
 }
 
+// Images/audio uploaded through the Training Builder are stored in the private 'documents'
+// bucket with a URL that never resolves on its own (see resolveStorageUrl) - unlike video,
+// neither element has a natural error-triggered recovery path, so resolve proactively.
+function useResolvedStorageUrl(src: string | undefined) {
+    const [resolvedSrc, setResolvedSrc] = useState<string | null>(null)
+    const [resolving, setResolving] = useState(!!src)
+
+    useEffect(() => {
+        let cancelled = false
+        setResolving(!!src)
+        if (!src) {
+            setResolvedSrc(null)
+            return
+        }
+        resolveStorageUrl(src).then((url) => {
+            if (!cancelled) {
+                setResolvedSrc(url)
+                setResolving(false)
+            }
+        })
+        return () => { cancelled = true }
+    }, [src])
+
+    return { resolvedSrc, resolving }
+}
+
+type ImageBlockProps = {
+    src: string
+    alt: string
+    t: TFunction<'training', undefined>
+}
+
+function ImageBlock({ src, alt, t }: ImageBlockProps) {
+    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
+    const [imageError, setImageError] = useState(false)
+
+    if (resolving) {
+        return (
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-center h-64">
+                <Loader2 className="h-8 w-8 animate-spin text-slate-300" />
+            </div>
+        )
+    }
+
+    if (imageError || !resolvedSrc) {
+        return (
+            <div className="rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50 flex flex-col items-center justify-center h-64 text-slate-400 gap-2">
+                <ImageIcon className="h-10 w-10" />
+                <span className="text-sm">{t('imageLoadError', 'Unable to load this image.')}</span>
+            </div>
+        )
+    }
+
+    return (
+        <div className="relative group">
+            <img
+                src={resolvedSrc}
+                alt={alt}
+                onError={() => setImageError(true)}
+                className="rounded-2xl shadow-xl max-h-[600px] w-auto mx-auto border border-slate-200 transition-transform duration-500 group-hover:scale-[1.01]"
+            />
+            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10 pointer-events-none" />
+        </div>
+    )
+}
+
+type AudioPlayerProps = {
+    src: string
+    blockId: string
+    onTrackProgress: (blockId: string, currentTime: number, duration: number) => void
+    onRegisterSeek: (blockId: string, currentTime: number) => void
+    t: TFunction<'training', undefined>
+}
+
+function AudioPlayer({ src, blockId, onTrackProgress, onRegisterSeek, t }: AudioPlayerProps) {
+    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
+    const [audioError, setAudioError] = useState(false)
+
+    if (resolving) {
+        return (
+            <div className="flex items-center gap-3 text-slate-400">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span>{t('loadingAudio', 'Loading audio...')}</span>
+            </div>
+        )
+    }
+
+    if (audioError || !resolvedSrc) {
+        return (
+            <div className="flex items-center gap-3 text-slate-500">
+                <Headphones className="h-6 w-6" />
+                <span>{t('audioLoadError', 'Unable to load this audio file.')}</span>
+            </div>
+        )
+    }
+
+    return (
+        <audio
+            className="w-full"
+            controls
+            src={resolvedSrc}
+            onError={() => setAudioError(true)}
+            onTimeUpdate={(e) => {
+                const target = e.currentTarget
+                onTrackProgress(blockId, target.currentTime, target.duration)
+            }}
+            onSeeking={(e) => onRegisterSeek(blockId, e.currentTarget.currentTime)}
+        />
+    )
+}
+
 export default function TrainingPlayer() {
     const { t, i18n } = useTranslation('training')
     const isRTL = i18n.dir() === 'rtl'
@@ -415,6 +540,8 @@ export default function TrainingPlayer() {
     const [completedMediaBlocks, setCompletedMediaBlocks] = useState<Set<string>>(new Set())
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
     const [resumeNotice, setResumeNotice] = useState<string | null>(null)
+    const [newlyEarnedAchievements, setNewlyEarnedAchievements] = useState<string[]>([])
+    const checkAchievement = useCheckAchievement()
 
     // Engagement State
     const [isFocused, setIsFocused] = useState(true)
@@ -444,6 +571,7 @@ export default function TrainingPlayer() {
         setCompletionPassed(null)
         setIsFinished(false)
         setResumeNotice(null)
+        setNewlyEarnedAchievements([])
         setTranslationTarget(null)
         setShowBilingual(false)
         setBlockTranslations({})
@@ -954,6 +1082,27 @@ export default function TrainingPlayer() {
             setCompletionScore(typeof effectiveScore === 'number' ? effectiveScore : null)
             setCompletionPassed(isPassed)
             setIsFinished(true)
+
+            // Achievement checks run against real persisted progress (see
+            // check_and_award_achievement), so they're safe to fire right after the
+            // training_progress row above lands. Only the two types with real server-side
+            // qualification logic are checked here - the rest are permanently unearnable
+            // today and would just be a silent no-op.
+            try {
+                const results = await Promise.all(
+                    Object.keys(TRAINING_ACHIEVEMENT_LABELS).map(async (type) => {
+                        const awarded = await checkAchievement.mutateAsync(type)
+                        return awarded ? type : null
+                    })
+                )
+                const awardedTypes = results.filter((type): type is string => type !== null)
+                if (awardedTypes.length > 0) {
+                    setNewlyEarnedAchievements(awardedTypes)
+                }
+            } catch (_achievementError) {
+                // Achievement awarding is a nice-to-have, never block or dirty the
+                // completion flow if it fails.
+            }
         } catch (caughtError) {
             const errorDetails = getUserFriendlyError(caughtError)
             toast({
@@ -1454,15 +1603,12 @@ export default function TrainingPlayer() {
                     <div className="space-y-6">
                         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                             {block.content_url ? (
-                                <audio
-                                    className="w-full"
-                                    controls
+                                <AudioPlayer
                                     src={block.content_url}
-                                    onTimeUpdate={(e) => {
-                                        const target = e.currentTarget
-                                        trackMediaProgress(block.id, target.currentTime, target.duration)
-                                    }}
-                                    onSeeking={(e) => registerMediaSeek(block.id, e.currentTarget.currentTime)}
+                                    blockId={block.id}
+                                    onTrackProgress={trackMediaProgress}
+                                    onRegisterSeek={registerMediaSeek}
+                                    t={t}
                                 />
                             ) : (
                                 <div className="flex items-center gap-3 text-slate-500">
@@ -1576,14 +1722,7 @@ export default function TrainingPlayer() {
                 {block.type === 'image' && (
                     <div className="space-y-6">
                         {block.content_url && (
-                            <div className="relative group">
-                                <img
-                                    src={block.content_url}
-                                    alt={t('content')}
-                                    className="rounded-2xl shadow-xl max-h-[600px] w-auto mx-auto border border-slate-200 transition-transform duration-500 group-hover:scale-[1.01]"
-                                />
-                                <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-black/10 pointer-events-none" />
-                            </div>
+                            <ImageBlock src={block.content_url} alt={t('content')} t={t} />
                         )}
                         {block.content && (
                             <div>
@@ -1741,22 +1880,36 @@ export default function TrainingPlayer() {
     const canViewCertificate = finalPassed && moduleData.module.certificate_enabled
 
     if (isFinished) {
+        const quizBreakdown = moduleData.blocks
+            .filter(block => block.type === 'quiz')
+            .map(block => ({ block, result: quizResultsById[getQuizProgressKey(block)] }))
+            .filter((entry): entry is { block: TrainingContentBlock; result: PersistedQuizResult } => !!entry.result)
+
         return (
             <LazyMotion features={domAnimation}>
                 <m.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="min-h-screen bg-slate-50 flex items-center justify-center p-6"
+                    transition={{ duration: 0.25, ease: [0.23, 1, 0.32, 1] }}
+                    className="min-h-screen bg-slate-50 flex items-center justify-center p-6 py-12"
                 >
                     <Card className="max-w-xl w-full text-center p-6 sm:p-12 shadow-2xl border-0 overflow-hidden relative">
                         <div className="absolute top-0 start-0 w-full h-2 bg-hotel-gold"></div>
                         <m.div
-                            initial={{ scale: 0.95, opacity: 0 }}
+                            initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: "spring", damping: 12, stiffness: 100, delay: 0.2 }}
-                            className="h-24 w-24 bg-hotel-gold/10 rounded-full flex items-center justify-center mx-auto mb-8"
+                            transition={{ type: "spring", duration: 0.5, bounce: 0.25, delay: 0.1 }}
+                            className="h-24 w-24 bg-hotel-gold/10 rounded-full flex items-center justify-center mx-auto mb-8 relative"
                         >
                             <Trophy className="h-12 w-12 text-hotel-gold-dark" />
+                            {finalPassed && (
+                                <m.span
+                                    initial={{ scale: 0.9, opacity: 0.6 }}
+                                    animate={{ scale: 1.4, opacity: 0 }}
+                                    transition={{ duration: 1.1, ease: "easeOut", delay: 0.15 }}
+                                    className="absolute inset-0 rounded-full border-2 border-hotel-gold/50"
+                                />
+                            )}
                         </m.div>
 
                     <h2 className="text-3xl font-bold text-hotel-navy mb-4 font-serif">
@@ -1766,7 +1919,7 @@ export default function TrainingPlayer() {
                         {t('trainingCompletedMessage', { module: moduleData.module.title })}
                     </p>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                         <div className="bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <p className="text-xs text-muted-foreground mb-1 uppercase tracking-wider">{t('finalScore')}</p>
                             <p className="text-2xl font-bold text-hotel-navy">{finalScore !== null ? `${finalScore}%` : t('n_a')}</p>
@@ -1779,13 +1932,78 @@ export default function TrainingPlayer() {
                         </div>
                     </div>
 
-                        <div className="space-y-4">
+                    {quizBreakdown.length > 1 && (
+                        <div className="mb-6 rounded-xl border border-slate-100 overflow-hidden text-start">
+                            <div className="bg-slate-50 px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                                {t('quizBreakdown', 'Quiz results')}
+                            </div>
+                            <div className="divide-y divide-slate-100">
+                                {quizBreakdown.map(({ block, result }, idx) => (
+                                    <m.div
+                                        key={block.id}
+                                        initial={{ opacity: 0, y: 6 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.2, delay: 0.15 + idx * 0.04, ease: "easeOut" }}
+                                        className="flex items-center justify-between gap-3 px-4 py-2.5"
+                                    >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                            {result.passed
+                                                ? <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                                                : <XCircle className="h-4 w-4 text-rose-400 shrink-0" />}
+                                            <span className="text-sm text-slate-700 truncate">{result.quizTitle}</span>
+                                        </div>
+                                        <span className={cn("text-sm font-semibold tabular-nums shrink-0", result.passed ? "text-emerald-600" : "text-rose-500")}>
+                                            {result.score}%
+                                        </span>
+                                    </m.div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {newlyEarnedAchievements.length > 0 && (
+                        <div className="mb-8 space-y-2">
+                            {newlyEarnedAchievements.map((type, idx) => {
+                                const meta = TRAINING_ACHIEVEMENT_LABELS[type]
+                                if (!meta) return null
+                                const Icon = meta.icon
+                                return (
+                                    <m.div
+                                        key={type}
+                                        initial={{ opacity: 0, scale: 0.92, y: 6 }}
+                                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                                        transition={{ type: "spring", duration: 0.45, bounce: 0.3, delay: 0.3 + idx * 0.08 }}
+                                        className="flex items-center gap-3 rounded-xl border border-hotel-gold/30 bg-gradient-to-r from-hotel-gold/10 to-transparent px-4 py-3 text-start"
+                                    >
+                                        <div className="h-10 w-10 rounded-full bg-hotel-gold/20 flex items-center justify-center shrink-0">
+                                            <Icon className="h-5 w-5 text-hotel-gold-dark" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-hotel-navy">
+                                                {t('achievementUnlocked', 'Achievement unlocked')}: {meta.title}
+                                            </p>
+                                            <p className="text-xs text-slate-500 truncate">{meta.description}</p>
+                                        </div>
+                                    </m.div>
+                                )
+                            })}
+                        </div>
+                    )}
+
+                        <div className="space-y-3">
                             {canViewCertificate && (
-                                <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate('/training/certificates')}>
+                                <Button
+                                    className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12 transition-transform active:scale-[0.98]"
+                                    onClick={() => navigate('/training/certificates')}
+                                >
                                     {t('viewCertificate', 'View Certificate')}
                                 </Button>
                             )}
-                            <Button variant="outline" className="w-full h-12" onClick={() => navigate('/learning/my')}>
+                            <Button
+                                variant="outline"
+                                className="w-full h-12 transition-transform active:scale-[0.98]"
+                                onClick={() => navigate('/learning/my')}
+                            >
                                 {t('backToMyLearning')}
                             </Button>
                         </div>
@@ -1914,8 +2132,16 @@ export default function TrainingPlayer() {
                                                 }
                                             </p>
                                         </div>
-                                        {(completedBlocks.has(block.id) || completedMediaBlocks.has(block.id)) && (
-                                            <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                        {block.type === 'quiz' ? (() => {
+                                            const quizResult = quizResultsById[getQuizProgressKey(block)]
+                                            if (!quizResult) return null
+                                            return quizResult.passed
+                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                                : <XCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                        })() : (
+                                            (completedBlocks.has(block.id) || completedMediaBlocks.has(block.id)) && (
+                                                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                            )
                                         )}
                                     </button>
                                 ))}
@@ -2120,16 +2346,37 @@ export default function TrainingPlayer() {
                     </div>
                 </SmartObserver>
 
-                {!isFinished && !trainingCompletion.complete && trainingCompletion.blockers.length > 0 && (
-                    <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900 md:px-12" role="status">
-                        <span className="font-semibold">{t('requirementsRemaining', 'Requirements remaining')}:</span>{' '}
-                        {trainingCompletion.blockers[0].reason === 'quiz-not-passed'
-                            ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${trainingCompletion.blockers[0].label}" to finish.` })
-                            : trainingCompletion.blockers[0].reason === 'quiz-not-submitted'
-                                ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${trainingCompletion.blockers[0].label}" to finish.` })
-                                : t('requiredContentStillNeeded', { defaultValue: `Complete "${trainingCompletion.blockers[0].label}" to finish.` })}
-                    </div>
-                )}
+                {!isFinished && !trainingCompletion.complete && trainingCompletion.blockers.length > 0 && (() => {
+                    const blocker = trainingCompletion.blockers[0]
+                    const blockerIndex = moduleData.blocks.findIndex(b => b.id === blocker.blockId)
+                    const isOnBlockerAlready = blockerIndex === activeBlockIndex
+                    return (
+                        <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900 md:px-12 flex flex-wrap items-center justify-between gap-2" role="status">
+                            <span>
+                                <span className="font-semibold">{t('requirementsRemaining', 'Requirements remaining')}:</span>{' '}
+                                {blocker.reason === 'quiz-not-passed'
+                                    ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${blocker.label}" to finish.` })
+                                    : blocker.reason === 'quiz-not-submitted'
+                                        ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })
+                                        : t('requiredContentStillNeeded', { defaultValue: `Complete "${blocker.label}" to finish.` })}
+                            </span>
+                            {blockerIndex !== -1 && !isOnBlockerAlready && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-xs border-amber-300 text-amber-900 hover:bg-amber-100 transition-transform active:scale-95"
+                                    onClick={() => {
+                                        setActiveBlockIndex(blockerIndex)
+                                        window.scrollTo(0, 0)
+                                    }}
+                                >
+                                    {t('goToRequirement', 'Go to it')}
+                                    <ChevronRight className={cn("h-3 w-3 ms-1", isRTL && "rotate-180")} />
+                                </Button>
+                            )}
+                        </div>
+                    )
+                })()}
 
                 {/* Navigation Bar */}
                 <footer className={cn(
@@ -2142,7 +2389,7 @@ export default function TrainingPlayer() {
                         onClick={handlePrevious}
                         disabled={activeBlockIndex === 0}
                         className={cn(
-                            "h-10 md:h-12 px-3 sm:px-4 md:px-6 text-sm md:text-base font-bold tracking-wide border-2 hover:bg-slate-50 transition-all rounded-xl",
+                            "h-10 md:h-12 px-3 sm:px-4 md:px-6 text-sm md:text-base font-bold tracking-wide border-2 hover:bg-slate-50 transition-all duration-150 ease-out active:scale-[0.97] rounded-xl",
                             isRTL ? "flex-row-reverse" : ""
                         )}
                     >
@@ -2173,7 +2420,7 @@ export default function TrainingPlayer() {
                         onClick={handleNext}
                         disabled={!canProceedToNext}
                         className={cn(
-                            "h-10 md:h-12 min-w-[7.5rem] sm:min-w-[10rem] justify-center px-3 sm:px-4 md:px-8 text-sm md:text-base font-bold tracking-wide transition-all duration-300 shadow-lg hover:shadow-xl rounded-xl",
+                            "h-10 md:h-12 min-w-[7.5rem] sm:min-w-[10rem] justify-center px-3 sm:px-4 md:px-8 text-sm md:text-base font-bold tracking-wide transition-all duration-150 ease-out shadow-lg hover:shadow-xl active:scale-[0.97] rounded-xl",
                             isLastBlock
                                 ? "bg-emerald-600 hover:bg-emerald-700 text-white"
                                 : "bg-hotel-navy hover:bg-hotel-navy-light text-white",

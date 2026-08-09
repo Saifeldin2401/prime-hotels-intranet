@@ -284,6 +284,37 @@ export async function resolveMediaUrl(mediaAssetId: string, fallbackUrl?: string
   return signedUrl || fallbackUrl || null
 }
 
+/**
+ * Training content blocks (image/audio/video/document_link) store a raw content_url
+ * string directly - there's no dedicated entity ID/RPC to resolve like the other
+ * helpers above. The Training Builder's upload flow (handleFileUpload) uploads every
+ * file type into the private 'documents' bucket and calls getPublicUrl() on it, which
+ * produces a URL that 404s for anyone, since the bucket isn't actually public. This
+ * generalizes VideoPlayer's own inline bucket/path-extraction-and-resign logic (which
+ * only runs reactively, after a load error) into a proactive, reusable resolver for the
+ * block types that have no error-triggered recovery at all (image, audio, document
+ * links) so they don't silently render/link to a URL that was never going to work.
+ * External URLs (YouTube links, a document link an author pasted directly, etc.) are
+ * left untouched - they never match the Supabase storage URL shape below.
+ */
+export async function resolveStorageUrl(rawUrl: string | null | undefined, ttlSeconds = 300): Promise<string | null> {
+  if (!rawUrl) return null
+
+  const match = rawUrl.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/)
+  if (!match) return rawUrl
+
+  const [, bucket, encodedPath] = match
+  const path = decodeURIComponent(encodedPath)
+
+  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttlSeconds)
+  if (error || !data?.signedUrl) {
+    console.error('resolveStorageUrl: failed to sign storage path', { bucket, error })
+    return rawUrl
+  }
+
+  return data.signedUrl
+}
+
 export function openUrlInNewTab(url: string | null) {
   if (!url) return
   window.open(url, '_blank', 'noopener,noreferrer')

@@ -1,8 +1,10 @@
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { sanitizeHtml, sanitizeUrl } from '@/lib/sanitize'
+import { resolveStorageUrl } from '@/lib/secureFileAccess'
 import type { TrainingContentBlock } from '@/lib/types'
-import { Link as LinkIcon } from 'lucide-react'
+import { Link as LinkIcon, Loader2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface DocumentBlockRendererProps {
@@ -106,8 +108,31 @@ export const DocumentBlockRenderer = ({
     }
 
     const safeContentUrl = getSafeUrl(block.content_url)
+
+    // The 'documents' storage bucket is private - a URL captured at author-upload time
+    // (via handleFileUpload's getPublicUrl()) never actually resolves. Re-sign it fresh
+    // for the current viewer before linking/rendering it.
+    const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
+    const [resolving, setResolving] = useState(!!safeContentUrl)
+
+    useEffect(() => {
+        let cancelled = false
+        setResolving(!!safeContentUrl)
+        if (!safeContentUrl) {
+            setResolvedUrl(null)
+            return
+        }
+        resolveStorageUrl(safeContentUrl).then((url) => {
+            if (!cancelled) {
+                setResolvedUrl(url)
+                setResolving(false)
+            }
+        })
+        return () => { cancelled = true }
+    }, [safeContentUrl])
+
     const isPdf = safeContentUrl?.toLowerCase().endsWith('.pdf')
-    
+
     // SECURITY: Sanitize HTML content before rendering
     // This prevents XSS attacks from malicious content in the block
     const originalMarkup = sanitizeHtml(block.content, { allowIframes: false })
@@ -120,9 +145,14 @@ export const DocumentBlockRenderer = ({
                     <LinkIcon className="h-8 w-8 text-blue-500" />
                     <div>
                         <h4 className="font-medium">{t('attachedDocument')}</h4>
-                        {safeContentUrl ? (
+                        {resolving ? (
+                            <span className="inline-flex items-center gap-1.5 text-slate-400 text-sm">
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                {t('resolvingLink', 'Resolving link...')}
+                            </span>
+                        ) : resolvedUrl ? (
                             <a
-                                href={safeContentUrl}
+                                href={resolvedUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-blue-600 hover:underline break-all"
@@ -150,9 +180,17 @@ export const DocumentBlockRenderer = ({
         )
     }
 
+    if (resolving) {
+        return (
+            <div className="flex items-center justify-center py-16 border rounded-lg bg-slate-50">
+                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            </div>
+        )
+    }
+
     return (
         <div className="space-y-4">
-            <PdfViewer url={safeContentUrl || ''} />
+            <PdfViewer url={resolvedUrl || ''} />
             <div className="mt-2">
                 <DocumentBlockDescription
                     originalMarkup={originalMarkup}
