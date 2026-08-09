@@ -173,12 +173,6 @@ enabled = true
 verify_jwt = false
 entrypoint = "./functions/security-monitor/index.ts"
 
-[functions.password-reminders-test]
-enabled = true
-# Retained for controlled operations only; handler requires the service role.
-verify_jwt = false
-entrypoint = "./functions/password-reminders-test/index.ts"
-
 [functions.send-email]
 enabled = true
 verify_jwt = false
