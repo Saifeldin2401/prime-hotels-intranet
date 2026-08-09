@@ -156,6 +156,28 @@ interface QuizRepairQuestionOutput {
 
 }
 
+// Structural draft outline for the Training Builder ("AI Draft Outline").
+// This is intentionally NOT full content generation -- it proposes a module
+// title/description plus a list of section headings with a suggested block
+// type and a short summary the author fleshes out inside the builder.
+export interface ModuleOutlineSection {
+  heading: string
+  suggestedBlockType: 'text' | 'video' | 'document_link'
+  summary: string
+}
+
+export interface ModuleOutlineQuizCheckpoint {
+  afterSectionIndex: number
+  topic: string
+}
+
+export interface ModuleOutline {
+  title: string
+  description: string
+  sections: ModuleOutlineSection[]
+  suggestedQuizCheckpoints: ModuleOutlineQuizCheckpoint[]
+}
+
 
 
 const cleanText = (text: string): string => {
@@ -302,6 +324,46 @@ const heuristicQuiz = (): QuizQuestion[] => {
 
   ]
 
+}
+
+const heuristicOutline = (text: string): ModuleOutline => {
+  const cleaned = cleanText(text)
+  const sentences = cleaned.split('. ').map(s => s.trim()).filter(s => s.length > 15)
+
+  if (sentences.length === 0) {
+    return {
+      title: 'New Training Module',
+      description: 'Could not auto-draft an outline from this content. Add sections manually.',
+      sections: [
+        { heading: 'Overview', suggestedBlockType: 'text', summary: 'Introduce the topic and why it matters to staff.' }
+      ],
+      suggestedQuizCheckpoints: []
+    }
+  }
+
+  const title = sentences[0].substring(0, 80)
+  const chunkSize = Math.max(1, Math.ceil(sentences.length / 4))
+  const sections: ModuleOutlineSection[] = []
+
+  for (let i = 0; i < sentences.length; i += chunkSize) {
+    const chunk = sentences.slice(i, i + chunkSize)
+    sections.push({
+      heading: chunk[0].substring(0, 60),
+      suggestedBlockType: 'text',
+      summary: chunk.slice(0, 3).join('. ').substring(0, 200)
+    })
+  }
+
+  const trimmedSections = sections.slice(0, 6)
+
+  return {
+    title,
+    description: 'Automatically drafted from the pasted source content.',
+    sections: trimmedSections,
+    suggestedQuizCheckpoints: trimmedSections.length > 1
+      ? [{ afterSectionIndex: trimmedSections.length - 1, topic: 'Key takeaways from this module' }]
+      : []
+  }
 }
 
 
@@ -538,6 +600,111 @@ export const aiService = {
 
 
     return heuristicQuiz()
+
+  },
+
+  /**
+   * Generates a structural DRAFT OUTLINE for a training module from pasted
+   * source material (an SOP excerpt, meeting notes, raw text). This is
+   * explicitly NOT full content generation -- it returns a suggested title,
+   * description, and an ordered list of section skeletons (heading +
+   * suggested block type + a short summary), plus optional quiz checkpoint
+   * suggestions. The author reviews/edits this in the Training Builder
+   * before inserting it, then fleshes out the real content themselves.
+   */
+  async generateModuleOutline(request: {
+    sourceContent: string,
+    targetLanguage?: string,
+    sectionCount?: number
+  }): Promise<ModuleOutline> {
+
+    // Use recursive sanitization to prevent bypass attempts with nested tags
+    let previous: string;
+    let sanitized = request.sourceContent;
+    do {
+      previous = sanitized;
+      sanitized = previous.replace(/<[^>]*>/g, '');
+    } while (sanitized !== previous);
+    const context = sanitized.substring(0, 6000)
+
+    const language = request.targetLanguage || 'English'
+    const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
+    const sectionGuidance = request.sectionCount
+      ? `Aim for approximately ${request.sectionCount} sections.`
+      : 'Use as many sections as the material naturally supports (typically 3-8).'
+
+    const prompt = `You are a Senior Hotel Training Curriculum Designer. Read the source material below and propose a STRUCTURAL outline for a training module.
+
+    Target Audience: Hotel Staff.
+    Target Language: ${language}
+    ${sectionGuidance}
+
+    CRITICAL RULES:
+    - This is a STRUCTURE only. Do NOT write full paragraphs of finished training content.
+    - "summary" fields must be 1-2 short sentences describing what that section should cover, not the finished content itself.
+    - "suggestedBlockType" must be exactly one of: "text", "video", "document_link".
+    - Suggest quiz checkpoints only where pedagogically useful, referencing the 0-based index of the section they should follow.
+    ${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
+
+    Return VALID JSON ONLY with this exact structure:
+    {
+      "title": "Suggested module title",
+      "description": "One or two sentence module description",
+      "sections": [
+        { "heading": "Section heading", "suggestedBlockType": "text", "summary": "What this section should cover" }
+      ],
+      "suggestedQuizCheckpoints": [
+        { "afterSectionIndex": 0, "topic": "What the checkpoint should test" }
+      ]
+    }
+
+    Do not add markdown formatting like \`\`\`json. Just the raw JSON object.
+
+    Source Material:
+    ${context}`
+
+    for (const model of FALLBACK_MODELS) {
+
+      try {
+
+        const generatedText = await callHuggingFace(model, prompt)
+        const parsed = safeParseJson<ModuleOutline>(generatedText, false)
+        if (parsed && parsed.title && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
+          const validBlockTypes = new Set(['text', 'video', 'document_link'])
+          const sections = parsed.sections
+            .filter(section => !!section?.heading)
+            .map(section => ({
+              heading: section.heading,
+              suggestedBlockType: validBlockTypes.has(section.suggestedBlockType)
+                ? section.suggestedBlockType
+                : 'text' as const,
+              summary: section.summary || ''
+            }))
+
+          if (sections.length > 0) {
+            return {
+              title: parsed.title,
+              description: parsed.description || '',
+              sections,
+              suggestedQuizCheckpoints: Array.isArray(parsed.suggestedQuizCheckpoints)
+                ? parsed.suggestedQuizCheckpoints.filter(checkpoint =>
+                    typeof checkpoint?.afterSectionIndex === 'number' && !!checkpoint?.topic
+                  )
+                : []
+            }
+          }
+        }
+
+      } catch (e) {
+
+        console.warn(`Outline generation model ${model} failed:`, e)
+
+      }
+
+    }
+
+    console.warn('🔥 All AI models failed for outline generation. Engaging Smart Local Fallback.')
+    return heuristicOutline(context)
 
   },
 

@@ -4,8 +4,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { cn } from '@/lib/utils'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AIOutlineDialog } from './AIOutlineDialog'
 import type { TrainingSection } from './trainingBuilderTypes'
 
 interface StepStructureProps {
@@ -14,6 +16,12 @@ interface StepStructureProps {
   deleteSection: (id: string) => void
   handleRenameSection: (id: string, value: string) => void
   moveSection: (index: number, direction: number) => void
+  title: string
+  setTitle: (v: string) => void
+  description: string
+  setDescription: (v: string) => void
+  setSections: React.Dispatch<React.SetStateAction<TrainingSection[]>>
+  setActiveSection: (v: string | null) => void
   isRTL: boolean
 }
 
@@ -23,9 +31,16 @@ export function StepStructure({
   deleteSection,
   handleRenameSection,
   moveSection,
+  title,
+  setTitle,
+  description,
+  setDescription,
+  setSections,
+  setActiveSection,
   isRTL,
 }: StepStructureProps) {
   const { t } = useTranslation('training')
+  const [showAIOutline, setShowAIOutline] = useState(false)
 
   return (
     <div className="p-6">
@@ -35,10 +50,20 @@ export function StepStructure({
             <h3 className="text-lg font-semibold text-slate-800">{t('builder.structureTitle')}</h3>
             <p className="text-sm text-muted-foreground">{t('builder.structureDesc')}</p>
           </div>
-          <Button onClick={addSection} className={cn("bg-hotel-gold hover:bg-hotel-gold-dark text-white", isRTL ? "flex-row-reverse" : "")}>
-            <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
-            {t('builder.addSection')}
-          </Button>
+          <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+            <Button
+              variant="outline"
+              onClick={() => setShowAIOutline(true)}
+              className={cn("border-purple-200 text-purple-700 hover:bg-purple-50", isRTL ? "flex-row-reverse" : "")}
+            >
+              <Sparkles className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
+              {t('builder.draftWithAI', 'Draft with AI')}
+            </Button>
+            <Button onClick={addSection} className={cn("bg-hotel-gold hover:bg-hotel-gold-dark text-white", isRTL ? "flex-row-reverse" : "")}>
+              <Plus className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
+              {t('builder.addSection')}
+            </Button>
+          </div>
         </div>
 
         {sections.length === 0 ? (
@@ -49,10 +74,16 @@ export function StepStructure({
               </div>
               <h4 className="text-lg font-medium text-slate-700 mb-2">{t('builder.startStructure')}</h4>
               <p className="text-slate-500 mb-6 max-w-sm">{t('builder.startStructureDesc')}</p>
-              <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
-                <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
-                {t('builder.addSection')}
-              </Button>
+              <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
+                <Button onClick={addSection} variant="outline" className={cn("border-dashed border-slate-300 hover:border-hotel-gold hover:text-hotel-gold", isRTL ? "flex-row-reverse" : "")}>
+                  <Plus className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
+                  {t('builder.addSection')}
+                </Button>
+                <Button onClick={() => setShowAIOutline(true)} variant="outline" className={cn("border-dashed border-purple-200 text-purple-700 hover:border-purple-400 hover:bg-purple-50", isRTL ? "flex-row-reverse" : "")}>
+                  <Sparkles className={cn("w-4 h-4", isRTL ? "ms-1" : "me-1")} />
+                  {t('builder.draftWithAI', 'Draft with AI')}
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ) : (
@@ -109,6 +140,18 @@ export function StepStructure({
           </div>
         )}
       </div>
+
+      <AIOutlineDialog
+        open={showAIOutline}
+        onOpenChange={setShowAIOutline}
+        title={title}
+        setTitle={setTitle}
+        description={description}
+        setDescription={setDescription}
+        setSections={setSections}
+        setActiveSection={setActiveSection}
+        isRTL={isRTL}
+      />
     </div>
   )
 }

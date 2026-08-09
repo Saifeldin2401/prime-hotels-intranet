@@ -62,7 +62,9 @@ function TrainingBuilderInner() {
     if (builderStep === 'structure') return (
       <StepStructure
         sections={ctx.sections} addSection={ctx.addSection} deleteSection={ctx.deleteSection}
-        handleRenameSection={ctx.handleRenameSection} moveSection={ctx.moveSection} isRTL={ctx.isRTL}
+        handleRenameSection={ctx.handleRenameSection} moveSection={ctx.moveSection}
+        title={ctx.title} setTitle={ctx.setTitle} description={ctx.description} setDescription={ctx.setDescription}
+        setSections={ctx.setSections} setActiveSection={ctx.setActiveSection} isRTL={ctx.isRTL}
       />
     )
 
