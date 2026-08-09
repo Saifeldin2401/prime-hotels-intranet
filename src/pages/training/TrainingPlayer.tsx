@@ -29,6 +29,7 @@ import { awardCertificationPathCertificates } from '@/services/certificationPath
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { safeLocalStorage } from '@/lib/storage'
+import { evaluateTrainingCompletion, getQuizProgressKey } from '@/lib/trainingCompletion'
 import type { TrainingContentBlock } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
@@ -127,14 +128,6 @@ type ModuleCompletionOverrides = {
 const isValidUuid = (value?: string | null) =>
     !!value && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
-const getModuleQuizIds = (blocks: TrainingContentBlock[] = []) => {
-    const ids = blocks
-        .filter((block) => block.type === 'quiz')
-        .map((block) => (block.content_data as Record<string, unknown> | null)?.quiz_id)
-        .filter((quizId): quizId is string => typeof quizId === 'string' && quizId.length > 0)
-    return Array.from(new Set(ids))
-}
-
 const isResetProgressSnapshot = (progress: PersistedModuleProgress | null | undefined) => {
     if (!progress) return false
 
@@ -152,13 +145,13 @@ const isResetProgressSnapshot = (progress: PersistedModuleProgress | null | unde
         && (!quizResults || Object.keys(quizResults).length === 0)
 }
 
-const getAggregatedQuizScore = (quizIds: string[], quizScoresById: Record<string, number>) => {
-    if (quizIds.length === 0) return null
-    const scores = quizIds
-        .map((quizId) => quizScoresById[quizId])
+const getAggregatedQuizScore = (quizBlockIds: string[], quizScoresByBlockId: Record<string, number>) => {
+    if (quizBlockIds.length === 0) return null
+    const scores = quizBlockIds
+        .map((blockId) => quizScoresByBlockId[blockId])
         .filter((score): score is number => typeof score === 'number')
 
-    if (scores.length !== quizIds.length) return null
+    if (scores.length !== quizBlockIds.length) return null
     const avg = scores.reduce((sum, score) => sum + score, 0) / scores.length
     return Math.round(avg)
 }
@@ -172,6 +165,21 @@ const getValidQuizScoresMap = (value: unknown) => {
         return acc
     }, {})
 }
+
+const restoreQuizProgressByBlock = <T,>(
+    blocks: TrainingContentBlock[],
+    value: Record<string, T>
+) => blocks.reduce<Record<string, T>>((restored, block) => {
+    if (block.type !== 'quiz') return restored
+    const quizId = (block.content_data as Record<string, unknown> | null)?.quiz_id
+    const currentValue = value[block.id]
+    // Older progress snapshots used quiz IDs as keys. Keep them readable while
+    // persisting all new results by block ID, which supports repeated placements.
+    const legacyValue = typeof quizId === 'string' ? value[quizId] : undefined
+    const result = currentValue ?? legacyValue
+    if (result !== undefined) restored[block.id] = result
+    return restored
+}, {})
 
 function RichTextBlockContent({
     originalHtml,
@@ -498,12 +506,18 @@ export default function TrainingPlayer() {
             setTimeSpentSeconds(0)
         }
 
-        const restoredQuizScores = getValidQuizScoresMap(progress.metadata?.quiz_scores_by_id)
+        const restoredQuizScores = restoreQuizProgressByBlock(
+            blocks,
+            getValidQuizScoresMap(progress.metadata?.quiz_scores_by_id)
+        )
         let restoredAggregatedScore: number | null = null
         if (Object.keys(restoredQuizScores).length > 0) {
             setQuizScoresById(restoredQuizScores)
             quizScoresByIdRef.current = restoredQuizScores
-            const aggregatedScore = getAggregatedQuizScore(getModuleQuizIds(blocks), restoredQuizScores)
+            const aggregatedScore = getAggregatedQuizScore(
+                blocks.filter(block => block.type === 'quiz').map(getQuizProgressKey),
+                restoredQuizScores
+            )
             restoredAggregatedScore = aggregatedScore
             if (typeof aggregatedScore === 'number') {
                 setQuizScore(aggregatedScore)
@@ -520,8 +534,12 @@ export default function TrainingPlayer() {
 
         const restoredQuizResults = progress.metadata?.quiz_results_by_id
         if (restoredQuizResults && typeof restoredQuizResults === 'object' && !Array.isArray(restoredQuizResults)) {
-            setQuizResultsById(restoredQuizResults as Record<string, PersistedQuizResult>)
-            quizResultsByIdRef.current = restoredQuizResults as Record<string, PersistedQuizResult>
+            const normalizedResults = restoreQuizProgressByBlock(
+                blocks,
+                restoredQuizResults as Record<string, PersistedQuizResult>
+            )
+            setQuizResultsById(normalizedResults)
+            quizResultsByIdRef.current = normalizedResults
         } else {
             setQuizResultsById({})
             quizResultsByIdRef.current = {}
@@ -581,13 +599,6 @@ export default function TrainingPlayer() {
 
             if (blocksError) throw blocksError
 
-            const { data: linkedQuizzes } = await supabase
-                .from('learning_quizzes')
-                .select('id')
-                .eq('training_module_id', id)
-                .eq('status', 'published')
-                .limit(1)
-
             // Map raw DB column names to TrainingContentBlock shape
             const mappedBlocks = (blocks || []).map(b => ({
                 ...b,
@@ -637,7 +648,6 @@ export default function TrainingPlayer() {
             return {
                 module,
                 blocks: mappedBlocks,
-                linkedQuizId: linkedQuizzes?.[0]?.id,
                 referencedTitles
             }
         },
@@ -661,11 +671,18 @@ export default function TrainingPlayer() {
     }, [moduleData?.module.id, resetModuleInteractionState])
 
     const totalBlocks = moduleData?.blocks.length || 1
-    const moduleQuizIds = useMemo(
-        () => getModuleQuizIds(moduleData?.blocks || []),
+    const quizBlockIds = useMemo(
+        () => (moduleData?.blocks || [])
+            .filter(block => block.type === 'quiz')
+            .map(getQuizProgressKey),
         [moduleData?.blocks]
     )
-    const hasQuizBlock = (moduleData?.blocks || []).some(block => block.type === 'quiz')
+    const trainingCompletion = useMemo(() => evaluateTrainingCompletion({
+        blocks: moduleData?.blocks || [],
+        completedBlockIds: completedBlocks,
+        completedMediaBlockIds: completedMediaBlocks,
+        quizResultsByBlockId: quizResultsById,
+    }), [moduleData?.blocks, completedBlocks, completedMediaBlocks, quizResultsById])
     const isLastBlock = activeBlockIndex === totalBlocks - 1
     const completedCount = new Set([...completedBlocks, ...completedMediaBlocks]).size
     const progressSteps = Math.max(completedCount, activeBlockIndex + 1)
@@ -778,31 +795,31 @@ export default function TrainingPlayer() {
                 // Certificate generation can continue without this linkage.
             }
 
-            const passingScore = moduleData.module.passing_score_percentage || 80
             const latestQuizScores = resolvedQuizScores
-            const aggregatedPartScore = getAggregatedQuizScore(moduleQuizIds, latestQuizScores)
+            const completionState = evaluateTrainingCompletion({
+                blocks: moduleData.blocks,
+                completedBlockIds: resolvedCompletedBlocks,
+                completedMediaBlockIds: completedMediaBlocks,
+                quizResultsByBlockId: resolvedQuizResults,
+            })
+            const aggregatedPartScore = getAggregatedQuizScore(quizBlockIds, latestQuizScores)
             const effectiveScore = aggregatedPartScore ?? overrides.quizScore ?? quizScore ?? linkedTrainingQuizScore
-            const completedQuizParts = moduleQuizIds.filter((quizId) => typeof latestQuizScores[quizId] === 'number').length
-
-            if (moduleQuizIds.length > 1 && completedQuizParts < moduleQuizIds.length) {
+            if (!completionState.complete) {
+                const firstBlocker = completionState.blockers[0]
+                const blockerDescription = firstBlocker?.reason === 'quiz-not-passed'
+                    ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${firstBlocker.label}" before finishing.` })
+                    : firstBlocker?.reason === 'quiz-not-submitted'
+                        ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${firstBlocker.label}" before finishing.` })
+                        : t('requiredContentStillNeeded', { defaultValue: `Complete "${firstBlocker?.label || 'required content'}" before finishing.` })
                 toast({
-                    title: t('quizNotPassed'),
-                    description: t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.'),
+                    title: t('requirementsRemaining', 'Requirements remaining'),
+                    description: blockerDescription,
                     variant: 'destructive'
                 })
                 return
             }
 
-            if (hasQuizBlock && typeof effectiveScore !== 'number') {
-                toast({
-                    title: t('quizNotPassed'),
-                    description: t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.'),
-                    variant: 'destructive'
-                })
-                return
-            }
-
-            const isPassed = !hasQuizBlock || (typeof effectiveScore === 'number' && effectiveScore >= passingScore)
+            const isPassed = true
 
             await learningService.submitQuizProgress({
                 assignment_id: assignmentId || undefined,
@@ -852,7 +869,7 @@ export default function TrainingPlayer() {
                             description: t('certificateEarned', { moduleName: moduleData.module.title }),
                             completionDate: new Date(),
                             score: effectiveScore,
-                            passingScore,
+                            passingScore: moduleData.module.passing_score_percentage ?? undefined,
                             trainingModuleId: moduleData.module.id,
                             trainingProgressId: linkedTrainingProgressId,
                             propertyId: primaryProperty?.id,
@@ -1300,12 +1317,14 @@ export default function TrainingPlayer() {
     const isGateBlock = !!(activeBlock && ['video', 'audio', 'interactive'].includes(activeBlock.type))
     const isGateCompletionRequired = !!(activeBlock && activeBlock.is_mandatory && isGateBlock)
     const isGateCompleted = !!(activeBlock && completedMediaBlocks.has(activeBlock.id))
-    const activeQuizId = activeBlock?.type === 'quiz'
-        ? ((activeBlock.content_data?.quiz_id as string) || '')
-        : ''
-    const activeQuizResult = activeQuizId ? quizResultsById[activeQuizId] : null
+    const activeQuizResult = activeBlock?.type === 'quiz'
+        ? quizResultsById[getQuizProgressKey(activeBlock)]
+        : null
+    const activeQuizRequiresPass = activeBlock?.type === 'quiz'
+        && (activeBlock.content_data as Record<string, unknown> | null)?.completion_requirement !== 'submitted'
+        && (activeBlock.content_data as Record<string, unknown> | null)?.require_passing !== false
     const activeQuizPassed = activeBlock?.type === 'quiz'
-        ? Boolean(activeQuizResult?.passed)
+        ? activeBlock.is_mandatory === false || (activeQuizRequiresPass ? Boolean(activeQuizResult?.passed) : Boolean(activeQuizResult?.completedAt))
         : true
 
     // Combined "Can Proceed" Logic
@@ -1593,9 +1612,9 @@ export default function TrainingPlayer() {
                                     {t('knowledgeCheck')}
                                 </h3>
                                 <p className="text-sm text-muted-foreground">{t('validateYourLearning')}</p>
-                                {moduleQuizIds.length > 1 && (
+                                {trainingCompletion.totalQuizzes > 1 && (
                                     <p className="text-xs text-muted-foreground mt-1">
-                                        {`Quiz parts completed: ${moduleQuizIds.filter((quizId) => typeof quizScoresById[quizId] === 'number').length}/${moduleQuizIds.length}`}
+                                        {`Quizzes completed: ${trainingCompletion.completedQuizzes}/${trainingCompletion.totalQuizzes}`}
                                     </p>
                                 )}
                             </div>
@@ -1608,6 +1627,7 @@ export default function TrainingPlayer() {
                             showBilingual={showBilingual}
                             onComplete={(result) => {
                                 const currentQuizId = (block.content_data?.quiz_id as string) || ''
+                                const progressKey = getQuizProgressKey(block)
                                 const nextCompletedBlocks = new Set(completedBlocks)
                                 nextCompletedBlocks.add(block.id)
                                 let nextAggregatedScore = result.score
@@ -1615,48 +1635,46 @@ export default function TrainingPlayer() {
                                 let nextQuizResults = quizResultsByIdRef.current
 
                                 if (currentQuizId) {
-                                    nextQuizScores = { ...quizScoresByIdRef.current, [currentQuizId]: result.score }
+                                    const previousResult = quizResultsByIdRef.current[progressKey]
+                                    const preservedSuccessfulResult = previousResult?.passed && !result.passed
+                                        ? previousResult
+                                        : null
+                                    const resultToPersist = preservedSuccessfulResult || {
+                                        quizId: currentQuizId,
+                                        quizTitle: block.title || t('knowledgeCheck', 'Knowledge Check'),
+                                        score: result.score,
+                                        passed: result.passed,
+                                        correctCount: result.correctCount,
+                                        totalQuestions: result.totalQuestions,
+                                        completedAt: new Date().toISOString(),
+                                        reviewItems: result.reviewItems
+                                    }
+                                    nextQuizScores = {
+                                        ...quizScoresByIdRef.current,
+                                        [progressKey]: Math.max(quizScoresByIdRef.current[progressKey] ?? 0, result.score)
+                                    }
                                     quizScoresByIdRef.current = nextQuizScores
-                                    const calculatedAggregated = getAggregatedQuizScore(moduleQuizIds, nextQuizScores)
+                                    const calculatedAggregated = getAggregatedQuizScore(quizBlockIds, nextQuizScores)
                                     nextAggregatedScore = calculatedAggregated ?? result.score
                                     setQuizScoresById(nextQuizScores)
                                     setQuizScore(nextAggregatedScore)
 
                                     nextQuizResults = {
                                         ...quizResultsByIdRef.current,
-                                        [currentQuizId]: {
-                                            quizId: currentQuizId,
-                                            quizTitle: block.title || t('knowledgeCheck', 'Knowledge Check'),
-                                            score: result.score,
-                                            passed: result.passed,
-                                            correctCount: result.correctCount,
-                                            totalQuestions: result.totalQuestions,
-                                            completedAt: new Date().toISOString(),
-                                            reviewItems: result.reviewItems
-                                        }
+                                        [progressKey]: resultToPersist
                                     }
                                     quizResultsByIdRef.current = nextQuizResults
                                     setQuizResultsById(nextQuizResults)
                                 } else {
                                     setQuizScore(result.score)
                                 }
+                                setCompletedBlocks(nextCompletedBlocks)
+                                void recordBlockCompletion(block.id)
                                 if (result.passed) {
-                                    setCompletedBlocks(nextCompletedBlocks)
-                                    void recordBlockCompletion(block.id)
                                     toast({
                                         title: t('moduleQuizPassed'),
                                         description: t('quizScoreProceed', { score: result.score })
                                     })
-                                    if (isLastBlock) {
-                                        void handleCompleteModule({
-                                            completedBlocks: nextCompletedBlocks,
-                                            quizScoresById: nextQuizScores,
-                                            quizResultsById: nextQuizResults,
-                                            quizScore: nextAggregatedScore,
-                                            lastBlockId: block.id,
-                                            lastBlockIndex: activeBlockIndex
-                                        })
-                                    }
                                 } else {
                                     toast({
                                         title: t('quizNotPassed'),
@@ -1718,11 +1736,9 @@ export default function TrainingPlayer() {
         </div>
     )
 
-    const passingScore = moduleData.module.passing_score_percentage || 80
     const finalScore = completionScore ?? quizScore
-    const finalPassed = completionPassed ?? (!hasQuizBlock || (typeof finalScore === 'number' && finalScore >= passingScore))
+    const finalPassed = completionPassed ?? true
     const canViewCertificate = finalPassed && moduleData.module.certificate_enabled
-    const canRetakeFinalQuiz = !finalPassed && !!moduleData.linkedQuizId
 
     if (isFinished) {
         return (
@@ -1767,11 +1783,6 @@ export default function TrainingPlayer() {
                             {canViewCertificate && (
                                 <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate('/training/certificates')}>
                                     {t('viewCertificate', 'View Certificate')}
-                                </Button>
-                            )}
-                            {canRetakeFinalQuiz && (
-                                <Button className="w-full bg-hotel-navy hover:bg-hotel-navy-light text-white h-12" onClick={() => navigate(`/learning/quizzes/${moduleData.linkedQuizId}/take`)}>
-                                    {t('retryFinalAssessment', { defaultValue: 'Retake Final Assessment' })}
                                 </Button>
                             )}
                             <Button variant="outline" className="w-full h-12" onClick={() => navigate('/learning/my')}>
@@ -2109,6 +2120,17 @@ export default function TrainingPlayer() {
                     </div>
                 </SmartObserver>
 
+                {!isFinished && !trainingCompletion.complete && trainingCompletion.blockers.length > 0 && (
+                    <div className="border-t border-amber-100 bg-amber-50 px-4 py-3 text-sm text-amber-900 md:px-12" role="status">
+                        <span className="font-semibold">{t('requirementsRemaining', 'Requirements remaining')}:</span>{' '}
+                        {trainingCompletion.blockers[0].reason === 'quiz-not-passed'
+                            ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${trainingCompletion.blockers[0].label}" to finish.` })
+                            : trainingCompletion.blockers[0].reason === 'quiz-not-submitted'
+                                ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${trainingCompletion.blockers[0].label}" to finish.` })
+                                : t('requiredContentStillNeeded', { defaultValue: `Complete "${trainingCompletion.blockers[0].label}" to finish.` })}
+                    </div>
+                )}
+
                 {/* Navigation Bar */}
                 <footer className={cn(
                     "min-h-[5rem] md:min-h-[6rem] bg-white border-t border-slate-100 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-12 py-2 md:py-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 shrink-0 z-20 sticky bottom-0",
@@ -2166,7 +2188,7 @@ export default function TrainingPlayer() {
                                         <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
                                         <span className="hidden sm:inline">
                                             {activeBlock?.type === 'quiz' && !activeQuizPassed
-                                                ? t('completeQuizBeforeFinish', 'Please complete the quiz before finishing this module.')
+                                                ? t('completeQuiz', 'Complete quiz')
                                                 : t('completeModule')}
                                         </span>
                                         <span className="sm:hidden">

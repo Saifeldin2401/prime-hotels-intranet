@@ -60,19 +60,6 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-// Deterministic-enough shuffle for presenting ordering/matching options -- doesn't need to be
-// cryptographically random, just not the already-correct order.
-function shuffleArrayStable<T>(items: T[]): T[] {
-    const clone = [...items]
-    for (let i = clone.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1))
-        const temp = clone[i]
-        clone[i] = clone[j]
-        clone[j] = temp
-    }
-    return clone
-}
-
 // --- Types ---
 
 interface QuizComponentEnhancedProps {
@@ -764,7 +751,9 @@ export function QuizComponentEnhanced({
         }
 
         // Show feedback
-        if (enableImmediateFeedback) {
+        // The quiz's saved setting wins over the component default. This prevents an
+        // embedded player from silently changing how a builder configured feedback.
+        if (enableImmediateFeedback && (quiz?.show_feedback_during ?? true)) {
             setCurrentFeedback(isCorrect ? 'correct' : 'incorrect')
             setShowFeedback(true)
         } else {
@@ -861,12 +850,35 @@ export function QuizComponentEnhanced({
             )
                 ? previousMetadata.quiz_attempts_by_context as Record<string, unknown>
                 : {}
+            const previousHistory = (
+                previousMetadata.quiz_attempt_history_by_context &&
+                typeof previousMetadata.quiz_attempt_history_by_context === 'object' &&
+                !Array.isArray(previousMetadata.quiz_attempt_history_by_context)
+            ) ? previousMetadata.quiz_attempt_history_by_context as Record<string, unknown> : {}
+            const contextHistory = Array.isArray(previousHistory[attemptContextKey])
+                ? previousHistory[attemptContextKey] as unknown[]
+                : []
+            const completedAt = new Date().toISOString()
             const metadata = {
                 ...previousMetadata,
                 quiz_attempt_count: nextAttemptCount,
                 quiz_attempts_by_context: {
                     ...previousContextMap,
                     [attemptContextKey]: nextAttemptCount
+                },
+                quiz_attempt_history_by_context: {
+                    ...previousHistory,
+                    [attemptContextKey]: [
+                        ...contextHistory.slice(-19),
+                        {
+                            attempt_number: nextAttemptCount,
+                            score: finalResult.score,
+                            passed: finalResult.passed,
+                            correct_count: finalResult.correctCount,
+                            total_questions: finalResult.totalQuestions,
+                            completed_at: completedAt
+                        }
+                    ]
                 },
                 max_attempts: quiz.max_attempts ?? null,
                 latest_quiz_result: {
@@ -876,7 +888,7 @@ export function QuizComponentEnhanced({
                     passed: finalResult.passed,
                     correct_count: finalResult.correctCount,
                     total_questions: finalResult.totalQuestions,
-                    completed_at: new Date().toISOString(),
+                    completed_at: completedAt,
                     review_items: finalResult.reviewItems
                 }
             }
@@ -891,7 +903,7 @@ export function QuizComponentEnhanced({
                 progress_percentage: 100,
                 score_percentage: Math.round(percentage),
                 passed,
-                completed_at: new Date().toISOString(),
+                completed_at: completedAt,
                 metadata
             })
             progressMetadataRef.current = metadata
@@ -1120,23 +1132,21 @@ export function QuizComponentEnhanced({
         return translatedCurrent.options[optionId || ''] || fallback
     }
 
-    // Stable-per-question shuffles so 'ordering'/'matching' don't hand the learner the
-    // options already in the correct order/pairing.
+    // learningService has already applied the persisted answer-order rule. Reuse that
+    // order for every question type, including ordering and matching, rather than
+    // introducing a second unpersisted shuffle in the player.
     const orderingShuffledIds = useMemo(() => {
         if (currentQuestion?.question?.question_type !== 'ordering') return []
-        const ids = (currentQuestion.question.options || []).map(o => o.id)
-        return shuffleArrayStable(ids)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentQuestion?.question_id])
+        return (currentQuestion.question.options || []).map(o => o.id)
+    }, [currentQuestion])
 
     const matchingShuffledValues = useMemo(() => {
         if (currentQuestion?.question?.question_type !== 'matching') return []
         const values = (currentQuestion.question.options || [])
             .map(o => o.match_value)
             .filter((v): v is string => !!v)
-        return shuffleArrayStable(values)
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [currentQuestion?.question_id])
+        return values
+    }, [currentQuestion])
 
     const feedbackOverlay = (
         <FeedbackOverlay

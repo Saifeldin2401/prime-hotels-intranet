@@ -22,6 +22,7 @@ export interface LearningQuiz {
     passing_score_percentage: number
     max_attempts?: number | null
     randomize_questions: boolean
+    randomize_answers?: boolean
     show_feedback_during: boolean
 
     // Status
@@ -209,6 +210,7 @@ export interface CreateQuizDTO {
     time_limit_minutes?: number
     passing_score_percentage?: number
     randomize_questions?: boolean
+    randomize_answers?: boolean
     show_feedback_during?: boolean
     status?: QuestionStatus
     created_by?: string

@@ -522,14 +522,31 @@ export const learningService = {
             })
         }
 
-        // Respect quiz setting: randomize question order in player when enabled.
+        // Presentation order is derived from persisted quiz configuration.  The user
+        // seed keeps an in-progress attempt stable after a refresh or later resume.
         if (data.questions) {
+            const { data: authData } = await supabase.auth.getUser()
+            const userSeed = authData?.user?.id || 'anonymous'
+
             if (data.randomize_questions) {
-                const { data: authData } = await supabase.auth.getUser()
-                const userSeed = authData?.user?.id || 'anonymous'
                 data.questions = seededShuffleArray(data.questions, `${id}:${userSeed}`)
             } else {
                 data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
+            }
+
+            if (data.randomize_answers) {
+                data.questions = data.questions.map((questionLink: LearningQuizQuestion) => {
+                    const options = questionLink.question?.options
+                    if (!options || options.length < 2) return questionLink
+
+                    return {
+                        ...questionLink,
+                        question: {
+                            ...questionLink.question,
+                            options: seededShuffleArray(options, `${id}:${userSeed}:${questionLink.question_id}`),
+                        },
+                    }
+                })
             }
         }
 
@@ -1238,6 +1255,13 @@ export const learningService = {
         const existingProgress = typeof existingRow?.progress_percentage === 'number' ? existingRow.progress_percentage : null
         const nextProgress = typeof progress.progress_percentage === 'number' ? progress.progress_percentage : null
         const shouldPreserveCompletion = existingRow?.status === 'completed' && progress.status !== 'completed'
+        // A later failed retake must never erase a successful attempt. The attempt
+        // counter and latest-review metadata still update, while the authoritative
+        // completion/pass state remains successful.
+        const shouldPreserveSuccessfulQuizAttempt =
+            existingRow?.lp_content_type === 'quiz' &&
+            existingRow?.passed === true &&
+            progress.passed === false
 
         const keepExistingScore =
             existingScore !== null &&
@@ -1262,18 +1286,20 @@ export const learningService = {
             existingProgress !== null && nextProgress !== null
                 ? Math.max(existingProgress, nextProgress)
                 : (nextProgress ?? existingProgress)
-        const resolvedStatus = shouldPreserveCompletion ? 'completed' : progress.status
+        const resolvedStatus = (shouldPreserveCompletion || shouldPreserveSuccessfulQuizAttempt)
+            ? 'completed'
+            : progress.status
         const resolvedProgressPercentage = resolvedStatus === 'completed'
             ? 100
             : Math.min(bestProgressPercentage ?? 0, 99)
 
-        const bestScorePercentage = shouldPreserveCompletion
+        const bestScorePercentage = (shouldPreserveCompletion || shouldPreserveSuccessfulQuizAttempt)
             ? (existingRow?.score_percentage ?? progress.score_percentage)
             : (keepExistingScore ? existingRow?.score_percentage : progress.score_percentage)
-        const bestPassed = shouldPreserveCompletion
+        const bestPassed = (shouldPreserveCompletion || shouldPreserveSuccessfulQuizAttempt)
             ? (existingRow?.passed ?? progress.passed)
             : (keepExistingScore ? existingRow?.passed : progress.passed)
-        const bestCompletedAt = shouldPreserveCompletion
+        const bestCompletedAt = (shouldPreserveCompletion || shouldPreserveSuccessfulQuizAttempt)
             ? (existingRow?.completed_at ?? progress.completed_at)
             : (keepExistingScore ? (existingRow?.completed_at ?? progress.completed_at) : (progress.completed_at ?? existingRow?.completed_at))
 

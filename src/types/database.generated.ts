@@ -6435,6 +6435,7 @@ export type Database = {
           linked_sop_id: string | null
           max_attempts: number | null
           passing_score_percentage: number | null
+          randomize_answers: boolean
           randomize_questions: boolean | null
           show_feedback_during: boolean | null
           source_document_id: string | null
@@ -6454,6 +6455,7 @@ export type Database = {
           linked_sop_id?: string | null
           max_attempts?: number | null
           passing_score_percentage?: number | null
+          randomize_answers?: boolean
           randomize_questions?: boolean | null
           show_feedback_during?: boolean | null
           source_document_id?: string | null
@@ -6473,6 +6475,7 @@ export type Database = {
           linked_sop_id?: string | null
           max_attempts?: number | null
           passing_score_percentage?: number | null
+          randomize_answers?: boolean
           randomize_questions?: boolean | null
           show_feedback_during?: boolean | null
           source_document_id?: string | null

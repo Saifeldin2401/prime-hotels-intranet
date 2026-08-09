@@ -44,6 +44,7 @@ export default function QuizBuilder() {
         passing_score_percentage: 70,
         time_limit_minutes: 30,
         randomize_questions: false,
+        randomize_answers: false,
         show_feedback_during: true,
     })
 
@@ -186,6 +187,7 @@ export default function QuizBuilder() {
                 time_limit_minutes: quizData.time_limit_minutes ?? undefined,
                 passing_score_percentage: quizData.passing_score_percentage ?? undefined,
                 randomize_questions: quizData.randomize_questions ?? false,
+                randomize_answers: quizData.randomize_answers ?? false,
                 show_feedback_during: quizData.show_feedback_during ?? false,
                 status: (quizData.status || 'draft') as QuestionStatus,
             }
@@ -316,6 +318,19 @@ export default function QuizBuilder() {
                             <Switch
                                 checked={quiz.randomize_questions}
                                 onCheckedChange={checked => setQuiz({ ...quiz, randomize_questions: checked })}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between border p-4 rounded-lg">
+                            <div className="space-y-0.5">
+                                <Label>{t('training:quizzes.builder.randomize_answers', 'Randomize answer order')}</Label>
+                                <p className="text-sm text-muted-foreground">
+                                    {t('training:quizzes.builder.randomize_answers_desc', 'Present each learner with a stable randomized answer order.')}
+                                </p>
+                            </div>
+                            <Switch
+                                checked={quiz.randomize_answers ?? false}
+                                onCheckedChange={checked => setQuiz({ ...quiz, randomize_answers: checked })}
                             />
                         </div>
 
