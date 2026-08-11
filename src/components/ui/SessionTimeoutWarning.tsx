@@ -7,7 +7,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
+import { useInactivityTimeout, REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout'
 import { AlertCircle, Clock, LogOut, RefreshCw } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -17,13 +17,22 @@ interface SessionTimeoutWarningProps {
 
 export function SessionTimeoutWarning({ enabled = true }: SessionTimeoutWarningProps) {
     const { t } = useTranslation('common')
+
+    // Disable inactivity timeout when Remember Me is active
+    let rememberMeActive = false
+    try {
+        rememberMeActive = localStorage.getItem(REMEMBER_ME_KEY) === 'true'
+    } catch {
+        // Ignore storage errors
+    }
+
     const {
         showWarning,
         remainingMinutes,
         remainingSeconds,
         extendSession,
         signOutNow
-    } = useInactivityTimeout({ enabled })
+    } = useInactivityTimeout({ enabled: enabled && !rememberMeActive })
 
     const formatTime = () => {
         if (remainingSeconds < 60) {

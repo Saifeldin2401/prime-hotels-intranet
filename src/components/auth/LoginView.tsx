@@ -25,6 +25,7 @@ import { showErrorToast } from '@/lib/toastHelpers';
 import { useAuth } from '@/hooks/useAuth';
 import { getRemainingAttempts } from '@/lib/authSecurityService';
 import { safeLocalStorage } from '@/lib/storage';
+import { REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout';
 
 export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout';
 
@@ -145,8 +146,10 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
 
       if (rememberMe) {
         safeLocalStorage.setItem('remembered_email', email);
+        safeLocalStorage.setItem(REMEMBER_ME_KEY, 'true');
       } else {
         safeLocalStorage.removeItem('remembered_email');
+        safeLocalStorage.removeItem(REMEMBER_ME_KEY);
       }
 
       try {

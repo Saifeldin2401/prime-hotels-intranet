@@ -20,25 +20,29 @@ export function PublicNavbar() {
   }, [])
 
   const navItems = [
-    { label: t('nav.about', 'About'), href: '#about' },
-    { label: t('nav.practices', 'Services'), href: '#practices' },
-    { label: t('nav.platform', 'Platform'), href: '#platform' },
-    { label: t('nav.ascent', 'Methodology'), href: '#ascent' },
-    { label: t('nav.leadership', 'Leadership'), href: '#leadership' },
-    { label: t('nav.portal', 'Portal'), href: '#portal' },
+    { label: t('nav.about', 'About'), href: '/about' },
+    { label: t('nav.practices', 'Services'), href: '/about#practices' },
+    { label: t('nav.ascent', 'Methodology'), href: '/methodology' },
+    { label: t('nav.vision', 'Vision 2030'), href: '/vision-2030' },
+    { label: t('nav.cases', 'Case Studies'), href: '/case-studies' },
+    { label: t('nav.leadership', 'Leadership'), href: '/leadership' },
+    { label: t('nav.digital', 'Digital & AI'), href: '/digital' },
     { label: t('nav.verify', 'Verify'), href: '/verify' },
   ]
 
   const handleNavClick = (href: string) => {
     setMobileMenuOpen(false)
-    if (href.startsWith('#')) {
-      const element = document.querySelector(href)
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' })
+    if (href.includes('#')) {
+      const [path, hash] = href.split('#')
+      if (window.location.pathname === path || (path === '' && window.location.pathname === '/')) {
+        const element = document.querySelector(`#${hash}`)
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' })
+          return
+        }
       }
-    } else {
-      navigate(href)
     }
+    navigate(href)
   }
 
   return (

@@ -37,6 +37,27 @@ interface DocumentUploadDialogProps {
   onOpenChange: (open: boolean) => void
 }
 
+/**
+ * Kicks off AI auto-tagging for a freshly created document.
+ *
+ * Intentionally fire-and-forget: the edge function reads the document server
+ * side and writes ai_tags / ai_category / ai_summary / ai_processed_at. If it
+ * is slow, unavailable, or errors, the upload is still complete and correct,
+ * so failures are logged and swallowed rather than propagated.
+ */
+function requestAiTagging(documentId: string): void {
+  void supabase.functions
+    .invoke('ai-document-tagger', { body: { documentId } })
+    .then(({ error }) => {
+      if (error) {
+        console.warn('AI document tagging failed (non-blocking):', error.message)
+      }
+    })
+    .catch((error: unknown) => {
+      console.warn('AI document tagging failed (non-blocking):', error)
+    })
+}
+
 export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialogProps) {
   const { t } = useTranslation()
   const { profile } = useAuth()
@@ -93,12 +114,10 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
 
       if (uploadError) throw uploadError
 
-      // Get public URL
-      const { data: urlData } = supabase.storage
-        .from('documents')
-        .getPublicUrl(filePath)
-
-      const fileUrl = urlData.publicUrl
+      // The 'documents' bucket is private, so a public URL here would 404.
+      // Store the object path; readers sign it via get_secure_document_url /
+      // resolveDocumentUrl, which already accept a bare path.
+      const fileUrl = filePath
 
       // Create document record
       const documentData: {
@@ -162,6 +181,12 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         change_summary: 'Initial version',
         created_by: profile.id,
       })
+
+      // Fire-and-forget AI auto-tagging. This populates documents.ai_tags /
+      // ai_category / ai_summary, which DocumentPicker searches on. It is a
+      // pure enhancement: it is deliberately not awaited and never surfaces an
+      // error, because a tagging failure must never lose an uploaded file.
+      requestAiTagging(document.id)
 
       return document
     },

@@ -36,7 +36,14 @@ import { ProcurementRoutes } from './modules/ProcurementRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
+const PublicLayout = lazy(() => import('@/pages/public/PublicLayout'))
 const PublicHome = lazy(() => import('@/pages/public/PublicHome'))
+const AboutPage = lazy(() => import('@/pages/public/AboutPage'))
+const MethodologyPage = lazy(() => import('@/pages/public/MethodologyPage'))
+const VisionPage = lazy(() => import('@/pages/public/VisionPage'))
+const CaseStudiesPage = lazy(() => import('@/pages/public/CaseStudiesPage'))
+const LeadershipPage = lazy(() => import('@/pages/public/LeadershipPage'))
+const DigitalAIPage = lazy(() => import('@/pages/public/DigitalAIPage'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
 
@@ -209,7 +216,15 @@ export const router = createBrowserRouter(
             {StandaloneAuthRoutes()}
 
             <Route element={<RootLayout />} errorElement={<RouteErrorBoundary section="App"><Outlet /></RouteErrorBoundary>}>
-                <Route path="/" element={<RootIndex />} />
+                <Route element={<PublicLayout />}>
+                    <Route path="/" element={<RootIndex />} />
+                    <Route path="/about" element={<AboutPage />} />
+                    <Route path="/methodology" element={<MethodologyPage />} />
+                    <Route path="/vision-2030" element={<VisionPage />} />
+                    <Route path="/case-studies" element={<CaseStudiesPage />} />
+                    <Route path="/leadership" element={<LeadershipPage />} />
+                    <Route path="/digital" element={<DigitalAIPage />} />
+                </Route>
                 <Route path="/verify/:code?" element={<VerifyCertificate />} />
                 <Route path="/analytics" element={<LegacyAnalyticsRedirect />} />
                 <Route path="/calendar" element={<LegacyScheduleRedirect />} />

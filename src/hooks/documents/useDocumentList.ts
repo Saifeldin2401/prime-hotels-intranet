@@ -42,6 +42,10 @@ export function useDocuments(filters?: DocumentFilters) {
           created_by,
           created_at,
           updated_at,
+          ai_tags,
+          ai_category,
+          ai_summary,
+          ai_processed_at,
           folder:document_folders(id, name),
           tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
           author:profiles!documents_created_by_fkey(id, full_name, avatar_url)

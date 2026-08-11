@@ -13,6 +13,19 @@ interface UseInactivityTimeoutOptions {
 }
 
 const STORAGE_KEY = 'altus_last_activity'
+export const REMEMBER_ME_KEY = 'altus_remember_me'
+
+/**
+ * Checks localStorage for the remember-me flag.
+ * When set, inactivity timeout is suppressed.
+ */
+function isRememberMeActive(): boolean {
+    try {
+        return localStorage.getItem(REMEMBER_ME_KEY) === 'true'
+    } catch {
+        return false
+    }
+}
 
 export function useInactivityTimeout({
     timeoutMs: customTimeoutMs,
@@ -32,11 +45,31 @@ export function useInactivityTimeout({
     const navigate = useNavigate()
     const [showWarning, setShowWarning] = useState(false)
     const [remainingTime, setRemainingTime] = useState(timeoutMs - warningMs)
+    const [rememberMe, setRememberMe] = useState(isRememberMeActive)
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
     const lastActivityRef = useRef(0)
+
+    // Keep remainingTime in sync when timeoutMs changes (e.g. admin updates the setting)
+    useEffect(() => {
+        setRemainingTime(timeoutMs - warningMs)
+    }, [timeoutMs, warningMs])
+
+    // Listen for remember-me changes from other tabs
+    useEffect(() => {
+        const handleStorageChange = (e: StorageEvent) => {
+            if (e.key === REMEMBER_ME_KEY) {
+                setRememberMe(e.newValue === 'true')
+            }
+        }
+        window.addEventListener('storage', handleStorageChange)
+        return () => window.removeEventListener('storage', handleStorageChange)
+    }, [])
+
+    // Effective enabled state: disabled when remember-me is active
+    const effectiveEnabled = enabled && !rememberMe
 
     const clearAllTimers = useCallback(() => {
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -115,7 +148,7 @@ export function useInactivityTimeout({
     }, [user, timeoutMs, warningMs, onWarning, handleTimeout])
 
     const resetTimers = useCallback((isExternalUpdate = false) => {
-        if (!enabled || !user) return
+        if (!effectiveEnabled || !user) return
 
         clearAllTimers()
         setShowWarning(false)
@@ -131,7 +164,7 @@ export function useInactivityTimeout({
 
         // Set timeout timer
         timeoutRef.current = setTimeout(handleTimeout, Math.max(5000, timeoutMs))
-    }, [enabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
+    }, [effectiveEnabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
 
     const extendSession = useCallback(async () => {
         try {
@@ -144,23 +177,23 @@ export function useInactivityTimeout({
 
     // Activity event handler with 5-second throttle
     const handleActivity = useCallback(() => {
-        if (!enabled || !user) return
+        if (!effectiveEnabled || !user) return
         const now = Date.now()
         if (showWarning || now - lastActivityRef.current > 5000) {
             resetTimers()
         }
-    }, [enabled, user, resetTimers, showWarning])
+    }, [effectiveEnabled, user, resetTimers, showWarning])
 
     useEffect(() => {
-        if (!enabled || !user) {
+        if (!effectiveEnabled || !user) {
             clearAllTimers()
+            setShowWarning(false)
             return
         }
 
-        // Initialize last activity if not present
-        if (!localStorage.getItem(STORAGE_KEY)) {
-            localStorage.setItem(STORAGE_KEY, Date.now().toString())
-        }
+        // Always write a fresh timestamp on mount so multi-tab checks don't
+        // read stale/missing data left over from a previous timed-out session.
+        localStorage.setItem(STORAGE_KEY, Date.now().toString())
 
         const handleVisibilityChange = () => {
             if (document.visibilityState === 'hidden') {
@@ -207,7 +240,7 @@ export function useInactivityTimeout({
             document.removeEventListener('visibilitychange', handleVisibilityChange)
             window.removeEventListener('storage', handleStorageChange)
         }
-    }, [enabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
+    }, [effectiveEnabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
 
     return {
         showWarning,
