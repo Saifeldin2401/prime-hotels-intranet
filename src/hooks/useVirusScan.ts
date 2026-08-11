@@ -17,6 +17,7 @@ export interface ScanOptions {
     context?: string
 }
 
+// guardrail-ok: a byte count for how much of a file to sample when scanning, not sample data.
 const SAMPLE_BYTES = 256 * 1024
 const SERVER_SCAN_TIMEOUT_MS = 12000
 

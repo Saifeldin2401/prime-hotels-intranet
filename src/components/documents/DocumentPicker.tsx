@@ -206,14 +206,15 @@ function UploadTab({
 
       if (uploadError) throw uploadError
 
-      const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+      // 'documents' is a private bucket: store the object path, not a public URL
+      // (which would 404). Readers sign it via resolveDocumentUrl.
       const scopedPropertyId = isRealPropertyId(currentProperty?.id)
         ? currentProperty.id
         : (propertyIds[0] ?? undefined)
 
       const newDoc = await createDocument.mutateAsync({
         title: file.name.replace(/\.[^/.]+$/, ''),
-        file_url: urlData.publicUrl,
+        file_url: filePath,
         file_size: file.size,
         file_extension: fileExt.toLowerCase(),
         property_id: scopedPropertyId,

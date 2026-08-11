@@ -453,19 +453,16 @@ export function useUploadMaintenanceAttachment() {
 
       if (uploadError) throw uploadError
 
-      // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from('maintenance-attachments')
-        .getPublicUrl(fileName)
-
-      // Create attachment record
+      // Store the object PATH, not a URL. This bucket is private, so a public
+      // URL would 404 and a signed URL would expire long before someone opens
+      // the ticket. resolveMaintenanceAttachmentUrl() signs it at view time.
       const { data, error } = await supabase
         .from('maintenance_attachments')
         .insert({
           ticket_id: ticketId,
           uploaded_by_id: user.id,
           file_name: file.name,
-          file_path: publicUrl || fileName,
+          file_path: fileName,
           file_type: file.type,
           file_size: file.size,
           description: description || null

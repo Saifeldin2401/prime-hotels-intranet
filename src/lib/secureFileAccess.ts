@@ -297,11 +297,31 @@ export async function resolveMediaUrl(mediaAssetId: string, fallbackUrl?: string
  * External URLs (YouTube links, a document link an author pasted directly, etc.) are
  * left untouched - they never match the Supabase storage URL shape below.
  */
-export async function resolveStorageUrl(rawUrl: string | null | undefined, ttlSeconds = 300): Promise<string | null> {
+export async function resolveStorageUrl(
+  rawUrl: string | null | undefined,
+  ttlSeconds = 300,
+  fallbackBucket?: string,
+): Promise<string | null> {
   if (!rawUrl) return null
 
+  // Already an external URL (YouTube, a pasted link, a public-bucket asset) --
+  // leave it alone.
   const match = rawUrl.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/)
-  if (!match) return rawUrl
+
+  // A bare object path (no scheme). Newer upload paths store the path rather
+  // than a URL, since a public URL on a private bucket never resolves. The
+  // caller tells us which bucket it belongs to.
+  if (!match) {
+    if (fallbackBucket && !/^https?:\/\//i.test(rawUrl)) {
+      const { data, error } = await supabase.storage.from(fallbackBucket).createSignedUrl(rawUrl, ttlSeconds)
+      if (error || !data?.signedUrl) {
+        console.error('resolveStorageUrl: failed to sign bare path', { bucket: fallbackBucket, error })
+        return rawUrl
+      }
+      return data.signedUrl
+    }
+    return rawUrl
+  }
 
   const [, bucket, encodedPath] = match
   const path = decodeURIComponent(encodedPath)

@@ -34,6 +34,32 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      // ---------------------------------------------------------------------
+      // REGRESSION GUARDRAILS (severity: error, on purpose)
+      //
+      // These encode bug classes that have each recurred many times in this
+      // codebase. They are errors, not warnings, because there are ~1090
+      // existing warnings -- a new warning is invisible in that noise and
+      // would not stop the bug from shipping again.
+      // ---------------------------------------------------------------------
+
+      // Every storage bucket in this project is PRIVATE except 'avatars'
+      // (verified against storage.buckets). getPublicUrl() on a private bucket
+      // returns a URL that always 404s, and the failure is silent -- the string
+      // looks like a valid URL and often gets persisted to the database, so the
+      // breakage surfaces later and far from the cause. This exact bug has been
+      // found and fixed in documents, media, images, audio, document links,
+      // avatars, maintenance attachments, and announcement attachments.
+      // Use a signed URL instead (see resolveStorageUrl / the resolve*Url
+      // helpers in src/lib/secureFileAccess.ts). If you are genuinely targeting
+      // the public 'avatars' bucket, disable this rule on the line with a
+      // comment saying so.
+      'no-restricted-properties': ['error', {
+        property: 'getPublicUrl',
+        message:
+          'All storage buckets except "avatars" are private -- getPublicUrl() will return a URL that 404s. Use a signed URL (resolveStorageUrl / resolve*Url in src/lib/secureFileAccess.ts). For the avatars bucket only, add an eslint-disable-next-line with a justification.',
+      }],
+
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/ban-ts-comment': 'warn',
       '@typescript-eslint/no-empty-object-type': 'warn',

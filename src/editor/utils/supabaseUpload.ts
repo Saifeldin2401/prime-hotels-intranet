@@ -19,11 +19,19 @@ const DEFAULT_MAX_UPLOAD_MB = 5
 const DEFAULT_VIDEO_MAX_MB = 500
 
 /**
- * Generic file upload to Supabase Storage
+ * Uploads an image/video for embedding into rich-text content and returns a
+ * durable URL.
+ *
+ * Defaults to the public 'content-media' bucket on purpose: the returned URL is
+ * written straight into saved HTML (<img src>), so it has to outlive both a
+ * signed URL's expiry and the request that created it. The private 'media'
+ * bucket cannot serve that need -- getPublicUrl() against it returns a URL that
+ * 404s, which is exactly the bug this default replaces. Anything
+ * access-controlled belongs in 'media' with a signed URL, not here.
  */
 export async function uploadFileToSupabase(
   file: File,
-  bucket = 'media',
+  bucket = 'content-media',
   maxUploadMb?: number
 ): Promise<string> {
   const isImage = ALLOWED_IMAGE_TYPES.has(file.type)
@@ -61,10 +69,12 @@ export async function uploadFileToSupabase(
     throw new Error(uploadError.message)
   }
 
-  const {
-    data: { publicUrl },
-  } = supabase.storage.from(bucket).getPublicUrl(path)
+  // 'content-media' is one of the two intentionally public buckets (see the
+  // 20260809180000 migration): embedded content URLs are persisted inside saved
+  // HTML and must stay valid, so a signed URL is not an option here.
+  // eslint-disable-next-line no-restricted-properties -- intentionally public bucket, see above
+  const { data: urlData } = supabase.storage.from(bucket).getPublicUrl(path)
 
-  return publicUrl
+  return urlData.publicUrl
 }
 

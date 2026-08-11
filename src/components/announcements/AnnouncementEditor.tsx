@@ -434,19 +434,18 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       const filePath = `announcements/${fileName}`
 
       const { error: uploadError } = await supabase.storage
-        .from('attachments')
+        .from('announcement-attachments')
         .upload(filePath, file)
 
       if (uploadError) throw uploadError
 
-      const { data: { publicUrl } } = supabase.storage
-        .from('attachments')
-        .getPublicUrl(filePath)
-
+      // Store the object PATH, not a URL. The bucket is private, so any URL
+      // captured here would either 404 (public URL) or expire (signed URL)
+      // long before a reader opens the announcement. Viewers sign it on click.
       return {
         id: crypto.randomUUID(),
         type: getAttachmentType(file.type),
-        url: publicUrl,
+        url: filePath,
         name: file.name,
         size: file.size
       }

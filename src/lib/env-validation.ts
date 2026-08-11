@@ -14,6 +14,7 @@ interface EnvConfig {
   VITE_ENABLE_PWA?: string
 }
 
+// guardrail-ok: the list of placeholder values this validator DETECTS and rejects.
 const PLACEHOLDER_MARKERS = [
   'your-project-id',
   'your_supabase_anon_key_here',

@@ -1340,15 +1340,17 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       if (uploadError) throw uploadError
 
-      const { data } = supabase.storage.from('documents').getPublicUrl(filePath)
-
+      // The 'documents' bucket is private -- a public URL here 404s, which is
+      // what silently broke every uploaded image/audio/document training block.
+      // Store the object path; the player signs it at view time via
+      // resolveStorageUrl(value, ttl, 'documents').
       const displayName = file.name.replace(/\.[^/.]+$/, '').replace(/[_-]+/g, ' ').trim()
       setCurrentBlock(prev => ({
         ...prev,
-        content_url: data.publicUrl,
+        content_url: filePath,
         title: prev.title?.trim() ? prev.title : displayName
       }))
-      addRecentUpload({ url: data.publicUrl, name: file.name, type })
+      addRecentUpload({ url: filePath, name: file.name, type })
 
       toast({
         title: t('uploadSuccessful'),

@@ -154,6 +154,7 @@ export default function MyProfile() {
                 .upload(filePath, file, { cacheControl: '3600', upsert: false })
             if (uploadError) throw uploadError
 
+            // eslint-disable-next-line no-restricted-properties -- 'avatars' is one of the two intentionally public buckets; avatar_url is read as a plain <img src> in ~42 places and must be durable.
             const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(filePath)
 
             const { error: updateError } = await supabase

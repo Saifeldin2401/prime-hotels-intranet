@@ -205,7 +205,7 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
                             setIsUploading(true)
                             try {
                                 // Upload to Supabase storage first
-                                const url = await uploadFileToSupabase(file, 'media')
+                                const url = await uploadFileToSupabase(file, 'content-media')
                                 
                                 // Then sync to Media Library
                                 await uploadFile(file, {
@@ -654,7 +654,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
         Array.from(files).forEach(async (file, index) => {
             try {
                 // Upload to Supabase storage first
-                const url = await uploadFileToSupabase(file, 'media')
+                const url = await uploadFileToSupabase(file, 'content-media')
                 
                 // Then sync to Media Library
                 await uploadFile(file, {

@@ -88,6 +88,7 @@ export function AssignTrainingWizardModal({
   const { t } = useTranslation('dashboard')
   const { user, profile } = useAuth()
   const { availableProperties, currentProperty } = useProperty()
+  const queryClient = useQueryClient()
 
   // Wizard Step State (1 to 4)
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1)
@@ -198,7 +199,6 @@ export function AssignTrainingWizardModal({
         is_deleted: false
       }]
 
-      const queryClient = useQueryClient()
       const result = await persistLearningAssignments(payload)
 
       queryClient.invalidateQueries({ queryKey: ['learning-assignments'] })

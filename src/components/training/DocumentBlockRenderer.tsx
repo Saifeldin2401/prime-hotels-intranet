@@ -122,7 +122,9 @@ export const DocumentBlockRenderer = ({
             setResolvedUrl(null)
             return
         }
-        resolveStorageUrl(safeContentUrl).then((url) => {
+        // Training Builder uploads land in the private 'documents' bucket and are
+        // stored as a bare object path, so tell the resolver which bucket to sign against.
+        resolveStorageUrl(safeContentUrl, 300, 'documents').then((url) => {
             if (!cancelled) {
                 setResolvedUrl(url)
                 setResolving(false)

@@ -42,7 +42,9 @@ export function CustomRichTextEditor({
   toolbarConfig,
   autosave,
   ai,
-  supabaseBucket = 'documents',
+  // Editor uploads get embedded into saved HTML as <img src>, so they need a
+  // durable URL -- 'documents' is private and would embed a URL that 404s.
+  supabaseBucket = 'content-media',
 }: RichTextEditorProps) {
   // 1. Config & State
   const mergedToolbarConfig = useMemo(() => mergeToolbarConfig(toolbarConfig), [toolbarConfig])
@@ -182,7 +184,7 @@ export function CustomRichTextEditor({
       setIsUploadingVideo(true)
       try {
         for (const file of videoFiles) {
-          const publicUrl = await uploadFileToSupabase(file, 'media')
+          const publicUrl = await uploadFileToSupabase(file, 'content-media')
           if (!publicUrl) continue
 
           const chain = currentEditor.chain().focus()

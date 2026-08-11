@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "vite",
     "typecheck": "node --max-old-space-size=4096 node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit",
-    "verify": "npm run lint && npm run typecheck && npm run test:run",
+    "verify": "npm run lint && npm run check:guardrails && npm run typecheck && npm run test:run",
     "build": "npm run typecheck && node --max-old-space-size=4096 node_modules/vite/bin/vite.js build",
     "lint": "eslint .",
     "preview": "vite preview",
@@ -23,7 +23,8 @@
     "audit:ci": "npm audit --omit=dev --audit-level=critical",
     "security:check": "node scripts/validate-env.js && npm audit",
     "security:env": "node scripts/validate-env.js",
-    "start": "vite preview --host 0.0.0.0"
+    "start": "vite preview --host 0.0.0.0",
+    "check:guardrails": "node scripts/check-guardrails.mjs"
   },
   "dependencies": {
     "@emotion/cache": "^11.14.0",

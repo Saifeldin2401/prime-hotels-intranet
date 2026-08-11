@@ -1642,11 +1642,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                                                 if (error) throw error
 
-                                                const { data: { publicUrl } } = supabase.storage
-                                                    .from('documents')
-                                                    .getPublicUrl(fileName)
-
-                                                updateField('file_url', publicUrl)
+                                                // The 'documents' bucket is private: a public URL here
+                                                // would 404. Store the object path and let the viewer
+                                                // sign it at read time (resolveDocumentUrl).
+                                                updateField('file_url', fileName)
                                                 updateField('storage_path', fileName)
                                                 
                                                 // Auto-generate AI tags based on filename and title

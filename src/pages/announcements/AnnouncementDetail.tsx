@@ -38,6 +38,36 @@ function getAnnouncementProfile(profile: AnnouncementProfile | AnnouncementProfi
     return Array.isArray(profile) ? (profile[0] ?? null) : (profile ?? null)
 }
 
+/**
+ * Attachments live in the private 'announcement-attachments' bucket, so the
+ * stored value is an object path rather than a URL. Sign it at click time --
+ * pre-signing every attachment on render would waste calls and the links would
+ * expire while the page sat open.
+ *
+ * Older rows (pre-dating the bucket fix) may hold a full URL; pass those
+ * through unchanged so they degrade gracefully instead of throwing.
+ */
+async function handleOpenAttachment(attachment: { url?: string; name?: string }) {
+    const value = attachment?.url
+    if (!value) return
+
+    if (/^https?:\/\//i.test(value)) {
+        window.open(value, '_blank', 'noopener,noreferrer')
+        return
+    }
+
+    const { data, error } = await supabase.storage
+        .from('announcement-attachments')
+        .createSignedUrl(value, 300)
+
+    if (error || !data?.signedUrl) {
+        toast.error('Could not open this attachment.')
+        return
+    }
+
+    window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+}
+
 export default function AnnouncementDetail() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
@@ -329,15 +359,14 @@ export default function AnnouncementDetail() {
                             <h4 className="font-medium mb-3">{t('detail.attachments', 'Attachments')}</h4>
                             <div className="flex flex-wrap gap-2">
                                 {announcement.attachments.map((attachment, index: number) => (
-                                    <a
+                                    <button
                                         key={index}
-                                        href={attachment.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        type="button"
+                                        onClick={() => void handleOpenAttachment(attachment)}
                                         className="px-4 py-2 bg-muted rounded-lg text-sm hover:bg-muted/80 transition-colors flex items-center gap-2"
                                     >
                                         📎 {attachment.name || `Attachment ${index + 1}`}
-                                    </a>
+                                    </button>
                                 ))}
                             </div>
                         </div>
