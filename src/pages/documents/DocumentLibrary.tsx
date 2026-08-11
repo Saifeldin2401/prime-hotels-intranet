@@ -4,8 +4,10 @@ import { DocumentFolderTree } from '@/components/documents/DocumentFolderTree'
 import { DocumentSearchAdvanced, type ConfidentialityLevel } from '@/components/documents/DocumentSearchAdvanced'
 import { DocumentTrashBin } from '@/components/documents/DocumentTrashBin'
 import { DocumentPublishDialog } from '@/components/documents/DocumentPublishDialog'
+import { DocumentRecommendations } from '@/components/documents/DocumentRecommendations'
 import { DocumentUploadDialog } from '@/components/documents/DocumentUploadDialog'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
+import { RecentlyViewedDocuments } from '@/components/documents/RecentlyViewedDocuments'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { StatusBadge } from '@/components/shared/StatusBadge'
 import { Button } from '@/components/ui/button'
@@ -1089,6 +1091,12 @@ export default function DocumentLibrary() {
               </div>
             </div>
           </Card>
+
+          {/* Recently Viewed */}
+          <RecentlyViewedDocuments limit={5} className="border-0 shadow-sm" />
+
+          {/* Recommended for You */}
+          <DocumentRecommendations className="border-0 shadow-sm" />
         </div>
 
         {/* Main Document List */}

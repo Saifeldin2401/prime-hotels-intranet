@@ -9,6 +9,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog'
+import { AIInsightsCard } from '@/components/operations/AIInsightsCard'
+import { OperationsControlCenter } from '@/components/operations/OperationsControlCenter'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -31,7 +33,7 @@ import {
     Trash2,
     Upload,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -46,6 +48,18 @@ export default function OperationsDashboard() {
     const { data: importLogs, refetch: refetchLogs } = useDataImportLogs()
     const deleteImportLog = useDeleteImportLog()
     const [logToDelete, setLogToDelete] = useState<string | null>(null)
+
+    // No live PMS performance pipeline exists yet (the PMS data tables were dropped -
+    // see supabase/migrations/20260612112211_drop_pms_module.sql), so there is no
+    // occupancy/ADR/RevPAR source to feed the AI insights panel. Pass zeroed metrics
+    // so it renders its graceful "no data yet" state instead of fabricated numbers.
+    // Repoint this at a real KPI source once one exists.
+    const aiInsightsData = useMemo(() => ({
+        occupancyRate: 0,
+        adr: 0,
+        revpar: 0,
+        totalRevenue: 0,
+    }), [])
 
     const handleDeleteLog = async (id: string) => {
         try {
@@ -167,6 +181,12 @@ export default function OperationsDashboard() {
                     </Link>
                 ))}
             </div>
+
+            {/* Operations Control Center - live task, maintenance & department stats */}
+            <OperationsControlCenter />
+
+            {/* AI Operations Insights */}
+            <AIInsightsCard data={aiInsightsData} />
 
             {/* Data Import History */}
             <Card>

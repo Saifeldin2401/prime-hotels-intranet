@@ -2,11 +2,12 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import { Building2, FileText, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-export function DocumentRecommendations() {
+export function DocumentRecommendations({ className }: { className?: string } = {}) {
   const { user } = useAuth();
 
   const { data: recommendations } = useQuery({
@@ -73,7 +74,7 @@ export function DocumentRecommendations() {
   };
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Star className="h-5 w-5 text-yellow-500" />

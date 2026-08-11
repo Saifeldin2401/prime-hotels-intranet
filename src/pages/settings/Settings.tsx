@@ -6,13 +6,15 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useUserSettings } from '@/contexts/UserSettingsContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useAppRecovery } from '@/hooks/useAppRecovery'
 import { supabase } from '@/lib/supabase'
-import { Accessibility, Globe, Keyboard, Loader2, Shield } from 'lucide-react'
+import { Accessibility, Globe, Keyboard, Loader2, RefreshCw, Shield, Wrench } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { NotificationSettings } from './NotificationSettings'
 import { PushNotificationSettings } from '@/components/settings/PushNotificationSettings'
+import { SessionList } from '@/components/auth/SessionList'
 
 export default function Settings() {
     const { t: t_ext } = useTranslation('extracted');
@@ -32,6 +34,8 @@ export default function Settings() {
     const [newPassword, setNewPassword] = useState('')
     const [confirmPassword, setConfirmPassword] = useState('')
     const [updatingPassword, setUpdatingPassword] = useState(false)
+    const { forceRefresh } = useAppRecovery()
+    const [clearingCache, setClearingCache] = useState(false)
 
     const loadSettings = useCallback(async () => {
         try {
@@ -89,13 +93,12 @@ export default function Settings() {
         }
     }
 
-    const handleSignOutOthers = async () => {
+    const handleClearCache = async () => {
         try {
-            const { error } = await supabase.auth.signOut({ scope: 'others' })
-            if (error) throw error
-            toast.success('Signed out of all other devices')
-        } catch (error) {
-            toast.error(error.message || 'Failed to sign out of other devices')
+            setClearingCache(true)
+            await forceRefresh()
+        } finally {
+            setClearingCache(false)
         }
     }
 
@@ -140,6 +143,9 @@ export default function Settings() {
                     </TabsTrigger>
                     <TabsTrigger value="security" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
                         {t('tabs.security')}
+                    </TabsTrigger>
+                    <TabsTrigger value="troubleshooting" className="rounded-lg data-[state=active]:bg-white dark:data-[state=active]:bg-hotel-navy data-[state=active]:shadow-sm">
+                        {t('tabs.troubleshooting', { defaultValue: 'Troubleshooting' })}
                     </TabsTrigger>
                 </TabsList>
 
@@ -297,40 +303,33 @@ export default function Settings() {
                         </Card>
 
                         {/* Active Sessions */}
+                        <SessionList />
+                    </div>
+                </TabsContent>
+
+                <TabsContent value="troubleshooting">
+                    <div className="grid gap-6">
+                        {/* Clear Cache & Reload */}
                         <Card className="bg-white dark:bg-hotel-navy border-border/50 shadow-sm">
                             <CardHeader className="bg-slate-50/50 dark:bg-white/5 border-b border-border/50">
                                 <CardTitle className="text-base flex items-center gap-2">
-                                    <Shield className="h-4 w-4 text-hotel-gold" />
-                                    {t_ext('active_sessions', 'Active Sessions')}</CardTitle>
-                                <CardDescription>{t_ext('devices_currently_signed_into_your_accou', 'Devices currently signed into your account')}</CardDescription>
+                                    <Wrench className="h-4 w-4 text-hotel-gold" />
+                                    {t_ext('troubleshooting', 'Troubleshooting')}</CardTitle>
+                                <CardDescription>{t_ext('resolve_issues_caused_by_outdated_or_cor', 'Resolve issues caused by outdated or corrupted local app data')}</CardDescription>
                             </CardHeader>
-                            <CardContent className="p-0">
-                                <div className="divide-y divide-border/50">
-                                    <div className="p-4 flex items-center justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-full">
-                                                <div className="w-2 h-2 rounded-full bg-green-500" />
-                                            </div>
-                                            <div>
-                                                <p className="text-sm font-medium">{t_ext('current_session', 'Current Session')}</p>
-                                                <p className="text-xs text-gray-500">{t_ext('your_active_workspace', 'Your active workspace')}</p>
-                                            </div>
-                                        </div>
-                                        <span className="text-xs bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400 px-2 py-0.5 rounded-full font-medium">{t_ext('active', 'Active')}</span>
+                            <CardContent className="pt-6">
+                                <div className="flex items-center justify-between gap-4">
+                                    <div className="flex flex-col gap-1">
+                                        <Label className="text-gray-900 dark:text-gray-100 font-medium">{t_ext('clear_cache_and_reload', 'Clear Cache & Reload')}</Label>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">{t_ext('seeing_a_blank_page_missing_data_or_a_st', "Seeing a blank page, missing data, or a stale version of the app? Clearing the cache and reloading can fix it.")}</p>
                                     </div>
-                                    <div className="p-6 bg-slate-50/50 dark:bg-white/5">
-                                        <div className="flex flex-col gap-4">
-                                            <div className="space-y-1">
-                                                <h4 className="text-sm font-medium">{t_ext('other_active_devices', 'Other Active Devices')}</h4>
-                                                <p className="text-xs text-gray-500">{t_ext('to_secure_your_account_you_can_terminate', 'To secure your account, you can terminate all other active sessions across your devices.')}</p>
-                                            </div>
-                                            <button
-                                                onClick={handleSignOutOthers}
-                                                className="w-fit text-sm text-red-600 hover:text-red-700 font-medium px-4 py-2 border border-red-200 dark:border-red-900/50 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                                            >
-                                                {t_ext('sign_out_of_all_other_devices', 'Sign out of all other devices')}</button>
-                                        </div>
-                                    </div>
+                                    <button
+                                        onClick={handleClearCache}
+                                        disabled={clearingCache}
+                                        className="shrink-0 flex items-center gap-2 text-sm text-hotel-gold hover:text-hotel-gold-dark font-medium px-4 py-2 border border-hotel-gold/30 rounded-md hover:bg-hotel-gold/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {clearingCache ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                                        {t_ext('clear_cache_and_reload', 'Clear Cache & Reload')}</button>
                                 </div>
                             </CardContent>
                         </Card>

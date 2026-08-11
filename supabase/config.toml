@@ -65,11 +65,6 @@ vector_port = 54328
 backend = "postgres"
 
 [functions]
-[functions.action-registry]
-enabled = true
-verify_jwt = true
-entrypoint = "./functions/action-registry/index.ts"
-
 [functions.admin-account-actions]
 enabled = true
 verify_jwt = true
@@ -82,8 +77,10 @@ entrypoint = "./functions/ai-translation/index.ts"
 
 [functions.ai-document-tagger]
 enabled = true
-# This internal worker validates the service-role credential in its handler.
-verify_jwt = false
+# Callable with a user JWT (document owner tagging their own upload) or with the
+# service-role key (internal callers). The handler authorizes both cases itself.
+# Matches the deployed setting, which has always been verify_jwt = true.
+verify_jwt = true
 entrypoint = "./functions/ai-document-tagger/index.ts"
 
 [functions.approval-escalation]

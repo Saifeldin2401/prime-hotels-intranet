@@ -21,6 +21,12 @@ import { Link } from 'react-router-dom'
 interface PendingApprovalsWidgetProps {
     className?: string
     maxItems?: number
+    /** Card title override. Defaults to "Pending Approvals". */
+    title?: string
+    /** Whether to show the "View All Approvals" link to /approvals when there are more
+     * items than maxItems. Set to false when the widget is already embedded on the
+     * approvals page itself, where a link back to the same page would be a no-op. */
+    showViewAllLink?: boolean
 }
 
 const leaveTypeLabels: Record<string, string> = {
@@ -34,7 +40,7 @@ const leaveTypeLabels: Record<string, string> = {
     bereavement: 'Bereavement Leave'
 }
 
-export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingApprovalsWidgetProps) {
+export function PendingApprovalsWidget({ className, maxItems = 3, title = 'Pending Approvals', showViewAllLink = true }: PendingApprovalsWidgetProps) {
     const { t } = useTranslation('approvals')
     const { data: stats } = useApprovalStats()
     const { data: pendingItems, isLoading } = usePendingApprovals()
@@ -51,7 +57,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Clock className="h-5 w-5" />
-                        Pending Approvals
+                        {title}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -69,7 +75,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                 <CardHeader className="pb-3">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Clock className="h-5 w-5" />
-                        Pending Approvals
+                        {title}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -90,7 +96,7 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                         <Clock className="h-5 w-5" />
-                        Pending Approvals
+                        {title}
                         {stats?.total_pending && stats.total_pending > 0 && (
                             <Badge variant="secondary" className="ms-2">
                                 {stats.total_pending}
@@ -180,13 +186,18 @@ export function PendingApprovalsWidget({ className, maxItems = 3 }: PendingAppro
                     </div>
                 ))}
 
-                {hasMore && (
+                {hasMore && showViewAllLink && (
                     <Link to="/approvals">
                         <Button variant="ghost" className="w-full gap-2">
                             View All Approvals
                             <ArrowRight className="h-4 w-4" />
                         </Button>
                     </Link>
+                )}
+                {hasMore && !showViewAllLink && (
+                    <p className="text-xs text-center text-muted-foreground pt-1">
+                        {t('widget.more_pending', '{{count}} more pending in the Leaves tab below', { count: (pendingItems?.length || 0) - maxItems })}
+                    </p>
                 )}
             </CardContent>
 

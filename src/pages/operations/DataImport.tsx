@@ -47,6 +47,7 @@ import { downloadReport, loadLogoAsDataUrl } from '@/lib/printEngine'
 import { detectPropertyByName, detectPropertyFromContext } from '@/lib/propertyDetection'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { SmartHeaderMapper } from '@/components/operations/SmartHeaderMapper'
 import { useQueryClient } from '@tanstack/react-query'
 import { format } from 'date-fns'
 import {
@@ -84,6 +85,18 @@ interface FileQueueItem {
     extractedData?: ExtractedData
     error?: string
     duplicateWarning?: boolean
+    // Raw column headers detected in the source file, and the data rows below them,
+    // captured so the Smart Header Mapper can offer a manual correction step before import.
+    csvHeaders?: string[]
+    dataRows?: string[][]
+    headerMapping?: Record<string, string>
+    mappingReviewed?: boolean
+}
+
+// Side-channel used by the parsers below to hand back the raw header row + data rows
+// they detected, without changing the ExtractedData return type.
+interface HeaderCapture {
+    current: { headers: string[]; dataRows: string[][] }
 }
 
 // ========== CONSTANTS ==========
@@ -92,6 +105,21 @@ const ARABIC_MONTHS: Record<string, string> = {
     'مايو': '05', 'يونيو': '06', 'يوليو': '07', 'أغسطس': '08',
     'سبتمبر': '09', 'أكتوبر': '10', 'نوفمبر': '11', 'ديسمبر': '12'
 }
+
+// Canonical fields the importer understands. Shown as the "target" side of the
+// Smart Header Mapper so users can correct a column match the auto-detector got wrong.
+const IMPORT_TARGET_FIELDS = [
+    'business_date',
+    'hotel_name',
+    'rooms_available',
+    'rooms_sold',
+    'occupancy',
+    'adr',
+    'revpar',
+    'room_revenue',
+    'fb_revenue',
+    'total_revenue',
+]
 
 // ========== PARSING HELPERS (Preserved) ==========
 function parseExcel(file: File): Promise<string[][]> {
@@ -167,8 +195,8 @@ function calculateQualityScore(records: ExtractedRecord[]): { score: number, iss
     return { score: Math.max(0, totalScore), issues, fieldConfidence }
 }
 
-function extractDataFromRows(rows: string[][], properties = [], fileName: string = ''): ExtractedData {
-    const pmsResult = parsePMSDailyReport(rows, properties, fileName)
+function extractDataFromRows(rows: string[][], properties = [], fileName: string = '', headerCapture?: HeaderCapture): ExtractedData {
+    const pmsResult = parsePMSDailyReport(rows, properties, fileName, headerCapture)
     if (pmsResult.detected && pmsResult.data.length > 0) {
         const records = pmsResult.data
         const roomsSold = records.reduce((sum, r) => sum + (parseInt(String(r.rooms_sold)) || 0), 0)
@@ -188,10 +216,10 @@ function extractDataFromRows(rows: string[][], properties = [], fileName: string
             fieldConfidence
         }
     }
-    return parseStandardTemplate(rows, properties, fileName)
+    return parseStandardTemplate(rows, properties, fileName, headerCapture)
 }
 
-function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = ''): { data: ExtractedRecord[], detected: boolean } {
+function parsePMSDailyReport(rows: string[][], properties = [], fileName: string = '', headerCapture?: HeaderCapture): { data: ExtractedRecord[], detected: boolean } {
     const isValidFormat = rows.some(row => row.some(cell => cell && (cell.toLowerCase().includes('key performance indicators') || cell.toLowerCase().includes('report date') || cell.toLowerCase().includes('altus al-hamra') || cell.toLowerCase().includes('altus al corniche') || cell.toLowerCase().includes('daily sales report'))))
     if (!isValidFormat) return { data: [], detected: false }
 
@@ -234,6 +262,12 @@ function parsePMSDailyReport(rows: string[][], properties = [], fileName: string
     if (!businessDate) businessDate = new Date().toISOString().split('T')[0]
     if (kpiHeaderRow === -1) return { data: [], detected: true }
     const headers = rows[kpiHeaderRow]; const values = rows[kpiHeaderRow + 1];
+    if (headerCapture) {
+        headerCapture.current = {
+            headers: headers.map(h => (h || '').trim()),
+            dataRows: values ? [values] : []
+        }
+    }
     const extracted: ExtractedRecord = {
         business_date: businessDate,
         detected_property_id: headerPropertyId,
@@ -256,7 +290,7 @@ function parsePMSDailyReport(rows: string[][], properties = [], fileName: string
     return { data: [extracted], detected: true }
 }
 
-function parseStandardTemplate(rows: string[][], properties = [], fileName: string = ''): ExtractedData {
+function parseStandardTemplate(rows: string[][], properties = [], fileName: string = '', headerCapture?: HeaderCapture): ExtractedData {
     const occupancyKeywords = ['business_date', 'rooms_available', 'rooms_sold']
     const revenueKeywords = ['business_date', 'room_revenue', 'fb_revenue']
     const hotelKeywords = ['hotel', 'property', 'hotel_name', 'hotel name', 'property_name', 'unit']
@@ -270,6 +304,19 @@ function parseStandardTemplate(rows: string[][], properties = [], fileName: stri
 
     const headers = rows[headerRow].map(h => (h || '').toLowerCase().trim())
     const hotelNameIdx = headers.findIndex(h => hotelKeywords.some(k => h.includes(k)))
+
+    if (headerCapture) {
+        const capturedDataRows: string[][] = []
+        for (let i = headerRow + 1; i < rows.length; i++) {
+            const row = rows[i]
+            if (!row || row.every(c => !c)) continue
+            capturedDataRows.push(row)
+        }
+        headerCapture.current = {
+            headers: rows[headerRow].map(h => (h || '').trim()),
+            dataRows: capturedDataRows
+        }
+    }
 
     // Use Contextual Detection as fallback (Filename + Headers)
     let contextPropertyId: string | null = null
@@ -304,6 +351,47 @@ function parseStandardTemplate(rows: string[][], properties = [], fileName: stri
     const uniqueProperties = new Set(records.map(r => r.detected_property_id).filter(Boolean))
 
     return { records, detectedFormat: format, dateRange: { start: String(records[0]?.business_date || ''), end: String(records[records.length - 1]?.business_date || '') }, summary: { totalRecords: records.length, roomsSold: records.reduce((sum, r) => sum + (parseInt(String(r.rooms_sold)) || 0), 0), totalRevenue: records.reduce((sum, r) => sum + (parseFloat(String(r.room_revenue)) || 0), 0), propertiesFound: uniqueProperties.size }, qualityScore: score, qualityIssues: issues, fieldConfidence }
+}
+
+// Rebuilds extracted records from the raw data rows using a user-confirmed header
+// mapping (csvHeader -> canonical field), instead of trusting the literal column
+// text. This is what makes the Smart Header Mapper's manual corrections actually
+// flow through to the import that runs.
+function applyHeaderMapping(
+    dataRows: string[][],
+    csvHeaders: string[],
+    mapping: Record<string, string>,
+    properties = [],
+    fileName: string = ''
+): ExtractedRecord[] {
+    const hotelColIdx = csvHeaders.findIndex(h => mapping[h] === 'hotel_name')
+    let fileContext: { propertyId: string | null; confidence: number } | null = null
+    if (hotelColIdx === -1) {
+        const contextDetection = detectPropertyFromContext(fileName, [csvHeaders, ...dataRows], properties)
+        fileContext = { propertyId: contextDetection.propertyId, confidence: contextDetection.confidence }
+    }
+
+    return dataRows
+        .map(row => {
+            const record: ExtractedRecord = {}
+            csvHeaders.forEach((header, idx) => {
+                const target = mapping[header]
+                if (!target || target === 'skip' || target === 'hotel_name') return
+                record[target] = row[idx] || ''
+            })
+
+            if (hotelColIdx !== -1 && row[hotelColIdx]) {
+                const detection = detectPropertyByName(row[hotelColIdx], properties)
+                record.detected_property_id = detection.propertyId
+                record.detected_confidence = detection.confidence
+            } else if (fileContext) {
+                record.detected_property_id = fileContext.propertyId
+                record.detected_confidence = fileContext.confidence
+            }
+
+            return record
+        })
+        .filter(record => Boolean(record.business_date))
 }
 
 // ========== MAIN COMPONENT ==========
@@ -429,13 +517,17 @@ export default function DataImport() {
                 if (fileName.endsWith('.csv')) rows = parseCSV(await item.file.text())
                 else rows = await parseExcel(item.file)
 
-                const extracted = finalizeExtractedData(extractDataFromRows(rows, properties, item.file.name))
+                const headerCapture: HeaderCapture = { current: { headers: [], dataRows: [] } }
+                const extracted = finalizeExtractedData(extractDataFromRows(rows, properties, item.file.name, headerCapture))
                 if (extracted.records.length > 0) {
                     // Duplicate check removed: daily_occupancy table dropped
                     setFileQueue(prev => prev.map(f => f.id === item.id ? {
                         ...f,
                         status: 'success',
                         extractedData: extracted,
+                        csvHeaders: headerCapture.current.headers,
+                        dataRows: headerCapture.current.dataRows,
+                        mappingReviewed: false,
                         duplicateWarning: false
                     } as FileQueueItem : f))
                 } else {
@@ -581,6 +673,50 @@ export default function DataImport() {
                 count: total
             })
         })
+    }
+
+    const handleMappingChange = (fileId: string, mapping: Record<string, string>) => {
+        setFileQueue(prev => prev.map(f => f.id === fileId ? { ...f, headerMapping: mapping } : f))
+    }
+
+    const handleMappingConfirm = (fileId: string) => {
+        setFileQueue(prev => prev.map(f => {
+            if (f.id !== fileId) return f
+            if (!f.csvHeaders?.length || !f.dataRows || !f.headerMapping) {
+                return { ...f, mappingReviewed: true }
+            }
+
+            const remappedRecords = applyHeaderMapping(f.dataRows, f.csvHeaders, f.headerMapping, properties, f.file.name)
+            if (remappedRecords.length === 0) {
+                // Nothing usable came out of the confirmed mapping (e.g. no column was
+                // mapped to business_date) - keep whatever was previously extracted
+                // rather than wiping the file's data out from under the user.
+                return { ...f, mappingReviewed: true }
+            }
+
+            const { score, issues, fieldConfidence } = calculateQualityScore(remappedRecords)
+            const uniqueProperties = new Set(remappedRecords.map(r => r.detected_property_id).filter(Boolean))
+
+            const rebuilt = finalizeExtractedData({
+                records: remappedRecords,
+                detectedFormat: f.extractedData?.detectedFormat || 'unknown',
+                dateRange: {
+                    start: String(remappedRecords[0]?.business_date || ''),
+                    end: String(remappedRecords[remappedRecords.length - 1]?.business_date || '')
+                },
+                summary: {
+                    totalRecords: remappedRecords.length,
+                    roomsSold: remappedRecords.reduce((sum, r) => sum + (parseInt(String(r.rooms_sold)) || 0), 0),
+                    totalRevenue: remappedRecords.reduce((sum, r) => sum + (parseFloat(String(r.total_revenue)) || parseFloat(String(r.room_revenue)) || 0), 0),
+                    propertiesFound: uniqueProperties.size
+                },
+                qualityScore: score,
+                qualityIssues: issues,
+                fieldConfidence
+            })
+
+            return { ...f, status: 'success', extractedData: rebuilt, mappingReviewed: true }
+        }))
     }
 
     const updateRecord = (fileId: string, recordIndex: number, field: string, value: string) => {
@@ -1141,23 +1277,46 @@ export default function DataImport() {
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'json')} className="w-[200px]">
-                                                <TabsList className="grid grid-cols-2 h-9">
-                                                    <TabsTrigger value="table" className="text-xs">
-                                                        {t('data_import.review.table_view', { defaultValue: 'Table View' })}
-                                                    </TabsTrigger>
-                                                    <TabsTrigger value="json" className="text-xs">
-                                                        {t('data_import.review.raw_json', { defaultValue: 'Raw JSON' })}
-                                                    </TabsTrigger>
-                                                </TabsList>
-                                            </Tabs>
+                                            {selectedFile.mappingReviewed && !!selectedFile.csvHeaders?.length && (
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-9 text-xs gap-1.5"
+                                                    onClick={() => setFileQueue(prev => prev.map(f => f.id === selectedFile.id ? { ...f, mappingReviewed: false } : f))}
+                                                >
+                                                    <Sparkles className="h-3.5 w-3.5" />
+                                                    {t('data_import.review.edit_mapping', { defaultValue: 'Edit Column Mapping' })}
+                                                </Button>
+                                            )}
+                                            {(selectedFile.mappingReviewed || !selectedFile.csvHeaders?.length) && (
+                                                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'table' | 'json')} className="w-[200px]">
+                                                    <TabsList className="grid grid-cols-2 h-9">
+                                                        <TabsTrigger value="table" className="text-xs">
+                                                            {t('data_import.review.table_view', { defaultValue: 'Table View' })}
+                                                        </TabsTrigger>
+                                                        <TabsTrigger value="json" className="text-xs">
+                                                            {t('data_import.review.raw_json', { defaultValue: 'Raw JSON' })}
+                                                        </TabsTrigger>
+                                                    </TabsList>
+                                                </Tabs>
+                                            )}
                                             <Button variant="outline" size="icon" onClick={() => setSelectedFileId(null)} aria-label={t('accessibility.close_file_view', 'Close file view')}>
                                                 <X className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        {selectedFile.extractedData ? (
+                                        {!selectedFile.mappingReviewed && !!selectedFile.csvHeaders?.length ? (
+                                            <div className="p-4">
+                                                <SmartHeaderMapper
+                                                    csvHeaders={selectedFile.csvHeaders}
+                                                    targetHeaders={IMPORT_TARGET_FIELDS}
+                                                    initialMapping={selectedFile.headerMapping}
+                                                    onMappingChange={(mapping) => handleMappingChange(selectedFile.id, mapping)}
+                                                    onConfirm={() => handleMappingConfirm(selectedFile.id)}
+                                                />
+                                            </div>
+                                        ) : selectedFile.extractedData ? (
                                             viewMode === 'table' ? (
                                                 <ScrollArea className="h-[450px]">
                                                     <Table>

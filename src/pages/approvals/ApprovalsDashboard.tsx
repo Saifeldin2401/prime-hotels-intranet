@@ -1,11 +1,13 @@
 import { ApprovalCard } from '@/components/approvals/ApprovalCard'
 import { ApprovalDetailsSheet } from '@/components/approvals/ApprovalDetailsSheet'
+import { PendingApprovalsWidget } from '@/components/widgets/PendingApprovalsWidget'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
+import { usePermissions } from '@/hooks/usePermissions'
 import { useUnifiedApprovals, type ApprovalItem } from '@/hooks/useUnifiedApprovals'
 import { cn } from '@/lib/utils'
 import {
@@ -29,6 +31,8 @@ export default function ApprovalsDashboard() {
     const { t, i18n } = useTranslation('approvals')
     const { toast } = useToast()
     const isRTL = i18n.dir() === 'rtl'
+    const { hasPermission } = usePermissions()
+    const canReviewLeaveApprovals = hasPermission('approvals.view')
 
     // Use the unified hook
     const {
@@ -185,6 +189,17 @@ export default function ApprovalsDashboard() {
                     </div>
                 </div>
             </div>
+
+            {/* Quick Actions: oldest/most urgent leave approvals, one click away.
+                Scoped to leave requests specifically - the Leaves tab below covers
+                the full unified list across all approval types. */}
+            {canReviewLeaveApprovals && (
+                <PendingApprovalsWidget
+                    title={t('widget.leave_quick_actions', 'Leave Approvals — Quick Actions')}
+                    maxItems={3}
+                    showViewAllLink={false}
+                />
+            )}
 
             {/* Main Content Tabs */}
             <Tabs defaultValue="all" className="w-full">

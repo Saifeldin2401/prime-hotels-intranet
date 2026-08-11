@@ -3,6 +3,7 @@ import { DocumentComments } from '@/components/documents/DocumentComments'
 import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
 import { DocumentMetadataForm, type DocumentMetadata } from '@/components/documents/DocumentMetadataForm'
+import { DocumentVersionComparison } from '@/components/documents/DocumentVersionComparison'
 import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
 import { ContentCrossLinks } from '@/components/knowledge/ContentCrossLinks'
@@ -76,6 +77,7 @@ export default function DocumentDetail() {
   const [aiAssistantOpen, setAiAssistantOpen] = useState(false)
   const [shareDialogOpen, setShareDialogOpen] = useState(false)
   const [metadataDraft, setMetadataDraft] = useState<DocumentMetadata | null>(null)
+  const [compareVersionIds, setCompareVersionIds] = useState<[string, string] | null>(null)
 
   const {
     summary: aiSummary,
@@ -240,6 +242,24 @@ export default function DocumentDetail() {
   }
 
   const activeVersion = versions.find(v => (v as any).is_current) || versions[0]
+  // Reuses the same `versions` data useDocumentVersions already fetched (same RLS-scoped
+  // query the rest of the version-history UI relies on) instead of having
+  // DocumentVersionComparison query document_versions independently.
+  const comparisonVersions = versions.map((v) => ({
+    id: v.id,
+    document_id: v.document_id,
+    version_number: v.version_number,
+    title: (v as any).title ?? null,
+    content: (v as any).content ?? null,
+    change_summary: v.change_summary,
+    file_url: v.file_url,
+    created_at: v.created_at,
+    created_by: v.created_by,
+    user_name: v.creator?.full_name || 'Unknown User',
+    user_avatar: v.creator?.avatar_url || undefined,
+    is_current: v.id === activeVersion?.id,
+    status: (v as any).status ?? null,
+  }))
   const folder = folders.find(f => f.id === document.folder_id)
   const isOwner = user?.id === document.created_by
   const canEdit = isOwner || hasPermission('documents.edit')
@@ -498,6 +518,7 @@ export default function DocumentDetail() {
                   const secureVersionUrl = await resolveDocumentVersionUrl(version.id, version.fileUrl)
                   openUrlInNewTab(secureVersionUrl)
                 }}
+                onCompare={(versionId1, versionId2) => setCompareVersionIds([versionId1, versionId2])}
               />
             </TabsContent>
 
@@ -839,6 +860,22 @@ export default function DocumentDetail() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Compare Versions Dialog */}
+      {compareVersionIds && (
+        <Dialog open onOpenChange={(open) => !open && setCompareVersionIds(null)}>
+          <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Compare Versions</DialogTitle>
+            </DialogHeader>
+            <DocumentVersionComparison
+              versions={comparisonVersions}
+              isLoading={versionsLoading}
+              initialSelectedVersions={compareVersionIds}
+            />
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   )
 }

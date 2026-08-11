@@ -1,4 +1,5 @@
 import { Icons } from '@/components/icons'
+import { LeaveCoverageCalendar } from '@/components/leave/LeaveCoverageCalendar'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useTranslation } from 'react-i18next'
@@ -65,6 +66,16 @@ export default function HRControlCenter() {
         <p className="text-muted-foreground">
           {t('hr_admin.description', 'Manage HR workflows, approvals, and employee data from one place.')}
         </p>
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold tracking-tight mb-1">
+          {t('hr_admin.coverage.title', 'Leave Coverage')}
+        </h2>
+        <p className="text-sm text-muted-foreground mb-4">
+          {t('hr_admin.coverage.description', 'Property-wide view of who is on leave and where coverage is thin.')}
+        </p>
+        <LeaveCoverageCalendar />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

@@ -3,9 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
 import { formatDistanceToNow } from 'date-fns'
 import {
     ArrowLeftRight,
@@ -19,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 
-interface DocumentVersion {
+export interface DocumentVersion {
   id: string
   document_id: string
   version_number: number
@@ -36,8 +34,17 @@ interface DocumentVersion {
 }
 
 interface DocumentVersionComparisonProps {
-  documentId: string
+  /**
+   * Version rows to compare. Callers should source these from the same
+   * `useDocumentVersions` hook the rest of the version-history UI uses, so
+   * there is a single query / single set of RLS-scoped rows per document
+   * (see DocumentDetail.tsx). This component does not fetch on its own.
+   */
+  versions: DocumentVersion[]
+  isLoading?: boolean
   className?: string
+  /** Pre-select a pair of version IDs to compare on mount (e.g. from a "Compare" trigger elsewhere). */
+  initialSelectedVersions?: [string, string]
 }
 
 const VersionCard = ({ version, isSelected, onSelect }: {
@@ -107,30 +114,9 @@ const ChangeIndicator = ({ type }: { type: 'added' | 'removed' | 'modified' | 'u
   )
 }
 
-export function DocumentVersionComparison({ documentId, className }: DocumentVersionComparisonProps) {
-  const [selectedVersions, setSelectedVersions] = useState<[string, string]>(['', ''])
+export function DocumentVersionComparison({ versions, isLoading = false, className, initialSelectedVersions }: DocumentVersionComparisonProps) {
+  const [selectedVersions, setSelectedVersions] = useState<[string, string]>(initialSelectedVersions ?? ['', ''])
   const [viewMode, setViewMode] = useState<'side-by-side' | 'unified' | 'changes-only'>('side-by-side')
-
-  const { data: versions, isLoading } = useQuery({
-    queryKey: ['document-versions', documentId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('document_versions')
-        .select(`
-          *,
-          user:profiles!document_versions_created_by_fkey(id, full_name, avatar_url)
-        `)
-        .eq('document_id', documentId)
-        .order('version_number', { ascending: false })
-
-      if (error) throw error
-      return data.map((version) => ({
-        ...version,
-        user_name: version.user?.full_name || 'Unknown User',
-        user_avatar: version.user?.avatar_url
-      })) as DocumentVersion[]
-    }
-  })
 
   const handleVersionSelect = (position: 0 | 1, versionId: string) => {
     const newSelected = [...selectedVersions] as [string, string]

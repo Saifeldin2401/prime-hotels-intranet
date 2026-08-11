@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import { formatRelativeTime } from '@/lib/utils'
+import { cn, formatRelativeTime } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { Clock, FileText } from 'lucide-react'
 import { Link } from 'react-router-dom'
@@ -26,7 +26,7 @@ function getStoredViews(userId: string): RecentlyViewedItem[] {
   }
 }
 
-export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
+export function RecentlyViewedDocuments({ limit = 5, className }: { limit?: number; className?: string }) {
   const { user } = useAuth()
 
   const { data: recentViews } = useQuery({
@@ -64,7 +64,7 @@ export function RecentlyViewedDocuments({ limit = 5 }: { limit?: number }) {
   if (!recentViews?.length) return null
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader>
         <CardTitle className="text-lg flex items-center gap-2">
           <Clock className="h-5 w-5" />

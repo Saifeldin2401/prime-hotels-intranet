@@ -85,11 +85,19 @@ export function AIInsightsCard({ data, className }: AIInsightsCardProps) {
                     </div>
                 ) : (
                     <>
-                        <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
-                            <p className="text-sm italic leading-relaxed text-foreground/90">
-                                "{summary}"
-                            </p>
-                        </div>
+                        {summary ? (
+                            <div className="bg-primary/5 rounded-lg p-4 border border-primary/10">
+                                <p className="text-sm italic leading-relaxed text-foreground/90">
+                                    "{summary}"
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="bg-muted/30 rounded-lg p-4 border border-dashed text-center">
+                                <p className="text-sm text-muted-foreground">
+                                    No performance data available yet. Import PMS reports to generate insights.
+                                </p>
+                            </div>
+                        )}
 
                         <div className="grid gap-3">
                             {insights.map((insight, idx) => (
@@ -129,10 +137,10 @@ export function AIInsightsCard({ data, className }: AIInsightsCardProps) {
 
                         <div className="pt-2 flex justify-between items-center text-[10px] text-muted-foreground">
                             <div className="flex items-center gap-1">
-                                <span className="inline-block w-2 h-2 rounded-full bg-green-500" />
-                                Data Source: Live PMS Sync
+                                <span className={cn("inline-block w-2 h-2 rounded-full", summary ? "bg-green-500" : "bg-muted-foreground/40")} />
+                                {summary ? 'Data Source: Live PMS Sync' : 'Data Source: No import data yet'}
                             </div>
-                            <div>Last Analysis: {new Date().toLocaleTimeString()}</div>
+                            {summary && <div>Last Analysis: {new Date().toLocaleTimeString()}</div>}
                         </div>
                     </>
                 )}

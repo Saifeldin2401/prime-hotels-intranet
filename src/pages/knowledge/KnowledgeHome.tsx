@@ -4,6 +4,7 @@
  */
 
 import { KnowledgeAIAssistant } from '@/components/knowledge/KnowledgeAIAssistant'
+import { KnowledgeComplianceWidget } from '@/components/knowledge/KnowledgeComplianceWidget'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -563,6 +564,11 @@ export default function KnowledgeHome() {
                                     </div>
                                 </CardContent>
                             </Card>
+                        </motion.div>
+
+                        {/* Knowledge Compliance */}
+                        <motion.div custom={0.5} variants={fadeUp} initial="hidden" animate="visible">
+                            <KnowledgeComplianceWidget variant="user" />
                         </motion.div>
 
                         {/* Department Hub */}
