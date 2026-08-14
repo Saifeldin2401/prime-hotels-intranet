@@ -479,7 +479,9 @@ export function QuizComponentEnhanced({
         try {
             setLoading(true)
             setLoadError(null)
-            const data = await learningService.getQuiz(id)
+            // Fetch via server RPC — questions arrive WITHOUT answer keys
+            // (is_correct, correct_answer, explanation are stripped).
+            const data = await learningService.getQuizForPlayerRPC(id)
             setQuiz(data)
 
             if (data.time_limit_minutes) {
@@ -721,39 +723,65 @@ export function QuizComponentEnhanced({
         return labels.length > 0 ? labels.join(', ') : '(No answer)'
     }, [])
 
-    const handleAnswerSubmit = () => {
+    const handleAnswerSubmit = async () => {
         const currentQuestion = quiz?.questions?.[currentQuestionIndex]
         if (!currentQuestion) return
         if (attemptLimitReached) return
 
-        const isCorrect = gradeCurrentQuestion()
         const timeSpent = getCurrentQuestionTime()
+        const rawAnswer = answers[currentQuestion.question_id]
+        const wantsFeedback = enableImmediateFeedback && (quiz?.show_feedback_during ?? true)
+
+        // Grade via server RPC — the only path that has access to the answer key.
+        let isCorrect = false
+        if (wantsFeedback) {
+            try {
+                const selectedAnswer = typeof rawAnswer === 'string' ? rawAnswer : undefined
+                const selectedOptions = Array.isArray(rawAnswer) ? rawAnswer : undefined
+                const result = await supabase.rpc('grade_question_attempt', {
+                    p_question_id: currentQuestion.question_id,
+                    p_selected_answer: selectedAnswer || null,
+                    p_selected_options: selectedOptions || null,
+                    p_session_id: null,
+                    p_context_type: 'learning_quiz',
+                    p_context_entity_id: quiz?.id || null,
+                    p_time_spent_seconds: timeSpent,
+                    p_hint_used: hintRevealed.has(currentQuestion.question_id),
+                })
+                if (!result.error && result.data) {
+                    isCorrect = (result.data as { is_correct: boolean }).is_correct
+                }
+            } catch {
+                // If the per-question RPC fails, fall through — the final submit
+                // is the authoritative grading path and will still work.
+            }
+        }
 
         // Update question state
         setQuestionStates(prev => ({
             ...prev,
             [currentQuestion.question_id]: {
-                status: isCorrect ? 'correct' : 'incorrect',
+                status: wantsFeedback ? (isCorrect ? 'correct' : 'incorrect') : 'unanswered',
                 timeSpentSeconds: timeSpent,
                 powerUpsUsed: [...(prev[currentQuestion.question_id]?.powerUpsUsed || []), ...powerUpsUsed]
             }
         }))
 
         // Update streak
-        if (isCorrect) {
-            const newStreak = streak + 1
-            setStreak(newStreak)
-            if (newStreak > maxStreak) {
-                setMaxStreak(newStreak)
+        if (wantsFeedback) {
+            if (isCorrect) {
+                const newStreak = streak + 1
+                setStreak(newStreak)
+                if (newStreak > maxStreak) {
+                    setMaxStreak(newStreak)
+                }
+            } else {
+                setStreak(0)
             }
-        } else {
-            setStreak(0)
         }
 
-        // Show feedback
-        // The quiz's saved setting wins over the component default. This prevents an
-        // embedded player from silently changing how a builder configured feedback.
-        if (enableImmediateFeedback && (quiz?.show_feedback_during ?? true)) {
+        // Show feedback or advance
+        if (wantsFeedback) {
             setCurrentFeedback(isCorrect ? 'correct' : 'incorrect')
             setShowFeedback(true)
         } else {
@@ -789,131 +817,89 @@ export function QuizComponentEnhanced({
             }
 
             setSubmitted(true)
-            const nextAttemptCount = attemptCount + 1
 
-            // Grade all answers
-            let correctCount = 0
-            const gradedAnswers: GradedAnswer[] = quiz.questions?.map(q => {
+            const extraPauseMs = feedbackPauseStartMsRef.current ? Math.max(0, Date.now() - feedbackPauseStartMsRef.current) : 0
+            const totalTimeSpent = Math.floor(Math.max(0, (Date.now() - quizStartTime) - (feedbackPauseMsRef.current + extraPauseMs)) / 1000)
+
+            // Build answers payload for the server RPC
+            const answersPayload = (quiz.questions || []).map(q => {
+                const rawAnswer = answers[q.question_id]
+                return {
+                    question_id: q.question_id,
+                    selected_answer: typeof rawAnswer === 'string' ? rawAnswer : undefined,
+                    selected_options: Array.isArray(rawAnswer) ? rawAnswer : undefined,
+                    time_spent_seconds: questionStates[q.question_id]?.timeSpentSeconds || 0,
+                    hint_used: hintRevealed.has(q.question_id),
+                }
+            })
+
+            // Submit for server-side grading — the server reads the answer key,
+            // grades every answer, writes unified_quiz_sessions + attempts,
+            // and updates training_progress via the trusted RPC path.
+            const serverResult = await learningService.submitQuizAttemptRPC(
+                quiz.id,
+                answersPayload,
+                {
+                    contextType: 'quiz',
+                    contextEntityId: quiz.id,
+                    assignmentId: assignmentId || undefined,
+                    timeSpentSeconds: totalTimeSpent,
+                }
+            )
+
+            // Map server results into the UI's existing QuizResult shape
+            const resultsByQuestion = new Map(
+                (serverResult.results || []).map(r => [r.question_id, r.is_correct])
+            )
+
+            const gradedAnswers: GradedAnswer[] = (quiz.questions || []).map(q => {
                 const rawAnswer = answers[q.question_id]
                 const userAnswer = Array.isArray(rawAnswer) ? rawAnswer.join(',') : (rawAnswer || '')
-                const isCorrect = q.question
-                    ? gradeQuestionAnswer(q.question, rawAnswer)
-                    : false
-
-                if (isCorrect) correctCount++
                 return {
                     question_id: q.question_id,
                     answer: userAnswer,
-                    correct: isCorrect,
-                    timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0
+                    correct: resultsByQuestion.get(q.question_id) ?? false,
+                    timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0,
                 }
-            }) || []
-            const reviewItems: QuizReviewItem[] = quiz.questions?.map((q) => {
+            })
+
+            const reviewItems: QuizReviewItem[] = (quiz.questions || []).map(q => {
                 const rawAnswer = answers[q.question_id]
                 const question = q.question
-
+                const isCorrect = resultsByQuestion.get(q.question_id) ?? false
                 return {
                     questionId: q.question_id,
                     questionText: question?.question_text || 'Question',
                     selectedAnswer: question ? getAnswerDisplay(question, rawAnswer) : '(No answer)',
-                    correctAnswer: question ? getCorrectAnswerDisplay(question) : '(No answer)',
-                    correct: question ? gradeQuestionAnswer(question, rawAnswer) : false,
-                    explanation: question?.explanation || undefined,
-                    timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0
+                    // Server doesn't leak correct answers until after submission;
+                    // the review screen shows just the user's answer + correct/incorrect.
+                    correctAnswer: '—',
+                    correct: isCorrect,
+                    explanation: undefined,
+                    timeSpentSeconds: questionStates[q.question_id]?.timeSpentSeconds || 0,
                 }
-            }) || []
-
-            const totalQuestions = quiz.questions?.length || 0
-            const percentage = totalQuestions > 0 ? (correctCount / totalQuestions) * 100 : 0
-            const passed = percentage >= quiz.passing_score_percentage
-            const extraPauseMs = feedbackPauseStartMsRef.current ? Math.max(0, Date.now() - feedbackPauseStartMsRef.current) : 0
-            const totalTimeSpent = Math.floor(Math.max(0, (Date.now() - quizStartTime) - (feedbackPauseMsRef.current + extraPauseMs)) / 1000)
+            })
 
             const finalResult: QuizResult = {
-                score: Math.round(percentage),
-                passed,
-                correctCount,
-                totalQuestions,
+                score: serverResult.score_percentage,
+                passed: serverResult.passed,
+                correctCount: serverResult.correct_count,
+                totalQuestions: serverResult.total_questions,
                 gradedAnswers,
                 reviewItems,
                 streakAchieved: maxStreak,
                 timeSpentSeconds: totalTimeSpent,
-                powerUpsUsed
+                powerUpsUsed,
             }
 
             setResult(finalResult)
-            const previousMetadata = progressMetadataRef.current || {}
-            const previousContextMap = (
-                previousMetadata.quiz_attempts_by_context &&
-                typeof previousMetadata.quiz_attempts_by_context === 'object' &&
-                !Array.isArray(previousMetadata.quiz_attempts_by_context)
-            )
-                ? previousMetadata.quiz_attempts_by_context as Record<string, unknown>
-                : {}
-            const previousHistory = (
-                previousMetadata.quiz_attempt_history_by_context &&
-                typeof previousMetadata.quiz_attempt_history_by_context === 'object' &&
-                !Array.isArray(previousMetadata.quiz_attempt_history_by_context)
-            ) ? previousMetadata.quiz_attempt_history_by_context as Record<string, unknown> : {}
-            const contextHistory = Array.isArray(previousHistory[attemptContextKey])
-                ? previousHistory[attemptContextKey] as unknown[]
-                : []
-            const completedAt = new Date().toISOString()
-            const metadata = {
-                ...previousMetadata,
-                quiz_attempt_count: nextAttemptCount,
-                quiz_attempts_by_context: {
-                    ...previousContextMap,
-                    [attemptContextKey]: nextAttemptCount
-                },
-                quiz_attempt_history_by_context: {
-                    ...previousHistory,
-                    [attemptContextKey]: [
-                        ...contextHistory.slice(-19),
-                        {
-                            attempt_number: nextAttemptCount,
-                            score: finalResult.score,
-                            passed: finalResult.passed,
-                            correct_count: finalResult.correctCount,
-                            total_questions: finalResult.totalQuestions,
-                            completed_at: completedAt
-                        }
-                    ]
-                },
-                max_attempts: quiz.max_attempts ?? null,
-                latest_quiz_result: {
-                    quiz_id: quiz.id,
-                    quiz_title: quiz.title,
-                    score: finalResult.score,
-                    passed: finalResult.passed,
-                    correct_count: finalResult.correctCount,
-                    total_questions: finalResult.totalQuestions,
-                    completed_at: completedAt,
-                    review_items: finalResult.reviewItems
-                }
-            }
-
-            // Submit to backend
-            await learningService.submitQuizProgress({
-                assignment_id: assignmentId || undefined,
-                content_id: quiz.id,
-                content_type: 'quiz',
-                user_id: user.id,
-                status: 'completed',
-                progress_percentage: 100,
-                score_percentage: Math.round(percentage),
-                passed,
-                completed_at: completedAt,
-                metadata
-            })
-            progressMetadataRef.current = metadata
-            setAttemptCount(nextAttemptCount)
-            if (quiz.max_attempts && !passed && nextAttemptCount >= quiz.max_attempts) {
+            setAttemptCount(serverResult.attempt_number)
+            if (quiz.max_attempts && !serverResult.passed && serverResult.attempt_number >= quiz.max_attempts) {
                 setAttemptLimitReached(true)
             }
 
             // Certificate generation
-            if (passed && certificateEnabled) {
+            if (serverResult.passed && certificateEnabled) {
                 try {
                     const primaryProperty = properties?.[0]
                     const primaryDepartment = departments?.[0]
@@ -923,21 +909,21 @@ export function QuizComponentEnhanced({
                         recipientEmail: user.email,
                         certificateType: 'sop_quiz',
                         title: quiz.title,
-                        description: `Successfully completed ${quiz.title} with a score of ${Math.round(percentage)}%.`,
+                        description: `Successfully completed ${quiz.title} with a score of ${serverResult.score_percentage}%.`,
                         completionDate: new Date(),
-                        score: Math.round(percentage),
+                        score: serverResult.score_percentage,
                         passingScore: quiz.passing_score_percentage,
                         propertyId: primaryProperty?.id,
                         propertyName: primaryProperty?.name,
                         departmentId: primaryDepartment?.id,
-                        departmentName: primaryDepartment?.name
+                        departmentName: primaryDepartment?.name,
                     }
                     await createCertificate(certificateData)
 
                     toast({
                         title: t('training:quizzes.player.certificate_earned'),
                         description: t('training:quizzes.player.certificate_desc', { title: quiz.title }),
-                        variant: 'default'
+                        variant: 'default',
                     })
                 } catch (certError) {
                     console.error('Certificate generation failed:', certError)
@@ -945,11 +931,11 @@ export function QuizComponentEnhanced({
             }
 
             toast({
-                title: passed
+                title: serverResult.passed
                     ? t('training:quizzes.player.passed_toast_title')
                     : t('training:quizzes.player.failed_toast_title'),
-                description: t('training:quizzes.player.score_toast_desc', { score: Math.round(percentage) }),
-                variant: passed ? 'default' : 'destructive'
+                description: t('training:quizzes.player.score_toast_desc', { score: serverResult.score_percentage }),
+                variant: serverResult.passed ? 'default' : 'destructive',
             })
 
             if (onComplete) {
@@ -961,7 +947,7 @@ export function QuizComponentEnhanced({
             toast({
                 title: t('common.error'),
                 description: t('training:quizzes.player.submit_error'),
-                variant: 'destructive'
+                variant: 'destructive',
             })
             setSubmitted(false)
         }

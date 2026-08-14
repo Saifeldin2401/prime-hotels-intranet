@@ -293,7 +293,7 @@ function validateQuizDefinition(quiz: QuizDefinitionRow) {
       code: 'quiz_has_no_questions',
       severity: 'error',
       message: `Quiz "${quiz.title}" has no linked questions.`,
-      fixable: false
+      fixable: true
     })
     return issues
   }
@@ -303,6 +303,141 @@ function validateQuizDefinition(quiz: QuizDefinitionRow) {
   }
 
   return issues
+}
+
+async function autoRepairEmptyQuiz(
+  quiz: QuizDefinitionRow,
+  options?: {
+    moduleTitle?: string
+    moduleContext?: string
+  },
+  repairedQuestionIds?: Set<string>
+) {
+  const promptContext = options?.moduleContext || options?.moduleTitle || quiz.title
+  let generatedQuestions: Array<{
+    question_text: string
+    question_type: string
+    options?: Array<{ text: string; is_correct: boolean }>
+    correct_answer?: string | null
+    explanation?: string | null
+    hint?: string | null
+  }> = []
+
+  try {
+    const aiQuestions = await aiService.generateQuiz({
+      sopContent: promptContext,
+      count: 3,
+      types: ['mcq', 'true_false'],
+      difficulty: 'medium',
+      includeHints: true,
+      includeExplanations: true
+    })
+    if (aiQuestions && aiQuestions.length > 0) {
+      generatedQuestions = aiQuestions.map(q => ({
+        question_text: q.question_text,
+        question_type: q.question_type,
+        options: q.options,
+        correct_answer: q.correct_answer,
+        explanation: q.explanation,
+        hint: q.hint
+      }))
+    }
+  } catch (err) {
+    console.warn('AI question generation for empty quiz failed, using fallback questions:', err)
+  }
+
+  if (generatedQuestions.length === 0) {
+    const topic = options?.moduleTitle || quiz.title || 'Standard Operating Procedures'
+    generatedQuestions = [
+      {
+        question_text: `Which of the following best describes the primary objective of ${topic}?`,
+        question_type: 'mcq',
+        options: [
+          { text: `To ensure consistent service quality and compliance with ${topic} standards.`, is_correct: true },
+          { text: 'To bypass established departmental procedures during peak operational hours.', is_correct: false },
+          { text: 'To reduce communication between team members during daily operations.', is_correct: false },
+          { text: 'To eliminate the need for documentation and record keeping.', is_correct: false }
+        ],
+        correct_answer: `To ensure consistent service quality and compliance with ${topic} standards.`,
+        explanation: `Adhering to ${topic} ensures high service standards, guest satisfaction, and operational consistency across all properties.`,
+        hint: 'Think about consistency, guest satisfaction, and quality standards.'
+      },
+      {
+        question_text: `True or False: Staff members must follow the standard safety and quality guidelines outlined in ${topic}.`,
+        question_type: 'true_false',
+        options: [
+          { text: 'True', is_correct: true },
+          { text: 'False', is_correct: false }
+        ],
+        correct_answer: 'True',
+        explanation: 'Following safety and quality guidelines is mandatory for all hotel operations and staff members.',
+        hint: 'Compliance with hotel SOPs is obligatory.'
+      },
+      {
+        question_text: `What is the expected protocol when an issue or exception arises during ${topic} operations?`,
+        question_type: 'mcq',
+        options: [
+          { text: 'Report the issue immediately to the department supervisor and log the occurrence.', is_correct: true },
+          { text: 'Ignore the discrepancy if guest service is not immediately impacted.', is_correct: false },
+          { text: 'Delay reporting until the weekly departmental team meeting.', is_correct: false },
+          { text: 'Attempt to modify standard procedures without prior approval.', is_correct: false }
+        ],
+        correct_answer: 'Report the issue immediately to the department supervisor and log the occurrence.',
+        explanation: 'Prompt reporting and proper documentation ensure rapid resolution and prevent operational disruption.',
+        hint: 'Timely communication with management is key.'
+      }
+    ]
+  }
+
+  const timestamp = new Date().toISOString()
+  const { data: authData } = await supabase.auth.getUser()
+  const userId = authData?.user?.id
+
+  for (let i = 0; i < generatedQuestions.length; i++) {
+    const q = generatedQuestions[i]
+    const { data: questionRecord, error: qError } = await supabase
+      .from('unified_questions')
+      .insert({
+        source_domain: 'knowledge',
+        question_text: q.question_text,
+        question_type: q.question_type,
+        difficulty: 'medium',
+        correct_answer: q.correct_answer || null,
+        explanation: q.explanation || null,
+        hint: q.hint || null,
+        status: 'published',
+        created_by: userId,
+        updated_at: timestamp
+      })
+      .select('id')
+      .single()
+
+    if (qError || !questionRecord) {
+      console.error('Failed to insert question during auto-repair:', qError)
+      continue
+    }
+
+    if (q.options && q.options.length > 0) {
+      await supabase.from('unified_question_options').insert(
+        q.options.map((opt, idx) => ({
+          question_id: questionRecord.id,
+          option_text: opt.text,
+          is_correct: opt.is_correct,
+          display_order: idx
+        }))
+      )
+    }
+
+    await supabase.from('unified_quiz_questions').insert({
+      quiz_id: quiz.id,
+      question_id: questionRecord.id,
+      display_order: i + 1
+    })
+
+    if (repairedQuestionIds) {
+      repairedQuestionIds.add(questionRecord.id)
+    }
+  }
 }
 
 async function fetchQuizDefinition(quizId: string) {
@@ -603,6 +738,12 @@ export const quizIntegrityService = {
     let issues = validateQuizDefinition(quiz)
     const repairedQuestionIds = new Set<string>()
     let autoPublished = false
+
+    if (options?.autoRepair && issues.some(issue => issue.code === 'quiz_has_no_questions')) {
+      await autoRepairEmptyQuiz(quiz, options, repairedQuestionIds)
+      quiz = await fetchQuizDefinition(quizId)
+      issues = validateQuizDefinition(quiz)
+    }
 
     if (options?.autoRepair && issues.some(issue => issue.fixable && issue.questionId)) {
       const repairInputs = buildRepairInputs(quiz, issues)

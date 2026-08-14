@@ -133,6 +133,42 @@ for (const file of sourceFiles) {
 }
 
 // ---------------------------------------------------------------------------
+// GUARDRAIL 3: the generated database types must not be empty or truncated
+//
+// History: `npm run db:types` used to be `supabase gen types ... > file`. The
+// shell truncates the target BEFORE the CLI runs, so any CLI failure (missing
+// binary, invalid token, network blip) silently left a 0-byte types file. Two
+// commits in this repo's history contain a 0-byte database.generated.ts, which
+// quietly removes ALL database typing rather than failing loudly -- the exact
+// safety net this project depends on. db:types is now atomic
+// (scripts/gen-db-types.mjs), and this check stops a truncated file from ever
+// being committed again.
+// ---------------------------------------------------------------------------
+const TYPES_FILE = join(SRC, 'types', 'database.generated.ts')
+try {
+  const types = readFileSync(TYPES_FILE, 'utf8')
+  const tableCount = (types.match(/^      [a-z_]+: \{$/gm) || []).length
+
+  if (types.length < 10000 || !types.includes('export type Database')) {
+    failures.push(
+      `src/types/database.generated.ts  Types file is empty or truncated (${types.length} bytes).\n` +
+      `    This silently disables all Supabase type safety. Regenerate with\n` +
+      `    "npm run db:types" (needs a valid sbp_... SUPABASE_ACCESS_TOKEN), or\n` +
+      `    restore it: git checkout -- src/types/database.generated.ts`
+    )
+  } else if (tableCount < 150) {
+    failures.push(
+      `src/types/database.generated.ts  Only ${tableCount} tables found; expected 200+.\n` +
+      `    The types file looks partially generated. Regenerate it rather than committing this.`
+    )
+  }
+} catch {
+  failures.push(
+    `src/types/database.generated.ts  Missing. Supabase type safety depends on this file.`
+  )
+}
+
+// ---------------------------------------------------------------------------
 
 if (failures.length > 0) {
   console.error(`\n✖ ${failures.length} guardrail violation(s):\n`)
@@ -144,4 +180,4 @@ if (failures.length > 0) {
   process.exit(1)
 }
 
-console.log('✔ Guardrails passed (no fake-data constants, no unknown storage buckets).')
+console.log('✔ Guardrails passed (no fake-data constants, no unknown storage buckets, types file intact).')

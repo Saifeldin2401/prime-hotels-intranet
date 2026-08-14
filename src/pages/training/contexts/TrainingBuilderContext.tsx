@@ -272,11 +272,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     queryFn: async () => {
       const { data, error } = await supabase
         .from('learning_quizzes')
-        .select('*')
+        .select('*, questions:unified_quiz_questions(count)')
         .eq('is_deleted', false)
         .order('title')
       if (error) throw error
-      return data as LearningQuiz[]
+      return ((data || []) as unknown as Array<LearningQuiz & { questions?: Array<{ count: number }> }>).map((q) => ({
+        ...q,
+        question_count: q.questions?.[0]?.count ?? 0
+      })) as (LearningQuiz & { question_count?: number })[]
     }
   })
 
@@ -737,16 +740,77 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   // -------------------------------------------------------------------------
 
   const ensureLinkedQuizzesIntegrity = useCallback(async (mode: 'save' | 'publish') => {
-    if (linkedQuizIds.length === 0) {
-      return true
-    }
-
     setIsValidatingQuizzes(true)
 
     try {
       const moduleContext = buildModuleSourceText(sections)
+      const currentSections = [...sections]
+      let sectionsModified = false
+
+      // 1. Ensure every quiz block has a concrete quiz_id in learning_quizzes
+      for (let sIdx = 0; sIdx < currentSections.length; sIdx++) {
+        const section = currentSections[sIdx]
+        const updatedItems = [...section.items]
+        let itemsModified = false
+
+        for (let iIdx = 0; iIdx < updatedItems.length; iIdx++) {
+          const item = updatedItems[iIdx]
+          if (item.type === 'quiz') {
+            const contentData = (item.content_data as Record<string, unknown> | null) || {}
+            let quizId = (contentData.quiz_id as string | undefined)?.trim()
+
+            if (!quizId) {
+              const quizTitle = item.title?.trim() || `${title.trim() || 'Module'} - Assessment`
+              const { data: newQuiz, error: newQuizError } = await supabase
+                .from('learning_quizzes')
+                .insert({
+                  title: quizTitle,
+                  description: `Assessment for ${quizTitle}`,
+                  status: 'published',
+                  training_module_id: moduleId || null,
+                  passing_score_percentage: Number(passingScore) || 80,
+                  created_by: profile?.id
+                })
+                .select()
+                .single()
+
+              if (!newQuizError && newQuiz) {
+                quizId = newQuiz.id
+                updatedItems[iIdx] = {
+                  ...item,
+                  content_data: { ...contentData, quiz_id: newQuiz.id }
+                }
+                itemsModified = true
+              }
+            }
+          }
+        }
+
+        if (itemsModified) {
+          currentSections[sIdx] = { ...section, items: updatedItems }
+          sectionsModified = true
+        }
+      }
+
+      if (sectionsModified) {
+        setSections(currentSections)
+      }
+
+      const allQuizIds = Array.from(new Set(
+        currentSections.flatMap(section =>
+          section.items
+            .filter(item => item.type === 'quiz')
+            .map(item => ((item.content_data as { quiz_id?: string }).quiz_id || '').trim())
+            .filter((quizId): quizId is string => quizId.length > 0)
+        )
+      ))
+
+      if (allQuizIds.length === 0) {
+        return true
+      }
+
       const reports = await Promise.all(
-        linkedQuizIds.map(quizId => quizIntegrityService.ensureQuizIntegrity(quizId, {
+        allQuizIds.map(quizId => quizIntegrityService.ensureQuizIntegrity(quizId, {
           autoRepair: true,
           autoPublish: mode === 'publish',
           moduleTitle: title.trim() || t('builder.untitledModule'),
@@ -797,7 +861,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     } finally {
       setIsValidatingQuizzes(false)
     }
-  }, [linkedQuizIds, sections, t, title, toast])
+  }, [sections, title, passingScore, profile?.id, moduleId, t, toast])
 
   // -------------------------------------------------------------------------
   // Autosave (localStorage draft)

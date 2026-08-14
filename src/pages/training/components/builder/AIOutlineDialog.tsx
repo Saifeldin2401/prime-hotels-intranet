@@ -165,7 +165,7 @@ export function AIOutlineDialog({
         id: `content-${timestamp}-${index}`,
         type: section.suggestedBlockType,
         title: section.heading,
-        content: section.summary || '',
+        content: (section as unknown as { rich_content?: string }).rich_content || section.summary || '',
         content_url: '',
         content_data: {},
         is_mandatory: true,

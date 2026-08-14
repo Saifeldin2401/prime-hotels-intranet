@@ -29,7 +29,7 @@ import { createCertificate, type CertificateData } from '@/services/certificateS
 import { awardCertificationPathCertificates } from '@/services/certificationPathService'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { sanitizeHtml } from '@/lib/sanitize'
-import { resolveStorageUrl } from '@/lib/secureFileAccess'
+import { resolveStorageUrl, resolveHtmlStorageUrls } from '@/lib/secureFileAccess'
 import { safeLocalStorage } from '@/lib/storage'
 import { evaluateTrainingCompletion, getQuizProgressKey } from '@/lib/trainingCompletion'
 import type { TrainingContentBlock } from '@/lib/types'
@@ -195,6 +195,38 @@ const restoreQuizProgressByBlock = <T,>(
     return restored
 }, {})
 
+function useResolvedHtmlContent(rawContent: string | null | undefined): string {
+    const [resolved, setResolved] = useState<string>(() => {
+        if (!rawContent) return ''
+        const isHtml = /<\/?[a-z][\s\S]*>/i.test(rawContent)
+        const initial = isHtml ? rawContent : (marked.parse(rawContent, { async: false }) as string)
+        return sanitizeHtml(initial)
+    })
+
+    useEffect(() => {
+        let cancelled = false
+        if (!rawContent) {
+            setResolved('')
+            return
+        }
+
+        const isHtml = /<\/?[a-z][\s\S]*>/i.test(rawContent)
+        const htmlToProcess = isHtml
+            ? rawContent
+            : (marked.parse(rawContent, { async: false }) as string)
+
+        resolveHtmlStorageUrls(htmlToProcess, 3600).then((processed) => {
+            if (!cancelled) {
+                setResolved(sanitizeHtml(processed))
+            }
+        })
+
+        return () => { cancelled = true }
+    }, [rawContent])
+
+    return resolved
+}
+
 function RichTextBlockContent({
     originalHtml,
     translatedHtml,
@@ -204,8 +236,8 @@ function RichTextBlockContent({
     originalLabel,
     translatedLabel
 }: RichTextBlockContentProps) {
-    const originalMarkup = sanitizeHtml(marked.parse(originalHtml || '', { async: false }) as string)
-    const translatedMarkup = translatedHtml ? sanitizeHtml(marked.parse(translatedHtml, { async: false }) as string) : ''
+    const originalMarkup = useResolvedHtmlContent(originalHtml)
+    const translatedMarkup = useResolvedHtmlContent(translatedHtml)
 
     if (!translationTarget || !translatedHtml) {
         return (
@@ -253,6 +285,20 @@ function RichTextBlockContent({
     )
 }
 
+function getBlockMediaUrl(block: TrainingContentBlock | undefined | null): string | null {
+    if (!block) return null
+    if (block.content_url && typeof block.content_url === 'string' && block.content_url.trim().length > 0) {
+        return block.content_url.trim()
+    }
+    const data = block.content_data as Record<string, unknown> | null
+    if (!data) return null
+    const candidate = data.url || data.content_url || data.video_url || data.image_url || data.audio_url || data.file_url || data.public_url || data.src
+    if (typeof candidate === 'string' && candidate.trim().length > 0) {
+        return candidate.trim()
+    }
+    return null
+}
+
 type VideoPlayerProps = {
     src: string
     blockId: string
@@ -263,130 +309,73 @@ type VideoPlayerProps = {
 }
 
 function VideoPlayer({ src, blockId, onMarkWatched, onTrackProgress, onRegisterSeek, t }: VideoPlayerProps) {
+    const { resolvedSrc, resolving } = useResolvedStorageUrl(src)
     const [videoError, setVideoError] = useState<string | null>(null)
     const [videoLoading, setVideoLoading] = useState(true)
-    const [refreshingUrl, setRefreshingUrl] = useState(false)
-    const [currentSrc, setCurrentSrc] = useState(src)
     const videoRef = useRef<HTMLVideoElement>(null)
 
-    // Detect if URL is a Supabase storage URL that needs refreshing
-    const isSupabaseStorageUrl = (url: string): boolean => {
-        return url.includes('.supabase.co/storage/') || 
-               url.includes('/storage/v1/object/') ||
-               url.includes('/storage/v1/s3/')
+    useEffect(() => {
+        setVideoError(null)
+        setVideoLoading(true)
+    }, [resolvedSrc])
+
+    if (resolving) {
+        return (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 bg-slate-900">
+                <Loader2 className="animate-spin h-10 w-10 text-white mb-3" />
+                <span className="text-sm">{t('loadingVideo', 'Loading video...')}</span>
+            </div>
+        )
     }
 
-    // Refresh signed URL for Supabase storage
-    const refreshSignedUrl = useCallback(async (originalUrl: string): Promise<string | null> => {
-        try {
-            // Extract bucket and path from the URL
-            const url = new URL(originalUrl)
-            const pathMatch = url.pathname.match(/\/storage\/v1\/object\/(signed|public)\/([^/]+)\/(.+)/)
-            
-            if (!pathMatch) {
-                // Try S3-style URL pattern
-                const s3Match = url.pathname.match(/\/storage\/v1\/s3\/(.+)/)
-                if (s3Match) {
-                    // For S3 URLs, we need to get the bucket from the hostname or use 'media' as default
-                    const bucket = 'media' // Default bucket, adjust if needed
-                    const path = s3Match[1]
-                    const { data, error } = await supabase.storage
-                        .from(bucket)
-                        .createSignedUrl(path, 3600) // 1 hour expiry
-                    
-                    if (error) throw error
-                    return data?.signedUrl || null
-                }
-                return null
-            }
-
-            const bucket = pathMatch[2]
-            const path = decodeURIComponent(pathMatch[3])
-
-            const { data, error } = await supabase.storage
-                .from(bucket)
-                .createSignedUrl(path, 3600) // 1 hour expiry
-
-            if (error) throw error
-            return data?.signedUrl || null
-        } catch (err) {
-            console.error('Failed to refresh signed URL:', err)
-            return null
-        }
-    }, [])
-
-    // Handle video load error - try to refresh the URL if it's a Supabase URL
-    const handleVideoError = useCallback(async () => {
-        if (isSupabaseStorageUrl(currentSrc) && !refreshingUrl) {
-            setRefreshingUrl(true)
-            const freshUrl = await refreshSignedUrl(currentSrc)
-            
-            if (freshUrl) {
-                setCurrentSrc(freshUrl)
-                setVideoLoading(true)
-                setVideoError(null)
-                // The video element will reload with the new src
-            } else {
-                setVideoLoading(false)
-                setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or access has expired.'))
-            }
-            setRefreshingUrl(false)
-        } else {
-            setVideoLoading(false)
-            setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.'))
-        }
-    }, [currentSrc, refreshingUrl, refreshSignedUrl, t])
+    if (!resolvedSrc || videoError) {
+        return (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center bg-slate-900">
+                <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
+                <span className="text-sm mb-2">{videoError || t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.')}</span>
+                <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                        setVideoError(null)
+                        setVideoLoading(true)
+                        videoRef.current?.load()
+                    }}
+                    className="mt-2 border-white/30 text-white hover:bg-white/10"
+                >
+                    {t('retry', 'Retry')}
+                </Button>
+            </div>
+        )
+    }
 
     return (
         <>
-            {(videoLoading || refreshingUrl) && !videoError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10">
-                    <div className="animate-spin h-10 w-10 border-4 border-white/30 border-t-white rounded-full mb-3"></div>
-                    <span className="text-sm">
-                        {refreshingUrl ? t('refreshingVideo', 'Refreshing access...') : t('loadingVideo', 'Loading video...')}
-                    </span>
-                </div>
-            )}
-            {videoError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 p-6 text-center">
-                    <VideoIcon className="h-12 w-12 mb-3 opacity-50" />
-                    <span className="text-sm mb-2">{videoError}</span>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                            setVideoError(null)
-                            setVideoLoading(true)
-                            // Try refreshing the URL again
-                            if (isSupabaseStorageUrl(currentSrc)) {
-                                void handleVideoError()
-                            } else {
-                                // For non-Supabase URLs, just reload
-                                videoRef.current?.load()
-                            }
-                        }}
-                        className="mt-2 border-white/30 text-white hover:bg-white/10"
-                    >
-                        {t('retry', 'Retry')}
-                    </Button>
+            {videoLoading && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/70 z-10 pointer-events-none bg-black/40">
+                    <Loader2 className="animate-spin h-10 w-10 text-white mb-3" />
+                    <span className="text-sm">{t('loadingVideo', 'Loading video...')}</span>
                 </div>
             )}
             <video
                 ref={videoRef}
-                src={currentSrc}
-                className={cn("w-full h-full", (videoError || refreshingUrl) && "opacity-0")}
+                src={resolvedSrc}
+                className={cn("w-full h-full", videoLoading && "opacity-0")}
                 controls
+                controlsList="nodownload"
                 onLoadedData={() => setVideoLoading(false)}
-                onError={handleVideoError}
-                onTimeUpdate={(e) => {
-                    const target = e.currentTarget
-                    onTrackProgress(blockId, target.currentTime, target.duration)
+                onError={() => {
+                    setVideoLoading(false)
+                    setVideoError(t('videoLoadError', 'Unable to load video. The file may be missing or unsupported.'))
                 }}
+                onEnded={() => onMarkWatched(blockId)}
+                onTimeUpdate={(e) => onTrackProgress(blockId, e.currentTarget.currentTime, e.currentTarget.duration)}
                 onSeeking={(e) => onRegisterSeek(blockId, e.currentTarget.currentTime)}
             />
         </>
     )
 }
+
 
 // Images/audio uploaded through the Training Builder are stored in the private 'documents'
 // bucket with a URL that never resolves on its own (see resolveStorageUrl) - unlike video,
@@ -951,28 +940,12 @@ export default function TrainingPlayer() {
 
             const isPassed = true
 
-            await learningService.submitQuizProgress({
-                assignment_id: assignmentId || undefined,
-                content_id: moduleData.module.id,
-                content_type: 'module',
-                user_id: user.id,
-                status: 'completed',
-                progress_percentage: 100,
-                passed: isPassed,
-                score_percentage: typeof effectiveScore === 'number' ? effectiveScore : undefined,
-                completed_at: nowIso,
-                last_accessed_at: nowIso,
-                last_activity_at: nowIso,
-                last_block_index: resolvedLastBlockIndex,
-                last_block_id: resolvedLastBlockId,
-                time_spent_seconds: timeSpent,
-                metadata: {
-                    completed_blocks: resolvedCompletedBlocks,
-                    completed_media_blocks: Array.from(completedMediaBlocks),
-                    quiz_scores_by_id: latestQuizScores,
-                    quiz_results_by_id: resolvedQuizResults,
-                    active_block_id: resolvedLastBlockId
-                }
+            await learningService.completeTrainingModuleRPC(moduleData.module.id, {
+                assignmentId: assignmentId || undefined,
+                completedBlockIds: resolvedCompletedBlocks,
+                lastBlockId: resolvedLastBlockId,
+                lastBlockIndex: resolvedLastBlockIndex,
+                timeSpentSeconds: timeSpent,
             })
 
             try {
@@ -1511,39 +1484,34 @@ export default function TrainingPlayer() {
                     />
                 )}
 
-                {block.type === 'video' && (
-                    <div className="space-y-6">
-                        <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 relative group">
-                            {block.content_url ? (
-                                (() => {
-                                    // Check if this is a native video file.
-                                    // Supabase Storage signed URLs have query params after the filename
-                                    // (e.g. .../video.mp4?token=...), so we must check the pathname
-                                    // rather than the full URL string.
-                                    const isDirectVideo = (() => {
-                                        try {
-                                            const pathname = new URL(block.content_url!).pathname
-                                            return /\.(mp4|webm|ogg|mov|m4v)$/i.test(pathname)
-                                        } catch {
-                                            // Fallback: match extension anywhere before a query string
-                                            return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(block.content_url!)
-                                        }
-                                    })()
-                                    if (isDirectVideo) {
-                                        return (
-                                            <VideoPlayer
-                                                src={block.content_url!}
-                                                blockId={block.id}
-                                                onMarkWatched={handleMarkWatched}
-                                                onTrackProgress={trackMediaProgress}
-                                                onRegisterSeek={registerMediaSeek}
-                                                t={t}
-                                            />
-                                        )
-                                    }
-                                    return (
+                {block.type === 'video' && (() => {
+                    const videoUrl = getBlockMediaUrl(block)
+                    const isDirectVideo = (() => {
+                        if (!videoUrl) return false
+                        try {
+                            const pathname = new URL(videoUrl).pathname
+                            return /\.(mp4|webm|ogg|mov|m4v)(\?|#|$)/i.test(pathname)
+                        } catch {
+                            return true
+                        }
+                    })()
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 relative group">
+                                {videoUrl ? (
+                                    isDirectVideo ? (
+                                        <VideoPlayer
+                                            src={videoUrl}
+                                            blockId={block.id}
+                                            onMarkWatched={handleMarkWatched}
+                                            onTrackProgress={trackMediaProgress}
+                                            onRegisterSeek={registerMediaSeek}
+                                            t={t}
+                                        />
+                                    ) : (
                                         <iframe
-                                            src={block.content_url!}
+                                            src={videoUrl}
                                             className="w-full h-full"
                                             allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
                                             allowFullScreen
@@ -1553,194 +1521,203 @@ export default function TrainingPlayer() {
                                             title={t('training_video_content', { defaultValue: 'Training video content' })}
                                         />
                                     )
-                                })()
-                            ) : (
-                                <div className="flex flex-col items-center justify-center h-full text-white/50">
-                                    <VideoIcon className="h-12 w-12 mb-4 animate-pulse" />
-                                    <span>{t('videoUrlMissing')}</span>
-                                </div>
-                            )}
-                        </div>
-                        {block.is_mandatory && (
-                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-                                <div>
-                                    <p className="text-sm font-semibold text-hotel-navy">
-                                        {completedMediaBlocks.has(block.id)
-                                            ? t('videoCompleted', 'Video completed')
-                                            : t('videoRequired', 'Watch the video to continue')}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {t('videoCompletionHint', 'You can mark it as watched if the player does not support tracking.')}
-                                    </p>
-                                </div>
-                                {!completedMediaBlocks.has(block.id) && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleMarkWatched(block.id)}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        {t('markWatched', 'Mark as watched')}
-                                    </Button>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center h-full text-white/50">
+                                        <VideoIcon className="h-12 w-12 mb-4 animate-pulse" />
+                                        <span>{t('videoUrlMissing')}</span>
+                                    </div>
                                 )}
                             </div>
-                        )}
-                        {block.content && (
-                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                <RichTextBlockContent
-                                    originalHtml={block.content}
-                                    translatedHtml={translatedBlockContent}
-                                    translationTarget={translationTarget}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    originalLabel={t('original', 'Original')}
-                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {block.type === 'audio' && (
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                            {block.content_url ? (
-                                <AudioPlayer
-                                    src={block.content_url}
-                                    blockId={block.id}
-                                    onTrackProgress={trackMediaProgress}
-                                    onRegisterSeek={registerMediaSeek}
-                                    t={t}
-                                />
-                            ) : (
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <Headphones className="h-6 w-6" />
-                                    <span>{t('audioUrlMissing', 'Audio URL missing')}</span>
+                            {block.is_mandatory && (
+                                <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+                                    <div>
+                                        <p className="text-sm font-semibold text-hotel-navy">
+                                            {completedMediaBlocks.has(block.id)
+                                                ? t('videoCompleted', 'Video completed')
+                                                : t('videoRequired', 'Watch the video to continue')}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {t('videoCompletionHint', 'You can mark it as watched if the player does not support tracking.')}
+                                        </p>
+                                    </div>
+                                    {!completedMediaBlocks.has(block.id) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleMarkWatched(block.id)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            {t('markWatched', 'Mark as watched')}
+                                        </Button>
+                                    )}
                                 </div>
                             )}
-                        </div>
-                        {block.is_mandatory && (
-                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-                                <div>
-                                    <p className="text-sm font-semibold text-hotel-navy">
-                                        {completedMediaBlocks.has(block.id)
-                                            ? t('audioCompleted', 'Audio completed')
-                                            : t('audioRequired', 'Listen to the audio to continue')}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {t('audioCompletionHint', 'You can mark it as listened if the player does not support tracking.')}
-                                    </p>
-                                </div>
-                                {!completedMediaBlocks.has(block.id) && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleMarkWatched(block.id)}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        {t('markListened', 'Mark as listened')}
-                                    </Button>
-                                )}
-                            </div>
-                        )}
-                        {block.content && (
-                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                <RichTextBlockContent
-                                    originalHtml={block.content}
-                                    translatedHtml={translatedBlockContent}
-                                    translationTarget={translationTarget}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    originalLabel={t('original', 'Original')}
-                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {block.type === 'interactive' && (
-                    <div className="space-y-6">
-                        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                            {block.content_url ? (
-                                <div className="aspect-video rounded-xl overflow-hidden bg-slate-900">
-                                    <iframe
-                                        src={block.content_url}
-                                        className="w-full h-full"
-                                        allow="clipboard-read; clipboard-write; fullscreen"
-                                        sandbox="allow-same-origin allow-scripts"
-                                        referrerPolicy="strict-origin-when-cross-origin"
-                                        loading="lazy"
-                                        title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
+                            {block.content && (
+                                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                    <RichTextBlockContent
+                                        originalHtml={block.content}
+                                        translatedHtml={translatedBlockContent}
+                                        translationTarget={translationTarget}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                        originalLabel={t('original', 'Original')}
+                                        translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
                                     />
                                 </div>
-                            ) : (
-                                <div className="flex items-center gap-3 text-slate-500">
-                                    <Gamepad2 className="h-6 w-6" />
-                                    <span>{t('interactiveUrlMissing', 'Interactive URL missing')}</span>
+                            )}
+                        </div>
+                    )
+                })()}
+
+                {block.type === 'audio' && (() => {
+                    const audioUrl = getBlockMediaUrl(block)
+                    return (
+                        <div className="space-y-6">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                                {audioUrl ? (
+                                    <AudioPlayer
+                                        src={audioUrl}
+                                        blockId={block.id}
+                                        onTrackProgress={trackMediaProgress}
+                                        onRegisterSeek={registerMediaSeek}
+                                        t={t}
+                                    />
+                                ) : (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <Headphones className="h-6 w-6" />
+                                        <span>{t('audioUrlMissing', 'Audio URL missing')}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {block.is_mandatory && (
+                                <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+                                    <div>
+                                        <p className="text-sm font-semibold text-hotel-navy">
+                                            {completedMediaBlocks.has(block.id)
+                                                ? t('audioCompleted', 'Audio completed')
+                                                : t('audioRequired', 'Listen to the audio to continue')}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {t('audioCompletionHint', 'You can mark it as listened if the player does not support tracking.')}
+                                        </p>
+                                    </div>
+                                    {!completedMediaBlocks.has(block.id) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleMarkWatched(block.id)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            {t('markListened', 'Mark as listened')}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                            {block.content && (
+                                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                    <RichTextBlockContent
+                                        originalHtml={block.content}
+                                        translatedHtml={translatedBlockContent}
+                                        translationTarget={translationTarget}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                        originalLabel={t('original', 'Original')}
+                                        translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                    />
                                 </div>
                             )}
                         </div>
-                        {block.is_mandatory && (
-                            <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-                                <div>
-                                    <p className="text-sm font-semibold text-hotel-navy">
-                                        {completedMediaBlocks.has(block.id)
-                                            ? t('interactiveCompleted', 'Activity completed')
-                                            : t('interactiveRequired', 'Complete the activity to continue')}
-                                    </p>
-                                    <p className="text-xs text-slate-500">
-                                        {t('interactiveCompletionHint', 'Mark complete once finished to unlock the next step.')}
-                                    </p>
-                                </div>
-                                {!completedMediaBlocks.has(block.id) && (
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => handleMarkWatched(block.id)}
-                                        className="w-full sm:w-auto"
-                                    >
-                                        {t('markCompleted', 'Mark as completed')}
-                                    </Button>
+                    )
+                })()}
+
+                {block.type === 'interactive' && (() => {
+                    const interactiveUrl = getBlockMediaUrl(block)
+                    return (
+                        <div className="space-y-6">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                {interactiveUrl ? (
+                                    <div className="aspect-video rounded-xl overflow-hidden bg-slate-900">
+                                        <iframe
+                                            src={interactiveUrl}
+                                            className="w-full h-full"
+                                            allow="clipboard-read; clipboard-write; fullscreen"
+                                            sandbox="allow-same-origin allow-scripts"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            loading="lazy"
+                                            title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <Gamepad2 className="h-6 w-6" />
+                                        <span>{t('interactiveUrlMissing', 'Interactive URL missing')}</span>
+                                    </div>
                                 )}
                             </div>
-                        )}
-                        {block.content && (
-                            <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
-                                <RichTextBlockContent
-                                    originalHtml={block.content}
-                                    translatedHtml={translatedBlockContent}
-                                    translationTarget={translationTarget}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    originalLabel={t('original', 'Original')}
-                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
+                            {block.is_mandatory && (
+                                <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
+                                    <div>
+                                        <p className="text-sm font-semibold text-hotel-navy">
+                                            {completedMediaBlocks.has(block.id)
+                                                ? t('interactiveCompleted', 'Activity completed')
+                                                : t('interactiveRequired', 'Complete the activity to continue')}
+                                        </p>
+                                        <p className="text-xs text-slate-500">
+                                            {t('interactiveCompletionHint', 'Mark complete once finished to unlock the next step.')}
+                                        </p>
+                                    </div>
+                                    {!completedMediaBlocks.has(block.id) && (
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handleMarkWatched(block.id)}
+                                            className="w-full sm:w-auto"
+                                        >
+                                            {t('markCompleted', 'Mark as completed')}
+                                        </Button>
+                                    )}
+                                </div>
+                            )}
+                            {block.content && (
+                                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                    <RichTextBlockContent
+                                        originalHtml={block.content}
+                                        translatedHtml={translatedBlockContent}
+                                        translationTarget={translationTarget}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                        originalLabel={t('original', 'Original')}
+                                        translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )
+                })()}
 
-                {block.type === 'image' && (
-                    <div className="space-y-6">
-                        {block.content_url && (
-                            <ImageBlock src={block.content_url} alt={t('content')} t={t} />
-                        )}
-                        {block.content && (
-                            <div>
-                                <RichTextBlockContent
-                                    originalHtml={block.content}
-                                    translatedHtml={translatedBlockContent}
-                                    translationTarget={translationTarget}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    originalLabel={t('original', 'Original')}
-                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                                />
-                            </div>
-                        )}
-                    </div>
-                )}
+                {block.type === 'image' && (() => {
+                    const imageUrl = getBlockMediaUrl(block)
+                    return (
+                        <div className="space-y-6">
+                            {imageUrl && (
+                                <ImageBlock src={imageUrl} alt={t('content')} t={t} />
+                            )}
+                            {block.content && (
+                                <div>
+                                    <RichTextBlockContent
+                                        originalHtml={block.content}
+                                        translatedHtml={translatedBlockContent}
+                                        translationTarget={translationTarget}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                        originalLabel={t('original', 'Original')}
+                                        translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                    />
+                                </div>
+                            )}
+                        </div>
+                    )
+                })()}
 
                 {block.type === 'quiz' && (
                     <div className="py-8">
@@ -1845,11 +1822,11 @@ export default function TrainingPlayer() {
                         (block as TrainingContentBlock).source_document_id ||
                         (contentData?.document_id as string | undefined)
 
-                    if (!resolvedSopId) return null
-
                     return (
                         <EmbeddedArticleViewer
-                            sopId={resolvedSopId}
+                            sopId={resolvedSopId || block.id}
+                            fallbackTitle={block.title}
+                            fallbackContent={block.content}
                             showBilingual={showBilingual}
                             translationDir={translationDir}
                             translationTarget={translationTarget}

@@ -326,43 +326,152 @@ const heuristicQuiz = (): QuizQuestion[] => {
 
 }
 
-const heuristicOutline = (text: string): ModuleOutline => {
+const heuristicOutline = (text: string, generateFullContent = true): ModuleOutline => {
   const cleaned = cleanText(text)
   const sentences = cleaned.split('. ').map(s => s.trim()).filter(s => s.length > 15)
 
   if (sentences.length === 0) {
     return {
-      title: 'New Training Module',
-      description: 'Could not auto-draft an outline from this content. Add sections manually.',
+      title: 'New Training Masterclass',
+      description: 'Standard operating procedure and training curriculum for hotel operations.',
       sections: [
-        { heading: 'Overview', suggestedBlockType: 'text', summary: 'Introduce the topic and why it matters to staff.' }
+        {
+          heading: 'Executive Overview & Standards',
+          suggestedBlockType: 'text',
+          summary: 'Introduce operational context, quality benchmarks, and core service principles.',
+          rich_content: `<div class="space-y-5"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow border border-slate-800"><span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">PRIME Operations Standard</span><h3 class="text-xl font-bold text-white mb-2">Standard Operating Procedures</h3><p class="text-slate-300 text-sm leading-relaxed">Adherence to operational excellence, brand benchmarks, and safety compliance across all hotel touchpoints.</p></div></div>`
+        }
       ],
       suggestedQuizCheckpoints: []
     }
   }
 
   const title = sentences[0].substring(0, 80)
-  const chunkSize = Math.max(1, Math.ceil(sentences.length / 4))
-  const sections: ModuleOutlineSection[] = []
-
-  for (let i = 0; i < sentences.length; i += chunkSize) {
-    const chunk = sentences.slice(i, i + chunkSize)
-    sections.push({
-      heading: chunk[0].substring(0, 60),
-      suggestedBlockType: 'text',
-      summary: chunk.slice(0, 3).join('. ').substring(0, 200)
-    })
-  }
-
-  const trimmedSections = sections.slice(0, 6)
+  const rawSections = [
+    {
+      heading: 'Executive Overview & Standards',
+      suggestedBlockType: 'text' as const,
+      summary: sentences.slice(0, 2).join('. '),
+      rich_content: `<div class="space-y-5">
+        <div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow-lg border border-slate-800">
+          <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">PRIME Operations Standard</span>
+          <h3 class="text-xl font-bold tracking-tight text-white mb-2">${title}</h3>
+          <p class="text-slate-300 text-sm leading-relaxed">${sentences.slice(0, 2).join('. ')}.</p>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+            <div class="text-indigo-600 font-bold text-base mb-1">Quality Standard</div>
+            <p class="text-xs text-slate-600">Zero-compromise on brand cleanliness, guest safety, and luxury presentation standards.</p>
+          </div>
+          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+            <div class="text-indigo-600 font-bold text-base mb-1">Operational Benchmark</div>
+            <p class="text-xs text-slate-600">Consistent multi-property adherence with regular supervisor quality audits.</p>
+          </div>
+          <div class="p-4 bg-white rounded-lg border border-slate-200 shadow-sm">
+            <div class="text-indigo-600 font-bold text-base mb-1">Guest Experience</div>
+            <p class="text-xs text-slate-600">Elevating satisfaction through meticulous attention to operational detail.</p>
+          </div>
+        </div>
+      </div>`
+    },
+    {
+      heading: 'Core Objectives & Competency Framework',
+      suggestedBlockType: 'text' as const,
+      summary: 'Detailed competency goals and learning outcomes for staff.',
+      rich_content: `<div class="space-y-4">
+        <h3 class="text-lg font-bold text-slate-900">Core Competencies & Key Takeaways</h3>
+        <ul class="space-y-3 text-sm text-slate-700">
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">1</span>
+            <span><strong>Master Standard Operating Procedures:</strong> Execute every step in compliance with company protocols.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">2</span>
+            <span><strong>Safety & Equipment Compliance:</strong> Apply correct safety gear, chemical handling, and machine safety checks.</span>
+          </li>
+          <li class="flex items-start gap-3">
+            <span class="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold text-xs">3</span>
+            <span><strong>Troubleshooting & Escalation:</strong> Rapidly resolve operational bottlenecks and escalate deviations.</span>
+          </li>
+        </ul>
+      </div>`
+    },
+    {
+      heading: 'Step-by-Step SOP Procedures',
+      suggestedBlockType: 'text' as const,
+      summary: sentences.slice(2, 4).join('. ') || 'Step-by-step workflow procedures and standard phases.',
+      rich_content: `<div class="space-y-5">
+        <h3 class="text-lg font-bold text-slate-900">Standard Operating Workflow</h3>
+        <div class="space-y-4">
+          <div class="border-l-4 border-indigo-500 pl-4 py-1">
+            <h4 class="font-bold text-slate-900 text-sm">Phase 1: Preparation & Safety Check</h4>
+            <p class="text-xs text-slate-600">Inspect equipment, verify work area cleanliness, and ensure required PPE is worn.</p>
+          </div>
+          <div class="border-l-4 border-blue-500 pl-4 py-1">
+            <h4 class="font-bold text-slate-900 text-sm">Phase 2: Execution & Core Processing</h4>
+            <p class="text-xs text-slate-600">${sentences.slice(2, 4).join('. ') || 'Follow strict timing, chemical, and temperature parameters.'}</p>
+          </div>
+          <div class="border-l-4 border-emerald-500 pl-4 py-1">
+            <h4 class="font-bold text-slate-900 text-sm">Phase 3: Inspection & Quality Assurance</h4>
+            <p class="text-xs text-slate-600">Perform 100% visual inspection before handover to ensure zero defects.</p>
+          </div>
+        </div>
+        <div class="p-4 bg-amber-50 rounded-lg border border-amber-200">
+          <strong class="text-amber-900 text-xs uppercase font-bold tracking-wider">Pro-Tip & Safety Alert:</strong>
+          <p class="text-xs text-amber-800 mt-1">Never skip verification checks during high-volume rush periods. Quality consistency protects guest satisfaction.</p>
+        </div>
+      </div>`
+    },
+    {
+      heading: 'Real-World Operational Scenario & Resolution',
+      suggestedBlockType: 'scenario' as const,
+      summary: 'Practical troubleshooting dilemma encountered during hotel operations.',
+      rich_content: `<div class="space-y-4">
+        <div class="p-4 bg-purple-50 border border-purple-200 rounded-lg">
+          <span class="text-xs font-bold text-purple-700 uppercase tracking-wide">Operational Dilemma</span>
+          <h4 class="text-base font-bold text-purple-950 mt-1">High-Occupancy Operational Challenge</h4>
+          <p class="text-xs text-purple-900 mt-2 leading-relaxed">
+            During high occupancy or VIP turnover, a critical operational discrepancy arises requiring immediate resolution without compromising luxury guest standards.
+          </p>
+        </div>
+        <div class="p-4 bg-white border border-slate-200 rounded-lg space-y-2">
+          <h4 class="text-sm font-bold text-slate-900">Recommended Resolution Action:</h4>
+          <ol class="list-decimal list-inside space-y-1.5 text-xs text-slate-700">
+            <li>Isolate the issue immediately and prevent defective items from reaching guest areas.</li>
+            <li>Implement the secondary fallback inventory protocol.</li>
+            <li>Notify the duty supervisor and document the root cause for prevention.</li>
+          </ol>
+        </div>
+      </div>`
+    },
+    {
+      heading: 'Summary & Shift Operations Checklist',
+      suggestedBlockType: 'text' as const,
+      summary: 'Key takeaways and daily operational checklist.',
+      rich_content: `<div class="space-y-5">
+        <div class="p-5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-950">
+          <h3 class="text-lg font-bold text-emerald-900 mb-1">Module Summary</h3>
+          <p class="text-xs text-emerald-800">You are now equipped with standard operating techniques and quality benchmarks for daily execution.</p>
+        </div>
+        <div class="border border-slate-200 rounded-lg p-4 bg-white space-y-2">
+          <h4 class="font-bold text-sm text-slate-900">Daily Shift Checklist:</h4>
+          <div class="space-y-1.5 text-xs text-slate-700">
+            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Complete start-of-shift equipment and safety inspections.</span></div>
+            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Verify operational parameters against official SOP specifications.</span></div>
+            <div class="flex items-center gap-2"><span class="text-emerald-600 font-bold">✓</span><span>Conduct end-of-shift handover and log book updates.</span></div>
+          </div>
+        </div>
+      </div>`
+    }
+  ]
 
   return {
     title,
-    description: 'Automatically drafted from the pasted source content.',
-    sections: trimmedSections,
-    suggestedQuizCheckpoints: trimmedSections.length > 1
-      ? [{ afterSectionIndex: trimmedSections.length - 1, topic: 'Key takeaways from this module' }]
-      : []
+    description: 'Executive training curriculum based on standard operating procedures.',
+    sections: rawSections,
+    suggestedQuizCheckpoints: [
+      { afterSectionIndex: 3, topic: 'Comprehensive Knowledge & Scenario Assessment' }
+    ]
   }
 }
 
@@ -478,93 +587,52 @@ export const aiService = {
     } while (sanitized !== previous);
     const context = sanitized.substring(0, 3000)
 
-    const count = request.count || 5
-
-    const types = request.types?.join(', ') || 'mcq, true_false, fill_blank'
+    const requestedTypesList = request.types && request.types.length > 0
+      ? request.types
+      : ['mcq', 'true_false', 'fill_blank']
+    const typesDescription = requestedTypesList.join(', ')
 
     const difficulty = request.difficulty || 'medium'
-
     const language = request.language || 'English'
-
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
 
+    const prompt = `You are a Senior Hotel Training & Quality Assurance Director. Create EXACTLY ${count} quiz questions based ONLY on the SOP/training content below.
 
+Target Audience: Hotel Staff and Operations Teams.
+Tone: Professional, Clear, Practical, and Educational.
+Target Language: ${language}
 
-    const prompt = `You are a Senior Hotel Training Manager. Create EXACTLY ${count} quiz questions based on the SOP content below.
+STRICT QUESTION TYPE REQUIREMENT:
+- You MUST ONLY generate questions whose "question_type" is one of the following requested types: [${typesDescription}].
+- Distribute the questions evenly across the requested types: [${typesDescription}].
+- DO NOT produce any question type that is not in [${typesDescription}].
 
-    
+Detailed rules per question type:
+- "mcq": Standard 4-choice question with 1 correct answer. "options" must have 4 distinct choices.
+- "mcq_multi": Multiple select question. "options" must have 4-5 choices.
+- "true_false": True/False question. "options" MUST be ["True", "False"] (or ["صحيح", "خطأ"] if language is Arabic). "correct_answer" must be "True" or "False" (or "صحيح"/"خطأ").
+- "fill_blank": Sentence with a "___" blank. "options" contains 4 possible replacement terms. "correct_answer" is the exact term that fills the blank.
+- "scenario": Realistic hotel operational scenario describing a guest interaction, safety procedure, or operational challenge, followed by a decision question. "options" contains 4 practical actions.
 
-    Target Audience: Hotel Staff.
+REQUIREMENTS:
+- Number of questions: EXACTLY ${count} (It is CRITICAL that you generate ${count} items)
+- Difficulty level: ${difficulty}
+- ${request.includeHints ? 'Include a helpful "hint" for each question' : 'Do NOT include hints'}
+- ${request.includeExplanations ? 'Include a clear "explanation" for why the answer is correct' : 'Do NOT include explanations'}
+${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
 
-    Tone: Professional, Clear, and Educational.
-
-    Target Language: ${language}
-
-    
-
-    
-
-    REQUIREMENTS:
-
-    - Number of questions: EXACTLY ${count} (It is CRITICAL that you generate ${count} items)
-
-    - Question types: ${types}
-
-    - Difficulty level: ${difficulty}
-
-    - ${request.includeHints ? 'Include a helpful "hint" for each question' : 'Do NOT include hints'}
-
-    - ${request.includeExplanations ? 'Include a clear "explanation" for why the answer is correct' : 'Do NOT include explanations'}
-
-    ${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
-
-    
-
-    Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTLY ${count} objects.
-
-    Structure:
-
-    [
-
-      {
-
-        "question_text": "Question 1 Content in ${language}",
-
-        "question_type": "mcq",
-
-        "options": ["Opt 1", "Opt 2", "Opt 3", "Opt 4"], 
-
-        "correct_answer": "Opt 2",
-
-        "points": 10,
-
-        "explanation": "Exp 1",
-
-        "hint": "Hint 1"
-
-      },
-
-      {
-
-        "question_text": "Question 2 Content in ${language}",
-
-        "question_type": "true_false",
-
-        "options": ["True", "False"], 
-
-        "correct_answer": "True",
-
-        "points": 10,
-
-        "explanation": "Exp 2",
-
-        "hint": "Hint 2"
-
-      }
-
-      ... (continue for ${count} items)
-
-    ]
+Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTLY ${count} objects:
+[
+  {
+    "question_text": "Clear question or scenario text in ${language}",
+    "question_type": "${requestedTypesList[0]}",
+    "options": ["Choice 1", "Choice 2", "Choice 3", "Choice 4"],
+    "correct_answer": "Choice 1",
+    "points": 10,
+    "explanation": "Explanation why Choice 1 is correct",
+    "hint": "Helpful hint"
+  }
+]
 
 
 

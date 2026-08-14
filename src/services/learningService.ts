@@ -1235,6 +1235,233 @@ export const learningService = {
         return (data || []).map((row) => ({ ...row, status: fromTrainingStatus(row.status) })) as LearningProgress[]
     },
 
+    // ==========================================
+    // SERVER-SIDE GRADING RPCs
+    // ==========================================
+    // These call SECURITY DEFINER functions that grade server-side, write
+    // unified_quiz_sessions + unified_question_attempts, enforce max_attempts,
+    // and are the only path allowed to mark quiz/module training_progress
+    // rows as passed/completed (the integrity trigger blocks client writes).
+
+    /**
+     * Fetch quiz metadata + questions for the player, WITHOUT answer keys.
+     * Options come back without `is_correct`, questions without `correct_answer`.
+     * Handles randomization client-side with a seeded shuffle (user-stable).
+     */
+    async getQuizForPlayerRPC(quizId: string): Promise<LearningQuiz> {
+        const { data, error } = await supabase.rpc('get_quiz_for_player', {
+            p_quiz_id: quizId,
+        })
+
+        if (error) throw error
+
+        const raw = data as {
+            id: string
+            title: string
+            description?: string
+            time_limit_minutes?: number | null
+            passing_score_percentage: number
+            max_attempts?: number | null
+            randomize_questions: boolean
+            randomize_answers?: boolean
+            show_feedback_during: boolean
+            questions: Array<{
+                question_id: string
+                display_order: number
+                points_override?: number
+                question: {
+                    id: string
+                    question_text: string
+                    question_text_ar?: string
+                    question_type: string
+                    points?: number
+                    hint?: string
+                    hint_ar?: string
+                    options?: Array<{
+                        id: string
+                        option_text: string
+                        option_text_ar?: string
+                        display_order: number
+                    }>
+                }
+            }>
+        }
+
+        // Map server response to LearningQuiz shape the player expects.
+        // The server omits is_correct/correct_answer — options and questions
+        // are safe to hand to the UI as-is.
+        const questions: LearningQuizQuestion[] = (raw.questions || [])
+            .filter(q => q.question?.question_text?.trim())
+            .map(q => ({
+                id: `${q.question_id}:${raw.id}`,
+                quiz_id: raw.id,
+                question_id: q.question_id,
+                display_order: q.display_order,
+                points_override: q.points_override,
+                question: {
+                    id: q.question.id,
+                    question_text: q.question.question_text,
+                    question_text_ar: q.question.question_text_ar,
+                    question_type: q.question.question_type,
+                    points: q.question.points,
+                    hint: q.question.hint,
+                    hint_ar: q.question.hint_ar,
+                    options: (q.question.options || []).map(o => ({
+                        id: o.id,
+                        question_id: q.question.id,
+                        option_text: o.option_text,
+                        option_text_ar: o.option_text_ar,
+                        display_order: o.display_order,
+                        is_correct: false, // masked — server never sends this
+                        created_at: '',
+                    })),
+                    // Masked fields — server never sends these
+                    correct_answer: undefined,
+                    explanation: undefined,
+                    accepted_answers: undefined,
+                    status: 'published' as const,
+                    source_domain: 'knowledge',
+                    created_at: '',
+                    updated_at: '',
+                } as unknown as import('@/types/questions').KnowledgeQuestion,
+            }))
+
+        // Client-side randomization using the user's ID as seed so the order
+        // is stable across refreshes / resumes within the same attempt.
+        const { data: authData } = await supabase.auth.getUser()
+        const userSeed = authData?.user?.id || 'anonymous'
+
+        let orderedQuestions = questions
+        if (raw.randomize_questions) {
+            orderedQuestions = seededShuffleArray(questions, `${raw.id}:${userSeed}`)
+        } else {
+            orderedQuestions = [...questions].sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
+        }
+
+        if (raw.randomize_answers) {
+            orderedQuestions = orderedQuestions.map(ql => {
+                const opts = ql.question?.options
+                if (!opts || opts.length < 2) return ql
+                return {
+                    ...ql,
+                    question: {
+                        ...ql.question!,
+                        options: seededShuffleArray(opts, `${raw.id}:${userSeed}:${ql.question_id}`),
+                    },
+                }
+            })
+        }
+
+        return {
+            id: raw.id,
+            title: raw.title,
+            description: raw.description,
+            time_limit_minutes: raw.time_limit_minutes,
+            passing_score_percentage: raw.passing_score_percentage,
+            max_attempts: raw.max_attempts,
+            randomize_questions: raw.randomize_questions,
+            randomize_answers: raw.randomize_answers,
+            show_feedback_during: raw.show_feedback_during,
+            status: 'published',
+            created_at: '',
+            updated_at: '',
+            questions: orderedQuestions,
+            question_count: orderedQuestions.length,
+        } as LearningQuiz
+    },
+
+    /**
+     * Submit a full quiz attempt for server-side grading.
+     * Returns the authoritative score, pass/fail, and per-question results.
+     */
+    async submitQuizAttemptRPC(
+        quizId: string,
+        answers: Array<{
+            question_id: string
+            selected_answer?: string
+            selected_options?: string[]
+            time_spent_seconds?: number
+            hint_used?: boolean
+        }>,
+        opts?: {
+            contextType?: string
+            contextEntityId?: string
+            assignmentId?: string
+            timeSpentSeconds?: number
+        }
+    ): Promise<{
+        session_id: string
+        score_percentage: number
+        passed: boolean
+        correct_count: number
+        total_questions: number
+        attempt_number: number
+        final_score_percentage: number
+        final_passed: boolean
+        results: Array<{ question_id: string; is_correct: boolean }>
+    }> {
+        const { data, error } = await supabase.rpc('submit_quiz_attempt', {
+            p_quiz_id: quizId,
+            p_answers: answers,
+            p_context_type: opts?.contextType || 'quiz',
+            p_context_entity_id: opts?.contextEntityId || null,
+            p_assignment_id: opts?.assignmentId || null,
+            p_time_spent_seconds: opts?.timeSpentSeconds || 0,
+        })
+
+        if (error) throw error
+        return data as {
+            session_id: string
+            score_percentage: number
+            passed: boolean
+            correct_count: number
+            total_questions: number
+            attempt_number: number
+            final_score_percentage: number
+            final_passed: boolean
+            results: Array<{ question_id: string; is_correct: boolean }>
+        }
+    },
+
+    /**
+     * Complete a training module via server-side validation.
+     * The RPC validates every mandatory quiz block was submitted and passed.
+     */
+    async completeTrainingModuleRPC(
+        moduleId: string,
+        opts?: {
+            assignmentId?: string
+            completedBlockIds?: string[]
+            lastBlockId?: string
+            lastBlockIndex?: number
+            timeSpentSeconds?: number
+        }
+    ): Promise<{
+        training_progress_id: string
+        score_percentage: number | null
+        passed: boolean
+        status: string
+        completed_at: string
+    }> {
+        const { data, error } = await supabase.rpc('complete_training_module', {
+            p_module_id: moduleId,
+            p_assignment_id: opts?.assignmentId || null,
+            p_completed_block_ids: opts?.completedBlockIds || [],
+            p_last_block_id: opts?.lastBlockId || null,
+            p_last_block_index: opts?.lastBlockIndex ?? null,
+            p_time_spent_seconds: opts?.timeSpentSeconds || 0,
+        })
+
+        if (error) throw error
+        return data as {
+            training_progress_id: string
+            score_percentage: number | null
+            passed: boolean
+            status: string
+            completed_at: string
+        }
+    },
+
     async submitQuizProgress(progress: Partial<LearningProgress>) {
         if (!progress.user_id || !progress.content_id || !progress.content_type) {
             throw new Error('Missing required progress keys (user_id, content_id, content_type)')

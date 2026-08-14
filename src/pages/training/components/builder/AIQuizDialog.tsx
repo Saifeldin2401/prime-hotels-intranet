@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import type { ContentBlockForm, ContentType, TrainingSection } from './trainingBuilderTypes'
 
 interface AIQuizDialogProps {
@@ -50,6 +51,16 @@ export function AIQuizDialog({
   const { toast } = useToast()
   const { profile } = useAuth()
   const queryClient = useQueryClient()
+  const [quizCustomTitle, setQuizCustomTitle] = useState('')
+
+  useEffect(() => {
+    if (open) {
+      const defaultName = aiPrefillTitle
+        ? `${aiPrefillTitle} - Quiz`
+        : (title.trim() ? `${title.trim()} - Quiz` : 'Knowledge Assessment')
+      setQuizCustomTitle(defaultName)
+    }
+  }, [open, aiPrefillTitle, title])
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -63,10 +74,23 @@ export function AIQuizDialog({
             {t('builder.aiDialogDescription')}
           </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
+        <div className="py-4 space-y-4">
+          <div className="bg-slate-50 p-3.5 rounded-lg border border-slate-200 space-y-1.5">
+            <label className="text-sm font-semibold text-slate-800 block">
+              {t('builder.quizTitle', 'Quiz Title')}
+            </label>
+            <input
+              type="text"
+              value={quizCustomTitle}
+              onChange={(e) => setQuizCustomTitle(e.target.value)}
+              placeholder={t('builder.quizTitlePlaceholder', 'Enter quiz title (e.g. Linen Care Knowledge Assessment)')}
+              className={`w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 ${isRTL ? 'text-right' : ''}`}
+            />
+          </div>
+
           <AIQuestionGenerator
             sopId="general"
-            sopTitle={aiPrefillTitle || title || t('builder.untitledModule')}
+            sopTitle={quizCustomTitle || aiPrefillTitle || title || t('builder.untitledModule')}
             sopContent={aiPrefillContent}
             initialContent={aiPrefillContent}
             initialSourceType="text"
@@ -79,23 +103,15 @@ export function AIQuizDialog({
               setAiPrefillTitle('')
 
               if (ids && ids.length > 0) {
-                if (!moduleId) {
-                  toast({
-                    title: t('common:error'),
-                    description: t('saveModuleFirstBeforeQuiz'),
-                    variant: 'destructive'
-                  })
-                  return
-                }
-
+                const finalQuizTitle = quizCustomTitle.trim() || aiPrefillTitle || title.trim() || t('builder.aiGeneratedQuiz', 'Knowledge Assessment')
                 try {
                   const { data: quizData, error: quizError } = await supabase
                     .from('learning_quizzes')
                     .insert({
-                      title: `${title || t('builder.untitledModule')} - Quiz`,
+                      title: finalQuizTitle,
                       description: `Auto-generated quiz with ${count} questions`,
                       status: 'published',
-                      training_module_id: moduleId,
+                      training_module_id: moduleId || null,
                       passing_score_percentage: Number(passingScore) || 80,
                       time_limit_minutes: null,
                       created_by: profile?.id
@@ -128,7 +144,7 @@ export function AIQuizDialog({
                   const quizBlock: ContentBlockForm = {
                     id: `quiz-${Date.now()}`,
                     type: 'quiz' as ContentType,
-                    title: t('builder.aiGeneratedQuiz'),
+                    title: finalQuizTitle,
                     content: '',
                     content_url: '',
                     content_data: { quiz_id: quizData.id, question_ids: ids },

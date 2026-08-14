@@ -13,7 +13,7 @@ import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
 import { AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
 import type { ContentBlockForm, RecentUpload } from './trainingBuilderTypes'
@@ -78,6 +78,7 @@ export function ContentBlockDialog({
   isRTL,
 }: ContentBlockDialogProps) {
   const { t } = useTranslation('training')
+  const [showImageMediaPicker, setShowImageMediaPicker] = useState(false)
 
   return (
     <>
@@ -158,7 +159,9 @@ export function ContentBlockDialog({
                         quizOptions.map(q => (
                           <SelectItem key={q.id} value={q.id} className={isRTL ? "flex-row-reverse" : ""}>
                             <span className="font-medium">{q.title}</span>
-                            <span className={cn("text-xs text-gray-400", isRTL ? "me-2" : "ms-2")}>({q.question_count || 0} qs)</span>
+                            <span className={cn("text-xs text-slate-500", isRTL ? "me-2" : "ms-2")}>
+                              ({(q as unknown as { question_count?: number }).question_count ?? 0} {(q as unknown as { question_count?: number }).question_count === 1 ? t('builder.question', { defaultValue: 'question' }) : t('builder.questions', { defaultValue: 'questions' })})
+                            </span>
                           </SelectItem>
                         ))
                       )}
@@ -359,6 +362,14 @@ export function ContentBlockDialog({
                     <Button type="button" size="sm" variant={mediaInputMode === 'upload' ? 'default' : 'outline'} onClick={() => setMediaInputMode('upload')}>
                       {t('builder.uploadFile', 'Upload file')}
                     </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={mediaInputMode === 'library' ? 'default' : 'outline'}
+                      onClick={() => { setMediaInputMode('library'); setShowImageMediaPicker(true) }}
+                    >
+                      {t('builder.mediaLibrary', 'Media Library')}
+                    </Button>
                     <Button type="button" size="sm" variant={mediaInputMode === 'link' ? 'default' : 'outline'} onClick={() => setMediaInputMode('link')}>
                       {t('builder.useLink', 'Use link')}
                     </Button>
@@ -554,6 +565,23 @@ export function ContentBlockDialog({
         }}
         config={{ allowedTypes: ['video'], multiple: false, category: 'training' }}
         title={t('builder.selectVideo', 'Select Video from Library')}
+      />
+
+      <MediaPicker
+        open={showImageMediaPicker}
+        onOpenChange={setShowImageMediaPicker}
+        onSelect={(assets: MediaAsset[]) => {
+          if (assets.length > 0 && currentBlock) {
+            const chosen = assets[0]
+            setCurrentBlock({
+              ...currentBlock,
+              content_url: chosen.storage_path || chosen.public_url,
+              title: currentBlock.title?.trim() ? currentBlock.title : chosen.title
+            })
+          }
+        }}
+        config={{ allowedTypes: ['image'], multiple: false, category: 'training' }}
+        title={t('builder.selectImage', 'Select Image from Library')}
       />
 
       <DocumentPicker

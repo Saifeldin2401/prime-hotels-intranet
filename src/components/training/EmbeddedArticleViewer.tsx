@@ -13,6 +13,8 @@ import { AlertCircle, BookOpen, Download, ExternalLink, FileText, Loader2 } from
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+import { resolveStorageUrl } from '@/lib/secureFileAccess'
+
 type TranslationDiagnostics = {
     partialFailures: number
     totalSegments: number
@@ -29,6 +31,8 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
 interface EmbeddedArticleViewerProps {
     sopId: string
+    fallbackTitle?: string
+    fallbackContent?: string
     showBilingual?: boolean
     translationDir?: 'ltr' | 'rtl'
     translationTarget?: TranslationTargetLanguage | null
@@ -135,6 +139,8 @@ export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
 
 const EmbeddedArticleViewerInner = ({
     sopId,
+    fallbackTitle,
+    fallbackContent,
     showBilingual,
     translationDir = 'ltr',
     translationTarget,
@@ -154,7 +160,8 @@ const EmbeddedArticleViewerInner = ({
             if (error) throw error
             return data as LegacySopDocument | null
         },
-        enabled: !!sopId
+        enabled: !!sopId,
+        staleTime: 0
     })
     // sop_documents has been consolidated into documents (content_type='sop').
     // If the primary documents query didn't find the record by UUID, try matching
@@ -176,10 +183,37 @@ const EmbeddedArticleViewerInner = ({
             if (error) throw error
             return data as LegacySopDocument | null
         },
-        enabled: shouldTryBySopCode
+        enabled: shouldTryBySopCode,
+        staleTime: 0
     })
 
-    const document = (documentData || legacyDocument) as LegacySopDocument | null
+    const rawDocument = (documentData || legacyDocument) as LegacySopDocument | null
+    const document: LegacySopDocument | null = rawDocument
+        ? {
+            ...rawDocument,
+            title: rawDocument.title || fallbackTitle || '',
+            content: rawDocument.content || fallbackContent || null
+        }
+        : (fallbackContent ? {
+            id: sopId,
+            title: fallbackTitle || t('sopReference', 'Standard Operating Procedure'),
+            content: fallbackContent,
+            status: 'PUBLISHED'
+        } : null)
+
+    const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null)
+    useEffect(() => {
+        let cancelled = false
+        if (!document?.file_url) {
+            setResolvedFileUrl(null)
+            return
+        }
+        resolveStorageUrl(document.file_url, 3600).then(url => {
+            if (!cancelled) setResolvedFileUrl(url)
+        })
+        return () => { cancelled = true }
+    }, [document?.file_url])
+
     const isLoading = isDocumentLoading || (shouldTryBySopCode && isLegacyLoading)
     const resolvedError = document ? null : (documentError || legacyError)
 

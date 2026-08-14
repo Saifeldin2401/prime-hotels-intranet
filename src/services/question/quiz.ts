@@ -1,105 +1,38 @@
-import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch';
-import { isMatchingAnswerCorrect, isOrderingAnswerCorrect } from '@/lib/questionOrderingMatching';
 import { supabase } from '@/lib/supabase';
 import type { AnswerSubmission, QuestionAttempt, QuizSession } from '@/types/questions';
-import { getQuestionById } from './core';
 
 export async function recordAttempt(
-    userId: string,
+    _userId: string,
     submission: AnswerSubmission
 ): Promise<{ isCorrect: boolean; feedback?: string }> {
-    // Get the question with options
-    const question = await getQuestionById(submission.question_id)
-    if (!question) throw new Error('Question not found')
-
-    // Validate answer
-    let isCorrect = false
-    let feedback: string | undefined
-
-    switch (question.question_type) {
-        case 'true_false': {
-            isCorrect = submission.selected_answer === question.correct_answer
-            break
-        }
-        case 'fill_blank': {
-            isCorrect = isFreeTextAnswerCorrect(
-                submission.selected_answer,
-                question.correct_answer,
-                question.accepted_answers
-            )
-            break
-        }
-        case 'mcq': {
-            const selectedOption = question.options?.find(o => o.id === submission.selected_answer)
-            isCorrect = selectedOption?.is_correct ?? false
-            feedback = selectedOption?.feedback
-            break
-        }
-        case 'mcq_multi': {
-            const correctOptions = question.options?.filter(o => o.is_correct).map(o => o.id) || []
-            const selectedOptions = submission.selected_options || []
-            isCorrect =
-                correctOptions.length === selectedOptions.length &&
-                correctOptions.every(id => selectedOptions.includes(id))
-            break
-        }
-        case 'scenario': {
-            const hasOptions = (question.options?.length || 0) > 0
-            if (hasOptions) {
-                const selectedOption = question.options?.find(o => o.id === submission.selected_answer)
-                isCorrect = selectedOption?.is_correct ?? false
-                feedback = selectedOption?.feedback
-            } else {
-                isCorrect = isFreeTextAnswerCorrect(
-                    submission.selected_answer,
-                    question.correct_answer,
-                    question.accepted_answers
-                )
-            }
-            break
-        }
-        case 'ordering': {
-            isCorrect = isOrderingAnswerCorrect(submission.selected_options, question.options)
-            break
-        }
-        case 'matching': {
-            isCorrect = isMatchingAnswerCorrect(submission.selected_answer, question.options)
-            break
-        }
-        default: {
-            isCorrect = false
-        }
-    }
-
-    // Get attempt number from unified_question_attempts
-    const { count } = await supabase
-        .from('unified_question_attempts')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-        .eq('question_id', submission.question_id)
-
-    // Record the attempt in unified_question_attempts
-    const { error } = await supabase
-        .from('unified_question_attempts')
-        .insert({
-            user_id: userId,
-            question_id: submission.question_id,
-            session_id: submission.session_id,
-            selected_answer: submission.selected_answer,
-            selected_options: submission.selected_options,
-            is_correct: isCorrect,
-            context_type: submission.context_type,
-            context_entity_id: submission.context_entity_id,
-            time_spent_seconds: submission.time_spent_seconds,
-            hint_used: submission.hint_used,
-            attempt_number: (count || 0) + 1
-        })
+    // Server-side grading via SECURITY DEFINER RPC.
+    // The server reads the answer key, grades, records the attempt in
+    // unified_question_attempts, and returns is_correct + explanation.
+    const { data, error } = await supabase.rpc('grade_question_attempt', {
+        p_question_id: submission.question_id,
+        p_selected_answer: submission.selected_answer || null,
+        p_selected_options: submission.selected_options || null,
+        p_session_id: submission.session_id || null,
+        p_context_type: submission.context_type || null,
+        p_context_entity_id: submission.context_entity_id || null,
+        p_time_spent_seconds: submission.time_spent_seconds ?? null,
+        p_hint_used: submission.hint_used ?? false,
+    })
 
     if (error) throw error
 
+    const result = data as {
+        is_correct: boolean
+        attempt_number: number
+        explanation?: string | null
+        explanation_ar?: string | null
+        correct_answer?: string | null
+        options?: Array<{ id: string; option_text: string; is_correct: boolean; display_order: number }> | null
+    }
+
     return {
-        isCorrect,
-        feedback: isCorrect ? question.explanation : feedback
+        isCorrect: result.is_correct,
+        feedback: result.explanation || undefined,
     }
 }
 

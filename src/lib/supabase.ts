@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import type { Database } from '@/types/database.generated'
 import { getCsrfToken } from './security'
 import { validateEnvironment } from './env-validation'
 
@@ -64,7 +65,7 @@ if (!supabaseUrl.startsWith('https://')) {
 
 
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,

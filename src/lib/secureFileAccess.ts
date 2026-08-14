@@ -297,42 +297,109 @@ export async function resolveMediaUrl(mediaAssetId: string, fallbackUrl?: string
  * External URLs (YouTube links, a document link an author pasted directly, etc.) are
  * left untouched - they never match the Supabase storage URL shape below.
  */
+/**
+ * Resolves a storage URL or path (bare storage path, Supabase storage URL, expired signed URL)
+ * into a fresh, valid signed URL.
+ */
 export async function resolveStorageUrl(
   rawUrl: string | null | undefined,
-  ttlSeconds = 300,
+  ttlSeconds = 3600,
   fallbackBucket?: string,
 ): Promise<string | null> {
-  if (!rawUrl) return null
+  if (!rawUrl || typeof rawUrl !== 'string') return null
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return null
 
-  // Already an external URL (YouTube, a pasted link, a public-bucket asset) --
-  // leave it alone.
-  const match = rawUrl.match(/\/storage\/v1\/object\/(?:public|sign|authenticated)\/([^/]+)\/([^?]+)/)
+  // 1. Check if it's a Supabase storage URL (public, sign, signed, authenticated, or s3)
+  const supabaseMatch = trimmed.match(/\/storage\/v1\/object\/(?:public|sign|signed|authenticated)\/([^/]+)\/([^?#]+)/i)
+    || trimmed.match(/\/storage\/v1\/s3\/([^/]+)\/([^?#]+)/i)
+    || trimmed.match(/\/storage\/v1\/render\/image\/(?:public|sign|signed|authenticated)\/([^/]+)\/([^?#]+)/i)
 
-  // A bare object path (no scheme). Newer upload paths store the path rather
-  // than a URL, since a public URL on a private bucket never resolves. The
-  // caller tells us which bucket it belongs to.
-  if (!match) {
-    if (fallbackBucket && !/^https?:\/\//i.test(rawUrl)) {
-      const { data, error } = await supabase.storage.from(fallbackBucket).createSignedUrl(rawUrl, ttlSeconds)
-      if (error || !data?.signedUrl) {
-        console.error('resolveStorageUrl: failed to sign bare path', { bucket: fallbackBucket, error })
-        return rawUrl
+  if (supabaseMatch) {
+    const [, bucket, encodedPath] = supabaseMatch
+    const path = decodeURIComponent(encodedPath)
+
+    try {
+      const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttlSeconds)
+      if (!error && data?.signedUrl) {
+        return data.signedUrl
       }
-      return data.signedUrl
+    } catch {
+      // Ignore and try fallback buckets
     }
-    return rawUrl
+
+    // Try other known buckets in case the bucket name in the URL differed
+    for (const altBucket of ['documents', 'media', 'content-media', 'avatars']) {
+      if (altBucket === bucket) continue
+      try {
+        const { data: altData, error: altError } = await supabase.storage.from(altBucket).createSignedUrl(path, ttlSeconds)
+        if (!altError && altData?.signedUrl) {
+          return altData.signedUrl
+        }
+      } catch {
+        // Continue
+      }
+    }
+
+    return trimmed
   }
 
-  const [, bucket, encodedPath] = match
-  const path = decodeURIComponent(encodedPath)
+  // 2. Check if it's a bare storage path (no http/https protocol)
+  if (!/^https?:\/\//i.test(trimmed)) {
+    const candidateBuckets = [
+      fallbackBucket,
+      'documents',
+      'media',
+      'content-media',
+      'avatars'
+    ].filter((b, idx, arr): b is string => !!b && arr.indexOf(b) === idx)
 
-  const { data, error } = await supabase.storage.from(bucket).createSignedUrl(path, ttlSeconds)
-  if (error || !data?.signedUrl) {
-    console.error('resolveStorageUrl: failed to sign storage path', { bucket, error })
-    return rawUrl
+    for (const b of candidateBuckets) {
+      try {
+        const { data, error } = await supabase.storage.from(b).createSignedUrl(trimmed, ttlSeconds)
+        if (!error && data?.signedUrl) {
+          return data.signedUrl
+        }
+      } catch {
+        // Continue to next bucket
+      }
+    }
+
+    return trimmed
   }
 
-  return data.signedUrl
+  // 3. Any other external URL (YouTube, Vimeo, external HTTPS) -- return as-is
+  return trimmed
+}
+
+/**
+ * Resolves all Supabase storage image/video/audio src attributes inside an HTML string
+ * to valid signed URLs.
+ */
+export async function resolveHtmlStorageUrls(html: string | null | undefined, ttlSeconds = 3600): Promise<string> {
+  if (!html || typeof html !== 'string') return ''
+
+  // Match src="..." attributes on img, video, audio, source tags
+  const srcRegex = /(<(?:img|video|audio|source)\b[^>]*?\bsrc=["'])([^"']+)(["'][^>]*>)/gi
+  const matches = Array.from(html.matchAll(srcRegex))
+  if (matches.length === 0) return html
+
+  let processed = html
+  for (const match of matches) {
+    const originalSrc = match[2]
+    if (
+      originalSrc.includes('/storage/v1/') ||
+      !/^https?:\/\//i.test(originalSrc) ||
+      originalSrc.includes('.supabase.co')
+    ) {
+      const resolved = await resolveStorageUrl(originalSrc, ttlSeconds)
+      if (resolved && resolved !== originalSrc) {
+        processed = processed.replace(match[0], `${match[1]}${resolved}${match[3]}`)
+      }
+    }
+  }
+
+  return processed
 }
 
 export function openUrlInNewTab(url: string | null) {
