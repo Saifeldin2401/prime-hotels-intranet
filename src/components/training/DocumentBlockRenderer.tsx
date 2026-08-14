@@ -182,11 +182,29 @@ export const DocumentBlockRenderer = ({
         )
     }
 
-    if (resolving || !resolvedUrl) {
+    if (resolving) {
         return (
             <div className="flex flex-col items-center justify-center py-16 border rounded-lg bg-slate-50 text-slate-400 gap-2">
-                <Loader2 className="h-6 w-6 animate-spin" />
+                <Loader2 className="h-6 w-6 animate-spin text-hotel-gold" />
                 <span className="text-xs">{t('loadingPdf', 'Loading document...')}</span>
+            </div>
+        )
+    }
+
+    if (!resolvedUrl) {
+        return (
+            <div className="flex flex-col items-center justify-center py-12 border rounded-lg bg-slate-50 text-slate-500 gap-3">
+                <p className="text-sm font-medium">{t('unableToLoadDocument', 'Unable to access attached PDF document.')}</p>
+                <div className="mt-2">
+                    <DocumentBlockDescription
+                        originalMarkup={originalMarkup}
+                        translatedMarkup={translatedMarkup}
+                        hasTranslation={!!translatedContent}
+                        showBilingual={showBilingual}
+                        translationLabel={translationLabel}
+                        translationDir={translationDir}
+                    />
+                </div>
             </div>
         )
     }

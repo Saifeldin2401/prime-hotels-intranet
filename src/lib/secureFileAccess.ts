@@ -365,7 +365,19 @@ export async function resolveStorageUrl(
       }
     }
 
-    return trimmed
+    // Direct authenticated download fallback to mint a local blob URL
+    for (const b of candidateBuckets) {
+      try {
+        const { data: blob, error: downloadError } = await supabase.storage.from(b).download(trimmed)
+        if (!downloadError && blob) {
+          return URL.createObjectURL(blob)
+        }
+      } catch {
+        // Continue to next bucket
+      }
+    }
+
+    return null
   }
 
   // 3. Any other external URL (YouTube, Vimeo, external HTTPS) -- return as-is
