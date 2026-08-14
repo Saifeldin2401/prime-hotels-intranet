@@ -120,29 +120,20 @@ export function RightPanel({
             <div>{t('builder.summaryPoints', { count: totalPoints })}</div>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-purple-100 bg-purple-50/50">
+        <Card className="shadow-sm border-amber-200 bg-amber-50/50">
           <CardHeader className="pb-3">
-            <CardTitle className={cn("text-sm font-medium uppercase tracking-wider text-purple-600 flex items-center gap-2", isRTL ? 'flex-row-reverse' : '')}>
-              <Sparkles className="w-4 h-4" />
-              {t('builder.aiTools')}
+            <CardTitle className={cn("text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 flex items-center gap-2", isRTL ? 'flex-row-reverse' : '')}>
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              {t('builder.smartAiAssistant', 'Smart AI Assistant')}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button
-              variant="outline"
-              className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
-              onClick={openAIGeneratorForModule}
-            >
-              <FileQuestion className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
-              {t('builder.generateQuiz')}
-            </Button>
-            <Button
-              variant="outline"
-              className={cn("w-full justify-start bg-white border-purple-200 text-purple-700 hover:bg-purple-100", isRTL ? "flex-row-reverse" : "")}
+              className={cn("w-full justify-center bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold text-xs shadow-sm border-none", isRTL ? "flex-row-reverse" : "")}
               onClick={() => setShowSmartWizard(true)}
             >
-              <Layers className={cn("w-4 h-4", isRTL ? "ms-2" : "me-2")} />
-              {t('builder.smartWizard')}
+              <Sparkles className={cn("w-3.5 h-3.5", isRTL ? "ms-1.5" : "me-1.5")} />
+              {t('builder.openSmartAiModal', 'Generate Course with AI')}
             </Button>
           </CardContent>
         </Card>

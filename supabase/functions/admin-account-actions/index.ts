@@ -469,7 +469,7 @@ Deno.serve(async (req: Request) => {
                 templateKey: "system_generic_alert",
                 title: "Password reset",
                 message:
-                  "Use the link below to reset your PHG Connect password.",
+                  "Use the link below to reset your Altus Connect password.",
                 actionUrl: resetLink,
                 actionLabel: "Reset Password",
                 businessDomain: "user_management",
@@ -596,7 +596,7 @@ Deno.serve(async (req: Request) => {
                   title: "Portal Access Credentials",
                   message:
                     "Your access credentials have been reissued. Use the temporary password below to sign in and you will be prompted to change it.",
-                  actionLabel: "Sign In to PHG Connect",
+                  actionLabel: "Sign In to Altus Connect",
                   actionUrl: "/",
                   businessDomain: "user_management",
                   notificationType: "system",
@@ -652,13 +652,13 @@ Deno.serve(async (req: Request) => {
             : actionLink || recoveryRedirectTo;
 
           const subject = passwordInitialized
-            ? "Reset your PHG Connect password"
-            : "Complete your PHG Connect account setup";
+            ? "Reset your Altus Connect password"
+            : "Complete your Altus Connect account setup";
           const title = passwordInitialized
             ? "Password reset"
             : "Complete your account setup";
           const message = passwordInitialized
-            ? "Use the link below to reset your PHG Connect password."
+            ? "Use the link below to reset your Altus Connect password."
             : "Use the link below to finish your account setup and set your password.";
           const actionLabel = passwordInitialized
             ? "Reset Password"

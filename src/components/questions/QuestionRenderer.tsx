@@ -8,9 +8,8 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
-import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch'
 import { cn } from '@/lib/utils'
-import type { KnowledgeQuestion, QuestionOption } from '@/types/questions'
+import type { KnowledgeQuestion, QuestionGradeResult, QuestionOption } from '@/types/questions'
 import { DIFFICULTY_CONFIG, QUESTION_TYPE_CONFIG } from '@/types/questions'
 import {
     BookOpen,
@@ -35,7 +34,11 @@ export interface QuestionRendererProps {
     randomizeOptions?: boolean
     disabled?: boolean
     previousAnswer?: string | string[]
-    isCorrect?: boolean
+    // Result of the server-side grading RPC. The pre-fetched `question` never
+    // carries the answer key, so correctness and any answer-key reveal
+    // (correct answer, explanation, per-option correctness/feedback) come
+    // exclusively from here, populated only after the learner has submitted.
+    gradeResult?: QuestionGradeResult
     onNext?: () => void
     onHintUsed?: () => void
     timeLimit?: number
@@ -53,7 +56,7 @@ export function QuestionRenderer({
     randomizeOptions = true,
     disabled = false,
     previousAnswer,
-    isCorrect,
+    gradeResult,
     onNext,
     onHintUsed,
     timeLimit,
@@ -79,11 +82,11 @@ export function QuestionRenderer({
 
     useEffect(() => {
         setSelectedAnswer(previousAnswer ?? null)
-        setHasSubmitted(previousAnswer !== undefined && previousAnswer !== null && isCorrect !== undefined)
+        setHasSubmitted(previousAnswer !== undefined && previousAnswer !== null && gradeResult !== undefined)
         setShowHintPanel(false)
         setTimeRemaining(timeLimit || 0)
         setStartTime(Date.now())
-    }, [question.id, previousAnswer, isCorrect, timeLimit])
+    }, [question.id, previousAnswer, gradeResult, timeLimit])
 
     useEffect(() => {
         if (question.options?.length) {
@@ -129,44 +132,25 @@ export function QuestionRenderer({
     const difficultyConfig = DIFFICULTY_CONFIG[question.difficulty_level]
     const typeConfig = QUESTION_TYPE_CONFIG[question.question_type]
 
-    // Determine if answer is correct (for UI feedback)
-    const answerIsCorrect = isCorrect !== undefined ? isCorrect : (() => {
-        if (!hasSubmitted || !selectedAnswer) return undefined
+    // Correctness is always sourced from the server grading result - the
+    // pre-fetched `question` never carries the answer key, so there is no
+    // safe client-side way to compute this.
+    const answerIsCorrect = gradeResult?.isCorrect
 
-        switch (question.question_type) {
-            case 'true_false': {
-                return selectedAnswer === question.correct_answer
-            }
-            case 'fill_blank': {
-                return isFreeTextAnswerCorrect(selectedAnswer as string, question.correct_answer, question.accepted_answers)
-            }
-            case 'mcq': {
-                const selected = shuffledOptions.find(o => o.id === selectedAnswer)
-                return selected?.is_correct
-            }
-            case 'mcq_multi': {
-                const correctIds = shuffledOptions.filter(o => o.is_correct).map(o => o.id)
-                const selectedIds = selectedAnswer as string[]
-                return correctIds.length === selectedIds.length &&
-                    correctIds.every(id => selectedIds.includes(id))
-            }
-            case 'scenario': {
-                if (shuffledOptions.length > 0) {
-                    const selected = shuffledOptions.find(o => o.id === selectedAnswer)
-                    return selected?.is_correct
-                }
-                return isFreeTextAnswerCorrect(selectedAnswer as string, question.correct_answer, question.accepted_answers)
-            }
-            default: {
-                return undefined
-            }
-        }
-    })()
+    // Overlay the revealed per-option correctness/feedback onto the
+    // render-safe options once the server has graded the answer.
+    const revealedOptionsById = new Map((gradeResult?.options || []).map(o => [o.id, o]))
+    const displayOptions: QuestionOption[] = shuffledOptions.map(option => {
+        const revealed = revealedOptionsById.get(option.id)
+        return revealed
+            ? { ...option, is_correct: revealed.is_correct, feedback: revealed.feedback }
+            : option
+    })
 
     // Get feedback for selected option (MCQ)
     const selectedOptionFeedback = (() => {
         if (question.question_type !== 'mcq' && question.question_type !== 'scenario') return null
-        const selected = shuffledOptions.find(o => o.id === selectedAnswer)
+        const selected = displayOptions.find(o => o.id === selectedAnswer)
         return selected?.feedback
     })()
 
@@ -233,9 +217,9 @@ export function QuestionRenderer({
             <CardContent className={cn(compact && 'p-0 pb-3')}>
                 {/* Question Type Renderer */}
                 {question.question_type === 'mcq' && (
-                    shuffledOptions.length > 0 ? (
+                    displayOptions.length > 0 ? (
                         <MCQQuestion
-                            options={shuffledOptions}
+                            options={displayOptions}
                             selectedAnswer={selectedAnswer as string | null}
                             onSelect={handleAnswerChange}
                             disabled={disabled || hasSubmitted}
@@ -249,9 +233,9 @@ export function QuestionRenderer({
                 )}
 
                 {question.question_type === 'mcq_multi' && (
-                    shuffledOptions.length > 0 ? (
+                    displayOptions.length > 0 ? (
                         <MCQQuestion
-                            options={shuffledOptions}
+                            options={displayOptions}
                             selectedAnswer={selectedAnswer as string[] | null}
                             onSelect={handleAnswerChange}
                             disabled={disabled || hasSubmitted}
@@ -270,7 +254,7 @@ export function QuestionRenderer({
                         selectedAnswer={selectedAnswer as string | null}
                         onSelect={(val) => handleAnswerChange(val)}
                         disabled={disabled || hasSubmitted}
-                        correctAnswer={hasSubmitted && showFeedback ? question.correct_answer : undefined}
+                        correctAnswer={hasSubmitted && showFeedback ? gradeResult?.correctAnswer : undefined}
                     />
                 )}
 
@@ -279,15 +263,15 @@ export function QuestionRenderer({
                         value={selectedAnswer as string || ''}
                         onChange={(val) => handleAnswerChange(val)}
                         disabled={disabled || hasSubmitted}
-                        correctAnswer={hasSubmitted && showFeedback ? question.correct_answer : undefined}
+                        correctAnswer={hasSubmitted && showFeedback ? gradeResult?.correctAnswer : undefined}
                         isCorrect={hasSubmitted ? answerIsCorrect : undefined}
                     />
                 )}
 
                 {question.question_type === 'scenario' && (
-                    shuffledOptions.length > 0 ? (
+                    displayOptions.length > 0 ? (
                         <MCQQuestion
-                            options={shuffledOptions}
+                            options={displayOptions}
                             selectedAnswer={selectedAnswer as string | null}
                             onSelect={handleAnswerChange}
                             disabled={disabled || hasSubmitted}
@@ -298,7 +282,7 @@ export function QuestionRenderer({
                             value={selectedAnswer as string || ''}
                             onChange={(val) => handleAnswerChange(val)}
                             disabled={disabled || hasSubmitted}
-                            correctAnswer={hasSubmitted && showFeedback ? question.correct_answer : undefined}
+                            correctAnswer={hasSubmitted && showFeedback ? gradeResult?.correctAnswer : undefined}
                             isCorrect={hasSubmitted ? answerIsCorrect : undefined}
                         />
                     )
@@ -353,9 +337,9 @@ export function QuestionRenderer({
                             )}
 
                             {/* Show explanation */}
-                            {showExplanation && question.explanation && (
+                            {showExplanation && gradeResult?.explanation && (
                                 <div className="mt-2 pt-2 border-t border-gray-200/50">
-                                    <p className="text-sm text-gray-700">{question.explanation}</p>
+                                    <p className="text-sm text-gray-700">{gradeResult.explanation}</p>
                                 </div>
                             )}
 

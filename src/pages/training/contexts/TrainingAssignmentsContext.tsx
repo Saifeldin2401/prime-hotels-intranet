@@ -632,6 +632,69 @@ export function TrainingAssignmentsProvider({
     enabled: !!selectedProgress?.user_id && selectedModuleQuizIds.length > 0
   })
 
+  const { data: selectedQuizSessions = [] } = useQuery({
+    queryKey: ['training-progress-details-quiz-sessions', selectedProgress?.user_id, selectedProgress?.content_id, selectedModuleQuizIds],
+    queryFn: async () => {
+      if (!selectedProgress?.user_id) return []
+
+      const orConditions: string[] = []
+      if (selectedProgress.content_id) {
+        orConditions.push(`quiz_entity_id.eq.${selectedProgress.content_id}`)
+        orConditions.push(`context_entity_id.eq.${selectedProgress.content_id}`)
+      }
+      if (selectedModuleQuizIds.length > 0) {
+        orConditions.push(`quiz_id.in.(${selectedModuleQuizIds.join(',')})`)
+      }
+      if (selectedModuleBlocks && selectedModuleBlocks.length > 0) {
+        const blockIds = selectedModuleBlocks.map(b => b.id)
+        orConditions.push(`context_entity_id.in.(${blockIds.join(',')})`)
+      }
+
+      if (orConditions.length === 0) return []
+
+      const { data, error } = await supabase
+        .from('unified_quiz_sessions')
+        .select(`
+          id,
+          user_id,
+          quiz_id,
+          quiz_entity_id,
+          context_type,
+          context_entity_id,
+          score_percentage,
+          correct_answers,
+          total_questions,
+          passed,
+          started_at,
+          completed_at,
+          unified_question_attempts (
+            id,
+            question_id,
+            selected_answer,
+            selected_options,
+            is_correct,
+            time_spent_seconds,
+            question:learning_questions (
+              id,
+              question_text,
+              question_type,
+              explanation
+            )
+          )
+        `)
+        .eq('user_id', selectedProgress.user_id)
+        .or(orConditions.join(','))
+        .order('completed_at', { ascending: false })
+
+      if (error) {
+        console.warn('Could not load unified quiz sessions for review:', error)
+        return []
+      }
+      return data || []
+    },
+    enabled: !!selectedProgress?.user_id && (!!selectedProgress?.content_id || selectedModuleQuizIds.length > 0)
+  })
+
   // ─── Effects ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -1440,12 +1503,47 @@ export function TrainingAssignmentsProvider({
       })
     })
 
+    // Merge authoritative attempts from unified_quiz_sessions
+    selectedQuizSessions.forEach((session: any) => {
+      const quizId = session.quiz_id || session.quiz_entity_id || session.context_entity_id
+      if (!quizId) return
+
+      const sessionReviewItems = (session.unified_question_attempts || []).map((att: any) => {
+        const rawAns = att.selected_answer || (Array.isArray(att.selected_options) ? att.selected_options.join(', ') : '')
+        return {
+          questionId: att.question_id,
+          questionText: att.question?.question_text || t('question', 'Question'),
+          selectedAnswer: rawAns || '—',
+          correctAnswer: '—',
+          correct: att.is_correct === true,
+          explanation: att.question?.explanation,
+          timeSpentSeconds: att.time_spent_seconds || 0
+        }
+      })
+
+      const existingResult = mergedResults.get(quizId)
+      const existingReview = existingResult?.reviewItems || []
+      const resolvedReview = sessionReviewItems.length > 0 ? sessionReviewItems : existingReview
+
+      mergedResults.set(quizId, {
+        ...existingResult,
+        quizId,
+        sessionId: session.id,
+        score: parseOptionalNumber(session.score_percentage) ?? existingResult?.score,
+        passed: typeof session.passed === 'boolean' ? session.passed : existingResult?.passed,
+        completedAt: session.completed_at || session.started_at || existingResult?.completedAt,
+        correctCount: parseOptionalNumber(session.correct_answers) ?? existingResult?.correctCount ?? (sessionReviewItems.filter((i: any) => i.correct).length || null),
+        totalQuestions: parseOptionalNumber(session.total_questions) ?? existingResult?.totalQuestions ?? (sessionReviewItems.length || null),
+        reviewItems: resolvedReview
+      })
+    })
+
     return Array.from(mergedResults.values()).sort((a, b) => {
       const aTime = new Date(a.completedAt || a.completed_at || 0).getTime()
       const bTime = new Date(b.completedAt || b.completed_at || 0).getTime()
       return bTime - aTime
     })
-  }, [getQuizResultReviewItems, parseOptionalNumber, selectedProgressMetadata, selectedQuizProgressRows])
+  }, [getQuizResultReviewItems, parseOptionalNumber, selectedProgressMetadata, selectedQuizProgressRows, selectedQuizSessions, t])
 
   const selectedQuizResultsMessage = useMemo(() => {
     if (selectedQuizResults.length > 0) return t('quizResultsDesc', 'Latest question-level review saved from the learner session.')

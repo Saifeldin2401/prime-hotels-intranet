@@ -246,7 +246,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
       '<h1>{{title}}</h1><p>{{message}}</p><p>Amount: {{amount}}</p><p><a href="{{action_url}}">Review Approval</a></p>',
     text_template:
       "Finance Approval Required | {{title}}\n\n{{message}}\nAmount: {{amount}}\n\n{{action_url}}",
-    from_name: "PHG Connect Finance",
+    from_name: "Altus Finance",
     from_email: "notifications@altus-advisory.com",
   },
   sales_pipeline_alert: {
@@ -258,7 +258,7 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
       '<h1>{{title}}</h1><p>{{message}}</p><p>Opportunity Stage: {{stage}}</p><p><a href="{{action_url}}">Open Sales Dashboard</a></p>',
     text_template:
       "Sales Alert | {{title}}\n\n{{message}}\nStage: {{stage}}\n\n{{action_url}}",
-    from_name: "PHG Connect Sales",
+    from_name: "Altus Sales",
     from_email: "notifications@altus-advisory.com",
   },
   management_kpi_alert: {
@@ -270,19 +270,19 @@ const defaultTemplates: Record<string, NotificationTemplateRow> = {
       '<h1>{{title}}</h1><p>{{message}}</p><p>Reporting Window: {{period}}</p><p><a href="{{action_url}}">Open Executive Dashboard</a></p>',
     text_template:
       "Management KPI Alert | {{title}}\n\n{{message}}\nWindow: {{period}}\n\n{{action_url}}",
-    from_name: "PHG Connect Management",
+    from_name: "Altus Management",
     from_email: "notifications@altus-advisory.com",
   },
   system_generic_alert: {
     template_key: "system_generic_alert",
     business_domain: "system",
     notification_type: "system",
-    subject_template: "PHG Connect Notification - {{title}}",
+    subject_template: "Altus Connect Notification - {{title}}",
     html_template:
-      '<h1>{{title}}</h1><p>{{message}}</p><p><a href="{{action_url}}">Open PHG Connect</a></p>',
+      '<h1>{{title}}</h1><p>{{message}}</p><p><a href="{{action_url}}">Open Altus Connect</a></p>',
     text_template:
-      "PHG Connect Notification | {{title}}\n\n{{message}}\n\n{{action_url}}",
-    from_name: "PHG Connect",
+      "Altus Connect Notification | {{title}}\n\n{{message}}\n\n{{action_url}}",
+    from_name: "Altus Connect",
     from_email: "notifications@altus-advisory.com",
   },
 };
@@ -1365,23 +1365,23 @@ function buildTemplateContext(
     title:
       isAr && payload.title_ar
         ? asText(payload.title_ar, "")
-        : asText(payload.title, "PHG Connect Notification"),
+        : asText(payload.title, "Altus Connect Notification"),
     message:
       isAr && payload.message_ar
         ? asText(payload.message_ar, "")
         : asText(
             payload.message,
             isAr
-              ? "لديك تحديث جديد في PHG Connect."
-              : "You have a new update in PHG Connect.",
+              ? "لديك تحديث جديد في Altus Connect."
+              : "You have a new update in Altus Connect.",
           ),
     action_url: actionUrl,
     action_label:
       isAr && payload.actionLabel_ar
         ? asText(payload.actionLabel_ar, "")
-        : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open PHG Connect"),
+        : asText(payload.actionLabel, isAr ? "فتح المنصة" : "Open Altus Connect"),
     app_url: appBaseUrl,
-    logo_url: appBaseUrl + "/prime-logo-white-full.png", // Corrected high-contrast logo
+    logo_url: appBaseUrl + "/altus-logo-official.png",
     recipient_name: recipientName || recipientEmail,
     lang: language,
     dir: isAr ? "rtl" : "ltr",
@@ -1392,8 +1392,8 @@ function buildTemplateContext(
     brand_gradient: branding.gradient,
     business_unit_label: isAr ? branding.labelAr : branding.labelEn,
     footer_text: isAr
-      ? "إشعار تلقائي من PHG Connect. تم الإرسال بناءً على إجراء داخل القسم أو مهمة/اعتماد مرتبط بك."
-      : "Automated notification from PRIME Connect. Sent based on an action in your department or an assignment.",
+      ? "إشعار تلقائي من Altus Connect. تم الإرسال بناءً على إجراء داخل القسم أو مهمة/اعتماد مرتبط بك."
+      : "Automated notification from Altus Connect. Sent based on an action in your department or an assignment.",
     has_data_box:
       payload.data_box ||
       payload.data_box_ar ||

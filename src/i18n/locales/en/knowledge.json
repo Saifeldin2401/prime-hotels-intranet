@@ -397,6 +397,8 @@
             "property_required": "Please select a property",
             "ai_success": "AI generation complete!",
             "ai_failed": "AI generation failed",
+            "checklist_success": "Interactive checklist generated successfully!",
+            "faqs_success": "Operational FAQs generated successfully!",
             "upload_success": "PDF uploaded successfully",
             "upload_error": "Failed to upload PDF: ",
             "only_pdf": "Only PDF files are allowed",

@@ -1,3 +1,4 @@
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { SyncStatus } from '@/components/common/SyncStatus'
 import {
@@ -310,6 +311,14 @@ export function Header({
 
             {/* Sync Status */}
             <SyncStatus className="hidden md:flex" />
+
+            {/* Language Switcher */}
+            <div id="language-switcher" className="text-white">
+              <LanguageSwitcher
+                variant="ghost"
+                className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2.5 rounded-lg border-transparent"
+              />
+            </div>
 
             {/* Notification Bell - Light Variant for Navy Header */}
             <div id="notifications-button" className="text-white">

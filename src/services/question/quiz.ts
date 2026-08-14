@@ -1,13 +1,15 @@
 import { supabase } from '@/lib/supabase';
-import type { AnswerSubmission, QuestionAttempt, QuizSession } from '@/types/questions';
+import type { AnswerSubmission, QuestionAttempt, QuestionGradeResult, QuizSession } from '@/types/questions';
 
 export async function recordAttempt(
     _userId: string,
     submission: AnswerSubmission
-): Promise<{ isCorrect: boolean; feedback?: string }> {
+): Promise<QuestionGradeResult> {
     // Server-side grading via SECURITY DEFINER RPC.
     // The server reads the answer key, grades, records the attempt in
-    // unified_question_attempts, and returns is_correct + explanation.
+    // unified_question_attempts, and returns is_correct + the reveal data
+    // (correct answer, explanation, per-option correctness/feedback) - none
+    // of which the client had access to before this call.
     const { data, error } = await supabase.rpc('grade_question_attempt', {
         p_question_id: submission.question_id,
         p_selected_answer: submission.selected_answer || null,
@@ -27,12 +29,19 @@ export async function recordAttempt(
         explanation?: string | null
         explanation_ar?: string | null
         correct_answer?: string | null
-        options?: Array<{ id: string; option_text: string; is_correct: boolean; display_order: number }> | null
+        options?: Array<{ id: string; option_text: string; is_correct: boolean; feedback?: string | null; display_order: number }> | null
     }
 
     return {
         isCorrect: result.is_correct,
         feedback: result.explanation || undefined,
+        correctAnswer: result.correct_answer || undefined,
+        explanation: result.explanation || undefined,
+        options: (result.options || []).map(o => ({
+            id: o.id,
+            is_correct: o.is_correct,
+            feedback: o.feedback || undefined,
+        })),
     }
 }
 

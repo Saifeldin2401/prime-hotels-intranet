@@ -97,7 +97,15 @@ export function ProgressDetailDialog() {
                   <div>
                     <p className="text-xs uppercase tracking-wider text-muted-foreground">{t('blocksCompleted', 'Blocks completed')}</p>
                     <p className="mt-1 font-medium">
-                      {Array.isArray(selectedProgressMetadata.completed_blocks) ? selectedProgressMetadata.completed_blocks.length : 0}
+                      {(() => {
+                        const metaBlocks = selectedProgressMetadata.completed_blocks
+                        if (Array.isArray(metaBlocks) && metaBlocks.length > 0) return metaBlocks.length
+                        if (selectedProgress.status === 'completed') return (selectedModuleBlocks?.length || 1)
+                        if (selectedProgress.progress_percentage > 0) {
+                          return Math.max(1, Math.round(((selectedProgress.progress_percentage || 0) / 100) * (selectedModuleBlocks?.length || 1)))
+                        }
+                        return 0
+                      })()}
                     </p>
                   </div>
                   <div>

@@ -33,7 +33,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const navigate = useNavigate()
   const location = useLocation()
   const { t } = useTranslation(['nav', 'common'])
-  const { groupedNavigation } = useNavigation()
+  const { groupedNavigation, favoriteItems } = useNavigation()
   const { profile, user, signOut } = useAuth()
   const { notifications, markAsRead, markAllAsRead } = useNotifications()
   const { hasPermission } = usePermissions()
@@ -48,6 +48,20 @@ export function AppLayout({ children }: AppLayoutProps) {
       useNavigationStore.getState().addRecentPage({ path: location.pathname, title: route.title })
     }
   }, [location.pathname])
+
+  const mappedFavorites = useMemo(
+    () =>
+      favoriteItems.map((item) => {
+        const Icon = item.icon
+        return {
+          title: t(item.title, { defaultValue: item.title }),
+          path: item.resolvedPath,
+          icon: <Icon size={16} />,
+          badgeCount: item.badgeCount,
+        }
+      }),
+    [favoriteItems, t]
+  )
 
   const groupedNavItems = useMemo(
     () =>
@@ -194,6 +208,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     <DashboardLayout
       navItems={navItems}
       groupedNavItems={groupedNavItems}
+      favoriteItems={mappedFavorites}
       workspaces={workspaces}
       currentWorkspaceId={currentProperty?.id}
       onChangeWorkspace={switchProperty}

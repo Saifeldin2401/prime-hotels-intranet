@@ -92,11 +92,10 @@
     "groups": {
         "personal_space": "مساحتي الشخصية",
         "hotel_operations": "العمليات الفندقية",
+        "knowledge_sop": "المعرفة والأكاديمية",
+        "hr_staff": "الموارد البشرية والفريق",
         "finance_revenue": "المالية والتجارية",
-        "hr_staff": "الموارد البشرية والتدريب",
-        "knowledge_sop": "المعرفة والسياسات",
-        "reports_analytics": "التقارير والتحليلات",
-        "administration": "إدارة النظام",
+        "administration": "الإدارة والتحليلات",
         "favorites": "المفضلة والاختصارات",
         "recents": "المزارة مؤخراً"
     },

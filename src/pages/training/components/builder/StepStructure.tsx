@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils'
 import { Plus, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AIOutlineDialog } from './AIOutlineDialog'
+import { SmartAICourseCreatorModal } from '@/components/training'
 import type { TrainingSection } from './trainingBuilderTypes'
 
 interface StepStructureProps {
@@ -141,16 +141,38 @@ export function StepStructure({
         )}
       </div>
 
-      <AIOutlineDialog
+      <SmartAICourseCreatorModal
         open={showAIOutline}
         onOpenChange={setShowAIOutline}
-        title={title}
-        setTitle={setTitle}
-        description={description}
-        setDescription={setDescription}
-        setSections={setSections}
-        setActiveSection={setActiveSection}
-        isRTL={isRTL}
+        initialTopic={title}
+        onApplyToBuilder={(generated) => {
+          if (generated.title && !title) setTitle(generated.title)
+          if (generated.description && !description) setDescription(generated.description)
+
+          const newSections = (generated.sections || []).map((sec: any, idx: number) => ({
+            id: `section_${Date.now()}_${idx}`,
+            title: sec.heading,
+            description: sec.summary,
+            order: sections.length + idx,
+            items: [
+              {
+                id: `block_${Date.now()}_${idx}`,
+                title: sec.heading,
+                type: (sec.suggestedBlockType === 'scenario' ? 'text' : sec.suggestedBlockType) as any,
+                content: sec.rich_content || `<h3>${sec.heading}</h3><p>${sec.summary}</p>`,
+                content_url: '',
+                content_data: { summary: sec.summary },
+                is_mandatory: true,
+                order: 0
+              }
+            ]
+          }))
+
+          setSections((prev) => [...prev, ...newSections])
+          if (newSections.length > 0) {
+            setActiveSection(newSections[0].id)
+          }
+        }}
       />
     </div>
   )

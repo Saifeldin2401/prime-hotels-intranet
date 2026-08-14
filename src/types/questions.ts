@@ -260,6 +260,17 @@ export interface AnswerSubmission {
     session_id?: string
 }
 
+// Returned by grade_question_attempt (server-side grading RPC) after an
+// answer is submitted. Everything here is safe to reveal only because
+// grading already happened - it must never be fetched ahead of an answer.
+export interface QuestionGradeResult {
+    isCorrect: boolean
+    feedback?: string
+    correctAnswer?: string
+    explanation?: string
+    options?: Array<{ id: string; is_correct: boolean; feedback?: string }>
+}
+
 // ============================================================================
 // ANALYTICS TYPES
 // ============================================================================

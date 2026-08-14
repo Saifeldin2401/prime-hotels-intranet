@@ -53,7 +53,7 @@ export function useDocumentAnalytics(documentId: string) {
 
       if (uniqueError) throw uniqueError
 
-      let viewersByDepartment: Array<{ department_id: string; department_name: string; count: number }> = []
+      let viewersByDepartment: Array<{ department_name: string; count: number }> = []
       try {
         const { data: deptData, error: deptError } = await supabase.rpc('get_document_viewers_by_department', {
           p_document_id: documentId

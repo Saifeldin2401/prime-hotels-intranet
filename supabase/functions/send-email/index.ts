@@ -208,7 +208,7 @@ serve(async (req) => {
       body.subject ||
       renderTemplate(
         sanitizedTemplate?.subject_template ||
-          "PHG Connect Notification - {{title}}",
+          "Altus Connect Notification - {{title}}",
         context,
       );
     // Fallback chain: caller HTML → DB template → code template → generic default

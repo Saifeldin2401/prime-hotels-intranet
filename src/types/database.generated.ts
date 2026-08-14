@@ -15248,6 +15248,17 @@ export type Database = {
         Returns: Json
       }
       complete_password_reset: { Args: never; Returns: undefined }
+      complete_training_module: {
+        Args: {
+          p_assignment_id?: string
+          p_completed_block_ids?: string[]
+          p_last_block_id?: string
+          p_last_block_index?: number
+          p_module_id: string
+          p_time_spent_seconds?: number
+        }
+        Returns: Json
+      }
       create_notification: {
         Args: {
           p_action_url?: string
@@ -15698,6 +15709,10 @@ export type Database = {
           unique_accessors: number
         }[]
       }
+      get_questions_for_attempt: {
+        Args: { p_question_ids: string[] }
+        Returns: Json
+      }
       get_questions_pass_rates: {
         Args: { p_question_ids: string[] }
         Returns: {
@@ -15707,6 +15722,7 @@ export type Database = {
           total_attempts: number
         }[]
       }
+      get_quiz_for_player: { Args: { p_quiz_id: string }; Returns: Json }
       get_reporting_chain: {
         Args: { p_employee_id: string }
         Returns: {

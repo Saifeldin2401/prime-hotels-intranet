@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useQuestionsForContext, useRecordAttempt } from '@/hooks/useQuestions'
 import { cn } from '@/lib/utils'
+import type { QuestionGradeResult } from '@/types/questions'
 import {
     Brain,
     Sparkles,
@@ -39,7 +40,7 @@ export function InlineQuizWidget({
     const recordAttempt = useRecordAttempt()
 
     const [currentIndex, setCurrentIndex] = useState(0)
-    const [answers, setAnswers] = useState<Record<string, { answer: string | string[]; isCorrect: boolean }>>({})
+    const [answers, setAnswers] = useState<Record<string, { answer: string | string[]; result: QuestionGradeResult }>>({})
     const [isStarted, setIsStarted] = useState(false)
     const [hintUsed, setHintUsed] = useState(false)
     const [startTime, setStartTime] = useState<number | null>(null)
@@ -48,7 +49,7 @@ export function InlineQuizWidget({
     const displayQuestions = questions?.slice(0, maxQuestions) || []
     const currentQuestion = displayQuestions[currentIndex]
     const isComplete = currentIndex >= displayQuestions.length && Object.keys(answers).length > 0
-    const correctCount = Object.values(answers).filter(a => a.isCorrect).length
+    const correctCount = Object.values(answers).filter(a => a.result.isCorrect).length
     const totalCount = Object.keys(answers).length
 
     if (isLoading) {
@@ -91,7 +92,7 @@ export function InlineQuizWidget({
 
             setAnswers(prev => ({
                 ...prev,
-                [currentQuestion.id]: { answer, isCorrect: result.isCorrect }
+                [currentQuestion.id]: { answer, result }
             }))
         } catch (error) {
             console.error('Failed to record attempt:', error)
@@ -218,7 +219,7 @@ export function InlineQuizWidget({
                         onNext={handleNext}
                         onHintUsed={() => setHintUsed(true)}
                         previousAnswer={answers[currentQuestion.id]?.answer}
-                        isCorrect={answers[currentQuestion.id]?.isCorrect}
+                        gradeResult={answers[currentQuestion.id]?.result}
                         showFeedback
                         showHint
                         compact

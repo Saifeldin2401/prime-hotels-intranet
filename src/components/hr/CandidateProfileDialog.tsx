@@ -52,7 +52,9 @@ interface ReferralHistoryItem {
     change_note: string | null
     created_at: string
     changed_by: string | null
-    changer: Array<{ id: string; full_name: string | null }> | null
+    // referral_history.changed_by has a single FK to profiles, so PostgREST
+    // embeds it as one object (or null), not an array.
+    changer: { id: string; full_name: string | null } | null
 }
 
 interface CandidateProfileDialogProps {
@@ -377,7 +379,7 @@ export function CandidateProfileDialog({
                                             </p>
                                             <p className="text-xs text-gray-500">
                                                 {formatRelativeTime(item.created_at)}
-                                                {item.changer?.[0]?.full_name ? ` • ${item.changer[0].full_name}` : ''}
+                                                {item.changer?.full_name ? ` • ${item.changer.full_name}` : ''}
                                             </p>
                                             {item.change_note && (
                                                 <p className="text-xs text-gray-600 mt-1">{item.change_note}</p>

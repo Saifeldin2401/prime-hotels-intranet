@@ -233,7 +233,7 @@ serve(async (req) => {
 });
 
 function getBeautifulEidTemplate(appUrl: string): string {
-  const logoUrl = `${appUrl}/prime-logo-white-full.png`;
+  const logoUrl = `${appUrl}/altus-logo-official.png`;
   const year = new Date().getFullYear().toString();
 
   return `
@@ -242,7 +242,7 @@ function getBeautifulEidTemplate(appUrl: string): string {
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eid Mubarak from PRIME Hotels</title>
+    <title>Eid Mubarak from Altus Hospitality</title>
 </head>
 <body style="margin: 0; padding: 0; background-color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
     <div style="background-color: #f8fafc; padding: 40px 10px;">
@@ -251,7 +251,7 @@ function getBeautifulEidTemplate(appUrl: string): string {
             
             <!-- Header (Dark Premium) -->
             <div style="padding: 40px 20px; text-align: center; background: linear-gradient(135deg, #0B1C3E 0%, #1a365d 100%);">
-                <img src="${logoUrl}" alt="PRIME Hotels Group" style="height: 48px; width: auto; margin-bottom: 24px;">
+                <img src="${logoUrl}" alt="Altus Hospitality" style="height: 48px; width: auto; margin-bottom: 24px;">
                 <br>
                 <div style="display: inline-block; padding: 6px 20px; border: 1px solid #D4AF37; border-radius: 50px; color: #D4AF37; font-size: 14px; font-weight: 600; letter-spacing: 2px;">
                     EID MUBARAK • عيد مبارك

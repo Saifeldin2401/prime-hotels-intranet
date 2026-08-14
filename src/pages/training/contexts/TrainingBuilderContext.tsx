@@ -339,7 +339,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const [passingScore, setPassingScore] = useState('80')
   const [maxAttempts, setMaxAttempts] = useState('3')
   const [allowRetake, setAllowRetake] = useState(true)
-  const [category, setCategory] = useState('')
+  const [category, setCategory] = useState('operations')
   const [difficultyLevel, setDifficultyLevel] = useState('beginner')
   const [audience, setAudience] = useState('all')
   const [contentLanguage, setContentLanguage] = useState('bilingual')
@@ -363,7 +363,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     setEstimatedDuration(normalizedEstimate ? normalizedEstimate.toString() : '')
     setUseEstimatedDuration(!!normalizedEstimate)
     setValidityPeriod(loadedModule.validity_period_days?.toString() || '')
-    setCategory(loadedModule.category || '')
+    setCategory(loadedModule.category || 'operations')
     setDifficultyLevel(loadedModule.difficulty_level || 'beginner')
     setCertificateEnabled(loadedModule.certificate_enabled ?? true)
     setPassingScore(loadedModule.passing_score_percentage?.toString() || '80')
@@ -495,7 +495,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   // -------------------------------------------------------------------------
 
   const [activeSection, setActiveSection] = useState<string | null>(null)
-  const [builderStep, setBuilderStep] = useState<BuilderStep>(() => (moduleId ? 'content' : 'setup'))
+  const [builderStep, setBuilderStep] = useState<BuilderStep>('content')
   const [selectedContent, setSelectedContent] = useState<ContentBlockForm | null>(null)
   const [showTitleField, setShowTitleField] = useState(true)
   const [showAdvancedBlockOptions, setShowAdvancedBlockOptions] = useState(false)
@@ -663,16 +663,13 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   }
 
   // -------------------------------------------------------------------------
-  // Steps / navigation
+  // Steps / navigation (Streamlined 3-Step Flow)
   // -------------------------------------------------------------------------
 
   const steps = [
-    { key: 'setup' as BuilderStep, label: t('builder.steps.setup'), description: t('builder.steps.setupDesc') },
-    { key: 'structure' as BuilderStep, label: t('builder.steps.structure'), description: t('builder.steps.structureDesc') },
-    { key: 'content' as BuilderStep, label: t('builder.steps.content'), description: t('builder.steps.contentDesc') },
-    { key: 'rules' as BuilderStep, label: t('builder.steps.rules'), description: t('builder.steps.rulesDesc') },
-    { key: 'preview' as BuilderStep, label: t('builder.steps.preview'), description: t('builder.steps.previewDesc') },
-    { key: 'publish' as BuilderStep, label: t('builder.steps.publish'), description: t('builder.steps.publishDesc') }
+    { key: 'content' as BuilderStep, label: t('builder.steps.content', 'Course Editor'), description: t('builder.steps.contentDesc', 'Design sections, lessons, and content') },
+    { key: 'rules' as BuilderStep, label: t('builder.steps.rules', 'Rules & Settings'), description: t('builder.steps.rulesDesc', 'Passing score, certificates, and limits') },
+    { key: 'publish' as BuilderStep, label: t('builder.steps.publish', 'Review & Publish'), description: t('builder.steps.publishDesc', 'Pre-flight check and publish') }
   ] as const
 
   const setupComplete = title.trim().length > 0 && !!category

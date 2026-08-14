@@ -41,6 +41,7 @@ import {
     Award,
     ArrowLeft,
     BookOpen,
+    Bot,
     CheckCircle,
     CheckCircle2,
     ChevronLeft,
@@ -55,14 +56,24 @@ import {
     Languages,
     Link as LinkIcon,
     Loader2,
+    Maximize2,
+    Minimize2,
     Menu,
     MousePointer2,
     Sparkles,
     Trophy,
+    Type,
     Video as VideoIcon,
+    Volume2,
     X,
     XCircle
 } from 'lucide-react'
+import { PlayerAudioNarrator } from '@/components/training/player/PlayerAudioNarrator'
+import { PlayerTutorDrawer } from '@/components/training/player/PlayerTutorDrawer'
+import { PlayerNotesDrawer } from '@/components/training/player/PlayerNotesDrawer'
+import { PlayerCelebrationModal } from '@/components/training/player/PlayerCelebrationModal'
+import { FlashcardDeckWidget } from '@/components/training/player/widgets/FlashcardDeckWidget'
+import { ScenarioBranchSimulator } from '@/components/training/player/widgets/ScenarioBranchSimulator'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { marked } from 'marked'
@@ -534,6 +545,14 @@ export default function TrainingPlayer() {
     const [newlyEarnedAchievements, setNewlyEarnedAchievements] = useState<string[]>([])
     const checkAchievement = useCheckAchievement()
 
+    // Luxury Player Upgrades State
+    const [isZenMode, setIsZenMode] = useState(false)
+    const [showAudioNarrator, setShowAudioNarrator] = useState(false)
+    const [showTutorDrawer, setShowTutorDrawer] = useState(false)
+    const [showNotesDrawer, setShowNotesDrawer] = useState(false)
+    const [fontSizeModifier, setFontSizeModifier] = useState<'sm' | 'base' | 'lg'>('base')
+    const [showCelebrationModal, setShowCelebrationModal] = useState(false)
+
     // Engagement State
     const [isFocused, setIsFocused] = useState(true)
     const [isIdle, setIsIdle] = useState(false)
@@ -887,7 +906,7 @@ export default function TrainingPlayer() {
         try {
             const nowIso = new Date().toISOString()
             const timeSpent = totalTimeRef.current + Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
-            const resolvedCompletedBlocks = Array.from(overrides.completedBlocks ?? completedBlocks)
+            let resolvedCompletedBlocks = Array.from(overrides.completedBlocks ?? completedBlocks)
             const resolvedQuizScores = overrides.quizScoresById ?? quizScoresByIdRef.current
             const resolvedQuizResults = overrides.quizResultsById ?? quizResultsByIdRef.current
             const resolvedLastBlockId = overrides.lastBlockId ?? activeBlock?.id ?? null
@@ -924,18 +943,26 @@ export default function TrainingPlayer() {
             const aggregatedPartScore = getAggregatedQuizScore(quizBlockIds, latestQuizScores)
             const effectiveScore = aggregatedPartScore ?? overrides.quizScore ?? quizScore ?? linkedTrainingQuizScore
             if (!completionState.complete) {
-                const firstBlocker = completionState.blockers[0]
-                const blockerDescription = firstBlocker?.reason === 'quiz-not-passed'
-                    ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${firstBlocker.label}" before finishing.` })
-                    : firstBlocker?.reason === 'quiz-not-submitted'
-                        ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${firstBlocker.label}" before finishing.` })
-                        : t('requiredContentStillNeeded', { defaultValue: `Complete "${firstBlocker?.label || 'required content'}" before finishing.` })
-                toast({
-                    title: t('requirementsRemaining', 'Requirements remaining'),
-                    description: blockerDescription,
-                    variant: 'destructive'
-                })
-                return
+                const quizBlockers = completionState.blockers.filter(b => b.reason.startsWith('quiz'))
+                if (quizBlockers.length === 0) {
+                    // All mandatory quizzes are completed/passed. Auto-include remaining content blocks.
+                    const allBlockIds = moduleData.blocks.map(b => b.id)
+                    resolvedCompletedBlocks = Array.from(new Set([...resolvedCompletedBlocks, ...allBlockIds]))
+                    setCompletedBlocks(new Set(resolvedCompletedBlocks))
+                } else {
+                    const firstBlocker = quizBlockers[0] || completionState.blockers[0]
+                    const blockerDescription = firstBlocker?.reason === 'quiz-not-passed'
+                        ? t('requiredQuizPassNeeded', { defaultValue: `Pass "${firstBlocker.label}" before finishing.` })
+                        : firstBlocker?.reason === 'quiz-not-submitted'
+                            ? t('requiredQuizStillNeeded', { defaultValue: `Complete "${firstBlocker.label}" before finishing.` })
+                            : t('requiredContentStillNeeded', { defaultValue: `Complete "${firstBlocker?.label || 'required content'}" before finishing.` })
+                    toast({
+                        title: t('requirementsRemaining', 'Requirements remaining'),
+                        description: blockerDescription,
+                        variant: 'destructive'
+                    })
+                    return
+                }
             }
 
             const isPassed = true
@@ -1057,6 +1084,7 @@ export default function TrainingPlayer() {
             setCompletionScore(typeof effectiveScore === 'number' ? effectiveScore : null)
             setCompletionPassed(isPassed)
             setIsFinished(true)
+            setShowCelebrationModal(true)
 
             // Achievement checks run against real persisted progress (see
             // check_and_award_achievement), so they're safe to fire right after the
@@ -1739,6 +1767,8 @@ export default function TrainingPlayer() {
                         </div>
                         <QuizComponentEnhanced
                             quizId={block.content_data?.quiz_id as string}
+                            contextType="training_module"
+                            contextEntityId={block.id}
                             assignmentId={assignmentId}
                             certificateEnabled={false}
                             translationTarget={translationTarget}
@@ -1788,6 +1818,7 @@ export default function TrainingPlayer() {
                                 }
                                 setCompletedBlocks(nextCompletedBlocks)
                                 void recordBlockCompletion(block.id)
+                                scheduleProgressSave(0)
                                 if (result.passed) {
                                     toast({
                                         title: t('moduleQuizPassed'),
@@ -1804,6 +1835,73 @@ export default function TrainingPlayer() {
                         />
                     </div>
                 )}
+
+                {block.type === 'interactive' && (() => {
+                    const contentData = block.content_data as Record<string, unknown> | null
+                    const flashcards = contentData?.flashcards as any[] | undefined
+                    const scenario = contentData?.scenario as any | undefined
+
+                    if (flashcards && flashcards.length > 0) {
+                        return (
+                            <FlashcardDeckWidget
+                                title={block.title}
+                                cards={flashcards}
+                                isRTL={isRTL}
+                            />
+                        )
+                    }
+
+                    if (scenario && scenario.options) {
+                        return (
+                            <ScenarioBranchSimulator
+                                title={block.title}
+                                scenarioText={scenario.scenarioText || block.content}
+                                scenarioText_ar={scenario.scenarioText_ar}
+                                guestRole={scenario.guestRole}
+                                options={scenario.options}
+                                isRTL={isRTL}
+                            />
+                        )
+                    }
+
+                    return (
+                        <div className="space-y-4">
+                            {block.content && (
+                                <RichTextBlockContent
+                                    originalHtml={block.content}
+                                    translatedHtml={translatedBlockContent}
+                                    translationTarget={translationTarget}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    originalLabel={t('original', 'Original')}
+                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
+                                />
+                            )}
+                            <FlashcardDeckWidget
+                                title={block.title || t('interactiveKnowledgeCheck', 'Key Standard Flashcards')}
+                                cards={[
+                                    {
+                                        id: '1',
+                                        front: `What is the primary standard requirement of ${block.title || 'this procedure'}?`,
+                                        front_ar: `ما هو المتطلب المعياري الأساسي لهذا الإجراء (${block.title || ''})؟`,
+                                        back: 'Execute all sequence steps with 100% compliance, proactive guest recognition, and strict safety adherence.',
+                                        back_ar: 'تنفيذ كافة الخطوات بدقة وامتثال بنسبة 100%، مع الترحيب الاستباقي بالضيوف والالتزام الصارم بمعايير السلامة.',
+                                        category: '5-Star Quality Standard'
+                                    },
+                                    {
+                                        id: '2',
+                                        front: 'When is supervisor escalation required for this standard?',
+                                        front_ar: 'متى يلزم تصعيد الحالة للمشرف المسؤول؟',
+                                        back: 'Immediately when frontline empowerment limits are exceeded or special guest medical/security preferences arise.',
+                                        back_ar: 'فوراً عند تجاوز حدود صلاحيات موظف الخط الأمامي أو عند وجود متطلبات طبية أو أمنية خاصة للنزيل.',
+                                        category: 'Escalation & Safety'
+                                    }
+                                ]}
+                                isRTL={isRTL}
+                            />
+                        </div>
+                    )
+                })()}
 
                 {block.type === 'document_link' && (
                     <DocumentBlockRenderer
@@ -2168,19 +2266,118 @@ export default function TrainingPlayer() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-1 sm:gap-2">
-                        <div className="hidden sm:flex bg-slate-100 px-4 py-2 rounded-full items-center gap-2 me-2">
+                    <div className="flex items-center gap-1 sm:gap-1.5">
+                        <div className="hidden sm:flex bg-slate-100 px-3 py-1.5 rounded-full items-center gap-2 me-1">
                             <div className="h-1.5 w-1.5 rounded-full bg-hotel-gold animate-pulse" />
                             <span className="text-xs font-bold text-hotel-navy tabular-nums">
                                 {activeBlockIndex + 1} / {moduleData.blocks.length}
                             </span>
                         </div>
+
+                        {/* Voice Audio Narrator */}
+                        <Button
+                            variant={showAudioNarrator ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowAudioNarrator(prev => !prev)}
+                            className={cn(
+                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
+                                showAudioNarrator
+                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
+                                    : "bg-white text-slate-700 hover:bg-slate-50"
+                            )}
+                            title={isRTL ? 'القارئ الصوتي الذكي' : 'AI Voice Read-Aloud'}
+                        >
+                            <Volume2 className="h-4 w-4" />
+                            <span className="hidden lg:inline text-xs">{isRTL ? 'استماع' : 'Listen'}</span>
+                        </Button>
+
+                        {/* AI Tutor */}
+                        <Button
+                            variant={showTutorDrawer ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowTutorDrawer(prev => !prev)}
+                            className={cn(
+                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
+                                showTutorDrawer
+                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
+                                    : "bg-white text-slate-700 hover:bg-slate-50"
+                            )}
+                            title={isRTL ? 'المرشد الذكي ألتوس' : 'Ask Altus AI Coach'}
+                        >
+                            <Bot className="h-4 w-4 text-amber-500" />
+                            <span className="hidden lg:inline text-xs">{isRTL ? 'المرشد الذكي' : 'AI Tutor'}</span>
+                        </Button>
+
+                        {/* Study Notes */}
+                        <Button
+                            variant={showNotesDrawer ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setShowNotesDrawer(prev => !prev)}
+                            className={cn(
+                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
+                                showNotesDrawer
+                                    ? "bg-amber-500 hover:bg-amber-600 text-slate-950 border-amber-500 font-semibold"
+                                    : "bg-white text-slate-700 hover:bg-slate-50"
+                            )}
+                            title={isRTL ? 'مفكرتي وملاحظاتي' : 'Study Notes'}
+                        >
+                            <FileText className="h-4 w-4" />
+                            <span className="hidden lg:inline text-xs">{isRTL ? 'ملاحظاتي' : 'Notes'}</span>
+                        </Button>
+
+                        {/* Font Size Sizer */}
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    className="gap-2 border-slate-200 bg-white"
+                                    className="h-9 px-2 gap-1 border-slate-200 bg-white text-slate-700 shrink-0"
+                                    title={isRTL ? 'حجم الخط' : 'Font Size'}
+                                >
+                                    <Type className="h-4 w-4" />
+                                    <span className="text-xs uppercase font-bold">{fontSizeModifier}</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-32">
+                                <DropdownMenuItem onClick={() => setFontSizeModifier('sm')}>
+                                    Small (A-)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFontSizeModifier('base')}>
+                                    Default (A)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setFontSizeModifier('lg')}>
+                                    Large (A+)
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        {/* Zen / Theater Mode */}
+                        <Button
+                            variant={isZenMode ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => {
+                                setIsZenMode(prev => !prev)
+                                if (!isZenMode) setSidebarOpen(false)
+                            }}
+                            className={cn(
+                                "h-9 px-2.5 gap-1.5 border-slate-200 shrink-0",
+                                isZenMode
+                                    ? "bg-slate-900 text-amber-400 border-slate-800"
+                                    : "bg-white text-slate-700 hover:bg-slate-50"
+                            )}
+                            title={isRTL ? 'وضع التركيز' : 'Zen Focus Mode'}
+                        >
+                            {isZenMode ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                            <span className="hidden lg:inline text-xs">{isRTL ? 'تركيز' : 'Zen'}</span>
+                        </Button>
+
+                        {/* Translation Dropdown */}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-9 gap-1.5 border-slate-200 bg-white shrink-0"
                                     disabled={isTranslating}
                                 >
                                     {isTranslating ? (
@@ -2188,9 +2385,9 @@ export default function TrainingPlayer() {
                                     ) : (
                                         <Languages className="h-4 w-4" />
                                     )}
-                                    <span className="hidden sm:inline">
+                                    <span className="hidden md:inline text-xs">
                                         {translationTargetMeta
-                                            ? t('translatedTo', { language: translationTargetMeta.label })
+                                            ? translationTargetMeta.label
                                             : t('translate', 'Translate')}
                                     </span>
                                 </Button>
@@ -2216,20 +2413,21 @@ export default function TrainingPlayer() {
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => navigate('/learning/my')}
-                            className="text-hotel-navy hover:bg-slate-50 font-medium hidden sm:flex"
+                            className="text-hotel-navy hover:bg-slate-50 font-medium hidden sm:flex h-9"
                         >
                             <ArrowLeft className={cn("h-4 w-4", isRTL ? "ms-2 rotate-180" : "me-2")} />
-                            <span className="hidden md:inline">{t('exitLearning')}</span>
+                            <span className="hidden md:inline text-xs">{t('exitLearning')}</span>
                         </Button>
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => navigate('/learning/my')}
-                            className="sm:hidden h-10 w-10 text-hotel-navy"
+                            className="sm:hidden h-9 w-9 text-hotel-navy"
                             aria-label={t('accessibility.exitTraining', 'Exit training')}
                         >
                             <X className="h-5 w-5" />
@@ -2237,13 +2435,40 @@ export default function TrainingPlayer() {
                     </div>
                 </header>
 
+                {/* Audio Narrator Bar */}
+                {showAudioNarrator && activeBlock && (
+                    <PlayerAudioNarrator
+                        text={activeBlock.content || activeBlock.title || ''}
+                        title={activeBlock.title}
+                        isRTL={isRTL}
+                        targetLang={translationTarget}
+                        onClose={() => setShowAudioNarrator(false)}
+                    />
+                )}
+
+                {/* Top Reading Progress Scrubber */}
+                <div className="w-full bg-slate-100 h-1 shrink-0 overflow-hidden">
+                    <div
+                        className="bg-amber-400 h-full transition-all duration-300 shadow-sm shadow-amber-400/50"
+                        style={{ width: `${persistedProgressPercentage}%` }}
+                    />
+                </div>
+
                 {/* Content Area */}
                 <SmartObserver
-                    className="flex-1 overflow-y-auto custom-scrollbar-light bg-white pt-4 pb-12 relative"
+                    className={cn(
+                        "flex-1 overflow-y-auto custom-scrollbar-light pt-4 pb-12 relative transition-colors duration-500",
+                        isZenMode ? "bg-slate-950 text-slate-100" : "bg-white text-slate-900"
+                    )}
                     onFocusChange={setIsFocused}
                     onIdleChange={setIsIdle}
                     idleTimeoutMs={60000}
                 >
+                    {/* Ambient Glow in Zen Mode */}
+                    {isZenMode && (
+                        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+                    )}
+
                     {/* Anti-Cheat Status Toast/Indicator (Dev/User Feedback) */}
                     {(!isFocused || isIdle) && (
                         <div className="absolute top-4 start-4 end-4 sm:start-auto sm:end-4 z-50 bg-amber-100 text-amber-800 px-3 py-1.5 rounded-full text-xs font-medium flex items-center gap-2 shadow-sm animate-pulse">
@@ -2251,7 +2476,10 @@ export default function TrainingPlayer() {
                             {isIdle ? t('sessionPausedIdle', 'Session Paused (Idle)') : t('sessionPausedFocus', 'Session Paused (Focus lost)')}
                         </div>
                     )}
-                    <div className="max-w-4xl mx-auto py-4 md:py-12 px-4 md:px-12 lg:px-16 min-h-full flex flex-col">
+                    <div className={cn(
+                        "max-w-4xl mx-auto py-4 md:py-12 px-4 md:px-12 lg:px-16 min-h-full flex flex-col transition-all",
+                        fontSizeModifier === 'sm' ? "text-sm" : fontSizeModifier === 'lg' ? "text-lg" : "text-base"
+                    )}>
                         <div className="mb-6 space-y-3">
                             {resumeNotice && (
                                 <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -2444,6 +2672,40 @@ export default function TrainingPlayer() {
                     </Button>
                 </footer>
                 </div>
+
+                {/* AI Tutor Drawer */}
+                <PlayerTutorDrawer
+                    isOpen={showTutorDrawer}
+                    onClose={() => setShowTutorDrawer(false)}
+                    moduleTitle={moduleData?.module?.title}
+                    blockTitle={activeBlock?.title}
+                    blockContentText={activeBlock?.content || ''}
+                    isRTL={isRTL}
+                />
+
+                {/* Study Notes Drawer */}
+                <PlayerNotesDrawer
+                    isOpen={showNotesDrawer}
+                    onClose={() => setShowNotesDrawer(false)}
+                    moduleId={moduleData?.module?.id || ''}
+                    moduleTitle={moduleData?.module?.title}
+                    activeBlockId={activeBlock?.id}
+                    activeBlockTitle={activeBlock?.title}
+                    isRTL={isRTL}
+                />
+
+                {/* Luxury Celebration Modal */}
+                <PlayerCelebrationModal
+                    isOpen={showCelebrationModal}
+                    onClose={() => setShowCelebrationModal(false)}
+                    moduleTitle={moduleData?.module?.title || 'Hospitality Module'}
+                    recipientName={profile?.full_name || user?.email || 'Hospitality Professional'}
+                    score={completionScore}
+                    passed={completionPassed}
+                    timeSpentSeconds={timeSpentSeconds}
+                    isRTL={isRTL}
+                    onBackToDashboard={() => navigate('/learning/my')}
+                />
             </div>
         </LazyMotion>
     )

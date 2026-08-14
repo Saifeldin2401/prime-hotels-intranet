@@ -660,17 +660,12 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
         }
 
       } catch (e) {
-
         console.warn(`Quiz generation model ${model} failed:`, e)
-
       }
-
     }
 
-
-
-    return heuristicQuiz()
-
+    console.warn('🔥 Engaging Smart Operational Hotel Quiz Fallback.')
+    return generateHotelQuizFallback(context, language, count)
   },
 
   /**
@@ -700,47 +695,51 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
     const language = request.targetLanguage || 'English'
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
     const sectionGuidance = request.sectionCount
-      ? `Aim for approximately ${request.sectionCount} sections.`
-      : 'Use as many sections as the material naturally supports (typically 3-8).'
+      ? `Generate EXACTLY ${request.sectionCount} comprehensive sections.`
+      : 'Generate 4-6 comprehensive sections covering foundational standards to advanced mastery.'
 
-    const prompt = `You are a Senior Hotel Training Curriculum Designer. Read the source material below and propose a STRUCTURAL outline for a training module.
+    const prompt = `You are a Senior Hotel Operational Training Director for Altus Hotels. Read the source material or topic below and create a COMPLETE, PRODUCTION-READY hotel training module with rich, actionable educational content and scenario-based quiz checkpoints.
 
-    Target Audience: Hotel Staff.
+    Target Audience: Luxury Hotel Staff & Operations Teams.
     Target Language: ${language}
     ${sectionGuidance}
 
-    CRITICAL RULES:
-    - This is a STRUCTURE only. Do NOT write full paragraphs of finished training content.
-    - "summary" fields must be 1-2 short sentences describing what that section should cover, not the finished content itself.
-    - "suggestedBlockType" must be exactly one of: "text", "video", "document_link".
-    - Suggest quiz checkpoints only where pedagogically useful, referencing the 0-based index of the section they should follow.
-    ${isArabic ? '- OUTPUT ONLY IN ARABIC. Translate content where necessary.' : ''}
+    CRITICAL RULES FOR REAL HOTEL OPERATIONAL CONTENT:
+    - Each section MUST contain substantial, ready-to-teach "rich_content" in clean, semantic HTML format (<h3>, <p>, <ul>, <li>, <strong>, <blockquote>).
+    - Include REAL, ACTIONABLE step-by-step Standard Operating Procedures (SOPs), actual guest dialogue scripts ("Welcome to Altus, Mr. Smith..."), quality standards, and critical dos and don'ts.
+    - NEVER generate placeholder text, generic summaries, or "Lorem ipsum". Write the full, professional hotel operational guidelines.
+    - "suggestedBlockType" must be one of: "text", "video", "document_link", "scenario".
+    - Include realistic "suggestedQuizCheckpoints" testing real-world operational scenarios.
+    ${isArabic ? '- OUTPUT FULLY IN ARABIC (العربية). All headings, rich_content, scripts, and quiz checkpoints must be in professional Arabic.' : ''}
 
     Return VALID JSON ONLY with this exact structure:
     {
-      "title": "Suggested module title",
-      "description": "One or two sentence module description",
+      "title": "Clear, Professional Course Title",
+      "description": "Comprehensive 2-3 sentence course description and learning objectives",
       "sections": [
-        { "heading": "Section heading", "suggestedBlockType": "text", "summary": "What this section should cover" }
+        {
+          "heading": "Section 1: Specific Standard Heading",
+          "suggestedBlockType": "text",
+          "summary": "Concise summary of learning goals",
+          "rich_content": "<h3>Standard Operating Procedure</h3><p>Detailed explanation...</p><ul><li><strong>Step 1:</strong> Action...</li><li><strong>Step 2:</strong> Action...</li></ul><blockquote><strong>Guest Interaction Script:</strong> 'Exact words to say...'</blockquote>"
+        }
       ],
       "suggestedQuizCheckpoints": [
-        { "afterSectionIndex": 0, "topic": "What the checkpoint should test" }
+        { "afterSectionIndex": 0, "topic": "Practical scenario testing understanding of Section 1" }
       ]
     }
 
     Do not add markdown formatting like \`\`\`json. Just the raw JSON object.
 
-    Source Material:
+    Source Material / Topic:
     ${context}`
 
     for (const model of FALLBACK_MODELS) {
-
       try {
-
         const generatedText = await callHuggingFace(model, prompt)
         const parsed = safeParseJson<ModuleOutline>(generatedText, false)
         if (parsed && parsed.title && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
-          const validBlockTypes = new Set(['text', 'video', 'document_link'])
+          const validBlockTypes = new Set(['text', 'video', 'document_link', 'scenario'])
           const sections = parsed.sections
             .filter(section => !!section?.heading)
             .map(section => ({
@@ -748,7 +747,8 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
               suggestedBlockType: validBlockTypes.has(section.suggestedBlockType)
                 ? section.suggestedBlockType
                 : 'text' as const,
-              summary: section.summary || ''
+              summary: section.summary || '',
+              rich_content: section.rich_content || `<h3>${section.heading}</h3><p>${section.summary}</p>`
             }))
 
           if (sections.length > 0) {
@@ -764,18 +764,204 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
             }
           }
         }
-
       } catch (e) {
-
         console.warn(`Outline generation model ${model} failed:`, e)
-
       }
-
     }
 
-    console.warn('🔥 All AI models failed for outline generation. Engaging Smart Local Fallback.')
-    return heuristicOutline(context)
+    console.warn('🔥 Engaging Smart Operational Hotel Fallback Engine.')
+    return generateRichHotelModuleFallback(context, language, request.sectionCount || 4)
+  },
 
+  /**
+   * Deeply expands a single lesson/section into a comprehensive, publication-grade
+   * 5-star operational standard operating procedure (600-800 words) formatted in clean semantic HTML.
+   */
+  async expandLessonContent(request: {
+    courseTitle?: string
+    sectionHeading: string
+    sectionSummary?: string
+    department?: string
+    language?: string
+  }): Promise<string> {
+    const language = request.language || 'English'
+    const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+    const department = request.department || 'Hotel Operations'
+
+    const prompt = isArabic
+      ? `أنت خبير ومدير تدريب وتطوير فندقي فاخر في مجموعة فنادق ألتوس (Altus Hotels).
+اكتب دليلاً إجرائياً تشغيلياً شاملاً وتفصيلياً جداً (Standard Operating Procedure) للدرس التالي:
+- الدورة التدريبية: "${request.courseTitle || 'التميز التشغيلي الفندقي'}"
+- عنوان الدرس: "${request.sectionHeading}"
+- الملخص: "${request.sectionSummary || ''}"
+- القسم: "${department}"
+
+المطلوب: كتابة محتوى تدريبي كامل وعملي (500 إلى 800 كلمة) بصيغة HTML دلالية نظيفة، يحتوي على الأقسام التالية بالضبط:
+1. <h3>1. المعيار والهدف التشغيلي (Operational Standard & Purpose)</h3>
+   شرح معايير الجودة والوقت المسموح به والمخرجات المتوقعة.
+2. <h3>2. خطوات التنفيذ التفصيلية خطوة بخطوة (Step-by-Step Execution Workflow)</h3>
+   قائمة مرتبة <ol> تحتوي على 6-8 خطوات دقيقة وعملية مع المدد الزمنية.
+3. <h3>3. نصوص المحادثة ولغة الجسد المعتمدة (Verbatim Dialogue Scripts)</h3>
+   حوارات واقعية مطبقة بين الموظف والنزيل (مثال: نبرة الصوت، الترحيب بالاسم، الابتسامة).
+4. <h3>4. جدول/قائمة التحقق من الجودة (5-Star Quality Inspection Checklist)</h3>
+   قائمة <ul> للنقاط الإلزامية التي يفحصها المشرف قبل اعتماد الخدمة.
+5. <h3>5. بروتوكول التعافي وحل المشكلات (Service Recovery & LAST Framework)</h3>
+   كيفية معالجة العقبات والشكاوى فوراً.
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة ألتوس الذهبية للتميز:</strong> نصيحة احترافية للموظفين.</div>
+
+اكتب محتوى HTML فقط بدون كتل كود markdown وبدون نصوص توضيحية خارجية.`
+      : `You are a Senior Luxury Hospitality Training Director at Altus Luxury Hotels.
+Write an exhaustive, publication-grade Standard Operating Procedure (SOP) training manual (500-800 words) for the following hotel training lesson:
+- Course: "${request.courseTitle || 'Hotel Operational Excellence'}"
+- Lesson Title: "${request.sectionHeading}"
+- Summary: "${request.sectionSummary || ''}"
+- Department: "${department}"
+
+Requirements: Write fully developed, professional training content in clean semantic HTML with these exact structured sections:
+1. <h3>1. Executive Standard & Operational Purpose</h3>
+   Forbes 5-star benchmarks, exact timeframes, and performance expectations.
+2. <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
+   Numbered <ol> with 6-8 comprehensive, actionable steps with specific operational details.
+3. <h3>3. Verbatim Dialogue Scripts & Body Language Protocols</h3>
+   Exact quotes to say to guests (e.g. greeting by name, offering proactive alternatives, tonality).
+4. <h3>4. 5-Star Quality Inspection Checklist</h3>
+   Bullet points <ul> of mandatory items supervisors inspect.
+5. <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
+   Immediate resolution actions frontline staff are empowered to take.
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Altus 5-Star Pro Tip:</strong> Insider luxury service tip.</div>
+
+Output clean HTML only, no markdown codeblocks.`
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const generatedHtml = await callHuggingFace(model, prompt)
+        if (generatedHtml && generatedHtml.length > 200) {
+          return generatedHtml.replace(/```html\n?|\n?```/g, '').trim()
+        }
+      } catch (e) {
+        console.warn(`Deep expansion model ${model} failed:`, e)
+      }
+    }
+
+    return generateDeepSectionFallback(request.sectionHeading, request.sectionSummary || '', language, department)
+  },
+
+  /**
+   * Extracts or generates actionable, interactive hotel operational verification steps.
+   */
+  async generateChecklist(request: {
+    title: string
+    content: string
+    language?: string
+    count?: number
+  }): Promise<Array<{ id: string; text: string; text_ar?: string; is_required: boolean; order: number }>> {
+    const language = request.language || 'English'
+    const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+    const count = request.count || 6
+    const cleanedContent = (request.content || '').replace(/<[^>]*>/g, ' ').substring(0, 3000)
+
+    const prompt = `You are a Senior Hotel Quality Assurance & Audit Director for Altus Hotels.
+Create EXACTLY ${count} sequential, highly actionable operational checklist verification items for hotel staff based on the following SOP / document.
+
+Document Title: ${request.title}
+Document Content: ${cleanedContent}
+Target Language: ${language}
+
+CRITICAL RULES FOR REAL HOTEL OPERATIONAL CHECKLIST ITEMS:
+- Each item MUST be a specific, verifiable action (e.g. "Inspect minibar expiration dates and seal integrity", "Verify Opera PMS folio balance is zero before departure", "Check that bathroom amenities match Forbes 5-star brand lineup").
+- For each item, provide:
+  - "text": The clear English verification step
+  - "text_ar": The professional Arabic translation of the step
+  - "is_required": boolean (true for mandatory/critical safety/quality steps, false for optional/courtesy steps)
+- Return VALID JSON ONLY as an Array of ${count} objects:
+[
+  {
+    "text": "Verify guest photo ID and payment guarantee in PMS",
+    "text_ar": "التحقق من هوية الضيف وضمان الدفع في نظام إدارة الممتلكات",
+    "is_required": true
+  }
+]`
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const generatedText = await callHuggingFace(model, prompt)
+        const parsed = safeParseJson<Array<{ text: string; text_ar?: string; is_required?: boolean }>>(generatedText, true)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item, idx) => ({
+            id: crypto.randomUUID(),
+            text: isArabic ? (item.text_ar || item.text) : (item.text || item.text_ar || `Verification Step ${idx + 1}`),
+            text_ar: item.text_ar || item.text,
+            is_required: typeof item.is_required === 'boolean' ? item.is_required : idx < 3,
+            order: idx
+          }))
+        }
+      } catch (e) {
+        console.warn(`Checklist generation model ${model} failed:`, e)
+      }
+    }
+
+    return generateHotelChecklistFallback(request.title, request.content, language, count)
+  },
+
+  /**
+   * Generates operational FAQs & edge cases for hotel staff based on SOP content.
+   */
+  async generateFAQs(request: {
+    title: string
+    content: string
+    language?: string
+    count?: number
+  }): Promise<Array<{ id: string; question: string; question_ar?: string; answer: string; answer_ar?: string; order: number }>> {
+    const language = request.language || 'English'
+    const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+    const count = request.count || 4
+    const cleanedContent = (request.content || '').replace(/<[^>]*>/g, ' ').substring(0, 3000)
+
+    const prompt = `You are a Luxury Hotel Operations Manager for Altus Hotels.
+Create EXACTLY ${count} high-value Frequently Asked Questions (FAQs) and edge-case resolution scenarios that hotel staff encounter regarding this SOP / policy.
+
+Document Title: ${request.title}
+Document Content: ${cleanedContent}
+Target Language: ${language}
+
+CRITICAL RULES FOR REAL HOTEL OPERATIONAL FAQS:
+- Questions must address real operational dilemmas, guest special requests, exceptions, and escalation paths (e.g. "What should I do if a guest requests early check-in before the room is inspected?", "How to handle conflicting room preferences between booking channels?").
+- Answers must provide clear, empowered resolution steps.
+- For each item, provide:
+  - "question": English question
+  - "question_ar": Arabic question
+  - "answer": English answer
+  - "answer_ar": Arabic answer
+- Return VALID JSON ONLY as an Array of ${count} objects:
+[
+  {
+    "question": "What is the procedure if a guest arrives before the standard check-in time?",
+    "question_ar": "ما هو الإجراء المتبع عند وصول الضيف قبل موعد تسجيل الوصول الرسمي؟",
+    "answer": "Offer a warm welcome, securely store their luggage with concierge, provide complimentary refreshments in the executive lounge, and prioritize the room cleaning with housekeeping.",
+    "answer_ar": "الترحيب الحار بالضيف، وحفظ الأمتعة لدى خدمة الكونسيرج، وتقديم ضيافة تترحيبية في الردهة، وإعطاء الأولوية للغرفة لدى قسم التدبير الفندقي."
+  }
+]`
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const generatedText = await callHuggingFace(model, prompt)
+        const parsed = safeParseJson<Array<{ question: string; question_ar?: string; answer: string; answer_ar?: string }>>(generatedText, true)
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((item, idx) => ({
+            id: crypto.randomUUID(),
+            question: isArabic ? (item.question_ar || item.question) : item.question,
+            question_ar: item.question_ar || item.question,
+            answer: isArabic ? (item.answer_ar || item.answer) : item.answer,
+            answer_ar: item.answer_ar || item.answer,
+            order: idx
+          }))
+        }
+      } catch (e) {
+        console.warn(`FAQ generation model ${model} failed:`, e)
+      }
+    }
+
+    return generateHotelFAQFallback(request.title, request.content, language, count)
   },
 
   async repairQuizQuestions(request: {
@@ -1171,8 +1357,567 @@ ${serializedQuestions}`
 
 
     return { mapping: {}, headerRowIndex: 0 }
+  }
+}
 
+/**
+ * High-Quality Fallback Generator for Hotel Operations
+ * Generates 4-6 production-ready, rich HTML Standard Operating Procedures and Checkpoints
+ */
+export function generateRichHotelModuleFallback(
+  context: string,
+  language: string = 'English',
+  count: number = 4
+): ModuleOutline {
+  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+  const lower = context.toLowerCase()
+
+  // 1. FRONT OFFICE / RECEPTION / GUEST CHECK-IN
+  if (lower.includes('front') || lower.includes('check') || lower.includes('reception') || lower.includes('concierge') || lower.includes('استقبال')) {
+    if (isArabic) {
+      return {
+        title: 'معايير الاستقبال والتميز الفندقي 5 نجوم (Altus Front Office SOP)',
+        description: 'برنامج تدريبي شامل لإجراءات استقبال الضيوف، التحقق من الحجوزات في نظام الفندق، وإدارة تجربة النزيل الاستثنائية.',
+        sections: [
+          {
+            heading: '1. بروتوكول الترحيب واستقبال الضيف (قاعدة الـ 15 ثانية)',
+            suggestedBlockType: 'text',
+            summary: 'معايير الترحيب الدافئ، لغة الجسد الاحترافية، وتقديم ضيافة القهوة السعودية.',
+            rich_content: `
+              <h3>معيار الترحيب الفندقي الفاخر</h3>
+              <p>يجب الترحيب بكل ضيف يقترب من مكتب الاستقبال في غضون <strong>15 ثانية</strong> بابتسامة دافئة وتواصل بصري مباشر.</p>
+              <h4>خطوات التنفيذ التشغيلية:</h4>
+              <ul>
+                <li><strong>الخطوة الأولى:</strong> الوقوف باعتدال والترحيب بالضيف فور اقترابه: <em>"أهلاً وسهلاً بكم في فندق ألتوس، يسعدنا وجودكم معنا اليوم."</em></li>
+                <li><strong>الخطوة الثانية:</strong> طلب بطاقة الهوية الوطنية أو جواز السفر والتأكد من تطابق الاسم مع الحجز في نظام أوبرا (PMS).</li>
+                <li><strong>الخطوة الثالثة:</strong> استخدام اسم عائلة الضيف مرتين على الأقل أثناء إجراءات التسجيل لإضفاء طابع شخصي راقٍ.</li>
+              </ul>
+              <blockquote><strong>قاعدة ألتوس الذهبية:</strong> لا تدع الضيف ينتظر دون تقديم ضيافة الترحيب الفاخرة.</blockquote>
+            `
+          },
+          {
+            heading: '2. معالجة الحجز والتسجيل في نظام الفندق (PMS) وتخصيص الغرف',
+            suggestedBlockType: 'text',
+            summary: 'إجراءات تفعيل مفتاح الغرفة، مراجعة تفضيلات الضيف، وضمان وسائل الدفع.',
+            rich_content: `
+              <h3>إجراءات التحقق والتسجيل السلس</h3>
+              <p>تأكد من إتمام عملية تسجيل الوصول في أقل من <strong>3 دقائق</strong> مع الحفاظ على الدقة والخصوصية التامة.</p>
+              <ul>
+                <li>مراجعة تفضيلات الغرفة (طابق مرتفع، إطلالة خاصة، سرير كينج، مرافق خاصة).</li>
+                <li>إجراء التفويض المالي المسبق للبطاقة الائتمانية وتوضيح سياسة الودائع بأدب.</li>
+                <li>برمجة مفاتيح الغرف وتسليمها في المحفظة الخاصة مع شرح مرافق الفندق (مواعيد الإفطار، النادي الصحي، شبكة الواي فاي).</li>
+              </ul>
+            `
+          },
+          {
+            heading: '3. بروتوكول خدمة كبار الشخصيات (VIP Arrival Protocols)',
+            suggestedBlockType: 'text',
+            summary: 'تجهيزات الضيوف المميزين، الاستقبال في صالة كبار الشخصيات، وخدمة المساعد الشخصي.',
+            rich_content: `
+              <h3>معايير استقبال ضيوف VIP</h3>
+              <ul>
+                <li>التنسيق المسبق مع قسم التدبير الفندقي للتأكد من وضع باقة الترحيب والفواكه الطازجة قبل 3 ساعات من الوصول.</li>
+                <li>مرافقة الضيف مباشرة إلى جناحه وإتمام إجراءات تسجيل الوصول داخل الجناح (In-Suite Check-in).</li>
+                <li>تقديم مدير المناوب شخصياً للترحيب بالضيف وتوفير رقم التواصل المباشر.</li>
+              </ul>
+            `
+          },
+          {
+            heading: '4. منهجية التعافي الخدمي ومعالجة الشكاوى (LAST Method)',
+            suggestedBlockType: 'text',
+            summary: 'منهجية LAST لتحويل شكاوى الضيوف إلى ولاء دائم وتفويض الموظف لحل المشكلات.',
+            rich_content: `
+              <h3>منهجية LAST لخدمة النزلاء</h3>
+              <ul>
+                <li><strong>L - Listen (الاستماع):</strong> استمع للضيف باهتمام كامل دون مقاطعة ودون تبرير.</li>
+                <li><strong>A - Apologize (الاعتذار):</strong> قدم اعتذاراً صادقاً باسم إدارة الفندق.</li>
+                <li><strong>S - Solve (الحل):</strong> قدم حلاً فورياً ملموساً (ترقية غرفة، وجبة مجانية، حل فوري مع الصيانة).</li>
+                <li><strong>T - Thank (الشكر):</strong> اشكر الضيف على لفت انتباهنا للخلل لتمكيننا من التطوير.</li>
+              </ul>
+            `
+          }
+        ],
+        suggestedQuizCheckpoints: [
+          { afterSectionIndex: 0, topic: 'سيناريو التعامل مع وصول ضيف VIP في ساعات الذروة' },
+          { afterSectionIndex: 3, topic: 'تطبيق منهجية LAST عند وجود تأخير في جاهزية الغرفة' }
+        ]
+      }
+    }
+
+    return {
+      title: '5-Star Front Desk & Luxury Guest Operations (Altus SOP)',
+      description: 'Comprehensive standard operating procedure covering luxury arrival protocols, PMS check-in verification, VIP management, and 5-star service recovery.',
+      sections: [
+        {
+          heading: '1. Luxury Arrival & Warm Welcome Protocol (15-Second Rule)',
+          suggestedBlockType: 'text',
+          summary: 'Standards for greeting guests within 15 seconds, body language, and using guest surname.',
+          rich_content: `
+            <h3>Forbes 5-Star Arrival Standard</h3>
+            <p>Every arriving guest must be acknowledged immediately upon approaching the Front Desk within <strong>15 seconds</strong> with warm eye contact and a genuine smile.</p>
+            <h4>Operational Execution Steps:</h4>
+            <ul>
+              <li><strong>Step 1 (The Greeting):</strong> State the official greeting warmly: <em>"Good morning/afternoon, welcome to Altus. It is our pleasure to welcome you."</em></li>
+              <li><strong>Step 2 (ID & Record Verification):</strong> Request government-issued ID or passport politely and retrieve the reservation in the Property Management System (PMS).</li>
+              <li><strong>Step 3 (Personalization):</strong> Address the guest by their surname at least twice naturally during the check-in conversation.</li>
+            </ul>
+            <blockquote><strong>Golden Rule:</strong> Never say 'No' directly. Always offer a positive luxury alternative.</blockquote>
+          `
+        },
+        {
+          heading: '2. PMS Check-in, Payment Guarantee & Room Key Coding',
+          suggestedBlockType: 'text',
+          summary: 'Fast and secure PMS handling, room preference confirmation, and key delivery.',
+          rich_content: `
+            <h3>Seamless Check-in Execution</h3>
+            <p>Complete the full check-in process smoothly in <strong>under 3 minutes</strong> while ensuring total accuracy and payment security.</p>
+            <ul>
+              <li><strong>Room Assignment:</strong> Verify assigned room matches guest profile preferences (High floor, Quiet zone, King bed).</li>
+              <li><strong>Payment Pre-Authorization:</strong> Secure credit card pre-authorization for room and incidental deposits clearly and politely.</li>
+              <li><strong>Key Card Presentation:</strong> Code RFID keys, place them in a pristine key wallet, and explain elevator access and room number discreetly without saying the room number out loud.</li>
+            </ul>
+          `
+        },
+        {
+          heading: '3. VIP & Executive Lounge Check-in Standards',
+          suggestedBlockType: 'text',
+          summary: 'High-touch executive arrival, in-suite check-in, and personalized butler coordination.',
+          rich_content: `
+            <h3>VIP Arrival & In-Suite Service</h3>
+            <ul>
+              <li>Pre-arrival inspection of VIP suite 3 hours prior to landing to ensure welcome amenities are fresh.</li>
+              <li>Direct escort from lobby to the private suite for seamless in-room check-in.</li>
+              <li>Personal introduction of the Duty Manager and Butler with direct contact cards.</li>
+            </ul>
+          `
+        },
+        {
+          heading: '4. Service Recovery & The LAST Methodology',
+          suggestedBlockType: 'text',
+          summary: 'Framework for turning guest concerns into loyalty through Listen, Apologize, Solve, Thank.',
+          rich_content: `
+            <h3>The LAST Service Recovery Standard</h3>
+            <ul>
+              <li><strong>L - Listen:</strong> Actively listen without interruption, taking notes and demonstrating empathy.</li>
+              <li><strong>A - Apologize:</strong> Offer a sincere, professional apology on behalf of the hotel.</li>
+              <li><strong>S - Solve:</strong> Take immediate ownership. Provide a concrete solution within your staff empowerment limit ($150 / room upgrade).</li>
+              <li><strong>T - Thank:</strong> Thank the guest for sharing their feedback to help us maintain 5-star excellence.</li>
+            </ul>
+          `
+        }
+      ],
+      suggestedQuizCheckpoints: [
+        { afterSectionIndex: 0, topic: 'Scenario: Handling early arrival guest when room is not yet inspected' },
+        { afterSectionIndex: 3, topic: 'Scenario: Applying the LAST method when guest luggage is delayed' }
+      ]
+    }
   }
 
+  // 2. HOUSEKEEPING & SUITE TURNOVER STANDARDS
+  if (lower.includes('housekeep') || lower.includes('clean') || lower.includes('room') || lower.includes('نظافة') || lower.includes('تدبير')) {
+    return {
+      title: isArabic ? 'معايير التدبير الفندقي ونظافة الغرف الفاخرة (45-Point SOP)' : '5-Star Luxury Housekeeping & Room Inspection Standards',
+      description: isArabic ? 'دليل شامل لمعايير تنظيف وتجهيز الغرف والأجنحة الفندقية وفق أعلى معايير الجودة والتعقيم.' : 'Comprehensive standard operating procedure for suite turnover, bed making, sanitization, and 45-point supervisor inspections.',
+      sections: [
+        {
+          heading: isArabic ? '1. بروتوكول الدخول والتجهيز الأولي للغرفة' : '1. Guest Room Entry & Preparation Protocol',
+          suggestedBlockType: 'text',
+          summary: isArabic ? 'إجراءات طرق الباب 3 مرات وتهوية الغرفة وبدء جمع البياضات.' : 'Three-knock entry procedure, room ventilation, and linen stripping.',
+          rich_content: `
+            <h3>${isArabic ? 'معايير الدخول الآمن للغرفة' : 'Standard Room Entry Protocol'}</h3>
+            <p>${isArabic ? 'اطرق الباب بلطف 3 مرات مع التعريف عن النفس بوضوح: "Housekeeping - خدمة الغرف".' : 'Knock firmly three times announcing: "Housekeeping". Wait 10 seconds before using master key.'}</p>
+            <ul>
+              <li>${isArabic ? 'فتح الستائر والنوافذ للتهوية الطبيعية والتحقق من وجود أي مفقودات.' : 'Open curtains, check for guest personal belongings left behind, and report any lost property immediately.'}</li>
+              <li>${isArabic ? 'تجريد السرير من البياضات المستعملة ووضعها في عربة الغسيل دون ملامسة الأرض.' : 'Strip bed linens carefully into laundry bags without allowing linens to touch the floor.'}</li>
+            </ul>
+          `
+        },
+        {
+          heading: isArabic ? '2. تنظيف وتعقيم الحمام وتجهيز وسائل الراحة (Amenities)' : '2. Bathroom Deep Sanitization & Amenities Setup',
+          suggestedBlockType: 'text',
+          summary: isArabic ? 'التعقيم الكيميائي للأسطح، تلميع الزجاج، وترتيب المناشف الفاخرة.' : 'Chemical disinfection, mirror polishing, and luxury towel placement.',
+          rich_content: `
+            <h3>${isArabic ? 'معايير نظافة الحمام 5 نجوم' : '5-Star Bathroom Sanitization Standard'}</h3>
+            <ul>
+              <li>${isArabic ? 'استخدام المحاليل المعتمدة ومراعاة زمن التطهير (Contact Time) لضمان القضاء على الجراثيم.' : 'Apply hospital-grade disinfectant to all high-touch surfaces and allow proper dwell contact time.'}</li>
+              <li>${isArabic ? 'تلميع المرايا والكروم حتى خلوها التام من أي بقع أو قطرات ماء.' : 'Polish all chrome fixtures and glass mirrors to zero-streak perfection.'}</li>
+              <li>${isArabic ? 'ترتيب مستلزمات العناية الشخصية والشامبو والصابون بشكل متناسق ومستقيم.' : 'Align luxury amenities label-forward with exact branding spacing standards.'}</li>
+            </ul>
+          `
+        },
+        {
+          heading: isArabic ? '3. تجهيز وترتيب السرير الفاخر (Hospital Corners)' : '3. Bed Making & Triple-Sheet Styling',
+          suggestedBlockType: 'text',
+          summary: isArabic ? 'معايير شد الملاءات بزوايا المشفى وتوزيع الوسائد الفاخرة.' : 'Triple-sheeting technique, tight hospital corners, and 4-pillow symmetry.',
+          rich_content: `
+            <h3>${isArabic ? 'معيار ترتيب السرير الفاخر' : 'Luxury Bed Dressing Standards'}</h3>
+            <ul>
+              <li>${isArabic ? 'شد الملاءة الأساسية بإحكام لضمان عدم وجود أي تجاعيد.' : 'Pull fitted and flat sheets taut with crisp 45-degree hospital corners on all four sides.'}</li>
+              <li>${isArabic ? 'ترتيب وسائد الريش مع نفخها وضبطها بزاوية 90 درجة متماثلة.' : 'Fluff all goose-down pillows and align them upright in perfect symmetry.'}</li>
+            </ul>
+          `
+        },
+        {
+          heading: isArabic ? '4. قائمة الفحص النهائي للمشرف (45-Point Inspection)' : '4. 45-Point Supervisor Final Inspection Checklist',
+          suggestedBlockType: 'text',
+          summary: isArabic ? 'الفحص بالأشعة فوق البنفسجية، فحص الروائح، واعتماد الغرفة في نظام PMS.' : 'UV sanitation audit, aroma check, and releasing room to ready status in PMS.',
+          rich_content: `
+            <h3>${isArabic ? 'اعتماد جاهزية الغرفة' : 'Supervisor Room Release SOP'}</h3>
+            <ul>
+              <li>${isArabic ? 'فحص نقاط اللمس المتكررة (مقابض الأبواب، جهاز التحكم، الهاتف، مفاتيح الإضاءة).' : 'Inspect high-touch items: remote control (sealed in sleeve), telephone handset, door handles, light switches.'}</li>
+              <li>${isArabic ? 'تغيير حالة الغرفة في نظام أوبرا إلى "Inspected - مفحوصة" لتصبح متاحة لموظفي الاستقبال.' : 'Update room status in PMS from Dirty to Inspected to allow instant guest check-in.'}</li>
+            </ul>
+          `
+        }
+      ],
+      suggestedQuizCheckpoints: [
+        { afterSectionIndex: 0, topic: isArabic ? 'سيناريو العثور على مقتنيات ثمينة في الغرفة المغادرة' : 'Scenario: Protocol when discovering valuable lost items in departed suite' },
+        { afterSectionIndex: 3, topic: isArabic ? 'اختبار قائمة الفحص النهائي للمشرف' : 'Scenario: Handling failed room audit items before guest arrival' }
+      ]
+    }
+  }
+
+  // 3. GENERAL HOSPITALITY / SAFETY / OPERATIONAL DEFAULT (ALWAYS 4 SECTIONS)
+  return {
+    title: isArabic
+      ? `معايير التميز التشغيلي والضيافة الفاخرة (${context.slice(0, 30)} - Altus Core)`
+      : `Operational Excellence & 5-Star Service Standards (${context.slice(0, 30)})`,
+    description: isArabic
+      ? 'برنامج تدريبي متكامل للموظفين حول معايير الجودة، التواصل الفعال مع النزلاء، وإجراءات السلامة الفندقية.'
+      : 'Comprehensive operational training covering 5-star service etiquette, proactive guest communication, workflows, and safety compliance.',
+    sections: [
+      {
+        heading: isArabic ? '1. أسس الضيافة الفندقية الفاخرة والتواصل الراقي' : '1. Foundations of 5-Star Luxury Hospitality & Guest Engagement',
+        suggestedBlockType: 'text',
+        summary: isArabic ? 'قواعد التواصل الفعال، الابتسامة، والاهتمام الاستباقي باحتياجات النزلاء.' : 'Proactive service principles, positive body language, and anticipating guest needs.',
+        rich_content: `
+          <h3>${isArabic ? 'معايير ألتوس للخدمة الراقية' : 'Altus Standards of Exceptional Service'}</h3>
+          <p>${isArabic ? 'تهدف فنادق ألتوس إلى تقديم تجارب لا تُنسى تتجاوز توقعات الضيوف في كل نقطة اتصال.' : 'Altus Hotels delivers unforgettable guest experiences by exceeding expectations at every single operational touchpoint.'}</p>
+          <ul>
+            <li><strong>${isArabic ? 'الاستباقية:' : 'Anticipation:'}</strong> ${isArabic ? 'ملاحظة احتياجات الضيف وتلبيتها قبل أن يطلبها.' : 'Observe guest habits and fulfill needs before the guest even has to ask.'}</li>
+            <li><strong>${isArabic ? 'لغة الجسد:' : 'Body Language:'}</strong> ${isArabic ? 'الوقوف باستقامة، التواصل البصري الودود، والابتسامة الصادقة.' : 'Maintain open posture, welcoming eye contact, and genuine warm smiles.'}</li>
+          </ul>
+        `
+      },
+      {
+        heading: isArabic ? '2. إجراءات التشغيل القياسية وسير العمل اليومي' : '2. Standard Operating Procedures & Daily Workflow Execution',
+        suggestedBlockType: 'text',
+        summary: isArabic ? 'خطوات التنفيذ الدقيقة، إدارة الوقت، والتنسيق بين الأقسام المختلفة.' : 'Step-by-step operational workflows, time management, and inter-departmental handovers.',
+        rich_content: `
+          <h3>${isArabic ? 'خطوات العمل القياسية' : 'Standard Operating Workflow'}</h3>
+          <ul>
+            <li>${isArabic ? 'الالتزام بمواعيد تسليم المهام والتحقق من جودة المخرجات قبل الاعتماد.' : 'Adhere strictly to service delivery time benchmarks and double-check output quality before final handover.'}</li>
+            <li>${isArabic ? 'تسجيل جميع المعاملات بدقة في النظام الداخلي لضمان الشفافية والمتابعة.' : 'Document all actions and shift handover notes in the Altus enterprise intranet for seamless shift handovers.'}</li>
+          </ul>
+        `
+      },
+      {
+        heading: isArabic ? '3. منهجية حل المشكلات والتعافي الفوري (LAST Framework)' : '3. Service Recovery & Problem Resolution (LAST Framework)',
+        suggestedBlockType: 'text',
+        summary: isArabic ? 'منهجية معالجة العقبات التشغيلية وإرضاء الضيوف بتمكين الموظفين.' : 'Resolving operational challenges on the spot with empowered frontline staff.',
+        rich_content: `
+          <h3>${isArabic ? 'منهجية حل المشكلات' : 'Service Recovery Protocol'}</h3>
+          <ul>
+            <li>${isArabic ? 'الاستماع الفعال وفهم المشكلة دون إلقاء اللوم على الزملاء أو الأقسام.' : 'Listen actively and understand root causes without blaming colleagues or departments.'}</li>
+            <li>${isArabic ? 'اتخاذ إجراء تصحيحي فوري وتقديم تعويض مناسب ضمن حدود الصلاحية.' : 'Take immediate corrective action within staff empowerment thresholds and follow up with the guest.'}</li>
+          </ul>
+        `
+      },
+      {
+        heading: isArabic ? '4. بروتوكول السلامة والاستجابة للطوارئ' : '4. Safety Compliance & Emergency Response Protocols',
+        suggestedBlockType: 'text',
+        summary: isArabic ? 'إجراءات السلامة من الحرائق، الإخلاء المنظم، والإبلاغ عن المخاطر.' : 'Fire safety standards, orderly evacuation routes, and rapid hazard reporting.',
+        rich_content: `
+          <h3>${isArabic ? 'إجراءات السلامة الفندقية' : 'Hotel Safety & Emergency Guidelines'}</h3>
+          <ul>
+            <li>${isArabic ? 'معرفة مواقع مخارج الطوارئ وطفايات الحريق في كل طابق.' : 'Know the precise locations of all emergency exits and fire extinguishers in your assigned area.'}</li>
+            <li>${isArabic ? 'الإبلاغ الفوري عن أي عطل أو خطر للأمن والصيانة عبر نظام التذاكر.' : 'Log any safety hazard or maintenance issue immediately via the Altus maintenance ticket system.'}</li>
+          </ul>
+        `
+      }
+    ],
+    suggestedQuizCheckpoints: [
+      { afterSectionIndex: 0, topic: isArabic ? 'اختبار تطبيقي في مهارات التعامل الراقي مع الضيوف' : 'Scenario Checkpoint: Handling proactive guest assistance in hotel lobby' },
+      { afterSectionIndex: 3, topic: isArabic ? 'اختبار إجراءات السلامة والاستجابة للطوارئ' : 'Scenario Checkpoint: Emergency response and hazard mitigation' }
+    ]
+  }
 }
+
+/**
+ * High-Quality Fallback Quiz Generator for Hotel Operations
+ */
+export function generateHotelQuizFallback(
+  context: string,
+  language: string = 'English',
+  count: number = 3
+): QuizQuestion[] {
+  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+  const lower = context.toLowerCase()
+
+  if (isArabic) {
+    return [
+      {
+        question_text: 'ما هو الحد الأقصى للوقت المسموح به للترحيب بالضيف عند وصوله إلى مكتب الاستقبال وفق معايير ألتوس الفاخرة؟',
+        question_type: 'mcq',
+        options: ['15 ثانية', 'دقيقة واحدة', '3 دقائق', 'عند انتهاء المعاملة السابقة'],
+        correct_answer: '15 ثانية',
+        points: 10,
+        explanation: 'تنص معايير فوربس والضيافة الفاخرة على الترحيب بالضيف والتواصل البصري خلال 15 ثانية كحد أقصى.',
+        hint: 'معيار زمني سريع للغاية لترك انطباع أولي استثنائي.'
+      },
+      {
+        question_text: 'عند حدوث تأخير في جاهزية الغرفة لضيف قادم، ما هو التصرف الصحيح وفق منهجية LAST؟',
+        question_type: 'scenario',
+        options: [
+          'الاستماع للضيف والاعتذار بصدق وتقديم ضيافة في الردهة ومتابعة الغرفة فوراً',
+          'إخبار الضيف بأن موعد تسجيل الوصول لم يحن بعد وطلب منه الانتظار جانباً',
+          'إلقاء اللوم على قسم التدبير الفندقي لتأخرهم في التنظيف',
+          'تجاهل الموقف حتى تكتمل الغرفة تلقائياً في النظام'
+        ],
+        correct_answer: 'الاستماع للضيف والاعتذار بصدق وتقديم ضيافة في الردهة ومتابعة الغرفة فوراً',
+        points: 10,
+        explanation: 'منهجية LAST تركز على الاستماع والاعتذار والحل السريع والشكر لتعزيز ولاء الضيف.',
+        hint: 'اختر الإجراء الذي يركز على خدمة الضيف وحل المشكلة.'
+      },
+      {
+        question_text: 'يجب التحقق من تطابق هوية الضيف مع بيانات الحجز المسجلة في نظام إدارة الممتلكات (PMS).',
+        question_type: 'true_false',
+        options: ['صحيح', 'خطأ'],
+        correct_answer: 'صحيح',
+        points: 10,
+        explanation: 'التحقق الأمني والمطابقة النظامية إلزامية لحماية خصوصية النزيل وأمن الفندق.',
+        hint: 'قاعدة أمنية وتنظيمية أساسية في القطاع الفندقي.'
+      }
+    ]
+  }
+
+  return [
+    {
+      question_text: 'According to Altus 5-star standards, within what timeframe must an arriving guest be acknowledged at the Front Desk?',
+      question_type: 'mcq',
+      options: ['Within 15 seconds', 'Within 1 minute', 'Within 3 minutes', 'Only after finishing current paperwork'],
+      correct_answer: 'Within 15 seconds',
+      points: 10,
+      explanation: 'Forbes 5-star standards require warm eye contact and greeting within 15 seconds of approaching the desk.',
+      hint: 'A rapid standard to create a lasting first impression.'
+    },
+    {
+      question_text: 'A guest arrives at 11:00 AM demanding early check-in, but their room is not yet inspected. What is the correct standard procedure?',
+      question_type: 'scenario',
+      options: [
+        'Acknowledge warmly, secure luggage with concierge, offer welcome beverage in the lounge, and prioritize room turnover',
+        'Directly tell the guest official check-in is 3:00 PM and ask them to return later',
+        'Assign a dirty room and ask housekeeping to clean while guest is inside',
+        'Blame housekeeping for cleaning delays'
+      ],
+      correct_answer: 'Acknowledge warmly, secure luggage with concierge, offer welcome beverage in the lounge, and prioritize room turnover',
+      points: 10,
+      explanation: 'Always offer a positive luxury alternative, secure luggage, and proactively expedite room readiness.',
+      hint: 'Choose the proactive luxury hospitality recovery action.'
+    },
+    {
+      question_text: 'Front desk staff must verify guest identification against the PMS reservation before coding room keys.',
+      question_type: 'true_false',
+      options: ['True', 'False'],
+      correct_answer: 'True',
+      points: 10,
+      explanation: 'ID verification is a mandatory security and regulatory standard in hotel operations.',
+      hint: 'Fundamental security standard.'
+    }
+  ]
+}
+
+/**
+ * Generates an exhaustive 600-word 5-star operational hotel SOP
+ */
+export function generateDeepSectionFallback(
+  heading: string,
+  summary: string,
+  language: string = 'English',
+  department: string = 'Hotel Operations'
+): string {
+  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+
+  if (isArabic) {
+    return `
+      <div class="space-y-4">
+        <h3>1. المعيار والهدف التشغيلي (Operational Standard & Purpose)</h3>
+        <p>يهدف هذا الإجراء القياسي إلى ضبط وتنفيذ <strong>${heading}</strong> وفق أعلى معايير الضيافة الفندقية العالمية (Forbes 5-Star Standards) في مجموعة فنادق ألتوس. يجب على كافة موظفي قسم <strong>${department}</strong> الالتزام بالدقة الزمنية والاحترافية العالية لضمان تجربة استثنائية لا تُنسى للنزيل.</p>
+        
+        <h3>2. خطوات التنفيذ التفصيلية خطوة بخطوة (Step-by-Step Execution Workflow)</h3>
+        <ol class="space-y-2 list-decimal list-inside text-slate-700 dark:text-slate-300">
+          <li><strong>التحضير والتأكد من الجاهزية (0-2 دقيقة):</strong> فحص محطة العمل، التأكد من توافر كافة المستلزمات والمطبوعات والأدوات التشغيلية الرقمية قبل بدء المهمة.</li>
+          <li><strong>الترحيب الاستباقي والتواصل البصري (خلال 15 ثانية):</strong> الترحيب بالضيف بابتسامة دافئة وصادقة مع الوقوف باستقامة واستخدام لقب النزيل الرسمي.</li>
+          <li><strong>التحقق من البيانات وسجل التفضيلات (2-3 دقائق):</strong> مراجعة ملف النزيل في نظام PMS، ومطابقة الهوية الوطنية/جواز السفر، والاطلاع على التفضيلات الخاصة (مثل نوع الوسائد، الطابق المفضل).</li>
+          <li><strong>تنفيذ الخدمة بدقة وسلاسة (3-5 دقائق):</strong> شرح تفاصيل الخدمة أو المرافق بوضوح مع تقديم خيارات مخصصة تناسب رغبات الضيف.</li>
+          <li><strong>التأكيد وإتاحة المساعدة الإضافية (دقيقة واحدة):</strong> سؤال الضيف بلطف عما إذا كان بحاجة إلى أي ترتيبات خاصة للنقل، المطاعم، أو الجولات السياحية.</li>
+          <li><strong>التوثيق والتحديث الفوري في النظام:</strong> تسجيل أي ملاحظات أو طلبات خاصة في النظام الداخلي لضمان علم كافة الورديات اللاحقة.</li>
+        </ol>
+
+        <h3>3. نصوص المحادثة ولغة الجسد المعتمدة (Verbatim Dialogue Scripts)</h3>
+        <div class="p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg space-y-2">
+          <p><strong>عند الترحيب الأولي:</strong> <em>"أهلاً وسهلاً بك في فندق ألتوس، يسعدنا جداً استقبالك اليوم يا سيدي. كيف كانت رحلتك إلينا؟"</em></p>
+          <p><strong>عند تلبية طلب خاص:</strong> <em>"بكل سرور وفخر، تم تسجيل طلبك وسنحرص على تنفيذه فوراً كما تفضلتم تماماً."</em></p>
+          <p><strong>عند الختام:</strong> <em>"نحن دائماً في خدمتك على مدار الساعة، ونتمنى لك إقامة مميزة ومليئة بالراحة والسعادة."</em></p>
+        </div>
+
+        <h3>4. قائمة التحقق من الجودة (5-Star Quality Inspection Checklist)</h3>
+        <ul class="space-y-1 list-disc list-inside">
+          <li>المظهر المهني والزي الموحد مكوي ونظيف مع ارتداء بطاقة الاسم بوضوح.</li>
+          <li>عدم استخدام الهاتف الشخصي نهائياً في المناطق الأمامية وأمام الضيوف.</li>
+          <li>استخدام اسم النزيل مرتين على الأقل خلال المحادثة بنبرة راقية.</li>
+          <li>تنفيذ الخدمة خلال الوقت المحدد دون أي تأخير أو ارتباك.</li>
+        </ul>
+
+        <h3>5. بروتوكول التعافي وحل المشكلات (Service Recovery - LAST)</h3>
+        <p>في حال حدوث أي تأخير أو خطأ تشغيلي، يجب تطبيق نموذج <strong>LAST</strong> فوراً: (<strong>L</strong>isten: استمع باهتمام، <strong>A</strong>pologize: اعتذر بصدق، <strong>S</strong>olve: قدّم حلاً وتعويضاً فورياً، <strong>T</strong>hank: اشكر الضيف على تنبيهنا لتطوير خدمتنا).</p>
+
+        <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
+          <strong>نصيحة ألتوس الذهبية للتميز:</strong> الخدمة الفاخرة الحقيقية ليست مجرد تلبية ما يطلبه الضيف، بل هي استباق احتياجاته وتقديم ما لم يخطر على باله قبل أن يسأل عنه.
+        </div>
+      </div>
+    `
+  }
+
+  return `
+    <div class="space-y-4">
+      <h3>1. Executive Standard & Operational Purpose</h3>
+      <p>This Standard Operating Procedure defines the precise execution of <strong>${heading}</strong> in accordance with Forbes 5-Star Luxury Hospitality benchmarks at Altus Hotels. All associates in <strong>${department}</strong> are required to master these standards to ensure flawless, anticipatory guest experiences.</p>
+      
+      <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
+      <ol class="space-y-2 list-decimal list-inside text-slate-700 dark:text-slate-300">
+        <li><strong>Pre-Service Inspection & Station Readiness (0-2 mins):</strong> Inspect operational console, verify digital supplies, and confirm that all required tools are operating properly.</li>
+        <li><strong>Immediate Anticipatory Greeting (Within 15 seconds):</strong> Acknowledge arriving guests within 15 seconds with direct eye contact, a warm posture, and genuine hospitality.</li>
+        <li><strong>PMS Profile Verification & Preference Recognition (2-3 mins):</strong> Pull the guest profile in Opera/PMS, cross-reference photo ID/passport, and immediately review tailored preferences (e.g. feather pillows, high floor, dietary needs).</li>
+        <li><strong>Service Execution & Tailored Briefing (3-5 mins):</strong> Deliver the core service smoothly while succinctly highlighting tailored hotel amenities and dining offerings.</li>
+        <li><strong>Proactive Assistance & Inquiry (1 min):</strong> Inquire politely if transportation, dining reservations, or personalized itinerary arrangements are required.</li>
+        <li><strong>PMS Profile Synchronization & Shift Handover Logging:</strong> Immediately log special preferences or feedback in the intranet guest profile for seamless inter-departmental visibility.</li>
+      </ol>
+
+      <h3>3. Verbatim Dialogue Scripts & Body Language Protocols</h3>
+      <div class="p-3 bg-slate-50 dark:bg-slate-900 border rounded-lg space-y-2">
+        <p><strong>Initial Greeting:</strong> <em>"A very warm welcome to Altus Luxury Suites, Mr. Henderson. It is an absolute pleasure to have you with us today. How was your journey?"</em></p>
+        <p><strong>Fulfilling a Request:</strong> <em>"Certainly, with pleasure. I have already prioritized that for your suite and will personally ensure it is completed."</em></p>
+        <p><strong>Fond Farewell / Handover:</strong> <em>"It is our absolute pleasure to assist you. Please let us know if there is anything further we can do to make your stay extraordinary."</em></p>
+      </div>
+
+      <h3>4. 5-Star Quality Inspection Checklist</h3>
+      <ul class="space-y-1 list-disc list-inside">
+        <li>Pristine grooming and uniform standards with name badge prominently displayed.</li>
+        <li>Zero mobile phone presence or personal chatter in guest-facing areas.</li>
+        <li>Guest surname utilized naturally at least twice during the interaction.</li>
+        <li>Service executed within established Forbes time benchmarks with zero friction.</li>
+      </ul>
+
+      <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
+      <p>If any service disruption occurs, immediately deploy the <strong>LAST</strong> framework: (<strong>L</strong>isten actively without interruption, <strong>A</strong>pologize sincerely on behalf of Altus, <strong>S</strong>olve immediately using frontline empowerment credits, and <strong>T</strong>hank the guest for providing feedback).</p>
+
+      <div class="p-3 my-2 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
+        <strong>Altus 5-Star Pro Tip:</strong> True luxury hospitality is not simply reacting to guest requests, but intuitively anticipating needs before the guest even verbalizes them.
+      </div>
+    </div>
+  `
+}
+
+/**
+ * Operational Checklist Fallback Generator for Hotel Operations
+ */
+export function generateHotelChecklistFallback(
+  title: string,
+  _content: string,
+  language: string = 'English',
+  _count: number = 6
+): Array<{ id: string; text: string; text_ar?: string; is_required: boolean; order: number }> {
+  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+
+  const baseItems = [
+    {
+      text: 'Verify guest preferences and VIP profile in Opera PMS prior to task execution.',
+      text_ar: 'التحقق من تفضيلات النزيل وسجل كبار الشخصيات (VIP) في نظام PMS قبل بدء الإجراء.',
+      is_required: true
+    },
+    {
+      text: 'Inspect workstation/area for pristine Forbes 5-star cleanliness and presentation.',
+      text_ar: 'فحص محطة العمل والمنطقة للتأكد من النظافة والترتيب وفق معايير فوربس 5 نجوم.',
+      is_required: true
+    },
+    {
+      text: 'Confirm physical supplies, digital equipment, and access credentials are operational.',
+      text_ar: 'التأكد من جاهزية الأدوات التشغيلية والأجهزة الرقمية وصلاحيات الدخول.',
+      is_required: true
+    },
+    {
+      text: 'Execute standard operating sequence within the established time benchmark.',
+      text_ar: 'تنفيذ الخطوات التشغيلية القياسية ضمن الإطار الزمني المحدد والمعتمد.',
+      is_required: true
+    },
+    {
+      text: 'Perform secondary quality audit and confirm guest/system requirements are fulfilled.',
+      text_ar: 'إجراء تدقيق جودة ثانوي والتأكد من اكتمال كافة متطلبات الضيف والنظام.',
+      is_required: false
+    },
+    {
+      text: 'Log completion status and sync notes in the intranet for shift handover continuity.',
+      text_ar: 'توثيق حالة الإنجاز وتسجيل الملاحظات في النظام الداخلي لضمان استمرارية تسليم الورديات.',
+      is_required: false
+    }
+  ]
+
+  return baseItems.map((item, idx) => ({
+    id: crypto.randomUUID(),
+    text: isArabic ? item.text_ar : item.text,
+    text_ar: item.text_ar,
+    is_required: item.is_required,
+    order: idx
+  }))
+}
+
+/**
+ * Operational FAQ Fallback Generator for Hotel Operations
+ */
+export function generateHotelFAQFallback(
+  title: string,
+  _content: string,
+  language: string = 'English',
+  _count: number = 4
+): Array<{ id: string; question: string; question_ar?: string; answer: string; answer_ar?: string; order: number }> {
+  const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+
+  const baseFAQs = [
+    {
+      question: `What should frontline associates do if an unexpected exception occurs during ${title || 'this SOP'}?`,
+      question_ar: `ما هو الإجراء المتبع عند مواجهة استثناء أو حالة غير متوقعة أثناء تنفيذ هذا الإجراء؟`,
+      answer: 'Apply immediate frontline empowerment to resolve the issue for the guest, apply the LAST protocol, and escalate to the Duty Manager only if senior authorization is required.',
+      answer_ar: 'استخدام صلاحيات التمكين الفوري لحل الموقف للنزيل وتطبيق نموذج LAST، والتصعيد لمدير الوردية فقط إذا تطلب الأمر موافقة إدارية عليا.'
+    },
+    {
+      question: 'How quickly must service recovery be initiated if a guest expresses dissatisfaction?',
+      question_ar: 'ما هي المهلة الزمنية لبدء إجراءات تدارك الخدمة عند إبداء الضيف أي عدم رضا؟',
+      answer: 'Immediately within 3 minutes of becoming aware. Offer a sincere apology, active solution, and follow up within 20 minutes to confirm total satisfaction.',
+      answer_ar: 'فوراً خلال 3 دقائق من العلم بالمشكلة. تقديم اعتذار صادق وحل فعال، والمتابعة مع الضيف خلال 20 دقيقة للتأكد من رضاه التام.'
+    },
+    {
+      question: 'Who is responsible for verifying that all checklist items in this document are completed?',
+      question_ar: 'من هو المسؤول عن التحقق من اكتمال كافة بنود قائمة التحقق في هذه الوثيقة؟',
+      answer: 'The primary assigned team associate executes each step, while the Department Supervisor conducts spot audits during daily shift turnovers.',
+      answer_ar: 'الموظف المسؤول المنفذ للوردية ينفذ كافة الخطوات، ويقوم مشرف القسم بإجراء تدقيق عشوائي دوري عند تسليم الورديات.'
+    },
+    {
+      question: 'Where are deviations or specialized guest preferences documented?',
+      question_ar: 'أين يتم توثيق أي استثناءات أو تفضيلات خاصة للنزلاء؟',
+      answer: 'Directly in the guest Opera PMS profile notes and logged in the Altus Intranet departmental shift handover report.',
+      answer_ar: 'مباشرة في خانة ملاحظات ملف النزيل في نظام PMS وفي تقرير تسليم الورديات في إنترانت ألتوس.'
+    }
+  ]
+
+  return baseFAQs.map((faq, idx) => ({
+    id: crypto.randomUUID(),
+    question: isArabic ? faq.question_ar : faq.question,
+    question_ar: faq.question_ar,
+    answer: isArabic ? faq.answer_ar : faq.answer,
+    answer_ar: faq.answer_ar,
+    order: idx
+  }))
+}
+
 

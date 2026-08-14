@@ -99,20 +99,55 @@ interface EmailNotificationPayload {
 const BULK_NOTIFICATION_EDGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/bulk-notification-processor`
 
 function resolveNotificationDomain(type: NotificationType): 'system' | 'user_management' | 'operations' | 'hr' | 'learning' | 'finance' | 'sales' | 'management' {
-  if (type.includes('maintenance')) return 'operations'
-  if (type.includes('training')) return 'learning'
-  if (type.includes('approval') || type.includes('request') || type.includes('promotion') || type.includes('transfer') || type.includes('referral')) return 'hr'
-  if (type.includes('announcement') || type.includes('escalation')) return 'management'
+  if (type.includes('maintenance') || type.includes('task') || type.includes('sop') || type.includes('shift') || type.includes('guest') || type.includes('lost_found') || type.includes('document')) return 'operations'
+  if (type.includes('training') || type.includes('recertification') || type.includes('compliance')) return 'learning'
+  if (type.includes('approval') || type.includes('purchase') || type.includes('capex') || type.includes('invoice') || type.includes('billing')) return 'finance'
+  if (type.includes('leave') || type.includes('promotion') || type.includes('transfer') || type.includes('referral') || type.includes('iqama') || type.includes('probation') || type.includes('anniversary')) return 'hr'
+  if (type.includes('announcement') || type.includes('escalation') || type.includes('employee_of_the_month') || type.includes('kpi')) return 'management'
   return 'system'
 }
 
 function resolveTemplateKey(type: NotificationType): string {
-  // Map specific types to specialized templates
+  // 1. Task & Maintenance Operations
+  if (type === 'task_assigned') return 'task_assigned_alert'
+  if (type === 'task_overdue') return 'task_overdue_escalation'
+  if (type === 'maintenance_assigned') return 'maintenance_ticket_assigned'
+  if (type === 'maintenance_resolved') return 'maintenance_ticket_resolved'
+  if (type.includes('vip_guest')) return 'vip_guest_arrival_alert'
+  if (type.includes('lost_found')) return 'lost_found_match_notification'
+
+  // 2. HR & Employee Lifecycle
+  if (type.includes('leave_submitted')) return 'leave_request_submitted_manager'
+  if (type.includes('leave_decision') || type.includes('leave_approved') || type.includes('leave_rejected')) return 'leave_request_decision'
+  if (type.includes('promotion') || type.includes('transfer')) return 'employee_promotion_transfer_notice'
+  if (type.includes('probation')) return 'probation_period_review_due'
+  if (type.includes('iqama')) return 'iqama_national_id_expiry_warning'
+  if (type.includes('anniversary')) return 'work_anniversary_greeting'
+
+  // 3. Standards & SOPs
+  if (type === 'document_acknowledgment_required' || type === 'sop_assigned' || type === 'sop_quiz_required') return 'sop_mandatory_acknowledgment'
+  if (type.includes('sop_review')) return 'sop_annual_review_reminder'
+
+  // 4. Procurement & Finance
+  if (type.includes('purchase_request')) return 'purchase_request_pending_approval'
+  if (type.includes('purchase_order')) return 'purchase_order_issued_vendor'
+  if (type.includes('capex')) return 'capex_milestone_breach_alert'
   if (type.includes('approval_required')) return 'approval_request_new'
   if (type.includes('approval_approved') || type.includes('approval_rejected') || type.includes('approval_outcome')) return 'approval_outcome'
   if (type.includes('escalation')) return 'approval_escalated'
+
+  // 5. Training & Learning
+  if (type.includes('recertification')) return 'recertification_due_reminder'
+  if (type.includes('training_overdue')) return 'recertification_due_reminder'
   if (type.includes('training_assigned')) return 'learning_assignment_new'
   if (type.includes('training_deadline')) return 'learning_deadline_reminder'
+  if (type.includes('certificate_earned')) return 'training_certificate_earned'
+
+  // 6. Scheduling & Recognition
+  if (type.includes('shift_roster')) return 'shift_roster_published'
+  if (type.includes('shift_swap')) return 'shift_swap_request_notification'
+  if (type.includes('employee_of_the_month')) return 'employee_of_the_month_spotlight'
+  if (type.includes('announcement')) return 'internal_announcement'
 
   const domain = resolveNotificationDomain(type)
   if (domain === 'operations') return 'operations_incident_alert'
@@ -191,6 +226,9 @@ export async function createNotification(params: CreateNotificationParams): Prom
   // 2. Send Email (Fire and forget, don't block UI)
   const emailTypes: NotificationType[] = [
     'task_assigned',
+    'task_overdue',
+    'maintenance_assigned',
+    'maintenance_resolved',
     'escalation_alert',
     'approval_required',
     'approval_approved',
@@ -198,6 +236,13 @@ export async function createNotification(params: CreateNotificationParams): Prom
     'approval_outcome',
     'training_overdue',
     'training_assigned',
+    'training_completed',
+    'document_acknowledgment_required',
+    'sop_assigned',
+    'sop_quiz_required',
+    'promotion_approved',
+    'transfer_approved',
+    'employee_of_the_month_winner',
     'announcement_new'
   ]
 

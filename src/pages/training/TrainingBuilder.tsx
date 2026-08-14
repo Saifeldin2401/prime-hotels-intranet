@@ -1,9 +1,11 @@
-import { SmartModuleWizard } from '@/components/training'
+import { SmartAICourseCreatorModal } from '@/components/training'
 import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
 import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { Button } from '@/components/ui/button'
+import { useToast } from '@/components/ui/use-toast'
+import { aiService } from '@/lib/gemini'
 import { cn } from '@/lib/utils'
 import { ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, RotateCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -26,7 +28,40 @@ import { TrainingBuilderProvider, useTrainingBuilderContext } from './contexts/T
 
 function TrainingBuilderInner() {
   const { t } = useTranslation('training')
+  const { toast } = useToast()
   const ctx = useTrainingBuilderContext()
+
+  const handleDeepExpandLesson = async (sectionId: string, contentId: string) => {
+    const sec = ctx.sections.find((s) => s.id === sectionId)
+    const block = sec?.items.find((i) => i.id === contentId)
+    if (!sec || !block) return
+
+    try {
+      const expandedHtml = await aiService.expandLessonContent({
+        courseTitle: ctx.title,
+        sectionHeading: block.title || sec.title,
+        sectionSummary: (block.content_data as any)?.summary || sec.description,
+        department: ctx.category || 'Hotel Operations',
+        language: ctx.isRTL ? 'Arabic' : 'English'
+      })
+
+      ctx.setSections((prev) =>
+        prev.map((s) => {
+          if (s.id !== sectionId) return s
+          return {
+            ...s,
+            items: s.items.map((i) => (i.id === contentId ? { ...i, content: expandedHtml } : i))
+          }
+        })
+      )
+      toast({
+        title: '✨ Deep SOP Expanded',
+        description: `Generated comprehensive 5-star operational procedure for: ${block.title || 'lesson'}`
+      })
+    } catch (e) {
+      console.error('Failed to deep expand lesson:', e)
+    }
+  }
 
   if (!ctx.hasMounted && ctx.isNewRoute) {
     return (
@@ -86,11 +121,19 @@ function TrainingBuilderInner() {
         onDeleteContent={ctx.deleteContent}
         onReorderSection={ctx.handleReorderSection} onReorderContent={ctx.handleReorderContent}
         onGenerateQuizFromSection={ctx.openAIGeneratorForSection}
+        onOpenAICreator={() => ctx.setShowSmartWizard(true)}
+        onOpenTemplateSelector={() => ctx.setShowTemplatePreview(true)}
+        onRenameSection={ctx.handleRenameSection}
+        onDeepExpandLesson={handleDeepExpandLesson}
       />
     )
 
     if (builderStep === 'rules') return (
       <StepRules
+        category={ctx.category} setCategory={ctx.setCategory}
+        difficultyLevel={ctx.difficultyLevel} setDifficultyLevel={ctx.setDifficultyLevel}
+        audience={ctx.audience} setAudience={ctx.setAudience}
+        description={ctx.description} setDescription={ctx.setDescription}
         certificateEnabled={ctx.certificateEnabled} setCertificateEnabled={ctx.setCertificateEnabled}
         passingScore={ctx.passingScore} setPassingScore={ctx.setPassingScore}
         validityPeriod={ctx.validityPeriod} setValidityPeriod={ctx.setValidityPeriod}
@@ -112,6 +155,7 @@ function TrainingBuilderInner() {
 
     if (builderStep === 'publish') return (
       <StepPublish
+        category={ctx.category} setCategory={ctx.setCategory}
         sections={ctx.sections} totalItems={ctx.totalItems}
         displayDuration={ctx.displayDuration} overrideDuration={ctx.overrideDuration}
         calculatedDuration={ctx.calculatedDuration} certificateEnabled={ctx.certificateEnabled}
@@ -212,52 +256,10 @@ function TrainingBuilderInner() {
 
       {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-
-        {/* Left sidebar – block library (content step only) */}
-        {ctx.builderStep === 'content' && (
-          <aside className="hidden xl:flex w-64 border-r bg-white">
-            <div className="p-4 space-y-4 w-full">
-              <div className="space-y-1">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.blockLibrary')}</div>
-                <div className="text-xs text-slate-500">{t('builder.activeSectionLabel')}: {ctx.activeSectionName || t('builder.noSectionSelected')}</div>
-              </div>
-              <Button variant="outline" size="sm" onClick={ctx.addSection} className={cn("w-full", ctx.isRTL ? "flex-row-reverse" : "")}>
-                <Plus className={cn("h-4 w-4", ctx.isRTL ? "ms-2" : "me-2")} />{t('builder.addSection')}
-              </Button>
-              <div className="space-y-2">
-                {ctx.savedBlocks.length > 0 && (
-                  <div className="space-y-2 pb-2 border-b border-slate-200">
-                    <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.savedBlocks', 'Saved blocks')}</div>
-                    {ctx.savedBlocks.slice(0, 5).map(block => (
-                      <div key={block.id} className={cn("flex items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2", ctx.isRTL ? "text-right" : "text-left")}>
-                        <button type="button" onClick={() => ctx.insertSavedBlock(block)} className="flex-1 text-left">
-                          <div className="text-xs font-semibold text-slate-700">{block.title || ctx.contentTypeLabelMap[block.type]}</div>
-                          <div className="text-[11px] text-slate-400">{ctx.contentTypeLabelMap[block.type]}</div>
-                        </button>
-                        <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-slate-400 hover:text-red-500"
-                          onClick={() => ctx.handleRemoveSavedBlock(block.id)} aria-label={t('accessibility.removeSavedBlock', 'Remove saved block')}>
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {ctx.blockLibrary.map(block => (
-                  <button key={block.type} type="button" onClick={() => ctx.addContent(block.type)}
-                    className={cn("w-full rounded-lg border border-slate-200 bg-white p-3 shadow-sm transition hover:border-hotel-gold hover:bg-hotel-gold/5", ctx.isRTL ? "text-right" : "text-left")}>
-                    <div className="text-sm font-semibold text-slate-700">{block.label}</div>
-                    <div className="text-xs text-slate-500">{block.hint}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </aside>
-        )}
-
         <main className="flex-1 overflow-y-auto">{renderStepContent()}</main>
 
         {/* Right sidebar */}
-        <BuilderSidebar className="hidden lg:flex w-[320px] border-l bg-slate-50/50">
+        <BuilderSidebar className="hidden xl:flex w-[300px] border-l bg-slate-50/50">
           <RightPanel
             builderStep={ctx.builderStep} sections={ctx.sections} totalItems={ctx.totalItems}
             totalPoints={ctx.totalPoints} displayDuration={ctx.displayDuration}
@@ -308,9 +310,67 @@ function TrainingBuilderInner() {
         setSections={ctx.setSections} setActiveSection={ctx.setActiveSection} isRTL={ctx.isRTL}
       />
 
-      <SmartModuleWizard
-        open={ctx.showSmartWizard} onOpenChange={ctx.setShowSmartWizard}
-        onModuleCreated={(newId) => ctx.setCreatedModuleId(newId)}
+      <SmartAICourseCreatorModal
+        open={ctx.showSmartWizard}
+        onOpenChange={ctx.setShowSmartWizard}
+        initialTopic={ctx.title}
+        onApplyToBuilder={(generated) => {
+          if (generated.title && !ctx.title) ctx.setTitle(generated.title)
+          if (generated.description && !ctx.description) ctx.setDescription(generated.description)
+
+          const checkpoints = generated.checkpoints || []
+          const newSections = (generated.sections || []).map((sec: any, idx: number) => {
+            const sectionItems: any[] = [
+              {
+                id: `block_${Date.now()}_${idx}_sop`,
+                title: sec.heading,
+                type: (sec.suggestedBlockType === 'scenario' ? 'text' : sec.suggestedBlockType) as any,
+                content: sec.rich_content || `<h3>${sec.heading}</h3><p>${sec.summary}</p>`,
+                content_url: '',
+                content_data: { summary: sec.summary },
+                is_mandatory: true,
+                order: 0
+              }
+            ]
+
+            // Check if there is an associated quiz checkpoint for this section
+            const checkpoint = checkpoints.find((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
+            if (checkpoint) {
+              sectionItems.push({
+                id: `block_${Date.now()}_${idx}_quiz`,
+                title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
+                type: 'quiz' as any,
+                content: '',
+                content_url: '',
+                content_data: {
+                  is_checkpoint: true,
+                  passing_score: 80,
+                  topic: checkpoint.topic
+                },
+                is_mandatory: true,
+                order: 1
+              })
+            }
+
+            return {
+              id: `section_${Date.now()}_${idx}`,
+              title: sec.heading,
+              description: sec.summary,
+              order: idx,
+              items: sectionItems
+            }
+          })
+
+          if (ctx.sections.length === 0 || (ctx.sections.length === 1 && ctx.sections[0].items.length === 0)) {
+            ctx.setSections(newSections)
+          } else {
+            ctx.setSections([...ctx.sections, ...newSections])
+          }
+
+          if (newSections.length > 0) {
+            ctx.setActiveSection(newSections[0].id)
+          }
+        }}
       />
 
       {ctx.showKBSidebar && (

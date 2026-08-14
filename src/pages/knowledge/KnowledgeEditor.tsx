@@ -9,12 +9,18 @@ import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import {
     AIDocumentSummary,
     ChecklistBuilder,
+    ChecklistRenderer,
+    FAQAccordion,
     FAQBuilder,
+    ImageGalleryRenderer,
     RelatedArticlesEditor,
     VideoContentBuilder,
+    VideoPlayer,
     VisualContentBuilder
 } from '@/components/knowledge'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
+import { MediaPicker } from '@/components/media/MediaPicker'
+import type { MediaAsset } from '@/lib/types/media'
 import { GroupedDepartmentSelector } from '@/components/shared/GroupedDepartmentSelector'
 import { MultiDepartmentSelector } from '@/components/shared/MultiDepartmentSelector'
 import { Badge } from '@/components/ui/badge'
@@ -62,9 +68,20 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
     AlertTriangle,
     ArrowLeft,
+    BookOpen,
     Building2,
+    Check,
+    CheckSquare,
+    ChevronDown,
     Clock,
+    ExternalLink,
+    Eye,
+    FileText,
     FolderOpen,
+    Globe,
+    HelpCircle,
+    Image as ImageIcon,
+    Layers,
     Link as LinkIcon,
     List,
     Loader2,
@@ -75,6 +92,8 @@ import {
     ShieldCheck,
     Sparkles,
     Tag,
+    Upload,
+    Video as VideoIcon,
     Wand2,
     X
 } from 'lucide-react'
@@ -252,6 +271,7 @@ export default function KnowledgeEditor() {
     const [hasMounted, setHasMounted] = useState(false)
     const [showRestorePrompt, setShowRestorePrompt] = useState(false)
     const [allowUnsafeNavigation, setAllowUnsafeNavigation] = useState(false)
+    const allowUnsafeNavigationRef = useRef(false)
     const restoredDraftRef = useRef(false)
 
     const [formData, setFormData] = useState<ArticleFormData>(() => createEmptyArticleFormData())
@@ -281,10 +301,11 @@ export default function KnowledgeEditor() {
     const { loadDraft, saveDraft, clearDraft, markSaved, hasDraft, hasUnsavedChanges } = formPersistence
 
     const shouldWarnOnExit =
+        !allowUnsafeNavigationRef.current &&
         !allowUnsafeNavigation &&
         !isEditing &&
         hasMounted &&
-        (hasDraft || hasUnsavedChanges || hasDraftableArticleContent(formData))
+        (hasDraft || hasUnsavedChanges)
     const { Dialog: UnsavedChangesDialog } = useUnsavedChanges(shouldWarnOnExit)
 
     // ============================================
@@ -410,13 +431,20 @@ export default function KnowledgeEditor() {
 
             // Filter active users and exclude the author, get unique user IDs
             const uniqueReviewerIds = new Set<string>()
-            const reviewers: { id: string; full_name: string }[] = []
+            interface ReviewerRoleRecord {
+                user_id: string
+                profiles?: {
+                    id: string
+                    full_name: string
+                    is_active: boolean
+                } | null
+            }
 
-            for (const item of reviewerRolesData) {
-                const profile = (item as any).profiles
-                if (profile?.is_active && profile.id !== user?.id && !uniqueReviewerIds.has(profile.id)) {
-                    uniqueReviewerIds.add(profile.id)
-                    reviewers.push({ id: profile.id, full_name: profile.full_name })
+            for (const rawItem of (reviewerRolesData as unknown as ReviewerRoleRecord[])) {
+                const reviewerProfile = rawItem.profiles
+                if (reviewerProfile?.is_active && reviewerProfile.id !== user?.id && !uniqueReviewerIds.has(reviewerProfile.id)) {
+                    uniqueReviewerIds.add(reviewerProfile.id)
+                    reviewers.push({ id: reviewerProfile.id, full_name: reviewerProfile.full_name })
                 }
             }
 
@@ -494,6 +522,7 @@ export default function KnowledgeEditor() {
     const [aiLanguage, setAiLanguage] = useState('English')
     const [isForbidden, setIsForbidden] = useState(false)
     const [showDocumentPicker, setShowDocumentPicker] = useState(false)
+    const [showMediaPicker, setShowMediaPicker] = useState(false)
     const [beautifyOptions, setBeautifyOptions] = useState({
         includeTables: true,
         includeMermaid: false,
@@ -878,6 +907,27 @@ export default function KnowledgeEditor() {
         })
     }, [])
 
+    const handleMediaSelect = useCallback((assets: MediaAsset[]) => {
+        if (assets.length === 0) return
+        const asset = assets[0]
+
+        if (asset.media_type === 'image') {
+            const imgHtml = `<p><img src="${asset.public_url}" alt="${asset.title || asset.filename}" class="rounded-xl shadow-md my-4 max-w-full" /></p>`
+            updateField('content', (formData.content || '') + '\n' + imgHtml)
+            toast.success(t('editor.media_inserted', 'Image inserted from media library'))
+        } else if (asset.media_type === 'video') {
+            updateField('video_url', asset.public_url)
+            if (formData.content_type !== 'video') {
+                updateField('content_type', 'video')
+            }
+            toast.success(t('editor.video_linked', 'Video linked from media library'))
+        } else {
+            updateField('file_url', asset.public_url)
+            toast.success(t('editor.media_attached', 'Media asset attached to document'))
+        }
+        setShowMediaPicker(false)
+    }, [formData.content, formData.content_type, t, updateField])
+
     // Computed validation warnings
     const validationWarnings = {
         departmentRequired: (formData.visibility === 'department' || formData.visibility === 'group_department') && !formData.department_id,
@@ -939,12 +989,12 @@ export default function KnowledgeEditor() {
     ])
 
     // AI
-    const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize') => {
+    const generateWithAI = async (action: 'outline' | 'expand' | 'improve' | 'summarize' | 'checklist' | 'faqs') => {
         if (action === 'outline' && !formData.title && !formData.content) {
             toast.error(t('editor.alerts.title_required'))
             return
         }
-        if ((action === 'expand' || action === 'improve' || action === 'summarize') && !formData.content) {
+        if ((action === 'expand' || action === 'improve' || action === 'summarize' || action === 'checklist' || action === 'faqs') && !formData.content && !formData.title) {
             toast.error(t('editor.write_placeholder'))
             return
         }
@@ -952,6 +1002,42 @@ export default function KnowledgeEditor() {
         setIsGenerating(true)
         try {
             let result: string | null = null
+
+            // Interactive Checklist generation
+            if (action === 'checklist') {
+                const items = await aiService.generateChecklist({
+                    title: formData.title || 'Hotel Standard Operating Procedure',
+                    content: formData.content || formData.title,
+                    language: aiLanguage,
+                    count: 6
+                })
+                if (items && items.length > 0) {
+                    updateField('checklist_items', items)
+                    toast.success(t('editor.alerts.checklist_success', { defaultValue: `Generated ${items.length} interactive checklist steps!` }))
+                } else {
+                    toast.error(t('editor.alerts.ai_failed'))
+                }
+                setIsGenerating(false)
+                return
+            }
+
+            // Operational FAQs generation
+            if (action === 'faqs') {
+                const faqs = await aiService.generateFAQs({
+                    title: formData.title || 'Hotel Standard Operating Procedure',
+                    content: formData.content || formData.title,
+                    language: aiLanguage,
+                    count: 4
+                })
+                if (faqs && faqs.length > 0) {
+                    updateField('faq_items', faqs)
+                    toast.success(t('editor.alerts.faqs_success', { defaultValue: `Generated ${faqs.length} operational FAQs!` }))
+                } else {
+                    toast.error(t('editor.alerts.ai_failed'))
+                }
+                setIsGenerating(false)
+                return
+            }
 
             // Content generation actions (outline, expand, improve)
             if (action === 'outline') {
@@ -1266,21 +1352,30 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 toast.success(status === 'PENDING_REVIEW'
                     ? t('editor.alerts.submitted_for_review')
                     : (isEditing ? t('editor.alerts.update_success', { type: typeLabel }) : t('editor.alerts.save_success', { type: typeLabel })))
-                redirectToArticleId = data.id
                 
                 // Clear draft on successful save
                 clearDraft()
             }
 
+            // Immediately mark navigation as safe and clear drafts
+            allowUnsafeNavigationRef.current = true
+            setAllowUnsafeNavigation(true)
+            clearDraft()
+            markSaved()
+
             let syncedArticleData = savedArticleData
             if (savedArticleId) {
-                const hydratedArticle = await KnowledgeService.getArticleById(savedArticleId, user?.id)
-                if (hydratedArticle) {
-                    syncedArticleData = hydratedArticle
+                try {
+                    const hydratedArticle = await KnowledgeService.getArticleById(savedArticleId, user?.id)
+                    if (hydratedArticle) {
+                        syncedArticleData = hydratedArticle
+                    }
+                } catch {
+                    // Fall back to savedArticleData
                 }
             }
 
-            const mergeArticleIntoCollection = (existing) => {
+            const mergeArticleIntoCollection = (existing: any) => {
                 if (!savedArticleId || !syncedArticleData || !existing) return existing
 
                 if (Array.isArray(existing)) {
@@ -1325,48 +1420,25 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 )
             }
 
-            await Promise.all([
-                queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-featured'] }),
-                queryClient.invalidateQueries({ queryKey: ['knowledge-recent'] }),
-                savedArticleId
-                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-article', savedArticleId] })
-                    : Promise.resolve(),
-                savedArticleId
-                    ? queryClient.invalidateQueries({ queryKey: ['knowledge-related', savedArticleId] })
-                    : Promise.resolve(),
-            ])
-
-            await Promise.all([
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-articles'],
-                    type: 'all'
-                }),
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-featured'],
-                    type: 'all'
-                }),
-                queryClient.refetchQueries({
-                    queryKey: ['knowledge-recent'],
-                    type: 'all'
-                }),
-                savedArticleId
-                    ? queryClient.refetchQueries({
-                        queryKey: ['knowledge-article', savedArticleId],
-                        type: 'all'
-                    })
-                    : Promise.resolve(),
-            ])
-
-            if (redirectToArticleId) {
-                setAllowUnsafeNavigation(true)
-                navigate(`/knowledge/${redirectToArticleId}`)
+            // Background invalidations
+            queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-department-counts-global'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-type-counts'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-featured'] })
+            queryClient.invalidateQueries({ queryKey: ['knowledge-recent'] })
+            if (savedArticleId) {
+                queryClient.invalidateQueries({ queryKey: ['knowledge-article', savedArticleId] })
+                queryClient.invalidateQueries({ queryKey: ['knowledge-related', savedArticleId] })
             }
-        } catch (error) {
+
+            // Always navigate to the article detail page after publish or new article creation
+            const targetArticleId = savedArticleId || savedArticleData?.id || id
+            if (targetArticleId) {
+                navigate(`/knowledge/${targetArticleId}`, { replace: true })
+            }
+        } catch (error: any) {
             console.error('Error in saveArticle:', error)
-            const errorMessage = error.message || (typeof error === 'string' ? error : JSON.stringify(error))
+            const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error))
             toast.error(t('editor.alerts.save_error', { error: errorMessage }))
         } finally {
             setIsSaving(false)
@@ -1387,19 +1459,20 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 max-w-7xl mx-auto pb-12">
             <UnsavedChangesDialog />
+
             {/* Restore Draft Prompt */}
             {!isEditing && showRestorePrompt && (
-                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <AlertTriangle className="w-5 h-5 text-amber-600" />
-                        <span className="text-sm text-amber-800 dark:text-amber-300">
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                    <div className="flex items-center gap-2.5">
+                        <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0" />
+                        <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
                             Draft article restored from previous session
                         </span>
                     </div>
                     <div className="flex gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)}>
+                        <Button variant="ghost" size="sm" onClick={() => setShowRestorePrompt(false)} className="text-xs">
                             Keep
                         </Button>
                         <Button variant="outline" size="sm" onClick={() => {
@@ -1407,463 +1480,448 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                             setFormData(createEmptyArticleFormData())
                             setShowRestorePrompt(false)
                             toast.success('Draft cleared')
-                        }}>
+                        }} className="text-xs">
                             Clear Draft
                         </Button>
                     </div>
                 </div>
             )}
-            {/* Header */}
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t('accessibility.back', 'Go back')}>
-                        <ArrowLeft className="h-5 w-5" />
+
+            {/* Sticky Modern Top Navigation & Actions Bar */}
+            <div className="sticky top-0 z-30 bg-background/90 backdrop-blur-md py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3 min-w-0">
+                    <Button variant="ghost" size="icon" onClick={() => navigate(-1)} aria-label={t('accessibility.back', 'Go back')} className="rounded-full h-9 w-9">
+                        <ArrowLeft className="h-4 w-4" />
                     </Button>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">
-                            {isEditing ? t('editor.edit_title') : t('editor.create_title')}
-                        </h1>
-                        <p className="text-gray-600 text-sm mt-1">{t('editor.subtitle')}</p>
+                    <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                            <h1 className="text-lg font-bold text-slate-900 dark:text-white truncate">
+                                {formData.title.trim() || (isEditing ? t('editor.edit_title') : t('editor.create_title'))}
+                            </h1>
+                            <Badge variant="outline" className="text-[10px] uppercase font-semibold capitalize tracking-wider bg-slate-50 dark:bg-slate-900">
+                                {formData.content_type}
+                            </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate">
+                            {isEditing ? 'Editing Knowledge Document' : 'New Knowledge Base Article'}
+                        </p>
                     </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={() => saveArticle('DRAFT')} disabled={isSaving || isUploading}>
-                        {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Save className="h-4 w-4 me-2" />}
-                        {t('editor.draft')}
+
+                <div className="flex items-center gap-2 shrink-0">
+                    <Button variant="outline" size="sm" onClick={() => saveArticle('DRAFT')} disabled={isSaving || isUploading} className="text-xs h-9">
+                        {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Save className="h-3.5 w-3.5 me-1.5" />}
+                        {t('editor.draft', 'Save Draft')}
                     </Button>
+
                     {/* Submit for Review (Dept Head, HR, Prop Manager) */}
                     {['department_head', 'property_hr', 'property_manager'].includes(primaryRole || '') && (
                         <Button
+                            size="sm"
                             onClick={() => saveArticle('PENDING_REVIEW')}
                             disabled={isSaving || isUploading}
-                            className="bg-yellow-500 hover:bg-yellow-600 text-white"
+                            className="bg-amber-500 hover:bg-amber-600 text-white text-xs h-9 font-semibold"
                         >
-                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Clock className="h-4 w-4 me-2" />}
-                            {t('editor.submit_for_review')}
+                            {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Clock className="h-3.5 w-3.5 me-1.5" />}
+                            {t('editor.submit_for_review', 'Submit for Review')}
                         </Button>
                     )}
 
                     {/* Publish (Prop Manager, Admin only) */}
-                    {['property_manager', 'regional_admin', 'corporate_admin'].includes(primaryRole || '') && (
+                    {['property_manager', 'regional_admin', 'corporate_admin', 'super_admin', 'admin'].includes(primaryRole || '') && (
                         <Button
+                            size="sm"
                             onClick={() => saveArticle('PUBLISHED')}
                             disabled={isSaving || isUploading}
-                            className="bg-hotel-gold text-hotel-navy"
+                            className="bg-hotel-gold hover:bg-hotel-gold-dark text-white text-xs h-9 font-bold shadow-sm"
                         >
-                            {isSaving ? <Loader2 className="animate-spin h-4 w-4" /> : <Send className="h-4 w-4 me-2" />}
-                            {t('editor.publish')}
+                            {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Send className="h-3.5 w-3.5 me-1.5" />}
+                            {t('editor.publish', 'Publish Article')}
                         </Button>
                     )}
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-6">
-                    <Card>
-                        <CardContent className="pt-6 space-y-4">
+            {/* Main 2-Panel Authoring Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* LEFT CANVAS: Writing Studio & Core Content (8 cols) */}
+                <div className="lg:col-span-8 space-y-5">
+                    
+                    {/* Article Hero Card: Title & Content Type Selector */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                        <CardContent className="pt-6 pb-5 space-y-4">
+                            {/* Large Title Input */}
                             <div>
-                                <Label>{t('editor.title_label')} *</Label>
-                                <Input value={formData.title} onChange={e => updateField('title', e.target.value)} placeholder={t('editor.title_placeholder')} className="mt-1 text-lg" />
+                                <Input
+                                    value={formData.title}
+                                    onChange={e => updateField('title', e.target.value)}
+                                    placeholder={t('editor.title_placeholder', 'Article Title (e.g. Forbes 5-Star VIP Arrival Protocol)...')}
+                                    className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                                />
+                                <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-2" />
+                            </div>
 
-                                {/* Duplicate Detection Warning */}
-                                {showDuplicateWarning && duplicateCheckResult?.hasDuplicates && (
-                                    <div className="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                                        <div className="flex items-start gap-2">
-                                            <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                                            <div className="flex-1">
-                                                <p className="text-sm font-medium text-amber-800">
-                                                    {t('editor.duplicate_warning', 'Similar articles already exist')}
-                                                </p>
-                                                <ul className="mt-2 space-y-1">
-                                                    {duplicateCheckResult.duplicates.slice(0, 3).map(dup => (
-                                                        <li key={dup.id} className="text-xs text-amber-700 flex items-center justify-between">
-                                                            <span className="truncate flex-1">• {dup.title}</span>
-                                                            <Badge variant="outline" className="ms-2 text-[10px]">{dup.similarity}% match</Badge>
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="mt-2 h-7 text-xs text-amber-700 hover:text-amber-900"
-                                                    onClick={() => {
-                                                        setShowDuplicateWarning(false)
-                                                        setDismissedDuplicateTitle(formData.title)
-                                                    }}
-                                                >
-                                                    {t('editor.dismiss_warning', 'Dismiss')}
-                                                </Button>
-                                            </div>
+                            {/* Content Type Selector Pills */}
+                            <div className="space-y-1.5">
+                                <Label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    Document Format
+                                </Label>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {CONTENT_TYPE_CONFIG.map(cfg => {
+                                        const isSelected = formData.content_type === cfg.type
+                                        return (
+                                            <button
+                                                key={cfg.type}
+                                                type="button"
+                                                onClick={() => updateField('content_type', cfg.type)}
+                                                className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all duration-150 flex items-center gap-1.5 ${
+                                                    isSelected
+                                                        ? 'bg-hotel-navy text-white shadow-sm border border-hotel-navy'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 border border-transparent'
+                                                }`}
+                                            >
+                                                <span>{cfg.icon || '📄'}</span>
+                                                <span>{t(`content_types.${cfg.type}`, cfg.label)}</span>
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Subtitle / Tagline */}
+                            <div className="pt-1">
+                                <Input
+                                    value={formData.description}
+                                    onChange={e => updateField('description', e.target.value)}
+                                    placeholder={t('editor.description_placeholder', 'Add a short subtitle or operational purpose (10-15 words)...')}
+                                    className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
+                                />
+                            </div>
+
+                            {/* Duplicate Detection Warning */}
+                            {showDuplicateWarning && duplicateCheckResult?.hasDuplicates && (
+                                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                                    <div className="flex items-start gap-2">
+                                        <AlertTriangle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                                        <div className="flex-1">
+                                            <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                                                {t('editor.duplicate_warning', 'Similar articles already exist')}
+                                            </p>
+                                            <ul className="mt-1.5 space-y-1">
+                                                {duplicateCheckResult.duplicates.slice(0, 2).map(dup => (
+                                                    <li key={dup.id} className="text-xs text-amber-700 dark:text-amber-400 flex items-center justify-between">
+                                                        <span className="truncate flex-1">• {dup.title}</span>
+                                                        <Badge variant="outline" className="ms-2 text-[10px]">{dup.similarity}% match</Badge>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                className="mt-1.5 h-6 text-[11px] text-amber-700 hover:text-amber-900 px-2"
+                                                onClick={() => {
+                                                    setShowDuplicateWarning(false)
+                                                    setDismissedDuplicateTitle(formData.title)
+                                                }}
+                                            >
+                                                {t('editor.dismiss_warning', 'Dismiss')}
+                                            </Button>
                                         </div>
                                     </div>
-                                )}
-
-                                {/* AI Tag Suggestions */}
-                                {!isEditing && formData.title.length > 10 && tagSuggestions.length === 0 && !isGeneratingTags && (
-                                    <div className="mt-2 flex items-center gap-2">
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-7 text-xs text-indigo-600 hover:text-indigo-700"
-                                            onClick={() => generateSuggestions(formData.title, formData.content, formData.description)}
-                                        >
-                                            <Tag className="w-3 h-3 me-1" />
-                                            {t('editor.suggest_tags', 'AI: Suggest tags')}
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {isGeneratingTags && (
-                                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-                                        <Loader2 className="w-3 h-3 animate-spin" />
-                                        {t('editor.generating_tags', 'Generating tag suggestions...')}
-                                    </div>
-                                )}
-
-                                {tagSuggestions.length > 0 && (
-                                    <div className="mt-2 flex flex-wrap items-center gap-2">
-                                        <span className="text-xs text-slate-500">{t('editor.suggested_tags', 'Suggested tags:')}</span>
-                                        {tagSuggestions.map((suggestion) => (
-                                            <Badge
-                                                key={`${suggestion.tag}-${suggestion.confidence}`}
-                                                variant="outline"
-                                                className={`text-[10px] cursor-pointer hover:bg-indigo-50 ${suggestion.confidence === 'high' ? 'border-green-300 text-green-700' :
-                                                    suggestion.confidence === 'medium' ? 'border-blue-300 text-blue-700' :
-                                                        'border-slate-300 text-slate-600'
-                                                    }`}
-                                                title={suggestion.reason}
-                                            >
-                                                {suggestion.tag}
-                                            </Badge>
-                                        ))}
-                                        <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-5 w-5 p-0"
-                                            onClick={clearSuggestions}
-                                            aria-label={t('accessibility.clear_suggestions', 'Clear suggestions')}
-                                        >
-                                            <X className="w-3 h-3" />
-                                        </Button>
-                                    </div>
-                                )}
-                            </div>
-                            <div>
-                                <Label>{t('editor.type_label')}</Label>
-                                <Select value={formData.content_type} onValueChange={v => updateField('content_type', v)}>
-                                    <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        {CONTENT_TYPE_CONFIG.map(o => <SelectItem key={o.type} value={o.type}>{t(`content_types.${o.type}`, o.label)}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div>
-                                <Label>{t('editor.description_label')}</Label>
-                                <Textarea value={formData.description} onChange={e => updateField('description', e.target.value)} placeholder={t('editor.description_placeholder')} className="mt-1" rows={2} />
-                            </div>
-                            <div>
-                                <Label>{t('editor.summary_label')}</Label>
-                                <Textarea
-                                    value={formData.summary}
-                                    onChange={e => updateField('summary', e.target.value)}
-                                    placeholder={t('editor.summary_placeholder')}
-                                    className="mt-1"
-                                    rows={2}
-                                    maxLength={300}
-                                />
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {t('editor.summary_hint')} ({formData.summary.length}/300)
-                                </p>
-                            </div>
-                            <div>
-                                <Label>{t('editor.url_label')}</Label>
-                                <div className="flex gap-2">
-                                    <Input value={formData.file_url} onChange={e => updateField('file_url', e.target.value)} placeholder={t('editor.url_placeholder')} className="mt-1" />
-                                    <Button variant="outline" size="icon" className="mt-1" aria-label={t('accessibility.link', 'Add link')}><LinkIcon className="h-4 w-4" /></Button>
                                 </div>
-                            </div>
+                            )}
 
-                            <div>
-                                <Label>Document Library</Label>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="secondary"
-                                        onClick={() => setShowDocumentPicker(true)}
-                                        className="gap-2"
-                                    >
-                                        <FolderOpen className="h-4 w-4" />
-                                        Browse Library
-                                    </Button>
-                                    {formData.file_url && (
-                                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                            Document selected
-                                        </Badge>
-                                    )}
-                                </div>
-                            </div>
-
-                            <div>
-                                <Label>{t('editor.upload_label')}</Label>
-                                <div className="mt-1 flex items-center gap-2">
-                                    <Input
-                                        type="file"
-                                        accept=".pdf"
-                                        disabled={isUploading}
-                                        onChange={async (e) => {
-                                            const file = e.target.files?.[0]
-                                            if (!file) return
-
-                                            if (file.type !== 'application/pdf') {
-                                                toast.error(t('editor.alerts.only_pdf'))
-                                                return
-                                            }
-
-                                            if (!user?.id) {
-                                                toast.error(t('editor.alerts.user_error'))
-                                                return
-                                            }
-
-                                            setIsUploading(true)
-                                            try {
-                                                const scanResult = await scanFile(file, {
-                                                    bucket: 'documents',
-                                                    context: 'knowledge_editor_upload'
-                                                })
-                                                if (!scanResult.safe) {
-                                                    throw new Error(scanResult.message || 'File failed security scan')
-                                                }
-
-                                                // RLS requires uploading to a folder matching the user ID
-                                                const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
-                                                const { error } = await supabase.storage
-                                                    .from('documents')
-                                                    .upload(fileName, file)
-
-                                                if (error) throw error
-
-                                                // The 'documents' bucket is private: a public URL here
-                                                // would 404. Store the object path and let the viewer
-                                                // sign it at read time (resolveDocumentUrl).
-                                                updateField('file_url', fileName)
-                                                updateField('storage_path', fileName)
-                                                
-                                                // Auto-generate AI tags based on filename and title
-                                                const aiTags = generateAITags(file.name, formData.title || file.name)
-                                                updateField('ai_tags', aiTags)
-                                                updateField('ai_category', categorizeDocument(aiTags))
-                                                updateField('ai_processed_at', new Date().toISOString())
-                                                
-                                                toast.success(t('editor.alerts.upload_success'))
-
-                                                // Auto-set title if empty
-                                                if (!formData.title) {
-                                                    updateField('title', file.name.replace('.pdf', ''))
-                                                }
-                                            } catch (error: unknown) {
-                                                const errorMessage = error instanceof Error ? error.message : 'Unknown upload error'
-                                                console.error('Upload error:', error)
-                                                toast.error(t('editor.alerts.upload_error') + errorMessage)
-                                            } finally {
-                                                setIsUploading(false)
-                                            }
-                                        }}
-                                        className="cursor-pointer"
-                                    />
-                                    {isUploading && <Loader2 className="h-4 w-4 animate-spin text-blue-600" />}
-                                    {formData.file_url && formData.file_url.includes('supabase') && !isUploading && (
-                                        <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                            {t('editor.uploaded')}
-                                        </Badge>
-                                    )}
-                                </div>
-                                <p className="text-xs text-gray-500 mt-1">
-                                    {isUploading ? t('editor.uploading') : t('editor.upload_hint')}
-                                </p>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    {/* AI Assistant */}
-                    <Card className="border-hotel-gold/30 bg-hotel-gold/5">
-                        <CardHeader className="pb-3">
-                            <CardTitle className="flex items-center justify-between text-base">
-                                <span className="flex items-center gap-2">
-                                    <Sparkles className="h-5 w-5 text-hotel-gold" />
-                                    {t('editor.ai_assistant')}
-                                </span>
+                            {/* AI Tag Suggestions */}
+                            {!isEditing && formData.title.length > 10 && tagSuggestions.length === 0 && !isGeneratingTags && (
                                 <div className="flex items-center gap-2">
-                                    <Select value={aiLanguage} onValueChange={setAiLanguage}>
-                                        <SelectTrigger className="w-[140px] h-8 text-xs bg-white">
-                                            <SelectValue placeholder="Language" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="English">{t('languages.english_only', { defaultValue: 'English Only' })}</SelectItem>
-                                            <SelectItem value="Arabic">{t('languages.arabic_only', { defaultValue: 'Arabic Only' })}</SelectItem>
-                                            <SelectItem value="English and Arabic">{t('languages.bilingual', { defaultValue: 'Bilingual (En/Ar)' })}</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 text-xs text-hotel-navy dark:text-hotel-gold hover:bg-slate-100 dark:hover:bg-slate-800"
+                                        onClick={() => generateSuggestions(formData.title, formData.content, formData.description)}
+                                    >
+                                        <Sparkles className="w-3 h-3 me-1 text-hotel-gold" />
+                                        {t('editor.suggest_tags', 'AI Suggest Tags')}
+                                    </Button>
                                 </div>
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex flex-wrap gap-2">
-                                <Button variant="outline" size="sm" onClick={() => generateWithAI('outline')} disabled={isGenerating}>
-                                    {isGenerating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />} {t('editor.outline')}
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => generateWithAI('expand')} disabled={isGenerating || !formData.content}>
-                                    <RefreshCw className="h-4 w-4" /> {t('editor.expand')}
-                                </Button>
-                                <Button variant="outline" size="sm" onClick={() => generateWithAI('improve')} disabled={isGenerating || !formData.content}>
-                                    <Sparkles className="h-4 w-4" /> {t('editor.improve')}
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => generateWithAI('summarize')}
-                                    disabled={isGenerating || !formData.content}
-                                    className="border-hotel-navy/20 hover:border-hotel-navy text-hotel-navy"
-                                >
-                                    <Sparkles className="h-4 w-4" /> Auto-Summarize
-                                </Button>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => beautifyArticle()}
-                                    disabled={isGenerating || !formData.content}
-                                    className="border-purple-500 hover:border-purple-600 text-purple-600"
-                                >
-                                    <Palette className="h-4 w-4" /> AI Beautify
-                                </Button>
-                            </div>
+                            )}
 
-                            <div className="mt-3 rounded-md border border-slate-200 bg-white p-3">
-                                <div className="text-xs font-medium text-slate-600 mb-2">
-                                    {t('editor.beautify_options', 'Beautify Options')}
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                    <label className="flex items-center justify-between text-xs text-slate-700">
-                                        <span>{t('editor.include_tables', 'Include Tables')}</span>
-                                        <Switch
-                                            checked={beautifyOptions.includeTables}
-                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeTables: val }))}
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between text-xs text-slate-700">
-                                        <span>{t('editor.include_mermaid', 'Include Mermaid Diagrams')}</span>
-                                        <Switch
-                                            checked={beautifyOptions.includeMermaid}
-                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeMermaid: val }))}
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between text-xs text-slate-700">
-                                        <span>{t('editor.include_callouts', 'Include Callouts')}</span>
-                                        <Switch
-                                            checked={beautifyOptions.includeCallouts}
-                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeCallouts: val }))}
-                                        />
-                                    </label>
-                                    <label className="flex items-center justify-between text-xs text-slate-700">
-                                        <span>{t('editor.include_toc', 'Include Table of Contents')}</span>
-                                        <Switch
-                                            checked={beautifyOptions.includeTOC}
-                                            onCheckedChange={(val) => setBeautifyOptions(prev => ({ ...prev, includeTOC: val }))}
-                                        />
-                                    </label>
-                                </div>
-                                {beautifyOptions.includeMermaid && (
-                                    <p className="mt-2 text-[11px] text-slate-500">
-                                        {t('editor.mermaid_preview_note', 'Mermaid diagrams render in Preview mode.')}
-                                    </p>
-                                )}
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}>
-                                <TabsList>
-                                    <TabsTrigger value="edit">{t('editor.content_tab')}</TabsTrigger>
-                                    <TabsTrigger value="preview">{t('editor.preview_tab')}</TabsTrigger>
-                                </TabsList>
-                            </Tabs>
-                        </CardHeader>
-                        <CardContent>
-                            {activeTab === 'edit' ? (
-                                <div className="space-y-6">
-                                    <RichTextEditor
-                                        value={formData.content}
-                                        onChange={v => updateField('content', v)}
-                                        placeholder={t('editor.write_placeholder')}
-                                        minHeight={200}
-                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
-                                    />
-
-                                    {/* Content Type Specific Builders */}
-                                    {formData.content_type === 'video' && (
-                                        <VideoContentBuilder
-                                            value={formData.video_url}
-                                            onChange={v => updateField('video_url', v)}
-                                        />
-                                    )}
-
-                                    {formData.content_type === 'checklist' && (
-                                        <ChecklistBuilder
-                                            items={formData.checklist_items}
-                                            onChange={v => updateField('checklist_items', v)}
-                                        />
-                                    )}
-
-                                    {formData.content_type === 'faq' && (
-                                        <FAQBuilder
-                                            items={formData.faq_items}
-                                            onChange={v => updateField('faq_items', v)}
-                                        />
-                                    )}
-
-                                    {formData.content_type === 'visual' && (
-                                        <VisualContentBuilder
-                                            images={formData.images}
-                                            onChange={v => updateField('images', v)}
-                                        />
-                                    )}
-                                </div>
-                            ) : (
-                                <div ref={previewRef} className="prose max-w-none min-h-[400px] p-4 border rounded bg-white">
-                                    <InlineErrorBoundary>
-                                        <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }} />
-                                    </InlineErrorBoundary>
-
-                                    {/* Preview content type specific blocks */}
-                                    <div className="mt-8 space-y-6">
-                                        {formData.content_type === 'video' && formData.video_url && (
-                                            <div className="aspect-video rounded-lg overflow-hidden bg-black">
-                                                <p className="text-white p-4">Video Preview: {formData.video_url}</p>
-                                            </div>
-                                        )}
-                                        {formData.content_type === 'checklist' && formData.checklist_items.length > 0 && (
-                                            <div className="space-y-2">
-                                                <h4 className="font-bold">Checklist Preview:</h4>
-                                                {formData.checklist_items.map((item) => (
-                                                    <div key={item.id} className="flex items-center gap-2">
-                                                        <div className="w-4 h-4 border rounded" />
-                                                        <span>{item.text}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </div>
+                            {tagSuggestions.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                                    <span className="text-[11px] text-slate-400 font-medium">{t('editor.suggested_tags', 'Tags:')}</span>
+                                    {tagSuggestions.map((suggestion) => (
+                                        <Badge
+                                            key={`${suggestion.tag}-${suggestion.confidence}`}
+                                            variant="outline"
+                                            className={`text-[10px] cursor-pointer hover:bg-hotel-gold/10 ${
+                                                suggestion.confidence === 'high' ? 'border-green-300 text-green-700' : 'border-slate-300 text-slate-600'
+                                            }`}
+                                        >
+                                            #{suggestion.tag}
+                                        </Badge>
+                                    ))}
+                                    <Button variant="ghost" size="sm" className="h-5 w-5 p-0" onClick={clearSuggestions}>
+                                        <X className="w-3 h-3 text-slate-400" />
+                                    </Button>
                                 </div>
                             )}
                         </CardContent>
                     </Card>
 
+                    {/* AI Co-Authoring Ribbon */}
+                    <div className="bg-gradient-to-r from-hotel-navy/5 via-hotel-gold/10 to-hotel-navy/5 border border-hotel-gold/25 rounded-xl p-3 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 rounded-lg bg-hotel-gold/20 flex items-center justify-center text-hotel-gold shrink-0">
+                                <Sparkles className="w-4 h-4" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-900 dark:text-white">
+                                AI Co-Writer:
+                            </span>
+                            <Select value={aiLanguage} onValueChange={setAiLanguage}>
+                                <SelectTrigger className="w-[120px] h-7 text-xs bg-white dark:bg-slate-950 font-medium">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="English">English</SelectItem>
+                                    <SelectItem value="Arabic">العربية</SelectItem>
+                                    <SelectItem value="English and Arabic">Bilingual</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('outline')}
+                                disabled={isGenerating}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                            >
+                                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin me-1" /> : <Wand2 className="h-3 w-3 text-hotel-gold me-1" />}
+                                {t('editor.outline', 'Outline')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('expand')}
+                                disabled={isGenerating || !formData.content}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                            >
+                                <RefreshCw className="h-3 w-3 text-hotel-navy dark:text-hotel-gold me-1" />
+                                {t('editor.expand', 'Deep Expand')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('improve')}
+                                disabled={isGenerating || !formData.content}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                            >
+                                <Sparkles className="h-3 w-3 text-amber-500 me-1" />
+                                {t('editor.improve', 'Polish')}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('checklist')}
+                                disabled={isGenerating}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/40"
+                            >
+                                <CheckSquare className="h-3 w-3 text-orange-500 me-1" />
+                                AI Checklist
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('faqs')}
+                                disabled={isGenerating}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-yellow-600 border-yellow-200 hover:bg-yellow-50 dark:hover:bg-yellow-950/40"
+                            >
+                                <HelpCircle className="h-3 w-3 text-yellow-500 me-1" />
+                                AI FAQs
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => generateWithAI('summarize')}
+                                disabled={isGenerating || !formData.content}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                            >
+                                <FileText className="h-3 w-3 text-blue-500 me-1" />
+                                Summarize
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => beautifyArticle()}
+                                disabled={isGenerating || !formData.content}
+                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-purple-600 border-purple-200 hover:bg-purple-50"
+                            >
+                                <Palette className="h-3 w-3 text-purple-500 me-1" />
+                                Beautify
+                            </Button>
+                        </div>
+                    </div>
+
+                    {/* Editor & Live Preview Studio */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}>
+                                        <TabsList className="h-8">
+                                            <TabsTrigger value="edit" className="text-xs h-7 px-3">
+                                                ✍️ {t('editor.content_tab', 'Write')}
+                                            </TabsTrigger>
+                                            <TabsTrigger value="preview" className="text-xs h-7 px-3">
+                                                👁️ {t('editor.preview_tab', 'Live Interactive Preview')}
+                                            </TabsTrigger>
+                                        </TabsList>
+                                    </Tabs>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowMediaPicker(true)}
+                                        className="h-8 text-xs gap-1.5 font-medium border-slate-200 dark:border-slate-800 hover:border-hotel-gold hover:bg-hotel-gold/5 text-slate-700 dark:text-slate-200"
+                                    >
+                                        <ImageIcon className="w-3.5 h-3.5 text-hotel-gold" />
+                                        <span>Media Library</span>
+                                    </Button>
+                                </div>
+
+                                <div className="text-xs text-muted-foreground flex items-center gap-2">
+                                    <span>{formData.content ? `${formData.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length} words` : '0 words'}</span>
+                                    <span>•</span>
+                                    <span>{calculateEstimatedReadTime(formData.content) || 1} min read</span>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-4">
+                            {activeTab === 'edit' ? (
+                                <div className="space-y-6">
+                                    <RichTextEditor
+                                        value={formData.content}
+                                        onChange={v => updateField('content', v)}
+                                        placeholder={t('editor.write_placeholder', 'Start typing the hotel operational procedure or policy standard here...')}
+                                        minHeight={320}
+                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                    />
+
+                                    {/* Interactive Execution Checklist Builder */}
+                                    <div className="pt-2">
+                                        <ChecklistBuilder
+                                            items={formData.checklist_items || []}
+                                            onChange={items => updateField('checklist_items', items)}
+                                            onAIGenerate={() => generateWithAI('checklist')}
+                                            isGenerating={isGenerating}
+                                            title={formData.title}
+                                        />
+                                    </div>
+
+                                    {/* Operational FAQs & Edge Cases Builder */}
+                                    <div className="pt-2">
+                                        <FAQBuilder
+                                            items={formData.faq_items || []}
+                                            onChange={items => updateField('faq_items', items)}
+                                            onAIGenerate={() => generateWithAI('faqs')}
+                                            isGenerating={isGenerating}
+                                            title={formData.title}
+                                        />
+                                    </div>
+
+                                    {/* Video Content Block (if video format or video url exists) */}
+                                    {(formData.content_type === 'video' || formData.video_url) && (
+                                        <div className="pt-2">
+                                            <VideoContentBuilder
+                                                value={formData.video_url}
+                                                onChange={v => updateField('video_url', v)}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Visual Image Gallery Block (if visual format or images exist) */}
+                                    {(formData.content_type === 'visual' || (formData.images && formData.images.length > 0)) && (
+                                        <div className="pt-2">
+                                            <VisualContentBuilder
+                                                images={formData.images}
+                                                onChange={v => updateField('images', v)}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+                            ) : (
+                                <div ref={previewRef} className="space-y-8 min-h-[400px] p-6 border rounded-xl bg-white dark:bg-slate-950">
+                                    {/* Standard Article HTML Preview */}
+                                    {previewHtml ? (
+                                        <InlineErrorBoundary>
+                                            <div
+                                                className="prose max-w-none text-slate-800 dark:text-slate-100"
+                                                dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
+                                            />
+                                        </InlineErrorBoundary>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground italic py-8 text-center">
+                                            {t('editor.preview_empty', 'No article body content yet. Start writing on the Write tab.')}
+                                        </p>
+                                    )}
+
+                                    {/* Live Video Preview */}
+                                    {formData.video_url && (
+                                        <div className="pt-6 border-t">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                                                <VideoIcon className="w-4 h-4 text-red-500" />
+                                                Video Demonstration
+                                            </h4>
+                                            <VideoPlayer videoUrl={formData.video_url} title={formData.title} />
+                                        </div>
+                                    )}
+
+                                    {/* Live Interactive Checklist Preview */}
+                                    {formData.checklist_items && formData.checklist_items.length > 0 && (
+                                        <div className="pt-6 border-t">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                                                <CheckSquare className="w-4 h-4 text-orange-500" />
+                                                Interactive SOP Execution Checklist
+                                            </h4>
+                                            <ChecklistRenderer items={formData.checklist_items} />
+                                        </div>
+                                    )}
+
+                                    {/* Live Interactive FAQ Accordion Preview */}
+                                    {formData.faq_items && formData.faq_items.length > 0 && (
+                                        <div className="pt-6 border-t">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                                                <HelpCircle className="w-4 h-4 text-yellow-500" />
+                                                Operational FAQs & Edge Cases
+                                            </h4>
+                                            <FAQAccordion items={formData.faq_items} />
+                                        </div>
+                                    )}
+
+                                    {/* Live Image Gallery Preview */}
+                                    {formData.images && formData.images.length > 0 && (
+                                        <div className="pt-6 border-t">
+                                            <h4 className="font-bold text-sm text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-2">
+                                                <ImageIcon className="w-4 h-4 text-blue-500" />
+                                                Step-by-Step Visual Gallery
+                                            </h4>
+                                            <ImageGalleryRenderer images={formData.images} />
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+
+                    {/* Related Articles (When editing) */}
                     {isEditing && id && (
                         <RelatedArticlesEditor documentId={id} relatedArticles={relatedArticles} onUpdate={refetchRelated} />
                     )}
 
-                    {/* AI Document Summary - For detailed analysis */}
+                    {/* AI Document Summary */}
                     {formData.content && formData.content.length > 100 && (
                         <AIDocumentSummary
                             content={formData.content}
@@ -1872,19 +1930,21 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     )}
                 </div>
 
-                <div className="space-y-6">
-                    {/* 1. Categorization */}
-                    <Card className="border-hotel-navy/10 shadow-sm">
+                {/* RIGHT INSPECTOR: Settings, Organization & Attachments (4 cols) */}
+                <div className="lg:col-span-4 space-y-4">
+                    
+                    {/* 1. Department & Classification */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <List className="h-4 w-4 text-hotel-gold" />
-                                {t('editor.topic_and_categorization', 'Topic & Categorization')}
+                                <span>{t('editor.topic_and_categorization', 'Topic & Classification')}</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
+                        <CardContent className="space-y-3.5">
                             <div>
-                                <Label className="text-sm font-semibold mb-1.5 block">
-                                    {t('editor.main_team_topic', 'Main Team (Topic)')}
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                                    {t('editor.main_team_topic', 'Department / Team')} <span className="text-red-500">*</span>
                                 </Label>
                                 <GroupedDepartmentSelector
                                     departments={departments}
@@ -1892,25 +1952,25 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     value={formData.department_id || 'none'}
                                     onValueChange={v => {
                                         updateField('department_id', v === 'none' ? null : v)
-                                        // Reset category when department changes
                                         updateField('category_id', null)
                                     }}
                                     placeholder={t('editor.select_department', 'Select main team...')}
                                     generalLabel={t('editor.general_department')}
-                                    className="w-full"
+                                    className="w-full text-xs"
                                 />
-                                <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                                    {t('editor.department_hint_simple', 'Choose the team that owns this document topic.')}
-                                </p>
                             </div>
 
                             {formData.department_id && (
-                                <div className="pt-2 border-t border-dashed border-hotel-navy/10">
-                                    <Label className="text-sm font-semibold mb-1.5 block">{t('editor.category_optional', 'Category (Optional)')}</Label>
+                                <div className="pt-2 border-t border-dashed">
+                                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                                        {t('editor.category_optional', 'Sub-Category (Optional)')}
+                                    </Label>
                                     <Select value={formData.category_id || 'none'} onValueChange={v => updateField('category_id', v === 'none' ? null : v)}>
-                                        <SelectTrigger className="w-full"><SelectValue placeholder={t('editor.category_optional', 'Category (Optional)')} /></SelectTrigger>
+                                        <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
+                                            <SelectValue placeholder={t('editor.category_optional', 'Sub-Category (Optional)')} />
+                                        </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="none">{t('editor.general_category')}</SelectItem>
+                                            <SelectItem value="none">{t('editor.general_category', 'General Topic')}</SelectItem>
                                             {categories?.map(cat => (
                                                 <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                                             ))}
@@ -1922,24 +1982,28 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     </Card>
 
                     {/* 2. Access & Visibility */}
-                    <Card className="border-hotel-navy/10 shadow-sm">
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-bold flex items-center gap-2">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
                                 <ShieldCheck className="h-4 w-4 text-hotel-gold" />
-                                {t('editor.who_can_view', 'Who Can View This')}
+                                <span>{t('editor.who_can_view', 'Audience & Access')}</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-5">
+                        <CardContent className="space-y-4">
                             <div>
-                                <Label className="text-sm font-semibold mb-1.5 block">{t('editor.viewer_group', 'Viewer Group')}</Label>
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                                    {t('editor.viewer_group', 'Viewer Scope')}
+                                </Label>
                                 <Select value={formData.visibility} onValueChange={v => updateField('visibility', v as KnowledgeVisibility)}>
-                                    <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                                    <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
+                                        <SelectValue />
+                                    </SelectTrigger>
                                     <SelectContent>
                                         {VISIBILITY_OPTIONS.map(o => (
                                             <SelectItem key={o.value} value={o.value}>
-                                                <div className="flex flex-col py-1">
-                                                    <span className="font-semibold text-sm">{o.label}</span>
-                                                    <span className="text-[10px] text-muted-foreground leading-tight">{o.description}</span>
+                                                <div className="flex flex-col py-0.5">
+                                                    <span className="font-semibold text-xs">{o.label}</span>
+                                                    <span className="text-[10px] text-muted-foreground">{o.description}</span>
                                                 </div>
                                             </SelectItem>
                                         ))}
@@ -1947,8 +2011,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 </Select>
 
                                 {formData.visibility === 'specific_departments' && (
-                                    <div className="mt-3">
-                                        <Label className="text-sm font-semibold mb-1.5 block">
+                                    <div className="mt-2.5">
+                                        <Label className="text-xs font-semibold mb-1 block">
                                             {t('editor.visibility.specific_departments_label', 'Select Teams')}
                                         </Label>
                                         <MultiDepartmentSelector
@@ -1961,117 +2025,37 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     </div>
                                 )}
 
-                                {formData.visibility === 'department' && (
-                                    <div className="mt-3">
-                                        <Label className="text-sm font-semibold mb-1.5 block">
-                                            {t('editor.select_team', 'Select Team')}
-                                        </Label>
-                                        <GroupedDepartmentSelector
-                                            departments={departments}
-                                            properties={properties}
-                                            value={formData.department_id || 'none'}
-                                            onValueChange={v => updateField('department_id', v === 'none' ? null : v)}
-                                            placeholder={t('editor.select_team', 'Select team')}
-                                            generalLabel={t('editor.general_department')}
-                                            className="w-full"
-                                        />
+                                {user && (formData.visibility === 'property' || formData.visibility === 'department') && (
+                                    <div className="mt-2.5">
+                                        <Label className="text-xs font-semibold mb-1 block">{t('editor.which_hotel', 'Hotel Property')}</Label>
+                                        <Select
+                                            value={formData.target_property_id || 'current'}
+                                            onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
+                                        >
+                                            <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
+                                                <Building2 className="me-1.5 h-3.5 w-3.5 opacity-50" />
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="current">
+                                                    Current Hotel ({currentProperty?.name || 'Head Office'})
+                                                </SelectItem>
+                                                {properties?.filter(p => p.id !== currentProperty?.id && p.id !== 'all').map(prop => (
+                                                    <SelectItem key={prop.id} value={prop.id}>{prop.name}</SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
                                     </div>
                                 )}
 
-                                {/* Selected Visibility Context */}
-                                <div className="mt-2 p-2 rounded bg-hotel-navy/5 border border-hotel-navy/10">
-                                    <p className="text-[11px] text-hotel-navy/90 leading-relaxed">
-                                        {visibilitySummary}
-                                    </p>
-
-                                    {/* Additional Settings for Group Department Visibility */}
-                                    {formData.visibility === 'group_department' && (
-                                        <div className="mt-3">
-                                            <Label className="text-sm font-semibold mb-1.5 block">
-                                                {t('editor.visibility.select_dept_group', 'Select Team')}
-                                            </Label>
-                                            <Select
-                                                value={
-                                                    // Find if current department_id matches one of the known names
-                                                    (formData.department_id
-                                                        ? departments?.find(d => d.id === formData.department_id)?.name
-                                                        : undefined) || ''
-                                                }
-                                                onValueChange={(deptName) => {
-                                                    // When name is selected, find a valid department ID from the list (prefer current property or Head Office)
-                                                    // We'll prioritize Head Office if exists, else first match
-                                                    const match = departments?.find(d => d.name === deptName && (
-                                                        d.property_id === currentProperty?.id ||
-                                                        properties?.find(p => p.id === d.property_id)?.name.toLowerCase().includes('head office')
-                                                    )) || departments?.find(d => d.name === deptName)
-
-                                                    if (match) {
-                                                        updateField('department_id', match.id)
-                                                    }
-                                                }}
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder={t('editor.visibility.choose_dept_group', 'Choose team...')} />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {uniqueDepartmentNames.map(name => (
-                                                        <SelectItem key={name} value={name}>
-                                                            {name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <p className="text-[10px] text-muted-foreground mt-1.5">
-                                                {t('editor.visibility.group_dept_hint', 'This team will see this document in all hotels.')}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    {validationWarnings.departmentRequired && (
-                                        <div className="mt-1 flex items-start gap-1.5">
-                                            <div className="mt-0.5 h-1.5 w-1.5 rounded-full bg-orange-500 shrink-0" />
-                                            <span className="text-[10px] font-bold text-orange-600">
-                                                {t('editor.visibility.dept_warning')}
-                                            </span>
-                                        </div>
-                                    )}
+                                <div className="mt-2 p-2 rounded bg-slate-50 dark:bg-slate-900 border text-[11px] text-slate-600 dark:text-slate-400">
+                                    {visibilitySummary}
                                 </div>
                             </div>
 
-                            {/* Hotel selector - only needed for one-hotel scopes */}
-                            {user && (formData.visibility === 'property' || formData.visibility === 'department') && (
-                                <div>
-                                    <Label className="text-sm font-semibold mb-1.5 block">{t('editor.which_hotel', 'Which Hotel?')}</Label>
-                                    <Select
-                                        value={formData.target_property_id || 'current'}
-                                        onValueChange={v => updateField('target_property_id', v === 'current' ? null : v)}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <Building2 className="me-2 h-4 w-4 shrink-0 opacity-50" />
-                                            <SelectValue placeholder={t('editor.which_hotel', 'Which Hotel?')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="current">
-                                                <span className="font-medium text-blue-600 underline decoration-blue-200 underline-offset-4 decoration-2">
-                                                    {t('editor.current_hotel', 'Current Hotel')}
-                                                </span>
-                                                <span className="ms-1 opacity-50">
-                                                    ({currentProperty?.name || 'Head Office'})
-                                                </span>
-                                            </SelectItem>
-                                            {properties?.filter(p => p.id !== currentProperty?.id && p.id !== 'all').map(prop => (
-                                                <SelectItem key={prop.id} value={prop.id}>
-                                                    {prop.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
-
-                            <div className="pt-2 border-t border-hotel-navy/5 flex items-center justify-between">
-                                <Label className="text-sm font-medium cursor-pointer" htmlFor="ack-switch">
-                                    {t('editor.require_read_confirmation', 'Require Read Confirmation')}
+                            <div className="pt-2 border-t flex items-center justify-between">
+                                <Label className="text-xs font-medium cursor-pointer" htmlFor="ack-switch">
+                                    {t('editor.require_read_confirmation', 'Mandatory Read Confirmation')}
                                 </Label>
                                 <Switch
                                     id="ack-switch"
@@ -2082,60 +2066,195 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         </CardContent>
                     </Card>
 
-                    {/* 3. Linked Training */}
-                    <Card className="border-hotel-navy/10 shadow-sm">
+                    {/* 3. Executive Summary (TL;DR) */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                        <CardHeader className="pb-2">
+                            <div className="flex items-center justify-between">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                    <FileText className="h-4 w-4 text-hotel-gold" />
+                                    <span>Executive TL;DR</span>
+                                </CardTitle>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => generateWithAI('summarize')}
+                                    disabled={isGenerating || !formData.content}
+                                    className="h-6 text-[11px] text-hotel-navy dark:text-hotel-gold hover:bg-hotel-gold/10 px-2"
+                                >
+                                    <Sparkles className="w-3 h-3 me-1 text-hotel-gold" />
+                                    AI Auto-Fill
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="space-y-2">
+                            <Textarea
+                                value={formData.summary}
+                                onChange={e => updateField('summary', e.target.value)}
+                                placeholder={t('editor.summary_placeholder', '2-3 sentence overview of what this document covers and who must follow it...')}
+                                rows={3}
+                                maxLength={300}
+                                className="text-xs bg-white dark:bg-slate-950"
+                            />
+                            <p className="text-[10px] text-muted-foreground text-right">
+                                {formData.summary.length}/300
+                            </p>
+                        </CardContent>
+                    </Card>
+
+                    {/* 4. PDF Attachment & Media Library */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base font-bold flex items-center gap-2">
-                                <LinkIcon className="h-4 w-4 text-hotel-gold" />
-                                {t('editor.linked_training', 'Linked Training')}
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <FolderOpen className="h-4 w-4 text-hotel-gold" />
+                                <span>Attached Document & Media</span>
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label className="text-sm font-semibold mb-1.5 block">
-                                    {t('editor.training_module', 'Training Module')}
-                                </Label>
-                                <Select
-                                    value={formData.linked_training_id || 'none'}
-                                    onValueChange={v => updateField('linked_training_id', v === 'none' ? null : v)}
+                        <CardContent className="space-y-3">
+                            <div className="grid grid-cols-2 gap-2">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowDocumentPicker(true)}
+                                    className="text-xs h-8 font-medium gap-1.5"
                                 >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={t('editor.select_training_module', 'Select training...')} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="none">
-                                            {t('editor.no_linked_training', 'None')}
-                                        </SelectItem>
-                                        {trainingModules?.map(module => (
-                                            <SelectItem key={module.id} value={module.id}>
-                                                {module.title}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
-                                    {t('editor.training_hint', 'Link an active training module. Users will see a prompt to take this training when reading this document.')}
-                                </p>
+                                    <FolderOpen className="h-3.5 w-3.5 text-hotel-gold" />
+                                    Doc Library
+                                </Button>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setShowMediaPicker(true)}
+                                    className="text-xs h-8 font-medium gap-1.5"
+                                >
+                                    <ImageIcon className="h-3.5 w-3.5 text-hotel-gold" />
+                                    Media Library
+                                </Button>
                             </div>
+                            {formData.file_url && (
+                                <div className="flex items-center justify-between p-2 rounded bg-green-50 dark:bg-green-950/20 border border-green-200 text-xs">
+                                    <span className="truncate text-green-800 dark:text-green-300 font-medium">
+                                        📎 {formData.file_url.split('/').pop()}
+                                    </span>
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 text-[10px] px-2 shrink-0">
+                                        Linked
+                                    </Badge>
+                                </div>
+                            )}
+
+                            <div className="pt-2 border-t border-dashed">
+                                <Label className="text-xs font-semibold mb-1.5 block">Upload PDF</Label>
+                                <Input
+                                    type="file"
+                                    accept=".pdf"
+                                    disabled={isUploading}
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        if (file.type !== 'application/pdf') {
+                                            toast.error(t('editor.alerts.only_pdf', 'Only PDF files are allowed'))
+                                            return
+                                        }
+                                        if (!user?.id) {
+                                            toast.error(t('editor.alerts.user_error'))
+                                            return
+                                        }
+
+                                        setIsUploading(true)
+                                        try {
+                                            const scanResult = await scanFile(file, {
+                                                bucket: 'documents',
+                                                context: 'knowledge_editor_upload'
+                                            })
+                                            if (!scanResult.safe) {
+                                                throw new Error(scanResult.message || 'File failed security scan')
+                                            }
+
+                                            const fileName = `${user.id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`
+                                            const { error } = await supabase.storage.from('documents').upload(fileName, file)
+                                            if (error) throw error
+
+                                            updateField('file_url', fileName)
+                                            updateField('storage_path', fileName)
+                                            if (!formData.title) updateField('title', file.name.replace('.pdf', ''))
+                                            toast.success(t('editor.alerts.upload_success', 'Document uploaded successfully'))
+                                        } catch (err: unknown) {
+                                            toast.error(err instanceof Error ? err.message : 'Upload failed')
+                                        } finally {
+                                            setIsUploading(false)
+                                        }
+                                    }}
+                                    className="text-xs cursor-pointer h-8 file:text-xs"
+                                />
+                            </div>
+
+                            {/* External Web Link */}
+                            <div className="pt-2 border-t border-dashed">
+                                <Label className="text-xs font-semibold mb-1 block">External Link</Label>
+                                <Input
+                                    value={formData.file_url}
+                                    onChange={e => updateField('file_url', e.target.value)}
+                                    placeholder="https://..."
+                                    className="text-xs h-8 bg-white dark:bg-slate-950"
+                                />
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* 5. Linked Training Course */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <LinkIcon className="h-4 w-4 text-hotel-gold" />
+                                <span>{t('editor.linked_training', 'Linked Training Course')}</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <Select
+                                value={formData.linked_training_id || 'none'}
+                                onValueChange={v => updateField('linked_training_id', v === 'none' ? null : v)}
+                            >
+                                <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
+                                    <SelectValue placeholder={t('editor.select_training_module', 'Select course...')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="none">{t('editor.no_linked_training', 'None (No course linked)')}</SelectItem>
+                                    {trainingModules?.map(m => (
+                                        <SelectItem key={m.id} value={m.id}>{m.title}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-[10px] text-muted-foreground mt-1.5">
+                                When associates read this SOP, they will be prompted to take the training module.
+                            </p>
                         </CardContent>
                     </Card>
                 </div>
             </div>
 
-            {/* Document Picker Dialog */}
+            {/* Document Library Picker Dialog */}
             <DocumentPicker
                 open={showDocumentPicker}
                 onOpenChange={setShowDocumentPicker}
                 onSelect={(docs) => {
                     if (docs.length > 0) {
                         updateField('file_url', docs[0].file_url)
-                        updateField('title', docs[0].title)
+                        if (!formData.title) updateField('title', docs[0].title)
                         toast.success('Document selected from library')
                     }
                 }}
                 config={{ allowedTypes: ['pdf'], multiple: false }}
                 title="Select Document from Library"
             />
-        </div >
+
+            {/* Central Media Library Picker Dialog */}
+            <MediaPicker
+                open={showMediaPicker}
+                onOpenChange={setShowMediaPicker}
+                onSelect={handleMediaSelect}
+                title="Select Media from Hotel Library"
+            />
+        </div>
     )
 }

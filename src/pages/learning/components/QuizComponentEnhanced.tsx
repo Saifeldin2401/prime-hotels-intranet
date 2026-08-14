@@ -28,8 +28,7 @@ import { useAuth } from '@/hooks/useAuth'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
-import { isFreeTextAnswerCorrect } from '@/lib/questionAnswerMatch'
-import { decodeMatchingAnswer, encodeMatchingAnswer, isMatchingAnswerCorrect, isOrderingAnswerCorrect } from '@/lib/questionOrderingMatching'
+import { decodeMatchingAnswer, encodeMatchingAnswer } from '@/lib/questionOrderingMatching'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { learningService } from '@/services/learningService'
@@ -65,6 +64,8 @@ import { useTranslation } from 'react-i18next'
 interface QuizComponentEnhancedProps {
     quizId: string
     assignmentId?: string | null
+    contextType?: string
+    contextEntityId?: string
     onComplete?: (result: QuizResult) => void
     onExit?: () => void
     certificateEnabled?: boolean
@@ -271,6 +272,8 @@ function FeedbackOverlay({
 export function QuizComponentEnhanced({
     quizId,
     assignmentId,
+    contextType,
+    contextEntityId,
     onComplete,
     onExit,
     certificateEnabled = true,
@@ -573,77 +576,6 @@ export function QuizComponentEnhanced({
         return typeof value === 'string' && value.trim().length > 0
     }
 
-    const normalizeSelectedOptions = (value: string | string[] | undefined): string[] => {
-        if (Array.isArray(value)) return value
-        if (typeof value === 'string' && value.length > 0) {
-            return value.split(',').map(v => v.trim()).filter(Boolean)
-        }
-        return []
-    }
-
-    const gradeQuestionAnswer = (
-        question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>,
-        userAnswer: string | string[] | undefined
-    ): boolean => {
-        switch (question.question_type) {
-            case 'mcq': {
-                const hasOptions = (question.options?.length || 0) > 0
-                if (hasOptions) {
-                    const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                    const selectedOption = question.options?.find(o => o.id === selected)
-                    return !!selectedOption?.is_correct
-                }
-                const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return selected.toLowerCase().trim() === (question.correct_answer || '').toLowerCase().trim()
-            }
-            case 'mcq_multi': {
-                const selectedOptions = normalizeSelectedOptions(userAnswer)
-                const correctOptions = question.options?.filter(o => o.is_correct).map(o => o.id) || []
-                return (
-                    correctOptions.length === selectedOptions.length &&
-                    correctOptions.every(id => selectedOptions.includes(id))
-                )
-            }
-            case 'scenario': {
-                const hasOptions = (question.options?.length || 0) > 0
-                if (hasOptions) {
-                    const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                    const selectedOption = question.options?.find(o => o.id === selected)
-                    return !!selectedOption?.is_correct
-                }
-                const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return isFreeTextAnswerCorrect(selected, question.correct_answer, question.accepted_answers)
-            }
-            case 'true_false': {
-                const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return selected.toLowerCase().trim() === (question.correct_answer || '').toLowerCase().trim()
-            }
-            case 'fill_blank': {
-                const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return isFreeTextAnswerCorrect(selected, question.correct_answer, question.accepted_answers)
-            }
-            case 'ordering': {
-                const selected = Array.isArray(userAnswer) ? userAnswer : []
-                return isOrderingAnswerCorrect(selected, question.options)
-            }
-            case 'matching': {
-                const selected = typeof userAnswer === 'string' ? userAnswer : ''
-                return isMatchingAnswerCorrect(selected, question.options)
-            }
-            default:
-                return false
-        }
-    }
-
-    const gradeCurrentQuestion = (): boolean => {
-        const currentQuestion = quiz?.questions?.[currentQuestionIndex]
-        if (!currentQuestion) return false
-
-        return currentQuestion.question
-            ? gradeQuestionAnswer(currentQuestion.question, answers[currentQuestion.question_id])
-            : false
-    }
-
     const getAnswerDisplay = useCallback((
         question: NonNullable<NonNullable<LearningQuiz['questions']>[number]['question']>,
         userAnswer: string | string[] | undefined
@@ -840,8 +772,8 @@ export function QuizComponentEnhanced({
                 quiz.id,
                 answersPayload,
                 {
-                    contextType: 'quiz',
-                    contextEntityId: quiz.id,
+                    contextType: contextType || 'quiz',
+                    contextEntityId: contextEntityId || quiz.id,
                     assignmentId: assignmentId || undefined,
                     timeSpentSeconds: totalTimeSpent,
                 }

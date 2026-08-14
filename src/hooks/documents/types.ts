@@ -83,8 +83,9 @@ export interface DocumentAnalytics {
     date: string
     count: number
   }>
+  // get_document_viewers_by_department groups by department NAME only (no id
+  // column in its result set), so no department_id is available here.
   viewers_by_department: Array<{
-    department_id: string
     department_name: string
     count: number
   }>

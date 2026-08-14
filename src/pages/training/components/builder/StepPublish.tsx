@@ -1,10 +1,14 @@
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface StepPublishProps {
+  category?: string
+  setCategory?: (v: string) => void
   sections: { length: number }
   totalItems: number
   displayDuration: number
@@ -23,6 +27,8 @@ interface StepPublishProps {
 }
 
 export function StepPublish({
+  category,
+  setCategory,
   sections,
   totalItems,
   displayDuration,
@@ -53,6 +59,12 @@ export function StepPublish({
               <div className="rounded-lg border bg-slate-50/70 p-4">
                 <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.summary')}</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500">Department:</span>
+                    <Badge variant="outline" className="text-xs capitalize font-semibold bg-white">
+                      {category ? category.replace('_', ' ') : 'Hotel Operations'}
+                    </Badge>
+                  </div>
                   <div>{t('builder.summarySections', { count: sections.length })}</div>
                   <div>{t('builder.summaryItems', { count: totalItems })}</div>
                   <div>{t('builder.summaryDuration', { count: displayDuration || 0 })}</div>
@@ -73,13 +85,30 @@ export function StepPublish({
                 <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.publishChecklist')}</div>
                 <div className="mt-3 space-y-2 text-sm">
                   {validationChecklist.map(item => (
-                    <div key={item.key} className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
-                      {item.ok ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                      ) : (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                    <div key={item.key} className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
+                      <div className="flex items-center gap-2">
+                        {item.ok ? (
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                        ) : (
+                          <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                        )}
+                        <span className={item.ok ? 'text-slate-700' : 'text-amber-700'}>{item.label}</span>
+                      </div>
+                      {item.key === 'category' && !item.ok && setCategory && (
+                        <Select onValueChange={(v) => setCategory(v)}>
+                          <SelectTrigger className="h-6 text-[11px] px-2 w-32 bg-white">
+                            <SelectValue placeholder="Set Category" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="front_office">Front Office</SelectItem>
+                            <SelectItem value="housekeeping">Housekeeping</SelectItem>
+                            <SelectItem value="food_beverage">Food & Beverage</SelectItem>
+                            <SelectItem value="operations">Operations</SelectItem>
+                            <SelectItem value="safety_security">Safety & Security</SelectItem>
+                            <SelectItem value="compliance">Compliance</SelectItem>
+                          </SelectContent>
+                        </Select>
                       )}
-                      <span className={item.ok ? 'text-slate-700' : 'text-amber-700'}>{item.label}</span>
                     </div>
                   ))}
                 </div>

@@ -90,9 +90,11 @@ export function KnowledgeBaseSidebar({
     const { data: quizzes, isLoading: quizzesLoading } = useQuery({
         queryKey: ['kb-quizzes', debouncedSearch, moduleTopic],
         queryFn: async () => {
+            // learning_quizzes has no question_count column -- derive it from the
+            // linked unified_quiz_questions rows instead.
             const query = supabase
                 .from('learning_quizzes')
-                .select('id, title, description, question_count')
+                .select('id, title, description, questions:unified_quiz_questions(count)')
                 .eq('status', 'published')
                 .order('created_at', { ascending: false })
                 .limit(10)
@@ -104,7 +106,10 @@ export function KnowledgeBaseSidebar({
 
             const { data, error } = await query
             if (error) throw error
-            return data
+            return (data || []).map((quiz) => ({
+                ...quiz,
+                question_count: quiz.questions?.[0]?.count ?? 0
+            }))
         }
     })
 

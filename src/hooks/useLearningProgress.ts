@@ -72,9 +72,13 @@ export function useLearningProgress() {
             if (error) throw error
 
             // training_progress.status uses the training_status enum; map it to the
-            // learning_assignment_status values the UI renders.
-            const STATUS_MAP: Record<string, LearningProgress['status']> = {
+            // learning_assignment_status values the UI renders. Every training_status
+            // value is listed explicitly so the mapped result is always a valid
+            // LearningProgress['status'] with no fallback to the raw DB value needed.
+            const STATUS_MAP: Record<'not_started' | 'in_progress' | 'completed' | 'expired', LearningProgress['status']> = {
                 not_started: 'assigned',
+                in_progress: 'in_progress',
+                completed: 'completed',
                 expired: 'overdue'
             }
 
@@ -97,7 +101,7 @@ export function useLearningProgress() {
 
             return (data || []).map((row) => ({
                 ...row,
-                status: STATUS_MAP[row.status as string] ?? row.status,
+                status: STATUS_MAP[row.status],
                 training_modules: row.content_type === 'module'
                     ? (modulesById.get(row.content_id) || null)
                     : null
@@ -110,9 +114,12 @@ export function useOrgUsers() {
     return useQuery({
         queryKey: ['org-users'],
         queryFn: async () => {
+            // profiles has no direct department_id/property_id FK -- department and
+            // property membership live in the user_departments/user_properties
+            // join tables, so those have to be embedded instead.
             const { data, error } = await supabase
                 .from('profiles')
-                .select('id, full_name, email, department:departments(name), property:properties(name)')
+                .select('id, full_name, email, user_departments(departments(name)), user_properties(properties(name))')
                 .order('full_name')
 
             if (error) throw error

@@ -82,7 +82,7 @@ export function EOMPendingReview({ onReviewed }: EOMPendingReviewProps) {
                 .from('eom_auto_selections')
                 .select(`
                     *,
-                    profile:user_id (
+                    profile:profiles!user_id (
                         full_name,
                         avatar_url,
                         job_title

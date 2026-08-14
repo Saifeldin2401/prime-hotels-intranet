@@ -167,7 +167,7 @@ serve(async (req) => {
       Deno.env.get("APP_BASE_URL") ||
       "https://www.altus-advisory.com"
     ).replace(/\/+$/, "");
-    const fromName = readSecret(config.email_from_name) || "PHG Connect";
+    const fromName = readSecret(config.email_from_name) || "Altus Connect";
     const fromEmail =
       readSecret(config.email_from_address) || "notifications@altus-advisory.com";
 
@@ -272,7 +272,7 @@ serve(async (req) => {
 });
 
 function getTemplateForEvent(eventCode: string, appUrl: string) {
-  let subject = "Greetings from PRIME Hotels";
+  let subject = "Greetings from Altus Hospitality";
   let englishText = "";
   let arabicText = "";
   let englishTitle = "";
@@ -284,41 +284,41 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
 
   switch (eventCode) {
     case "RAMADAN":
-      subject = "Ramadan Kareem from PRIME Hotels | رمضان كريم";
+      subject = "Ramadan Kareem from Altus Hospitality | رمضان كريم";
       englishTitle = "Dear Team,";
       arabicTitle = "أعزائنا الموظفين،";
       topLabelEnglish = "RAMADAN KAREEM";
       topLabelArabic = "رمضان كريم";
       englishText =
-        "As the holy month of Ramadan begins, we extend our warmest wishes to you and your families. May this blessed month bring you peace, reflection, and abundant blessings. Thank you for your continued dedication to PRIME Hotels Group as we continue to deliver exceptional hospitality.";
+        "As the holy month of Ramadan begins, we extend our warmest wishes to you and your families. May this blessed month bring you peace, reflection, and abundant blessings. Thank you for your continued dedication to Altus Hospitality as we continue to deliver exceptional hospitality.";
       arabicText =
-        "بمناسبة حلول شهر رمضان المبارك، نتقدم إليكم ولعائلاتكم بأصدق التهاني وأطيب الأمنيات. نسأل الله أن يتقبل صيامكم وقيامكم وأن يعيده عليكم بالخير واليمن والبركات. تقبل الله طاعاتكم وشكراً لجهودكم المستمرة في مجموعة فنادق برايم.";
+        "بمناسبة حلول شهر رمضان المبارك، نتقدم إليكم ولعائلاتكم بأصدق التهاني وأطيب الأمنيات. نسأل الله أن يتقبل صيامكم وقيامكم وأن يعيده عليكم بالخير واليمن والبركات. تقبل الله طاعاتكم وشكراً لجهودكم المستمرة في آلتوس للضيافة.";
       primaryColor = "#0A2540";
       accentColor = "#E6C27A";
       break;
     case "EID_FITR":
-      subject = "Eid Al-Fitr Mubarak from PRIME Hotels | عيد فطر مبارك";
+      subject = "Eid Al-Fitr Mubarak from Altus Hospitality | عيد فطر مبارك";
       englishTitle = "Dear Team,";
       arabicTitle = "أعزائنا الموظفين،";
       topLabelEnglish = "EID AL-FITR MUBARAK";
       topLabelArabic = "عيد فطر مبارك";
       englishText =
-        "On the joyful occasion of Eid Al-Fitr, we extend our warmest wishes to all team members across Prime Hotels Group properties. May this special time bring joy, peace, and prosperity to you and your families. We deeply appreciate your hard work and excellence.";
+        "On the joyful occasion of Eid Al-Fitr, we extend our warmest wishes to all team members across Altus Hospitality properties. May this special time bring joy, peace, and prosperity to you and your families. We deeply appreciate your hard work and excellence.";
       arabicText =
-        "بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي مجموعة فنادق برايم. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار. نشكر لكم التزامكم واحترافيتكم العالية التي تثري تجربة ضيوفنا.";
+        "بمناسبة حلول عيد الفطر المبارك، نتقدم بأصدق التهاني وأطيب التمنيات لجميع موظفي آلتوس للضيافة. نسأل الله أن يعيده عليكم بالخير والسعادة والازدهار. نشكر لكم التزامكم واحترافيتكم العالية التي تثري تجربة ضيوفنا.";
       primaryColor = "#0B1C3E";
       accentColor = "#D4AF37";
       break;
     case "EID_ADHA":
-      subject = "Eid Al-Adha Mubarak from PRIME Hotels | عيد أضحى مبارك";
+      subject = "Eid Al-Adha Mubarak from Altus Hospitality | عيد أضحى مبارك";
       englishTitle = "Dear Team,";
       arabicTitle = "أعزائنا الموظفين،";
       topLabelEnglish = "EID AL-ADHA MUBARAK";
       topLabelArabic = "عيد أضحى مبارك";
       englishText =
-        "Wishing you a blessed and joyful Eid Al-Adha. May this season of sacrifice and celebration bring abundant happiness, health, and success to you and your loved ones. We value your commitment to PRIME Hotels Group.";
+        "Wishing you a blessed and joyful Eid Al-Adha. May this season of sacrifice and celebration bring abundant happiness, health, and success to you and your loved ones. We value your commitment to Altus Hospitality.";
       arabicText =
-        "بمناسبة حلول عيد الأضحى المبارك، نتقدم إليكم بأسمى آيات التهاني والتبريكات. أعاده الله عليكم وعلى ذويكم باليمن والبركات والصحة والعافية. كل عام وأنتم بخير، مع خالص التقدير لجهودكم المخلصة في مجموعة فنادق برايم.";
+        "بمناسبة حلول عيد الأضحى المبارك، نتقدم إليكم بأسمى آيات التهاني والتبريكات. أعاده الله عليكم وعلى ذويكم باليمن والبركات والصحة والعافية. كل عام وأنتم بخير، مع خالص التقدير لجهودكم المخلصة في آلتوس للضيافة.";
       primaryColor = "#0A1F30";
       accentColor = "#D4AF37";
       break;
@@ -352,7 +352,7 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
       return null;
   }
 
-  const logoUrl = `${appUrl}/prime-logo-white-full.png`;
+  const logoUrl = `${appUrl}/altus-logo-official.png`;
   const year = new Date().getFullYear().toString();
 
   const html = `
@@ -369,7 +369,7 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
             
             <!-- Header -->
             <div style="padding: 40px 20px; text-align: center; background: linear-gradient(135deg, ${primaryColor} 0%, #1a365d 100%);">
-                <img src="${logoUrl}" alt="PRIME Hotels Group" style="height: 48px; width: auto; margin-bottom: 24px;">
+                <img src="${logoUrl}" alt="Altus Hospitality" style="height: 48px; width: auto; margin-bottom: 24px;">
                 <br>
                 <div style="display: inline-block; padding: 6px 20px; border: 1px solid ${accentColor}; border-radius: 50px; color: ${accentColor}; font-size: 14px; font-weight: 600; letter-spacing: 2px;">
                     ${topLabelEnglish} • ${topLabelArabic}
@@ -380,13 +380,13 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
                 <!-- ARABIC SECTION -->
                 <div dir="rtl" style="text-align: right; margin-bottom: 40px;">
                     <h2 style="color: ${primaryColor}; font-size: 24px; font-weight: bold; margin-bottom: 16px;">${arabicTitle}</h2>
-                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">هذه رسالة عامة صادرة عبر نظام PHG Connect.</p>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">هذه رسالة عامة صادرة عبر نظام Altus Connect.</p>
                     <p style="color: #334155; font-size: 16px; line-height: 1.8; margin-bottom: 20px;">
                         ${arabicText}
                     </p>
                     <p style="color: #94a3b8; font-size: 14px; line-height: 1.6;">
-                        — نظام PHG Connect<br>
-                        مجموعة فنادق برايم
+                        — نظام Altus Connect<br>
+                        آلتوس للضيافة
                     </p>
                 </div>
 
@@ -398,24 +398,24 @@ function getTemplateForEvent(eventCode: string, appUrl: string) {
                 <!-- ENGLISH SECTION -->
                 <div dir="ltr" style="text-align: left; margin-bottom: 20px;">
                     <h2 style="color: ${primaryColor}; font-size: 24px; font-weight: bold; margin-bottom: 16px;">${englishTitle}</h2>
-                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">This is a system-wide announcement from PHG Connect.</p>
+                    <p style="color: #64748b; font-size: 14px; margin-bottom: 24px;">This is a system-wide announcement from Altus Connect.</p>
                     <p style="color: #334155; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
                         ${englishText}
                     </p>
                     <p style="color: #94a3b8; font-size: 14px; line-height: 1.5;">
-                        — PHG Connect System<br>
-                        Prime Hotels Group
+                        — Altus Connect System<br>
+                        Altus Hospitality
                     </p>
                 </div>
                 
                 <div style="text-align: center; margin-top: 40px;">
-                    <a href="${appUrl}" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 15px;">Open PHG Connect</a>
+                    <a href="${appUrl}" style="display: inline-block; background-color: ${accentColor}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 8px; font-weight: bold; font-size: 15px;">Open Altus Connect</a>
                 </div>
             </div>
             
             <!-- Footer -->
             <div style="background-color: #f8fafc; padding: 24px; text-align: center; border-top: 1px solid #e2e8f0;">
-                <p style="color: #64748b; font-size: 13px; margin: 0;">&copy; ${year} PRIME Hotels Group. All rights reserved.</p>
+                <p style="color: #64748b; font-size: 13px; margin: 0;">&copy; ${year} Altus Hospitality. All rights reserved.</p>
             </div>
         </div>
     </div>

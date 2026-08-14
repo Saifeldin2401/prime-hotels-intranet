@@ -1,3 +1,4 @@
+import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,6 +65,10 @@ export const BuilderHeader = ({
                 </div>
 
                 <div className={`flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : ''}`}>
+                    <LanguageSwitcher
+                        variant="ghost"
+                        className="text-xs h-8 px-2 font-medium"
+                    />
                     <Button
                         variant="outline"
                         size="sm"

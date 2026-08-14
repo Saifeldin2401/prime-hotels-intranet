@@ -26,9 +26,11 @@ type PendingLeaveRequest = {
     reason?: string | null
     status?: string | null
     created_at?: string | null
-    requester?: Array<{ id: string; full_name: string | null; avatar_url: string | null; email: string | null }> | null
-    property?: Array<{ id: string; name: string | null }> | null
-    department?: Array<{ id: string; name: string | null }> | null
+    // Each embed below comes from a single FK column (requester_id/property_id/
+    // department_id), so PostgREST returns one object (or null), not an array.
+    requester?: { id: string; full_name: string | null; avatar_url: string | null; email: string | null } | null
+    property?: { id: string; name: string | null } | null
+    department?: { id: string; name: string | null } | null
 }
 
 type WorkflowRequestRow = {

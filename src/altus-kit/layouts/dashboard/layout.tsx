@@ -2,6 +2,7 @@ import type { Breakpoint } from '@mui/material/styles';
 
 import { merge } from 'es-toolkit';
 import { useBoolean } from 'minimal-shared/hooks';
+import { useTranslation } from 'react-i18next';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
@@ -18,6 +19,7 @@ import { HeaderSection } from '../core/header-section';
 import { LayoutSection } from '../core/layout-section';
 import { AccountPopover } from '../components/account-popover';
 import { NotificationsPopover } from '../components/notifications-popover';
+import { LanguagePopover } from '../components/language-popover';
 
 import type { MainSectionProps } from '../core/main-section';
 import type { HeaderSectionProps } from '../core/header-section';
@@ -35,6 +37,7 @@ export type DashboardLayoutProps = LayoutBaseProps & {
   layoutQuery?: Breakpoint;
   navItems?: NavItem[];
   groupedNavItems?: NavGroupData[];
+  favoriteItems?: NavItem[];
   workspaces?: WorkspacesPopoverProps['data'];
   currentWorkspaceId?: string;
   onChangeWorkspace?: (id: string) => void;
@@ -59,6 +62,7 @@ export function DashboardLayout({
   slotProps,
   navItems = navData,
   groupedNavItems,
+  favoriteItems,
   workspaces = [],
   currentWorkspaceId,
   onChangeWorkspace,
@@ -73,6 +77,8 @@ export function DashboardLayout({
   layoutQuery = 'lg',
 }: DashboardLayoutProps) {
   const theme = useTheme();
+  const { i18n } = useTranslation();
+  const isRtl = i18n.dir() === 'rtl' || i18n.language?.startsWith('ar') || theme.direction === 'rtl';
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
@@ -99,18 +105,23 @@ export function DashboardLayout({
           <NavMobile
             data={navItems}
             groupedData={groupedNavItems}
+            favoriteItems={favoriteItems}
             open={open}
             onClose={onClose}
             workspaces={workspaces}
             currentWorkspaceId={currentWorkspaceId}
             onChangeWorkspace={onChangeWorkspace}
+            onCommandOpen={onCommandOpen}
           />
         </>
       ),
       rightArea: (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0, sm: 0.75 } }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 0.5, sm: 1 } }}>
           {/** @slot Searchbar */}
           <Searchbar onCommandOpen={onCommandOpen} />
+
+          {/** @slot Language popover */}
+          <LanguagePopover />
 
           {/** @slot Notifications popover */}
           <NotificationsPopover
@@ -155,10 +166,12 @@ export function DashboardLayout({
         <NavDesktop
           data={navItems}
           groupedData={groupedNavItems}
+          favoriteItems={favoriteItems}
           layoutQuery={layoutQuery}
           workspaces={workspaces}
           currentWorkspaceId={currentWorkspaceId}
           onChangeWorkspace={onChangeWorkspace}
+          onCommandOpen={onCommandOpen}
         />
       }
       /** **************************************
@@ -173,7 +186,15 @@ export function DashboardLayout({
         {
           [`& .${layoutClasses.sidebarContainer}`]: {
             [theme.breakpoints.up(layoutQuery)]: {
-              paddingInlineStart: 'var(--layout-nav-vertical-width)',
+              ...(isRtl
+                ? {
+                    paddingRight: 'var(--layout-nav-vertical-width)',
+                    paddingLeft: 0,
+                  }
+                : {
+                    paddingLeft: 'var(--layout-nav-vertical-width)',
+                    paddingRight: 0,
+                  }),
               transition: theme.transitions.create(['padding-left', 'padding-right'], {
                 easing: 'var(--layout-transition-easing)',
                 duration: 'var(--layout-transition-duration)',

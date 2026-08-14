@@ -59,28 +59,75 @@ export async function getQuestions(
     }
 }
 
-// Read directly from unified_questions (domain-agnostic -- the knowledge_questions view
-// filters to source_domain='knowledge' only, which would silently drop e.g. training-domain
-// questions such as those used by the adaptive daily challenge).
+// Row shape returned by the get_questions_for_attempt RPC: render-safe fields
+// only - no correct_answer/accepted_answers/explanation/is_correct. Those are
+// revealed exclusively by grade_question_attempt, after grading.
+interface AttemptQuestionRow {
+    id: string
+    question_text: string
+    question_text_ar?: string | null
+    question_type: QuestionType
+    difficulty?: QuestionDifficulty | null
+    points: number
+    estimated_time_seconds: number
+    tags?: string[] | null
+    hint?: string | null
+    hint_ar?: string | null
+    linked_sop_id?: string | null
+    linked_sop?: { id: string; title: string } | null
+    options?: Array<{
+        id: string
+        option_text: string
+        option_text_ar?: string | null
+        display_order: number
+    }> | null
+}
+
+// Maps a render-safe attempt row to the KnowledgeQuestion shape the taking UI
+// (QuestionRenderer et al.) already expects. is_correct on each option is a
+// placeholder (false) - it is never populated here and must come from a
+// grading RPC response after the learner answers.
+export function mapAttemptRowToKnowledgeQuestion(row: AttemptQuestionRow): KnowledgeQuestion {
+    return {
+        id: row.id,
+        question_text: row.question_text,
+        question_text_ar: row.question_text_ar || undefined,
+        question_type: row.question_type,
+        difficulty_level: row.difficulty || 'medium',
+        hint: row.hint || undefined,
+        hint_ar: row.hint_ar || undefined,
+        linked_sop_id: row.linked_sop_id || undefined,
+        linked_sop: row.linked_sop || undefined,
+        tags: row.tags || [],
+        estimated_time_seconds: row.estimated_time_seconds,
+        points: row.points,
+        ai_generated: false,
+        status: 'published',
+        version: 1,
+        created_at: '',
+        updated_at: '',
+        options: (row.options || []).map(o => ({
+            id: o.id,
+            question_id: row.id,
+            option_text: o.option_text,
+            option_text_ar: o.option_text_ar || undefined,
+            is_correct: false,
+            display_order: o.display_order,
+            created_at: '',
+        })),
+    }
+}
+
+// Taking/rendering context only - goes through the safe RPC, which never
+// returns is_correct/correct_answer/explanation. Do not use this for the
+// question editor; it fetches an intentionally incomplete record.
 export async function getQuestionsByIds(ids: string[]): Promise<KnowledgeQuestion[]> {
     if (ids.length === 0) return []
 
-    const { data, error } = await supabase
-        .from('unified_questions')
-        .select(`
-      id, question_text, question_text_ar, question_type,
-      difficulty_level:difficulty,
-      correct_answer, accepted_answers, explanation, explanation_ar, hint, hint_ar,
-      linked_sop_id, linked_sop_section, tags, estimated_time_seconds, points,
-      ai_generated, ai_model_used, ai_confidence_score, ai_prompt_used,
-      status, version, reviewed_by, reviewed_at, review_notes,
-      created_by, created_at, updated_at, training_module_id, training_section_id,
-      options:unified_question_options(*)
-    `)
-        .in('id', ids)
-
+    const { data, error } = await supabase.rpc('get_questions_for_attempt', { p_question_ids: ids })
     if (error) throw error
-    return (data || []) as unknown as KnowledgeQuestion[]
+
+    return ((data || []) as AttemptQuestionRow[]).map(mapAttemptRowToKnowledgeQuestion)
 }
 
 // Read via backward-compat view

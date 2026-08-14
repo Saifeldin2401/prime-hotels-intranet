@@ -1,9 +1,10 @@
 import { PageHeader } from '@/components/layout/PageHeader'
 import { DeleteConfirmation } from '@/components/shared/DeleteConfirmation'
 import { ModuleAnalyticsCard } from '@/components/training/hub/ModuleAnalyticsCard'
-import { ModuleCreationWizard } from '@/components/training/hub/ModuleCreationWizard'
 import { ModuleQuickActions } from '@/components/training/hub/ModuleQuickActions'
 import { ModuleTemplateSelector } from '@/components/training/hub/ModuleTemplateSelector'
+import { SmartAICourseCreatorModal } from '@/components/training/hub/SmartAICourseCreatorModal'
+import { TrainingTrackCommandCenter } from '@/components/training/hub/TrainingTrackCommandCenter'
 import { AssignTrainingWizardModal } from '@/components/training/AssignTrainingWizardModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -121,7 +122,7 @@ export default function TrainingHub() {
 
   // Dialog states
   const [showTemplateDialog, setShowTemplateDialog] = useState(false)
-  const [showWizardDialog, setShowWizardDialog] = useState(false)
+  const [showSmartAIModal, setShowSmartAIModal] = useState(false)
   const [assignWizardOpen, setAssignWizardOpen] = useState(false)
 
   // Delete states
@@ -287,8 +288,8 @@ export default function TrainingHub() {
     setShowTemplateDialog(true)
   }
 
-  const handleCreateWithWizard = () => {
-    setShowWizardDialog(true)
+  const handleCreateWithAI = () => {
+    setShowSmartAIModal(true)
   }
 
   const handleEdit = (module: TrainingModule) => {
@@ -400,27 +401,11 @@ export default function TrainingHub() {
       return (
         <div className={cn("flex w-full flex-wrap items-center gap-2 sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
           <Button
-            onClick={() => setAssignWizardOpen(true)}
+            onClick={() => setShowSmartAIModal(true)}
             className={cn("w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black shadow-md border-none", isRTL ? "flex-row-reverse" : "")}
           >
             <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('assign_wizard', 'Assign Training & Onboarding')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => setViewMode('insights')}
-            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
-          >
-            <BarChart3 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('track')}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={handleCreateWithWizard}
-            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
-          >
-            <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('createWithWizard')}
+            {t('createWithAI', 'Create with AI')}
           </Button>
           <Button
             variant="outline"
@@ -428,11 +413,23 @@ export default function TrainingHub() {
             className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
           >
             <Layers className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('createFromTemplate')}
+            {t('createFromTemplate', 'From Template')}
           </Button>
-          <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
+          <Button
+            variant="outline"
+            onClick={handleStartFromScratch}
+            className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}
+          >
             <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-            {t('startFromScratch', 'Start from Scratch')}
+            {t('startFromScratch', 'Start Blank')}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => setAssignWizardOpen(true)}
+            className={cn("w-full sm:w-auto border-amber-300 text-amber-900 dark:text-amber-300 hover:bg-amber-50/50", isRTL ? "flex-row-reverse" : "")}
+          >
+            <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+            {t('assign_wizard', 'Assign to Team')}
           </Button>
         </div>
       )
@@ -664,9 +661,9 @@ export default function TrainingHub() {
                         <h3 className="text-lg font-semibold text-gray-700 mb-2">{t('noModules')}</h3>
                         <p className="text-gray-500 mb-6 text-center max-w-md">{t('noModulesDesc')}</p>
                         <div className={cn("flex w-full flex-wrap gap-2 justify-center", isRTL ? "flex-row-reverse" : "")}>
-                          <Button variant="outline" onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                            <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-                            {t('createWithWizard')}
+                          <Button variant="outline" onClick={handleCreateWithAI} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
+                            <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+                            {t('createWithAI', 'Create with AI')}
                           </Button>
                           <Button onClick={handleStartFromScratch} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
                             <Plus className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
@@ -698,9 +695,9 @@ export default function TrainingHub() {
                     <BookOpen className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
                     {t('library')}
                   </Button>
-                  <Button onClick={handleCreateWithWizard} className={cn("w-full sm:w-auto", isRTL ? "flex-row-reverse" : "")}>
-                    <Wand2 className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
-                    {t('createWithWizard')}
+                  <Button onClick={handleCreateWithAI} className={cn("w-full sm:w-auto bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 font-black shadow-md border-none", isRTL ? "flex-row-reverse" : "")}>
+                    <Sparkles className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
+                    {t('createWithAI', 'Create with AI')}
                   </Button>
                 </div>
               </CardContent>
@@ -726,25 +723,12 @@ export default function TrainingHub() {
           {!canAssignTraining && !canManageModules ? (
             renderAccessNotice(t('goToLibrary'), () => setViewMode('list'))
           ) : (
-            <>
-              {analytics && <ModuleAnalyticsCard analytics={analytics} />}
-
-              <div className="mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-lg font-semibold text-hotel-navy">{t('visualization.title')}</h3>
-                </div>
-                <Suspense fallback={<div className="h-[400px] w-full bg-gray-100 animate-pulse rounded-xl flex items-center justify-center text-muted-foreground">{t('loadingCharts')}</div>}>
-                  <TrainingProgressVisualization />
-                </Suspense>
-              </div>
-
-              <TrainingAssignmentsPanel
-                embedded
-                initialTab="overview"
-                hideCreateButton
-                hideHeaderActions
-              />
-            </>
+            <TrainingTrackCommandCenter
+              canManageModules={canManageModules}
+              canAssignTraining={canAssignTraining}
+              onNavigateToBuilder={(id) => setViewMode('builder', { moduleId: id })}
+              onOpenAssignWizard={() => setAssignWizardOpen(true)}
+            />
           )}
         </TabsContent>
       </Tabs>
@@ -760,12 +744,12 @@ export default function TrainingHub() {
         }}
       />
 
-      <ModuleCreationWizard
-        open={showWizardDialog}
-        onOpenChange={setShowWizardDialog}
-        onComplete={(moduleId) => {
-          navigate(`/training/hub/${moduleId}?view=builder`)
-          setShowWizardDialog(false)
+      <SmartAICourseCreatorModal
+        open={showSmartAIModal}
+        onOpenChange={setShowSmartAIModal}
+        onCourseCreated={(newModuleId) => {
+          navigate(`/training/hub/${newModuleId}?view=builder`)
+          setShowSmartAIModal(false)
         }}
       />
 
