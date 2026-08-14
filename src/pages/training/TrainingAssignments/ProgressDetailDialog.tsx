@@ -100,9 +100,9 @@ export function ProgressDetailDialog() {
                       {(() => {
                         const metaBlocks = selectedProgressMetadata.completed_blocks
                         if (Array.isArray(metaBlocks) && metaBlocks.length > 0) return metaBlocks.length
-                        if (selectedProgress.status === 'completed') return (selectedModuleBlocks?.length || 1)
+                        if (selectedProgress.status === 'completed') return 1
                         if (selectedProgress.progress_percentage > 0) {
-                          return Math.max(1, Math.round(((selectedProgress.progress_percentage || 0) / 100) * (selectedModuleBlocks?.length || 1)))
+                          return Math.max(1, Math.round((selectedProgress.progress_percentage || 0) / 100))
                         }
                         return 0
                       })()}

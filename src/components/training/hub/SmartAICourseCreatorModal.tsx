@@ -426,7 +426,7 @@ export function SmartAICourseCreatorModal({
                     department: department,
                     difficulty_level: difficulty,
                     status: 'active'
-                  })
+                  } as any)
                   .select()
                   .single()
 

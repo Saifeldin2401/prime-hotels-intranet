@@ -431,6 +431,7 @@ export default function KnowledgeEditor() {
 
             // Filter active users and exclude the author, get unique user IDs
             const uniqueReviewerIds = new Set<string>()
+            const reviewers: { id: string; full_name: string }[] = []
             interface ReviewerRoleRecord {
                 user_id: string
                 profiles?: {

@@ -1365,7 +1365,7 @@ export default function TrainingPlayer() {
                 const localUpdated = localData?.saved_at ? new Date(localData.saved_at).getTime() : 0
                 const dbUpdated = data.updated_at ? new Date(data.updated_at).getTime() : 0
                 if (!localData || dbUpdated >= localUpdated) {
-                    applyRestoredProgress(data, moduleData.blocks)
+                    applyRestoredProgress(data as any, moduleData.blocks)
                 }
             }
         }
