@@ -336,7 +336,14 @@ async function autoRepairEmptyQuiz(
       generatedQuestions = aiQuestions.map(q => ({
         question_text: q.question_text,
         question_type: q.question_type,
-        options: q.options,
+        options: Array.isArray(q.options)
+          ? q.options.map(opt => ({
+              text: typeof opt === 'string' ? opt : ((opt as unknown) as { text?: string })?.text || String(opt),
+              is_correct: typeof opt === 'string'
+                ? opt.trim().toLowerCase() === (q.correct_answer || '').trim().toLowerCase()
+                : Boolean(((opt as unknown) as { is_correct?: boolean })?.is_correct)
+            }))
+          : undefined,
         correct_answer: q.correct_answer,
         explanation: q.explanation,
         hint: q.hint

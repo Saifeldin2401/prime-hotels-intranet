@@ -162,8 +162,9 @@ interface QuizRepairQuestionOutput {
 // type and a short summary the author fleshes out inside the builder.
 export interface ModuleOutlineSection {
   heading: string
-  suggestedBlockType: 'text' | 'video' | 'document_link'
+  suggestedBlockType: 'text' | 'video' | 'document_link' | 'scenario'
   summary: string
+  rich_content?: string
 }
 
 export interface ModuleOutlineQuizCheckpoint {
@@ -595,6 +596,7 @@ export const aiService = {
     const difficulty = request.difficulty || 'medium'
     const language = request.language || 'English'
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
+    const count = request.count || 5
 
     const prompt = `You are a Senior Hotel Training & Quality Assurance Director. Create EXACTLY ${count} quiz questions based ONLY on the SOP/training content below.
 

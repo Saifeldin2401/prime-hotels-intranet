@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 import { ArrowDown, ArrowUp, FileQuestion, Loader2, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import type { ContentBlockForm, TrainingSection } from './trainingBuilderTypes'
+import type { ContentBlockForm, ContentType, TrainingSection } from './trainingBuilderTypes'
 
 interface AIOutlineDialogProps {
   open: boolean
@@ -159,11 +159,14 @@ export function AIOutlineDialog({
     }
 
     const timestamp = Date.now()
-
     const newSections: TrainingSection[] = includedSections.map((section, index) => {
+      const blockType: ContentType = (section.suggestedBlockType === 'scenario' || !section.suggestedBlockType)
+        ? 'text'
+        : (section.suggestedBlockType as ContentType)
+
       const primaryBlock: ContentBlockForm = {
         id: `content-${timestamp}-${index}`,
-        type: section.suggestedBlockType,
+        type: blockType,
         title: section.heading,
         content: (section as unknown as { rich_content?: string }).rich_content || section.summary || '',
         content_url: '',

@@ -65,7 +65,7 @@ if (!supabaseUrl.startsWith('https://')) {
 
 
 
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
