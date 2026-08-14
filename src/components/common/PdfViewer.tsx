@@ -106,7 +106,14 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
     }, [scale, rotation])
 
     useEffect(() => {
-        if (!url) return
+        if (!url || typeof url !== 'string' || !url.trim()) return
+
+        // If URL is not an absolute HTTP(S) / Blob / Data URL, wait or report error
+        if (!/^https?:\/\//i.test(url) && !url.startsWith('blob:') && !url.startsWith('data:')) {
+            setLoading(false)
+            setError(new Error('Invalid document link. Unable to access file from storage.'))
+            return
+        }
 
         let cancelled = false
         setLoading(true)
@@ -134,13 +141,17 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 }
 
                 const contentType = response.headers.get('content-type') || ''
-                if (contentType.includes('application/json') || contentType.includes('text/html')) {
+                if (contentType.includes('text/html')) {
+                    throw new Error('The document file could not be loaded from storage.')
+                }
+
+                if (contentType.includes('application/json')) {
                     const text = await response.text()
                     try {
                         const parsed = JSON.parse(text)
-                        throw new Error(parsed.message || parsed.error || 'The server returned an error instead of the PDF document.')
+                        throw new Error(parsed.message || parsed.error || 'Server returned an error instead of the PDF document.')
                     } catch (parseErr) {
-                        if (parseErr instanceof Error && parseErr.message !== 'The server returned an error instead of the PDF document.') {
+                        if (parseErr instanceof Error && parseErr.message !== 'Server returned an error instead of the PDF document.') {
                             throw parseErr
                         }
                         throw new Error('Invalid file format received from server.')

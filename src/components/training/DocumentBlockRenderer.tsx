@@ -182,17 +182,18 @@ export const DocumentBlockRenderer = ({
         )
     }
 
-    if (resolving) {
+    if (resolving || !resolvedUrl) {
         return (
-            <div className="flex items-center justify-center py-16 border rounded-lg bg-slate-50">
-                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            <div className="flex flex-col items-center justify-center py-16 border rounded-lg bg-slate-50 text-slate-400 gap-2">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <span className="text-xs">{t('loadingPdf', 'Loading document...')}</span>
             </div>
         )
     }
 
     return (
         <div className="space-y-4">
-            <PdfViewer url={resolvedUrl || ''} />
+            <PdfViewer url={resolvedUrl} />
             <div className="mt-2">
                 <DocumentBlockDescription
                     originalMarkup={originalMarkup}
