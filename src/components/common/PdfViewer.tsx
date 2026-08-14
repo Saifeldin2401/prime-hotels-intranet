@@ -127,7 +127,30 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 }
                 if (cancelled) return
 
-                const pdf = await pdfjs.getDocument(url).promise
+                // Fetch PDF data using fetch() with robust error and status checking
+                const response = await fetch(url)
+                if (!response.ok) {
+                    throw new Error(`Failed to load document (${response.status}: ${response.statusText || 'Access Denied'})`)
+                }
+
+                const contentType = response.headers.get('content-type') || ''
+                if (contentType.includes('application/json') || contentType.includes('text/html')) {
+                    const text = await response.text()
+                    try {
+                        const parsed = JSON.parse(text)
+                        throw new Error(parsed.message || parsed.error || 'The server returned an error instead of the PDF document.')
+                    } catch (parseErr) {
+                        if (parseErr instanceof Error && parseErr.message !== 'The server returned an error instead of the PDF document.') {
+                            throw parseErr
+                        }
+                        throw new Error('Invalid file format received from server.')
+                    }
+                }
+
+                const arrayBuffer = await response.arrayBuffer()
+                if (cancelled) return
+
+                const pdf = await pdfjs.getDocument({ data: arrayBuffer }).promise
                 if (cancelled) return
 
                 pdfDocRef.current = pdf
