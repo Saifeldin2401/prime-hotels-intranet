@@ -3,6 +3,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import type { Announcement } from '@/lib/types'
+import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useAnnouncements(options?: {
@@ -14,7 +15,7 @@ export function useAnnouncements(options?: {
 
     return useQuery({
         queryKey: ['announcements', user?.id, options, currentProperty?.id],
-        queryFn: async () => {
+        queryFn: async (): Promise<Announcement[]> => {
             if (!user?.id) return []
 
             let query = supabase
@@ -35,7 +36,23 @@ export function useAnnouncements(options?: {
 
             if (error) throw error
 
-            return data as Announcement[]
+            return (data || []).map((a) => ({
+                id: a.id,
+                title: a.title,
+                content: a.content,
+                priority: a.priority as Announcement['priority'],
+                pinned: a.pinned ?? false,
+                requires_acknowledgment: a.requires_acknowledgment ?? false,
+                allow_comments: a.allow_comments ?? true,
+                category: a.category,
+                scheduled_at: a.scheduled_at,
+                expires_at: a.expires_at,
+                created_by: a.created_by ?? '',
+                created_at: a.created_at ?? '',
+                updated_at: a.updated_at ?? '',
+                target_audience: a.target_audience as unknown as Announcement['target_audience'],
+                attachments: a.attachments as unknown as Announcement['attachments'],
+            }))
         },
         select: (data) => {
             if (!data) return []
@@ -118,13 +135,23 @@ export function useCreateAnnouncement() {
     const { user } = useAuth()
 
     return useMutation({
-        mutationFn: async (announcement: Partial<Announcement>) => {
+        mutationFn: async (announcement: Partial<Announcement> & { title: string; content: string }) => {
             if (!user?.id) throw new Error('User must be authenticated')
 
             const { data, error } = await supabase
                 .from('announcements')
                 .insert({
-                    ...announcement,
+                    title: announcement.title,
+                    content: announcement.content,
+                    priority: announcement.priority,
+                    pinned: announcement.pinned,
+                    requires_acknowledgment: announcement.requires_acknowledgment,
+                    allow_comments: announcement.allow_comments,
+                    category: announcement.category,
+                    scheduled_at: announcement.scheduled_at,
+                    expires_at: announcement.expires_at,
+                    target_audience: announcement.target_audience as unknown as Json,
+                    attachments: announcement.attachments as unknown as Json,
                     created_by: user.id
                 })
                 .select()

@@ -30,6 +30,8 @@ import { useState } from 'react'
 import { useTranslation } from "react-i18next"
 import { toast } from 'sonner'
 
+import type { Database, Json } from '@/types/database.generated'
+
 interface AnnouncementEditorProps {
   initialData?: {
     id?: string
@@ -99,7 +101,7 @@ interface AnnouncementSubmitData {
 interface DepartmentWithPropertyRow {
   id: string
   name: string
-  property: Array<{ name: string | null }> | null
+  property: { name: string | null } | Array<{ name: string | null }> | null
 }
 
 const DEFAULT_TARGET_AUDIENCE: TargetAudience = { type: 'all', values: [] }
@@ -187,12 +189,13 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
         .order('name')
       if (error) throw error
       // Format with property name for disambiguation
-      return (data ?? []).map((d: DepartmentWithPropertyRow) => {
-        const propertyName = d.property?.[0]?.name
+      return (data ?? []).map((d) => {
+        const prop = Array.isArray(d.property) ? d.property[0] : (d.property as { name: string | null } | null)
+        const propertyName = prop?.name
         return {
-        id: d.id,
-        name: propertyName ? `${d.name} (${propertyName})` : d.name
-      }
+          id: d.id,
+          name: propertyName ? `${d.name} (${propertyName})` : d.name
+        }
       })
     }
   })
@@ -223,10 +226,14 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
 
   const createAnnouncementMutation = useMutation({
     mutationFn: async (data: AnnouncementSubmitData) => {
+      const { target_audience, attachments, priority, ...rest } = data
       const { data: result, error } = await supabase
         .from('announcements')
         .insert({
-          ...data,
+          ...rest,
+          priority: priority as Database['public']['Enums']['announcement_priority'],
+          target_audience: target_audience as unknown as Json,
+          attachments: attachments as unknown as Json,
           created_by: user?.id,
         })
         .select()
@@ -261,7 +268,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
               const { data: roleUsers } = await supabase
                 .from('user_roles')
                 .select('user_id')
-                .eq('role', role)
+                .eq('role', role as Database['public']['Enums']['app_role'])
               if (roleUsers) {
                 targetUserIds.push(...roleUsers.map(u => u.user_id))
               }
@@ -337,13 +344,15 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   const updateAnnouncementMutation = useMutation({
     mutationFn: async (data: AnnouncementSubmitData) => {
       // Extract send_push_notification and send_email from data before passing to update
-      const { send_push_notification, send_email, ...updateData } = data
+      const { send_push_notification, send_email, target_audience, attachments, priority, ...updateData } = data
 
       const { data: result, error } = await supabase
         .from('announcements')
         .update({
           ...updateData,
-
+          priority: priority as Database['public']['Enums']['announcement_priority'],
+          target_audience: target_audience as unknown as Json,
+          attachments: attachments as unknown as Json,
         })
         .eq('id', asString(initialData?.id))
         .select()
@@ -354,7 +363,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
       // Send notifications to target audience if toggle is checked
       if (send_push_notification) {
         const targetUserIds: string[] = []
-        const audience = updateData.target_audience
+        const audience = target_audience
         const announcementTitle = updateData.title || 'Updated Announcement'
 
         if (audience && audience.type !== 'all') {
@@ -365,7 +374,7 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
                 const { data: roleUsers } = await supabase
                   .from('user_roles')
                   .select('user_id')
-                  .eq('role', role)
+                  .eq('role', role as Database['public']['Enums']['app_role'])
                 if (roleUsers) targetUserIds.push(...roleUsers.map(u => u.user_id))
               }
               break

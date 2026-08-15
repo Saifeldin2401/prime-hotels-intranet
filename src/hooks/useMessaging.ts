@@ -295,7 +295,7 @@ export function useComments(entityType: Comment['entity_type'], entityId: string
         .order('created_at', { ascending: true })
 
       if (error) throw error
-      return data as Comment[]
+      return (data || []) as unknown as Comment[]
     },
     enabled: !!user?.id && !!entityType && !!entityId
   })
@@ -420,6 +420,8 @@ export function useConversations() {
             subject,
             content,
             sender_id,
+            recipient_id,
+            status,
             created_at,
             sender:profiles!sender_id(id, full_name, email, avatar_url)
           )
@@ -441,15 +443,15 @@ export function useConversations() {
           const { data: userProps } = participantIds.length
             ? await supabase
               .from('user_properties')
-              .select('user_id, properties(name)')
+              .select('user_id, property:properties(name)')
               .in('user_id', participantIds)
-            : { data: [] as any[] }
+            : { data: [] }
 
           const primaryPropertyByUserId = new Map<string, string>()
           ;(userProps || []).forEach((row) => {
             if (!row?.user_id) return
             if (primaryPropertyByUserId.has(row.user_id)) return
-            const propName = row?.properties?.name
+            const propName = (row?.property as { name?: string } | null)?.name
             if (propName) primaryPropertyByUserId.set(row.user_id, propName)
           })
 

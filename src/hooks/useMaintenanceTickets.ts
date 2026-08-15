@@ -7,6 +7,12 @@ import { crudToasts } from '@/lib/toastHelpers'
 import type { MaintenanceAttachment, MaintenanceComment, MaintenanceTicket } from '@/lib/types'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+// MaintenanceTicket['reported_by'|'assigned_to'] is typed as the full Profile shape, so the
+// joined profile select must return every required Profile field, not just display fields.
+const PROFILE_RELATION_COLUMNS = 'id, email, full_name, phone, avatar_url, hire_date, date_of_birth, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at'
+const PROPERTY_RELATION_COLUMNS = 'id, name, address, phone, is_active, latitude, longitude, created_at'
+const DEPARTMENT_RELATION_COLUMNS = 'id, property_id, name, is_active, created_at'
+
 export function useMyMaintenanceTickets() {
   const { user } = useAuth()
   const { currentProperty } = useProperty()
@@ -20,10 +26,10 @@ export function useMyMaintenanceTickets() {
         .from('maintenance_tickets')
         .select(`
           *,
-          reported_by:profiles!reported_by_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          assigned_to:profiles!assigned_to_id(id, full_name, email)
+          reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
+          property:properties(${PROPERTY_RELATION_COLUMNS}),
+          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS})
         `)
         .eq('reported_by_id', user.id)
         .eq('is_deleted', false) // Exclude soft-deleted tickets
@@ -37,7 +43,7 @@ export function useMyMaintenanceTickets() {
       const { data, error } = await query
 
       if (error) throw error
-      return data as MaintenanceTicket[]
+      return (data as unknown) as MaintenanceTicket[]
     },
     enabled: !!user?.id
   })
@@ -57,10 +63,10 @@ export function useAssignedMaintenanceTickets() {
         .from('maintenance_tickets')
         .select(`
           *,
-          reported_by:profiles!reported_by_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          assigned_to:profiles!assigned_to_id(id, full_name, email)
+          reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
+          property:properties(${PROPERTY_RELATION_COLUMNS}),
+          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS})
         `)
         .eq('is_deleted', false)
         .order('created_at', { ascending: false })
@@ -106,7 +112,7 @@ export function useAssignedMaintenanceTickets() {
         console.error('Error fetching assigned tickets:', error)
         throw error
       }
-      return data as MaintenanceTicket[]
+      return (data as unknown) as MaintenanceTicket[]
     },
   })
 }
@@ -124,17 +130,17 @@ export function useMaintenanceTicket(ticketId: string) {
         .from('maintenance_tickets')
         .select(`
           *,
-          reported_by:profiles!reported_by_id(id, full_name, email),
-          property:properties(id, name),
-          department:departments(id, name),
-          assigned_to:profiles!assigned_to_id(id, full_name, email),
+          reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
+          property:properties(${PROPERTY_RELATION_COLUMNS}),
+          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS}),
           comments:maintenance_comments(
             *,
-            author:profiles!author_id(id, full_name, email)
+            author:profiles!author_id(${PROFILE_RELATION_COLUMNS})
           ),
           attachments:maintenance_attachments(
             *,
-            uploaded_by:profiles!uploaded_by_id(id, full_name, email)
+            uploaded_by:profiles!uploaded_by_id(${PROFILE_RELATION_COLUMNS})
           )
         `)
 
@@ -143,7 +149,7 @@ export function useMaintenanceTicket(ticketId: string) {
       const { data, error } = await query.single()
 
       if (error) throw error
-      return data as MaintenanceTicket
+      return (data as unknown) as MaintenanceTicket
     },
   })
 }
@@ -313,7 +319,9 @@ export function useAssignMaintenanceTicket() {
       })
 
       if (error) throw error
-      return data as MaintenanceTicket
+      // assign_maintenance_ticket returns to_jsonb(v_ticket) — the raw maintenance_tickets
+      // row (no joined relations), which the generated types only see as generic Json.
+      return data as unknown as MaintenanceTicket
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
@@ -365,7 +373,7 @@ export function useCompleteMaintenanceTicket() {
       })
 
       if (error) throw error
-      return data as MaintenanceTicket
+      return (data as unknown) as MaintenanceTicket
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })

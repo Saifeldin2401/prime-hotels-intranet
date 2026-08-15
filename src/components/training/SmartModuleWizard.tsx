@@ -27,6 +27,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { useAITrainingContent, type CourseConfiguration } from '@/hooks/training/useAITrainingContent'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/types/database.generated'
 import { cn } from '@/lib/utils'
 import * as QuestionService from '@/services/questionService'
 import { useQuery } from '@tanstack/react-query'
@@ -460,7 +461,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 training_module_id: b.training_module_id,
                 title: b.title,
                 content: b.content,
-                content_data: b.content_data,
+                content_data: (b.content_data as Json) || {},
                 is_mandatory: b.is_mandatory,
                 duration_seconds: b.duration_seconds,
                 points: b.points,
@@ -468,7 +469,7 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                 content_type: 'training_block',
                 block_type: b.type,
                 block_order: b.order,
-                status: 'PUBLISHED'
+                status: 'PUBLISHED' as const
             }))
             const { error: blocksError } = await supabase.from('documents').insert(docBlocks)
             if (blocksError) {
@@ -482,8 +483,8 @@ export function SmartModuleWizard({ open, onOpenChange, onModuleCreated }: Smart
                     block_order: 1000 + index,
                     is_mandatory: false,
                     content_data: { source_document_id: docId },
-                    title: documents?.find((d: any) => d.id === docId)?.title || 'Document',
-                    status: 'DRAFT'
+                    title: (documents as Array<{ id: string; title: string }> | undefined)?.find(d => d.id === docId)?.title || 'Document',
+                    status: 'DRAFT' as const
                 }))
 
                 const { error: resourceError } = await supabase.from('documents').insert(resources)

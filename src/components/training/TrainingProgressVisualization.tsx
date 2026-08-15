@@ -271,7 +271,8 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
 
   const processCategoryData = (completions: any[]) => {
     const categoryData = completions?.reduce((acc, completion) => {
-      const category = completion.training_module?.category || 'Other'
+      const mod = Array.isArray(completion.training_module) ? completion.training_module[0] : completion.training_module
+      const category = mod?.category || 'Other'
       acc[category] = (acc[category] || 0) + 1
       return acc
     }, {} as Record<string, number>) || {}
@@ -321,10 +322,12 @@ export function TrainingProgressVisualization({ className }: TrainingProgressVis
   const departmentCategoryData = processCategoryData(departmentProgress || [])
 
   const totalCompletions = userProgress?.length || 0
-  const totalHours = userProgress?.reduce((acc, completion) =>
-    acc + (completion.training_module?.estimated_duration_minutes || 0) / 60, 0) || 0
+  const totalHours = userProgress?.reduce((acc, completion) => {
+    const mod = Array.isArray(completion.training_module) ? completion.training_module[0] : completion.training_module
+    return acc + (mod?.estimated_duration_minutes || 0) / 60
+  }, 0) || 0
   const averageScore = userProgress?.reduce((acc, completion) =>
-    acc + (completion.score || 0), 0) / (totalCompletions || 1) || 0
+    acc + (completion.score_percentage ?? completion.quiz_score ?? 0), 0) / (totalCompletions || 1) || 0
 
   const currentStreak = calculateStreak(fullHistory || [])
   const hasPersonalTrend = userDailyProgress.length > 0

@@ -8,6 +8,7 @@ import type { TrainingModule } from '@/lib/types'
 import { analytics } from '@/services/analyticsService'
 import { quizIntegrityService } from '@/services/quizIntegrityService'
 import type { LearningQuiz } from '@/types/learning'
+import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -470,7 +471,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         title: block.title || '',
         content: block.content || '',
         content_url: block.content_url || '',
-        content_data: block.content_data || {},
+        content_data: (block.content_data && typeof block.content_data === 'object' && !Array.isArray(block.content_data) ? (block.content_data as Record<string, unknown>) : {}),
         is_mandatory: block.is_mandatory ?? true,
         duration: normalizeDurationMinutes(block.duration_seconds),
         points: block.points,
@@ -1492,23 +1493,20 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // Map TrainingContentBlockInsert fields to the unified documents columns.
     // documents has no `type`/`order`/`source_document_id` columns (they are
     // block_type/block_order/linked_training_id), and title is NOT NULL.
-    const docRows = blocksToInsert.map((b) => {
-      const rec = b as unknown as Record<string, unknown>
-      return {
-        training_module_id: rec.training_module_id ?? null,
-        content_type: 'training_block',
-        block_type: rec.type,
-        block_order: rec.order,
-        title: (rec.title as string) || 'Content block',
-        content: (rec.content as string) ?? '',
-        content_url: rec.content_url ?? null,
-        content_data: rec.content_data ?? {},
-        linked_training_id: rec.source_document_id ?? null,
-        is_mandatory: rec.is_mandatory ?? true,
-        duration_seconds: rec.duration_seconds ?? null,
-        points: rec.points ?? null,
-      }
-    })
+    const docRows = blocksToInsert.map((b) => ({
+      training_module_id: b.training_module_id || targetId,
+      content_type: 'training_block',
+      block_type: b.type,
+      block_order: b.order,
+      title: b.title || 'Content block',
+      content: b.content || '',
+      content_url: b.content_url || null,
+      content_data: (b.content_data as Json) || {},
+      linked_training_id: b.source_document_id || null,
+      is_mandatory: b.is_mandatory ?? true,
+      duration_seconds: b.duration_seconds ?? null,
+      points: b.points ?? null,
+    }))
 
     const { error: insertError } = await supabase
       .from('documents')
@@ -1517,12 +1515,15 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     if (!insertError) return
 
     if (previousRows.length > 0) {
-      const restoreRows = previousRows.map((row: Record<string, unknown>) => {
-        const { id, created_at, updated_at, ...rest } = row
+      const restoreRows = previousRows.map((row) => {
+        const { id, ...rest } = row
         void id
-        void created_at
-        void updated_at
-        return { ...rest, content_type: 'training_block' }
+        return {
+          ...rest,
+          title: row.title || 'Content block',
+          training_module_id: targetId,
+          content_type: 'training_block',
+        }
       })
 
       const { error: restoreError } = await supabase
@@ -1687,9 +1688,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     }
   })
 
+  const isSavingOperationInFlightRef = useRef(false)
+
   const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending
 
   const handleSave = async () => {
+    if (builderBusy || isSavingOperationInFlightRef.current) return
+    isSavingOperationInFlightRef.current = true
+
     try {
       const integrityMode = moduleStatus === 'published' ? 'publish' : 'save'
       const quizzesReady = await ensureLinkedQuizzesIntegrity(integrityMode)
@@ -1712,10 +1718,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         description: errorDetails.message,
         variant: 'destructive'
       })
+    } finally {
+      isSavingOperationInFlightRef.current = false
     }
   }
 
   const publishTraining = async () => {
+    if (builderBusy || isSavingOperationInFlightRef.current) return
+
     if (!publishReady) {
       toast({
         title: t('builder.publishBlocked'),
@@ -1724,6 +1734,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       })
       return
     }
+
+    isSavingOperationInFlightRef.current = true
 
     try {
       const quizzesReady = await ensureLinkedQuizzesIntegrity('publish')
@@ -1787,6 +1799,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         description: errorDetails.message,
         variant: 'destructive'
       })
+    } finally {
+      isSavingOperationInFlightRef.current = false
     }
   }
 

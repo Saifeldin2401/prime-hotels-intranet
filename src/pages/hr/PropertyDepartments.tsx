@@ -47,23 +47,27 @@ export default function PropertyDepartments() {
         queryFn: async () => {
             if (!currentProperty?.id) return null
 
-            let staffQuery = supabase
-                .from('profiles')
-                .select('*', { count: 'exact', head: true })
-                .eq('is_active', true)
-
+            let staffCount = 0
             if (isRealPropertyId(currentProperty.id)) {
-                staffQuery = staffQuery.eq('property_id', currentProperty.id)
+                const { count, error: staffError } = await supabase
+                    .from('user_properties')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('property_id', currentProperty.id)
+                if (staffError) throw staffError
+                staffCount = count || 0
+            } else {
+                const { count, error: staffError } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('is_active', true)
+                if (staffError) throw staffError
+                staffCount = count || 0
             }
-
-            const { count: staffCount, error: staffError } = await staffQuery
-
-            if (staffError) throw staffError
 
             let taskQuery = supabase
                 .from('tasks')
                 .select('*', { count: 'exact', head: true })
-                .in('status', ['open', 'todo', 'in_progress', 'pending'])
+                .in('status', ['todo', 'in_progress', 'review'])
                 .eq('is_deleted', false)
 
             if (isRealPropertyId(currentProperty.id)) {
@@ -71,7 +75,6 @@ export default function PropertyDepartments() {
             }
 
             const { count: taskCount, error: taskError } = await taskQuery
-
             if (taskError) throw taskError
 
             return {

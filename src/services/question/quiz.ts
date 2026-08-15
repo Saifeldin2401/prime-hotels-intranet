@@ -67,7 +67,7 @@ export async function getUserAttempts(
 
     const { data, error } = await query
     if (error) throw error
-    return data || []
+    return (data || []) as unknown as QuestionAttempt[]
 }
 
 export async function startQuizSession(
@@ -90,7 +90,7 @@ export async function startQuizSession(
         .single()
 
     if (error) throw error
-    return data
+    return data as unknown as QuizSession
 }
 
 export async function completeQuizSession(
@@ -133,5 +133,5 @@ export async function completeQuizSession(
         .single()
 
     if (error) throw error
-    return data
+    return data as unknown as QuizSession
 }

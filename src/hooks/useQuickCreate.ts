@@ -4,8 +4,14 @@ import type { Event } from '@/hooks/useEvents'
 import { createNotification } from '@/services/notificationService'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { Announcement, MaintenanceTicket, Task } from '@/lib/types'
+import type { Announcement, AppRole, MaintenanceTicket, Task } from '@/lib/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+
+const mapToAnnouncementPriority = (p?: string): 'normal' | 'important' | 'critical' => {
+  if (p === 'urgent' || p === 'critical') return 'critical'
+  if (p === 'high' || p === 'important') return 'important'
+  return 'normal'
+}
 
 // Quick Task Creation
 export function useQuickCreateTask() {
@@ -51,7 +57,7 @@ export function useQuickCreateTask() {
       })
 
       if (error) throw error
-      return data as Task
+      return (data as unknown) as Task
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -216,7 +222,7 @@ export function useQuickCreateAnnouncement() {
         .insert({
           title: announcement.title,
           content: announcement.content,
-          priority: announcement.priority || 'medium',
+          priority: mapToAnnouncementPriority(announcement.priority),
           target_audience: announcement.target_audience || { type: 'all', values: [] },
           pinned: announcement.pinned || false,
           created_by: user.id
@@ -249,7 +255,7 @@ export function useQuickCreateAnnouncement() {
               const { data: roleUsers } = await supabase
                 .from('user_roles')
                 .select('user_id')
-                .eq('role', role)
+                .eq('role', role as AppRole)
               if (roleUsers) {
                 targetUserIds.push(...roleUsers.map(u => u.user_id))
               }
@@ -302,7 +308,7 @@ export function useQuickCreateAnnouncement() {
         }
       }
 
-      return data as Announcement
+      return (data as unknown) as Announcement
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['announcements'] })

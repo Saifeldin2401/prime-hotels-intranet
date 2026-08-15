@@ -70,7 +70,7 @@ export const enterpriseErpService = {
             .limit(20)
 
         if (error) throw error
-        return data || []
+        return ((data || []) as unknown) as JournalEntry[]
     },
 
     async fetchTaxReturns(): Promise<TaxReturn[]> {
@@ -80,7 +80,7 @@ export const enterpriseErpService = {
             .order('created_at', { ascending: false })
 
         if (error) throw error
-        return data || []
+        return ((data || []) as unknown) as TaxReturn[]
     },
 
     async fetchVipPreferences(): Promise<VipGuestPreference[]> {
@@ -90,7 +90,7 @@ export const enterpriseErpService = {
             .order('lifetime_spend_sar', { ascending: false })
 
         if (error) throw error
-        return data || []
+        return ((data || []) as unknown) as VipGuestPreference[]
     },
 
     async createVipPreference(pref: Omit<VipGuestPreference, 'id'>): Promise<VipGuestPreference> {
@@ -101,7 +101,7 @@ export const enterpriseErpService = {
             .single()
 
         if (error) throw error
-        return data
+        return (data as unknown) as VipGuestPreference
     },
 
     calculateEosb(

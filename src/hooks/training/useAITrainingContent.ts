@@ -208,9 +208,9 @@ Return a JSON object with:
             // Search for related documents
             const { data: documents } = await supabase
                 .from('documents')
-                .select('id, title, description, document_type')
+                .select('id, title, description, content_type')
                 .or(`title.ilike.%${topic}%,content.ilike.%${topic}%`)
-                .eq('status', 'published')
+                .eq('status', 'PUBLISHED')
                 .limit(10)
 
             // Search for related quizzes

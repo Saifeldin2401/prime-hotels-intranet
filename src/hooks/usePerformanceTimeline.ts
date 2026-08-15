@@ -54,7 +54,7 @@ export function usePerformanceTimeline() {
       // Fetch real training progress completed by user in the last 7 days
       const { data: trainingData } = await supabase
         .from('training_progress')
-        .select('updated_at, is_completed, status')
+        .select('updated_at, status')
         .eq('user_id', user.id)
         .gte('updated_at', startDate)
 
@@ -77,7 +77,7 @@ export function usePerformanceTimeline() {
         const dayKey = format(new Date(task.updated_at), 'yyyy-MM-dd')
         if (countsByDay[dayKey]) {
           countsByDay[dayKey].total += 1
-          if (task.status === 'completed' || task.status === 'resolved') {
+          if (task.status === 'completed') {
             countsByDay[dayKey].completed += 1
           }
         }
@@ -89,7 +89,7 @@ export function usePerformanceTimeline() {
         const dayKey = format(new Date(tp.updated_at), 'yyyy-MM-dd')
         if (countsByDay[dayKey]) {
           countsByDay[dayKey].total += 1
-          if (tp.is_completed || tp.status === 'completed') {
+          if (tp.status === 'completed') {
             countsByDay[dayKey].completed += 1
           }
         }

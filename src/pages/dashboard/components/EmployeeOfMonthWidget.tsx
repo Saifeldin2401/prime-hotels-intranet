@@ -15,7 +15,9 @@ interface Winner {
     user_id: string
     month: number
     year: number
-    reason: string
+    reason_en?: string | null
+    reason_ar?: string | null
+    reason?: string | null
     user: {
         id: string
         full_name: string
@@ -31,7 +33,7 @@ export function EmployeeOfMonthWidget() {
 
     const { data: winners, isLoading } = useQuery({
         queryKey: ['employee-of-month-widget'],
-        queryFn: async () => {
+        queryFn: async (): Promise<Winner[]> => {
             const { data, error } = await supabase
                 .from('employee_of_the_month')
                 .select(`
@@ -48,7 +50,10 @@ export function EmployeeOfMonthWidget() {
                 .limit(1)
 
             if (error) throw error
-            return data as Winner[]
+            return ((data || []) as unknown as Winner[]).map((row) => ({
+                ...row,
+                reason: isRTL ? (row.reason_ar || row.reason_en) : (row.reason_en || row.reason_ar)
+            }))
         }
     })
 

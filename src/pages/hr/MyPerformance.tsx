@@ -11,10 +11,23 @@ import { Award, Calendar as CalendarIcon, Star, TrendingUp, User } from 'lucide-
 import { ar, enUS } from 'date-fns/locale'
 import { useTranslation } from 'react-i18next'
 
+interface MyPerformanceReview {
+    id: string
+    review_period: string | null
+    overall_rating: number
+    created_at: string | null
+    comments: string | null
+    goals: string | null
+    strengths?: string | null
+    areas_for_improvement?: string | null
+    reviewer?: { full_name?: string | null } | null
+}
+
 export default function MyPerformance() {
     const { t, i18n } = useTranslation('hr')
     const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
-    const { data: reviews, isLoading } = usePerformanceReviews()
+    const { data: rawReviews, isLoading } = usePerformanceReviews()
+    const reviews = rawReviews as unknown as MyPerformanceReview[] | undefined
     const { data: certificates } = useMyCertificates()
 
     const latestReview = reviews?.[0]

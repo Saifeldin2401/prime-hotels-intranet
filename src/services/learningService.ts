@@ -4,6 +4,7 @@ import {
     type PersistLearningAssignmentsResult,
 } from '@/lib/learningAssignmentMutations'
 import { supabase } from '@/lib/supabase'
+import type { Database, Json } from '@/types/database.generated'
 import type {
     CreateAssignmentDTO,
     CreateQuizDTO,
@@ -147,12 +148,13 @@ function fromTrainingStatus(status?: string | null): LearningAssignmentStatus {
     return (status as LearningAssignmentStatus) ?? 'assigned'
 }
 
-function toTrainingStatus(status?: string | null): string {
+function toTrainingStatus(status?: string | null): Database['public']['Enums']['training_status'] {
     if (status === 'assigned') return 'not_started'
     if (status === 'overdue') return 'expired'
-    // 'excused' has no training_status equivalent; exemption state lives in
-    // learning_assignment_exemptions, so callers must not write it here.
-    return status ?? 'not_started'
+    if (status === 'in_progress') return 'in_progress'
+    if (status === 'completed') return 'completed'
+    if (status === 'expired') return 'expired'
+    return 'not_started'
 }
 
 function getResolvedStatus(progress?: LearningProgress | null): LearningAssignmentStatus | 'not_started' {
@@ -491,10 +493,13 @@ export const learningService = {
         const { data, error } = await query
         if (error) throw error
 
-        return data.map(q => ({
-            ...q,
-            question_count: q.questions[0]?.count || 0
-        })) as LearningQuiz[]
+        return (data || []).map(q => {
+            const { questions, ...rest } = q
+            return {
+                ...rest,
+                question_count: questions?.[0]?.count || 0
+            }
+        }) as LearningQuiz[]
     },
 
     async getQuiz(id: string) {
@@ -516,7 +521,7 @@ export const learningService = {
         if (error) throw error
 
         if (data.questions) {
-            data.questions = data.questions.filter((questionLink: LearningQuizQuestion) => {
+            data.questions = data.questions.filter((questionLink) => {
                 const questionText = questionLink.question?.question_text
                 return typeof questionText === 'string' && questionText.trim().length > 0
             })
@@ -531,11 +536,11 @@ export const learningService = {
             if (data.randomize_questions) {
                 data.questions = seededShuffleArray(data.questions, `${id}:${userSeed}`)
             } else {
-                data.questions.sort((a: LearningQuizQuestion, b: LearningQuizQuestion) => (a.display_order || 0) - (b.display_order || 0))
+                data.questions.sort((a, b) => (a.display_order || 0) - (b.display_order || 0))
             }
 
             if (data.randomize_answers) {
-                data.questions = data.questions.map((questionLink: LearningQuizQuestion) => {
+                data.questions = data.questions.map((questionLink) => {
                     const options = questionLink.question?.options
                     if (!options || options.length < 2) return questionLink
 
@@ -804,21 +809,21 @@ export const learningService = {
         if (overridesResult.error) throw overridesResult.error
 
         const progressByContent = new Map(
-            (progressResult.data || []).map((progress: LearningProgress) => [
-                buildContentKey(progress.content_type, progress.content_id),
+            (progressResult.data || []).map((progress) => [
+                buildContentKey(progress.content_type as LearningContentType, progress.content_id),
                 progress,
             ])
         )
 
         const exemptedContentKeys = new Set(
             (exemptionsResult.data || [])
-                .map((row: LearningAssignmentExemption) => buildContentKey(row.content_type, row.content_id))
+                .map((row) => buildContentKey(row.content_type as LearningContentType, row.content_id))
                 .filter((key) => assignmentKeys.has(key))
         )
 
         const overridesByContent = new Map(
-            (overridesResult.data || []).map((override: LearningAssignmentUserOverride) => [
-                buildContentKey(override.content_type, override.content_id),
+            (overridesResult.data || []).map((override) => [
+                buildContentKey(override.content_type as LearningContentType, override.content_id),
                 override,
             ])
         )
@@ -828,7 +833,7 @@ export const learningService = {
                 const key = buildContentKey(assignment.content_type as LearningContentType, assignment.content_id)
                 const progress = progressByContent.get(key)
                 if (exemptedContentKeys.has(key)) return false
-                if (progress?.status === 'excused') return false
+                if ((progress?.status as string) === 'excused') return false
                 return true
             })
             .map((assignment) => {
@@ -1096,8 +1101,11 @@ export const learningService = {
 
         const quizContentIds = Array.from(new Set(
             (quizBlocks || [])
-                .map((block: { id: string; content_data?: Record<string, unknown> | null }) => {
-                    const linkedQuizId = block.content_data?.quiz_id
+                .map((block) => {
+                    const contentData = block.content_data && typeof block.content_data === 'object' && !Array.isArray(block.content_data)
+                        ? (block.content_data as Record<string, unknown>)
+                        : null
+                    const linkedQuizId = contentData?.quiz_id
                     return typeof linkedQuizId === 'string' && linkedQuizId.length > 0
                         ? linkedQuizId
                         : block.id
@@ -1226,7 +1234,7 @@ export const learningService = {
                 *,
                 content_id:training_id,
                 content_type:lp_content_type,
-                user:profiles!training_progress_user_id_fkey(full_name, job_title)
+                user:profiles!training_progress_user_id_fkey(id, full_name, job_title)
             `)
             .eq('assignment_id', assignmentId)
             .order('updated_at', { ascending: false })
@@ -1539,6 +1547,7 @@ export const learningService = {
 
         const progressData = {
             ...restProgress,
+            user_id: progress.user_id,
             training_id: progress.content_id,
             lp_content_type: progress.content_type,
             status: toTrainingStatus(resolvedStatus),
@@ -1546,7 +1555,7 @@ export const learningService = {
             score_percentage: bestScorePercentage,
             passed: bestPassed,
             completed_at: bestCompletedAt,
-            metadata: Object.keys(mergedMetadata).length ? mergedMetadata : progress.metadata,
+            metadata: (Object.keys(mergedMetadata).length ? mergedMetadata : progress.metadata) as Json | undefined,
             updated_at: new Date().toISOString()
         }
 

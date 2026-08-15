@@ -53,7 +53,7 @@ export default function PromotionWorkflow() {
                 .order('full_name')
 
             if (error) throw error
-            return data as (Profile & { user_roles: { role: string }[] })[]
+            return (data || []) as unknown as (Profile & { user_roles: { role: string }[] })[]
         }
     })
 
@@ -80,7 +80,7 @@ export default function PromotionWorkflow() {
                 .order('name')
 
             if (error) throw error
-            return data as Department[]
+            return (data || []) as unknown as Department[]
         },
         enabled: !!formData.employee_id
     })
@@ -90,6 +90,9 @@ export default function PromotionWorkflow() {
 
     const promoteMutation = useMutation({
         mutationFn: async () => {
+            if (!formData.to_role) {
+                throw new Error('Please select a new role')
+            }
             const { error } = await supabase.rpc("promote_employee", {
                 p_employee_id: formData.employee_id,
                 p_new_role: formData.to_role,

@@ -32,6 +32,7 @@ const entityTypes = [
 ]
 
 const roleLabels: Record<AppRole, string> = {
+  super_admin: 'Super Admin',
   corporate_admin: 'Corporate Admin',
   regional_admin: 'Regional Admin',
   regional_hr: 'Regional HR',

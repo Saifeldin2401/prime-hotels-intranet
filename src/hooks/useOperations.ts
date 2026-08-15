@@ -2,6 +2,7 @@ import { useProperty } from '@/contexts/PropertyContext'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
+import type { Database } from '@/types/database.generated'
 import type { DataImportLog } from '@/types/operations'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -52,7 +53,7 @@ export function useDataImportLogs(propertyId?: string) {
 
             const { data, error } = await query
             if (error) throw error
-            return data as DataImportLog[]
+            return (data as unknown) as DataImportLog[]
         }
     })
 }
@@ -61,7 +62,7 @@ export function useCreateImportLog() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async (data: Partial<DataImportLog>) => {
+        mutationFn: async (data: Database['public']['Tables']['data_import_logs']['Insert']) => {
             const { data: result, error } = await supabase
                 .from('data_import_logs')
                 .insert(data)

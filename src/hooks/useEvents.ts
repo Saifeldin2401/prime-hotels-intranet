@@ -45,7 +45,20 @@ export function useEvents(startDate?: Date, endDate?: Date) {
         throw error
       }
 
-      return data || []
+      return (data || []).map((ev) => ({
+        id: ev.id,
+        title: ev.title,
+        description: ev.description,
+        start_date: ev.start_time,
+        end_date: ev.end_time,
+        all_day: false,
+        type: (['meeting', 'training', 'holiday', 'deadline', 'birthday', 'general'].includes(ev.type)
+          ? ev.type
+          : 'general') as Event['type'],
+        created_by: ev.created_by,
+        is_public: true,
+        created_at: ev.start_time,
+      }))
     },
     enabled: !!user?.id
   })
@@ -80,7 +93,24 @@ export function useUpcomingEvents(limit: number = 5) {
         throw error
       }
 
-      return data || []
+      return (data || []).map((ev) => ({
+        id: ev.id,
+        title: ev.title,
+        description: ev.description ?? undefined,
+        start_date: ev.start_date,
+        end_date: ev.end_date ?? undefined,
+        all_day: ev.all_day ?? false,
+        location: ev.location ?? undefined,
+        type: (['meeting', 'training', 'holiday', 'deadline', 'birthday', 'general'].includes(ev.type ?? '')
+          ? ev.type
+          : 'general') as Event['type'],
+        property_id: ev.property_id ?? undefined,
+        department_id: ev.department_id ?? undefined,
+        created_by: ev.created_by,
+        is_public: ev.is_public ?? false,
+        attendees: ev.attendees ?? undefined,
+        created_at: ev.created_at ?? ev.start_date,
+      }))
     },
     enabled: !!user?.id
   })
@@ -121,11 +151,29 @@ export function useEventsByMonth(months: Date[]) {
 
       // Group by month
       const grouped = new Map<string, Event[]>()
-      data?.forEach(event => {
-        const date = new Date(event.start_date)
+      data?.forEach((ev) => {
+        const date = new Date(ev.start_date)
         const key = `${date.getFullYear()}-${date.getMonth()}`
         if (!grouped.has(key)) {
           grouped.set(key, [])
+        }
+        const event: Event = {
+          id: ev.id,
+          title: ev.title,
+          description: ev.description ?? undefined,
+          start_date: ev.start_date,
+          end_date: ev.end_date ?? undefined,
+          all_day: ev.all_day ?? false,
+          location: ev.location ?? undefined,
+          type: (['meeting', 'training', 'holiday', 'deadline', 'birthday', 'general'].includes(ev.type ?? '')
+            ? ev.type
+            : 'general') as Event['type'],
+          property_id: ev.property_id ?? undefined,
+          department_id: ev.department_id ?? undefined,
+          created_by: ev.created_by,
+          is_public: ev.is_public ?? false,
+          attendees: ev.attendees ?? undefined,
+          created_at: ev.created_at ?? ev.start_date,
         }
         grouped.get(key)!.push(event)
       })

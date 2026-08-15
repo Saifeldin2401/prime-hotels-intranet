@@ -14,6 +14,7 @@ import { useTrainingModulesList } from '@/hooks/useTrainingRules'
 import type { WorkflowDefinition, WorkflowStep } from '@/hooks/useWorkflows'
 import { useCreateWorkflow, useUpdateWorkflow, useUpdateWorkflowSteps, useWorkflowSteps } from '@/hooks/useWorkflows'
 import { supabase } from '@/lib/supabase'
+import type { Database, Json } from '@/types/database.generated'
 import { GripVertical, Loader2, Plus, Save, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from "react-i18next"
@@ -361,7 +362,7 @@ export function WorkflowEditor({ workflow, onClose }: WorkflowEditorProps) {
                     }))
                     const { error } = await supabase.rpc('replace_workflow_steps', {
                         p_workflow_id: workflowId,
-                        p_steps: stepsPayload
+                        p_steps: stepsPayload as unknown as Json
                     })
                     if (error) throw error
                 }

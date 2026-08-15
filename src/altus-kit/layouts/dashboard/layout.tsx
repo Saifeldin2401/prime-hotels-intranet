@@ -3,10 +3,14 @@ import type { Breakpoint } from '@mui/material/styles';
 import { merge } from 'es-toolkit';
 import { useBoolean } from 'minimal-shared/hooks';
 import { useTranslation } from 'react-i18next';
+import { useState, useCallback, useEffect } from 'react';
 
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
+import Tooltip from '@mui/material/Tooltip';
+import IconButton from '@mui/material/IconButton';
 import { useTheme } from '@mui/material/styles';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 import { NavMobile, NavDesktop } from './nav';
 import { layoutClasses } from '../core/classes';
@@ -82,6 +86,43 @@ export function DashboardLayout({
 
   const { value: open, onFalse: onClose, onTrue: onOpen } = useBoolean();
 
+  const [isNavMini, setIsNavMini] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    try {
+      return localStorage.getItem('dashboard_nav_mini') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleNavMini = useCallback(() => {
+    setIsNavMini((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('dashboard_nav_mini', String(next));
+      } catch {
+        // Ignore storage error
+      }
+      return next;
+    });
+  }, []);
+
+  // Keyboard shortcut: Ctrl+B or Cmd+B to toggle sidebar minimization
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+        const target = e.target as HTMLElement;
+        if (['INPUT', 'TEXTAREA', 'SELECT'].includes(target?.tagName) || target?.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        toggleNavMini();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [toggleNavMini]);
+
   const renderHeader = () => {
     const headerSlotProps: HeaderSectionProps['slotProps'] = {
       container: {
@@ -102,6 +143,38 @@ export function DashboardLayout({
             onClick={onOpen}
             sx={{ mr: 1, ml: -1, [theme.breakpoints.up(layoutQuery)]: { display: 'none' } }}
           />
+          {/** @slot Desktop Minimize/Expand Toggle */}
+          <Tooltip
+            title={
+              isNavMini
+                ? isRtl
+                  ? 'توسيع القائمة الجانبية (Ctrl+B)'
+                  : 'Expand Sidebar (Ctrl+B)'
+                : isRtl
+                ? 'تصغير القائمة الجانبية (Ctrl+B)'
+                : 'Minimize Sidebar (Ctrl+B)'
+            }
+          >
+            <IconButton
+              onClick={toggleNavMini}
+              size="small"
+              sx={{
+                display: 'none',
+                [theme.breakpoints.up(layoutQuery)]: { display: 'inline-flex' },
+                mr: isRtl ? 0 : 1,
+                ml: isRtl ? 1 : -0.5,
+                color: 'text.secondary',
+                borderRadius: 1,
+                p: 0.75,
+                '&:hover': {
+                  color: 'primary.main',
+                  bgcolor: 'action.hover',
+                },
+              }}
+            >
+              {isNavMini ? <PanelLeftOpen size={19} /> : <PanelLeftClose size={19} />}
+            </IconButton>
+          </Tooltip>
           <NavMobile
             data={navItems}
             groupedData={groupedNavItems}
@@ -153,6 +226,8 @@ export function DashboardLayout({
 
   const renderMain = () => <MainSection {...slotProps?.main}>{children}</MainSection>;
 
+  const resolvedNavWidth = isNavMini ? '88px' : '300px';
+
   return (
     <LayoutSection
       /** **************************************
@@ -172,6 +247,8 @@ export function DashboardLayout({
           currentWorkspaceId={currentWorkspaceId}
           onChangeWorkspace={onChangeWorkspace}
           onCommandOpen={onCommandOpen}
+          isMini={isNavMini}
+          onToggleMini={toggleNavMini}
         />
       }
       /** **************************************
@@ -181,23 +258,27 @@ export function DashboardLayout({
       /** **************************************
        * @Styles
        *************************************** */
-      cssVars={{ ...dashboardLayoutVars(theme), ...cssVars }}
+      cssVars={{
+        ...dashboardLayoutVars(theme),
+        '--layout-nav-vertical-width': resolvedNavWidth,
+        ...cssVars,
+      }}
       sx={[
         {
           [`& .${layoutClasses.sidebarContainer}`]: {
             [theme.breakpoints.up(layoutQuery)]: {
               ...(isRtl
                 ? {
-                    paddingRight: 'var(--layout-nav-vertical-width)',
+                    paddingRight: resolvedNavWidth,
                     paddingLeft: 0,
                   }
                 : {
-                    paddingLeft: 'var(--layout-nav-vertical-width)',
+                    paddingLeft: resolvedNavWidth,
                     paddingRight: 0,
                   }),
               transition: theme.transitions.create(['padding-left', 'padding-right'], {
-                easing: 'var(--layout-transition-easing)',
-                duration: 'var(--layout-transition-duration)',
+                easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+                duration: '200ms',
               }),
             },
           },

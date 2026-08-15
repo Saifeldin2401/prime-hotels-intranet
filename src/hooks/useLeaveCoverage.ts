@@ -50,7 +50,7 @@ export function useLeaveEvents(startDate: Date, endDate: Date, departmentId?: st
         queryFn: async (): Promise<LeaveEvent[]> => {
             let query = supabase
                 .from('leave_requests')
-                .select('id, user_id, department_id, start_date, end_date, leave_type, status')
+                .select('id, requester_id, department_id, start_date, end_date, type, status')
                 .gte('end_date', startDate.toISOString().split('T')[0])
                 .lte('start_date', endDate.toISOString().split('T')[0])
                 .in('status', ['approved', 'pending'])
@@ -69,8 +69,8 @@ export function useLeaveEvents(startDate: Date, endDate: Date, departmentId?: st
             if (!leaves || leaves.length === 0) return []
 
             // Manually fetch user profiles and departments to ensure data availability
-            const userIds = Array.from(new Set(leaves.map(l => l.user_id)))
-            const deptIds = Array.from(new Set(leaves.map(l => l.department_id)))
+            const userIds = Array.from(new Set(leaves.map(l => l.requester_id)))
+            const deptIds = Array.from(new Set(leaves.map(l => l.department_id).filter((id): id is string => !!id)))
 
             const { data: profiles } = await supabase
                 .from('profiles')
@@ -87,13 +87,13 @@ export function useLeaveEvents(startDate: Date, endDate: Date, departmentId?: st
 
             return leaves.map(item => ({
                 id: item.id,
-                user_id: item.user_id,
-                user_name: profileMap.get(item.user_id) || 'Unknown User',
-                department_id: item.department_id,
-                department_name: deptMap.get(item.department_id) || 'Unknown Dept',
+                user_id: item.requester_id,
+                user_name: profileMap.get(item.requester_id) || 'Unknown User',
+                department_id: item.department_id || '',
+                department_name: (item.department_id && deptMap.get(item.department_id)) || 'Unknown Dept',
                 start_date: item.start_date,
                 end_date: item.end_date,
-                leave_type: item.leave_type,
+                leave_type: item.type,
                 status: item.status as 'pending' | 'approved' | 'rejected'
             }))
         },

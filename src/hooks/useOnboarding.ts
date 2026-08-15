@@ -1,7 +1,57 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
-import type { OnboardingProcess, OnboardingTask, OnboardingTemplate } from '@/lib/types'
+import type { AppRole } from '@/lib/constants'
+import type { OnboardingProcess, OnboardingTask, OnboardingTaskDefinition, OnboardingTemplate } from '@/lib/types'
+import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+// onboarding_templates.role is the full DB app_role enum (includes 'super_admin'), but
+// AppRole intentionally excludes it (see src/lib/constants.ts) since super_admin is a
+// system role, not a template-targetable one. A template stored against that DB-only
+// value has no meaningful role restriction in the UI.
+function normalizeTemplateRole(role: string | null): AppRole | null {
+    return role === 'super_admin' ? null : (role as AppRole | null)
+}
+
+type OnboardingTemplateRow = {
+    id: string
+    title: string
+    role: string | null
+    job_title: string | null
+    department_id: string | null
+    tasks: Json
+    required_training_ids: string[] | null
+    is_active: boolean | null
+    created_at: string
+    updated_at: string
+}
+
+function mapOnboardingTemplateRow(row: OnboardingTemplateRow): OnboardingTemplate {
+    return {
+        id: row.id,
+        title: row.title,
+        role: normalizeTemplateRole(row.role),
+        job_title: row.job_title,
+        department_id: row.department_id,
+        // tasks is a jsonb column with a known array-of-task-definition shape.
+        tasks: ((row.tasks as unknown as OnboardingTaskDefinition[]) || []),
+        required_training_ids: row.required_training_ids || [],
+        is_active: row.is_active ?? true,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+    }
+}
+
+// OnboardingTaskDefinition's optional properties make it structurally incompatible with
+// the strict Json type even though the runtime shape is exactly what's stored in the
+// jsonb `tasks` column, so the write payload casts that one field through Json.
+function toOnboardingTemplateWriteData<T extends Partial<OnboardingTemplate>>(input: T) {
+    const { tasks, ...rest } = input
+    return {
+        ...rest,
+        ...(tasks !== undefined ? { tasks: tasks as unknown as Json } : {})
+    }
+}
 
 export function useMyOnboarding() {
     const { user } = useAuth()
@@ -75,7 +125,7 @@ export function useOnboardingTemplates() {
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            return data as OnboardingTemplate[]
+            return (data || []).map(mapOnboardingTemplateRow)
         }
     })
 }
@@ -84,10 +134,10 @@ export function useCreateOnboardingTemplate() {
     const queryClient = useQueryClient()
 
     return useMutation({
-        mutationFn: async (template: Partial<OnboardingTemplate>) => {
+        mutationFn: async (template: Partial<OnboardingTemplate> & Pick<OnboardingTemplate, 'title'>) => {
             const { data, error } = await supabase
                 .from('onboarding_templates')
-                .insert(template)
+                .insert(toOnboardingTemplateWriteData(template))
                 .select()
                 .single()
 
@@ -130,7 +180,7 @@ export function useOnboardingTemplate(id: string | undefined) {
                 .single()
 
             if (error) throw error
-            return data as OnboardingTemplate
+            return data ? mapOnboardingTemplateRow(data) : null
         },
         enabled: !!id
     })
@@ -143,7 +193,7 @@ export function useUpdateOnboardingTemplate() {
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<OnboardingTemplate> }) => {
             const { data, error } = await supabase
                 .from('onboarding_templates')
-                .update(updates)
+                .update(toOnboardingTemplateWriteData(updates))
                 .eq('id', id)
                 .select()
                 .single()

@@ -159,7 +159,7 @@ export default function EmailTemplateEditor() {
         backTo="/admin"
         actions={
           <Button onClick={handleSave} disabled={isSaving}>
-            <Save className="w-4 h-4 mr-2" />
+            <Save className="w-4 h-4 me-2" />
             {t('actions.save', { ns: 'common', defaultValue: 'Save Template' })}
           </Button>
         }
@@ -182,7 +182,7 @@ export default function EmailTemplateEditor() {
                 key={tmpl.id}
                 onClick={() => handleSelectTemplate(tmpl)}
                 className={cn(
-                  "w-full text-left px-3 py-2 text-sm rounded-md transition-colors",
+                  "w-full text-start px-3 py-2 text-sm rounded-md transition-colors",
                   selectedTemplate?.id === tmpl.id
                     ? "bg-primary/10 text-primary font-medium"
                     : "hover:bg-muted text-muted-foreground"
@@ -225,13 +225,13 @@ export default function EmailTemplateEditor() {
             <div className="p-2 border-b flex items-center justify-between bg-muted/20">
               <Tabs value={previewMode} onValueChange={(v) => setPreviewMode(v as any)} className="w-[400px]">
                 <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="code"><Code className="w-4 h-4 mr-2" /> Code Editor</TabsTrigger>
-                  <TabsTrigger value="preview"><Eye className="w-4 h-4 mr-2" /> Live Preview</TabsTrigger>
+                  <TabsTrigger value="code"><Code className="w-4 h-4 me-2" /> Code Editor</TabsTrigger>
+                  <TabsTrigger value="preview"><Eye className="w-4 h-4 me-2" /> Live Preview</TabsTrigger>
                 </TabsList>
               </Tabs>
               {selectedTemplate && (
                 <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive hover:bg-destructive/10" onClick={handleDelete}>
-                  <Trash2 className="w-4 h-4 mr-2" />
+                  <Trash2 className="w-4 h-4 me-2" />
                   Delete
                 </Button>
               )}

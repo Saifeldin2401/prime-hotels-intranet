@@ -227,8 +227,8 @@ export function TrainingRulesList() {
                                 {rule.target_role && (
                                     <Badge variant="outline">{t_ext('role', 'Role:')}{rule.target_role}</Badge>
                                 )}
-                                        {rule.job_titles?.title && (
-                                            <Badge variant="outline">{t_ext('title', 'Title:')}{rule.job_titles.title}</Badge>
+                                        {jobTitles?.find(jt => jt.id === (rule.target_id || (rule as Record<string, unknown>).job_title_id))?.title && (
+                                            <Badge variant="outline">{t_ext('title', 'Title:')}{jobTitles.find(jt => jt.id === (rule.target_id || (rule as Record<string, unknown>).job_title_id))?.title}</Badge>
                                         )}
                                     </div>
                                 </TableCell>

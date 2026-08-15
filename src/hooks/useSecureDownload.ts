@@ -46,12 +46,12 @@ export function useSecureDownload() {
           return null;
         }
 
-        if (!data || data.length === 0) {
+        if (!data) {
           toast.error('Media asset not found');
           return null;
         }
 
-        return data[0].signed_url;
+        return data;
       } catch (error) {
         console.error('Error in generateSecureUrl:', error);
         toast.error('Failed to generate download link');
@@ -277,14 +277,14 @@ export function useBatchDownload() {
             p_expiry_seconds: 300,
           });
 
-          if (error || !data || data.length === 0) {
+          if (error || !data) {
             results.push({ index: i, success: false, error: 'Failed to generate URL' });
             options?.onFileComplete?.(i, false);
             continue;
           }
 
           // Download file
-          const response = await fetch(data[0].signed_url, {
+          const response = await fetch(data, {
             signal: abortControllerRef.current.signal,
           });
 

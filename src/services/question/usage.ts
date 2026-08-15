@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { KnowledgeQuestion, QuestionUsage } from '@/types/questions'
-import { mapAttemptRowToKnowledgeQuestion } from './core'
+import { mapAttemptRowToKnowledgeQuestion, type AttemptQuestionRow } from './core'
 
 // Taking/rendering context only. Fetches the ordered question_id list from
 // the usage join table, then the render-safe question data via the same
@@ -25,7 +25,8 @@ export async function getQuestionsForContext(
     })
     if (questionsError) throw questionsError
 
-    const byId = new Map((questions || []).map((q: { id: string }) => [q.id, q]))
+    const rows = (questions || []) as unknown as AttemptQuestionRow[]
+    const byId = new Map(rows.map(q => [q.id, q]))
     return orderedIds
         .map(id => byId.get(id))
         .filter((q): q is NonNullable<typeof q> => !!q)

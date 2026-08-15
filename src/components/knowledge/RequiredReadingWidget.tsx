@@ -69,7 +69,7 @@ export function RequiredReadingWidget({
     const overdueCount = pending.filter(r =>
         r.due_date && new Date(r.due_date) < new Date()
     ).length
-    const completionRate = (completed.length / requiredReading.length) * 100
+    const completionRate = requiredReading.length > 0 ? (completed.length / requiredReading.length) * 100 : 100
 
     // Compact version for sidebar or small spaces
     if (compact) {

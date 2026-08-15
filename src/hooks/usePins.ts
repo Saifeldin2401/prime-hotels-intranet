@@ -71,9 +71,9 @@ export function usePins() {
         throw new Error(t('pins.errors.fetch_failed', 'Failed to load pinned items'))
       }
 
-      return (data || []).map((item: Record<string, unknown>) => ({
+      return (data || []).map((item) => ({
         pin_id: item.pin_id,
-        item_type: item.item_type,
+        item_type: item.item_type as PinItemType,
         item_id: item.item_id,
         pinned_at: item.pinned_at,
         display_order: item.display_order,

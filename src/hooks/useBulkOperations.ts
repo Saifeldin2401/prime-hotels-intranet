@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { logAuditEvent } from '@/lib/auditLog'
 import { getValidNextStatuses, validateTransition } from '@/lib/statusTransitions'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 import { crudToasts } from '@/lib/toastHelpers'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -348,7 +349,7 @@ export function useBulkUpdateTaskStatus() {
                 const { data, error } = await supabase
                     .from('tasks')
                     .update({
-                        status: newStatus,
+                        status: newStatus as Database['public']['Enums']['entity_status'],
                         updated_at: new Date().toISOString()
                     })
                     .in('id', validIds)

@@ -188,7 +188,6 @@
             "coming_up_on": "سيأتي في",
             "coo_title": "المدير التنفيذي للعمليات"
         },
-
         "pinned_items": "العناصر المثبتة",
         "pinned_items_desc": "وصول سريع للعناصر المهمة",
         "pinned": {
@@ -197,12 +196,76 @@
             "empty": "لا توجد عناصر مثبتة بعد",
             "empty_desc": "ثبت المستندات والمهام والتدريب والإعلانات المهمة للوصول السريع من لوحة التحكم.",
             "limit": "يمكنك تثبيت حتى 10 عناصر",
-            "pin_items": "ثبت العناصر المهمة للوصول السريع"
+            "pin_items": "ثبت العناصر المهمة للوصول السريع",
+            "drag_hint": "اسحب لإعادة الترتيب",
+            "unpin": "إلغاء التثبيت",
+            "pin": "تثبيت",
+            "open": "فتح",
+            "type_document": "مستند",
+            "type_task": "مهمة",
+            "type_training": "تدريب",
+            "type_announcement": "إعلان",
+            "pinned_at": "تم التثبيت {{date}}",
+            "cannot_open": "تعذر فتح هذا العنصر",
+            "pinned_success": "تم تثبيت العنصر في لوحة التحكم",
+            "unpinned_success": "تم إلغاء تثبيت العنصر",
+            "reordered_success": "تمت إعادة ترتيب العناصر المثبتة",
+            "error_pinning": "فشل تثبيت العنصر",
+            "error_unpinning": "فشل إلغاء تثبيت العنصر",
+            "error_reordering": "فشل إعادة ترتيب العناصر",
+            "view_all": "عرض جميع العناصر المثبتة",
+            "no_results": "لم يتم العثور على عناصر مثبتة",
+            "confirm_unpin": "هل أنت متأكد من إلغاء تثبيت هذا العنصر؟",
+            "confirm_unpin_all": "هل أنت متأكد من إلغاء تثبيت جميع العناصر؟",
+            "unpin_all": "إلغاء تثبيت الكل",
+            "unpinned_all_success": "تم إلغاء تثبيت جميع العناصر",
+            "quick_pin": "تثبيت سريع",
+            "search_placeholder": "بحث في العناصر المثبتة...",
+            "filter_all": "الكل",
+            "filter_documents": "المستندات",
+            "filter_tasks": "المهام",
+            "filter_training": "التدريب",
+            "filter_announcements": "الإعلانات",
+            "sort_by": "ترتيب حسب",
+            "sort_recent": "المثبت حديثاً",
+            "sort_title": "العنوان",
+            "sort_type": "النوع",
+            "sort_order": "ترتيب مخصص",
+            "max_reached": "تم الوصول للحد الأقصى للعناصر المثبتة (10)",
+            "already_pinned": "هذا العنصر مثبت بالفعل",
+            "tip": "تلميح: يمكنك تثبيت العناصر بالنقر على أيقونة التثبيت في المستندات أو المهام أو التدريب."
         },
         "motivational_quotes": {
             "ibn_arabi_1": "من عرف نفسه عرف ربه.",
             "ibn_arabi_1_author": "— ابن عربي"
-        }
+        },
+        "customize": "تخصيص لوحة التحكم",
+        "reset_layout": "إعادة تعيين التنسيق",
+        "save_layout": "حفظ التنسيق",
+        "layout_saved": "تم حفظ تنسيق لوحة التحكم بنجاح",
+        "layout_reset": "تمت إعادة تعيين التنسيق إلى الافتراضي",
+        "drag_to_reorder": "اسحب الأدوات لإعادة ترتيب لوحة التحكم",
+        "hide_widget": "إخفاء الأداة",
+        "show_widget": "إظهار الأداة",
+        "visible_widgets": "الأدوات المرئية",
+        "hidden_widgets": "الأدوات المخفية",
+        "no_hidden_widgets": "جميع الأدوات مرئية حالياً",
+        "widget_count": "{{count}} أداة",
+        "widget_count_other": "{{count}} أدوات",
+        "manage_widgets": "إدارة الأدوات",
+        "add_widget": "إضافة أداة",
+        "remove_widget": "إزالة الأداة",
+        "widget_settings": "إعدادات الأداة",
+        "columns": "الأعمدة",
+        "compact_view": "عرض مضغوط",
+        "expanded_view": "عرض موسع",
+        "auto_refresh": "تحديث تلقائي",
+        "refresh_interval": "فترة التحديث",
+        "every_minute": "كل دقيقة",
+        "every_5_minutes": "كل 5 دقائق",
+        "every_15_minutes": "كل 15 دقيقة",
+        "every_30_minutes": "كل 30 دقيقة",
+        "disabled": "معطل"
     },
     "focus": {
         "my_work": "عملي",
@@ -1039,6 +1102,7 @@
             "description": "إدارة العناصر المثبتة للوصول السريع"
         },
         "actions": {
+            "pin": "تثبيت في لوحة التحكم",
             "unpin": "إلغاء التثبيت"
         },
         "types": {
@@ -1048,6 +1112,24 @@
             "task": "مهمة",
             "announcement": "إعلان",
             "knowledge": "معرفة"
+        },
+        "tooltip": {
+            "pin": "تثبيت في لوحة التحكم",
+            "unpin": "إلغاء التثبيت من لوحة التحكم"
+        },
+        "errors": {
+            "fetch_failed": "فشل تحميل العناصر المثبتة",
+            "not_authenticated": "يجب تسجيل الدخول أولاً",
+            "max_reached": "تم الوصول للحد الأقصى {{max}} عناصر مثبتة",
+            "unpin_first": "قم بإلغاء تثبيت عنصر أولاً لإضافة عنصر جديد.",
+            "already_pinned": "هذا العنصر مثبت بالفعل",
+            "add_failed": "فشل تثبيت العنصر",
+            "remove_failed": "فشل إلغاء تثبيت العنصر",
+            "reorder_failed": "فشل إعادة ترتيب العناصر"
+        },
+        "success": {
+            "added": "تم التثبيت في لوحة التحكم",
+            "removed": "تمت إزالة التثبيت من لوحة التحكم"
         }
     },
     "customize": {

@@ -32,9 +32,12 @@ import {
 } from "@/components/ui/popover"
 import { useDepartments } from '@/hooks/useDepartments'
 import type { AppRole } from '@/lib/constants'
-import type { Profile, Property } from '@/lib/types'
+import type { Profile } from '@/lib/types'
+import type { Database } from '@/types/database.generated'
 import { cn, escapeSearchQuery } from "@/lib/utils"
 import { ArrowLeft, Check, ChevronsUpDown } from 'lucide-react'
+
+type RoleType = Database['public']['Enums']['app_role']
 
 interface UserFormProps {
   user?: Profile
@@ -60,13 +63,16 @@ interface PotentialManager {
   isDeptHead: boolean
 }
 
-const isValidUUID = (value: string) =>
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+const isValidUUID = (id: string | null | undefined): boolean => {
+  if (!id) return false
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  return uuidRegex.test(id)
+}
 
 const MANAGER_ROLES = ['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin', 'corporate_admin']
 
 export function UserForm({ user, onClose }: UserFormProps) {
-  const { t } = useTranslation('users')
+  const { t } = useTranslation('admin')
   const { t: tCommon } = useTranslation('common')
   const { toast } = useToast()
   const managerListId = useId()
@@ -74,8 +80,8 @@ export function UserForm({ user, onClose }: UserFormProps) {
   const [fullName, setFullName] = useState('')
   const [phone, setPhone] = useState('')
   const [jobTitle, setJobTitle] = useState('')
-  const [role, setRole] = useState<AppRole | ''>('')
-  const [originalRole, setOriginalRole] = useState<AppRole | ''>('')
+  const [role, setRole] = useState<RoleType | ''>('')
+  const [originalRole, setOriginalRole] = useState<RoleType | ''>('')
   const [isActive, setIsActive] = useState(true)
   const [selectedProperties, setSelectedProperties] = useState<string[]>([])
   const [selectedDepartments, setSelectedDepartments] = useState<string[]>([])
@@ -221,7 +227,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
         .order('name')
 
       if (error) throw error
-      return data as Property[]
+      return data ?? []
     },
   })
 
@@ -940,7 +946,7 @@ export function UserForm({ user, onClose }: UserFormProps) {
               <select
                 id="role"
                 value={role}
-                onChange={(e) => setRole(e.target.value as AppRole)}
+                onChange={(e) => setRole(e.target.value as RoleType)}
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                 required
               >

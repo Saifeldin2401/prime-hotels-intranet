@@ -961,17 +961,19 @@ export default function DocumentLibrary() {
               }
               
               // Create duplicates with new titles
-              const duplicates = docsToDuplicate.map(doc => ({
-                ...doc,
-                id: undefined, // Let Supabase generate new ID
-                title: `${doc.title} (Copy)`,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                created_by: user?.id,
-                view_count: 0,
-                download_count: 0,
-                status: 'DRAFT'
-              }))
+              const duplicates = docsToDuplicate.map(doc => {
+                const { id: _id, ...rest } = doc
+                return {
+                  ...rest,
+                  title: `${doc.title} (Copy)`,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                  created_by: user?.id,
+                  view_count: 0,
+                  download_count: 0,
+                  status: 'DRAFT' as const,
+                }
+              })
               
               const { data: newDocs, error: insertError } = await supabase
                 .from('documents')

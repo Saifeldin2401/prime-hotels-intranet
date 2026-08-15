@@ -44,6 +44,7 @@ export function useUserData() {
 
 // ─── Role priority order (lower = higher privilege) ──────────────────────────
 const ROLE_ORDER: Record<AppRole, number> = {
+  super_admin: 0,
   corporate_admin: 1,
   regional_admin: 2,
   regional_hr: 3,

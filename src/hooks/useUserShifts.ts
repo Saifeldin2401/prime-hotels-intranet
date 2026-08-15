@@ -116,7 +116,7 @@ export function useUserShifts(startDate?: Date, endDate?: Date) {
 
       return (data || []).map((row) => ({
         ...row,
-        shift_date: row.start_time ? row.start_time.split('T')[0] : row.shift_date
+        shift_date: row.start_time ? row.start_time.split('T')[0] : ''
       })) as UserShift[]
     },
     enabled: !!user?.id

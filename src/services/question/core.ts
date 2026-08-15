@@ -29,7 +29,6 @@ export async function getQuestions(
         .select(`
       *,
       options:knowledge_question_options(*),
-      linked_sop:documents(id, title),
       created_by_profile:profiles!unified_questions_created_by_fkey(id, full_name)
     `, { count: 'exact' })
 
@@ -54,7 +53,7 @@ export async function getQuestions(
     if (error) throw error
 
     return {
-        questions: data || [],
+        questions: (data || []) as KnowledgeQuestion[],
         total: count || 0
     }
 }
@@ -62,7 +61,7 @@ export async function getQuestions(
 // Row shape returned by the get_questions_for_attempt RPC: render-safe fields
 // only - no correct_answer/accepted_answers/explanation/is_correct. Those are
 // revealed exclusively by grade_question_attempt, after grading.
-interface AttemptQuestionRow {
+export interface AttemptQuestionRow {
     id: string
     question_text: string
     question_text_ar?: string | null
@@ -127,7 +126,7 @@ export async function getQuestionsByIds(ids: string[]): Promise<KnowledgeQuestio
     const { data, error } = await supabase.rpc('get_questions_for_attempt', { p_question_ids: ids })
     if (error) throw error
 
-    return ((data || []) as AttemptQuestionRow[]).map(mapAttemptRowToKnowledgeQuestion)
+    return ((data || []) as unknown as AttemptQuestionRow[]).map(mapAttemptRowToKnowledgeQuestion)
 }
 
 // Read via backward-compat view
@@ -137,7 +136,6 @@ export async function getQuestionById(id: string): Promise<KnowledgeQuestion | n
         .select(`
       *,
       options:knowledge_question_options(*),
-      linked_sop:documents(id, title),
       created_by_profile:profiles!unified_questions_created_by_fkey(id, full_name),
       reviewed_by_profile:profiles!unified_questions_reviewed_by_fkey(id, full_name)
     `)
@@ -145,7 +143,7 @@ export async function getQuestionById(id: string): Promise<KnowledgeQuestion | n
         .single()
 
     if (error) throw error
-    return data
+    return data as KnowledgeQuestion | null
 }
 
 // Write directly to unified_questions (source_domain='knowledge')
@@ -189,7 +187,16 @@ export async function createQuestion(
         if (optError) throw optError
     }
 
-    return question
+    return {
+        ...question,
+        difficulty_level: question.difficulty,
+        tags: question.tags || [],
+        estimated_time_seconds: question.estimated_time_seconds || 60,
+        points: question.points || 10,
+        version: question.version || 1,
+        created_at: question.created_at || new Date().toISOString(),
+        updated_at: question.updated_at || new Date().toISOString(),
+    } as KnowledgeQuestion
 }
 
 // Write directly to unified_questions
@@ -240,7 +247,16 @@ export async function updateQuestion(
         }
     }
 
-    return question
+    return {
+        ...question,
+        difficulty_level: question.difficulty,
+        tags: question.tags || [],
+        estimated_time_seconds: question.estimated_time_seconds || 60,
+        points: question.points || 10,
+        version: question.version || 1,
+        created_at: question.created_at || new Date().toISOString(),
+        updated_at: question.updated_at || new Date().toISOString(),
+    } as KnowledgeQuestion
 }
 
 // Write directly to unified_questions

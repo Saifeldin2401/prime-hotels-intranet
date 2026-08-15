@@ -58,6 +58,7 @@ import { sanitizeHtml } from '@/lib/sanitize'
 import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
 import { triggerService } from '@/services/triggerService'
+import type { Database, Json } from '@/types/database.generated'
 import {
     type ChecklistItem,
     type FAQItem,
@@ -411,7 +412,7 @@ export default function KnowledgeEditor() {
     const notifyReviewersOfSubmission = async (documentId: string, documentTitle: string) => {
         try {
             // Get reviewers with reviewer roles from user_roles table
-            const reviewerRoles = ['property_manager', 'regional_admin', 'regional_hr']
+            const reviewerRoles: Database['public']['Enums']['app_role'][] = ['property_manager', 'regional_admin', 'regional_hr']
 
             // Query user_roles to find users with reviewer roles, then get their profile info
             const { data: reviewerRolesData, error: rolesError } = await supabase
@@ -518,6 +519,7 @@ export default function KnowledgeEditor() {
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
     const previewRef = useRef<HTMLDivElement>(null)
     const [isSaving, setIsSaving] = useState(false)
+    const isSavingInFlightRef = useRef(false)
     const [isUploading, setIsUploading] = useState(false)
     const [isGenerating, setIsGenerating] = useState(false)
     const [aiLanguage, setAiLanguage] = useState('English')
@@ -847,11 +849,26 @@ export default function KnowledgeEditor() {
         if (id && id !== 'new') {
             supabase
                 .from('documents')
-                .select('*')
+                .select('*, document_department_access(department_id)')
                 .eq('id', id)
                 .single()
                 .then(({ data, error }) => {
                     if (data && !error) {
+                        const parsedChecklist = Array.isArray(data.checklist_items)
+                            ? (data.checklist_items as unknown as ChecklistItem[])
+                            : []
+                        const parsedFaq = Array.isArray(data.faq_items)
+                            ? (data.faq_items as unknown as FAQItem[])
+                            : []
+                        const parsedImages = Array.isArray(data.images)
+                            ? (data.images as unknown as Array<{ id: string; url: string; caption: string; order: number }>)
+                            : []
+                        const accessIds = Array.isArray(data.document_department_access)
+                            ? data.document_department_access
+                                .map((item: { department_id: string | null }) => item.department_id)
+                                .filter((deptId): deptId is string => typeof deptId === 'string')
+                            : []
+
                         setFormData({
                             title: data.title || '',
                             description: data.description || '',
@@ -860,19 +877,19 @@ export default function KnowledgeEditor() {
                             file_url: data.file_url || '',
                             storage_path: '',
                             content_type: data.content_type || 'document',
-                            visibility: data.visibility || 'all_properties',
+                            visibility: (data.visibility || 'all_properties') as KnowledgeVisibility,
                             requires_acknowledgment: data.requires_acknowledgment || false,
                             featured: false,
                             department_id: data.department_id || null,
                             category_id: data.category_id || null,
                             target_property_id: data.property_id || null,
-                            specific_department_ids: data.department_access_ids || [],
+                            specific_department_ids: accessIds,
                             linked_training_id: data.linked_training_id || null,
                             // Content Type Specific
-                            checklist_items: data.checklist_items || [],
-                            faq_items: data.faq_items || [],
+                            checklist_items: parsedChecklist,
+                            faq_items: parsedFaq,
                             video_url: data.video_url || '',
-                            images: data.images || [],
+                            images: parsedImages,
                             // AI Auto-tagging fields
                             ai_tags: data.ai_tags || [],
                             ai_category: data.ai_category || '',
@@ -1176,6 +1193,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
     }, [])
 
     const saveArticle = async (status: 'DRAFT' | 'PENDING_REVIEW' | 'PUBLISHED') => {
+        if (isSaving || isSavingInFlightRef.current) return
+
         if (!formData.title.trim()) {
             toast.error(t('editor.alerts.title_required'))
             return
@@ -1197,6 +1216,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             return
         }
 
+        isSavingInFlightRef.current = true
         setIsSaving(true)
 
         let finalSummary = formData.summary
@@ -1262,7 +1282,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             let savedArticleData = null
             let redirectToArticleId: string | null = null
 
-            const articleData = {
+            const articleData: Database['public']['Tables']['documents']['Update'] = {
                 title: formData.title,
                 description: finalDescription || null,
                 summary: finalSummary || null,
@@ -1279,10 +1299,10 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 updated_by: user?.id,
                 updated_at: new Date().toISOString(),
                 estimated_read_time: estimatedReadTime,
-                checklist_items: formData.checklist_items || [],
-                faq_items: formData.faq_items || [],
+                checklist_items: (formData.checklist_items || []) as unknown as Json,
+                faq_items: (formData.faq_items || []) as unknown as Json,
                 video_url: formData.video_url || null,
-                images: formData.images || []
+                images: (formData.images || []) as unknown as Json
             }
 
             if (isEditing && id) {
@@ -1320,8 +1340,11 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     ? t('editor.alerts.submitted_for_review')
                     : t('editor.alerts.update_success', { type: typeLabel }))
             } else {
-                const insertPayload = {
+                const insertPayload: Database['public']['Tables']['documents']['Insert'] = {
                     ...articleData,
+                    title: formData.title,
+                    status: status,
+                    visibility: formData.visibility,
                     created_by: user?.id
                 }
                 const { data, error } = await supabase
@@ -1442,6 +1465,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             const errorMessage = error?.message || (typeof error === 'string' ? error : JSON.stringify(error))
             toast.error(t('editor.alerts.save_error', { error: errorMessage }))
         } finally {
+            isSavingInFlightRef.current = false
             setIsSaving(false)
         }
     }

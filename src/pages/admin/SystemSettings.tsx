@@ -71,7 +71,7 @@ function SettingRow({ setting, onUpdate }: { setting: SystemSetting; onUpdate: (
 
     return (
         <div className="flex flex-col sm:flex-row sm:items-start justify-between py-4 px-4 border-b last:border-0 gap-3">
-            <div className="flex-1 min-w-0 pr-2">
+            <div className="flex-1 min-w-0 pe-2">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                         {formatKey(setting.key)}

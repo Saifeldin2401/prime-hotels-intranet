@@ -141,7 +141,7 @@ export function AssignTrainingWizardModal({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, job_title, department_name, avatar_url')
+        .select('id, full_name, email, job_title, avatar_url')
         .order('full_name', { ascending: true })
         .limit(30)
       if (error) return []

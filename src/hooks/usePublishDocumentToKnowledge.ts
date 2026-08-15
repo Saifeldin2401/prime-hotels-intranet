@@ -10,6 +10,8 @@ import { useProperty } from '@/contexts/PropertyContext';
 import { supabase } from '@/lib/supabase';
 import { logAuditEvent } from '@/lib/auditLog';
 import { crudToasts } from '@/lib/toastHelpers';
+import { getArticleById } from '@/services/knowledgeService';
+import type { Database } from '@/types/database.generated';
 import type { Document } from '@/lib/types';
 import type { KnowledgeArticle, KnowledgeVisibility } from '@/types/knowledge';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -70,19 +72,19 @@ export function usePublishDocumentToKnowledge() {
 
         // 3. Determine if user can auto-publish based on role
         const canAutoPublish = ['regional_admin', 'regional_hr', 'corporate_admin'].includes(primaryRole || '');
-        const finalStatus = input.autoPublish && canAutoPublish ? 'PUBLISHED' : 'DRAFT';
+        const finalStatus: Database['public']['Enums']['document_status'] = input.autoPublish && canAutoPublish ? 'PUBLISHED' : 'DRAFT';
 
         // 4. Create knowledge base article from document
-        const articleData = {
+        const articleData: Database['public']['Tables']['documents']['Insert'] = {
           title: input.title || document.title,
           description: input.description || document.description,
           content: input.content || `<p>Document reference: <a href="${document.file_url}" target="_blank">${document.title}</a></p>`,
           content_type: 'document',
           file_url: document.file_url,
           visibility: input.visibility,
-          property_id: input.propertyId || currentProperty?.id,
-          department_id: input.departmentId,
-          category_id: input.categoryId,
+          property_id: input.propertyId || currentProperty?.id || null,
+          department_id: input.departmentId || null,
+          category_id: input.categoryId || null,
           requires_acknowledgment: input.requiresAcknowledgment || false,
           status: finalStatus,
           created_by: user.id,
@@ -108,7 +110,7 @@ export function usePublishDocumentToKnowledge() {
           .insert({
             document_id: article.id,
             version_number: 1,
-            file_url: articleData.file_url,
+            file_url: articleData.file_url ?? '',
             change_summary: `Published from document library (source: ${document.id})`,
             created_by: user.id,
           });
@@ -164,8 +166,10 @@ export function usePublishDocumentToKnowledge() {
           },
         });
 
+        const publishedArticle = await getArticleById(article.id);
+
         return {
-          article: article as KnowledgeArticle,
+          article: publishedArticle,
           success: true,
         };
       } catch (error) {

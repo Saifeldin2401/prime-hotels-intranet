@@ -232,14 +232,27 @@ export function useSidebarCounts() {
                 }
             }
 
+            // get_sidebar_counts returns `json` (not a table), so the generated type is the
+            // generic Json union. The function (see migrations) always builds this exact object
+            // shape via json_build_object -- it does not include requiredReading.
+            const counts = data as {
+                unreadNotifications?: number
+                pendingApprovals?: number
+                overdueTasks?: number
+                unreadMessages?: number
+                pendingTraining?: number
+                activeGoals?: number
+            } | null
+
             return {
-                unreadNotifications: data?.unreadNotifications ?? 0,
-                pendingApprovals: data?.pendingApprovals ?? 0,
-                overdueTasks: data?.overdueTasks ?? 0,
-                unreadMessages: data?.unreadMessages ?? 0,
-                pendingTraining: data?.pendingTraining ?? 0,
-                activeGoals: data?.activeGoals ?? 0,
-                requiredReading: data?.requiredReading ?? 0,
+                unreadNotifications: counts?.unreadNotifications ?? 0,
+                pendingApprovals: counts?.pendingApprovals ?? 0,
+                overdueTasks: counts?.overdueTasks ?? 0,
+                unreadMessages: counts?.unreadMessages ?? 0,
+                pendingTraining: counts?.pendingTraining ?? 0,
+                activeGoals: counts?.activeGoals ?? 0,
+                // The RPC does not compute this yet; always 0 until it's added server-side.
+                requiredReading: 0,
             }
         },
     })

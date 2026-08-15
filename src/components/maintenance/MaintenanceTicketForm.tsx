@@ -48,18 +48,26 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>
 
-const normalizeCategory = (value?: string) => {
+const normalizeCategory = (value?: string): MaintenanceTicket['category'] => {
   if (!value) return 'other'
   const normalized = value.toLowerCase()
-  const legacyMap: Record<string, string> = {
+  const legacyMap: Record<string, MaintenanceTicket['category']> = {
     internet: 'appliance',
     tv: 'appliance',
     furniture: 'cosmetic',
     general: 'other'
   }
-  const allowed = ['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other']
-  if (allowed.includes(normalized)) return normalized as any
-  return (legacyMap[normalized] || 'other') as any
+  const allowed: MaintenanceTicket['category'][] = ['plumbing', 'electrical', 'hvac', 'appliance', 'structural', 'cosmetic', 'safety', 'other']
+  if (allowed.includes(normalized as MaintenanceTicket['category'])) return normalized as MaintenanceTicket['category']
+  return legacyMap[normalized] || 'other'
+}
+
+const normalizePriority = (value?: string): MaintenanceTicket['priority'] => {
+  const allowed: MaintenanceTicket['priority'][] = ['low', 'medium', 'high', 'urgent', 'critical']
+  if (value && allowed.includes(value as MaintenanceTicket['priority'])) {
+    return value as MaintenanceTicket['priority']
+  }
+  return 'medium'
 }
 
 export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicketFormProps) {
@@ -72,7 +80,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
     defaultValues: {
       title: initialData?.title || '',
       description: initialData?.description || '',
-      priority: (initialData?.priority as any) || 'medium',
+      priority: normalizePriority(initialData?.priority),
       category: normalizeCategory(initialData?.category),
       property_id: initialData?.property_id || '',
       department_id: initialData?.department_id || '',
@@ -97,7 +105,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
   // Apply AI suggestions to form
   const handleApplySuggestion = (s: typeof suggestion) => {
     if (!s) return
-    const categoryMap: Record<string, string> = {
+    const categoryMap: Record<string, MaintenanceTicket['category']> = {
       'hvac': 'hvac',
       'plumbing': 'plumbing',
       'electrical': 'electrical',
@@ -108,9 +116,9 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
       'general maintenance': 'other',
       'exterior/grounds': 'structural'
     }
-    const mappedCategory = (categoryMap[s.category.toLowerCase()] || 'other') as any
+    const mappedCategory = categoryMap[s.category.toLowerCase()] || normalizeCategory(s.category)
     form.setValue('category', mappedCategory)
-    form.setValue('priority', s.priority as any)
+    form.setValue('priority', normalizePriority(s.priority))
     clearSuggestion()
   }
 
@@ -128,7 +136,7 @@ export function MaintenanceTicketForm({ onClose, initialData }: MaintenanceTicke
         room_number: data.room_number || null,
         estimated_cost: data.estimated_cost ? parseFloat(data.estimated_cost) : null,
         reported_by_id: profile.id,
-        status: 'open',
+        status: 'open' as const,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }

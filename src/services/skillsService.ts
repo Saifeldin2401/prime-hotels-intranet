@@ -38,7 +38,7 @@ export const skillsService = {
         return data as Skill[]
     },
 
-    async createSkill(skill: Partial<Skill>) {
+    async createSkill(skill: Partial<Skill> & { name: string }) {
         const { data, error } = await supabase
             .from('skills')
             .insert(skill)

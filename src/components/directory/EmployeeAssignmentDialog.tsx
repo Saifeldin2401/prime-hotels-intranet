@@ -32,6 +32,7 @@ import {
     SelectValue,
 } from '@/components/ui/select'
 import { useAuth } from '@/hooks/useAuth'
+import type { AppRole } from '@/lib/database.types'
 import type { OrgEmployee } from '@/hooks/useOrgHierarchy'
 import { supabase } from '@/lib/supabase'
 import { cn, escapeSearchQuery } from '@/lib/utils'
@@ -45,6 +46,7 @@ interface EmployeeAssignmentDialogProps {
     employee: OrgEmployee | null
     isOpen: boolean
     onClose: () => void
+    onSuccess?: () => void
 }
 
 // Which roles can be assigned by which admin role
@@ -65,7 +67,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
     const [selectedPropertyId, setSelectedPropertyId] = useState<string>(() => employee?.propertyId || '')
     const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>(() => employee?.departmentId || 'none')
-    const [selectedRole, setSelectedRole] = useState<string>(() => employee?.roles?.[0] || 'staff')
+    const [selectedRole, setSelectedRole] = useState<AppRole>(() => (employee?.roles?.[0] as AppRole) || 'staff')
     const [selectedManagerId, setSelectedManagerId] = useState<string | null>(() => employee?.reporting_to || null)
     const [openManagerSelect, setOpenManagerSelect] = useState(false)
     const [managerSearch, setManagerSearch] = useState('')
@@ -227,7 +229,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
     const initializeForm = (targetEmployee: OrgEmployee) => {
         setSelectedPropertyId(targetEmployee.propertyId || '')
         setSelectedDepartmentId(targetEmployee.departmentId || 'none')
-        setSelectedRole(targetEmployee.roles?.[0] || 'staff')
+        setSelectedRole((targetEmployee.roles?.[0] as AppRole) || 'staff')
         setSelectedManagerId(targetEmployee.reporting_to || null)
     }
 
@@ -349,7 +351,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
                 const rolesToRemove = (existingRoles || [])
                     .map((row) => row.role)
-                    .filter((roleName): roleName is string => !!roleName && roleName !== selectedRole)
+                    .filter((roleName): roleName is AppRole => !!roleName && roleName !== selectedRole)
                 if (rolesToRemove.length > 0) {
                     const { error: removeRolesError } = await supabase
                         .from('user_roles')
@@ -496,7 +498,7 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
                         </Label>
                         <Select
                             value={selectedRole}
-                            onValueChange={setSelectedRole}
+                            onValueChange={(val) => setSelectedRole(val as AppRole)}
                             disabled={!canEditEmployee || availableRoles.length === 0}
                         >
                             <SelectTrigger>

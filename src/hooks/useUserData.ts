@@ -22,6 +22,26 @@ export interface UserScheduleItem {
     description: string | null
 }
 
+const mapTaskStatus = (status: string | null): UserTask['status'] => {
+    switch (status) {
+        case 'completed': return 'completed'
+        case 'in_progress': return 'in_progress'
+        case 'review': return 'review'
+        case 'cancelled': return 'cancelled'
+        default: return 'todo'
+    }
+}
+
+const mapTaskPriority = (priority: string | null): UserTask['priority'] => {
+    switch (priority) {
+        case 'urgent':
+        case 'critical': return 'urgent'
+        case 'high': return 'high'
+        case 'low': return 'low'
+        default: return 'medium'
+    }
+}
+
 export function useUserTasks() {
     const { user } = useAuth()
 
@@ -39,7 +59,15 @@ export function useUserTasks() {
                 .limit(10)
 
             if (error) throw error
-            return data || []
+            return (data || []).map((t) => ({
+                id: t.id,
+                title: t.title,
+                description: t.description,
+                due_date: t.due_date,
+                priority: mapTaskPriority(t.priority),
+                status: mapTaskStatus(t.status),
+                created_at: t.created_at ?? '',
+            }))
         },
         enabled: !!user?.id
     })
@@ -72,7 +100,7 @@ export function useUserSchedule() {
                 .select('*')
                 .eq('target_type', 'user')
                 .eq('target_id', user.id)
-                .in('status', ['assigned', 'in_progress'])
+                .eq('is_active', true)
                 .gte('due_date', now.toISOString())
                 .lte('due_date', futureDate.toISOString())
                 .order('due_date', { ascending: true })
@@ -98,8 +126,8 @@ export function useUserSchedule() {
             if (assignments && assignments.length > 0) {
                 // Fetch module titles
                 const moduleIds = assignments
-                    .filter(a => a.content_type === 'module')
-                    .map(a => a.content_id)
+                    .filter(a => a.content_type === 'module' && a.content_id)
+                    .map(a => a.content_id as string)
 
                 let modules: { id: string, title: string }[] = []
                 if (moduleIds.length > 0) {
@@ -112,15 +140,17 @@ export function useUserSchedule() {
 
                 assignments.forEach((a) => {
                     const moduleTitle = modules.find(m => m.id === a.content_id)?.title
-                    scheduleItems.push({
-                        id: a.id,
-                        type: 'training',
-                        title: moduleTitle || 'Training Session',
-                        start_time: a.due_date,
-                        end_time: a.due_date, // Assignments are due dates, not durations in schedule
-                        location: null,
-                        description: null
-                    })
+                    if (a.due_date) {
+                        scheduleItems.push({
+                            id: a.id,
+                            type: 'training',
+                            title: moduleTitle || 'Training Session',
+                            start_time: a.due_date,
+                            end_time: a.due_date, // Assignments are due dates, not durations in schedule
+                            location: null,
+                            description: null
+                        })
+                    }
                 })
             }
 

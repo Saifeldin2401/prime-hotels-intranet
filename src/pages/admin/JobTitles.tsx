@@ -30,6 +30,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { useDepartments } from '@/hooks/useDepartments'
 import { ROLES } from '@/lib/constants'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { ColumnDef } from "@tanstack/react-table"
 import {
@@ -44,12 +45,14 @@ import {
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+type AppRoleType = Database['public']['Enums']['app_role']
+
 interface JobTitle {
     id: string
     title: string
     category: string
     department_id: string | null
-    default_role: string | null
+    default_role: AppRoleType | null
     created_at: string
 }
 
@@ -57,7 +60,11 @@ export default function JobTitles() {
     const [isDialogOpen, setIsDialogOpen] = useState(false)
     const [editingTitle, setEditingTitle] = useState<JobTitle | null>(null)
 
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        title: string
+        department_id: string
+        default_role: AppRoleType | ''
+    }>({
         title: '',
         department_id: '',
         default_role: ''
@@ -91,10 +98,15 @@ export default function JobTitles() {
 
     // Create Mutation
     const createMutation = useMutation({
-        mutationFn: async (newTitle: { title: string, department_id: string | null, category: string, default_role: string | null }) => {
+        mutationFn: async (newTitle: { title: string, department_id: string | null, category: string, default_role: AppRoleType | null }) => {
             const { data, error } = await supabase
                 .from('job_titles')
-                .insert([newTitle])
+                .insert({
+                    title: newTitle.title,
+                    department_id: newTitle.department_id,
+                    category: newTitle.category,
+                    default_role: newTitle.default_role,
+                })
                 .select()
                 .single()
 
@@ -121,7 +133,7 @@ export default function JobTitles() {
 
     // Update Mutation
     const updateMutation = useMutation({
-        mutationFn: async (title: { id: string, title: string, department_id: string | null, category: string, default_role: string | null }) => {
+        mutationFn: async (title: { id: string, title: string, department_id: string | null, category: string, default_role: AppRoleType | null }) => {
             const { data, error } = await supabase
                 .from('job_titles')
                 .update({
@@ -379,7 +391,7 @@ export default function JobTitles() {
                                 <Label htmlFor="role">{t('job_titles.default_role_label')}</Label>
                                 <Select
                                     value={formData.default_role}
-                                    onValueChange={(val) => setFormData({ ...formData, default_role: val })}
+                                    onValueChange={(val) => setFormData({ ...formData, default_role: val as AppRoleType })}
                                 >
                                     <SelectTrigger>
                                         <SelectValue placeholder={t('job_titles.select_role')} />

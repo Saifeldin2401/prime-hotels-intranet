@@ -116,7 +116,7 @@ export function EosbCalculatorModal({ open, onOpenChange }: Props) {
                             </div>
 
                             <p className="text-[11px] text-muted-foreground leading-relaxed">
-                                <CheckCircle2 className="h-3 w-3 text-emerald-600 inline mr-1" />
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600 inline me-1" />
                                 Calculated per Saudi Ministry of Human Resources & Social Development rules: First 5 years at 50% monthly wage/year, subsequent years at 100% monthly wage/year.
                             </p>
                         </div>

@@ -144,7 +144,10 @@ export function DocumentBulkOperations({
     try {
       const { error } = await supabase
         .from('documents')
-        .update({ status: 'ARCHIVED' })
+        .update({
+          is_archived: true,
+          updated_at: new Date().toISOString()
+        })
         .in('id', Array.from(selectedDocuments))
         .eq('created_by', user?.id)
 

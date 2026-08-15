@@ -7,32 +7,35 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { Database, Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { useAuth } from './useAuth'
 
+export type AchievementType = Database['public']['Enums']['achievement_type']
+
 export interface Achievement {
   id: string
   user_id: string
-  achievement_type: string
+  achievement_type: AchievementType
   title: string
   description: string
   icon: string
   color: string
   points: number
   earned_at: string
-  metadata: Record<string, unknown>
+  metadata: Json
 }
 
 export interface AchievementDefinition {
   id: string
-  achievement_type: string
+  achievement_type: AchievementType
   title: string
   description: string
   icon: string
   color: string
   points: number
-  criteria: Record<string, unknown>
+  criteria: Json
 }
 
 export interface AchievementStats {
@@ -65,7 +68,7 @@ export function useUserAchievements(limit = 50) {
         throw error
       }
 
-      return data || []
+      return (data || []) as Achievement[]
     },
     enabled: !!user?.id
   })
@@ -89,7 +92,7 @@ export function useAchievementDefinitions() {
         throw error
       }
 
-      return data || []
+      return (data || []) as AchievementDefinition[]
     }
   })
 }
@@ -123,7 +126,7 @@ export function useAchievementStats() {
         throw error
       }
 
-      const list = achievements || []
+      const list = (achievements || []) as Achievement[]
 
       // Calculate stats
       const byCategory: Record<string, number> = {}
@@ -152,7 +155,7 @@ export function useAchievementLeaderboard(limit = 10) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('achievement_leaderboard')
-        .select('*, user:profiles(id, full_name, avatar_url)')
+        .select('*')
         .limit(limit)
 
       if (error) {
@@ -160,7 +163,20 @@ export function useAchievementLeaderboard(limit = 10) {
         throw error
       }
 
-      return data || []
+      if (!data || data.length === 0) return []
+
+      const userIds = data.map(d => d.user_id).filter((id): id is string => Boolean(id))
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url')
+        .in('id', userIds)
+
+      const profileMap = new Map(profiles?.map(p => [p.id, p]) || [])
+
+      return data.map(row => ({
+        ...row,
+        user: row.user_id ? profileMap.get(row.user_id) : undefined
+      }))
     }
   })
 }
@@ -173,7 +189,7 @@ export function useCheckAchievement() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (achievementType: string) => {
+    mutationFn: async (achievementType: AchievementType) => {
       if (!user?.id) throw new Error('Not authenticated')
 
       const { data, error } = await supabase.rpc('check_and_award_achievement', {

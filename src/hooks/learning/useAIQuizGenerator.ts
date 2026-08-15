@@ -2,12 +2,13 @@ import { useToast } from '@/components/ui/use-toast'
 import { aiService } from '@/lib/gemini'
 import { supabase } from '@/lib/supabase'
 import { learningService } from '@/services/learningService'
+import type { Database } from '@/types/database.generated'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 interface QuizGenerationOptions {
     types?: string[]
-    difficulty?: string
+    difficulty?: Database['public']['Enums']['question_difficulty']
     includeHints?: boolean
     includeExplanations?: boolean
     timeLimitMinutes?: number
@@ -83,14 +84,14 @@ export const useAIQuizGenerator = () => {
                     .insert({
                         source_domain: 'knowledge',
                         question_text: q.question_text,
-                        question_type: q.question_type,
+                        question_type: (q.question_type as Database['public']['Enums']['question_type']) || 'mcq',
                         correct_answer: q.correct_answer,
                         points: q.points,
                         explanation: q.explanation ?? null,
                         hint: q.hint ?? null,
                         linked_sop_id: sopId,
-                        difficulty: options.difficulty ?? 'medium',
-                        status: 'draft',
+                        difficulty: (options.difficulty as Database['public']['Enums']['question_difficulty']) ?? 'medium',
+                        status: 'draft' as const,
                         created_by: (await supabase.auth.getUser()).data.user?.id
                     })
                     .select('id')

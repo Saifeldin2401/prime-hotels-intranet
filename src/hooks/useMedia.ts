@@ -41,16 +41,16 @@ async function checkMediaAccess(assetId: string, userId: string): Promise<boolea
     // Public assets are accessible
     if (asset.is_public) return true;
     
-    // Check if user has role for this property
+    // Check if user has access to this property
     if (asset.property_id) {
-      const { data: propertyRole } = await supabase
-        .from('user_roles')
+      const { data: userProperty } = await supabase
+        .from('user_properties')
         .select('id')
         .eq('user_id', userId)
         .eq('property_id', asset.property_id)
         .maybeSingle();
       
-      if (propertyRole) return true;
+      if (userProperty) return true;
     }
     
     return false;
@@ -261,9 +261,12 @@ export function useMedia(options: UseMediaOptions = {}) {
 
       if (data && data.length > 0) {
         const asset = data[0];
+        const usages = Array.isArray(asset.usages)
+          ? (asset.usages as unknown as MediaAssetUsage[])
+          : [];
         return {
           ...asset,
-          usages: asset.usages as MediaAssetUsage[],
+          usages,
         } as MediaAssetWithUsage;
       }
       return null;

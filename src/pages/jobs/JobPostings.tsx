@@ -31,8 +31,9 @@ import {
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
+import type { Database } from '@/types/database.generated'
 
-
+type EntityStatus = Database['public']['Enums']['entity_status']
 
 export default function JobPostings({ embedded = false }: { embedded?: boolean }) {
     const navigate = useNavigate()
@@ -62,12 +63,12 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                 .eq('is_deleted', false)
 
             if (statusFilter !== 'all') {
-                query = query.eq('status', statusFilter)
+                query = query.eq('status', statusFilter as EntityStatus)
             }
 
             const { data, error } = await query
             if (error) throw error
-            return data as JobPosting[]
+            return (data || []) as unknown as JobPosting[]
         }
     })
 
@@ -91,8 +92,8 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
     })
 
     const updateStatusMutation = useMutation({
-        mutationFn: async ({ jobId, status }: { jobId: string, status: string }) => {
-            const updates: { status: string; published_at?: string } = { status }
+        mutationFn: async ({ jobId, status }: { jobId: string, status: EntityStatus }) => {
+            const updates: Database['public']['Tables']['job_postings']['Update'] = { status }
 
             if (status === 'open' && !jobs?.find(j => j.id === jobId)?.published_at) {
                 updates.published_at = new Date().toISOString()

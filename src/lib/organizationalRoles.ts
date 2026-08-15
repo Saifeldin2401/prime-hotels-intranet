@@ -23,7 +23,7 @@ export const BUSINESS_ROLE_DEFINITIONS: Record<BusinessRole, BusinessRoleDefinit
     id: 'cluster_general_manager',
     label: 'Cluster General Manager',
     level: 'cluster',
-    appRoles: ['corporate_admin', 'regional_admin'],
+    appRoles: ['super_admin', 'corporate_admin', 'regional_admin'],
     canViewConsolidated: true,
   },
   property_general_manager: {
@@ -64,6 +64,7 @@ export const BUSINESS_ROLE_DEFINITIONS: Record<BusinessRole, BusinessRoleDefinit
 }
 
 const appRoleToBusinessRoleMap: Record<AppRole, BusinessRole> = {
+  super_admin: 'cluster_general_manager',
   corporate_admin: 'cluster_general_manager',
   regional_admin: 'cluster_general_manager',
   regional_hr: 'cluster_department_head',

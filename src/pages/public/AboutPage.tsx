@@ -219,7 +219,7 @@ export default function AboutPage() {
                 ? 'منتج استراتيجي حصري يحوّل ثلاثة عقود من الخبرة الفندقية ومعايير التشغيل إلى نظام رقمي منظم للتعلم وإدارة المعرفة وقياس الأداء، مصمم خصيصاً للفنادق المستقلة والشقق الفندقية والمنشآت الصغيرة والمتوسطة في المملكة والمنطقة العربية.'
                 : 'A strategic Altus product that converts three decades of hotel expertise and operating standards into a structured digital system for learning, knowledge management, and performance measurement — purpose-built for independent hotels, serviced apartments, and SME establishments across Saudi Arabia and the Arab region.'}
             </p>
-            <p className="text-base sm:text-lg italic mt-6 pl-5 border-l-2" style={{ ...canela, color: COLOR.charcoal, borderColor: COLOR.copper }}>
+            <p className="text-base sm:text-lg italic mt-6 ps-5 border-s-2" style={{ ...canela, color: COLOR.charcoal, borderColor: COLOR.copper }}>
               {isRTL
                 ? '"المعرفة الصحيحة، للشخص الصحيح، في الوقت الصحيح، مع دليل واضح على التعلّم والتحسّن."'
                 : '“The right knowledge, to the right person, at the right time, with clear evidence of learning and improvement.”'}

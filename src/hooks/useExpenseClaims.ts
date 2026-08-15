@@ -35,7 +35,7 @@ export function useMyExpenseClaims() {
 
       const { data, error } = await query
       if (error) throw error
-      return data as ExpenseClaim[]
+      return (data || []) as unknown as ExpenseClaim[]
     },
   })
 }
@@ -100,7 +100,25 @@ export function useSubmitExpenseClaim() {
         || departments?.[0]?.id
         || null
 
-      const { data, error } = await supabase.rpc('submit_expense_claim', {
+      // submit_expense_claim exists live (returns jsonb: claim_id/request_id/request_no) but
+      // predates the committed database.generated.ts snapshot, so it isn't in the typed RPC
+      // name union yet. Narrow, commented cast until types are regenerated (db:types).
+      const { data, error } = await (supabase.rpc as unknown as (
+        fn: 'submit_expense_claim',
+        args: {
+          p_category: string
+          p_amount: number
+          p_currency: string
+          p_expense_date: string
+          p_vendor_name: string | null
+          p_description: string | null
+          p_property_id: string | null
+          p_department_id: string | null
+        }
+      ) => Promise<{
+        data: { claim_id: string; request_id: string; request_no: number | null } | null
+        error: { message: string } | null
+      }>)('submit_expense_claim', {
         p_category: payload.category,
         p_amount: payload.amount,
         p_currency: payload.currency || 'SAR',
@@ -116,8 +134,8 @@ export function useSubmitExpenseClaim() {
         throw new Error('Failed to create expense claim workflow')
       }
 
-      const claimId = data.claim_id as string
-      const requestId = data.request_id as string
+      const claimId = data.claim_id
+      const requestId = data.request_id
 
       if (payload.receipt) {
         const scanResult = await scanFile(payload.receipt, {

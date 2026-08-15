@@ -37,7 +37,7 @@ const actionColors = {
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50, 100]
 type AuditUser = { full_name?: string | null; email?: string | null }
-type AuditLogWithUser = AuditLog & { user?: AuditUser | AuditUser[] | null }
+type AuditLogWithUser = AuditLog & { user?: AuditUser | null }
 
 export default function AuditLogs() {
   const { t } = useTranslation('admin')
@@ -61,10 +61,7 @@ export default function AuditLogs() {
     queryFn: async () => {
       let query = supabase
         .from('audit_logs_v')
-        .select(`
-          *,
-          user:profiles!user_id(full_name, email)
-        `, { count: 'exact' })
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })
 
       if (searchTerm) {
@@ -109,8 +106,36 @@ export default function AuditLogs() {
       const { data, error, count } = await query
 
       if (error) throw error
+
+      const rawLogs = data || []
+      const userIds = Array.from(new Set(rawLogs.map(l => l.user_id).filter((id): id is string => Boolean(id))))
+
+      const profileMap = new Map<string, { full_name: string | null; email: string | null }>()
+      if (userIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, email')
+          .in('id', userIds)
+        if (profiles) {
+          profiles.forEach(p => profileMap.set(p.id, { full_name: p.full_name, email: p.email }))
+        }
+      }
+
+      const enrichedLogs = rawLogs.map(l => ({
+        id: l.id ?? '',
+        entity_type: l.entity_type ?? '',
+        entity_id: l.entity_id ?? '',
+        action: (l.action ?? 'other') as AuditLog['action'],
+        user_id: l.user_id,
+        created_at: l.created_at ?? '',
+        ip_address: l.ip_address,
+        user_agent: l.user_agent,
+        details: l.details as Record<string, unknown> | null,
+        user: l.user_id ? profileMap.get(l.user_id) : undefined,
+      }))
+
       return {
-        logs: data as (AuditLog & { user: { full_name: string, email: string } })[],
+        logs: enrichedLogs as AuditLogWithUser[],
         totalCount: count || 0
       }
     },

@@ -194,12 +194,12 @@ export default function LeadsPipeline() {
             {/* Filter & Search Bar */}
             <div className="flex items-center justify-between gap-4 py-2">
                 <div className="relative w-full max-w-sm">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <Search className="w-4 h-4 absolute start-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <Input
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         placeholder="Search leads by name or source..."
-                        className="pl-9 bg-white"
+                        className="ps-9 bg-white"
                     />
                 </div>
             </div>
@@ -231,7 +231,7 @@ export default function LeadsPipeline() {
                                 </div>
 
                                 {/* Cards List */}
-                                <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pr-0.5">
+                                <div className="space-y-2.5 flex-1 overflow-y-auto max-h-[600px] pe-0.5">
                                     {stageLeads.map((lead) => {
                                         const nextStage = idx < STAGES.length - 2 ? STAGES[idx + 1].stage : null
 

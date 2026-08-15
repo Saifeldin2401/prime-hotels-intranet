@@ -148,7 +148,7 @@ export function useAIDetectDuplicates() {
 
       const { data: existingDocs, error } = await supabase
         .from('documents')
-        .select('id, title, content, file_type, file_hash')
+        .select('id, title, content, file_type')
         .eq('is_deleted', false)
         .limit(100)
 

@@ -6,15 +6,15 @@ import { getTransitionErrorMessage, validateTransition } from '@/lib/statusTrans
 import { secureSearchTasks } from '@/lib/secureSearch'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { Task, TaskComment, TaskStats } from '@/lib/types'
+import type { Task, TaskComment, TaskPriority, TaskStats, TaskStatus } from '@/lib/types'
 import { sanitizeSearchInput } from '@/lib/utils'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Fetch tasks
 export function useTasks(filters?: {
-  status?: string
-  statuses?: string[]
-  priority?: string
+  status?: TaskStatus
+  statuses?: TaskStatus[]
+  priority?: TaskPriority
   assignedTo?: string
   assignedToIds?: string[]
   createdBy?: string
@@ -84,7 +84,7 @@ export function useTasks(filters?: {
             created_by: filters.createdBy,
             limit: filters.limit || 100
           })
-          return secureResults as Task[]
+          return (secureResults as unknown) as Task[]
         }
       }
 
@@ -95,7 +95,7 @@ export function useTasks(filters?: {
       const { data, error } = await query
 
       if (error) throw error
-      return data as Task[]
+      return (data as unknown) as Task[]
     },
   })
 }
@@ -103,8 +103,8 @@ export function useTasks(filters?: {
 // Paginated version of useTasks
 export function useTasksPaginated(
   filters?: {
-    status?: string
-    priority?: string
+    status?: TaskStatus
+    priority?: TaskPriority
     assignedTo?: string
     createdBy?: string
     propertyId?: string
@@ -189,7 +189,7 @@ export function useTasksPaginated(
             limit: (pagination?.to || 20) - (pagination?.from || 0) + 1,
             offset: pagination?.from || 0
           })
-          return secureResults as Task[]
+          return (secureResults as unknown) as Task[]
         }
       }
 
@@ -200,7 +200,7 @@ export function useTasksPaginated(
 
       const { data, error } = await query
       if (error) throw error
-      return data as Task[]
+      return (data as unknown) as Task[]
     },
   })
 }
@@ -229,7 +229,7 @@ export function useTask(taskId: string) {
         .single()
 
       if (error) throw error
-      return data as Task
+      return (data as unknown) as Task
     },
   })
 }
@@ -261,7 +261,15 @@ export function useCreateTask() {
       if (!user?.id) throw new Error('User must be authenticated')
 
       const taskData = {
-        ...task,
+        title: task.title,
+        description: task.description,
+        assigned_to_id: task.assigned_to_id,
+        department_id: task.department_id,
+        due_date: task.due_date,
+        start_date: task.start_date,
+        tags: task.tags,
+        estimated_hours: task.estimated_hours,
+        actual_hours: task.actual_hours,
         created_by_id: user.id,
         property_id: isRealPropertyId(task.property_id)
           ? task.property_id
@@ -287,7 +295,7 @@ export function useCreateTask() {
       })
 
       if (error) throw error
-      return data as Task
+      return (data as unknown) as Task
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
@@ -408,12 +416,20 @@ export function useDeleteTask() {
 // Add comment
 export function useAddTaskComment() {
   const queryClient = useQueryClient()
+  const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async (comment: Partial<TaskComment>) => {
+    mutationFn: async (comment: { task_id: string; content: string; author_id?: string }) => {
+      const authorId = comment.author_id || user?.id
+      if (!authorId) throw new Error('User must be authenticated')
+
       const { data, error } = await supabase
         .from('task_comments')
-        .insert(comment)
+        .insert({
+          task_id: comment.task_id,
+          content: comment.content,
+          author_id: authorId
+        })
         .select()
         .single()
 

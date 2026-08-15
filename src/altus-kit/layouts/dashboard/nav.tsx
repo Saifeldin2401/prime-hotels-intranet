@@ -8,12 +8,14 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import ListItem from '@mui/material/ListItem';
 import Collapse from '@mui/material/Collapse';
+import Tooltip from '@mui/material/Tooltip';
+import Divider from '@mui/material/Divider';
 import { useTheme } from '@mui/material/styles';
 import ListItemButton from '@mui/material/ListItemButton';
 import Drawer, { drawerClasses } from '@mui/material/Drawer';
 import InputBase from '@mui/material/InputBase';
 import IconButton from '@mui/material/IconButton';
-import { ChevronDown, Search, X, Star } from 'lucide-react';
+import { ChevronDown, Search, X, Star, PanelLeftClose, PanelLeftOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { usePathname } from '@/altus-kit/routes/hooks';
 import { RouterLink } from '@/altus-kit/routes/components';
@@ -35,6 +37,8 @@ export type NavContentProps = {
   currentWorkspaceId?: string;
   onChangeWorkspace?: (id: string) => void;
   onCommandOpen?: () => void;
+  isMini?: boolean;
+  onToggleMini?: () => void;
   slots?: {
     topArea?: React.ReactNode;
     bottomArea?: React.ReactNode;
@@ -54,7 +58,9 @@ export function NavDesktop({
   currentWorkspaceId,
   onChangeWorkspace,
   onCommandOpen,
-}: NavContentProps & { layoutQuery: Breakpoint }) {
+  isMini = false,
+  onToggleMini,
+}: NavContentProps & { layoutQuery: Breakpoint; isMini?: boolean; onToggleMini?: () => void }) {
   const theme = useTheme();
   const { i18n } = useTranslation();
   const isRtl = i18n.dir() === 'rtl' || i18n.language?.startsWith('ar') || theme.direction === 'rtl';
@@ -63,7 +69,7 @@ export function NavDesktop({
     <Box
       sx={{
         pt: 2,
-        px: 2,
+        px: isMini ? 1 : 2,
         top: 0,
         ...(isRtl
           ? {
@@ -83,7 +89,11 @@ export function NavDesktop({
         position: 'fixed',
         flexDirection: 'column',
         zIndex: 'var(--layout-nav-zIndex)',
-        width: 'var(--layout-nav-vertical-width)',
+        width: isMini ? 88 : 'var(--layout-nav-vertical-width)',
+        transition: theme.transitions.create(['width', 'padding'], {
+          easing: 'cubic-bezier(0.4, 0, 0.2, 1)',
+          duration: '200ms',
+        }),
         bgcolor: 'background.paper',
         [theme.breakpoints.up(layoutQuery)]: {
           display: 'flex',
@@ -100,6 +110,8 @@ export function NavDesktop({
         currentWorkspaceId={currentWorkspaceId}
         onChangeWorkspace={onChangeWorkspace}
         onCommandOpen={onCommandOpen}
+        isMini={isMini}
+        onToggleMini={onToggleMini}
       />
     </Box>
   );
@@ -495,27 +507,367 @@ export function NavContent({
   currentWorkspaceId,
   onChangeWorkspace,
   onCommandOpen,
+  isMini = false,
+  onToggleMini,
   sx,
 }: NavContentProps) {
   const pathname = usePathname();
+  const { i18n } = useTranslation();
+  const theme = useTheme();
+  const isRtl = i18n.dir() === 'rtl' || i18n.language?.startsWith('ar') || theme.direction === 'rtl';
   const [filterQuery, setFilterQuery] = useState('');
 
+  // -------------------------------------------------------------------------
+  // MINI (Collapsed 88px) MODE
+  // -------------------------------------------------------------------------
+  if (isMini) {
+    // Collect all unique flat items from groupedData or fallback data
+    const allNavItems: NavItem[] = groupedData && groupedData.length > 0
+      ? groupedData.flatMap((g) => g.items)
+      : data;
+
+    return (
+      <Box sx={{ display: 'flex', flexDirection: 'column', height: 1, ...sx }}>
+        {/* Mini Header / Logo */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 1.5, gap: 1 }}>
+          <Tooltip
+            title={isRtl ? 'توسيع القائمة الجانبية (Ctrl+B)' : 'Expand Sidebar (Ctrl+B)'}
+            placement={isRtl ? 'left' : 'right'}
+            arrow
+          >
+            <IconButton
+              onClick={onToggleMini}
+              size="small"
+              sx={{
+                p: 0.5,
+                borderRadius: 1.25,
+                color: 'primary.main',
+                '&:hover': {
+                  bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.12),
+                },
+              }}
+            >
+              <Logo />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        {slots?.topArea}
+
+        {/* Mini Workspace Selector */}
+        {workspaces && workspaces.length > 0 && (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1 }}>
+            <WorkspacesPopover
+              data={workspaces}
+              value={currentWorkspaceId}
+              onChangeWorkspace={onChangeWorkspace}
+              sx={{
+                p: 0.5,
+                minWidth: 44,
+                width: 44,
+                height: 44,
+                borderRadius: 1.25,
+                justifyContent: 'center',
+                '& svg, & .MuiTypography-root, & span:not(:first-of-type)': { display: 'none' },
+              }}
+            />
+          </Box>
+        )}
+
+        {/* Mini Quick Find / Command Palette Trigger */}
+        <Box sx={{ display: 'flex', justifyContent: 'center', mb: 1.5 }}>
+          <Tooltip
+            title={isRtl ? 'بحث سريع (⌘K / Ctrl+K)' : 'Quick find (⌘K / Ctrl+K)'}
+            placement={isRtl ? 'left' : 'right'}
+            arrow
+          >
+            <IconButton
+              onClick={onCommandOpen}
+              size="small"
+              sx={{
+                width: 44,
+                height: 44,
+                borderRadius: 1.25,
+                bgcolor: 'action.hover',
+                color: 'text.secondary',
+                '&:hover': {
+                  bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.12),
+                  color: 'primary.main',
+                },
+              }}
+            >
+              <Search size={18} />
+            </IconButton>
+          </Tooltip>
+        </Box>
+
+        <Divider sx={{ my: 0.5, borderStyle: 'dashed' }} />
+
+        {/* Mini Navigation Items List */}
+        <Scrollbar fillContent sx={{ flex: '1 1 auto' }}>
+          <Box
+            component="nav"
+            sx={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              py: 1,
+              gap: 0.75,
+            }}
+          >
+            {groupedData && groupedData.length > 0 ? (
+              groupedData.map((group, gIdx) => (
+                <Box key={group.id} sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  {gIdx > 0 && (
+                    <Box
+                      sx={{
+                        width: 24,
+                        my: 0.75,
+                        borderTop: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.16)}`,
+                      }}
+                    />
+                  )}
+                  {group.items.map((item, index) => {
+                    const isActived =
+                      item.path === pathname || (item.path !== '/' && pathname.startsWith(`${item.path}/`));
+
+                    return (
+                      <Tooltip
+                        key={`${item.title}-${index}`}
+                        title={
+                          <Box sx={{ p: 0.25 }}>
+                            <Typography variant="subtitle2" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                              {item.title}
+                            </Typography>
+                            {item.badgeCount && item.badgeCount > 0 ? (
+                              <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700 }}>
+                                {item.badgeCount} pending
+                              </Typography>
+                            ) : null}
+                          </Box>
+                        }
+                        placement={isRtl ? 'left' : 'right'}
+                        arrow
+                      >
+                        <ListItemButton
+                          component={RouterLink}
+                          href={item.path}
+                          sx={{
+                            width: 44,
+                            height: 44,
+                            minHeight: 44,
+                            p: 0,
+                            my: 0.25,
+                            borderRadius: 1.25,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: isActived ? 'primary.main' : 'text.secondary',
+                            bgcolor: isActived
+                              ? varAlpha(theme.vars.palette.primary.mainChannel, 0.12)
+                              : 'transparent',
+                            boxShadow: isActived
+                              ? isRtl
+                                ? `inset -3px 0 0 ${theme.vars.palette.primary.main}`
+                                : `inset 3px 0 0 ${theme.vars.palette.primary.main}`
+                              : 'none',
+                            '&:hover': {
+                              bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+                              color: 'primary.main',
+                            },
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              position: 'relative',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              width: 20,
+                              height: 20,
+                            }}
+                          >
+                            {item.icon}
+                            {item.badgeCount && item.badgeCount > 0 && (
+                              <Box
+                                sx={{
+                                  position: 'absolute',
+                                  top: -4,
+                                  right: isRtl ? 'auto' : -4,
+                                  left: isRtl ? -4 : 'auto',
+                                  width: 8,
+                                  height: 8,
+                                  borderRadius: '50%',
+                                  bgcolor: 'error.main',
+                                  border: `2px solid ${theme.vars.palette.background.paper}`,
+                                }}
+                              />
+                            )}
+                          </Box>
+                        </ListItemButton>
+                      </Tooltip>
+                    );
+                  })}
+                </Box>
+              ))
+            ) : (
+              allNavItems.map((item, index) => {
+                const isActived =
+                  item.path === pathname || (item.path !== '/' && pathname.startsWith(`${item.path}/`));
+
+                return (
+                  <Tooltip
+                    key={`${item.title}-${index}`}
+                    title={
+                      <Box sx={{ p: 0.25 }}>
+                        <Typography variant="subtitle2" sx={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                          {item.title}
+                        </Typography>
+                        {item.badgeCount && item.badgeCount > 0 ? (
+                          <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 700 }}>
+                            {item.badgeCount} pending
+                          </Typography>
+                        ) : null}
+                      </Box>
+                    }
+                    placement={isRtl ? 'left' : 'right'}
+                    arrow
+                  >
+                    <ListItemButton
+                      component={RouterLink}
+                      href={item.path}
+                      sx={{
+                        width: 44,
+                        height: 44,
+                        minHeight: 44,
+                        p: 0,
+                        my: 0.25,
+                        borderRadius: 1.25,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: isActived ? 'primary.main' : 'text.secondary',
+                        bgcolor: isActived
+                          ? varAlpha(theme.vars.palette.primary.mainChannel, 0.12)
+                          : 'transparent',
+                        boxShadow: isActived
+                          ? isRtl
+                            ? `inset -3px 0 0 ${theme.vars.palette.primary.main}`
+                            : `inset 3px 0 0 ${theme.vars.palette.primary.main}`
+                          : 'none',
+                        '&:hover': {
+                          bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.08),
+                          color: 'primary.main',
+                        },
+                      }}
+                    >
+                      <Box
+                        sx={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 20,
+                          height: 20,
+                        }}
+                      >
+                        {item.icon}
+                        {item.badgeCount && item.badgeCount > 0 && (
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: -4,
+                              right: isRtl ? 'auto' : -4,
+                              left: isRtl ? -4 : 'auto',
+                              width: 8,
+                              height: 8,
+                              borderRadius: '50%',
+                              bgcolor: 'error.main',
+                              border: `2px solid ${theme.vars.palette.background.paper}`,
+                            }}
+                          />
+                        )}
+                      </Box>
+                    </ListItemButton>
+                  </Tooltip>
+                );
+              })
+            )}
+          </Box>
+        </Scrollbar>
+
+        {/* Mini Footer Toggle Button */}
+        {onToggleMini && (
+          <Box sx={{ mt: 'auto', pt: 1, pb: 1, display: 'flex', justifyContent: 'center' }}>
+            <Tooltip
+              title={isRtl ? 'توسيع القائمة (Ctrl+B)' : 'Expand Sidebar (Ctrl+B)'}
+              placement={isRtl ? 'left' : 'right'}
+              arrow
+            >
+              <IconButton
+                onClick={onToggleMini}
+                size="small"
+                sx={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 1,
+                  color: 'text.secondary',
+                  '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+                }}
+              >
+                {isRtl ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
+              </IconButton>
+            </Tooltip>
+          </Box>
+        )}
+
+        {slots?.bottomArea}
+      </Box>
+    );
+  }
+
+  // -------------------------------------------------------------------------
+  // FULL EXPANDED (300px) MODE
+  // -------------------------------------------------------------------------
   return (
     <>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1.5 }}>
-        <Logo />
-        <Typography
-          variant="subtitle1"
-          sx={{
-            fontFamily: "'Playfair Display', Georgia, serif",
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-            color: 'text.primary',
-            lineHeight: 1.1,
-          }}
-        >
-          Altus Connect
-        </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', px: 1.5, py: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25 }}>
+          <Logo />
+          <Typography
+            variant="subtitle1"
+            sx={{
+              fontFamily: "'Playfair Display', Georgia, serif",
+              fontWeight: 700,
+              letterSpacing: '0.02em',
+              color: 'text.primary',
+              lineHeight: 1.1,
+            }}
+          >
+            Altus Connect
+          </Typography>
+        </Box>
+
+        {onToggleMini && (
+          <Tooltip
+            title={isRtl ? 'تصغير القائمة الجانبية (Ctrl+B)' : 'Minimize Sidebar (Ctrl+B)'}
+            placement={isRtl ? 'left' : 'right'}
+            arrow
+          >
+            <IconButton
+              size="small"
+              onClick={onToggleMini}
+              sx={{
+                color: 'text.secondary',
+                borderRadius: 1,
+                p: 0.6,
+                '&:hover': { color: 'primary.main', bgcolor: 'action.hover' },
+              }}
+            >
+              <PanelLeftClose size={18} />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       {slots?.topArea}
@@ -537,7 +889,7 @@ export function NavContent({
             py: 0.6,
             borderRadius: 1.5,
             bgcolor: 'action.hover',
-            border: (theme) => `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)}`,
+            border: `1px solid ${varAlpha(theme.vars.palette.grey['500Channel'], 0.12)}`,
             transition: 'border-color 0.2s',
             '&:focus-within': {
               borderColor: 'primary.main',
@@ -576,7 +928,7 @@ export function NavContent({
                 px: 0.6,
                 py: 0.15,
                 borderRadius: 0.75,
-                bgcolor: (theme) => varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
+                bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.16),
                 color: 'text.secondary',
                 fontSize: '0.65rem',
                 fontWeight: 'fontWeightBold',
@@ -585,7 +937,7 @@ export function NavContent({
                 fontFamily: 'monospace',
                 flexShrink: 0,
                 '&:hover': {
-                  bgcolor: (theme) => varAlpha(theme.vars.palette.grey['500Channel'], 0.24),
+                  bgcolor: varAlpha(theme.vars.palette.grey['500Channel'], 0.24),
                 },
               }}
               title="Open Command Palette (Ctrl+K)"
@@ -613,7 +965,7 @@ export function NavContent({
                   key={fav.path}
                   component={RouterLink}
                   href={fav.path}
-                  sx={(theme) => ({
+                  sx={{
                     px: 1,
                     py: 0.5,
                     borderRadius: 1,
@@ -628,7 +980,7 @@ export function NavContent({
                       bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.16),
                       color: 'primary.main',
                     },
-                  })}
+                  }}
                 >
                   {fav.title}
                 </ListItemButton>
@@ -701,7 +1053,7 @@ export function NavContent({
                         component={RouterLink}
                         href={item.path}
                         sx={[
-                          (theme) => ({
+                          {
                             pl: 1.5,
                             py: 0.85,
                             gap: 1.5,
@@ -719,7 +1071,7 @@ export function NavContent({
                                 bgcolor: varAlpha(theme.vars.palette.primary.mainChannel, 0.16),
                               },
                             }),
-                          }),
+                          },
                         ]}
                       >
                         <Box component="span" sx={{ width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

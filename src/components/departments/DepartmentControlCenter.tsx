@@ -22,7 +22,14 @@ export function DepartmentControlCenter({ propertyId }: { propertyId?: string })
   const [editingName, setEditingName] = useState('')
   const [editingManagerId, setEditingManagerId] = useState('')
 
-  const managers = useMemo(() => profiles.filter(p => p.roles?.some((r: string) => r.includes('manager') || r.includes('hr') || r.includes('admin'))), [profiles])
+  const managers = useMemo(() => profiles.filter(p => {
+    const roles: string[] = 'user_roles' in p && Array.isArray(p.user_roles)
+      ? (p.user_roles as Array<{ role: string }>).map(r => r.role)
+      : ('roles' in p && Array.isArray(p.roles) ? (p.roles as string[]) : [])
+    const jobTitle = ('job_title' in p && typeof p.job_title === 'string') ? p.job_title.toLowerCase() : ''
+    return roles.some((r: string) => r.includes('manager') || r.includes('hr') || r.includes('admin'))
+      || jobTitle.includes('manager') || jobTitle.includes('director') || jobTitle.includes('head')
+  }), [profiles])
 
   const resetForm = () => {
     setName('')

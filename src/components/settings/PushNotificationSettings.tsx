@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/supabase';
+import type { Json } from '@/types/database.generated';
 import { useAuth } from '@/hooks/useAuth';
 
 // Public VAPID key for push notifications
@@ -108,7 +109,7 @@ export function PushNotificationSettings() {
         .from('push_subscriptions')
         .upsert({
           user_id: user.id,
-          subscription: subscription.toJSON(),
+          subscription: subscription.toJSON() as unknown as Json,
           updated_at: new Date().toISOString(),
         }, {
           onConflict: 'user_id',

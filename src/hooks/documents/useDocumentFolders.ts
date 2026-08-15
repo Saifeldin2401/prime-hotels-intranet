@@ -31,7 +31,7 @@ export function useDocumentFolders(parentId?: string | null) {
 
       const foldersWithCount = (data || []).map(folder => ({
         ...folder,
-        document_count: (folder as { document_count?: [{ count: number }] }).document_count?.[0]?.count || 0
+        document_count: (folder.document_count as Array<{ count: number }> | undefined)?.[0]?.count || 0
       }))
 
       return foldersWithCount as DocumentFolder[]
@@ -57,7 +57,7 @@ export function useDocumentFolderTree() {
 
       const folders = (data || []).map(folder => ({
         ...folder,
-        document_count: (folder as { document_count?: [{ count: number }] }).document_count?.[0]?.count || 0
+        document_count: (folder.document_count as Array<{ count: number }> | undefined)?.[0]?.count || 0
       })) as DocumentFolder[]
 
       const folderMap = new Map(folders.map(f => [f.id, { ...f, children: [] as DocumentFolder[] }]))
@@ -85,13 +85,17 @@ export function useCreateDocumentFolder() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async (folder: Partial<DocumentFolder>) => {
+    mutationFn: async (folder: { name: string; description?: string | null; parent_id?: string | null; property_id?: string | null; department_id?: string | null }) => {
       if (!user) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
         .from('document_folders')
         .insert({
-          ...folder,
+          name: folder.name,
+          description: folder.description ?? null,
+          parent_id: folder.parent_id ?? null,
+          property_id: folder.property_id ?? null,
+          department_id: folder.department_id ?? null,
           created_by: user.id,
         })
         .select()

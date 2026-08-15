@@ -72,7 +72,7 @@ export function BudgetCharts({ budgets }: BudgetChartsProps) {
                         {t('finance:budgets.charts.by_category', { defaultValue: 'Budget Allocation by Category' })}
                     </CardTitle>
                 </CardHeader>
-                <CardContent className="pl-2">
+                <CardContent className="ps-2">
                     <div className="h-[300px] w-full">
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={categoryData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>

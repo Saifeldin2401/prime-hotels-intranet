@@ -35,7 +35,7 @@ export const useAuditRetention = () => {
     })
 
     const createMutation = useMutation({
-        mutationFn: async (policy: Partial<AuditRetentionPolicy>) => {
+        mutationFn: async (policy: Omit<AuditRetentionPolicy, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => {
             // First disable other defaults if this is marked as default
             if (policy.is_default) {
                 await supabase.from('audit_export_retention_policies').update({ is_default: false }).neq('id', '00000000-0000-0000-0000-000000000000')
@@ -43,7 +43,16 @@ export const useAuditRetention = () => {
 
             const { data, error } = await supabase
                 .from('audit_export_retention_policies')
-                .insert([policy])
+                .insert({
+                    name: policy.name,
+                    description: policy.description,
+                    retention_days: policy.retention_days,
+                    applies_to_formats: policy.applies_to_formats,
+                    auto_delete: policy.auto_delete,
+                    notify_before_delete_days: policy.notify_before_delete_days,
+                    is_default: policy.is_default,
+                    created_by: policy.created_by,
+                })
                 .select()
                 .single()
 

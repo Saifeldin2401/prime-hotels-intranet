@@ -1,5 +1,6 @@
 import { aiService } from '@/lib/gemini'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 
 type SupportedQuestionType = 'mcq' | 'mcq_multi' | 'true_false' | 'fill_blank' | 'scenario'
 
@@ -407,12 +408,12 @@ async function autoRepairEmptyQuiz(
       .insert({
         source_domain: 'knowledge',
         question_text: q.question_text,
-        question_type: q.question_type,
-        difficulty: 'medium',
+        question_type: (q.question_type as Database['public']['Enums']['question_type']) || 'mcq',
+        difficulty: 'medium' as const,
         correct_answer: q.correct_answer || null,
         explanation: q.explanation || null,
         hint: q.hint || null,
-        status: 'published',
+        status: 'published' as const,
         created_by: userId,
         updated_at: timestamp
       })

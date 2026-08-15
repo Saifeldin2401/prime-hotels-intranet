@@ -101,7 +101,7 @@ export default function MessagingDashboard() {
   }, [conversations, effectiveConversationId])
 
   const otherParticipant = useMemo(() => {
-    const participants = (activeConversation?.participants || []) as any[]
+    const participants = activeConversation?.participants || []
     if (!user?.id) return participants[0] || null
     return participants.find((p) => p.id !== user.id) || participants[0] || null
   }, [activeConversation, user])
@@ -132,7 +132,7 @@ export default function MessagingDashboard() {
 
   const filteredProfiles = useMemo(() => {
     const q = userSearch.trim().toLowerCase()
-    const base = (allProfiles as any[]).filter((p) => p?.id && p.id !== user?.id)
+    const base = allProfiles.filter((p) => p?.id && p.id !== user?.id)
     if (!q) return base.slice(0, 30)
     return base
       .filter((p) => `${p.full_name || ''} ${p.email || ''} ${p.job_title || ''}`.toLowerCase().includes(q))
@@ -370,7 +370,7 @@ export default function MessagingDashboard() {
               ) : (
                 <div className="space-y-0.5">
                   {filteredConversations.map((c) => {
-                    const participants = (c.participants || []) as any[]
+                    const participants = c.participants || []
                     const other = user?.id ? (participants.find((p) => p.id !== user.id) || participants[0]) : participants[0]
                     const isActive = c.id === effectiveConversationId && !activeChannel
                     const initials = getInitials(other?.full_name, other?.email)
@@ -602,19 +602,25 @@ export default function MessagingDashboard() {
                 <Send className={cn('w-4 h-4', isRTL ? 'rotate-180' : '')} />
               </Button>
             </div>
-            {activeConversation?.messages?.[0]?.id && activeConversation?.messages?.[0]?.recipient_id === user?.id && activeConversation?.messages?.[0]?.status !== 'read' && (
-              <div className="mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => markAsReadMutation.mutate(activeConversation.messages[0].id)}
-                  disabled={markAsReadMutation.isPending}
-                >
-                  {t('mark_read')}
-                </Button>
-              </div>
-            )}
+            {(() => {
+              const lastMsg = activeConversation?.messages?.[0] as { id: string; recipient_id?: string | null; status?: string } | undefined
+              if (lastMsg?.id && lastMsg.recipient_id === user?.id && lastMsg.status !== 'read') {
+                return (
+                  <div className="mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                      onClick={() => markAsReadMutation.mutate(lastMsg.id)}
+                      disabled={markAsReadMutation.isPending}
+                    >
+                      {t('mark_read')}
+                    </Button>
+                  </div>
+                )
+              }
+              return null
+            })()}
           </div>
         </div>
       </div>
@@ -654,7 +660,9 @@ export default function MessagingDashboard() {
                       </Avatar>
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">{p.full_name || p.email}</div>
-                        <div className="text-[11px] text-muted-foreground truncate">{p.job_title || ''}{p.property_name ? ` • ${p.property_name}` : ''}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">
+                          {p.job_title || ''}{'property_name' in p && p.property_name ? ` • ${String(p.property_name)}` : ''}
+                        </div>
                       </div>
                     </button>
                   )

@@ -206,7 +206,7 @@ export function InlineQuizWidget({
                     </Badge>
                 </div>
                 <Progress
-                    value={((currentIndex + 1) / displayQuestions.length) * 100}
+                    value={displayQuestions.length > 0 ? ((currentIndex + 1) / displayQuestions.length) * 100 : 0}
                     className="h-1 mt-2"
                 />
             </CardHeader>

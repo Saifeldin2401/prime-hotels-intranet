@@ -235,7 +235,7 @@ export function DailyQuizWidget({ className }: DailyQuizWidgetProps) {
                     </Badge>
                 </div>
                 <Progress
-                    value={((currentIndex + 1) / questions.length) * 100}
+                    value={questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0}
                     className="h-1 mt-2 [&>div]:bg-purple-500"
                 />
             </CardHeader>

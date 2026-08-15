@@ -22,7 +22,7 @@ import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleView
 import { SmartObserver } from '@/components/training/SmartObserver'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
-import { useCheckAchievement } from '@/hooks/useAchievements'
+import { useCheckAchievement, type AchievementType } from '@/hooks/useAchievements'
 import type { TranslationTargetLanguage } from '@/hooks/useTranslationAI'
 import { SUPPORTED_TRANSLATION_LANGUAGES, useTranslationAI } from '@/hooks/useTranslationAI'
 import { createCertificate, type CertificateData } from '@/services/certificateService'
@@ -903,6 +903,13 @@ export default function TrainingPlayer() {
 
         completionInFlightRef.current = true
 
+        // Cancel any pending background save so it cannot race with the
+        // completion RPC and overwrite progress_percentage back to 99%.
+        if (saveTimeoutRef.current) {
+            clearTimeout(saveTimeoutRef.current)
+            saveTimeoutRef.current = null
+        }
+
         try {
             const nowIso = new Date().toISOString()
             const timeSpent = totalTimeRef.current + Math.max(0, Math.floor((Date.now() - blockStartRef.current) / 1000))
@@ -1086,6 +1093,12 @@ export default function TrainingPlayer() {
             setIsFinished(true)
             setShowCelebrationModal(true)
 
+            // Clear any local-storage fallback so a stale 99% snapshot is never
+            // restored on page reload after the module was completed.
+            if (storageKey) {
+                safeLocalStorage.removeItem(storageKey)
+            }
+
             // Achievement checks run against real persisted progress (see
             // check_and_award_achievement), so they're safe to fire right after the
             // training_progress row above lands. Only the two types with real server-side
@@ -1094,7 +1107,7 @@ export default function TrainingPlayer() {
             try {
                 const results = await Promise.all(
                     Object.keys(TRAINING_ACHIEVEMENT_LABELS).map(async (type) => {
-                        const awarded = await checkAchievement.mutateAsync(type)
+                        const awarded = await checkAchievement.mutateAsync(type as AchievementType)
                         return awarded ? type : null
                     })
                 )

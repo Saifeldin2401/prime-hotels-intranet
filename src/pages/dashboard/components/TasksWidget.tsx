@@ -18,7 +18,7 @@ import { Link } from 'react-router-dom'
 export function TasksWidget({ focusMode = 'my_work' }: { focusMode?: DashboardFocusMode }) {
   const { user } = useAuth()
   const { data: tasks, isLoading } = useTasks({
-    statuses: ['open', 'todo', 'in_progress', 'pending'],
+    statuses: ['todo', 'in_progress', 'review'],
     assignedTo: focusMode === 'my_work' ? user?.id : undefined,
     createdBy: focusMode === 'my_team' ? user?.id : undefined,
     limit: 6,

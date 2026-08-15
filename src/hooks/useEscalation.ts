@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 // Types
@@ -6,7 +7,7 @@ export interface EscalationRule {
     id: string
     action_type: string
     threshold_hours: number
-    next_role: string
+    next_role: Database['public']['Enums']['app_role']
     is_active: boolean
     created_at: string
     updated_at: string

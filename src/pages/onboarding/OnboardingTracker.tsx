@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useOnboardingTasks } from '@/hooks/useOnboarding'
 import { supabase } from '@/lib/supabase'
-import type { OnboardingProcess } from '@/lib/types'
+import type { OnboardingProcess, Profile } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import { format, isValid } from 'date-fns'
@@ -112,94 +112,91 @@ export default function OnboardingTracker() {
                     .order('start_date', { ascending: false })
 
                 if (!error && data && data.length > 0) {
-                    processItems = data as OnboardingProcess[]
+                    processItems = data as unknown as OnboardingProcess[]
                 }
             } catch (e) {
                 console.error('onboarding_process fetch error:', e)
             }
 
-            // Also query learning_assignments to show ALL assigned onboarding journeys & modules
+            // Also query user_path_enrollments to show assigned onboarding journeys.
+            // user_path_enrollments only has id/user_id/path_id/enrolled_at/completed_at --
+            // it has no status/progress_percent/created_at columns, so those are derived
+            // client-side from completed_at instead of selected directly.
             try {
-                const { data: assignments, error: assignError } = await supabase
-                    .from('learning_assignments')
+                const { data: enrollments, error: enrollError } = await supabase
+                    .from('user_path_enrollments')
                     .select(`
                       id,
-                      target_id,
-                      target_type,
-                      content_id,
-                      content_type,
-                      created_at,
-                      due_date,
-                      priority,
-                      is_deleted
+                      user_id,
+                      path_id,
+                      enrolled_at,
+                      completed_at,
+                      user:profiles!user_path_enrollments_user_id_fkey(id, full_name, email, avatar_url),
+                      path:training_paths!user_path_enrollments_path_id_fkey(id, title, description)
                     `)
-                    .or('is_deleted.is.null,is_deleted.eq.false')
-                    .order('created_at', { ascending: false })
+                    .order('enrolled_at', { ascending: false })
 
-                if (!assignError && assignments && assignments.length > 0) {
-                    const targetIds = assignments.map(a => a.target_id).filter(Boolean) as string[]
-                    const userMap = new Map<string, any>()
-
-                    if (targetIds.length > 0) {
-                        const { data: profiles } = await supabase
-                            .from('profiles')
-                            .select('id, full_name, email, avatar_url')
-                            .in('id', targetIds)
-
-                        profiles?.forEach(p => userMap.set(p.id, p))
-                    }
-
-                    const mappedAssignments: OnboardingProcess[] = assignments.map(a => {
-                        const userProfile = a.target_id ? userMap.get(a.target_id) : null
-                        const targetLabel = a.target_type === 'new_hire' ? 'All New Hires (Onboarding)' : (a.target_type === 'department' ? 'Department Assignment' : (a.target_type === 'role' ? 'Role Assignment' : 'Group Audience'))
-                        
+                if (!enrollError && enrollments && enrollments.length > 0) {
+                    const mappedEnrollments: OnboardingProcess[] = enrollments.map(e => {
+                        const profileUser = e.user as unknown as Profile | undefined
+                        const timestamp = e.enrolled_at || new Date().toISOString()
+                        const isCompleted = !!e.completed_at
+                        // Full Profile shape required when no joined profile row exists --
+                        // OnboardingProcess.user is typed as Profile (not Partial<Profile>).
+                        const fallbackUser: Profile = {
+                            id: e.user_id || 'group',
+                            email: '',
+                            full_name: 'Team Member',
+                            phone: null,
+                            avatar_url: null,
+                            hire_date: null,
+                            date_of_birth: null,
+                            job_title: null,
+                            staff_id: null,
+                            reporting_to: null,
+                            is_active: true,
+                            emergency_contact_name: null,
+                            emergency_contact_phone: null,
+                            nationality: null,
+                            blood_group: null,
+                            created_at: timestamp,
+                            updated_at: timestamp
+                        }
                         return {
-                            id: `assign-${a.id}`,
-                            user_id: a.target_id || 'group',
-                            template_id: null,
-                            status: 'in_progress',
-                            progress_percent: 25,
-                            created_at: a.created_at,
-                            updated_at: a.created_at,
-                            user: userProfile || { full_name: targetLabel, email: 'Onboarding Target' },
-                            template: { 
-                                id: '',
-                                title: 'ALTUS New Hire Hotel Orientation (KSA)',
+                            id: `enroll-${e.id}`,
+                            user_id: e.user_id || 'group',
+                            template_id: e.path_id,
+                            status: isCompleted ? 'approved' : 'pending',
+                            progress_percent: isCompleted ? 100 : 0,
+                            created_at: timestamp,
+                            updated_at: e.completed_at || timestamp,
+                            user: profileUser || fallbackUser,
+                            template: {
+                                id: e.path?.id || '',
+                                title: e.path?.title || 'Hotel Learning Journey',
                                 role: null,
                                 job_title: null,
                                 department_id: null,
                                 tasks: [],
                                 required_training_ids: [],
                                 is_active: true,
-                                created_at: a.created_at,
-                                updated_at: a.created_at
+                                created_at: timestamp,
+                                updated_at: timestamp
                             },
-                            start_date: a.created_at || new Date().toISOString(),
-                            tasks: [{
-                                id: 't1',
-                                process_id: `assign-${a.id}`,
-                                title: 'Onboarding Task',
-                                description: null,
-                                status: 'in_progress',
-                                assigned_to_id: a.target_id || 'group',
-                                due_date: a.due_date || null,
-                                is_completed: false,
-                                completed_at: null,
-                                created_at: a.created_at,
-                                updated_at: a.created_at
-                            }]
+                            start_date: timestamp,
+                            tasks: []
                         }
                     })
 
-                    const existingUserIds = new Set(processItems.map(p => p.user_id))
-                    mappedAssignments.forEach(ma => {
-                        if (!existingUserIds.has(ma.user_id)) {
-                            processItems.push(ma)
+                    const existingProcessIds = new Set(processItems.map(p => p.id))
+                    mappedEnrollments.forEach(me => {
+                        if (!existingProcessIds.has(me.id)) {
+                            processItems.push(me)
                         }
                     })
                 }
             } catch (e) {
-                console.error('learning_assignments fetch error:', e)
+                console.error('user_path_enrollments fetch error:', e)
             }
 
             return processItems

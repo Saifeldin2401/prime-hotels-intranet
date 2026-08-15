@@ -487,11 +487,12 @@ export async function getRequiredReading(userId: string, propertyId?: string): P
         const hydratedDocs = await hydratePublishedSnapshotsForList(requiredDocs)
 
         // 2. Get user's acknowledgments for these documents
+        const docIds = hydratedDocs.map(d => toStringValue(d.id)).filter(Boolean)
         const { data: acks } = await supabase
             .from('document_acknowledgments')
             .select('document_id, acknowledged_at')
             .eq('user_id', userId)
-            .in('document_id', hydratedDocs.map(d => d.id))
+            .in('document_id', docIds)
 
         const ackMap = new Map(acks?.map(a => [a.document_id, a]))
 
@@ -989,15 +990,17 @@ export async function trackRelatedImpressions(sourceId: string, relatedIds: stri
 // ============================================================================
 
 async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Promise<RawKnowledgeArticle> {
-    if (!data?.id) return data
+    const docId = toStringValue(data?.id)
+    if (!docId) return data
     if (data.status === 'PUBLISHED') return data
-    if (!data.current_version) return data
+    const versionNum = typeof data.current_version === 'number' ? data.current_version : undefined
+    if (!versionNum) return data
 
     const { data: snapshot, error } = await supabase
         .from('document_versions')
-        .select('version_number, title, description, content, file_url, status')
-        .eq('document_id', data.id)
-        .eq('version_number', data.current_version)
+        .select('version_number, file_url, change_summary')
+        .eq('document_id', docId)
+        .eq('version_number', versionNum)
         .maybeSingle()
 
     if (error || !snapshot) {
@@ -1006,12 +1009,8 @@ async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Prom
 
     return {
         ...data,
-        title: snapshot.title ?? data.title,
-        description: snapshot.description ?? data.description,
-        content: snapshot.content ?? data.content,
-        file_url: snapshot.file_url ?? data.file_url,
-        status: snapshot.status || 'PUBLISHED',
-        current_version: snapshot.version_number ?? data.current_version,
+        file_url: snapshot.file_url ?? (typeof data.file_url === 'string' ? data.file_url : undefined),
+        current_version: snapshot.version_number ?? versionNum,
         updated_at: data.updated_at
     }
 }
@@ -1019,18 +1018,20 @@ async function hydratePublishedSnapshotIfNeeded(data: RawKnowledgeArticle): Prom
 async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Promise<RawKnowledgeArticle[]> {
     if (!rows.length) return rows
     const needsSnapshot = rows.filter(row =>
-        row?.id &&
+        Boolean(row?.id) &&
         row?.status !== 'PUBLISHED' &&
-        row?.current_version
+        typeof row?.current_version === 'number'
     )
     if (!needsSnapshot.length) return rows
 
-    const docIds = Array.from(new Set(needsSnapshot.map(row => row.id)))
-    const versionNumbers = Array.from(new Set(needsSnapshot.map(row => row.current_version)))
+    const docIds = Array.from(new Set(needsSnapshot.map(row => toStringValue(row.id)).filter(Boolean)))
+    const versionNumbers = Array.from(new Set(needsSnapshot.map(row => Number(row.current_version)).filter(n => !isNaN(n))))
+
+    if (!docIds.length || !versionNumbers.length) return rows
 
     const { data: snapshots, error } = await supabase
         .from('document_versions')
-        .select('document_id, version_number, title, description, content, file_url, status')
+        .select('document_id, version_number, file_url, change_summary')
         .in('document_id', docIds)
         .in('version_number', versionNumbers)
 
@@ -1041,17 +1042,15 @@ async function hydratePublishedSnapshotsForList(rows: RawKnowledgeArticle[]): Pr
     )
 
     return rows.map(row => {
-        if (!row?.id || row?.status === 'PUBLISHED' || !row?.current_version) return row
-        const snapshot = snapshotMap.get(`${row.id}:${row.current_version}`)
+        const docId = toStringValue(row?.id)
+        const versionNum = typeof row?.current_version === 'number' ? row.current_version : undefined
+        if (!docId || row?.status === 'PUBLISHED' || !versionNum) return row
+        const snapshot = snapshotMap.get(`${docId}:${versionNum}`)
         if (!snapshot) return row
         return {
             ...row,
-            title: snapshot.title ?? row.title,
-            description: snapshot.description ?? row.description,
-            content: snapshot.content ?? row.content,
-            file_url: snapshot.file_url ?? row.file_url,
-            status: snapshot.status || row.status || 'PUBLISHED',
-            current_version: snapshot.version_number ?? row.current_version,
+            file_url: snapshot.file_url ?? (typeof row.file_url === 'string' ? row.file_url : undefined),
+            current_version: snapshot.version_number ?? versionNum,
             updated_at: row.updated_at
         }
     })

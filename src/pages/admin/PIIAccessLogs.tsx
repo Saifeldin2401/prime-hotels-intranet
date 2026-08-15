@@ -37,7 +37,7 @@ export default function PIIAccessLogs() {
 
       if (error) throw error
       return {
-        logs: data as PIIAccessLog[],
+        logs: (data || []) as unknown as PIIAccessLog[],
         totalCount: count || 0
       }
     },
@@ -74,7 +74,7 @@ export default function PIIAccessLogs() {
                       <div>
                         <div className="flex items-center gap-2 mb-1">
                           <span className="font-semibold text-primary">
-                            {t('pii_audit.accessed_fields', { fields: log.pii_fields.join(', ') })}
+                            {t('pii_audit.accessed_fields', { fields: Array.isArray(log.pii_fields) ? log.pii_fields.join(', ') : '' })}
                           </span>
                         </div>
                         <p className="text-sm text-gray-500 flex items-center gap-2">

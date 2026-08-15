@@ -70,7 +70,7 @@ export default function JobPostingDetail() {
                 .single()
 
             if (error) throw error
-            return data as JobPosting
+            return data as unknown as JobPosting
         },
         enabled: !!id
     })
@@ -88,7 +88,7 @@ export default function JobPostingDetail() {
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            return data as JobApplication[]
+            return (data || []) as unknown as JobApplication[]
         },
         enabled: !!id
     })

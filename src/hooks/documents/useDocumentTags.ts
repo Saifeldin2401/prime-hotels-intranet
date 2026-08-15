@@ -20,6 +20,7 @@ export function useDocumentTags() {
 
       return (data || []).map(tag => ({
         ...tag,
+        description: null,
         usage_count: tag.usage_count?.[0]?.count || 0
       })) as DocumentTag[]
     },
@@ -48,7 +49,10 @@ export function useSearchDocumentTags(searchQuery: string) {
         .limit(20)
 
       if (error) throw error
-      return data as DocumentTag[]
+      return (data || []).map(tag => ({
+        ...tag,
+        description: null,
+      })) as DocumentTag[]
     },
   })
 }
@@ -70,6 +74,7 @@ export function usePopularDocumentTags(limit: number = 10) {
 
       return (data || []).map(tag => ({
         ...tag,
+        description: null,
         usage_count: tag.usage_count?.[0]?.count || 0
       })) as DocumentTag[]
     },
@@ -80,10 +85,13 @@ export function useCreateDocumentTag() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (tag: Partial<DocumentTag>) => {
+    mutationFn: async (tag: { name: string; color?: string | null }) => {
       const { data, error } = await supabase
         .from('document_tags')
-        .insert(tag)
+        .insert({
+          name: tag.name,
+          color: tag.color ?? null,
+        })
         .select()
         .single()
 

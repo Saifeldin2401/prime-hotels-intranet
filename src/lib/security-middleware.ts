@@ -1,4 +1,4 @@
-// Security middleware and rate limiting utilities
+import type { Json } from '@/types/database.generated'
 
 // Lazy import to break circular dependency: supabase.ts → security.ts → security-middleware.ts → supabase.ts
 const getSupabase = () => import('./supabase').then((m) => m.supabase)
@@ -343,7 +343,7 @@ export class SecurityMiddleware {
    */
   static async logSecurityEvent(
     eventType: string,
-    metadata: Record<string, unknown> = {},
+    metadata: Json = {},
     severity: 'info' | 'warning' | 'error' | 'critical' = 'info'
   ): Promise<void> {
     try {

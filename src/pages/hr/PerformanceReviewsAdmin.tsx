@@ -59,7 +59,7 @@ export default function PerformanceReviewsAdmin() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('performance_reviews')
-        .select('*, employee:profiles(id, full_name, email, job_title), reviewer:profiles!performance_reviews_reviewer_id_fkey(id, full_name)')
+        .select('*, employee:profiles!performance_reviews_employee_id_fkey(id, full_name, email, job_title), reviewer:profiles!performance_reviews_reviewer_id_fkey(id, full_name)')
         .order('review_date', { ascending: false })
 
       if (error) throw error

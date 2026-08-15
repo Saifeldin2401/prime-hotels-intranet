@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useHRSettings } from '@/hooks/useSystemSettings'
 import { supabase } from '@/lib/supabase'
 import { useQuery } from '@tanstack/react-query'
+import { useNavigate, useParams } from 'react-router-dom'
 import { format } from 'date-fns'
 import {
     AlertCircle,
@@ -26,8 +27,8 @@ import {
 } from 'lucide-react'
 import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
 import EmployeeDocuments from './EmployeeDocuments'
+import EmployeeTrainingHistory from './EmployeeTrainingHistory'
 
 type AppRole =
   | 'corporate_admin'
@@ -126,7 +127,7 @@ export default function UserProfile() {
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
       if (!row) throw new Error('Profile not found')
-      return row as PublicProfileData
+      return row as unknown as PublicProfileData
     },
     enabled: !!id && isValidProfileId
   })
@@ -142,7 +143,7 @@ export default function UserProfile() {
 
       if (error) throw error
       const row = Array.isArray(data) ? data[0] : data
-      return (row || null) as PrivateProfileData | null
+      return (row || null) as unknown as PrivateProfileData | null
     },
     enabled: !!id && isValidProfileId && canViewPrivate
   })
@@ -209,9 +210,10 @@ export default function UserProfile() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3 lg:w-[700px]">
+        <TabsList className="grid w-full grid-cols-4 lg:w-[800px]">
           <TabsTrigger value="overview">{t('profile:overview', 'Overview')}</TabsTrigger>
           <TabsTrigger value="skills">{t('profile:skills_and_competencies', 'Skills')}</TabsTrigger>
+          <TabsTrigger value="training">{t('profile:training', 'Training')}</TabsTrigger>
           <TabsTrigger value="documents">{t('profile:documents', 'Documents')}</TabsTrigger>
         </TabsList>
 
@@ -494,6 +496,10 @@ export default function UserProfile() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="training">
+          <EmployeeTrainingHistory userId={id} />
         </TabsContent>
 
         <TabsContent value="documents">

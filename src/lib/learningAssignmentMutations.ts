@@ -1,5 +1,6 @@
 import { getErrorMessage } from '@/lib/errorMessages'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 
 export type LearningAssignmentMutationPayload = {
   target_type: string
@@ -182,7 +183,7 @@ async function clearDirectUserAssignmentExemptions(assignments: LearningAssignme
       const { error } = await supabase
         .from('learning_assignment_exemptions')
         .delete()
-        .eq('content_type', assignment.content_type)
+        .eq('content_type', assignment.content_type as Database['public']['Enums']['learning_content_type'])
         .eq('content_id', assignment.content_id)
         .eq('user_id', assignment.target_id!)
 

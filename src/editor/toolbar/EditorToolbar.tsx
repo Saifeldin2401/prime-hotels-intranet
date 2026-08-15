@@ -261,22 +261,22 @@ export function EditorToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-2">
-                <AlignLeft className="mr-1 h-4 w-4" />
+                <AlignLeft className="me-1 h-4 w-4" />
                 Align
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               <DropdownMenuItem onSelect={() => editor?.chain().focus().setTextAlign('left').run()}>
-                <AlignLeft className="mr-2 h-4 w-4" /> Left
+                <AlignLeft className="me-2 h-4 w-4" /> Left
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => editor?.chain().focus().setTextAlign('center').run()}>
-                <AlignCenter className="mr-2 h-4 w-4" /> Center
+                <AlignCenter className="me-2 h-4 w-4" /> Center
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => editor?.chain().focus().setTextAlign('right').run()}>
-                <AlignRight className="mr-2 h-4 w-4" /> Right
+                <AlignRight className="me-2 h-4 w-4" /> Right
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => editor?.chain().focus().setTextAlign('justify').run()}>
-                <AlignJustify className="mr-2 h-4 w-4" /> Justify
+                <AlignJustify className="me-2 h-4 w-4" /> Justify
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -286,7 +286,7 @@ export function EditorToolbar({
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-2" disabled={disabled || !editor}>
-                <Link2 className="mr-1 h-4 w-4" /> Link
+                <Link2 className="me-1 h-4 w-4" /> Link
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-80 space-y-3">
@@ -320,7 +320,7 @@ export function EditorToolbar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm" className="h-8 px-2" disabled={disabled || !editor}>
-                <Table2 className="mr-1 h-4 w-4" /> Table
+                <Table2 className="me-1 h-4 w-4" /> Table
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -358,12 +358,12 @@ export function EditorToolbar({
         {config.features.media && (
           <>
             <Button variant="outline" size="sm" className="h-8 px-2" onClick={onUploadImage} disabled={disabled || !editor}>
-              <ImagePlus className="mr-1 h-4 w-4" /> Image
+              <ImagePlus className="me-1 h-4 w-4" /> Image
             </Button>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 px-2" disabled={disabled || !editor}>
-                  <Video className="mr-1 h-4 w-4" /> Video
+                  <Video className="me-1 h-4 w-4" /> Video
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-80 space-y-4">
@@ -421,18 +421,18 @@ export function EditorToolbar({
 
         {config.features.aiAssist && (
           <Button variant="outline" size="sm" className="h-8 px-2" onClick={onOpenAiPanel} disabled={disabled || !editor}>
-            <Sparkles className="mr-1 h-4 w-4" /> AI Assist
+            <Sparkles className="me-1 h-4 w-4" /> AI Assist
           </Button>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ms-auto flex items-center gap-2">
           {config.features.copyActions && (
             <>
               <Button variant="outline" size="sm" className="h-8 px-2" onClick={onCopyHtml}>
-                <Copy className="mr-1 h-4 w-4" /> HTML
+                <Copy className="me-1 h-4 w-4" /> HTML
               </Button>
               <Button variant="outline" size="sm" className="h-8 px-2" onClick={onCopyMarkdown}>
-                <FileCode2 className="mr-1 h-4 w-4" /> Markdown
+                <FileCode2 className="me-1 h-4 w-4" /> Markdown
               </Button>
             </>
           )}
@@ -441,11 +441,11 @@ export function EditorToolbar({
             <Button variant="outline" size="sm" className="h-8 px-2" onClick={onToggleFullscreen}>
               {isFullscreen ? (
                 <>
-                  <Minimize className="mr-1 h-4 w-4" /> Exit Fullscreen
+                  <Minimize className="me-1 h-4 w-4" /> Exit Fullscreen
                 </>
               ) : (
                 <>
-                  <Maximize className="mr-1 h-4 w-4" /> Fullscreen
+                  <Maximize className="me-1 h-4 w-4" /> Fullscreen
                 </>
               )}
             </Button>

@@ -3419,10 +3419,10 @@ export type Database = {
       }
       documents: {
         Row: {
-          ai_generated: boolean | null
-          ai_source_content: string | null
           ai_category: string | null
+          ai_generated: boolean | null
           ai_processed_at: string | null
+          ai_source_content: string | null
           ai_summary: string | null
           ai_tags: string[] | null
           archived_at: string | null
@@ -3509,10 +3509,10 @@ export type Database = {
           watermark_text: string | null
         }
         Insert: {
-          ai_generated?: boolean | null
-          ai_source_content?: string | null
           ai_category?: string | null
+          ai_generated?: boolean | null
           ai_processed_at?: string | null
+          ai_source_content?: string | null
           ai_summary?: string | null
           ai_tags?: string[] | null
           archived_at?: string | null
@@ -3599,10 +3599,10 @@ export type Database = {
           watermark_text?: string | null
         }
         Update: {
-          ai_generated?: boolean | null
-          ai_source_content?: string | null
           ai_category?: string | null
+          ai_generated?: boolean | null
           ai_processed_at?: string | null
+          ai_source_content?: string | null
           ai_summary?: string | null
           ai_tags?: string[] | null
           archived_at?: string | null
@@ -12291,13 +12291,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "training_progress_training_id_fkey"
-            columns: ["training_id"]
-            isOneToOne: false
-            referencedRelation: "training_modules"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "training_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -12785,6 +12778,8 @@ export type Database = {
       unified_quiz_sessions: {
         Row: {
           completed_at: string | null
+          context_entity_id: string | null
+          context_type: string | null
           correct_answers: number | null
           earned_points: number | null
           id: string
@@ -12801,6 +12796,8 @@ export type Database = {
         }
         Insert: {
           completed_at?: string | null
+          context_entity_id?: string | null
+          context_type?: string | null
           correct_answers?: number | null
           earned_points?: number | null
           id?: string
@@ -12817,6 +12814,8 @@ export type Database = {
         }
         Update: {
           completed_at?: string | null
+          context_entity_id?: string | null
+          context_type?: string | null
           correct_answers?: number | null
           earned_points?: number | null
           id?: string
@@ -14323,20 +14322,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "training_progress_training_id_fkey"
-            columns: ["training_module_id"]
-            isOneToOne: false
-            referencedRelation: "training_modules"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "training_progress_training_id_fkey"
-            columns: ["content_id"]
-            isOneToOne: false
-            referencedRelation: "training_modules"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "training_progress_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
@@ -15027,6 +15012,16 @@ export type Database = {
       }
     }
     Functions: {
+      _grade_question_answer: {
+        Args: {
+          p_question_id: string
+          p_selected_answer: string
+          p_selected_options: string[]
+        }
+        Returns: boolean
+      }
+      _normalize_free_text: { Args: { p_value: string }; Returns: string }
+      _safe_uuid: { Args: { p_value: string }; Returns: string }
       announce_eom_from_selection: {
         Args: { p_selection_id: string }
         Returns: string
@@ -15165,16 +15160,28 @@ export type Database = {
         Returns: boolean
       }
       can_manage_assignments: { Args: { user_id: string }; Returns: boolean }
+      can_manage_employee_document: {
+        Args: { p_target_user_id: string }
+        Returns: boolean
+      }
       can_user_act_on_document_approval: {
         Args: { p_approval_id: string; p_user_id: string }
         Returns: boolean
       }
       can_view_document: { Args: { document_id: string }; Returns: boolean }
+      can_view_employee_document: {
+        Args: { p_target_user_id: string }
+        Returns: boolean
+      }
       can_view_employee_public_profile: {
         Args: { p_target_user_id: string }
         Returns: boolean
       }
       can_view_feed_item: { Args: { _feed_item_id: string }; Returns: boolean }
+      can_view_report_definition: {
+        Args: { _report_id: string }
+        Returns: boolean
+      }
       can_view_request:
         | { Args: { request_id: string }; Returns: boolean }
         | { Args: { request_id: string; user_id: string }; Returns: boolean }
@@ -15763,10 +15770,7 @@ export type Database = {
       }
       get_secure_media_url: {
         Args: { p_expiry_seconds?: number; p_media_asset_id: string }
-        Returns: {
-          expires_at: string
-          signed_url: string
-        }[]
+        Returns: string
       }
       get_secure_payslip_url: {
         Args: { p_payslip_id: string }
@@ -15948,6 +15952,19 @@ export type Database = {
           total_days: number
           used_days: number
         }[]
+      }
+      grade_question_attempt: {
+        Args: {
+          p_context_entity_id?: string
+          p_context_type?: string
+          p_hint_used?: boolean
+          p_question_id: string
+          p_selected_answer: string
+          p_selected_options?: string[]
+          p_session_id?: string
+          p_time_spent_seconds?: number
+        }
+        Returns: Json
       }
       has_any_role: {
         Args: {
@@ -16439,6 +16456,17 @@ export type Database = {
             }
             Returns: Json
           }
+      submit_quiz_attempt: {
+        Args: {
+          p_answers: Json
+          p_assignment_id?: string
+          p_context_entity_id?: string
+          p_context_type?: string
+          p_quiz_id: string
+          p_time_spent_seconds?: number
+        }
+        Returns: Json
+      }
       submit_training_module_for_review: {
         Args: { p_module_id: string }
         Returns: undefined
@@ -16495,20 +16523,19 @@ export type Database = {
           certificate_number: string
           certificate_type: string
           completion_date: string
+          department_name: string
           expiry_date: string
           is_valid: boolean
           issued_at: string
+          property_name: string
           recipient_name: string
           status: string
           title: string
+          verification_code: string
         }[]
       }
       verify_mfa_code: {
         Args: { p_code: string; p_user_id: string }
-        Returns: boolean
-      }
-      verify_report_signature: {
-        Args: { p_export_id: string; p_report_data: Json; p_signature: string }
         Returns: boolean
       }
     }

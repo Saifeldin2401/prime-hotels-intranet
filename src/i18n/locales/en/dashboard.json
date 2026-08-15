@@ -58,9 +58,14 @@
             "analytics_desc": "View performance data"
         },
         "birthdays": {
-            "title": "Today\u0027s Birthdays",
+            "title": "Today's Birthdays",
             "desc": "Celebrate team members with birthdays today.",
-            "no_birthdays": "No birthdays today."
+            "no_birthdays": "No birthdays today.",
+            "today": "Today!",
+            "tomorrow": "Tomorrow",
+            "in_days": "In {{count}} days",
+            "no_birthdays_week": "No birthdays in the next 7 days.",
+            "send_wish": "Send Wishes"
         },
         "employee_of_the_month": {
             "title": "Employee of the Month",
@@ -69,6 +74,197 @@
             "view_previous": "View Previous Winners",
             "manage": "Manage EOM",
             "no_employee_found": "No Employee Found"
+        },
+        "unread_announcements": "Unread Announcements",
+        "my_tasks": "My Tasks",
+        "announcements_subtitle": "Announcements",
+        "knowledge_base": "Knowledge Base",
+        "knowledge_base_desc": "Recent articles and standard operating procedures",
+        "training_progress": "Training Progress",
+        "training_progress_desc": "Continue your learning journey",
+        "all_courses": "All Courses",
+        "new": "New",
+        "start": "Start",
+        "training_module_desc": "Comprehensive training module covering {{topic}} for hotel staff.",
+        "no_active_courses": "No active courses",
+        "browse_training": "Browse Available Training",
+        "continue": "Continue",
+        "no_articles": "No articles found",
+        "no_articles_desc": "New content will appear here.",
+        "pending_widget": {
+            "title": "Pending Items",
+            "subtitle": "Items requiring your attention",
+            "approvals": "Pending Approvals",
+            "notifications": "Unread Notifications",
+            "announcements": "Unread Announcements",
+            "items_waiting": "{{count}} item waiting",
+            "items_waiting_other": "{{count}} items waiting",
+            "notifications_count": "{{count}} new notification",
+            "notifications_count_other": "{{count}} new notifications",
+            "announcements_count": "{{count}} new announcement",
+            "announcements_count_other": "{{count}} new announcements",
+            "all_caught_up": "You are all caught up! No pending items."
+        },
+        "activity_widget": {
+            "assigned": "Assigned {{date}}",
+            "due": "Due {{date}}",
+            "default_training_title": "Training Assignment"
+        },
+        "active_users": {
+            "title": "Active Team Members",
+            "online": "Active Now",
+            "no_active": "No other active users at the moment."
+        },
+        "online_users": {
+            "title": "Online Now",
+            "online": "Online",
+            "no_active": "No team members currently online",
+            "check_back": "Check back later",
+            "search_placeholder": "Search team members...",
+            "just_now": "Just now",
+            "minutes": "{{count}}m",
+            "hours": "{{count}}h",
+            "days": "{{count}}d",
+            "team_member": "Team Member"
+        },
+        "dashboardNotifications": {
+            "title": "Notifications",
+            "unread_count": "{{count}} unread",
+            "unread_count_other": "{{count}} unread",
+            "all_caught_up": "You are all caught up!",
+            "no_notifications": "No notifications yet",
+            "mark_all_read": "Mark All as Read",
+            "clear_all": "Clear All",
+            "view_details": "View Details"
+        },
+        "dept_kpi": {
+            "title": "Department Performance",
+            "no_data": "No department data available",
+            "top_depts": "Top Departments",
+            "rankings": "Department Performance Rankings",
+            "tasks": "Tasks",
+            "training": "Training",
+            "sops": "SOPs"
+        },
+        "knowledge": {
+            "title": "Knowledge Base",
+            "view_all": "View All",
+            "progress": "Required Reading Progress",
+            "required": "Required Reading",
+            "recently_updated": "Recently Updated",
+            "updated_at": "Updated {{time}}",
+            "all_caught_up": "You are all caught up!",
+            "explore": "Explore Knowledge Base"
+        },
+        "team_list": {
+            "title": "Department Team",
+            "search_team_members": "Search team members...",
+            "loading_team": "Loading team...",
+            "no_team_found": "No members found in your team.",
+            "no_job_title": "No Job Title",
+            "unknown": "Unknown",
+            "view": "View"
+        },
+        "maintenance_labels": {
+            "critical": "Critical",
+            "urgent": "Urgent"
+        },
+        "role_widget": {
+            "properties": "Properties",
+            "departments": "Departments"
+        },
+        "quick_actions_widget": {
+            "view": "View",
+            "search": "Search",
+            "go_back": "Go Back"
+        },
+        "motivation": {
+            "refresh": "Refresh"
+        },
+        "elite_spotlight": {
+            "title": "Spotlight",
+            "birthday_celebration": "Birthday Celebration",
+            "birthday_message": "Wishing you a happy birthday and a successful year ahead from PRIME Hotels!",
+            "coming_up_on": "Coming up on",
+            "coo_title": "Chief Operating Officer"
+        },
+        "pinned_items": "Pinned Items",
+        "pinned_items_desc": "Quick access to important items",
+        "pinned": {
+            "title": "Pinned Items",
+            "subtitle": "Quick access to important items",
+            "empty": "No pinned items yet",
+            "empty_desc": "Pin important documents, tasks, training, and announcements for quick access from the dashboard.",
+            "limit": "You can pin up to 10 items",
+            "drag_hint": "Drag to reorder",
+            "unpin": "Unpin",
+            "pin": "Pin",
+            "open": "Open",
+            "type_document": "Document",
+            "type_task": "Task",
+            "type_training": "Training",
+            "type_announcement": "Announcement",
+            "pinned_at": "Pinned {{date}}",
+            "cannot_open": "Cannot open this item",
+            "pinned_success": "Item pinned to dashboard",
+            "unpinned_success": "Item unpinned from dashboard",
+            "reordered_success": "Pinned items reordered",
+            "error_pinning": "Failed to pin item",
+            "error_unpinning": "Failed to unpin item",
+            "error_reordering": "Failed to reorder items",
+            "view_all": "View All Pinned",
+            "no_results": "No pinned items found",
+            "confirm_unpin": "Are you sure you want to unpin this item?",
+            "confirm_unpin_all": "Are you sure you want to unpin all items?",
+            "unpin_all": "Unpin All",
+            "unpinned_all_success": "All items unpinned",
+            "quick_pin": "Quick Pin",
+            "search_placeholder": "Search pinned items...",
+            "filter_all": "All",
+            "filter_documents": "Documents",
+            "filter_tasks": "Tasks",
+            "filter_training": "Training",
+            "filter_announcements": "Announcements",
+            "sort_by": "Sort by",
+            "sort_recent": "Recently Pinned",
+            "sort_title": "Title",
+            "sort_type": "Type",
+            "sort_order": "Custom Order",
+            "max_reached": "Maximum pinned items reached (10)",
+            "already_pinned": "This item is already pinned",
+            "tip": "Tip: You can pin items by clicking the pin icon on documents, tasks, or training modules.",
+            "pin_items": "Pin Items"
+        },
+        "customize": "Customize Dashboard",
+        "reset_layout": "Reset Layout",
+        "save_layout": "Save Layout",
+        "layout_saved": "Dashboard layout saved successfully",
+        "layout_reset": "Dashboard layout reset to default",
+        "drag_to_reorder": "Drag widgets to reorder your dashboard",
+        "hide_widget": "Hide Widget",
+        "show_widget": "Show Widget",
+        "visible_widgets": "Visible Widgets",
+        "hidden_widgets": "Hidden Widgets",
+        "no_hidden_widgets": "All widgets are currently visible",
+        "widget_count": "{{count}} widget",
+        "widget_count_other": "{{count}} widgets",
+        "manage_widgets": "Manage Widgets",
+        "add_widget": "Add Widget",
+        "remove_widget": "Remove Widget",
+        "widget_settings": "Widget Settings",
+        "columns": "Columns",
+        "compact_view": "Compact View",
+        "expanded_view": "Expanded View",
+        "auto_refresh": "Auto Refresh",
+        "refresh_interval": "Refresh Interval",
+        "every_minute": "Every minute",
+        "every_5_minutes": "Every 5 minutes",
+        "every_15_minutes": "Every 15 minutes",
+        "every_30_minutes": "Every 30 minutes",
+        "disabled": "Disabled",
+        "motivational_quotes": {
+            "ibn_arabi_1": "The journey is the essence of wisdom.",
+            "ibn_arabi_1_author": "Ibn Arabi"
         }
     },
     "focus": {
@@ -126,7 +322,8 @@
     "activity_widget": {
         "assigned": "Assigned {{date}}",
         "due": "Due {{date}}",
-        "default_training_title": "Training Assignment"
+        "default_training_title": "Training Assignment",
+        "subtitle": "Recent activity across properties"
     },
     "active_users": {
         "title": "Active Team Members",
@@ -143,7 +340,9 @@
         "minutes": "{{count}}m",
         "hours": "{{count}}h",
         "days": "{{count}}d",
-        "team_member": "Team Member"
+        "team_member": "Team Member",
+        "team_members_active": "{{count}} team members active",
+        "one_member_active": "1 team member active"
     },
     "dashboardNotifications": {
         "title": "Notifications",
@@ -173,10 +372,11 @@
         "required": "Required Reading",
         "recently_updated": "Recently Updated",
         "updated_at": "Updated {{time}}",
-        "all_caught_up": "You\u0027re all caught up!",
+        "all_caught_up": "You're all caught up!",
         "explore": "Explore Knowledge Base",
         "no_articles": "No articles found",
-        "no_articles_desc": "New content will appear here."
+        "no_articles_desc": "New content will appear here.",
+        "subtitle": "Operational resources and SOPs"
     },
     "team_list": {
         "title": "Department Team",
@@ -280,11 +480,11 @@
     },
     "staff": {
         "welcome_back": "Welcome back, {{name}}",
-        "subtitle": "Here\u0027s your daily overview",
+        "subtitle": "Here's your daily overview",
         "role_badge": "Staff Member",
         "notifications": "Notifications",
         "stats": {
-            "todays_tasks": "Today\u0027s Tasks",
+            "todays_tasks": "Today's Tasks",
             "from_yesterday": "from yesterday",
             "training_progress": "Training Progress",
             "upcoming_events": "Upcoming Events",
@@ -306,7 +506,7 @@
             "my_training": "My Training",
             "complete_training": "Complete your training",
             "continue_learning_btn": "Continue Learning",
-            "policies_forms": "Policies \u0026 Forms",
+            "policies_forms": "Policies & Forms",
             "access_policies": "Access company policies",
             "promote_employee": "Promote Employee",
             "manage_promotions": "Manage promotions",
@@ -328,7 +528,7 @@
         "due_tomorrow": "Due Tomorrow",
         "due_date": "Due: {{date}}",
         "no_tasks": "No tasks assigned",
-        "weeks_schedule": "This Week\u0027s Schedule",
+        "weeks_schedule": "This Week's Schedule",
         "today": "Today",
         "tomorrow": "Tomorrow",
         "no_schedule": "No schedule available"
@@ -350,15 +550,15 @@
         "portfolio_trends_subtitle": "Momentum across compliance, maintenance, and staffing",
         "operational_intelligence": "Operational Intelligence",
         "operational_intelligence_subtitle": "Cross-department signals and core execution metrics",
-        "workforce_knowledge": "Workforce \u0026 Knowledge",
+        "workforce_knowledge": "Workforce & Knowledge",
         "workforce_knowledge_subtitle": "People operations, learning health, and frontline readiness",
-        "insights_compliance": "Insights \u0026 Compliance",
+        "insights_compliance": "Insights & Compliance",
         "insights_compliance_subtitle": "Behavioral signals, AI intelligence, and compliance posture",
-        "finance_governance": "Finance \u0026 Governance",
+        "finance_governance": "Finance & Governance",
         "finance_governance_subtitle": "Financial health indicators and portfolio governance readiness",
         "recruitment": "Recruitment",
         "maintenance_efficiency": "Maintenance Efficiency",
-        "total_staff_revenue": "Total Staff \u0026 Revenue",
+        "total_staff_revenue": "Total Staff & Revenue",
         "completion_rate": "Completion Rate",
         "open_positions": "Open Positions",
         "active_job_postings": "Active job postings",
@@ -409,7 +609,7 @@
         "active_team_members": "Active team members",
         "operational_departments": "Operational departments",
         "tasks_requiring_attention": "Tasks requiring attention",
-        "training_sop_compliance": "Training \u0026 SOP compliance",
+        "training_sop_compliance": "Training & SOP compliance",
         "department_details": "Department Details",
         "no_departments_found": "No departments found",
         "head_label": "Head: {{name}}",
@@ -437,7 +637,7 @@
         "knowledge_compliance_card": "Knowledge Compliance",
         "attendance_rate_card": "Attendance Rate",
         "training_completion_card": "Training Completion",
-        "training_knowledge_tab": "Training \u0026 Knowledge",
+        "training_knowledge_tab": "Training & Knowledge",
         "staff_members_title": "Staff Members",
         "search_staff_placeholder": "Search staff...",
         "loading_staff": "Loading staff...",
@@ -524,7 +724,10 @@
             "recruitment_desc": "Recruitment Description",
             "staff_desc": "Staff Description",
             "tasks": "Tasks",
-            "maintenance": "Maintenance"
+            "maintenance": "Maintenance",
+            "title": "Quick Actions",
+            "subtitle": "Frequently used shortcuts",
+            "view_all": "View All"
         },
         "report_builder": "Report Builder",
         "department_focus": "Department Focus",
@@ -582,7 +785,7 @@
         "search_team": "Search team members...",
         "no_reports": "No direct reports",
         "no_results": "No team members found",
-        "no_reports_desc": "You don\u0027t have any employees reporting to you yet.",
+        "no_reports_desc": "You don't have any employees reporting to you yet.",
         "try_different_search": "Try a different search term",
         "pending": "pending",
         "training": "training"
@@ -627,7 +830,7 @@
         "general": "General",
         "hospitality": "Hospitality",
         "technology": "Technology",
-        "food_and_beverage": "Food \u0026 Beverage",
+        "food_and_beverage": "Food & Beverage",
         "tourism": "Tourism",
         "marketing": "Marketing",
         "people": "People",
@@ -681,9 +884,13 @@
         "article_updated": "Article updated: {{title}}",
         "training_completed": "{{name}} completed \"{{title}}\"",
         "happy_birthday": "🎂 Happy Birthday {{name}}!",
-        "birthday_in": "{{name}}\u0027s birthday in {{days}} days",
+        "birthday_in": "{{name}}'s birthday in {{days}} days",
         "welcome_team": "Welcome {{name}} to the team!",
-        "joined_as": "Joined as {{role}}"
+        "joined_as": "Joined as {{role}}",
+        "new_article": "New Article",
+        "read_article": "Read Article",
+        "completed_training": "Completed Training",
+        "training_congrats": "Congratulations on completing the training module!"
     },
     "subtitle": "Your centralized hub for operational knowledge",
     "welcome_header": {
@@ -706,7 +913,12 @@
             "active_tasks": "You have {{count}} active tasks in your queue",
             "milestone": "Milestone: {{count}} training modules completed",
             "operational_focus": "Operational focus: {{name}}",
-            "system_operational": "Altus Advisory operational"
+            "system_operational": "Altus Advisory operational",
+            "action_required_one": "1 action required",
+            "active_tasks_one": "1 active task",
+            "milestone_one": "1 milestone approaching",
+            "announcement_label": "Announcement",
+            "operating_normally": "All systems operating normally"
         },
         "stats": {
             "tasks": "Tasks",
@@ -716,7 +928,11 @@
             "all_caught_up": "All caught up",
             "schedule_clear": "Schedule clear",
             "done": "done"
-        }
+        },
+        "primary_focus": "Primary Focus",
+        "unread_alerts": "{{count}} Unread Alerts",
+        "unread_alerts_one": "1 Unread Alert",
+        "view_details": "View Details"
     },
     "quick_stats": {
         "tasks": "Tasks",
@@ -762,14 +978,14 @@
         "maintenance_title": "Report Maintenance",
         "maintenance_description": "Report an issue",
         "maintenance_name": "Issue Title",
-        "maintenance_placeholder": "What\u0027s the issue?",
+        "maintenance_placeholder": "What's the issue?",
         "announcement_title": "Post Announcement",
         "announcement_description": "Post an announcement",
         "announcement_name": "Announcement Title",
         "announcement_placeholder": "Enter announcement title...",
         "task_title_placeholder": "Task title...",
         "event_title_placeholder": "Event title...",
-        "maintenance_title_placeholder": "What\u0027s the issue?",
+        "maintenance_title_placeholder": "What's the issue?",
         "announcement_title_placeholder": "Announcement title...",
         "assigned_to": "Assigned To",
         "assign_to": "Assign To",
@@ -830,9 +1046,47 @@
     },
     "pins": {
         "title": "Pinned Items",
-        "empty": "Pin important items for quick access",
+        "empty": {
+            "title": "No pinned items yet",
+            "description": "Pin important documents, tasks, training, and announcements for quick access from your dashboard.",
+            "limit_info": "You can pin up to {{max}} items"
+        },
         "max_reached": "Maximum 10 pins reached. Unpin an item first.",
-        "view_all": "View All Pins"
+        "view_all": "View All Pins",
+        "dialog": {
+            "title": "All Pinned Items",
+            "description": "Manage your pinned items for quick access"
+        },
+        "actions": {
+            "pin": "Pin to dashboard",
+            "unpin": "Unpin from dashboard"
+        },
+        "types": {
+            "document": "Document",
+            "sop": "SOP",
+            "training": "Training",
+            "task": "Task",
+            "announcement": "Announcement",
+            "knowledge": "Knowledge"
+        },
+        "tooltip": {
+            "pin": "Pin to dashboard",
+            "unpin": "Unpin from dashboard"
+        },
+        "errors": {
+            "fetch_failed": "Failed to load pinned items",
+            "not_authenticated": "User must be authenticated",
+            "max_reached": "Maximum {{max}} pinned items reached",
+            "unpin_first": "Unpin something first to add a new item.",
+            "already_pinned": "This item is already pinned",
+            "add_failed": "Failed to pin item",
+            "remove_failed": "Failed to unpin item",
+            "reorder_failed": "Failed to reorder pins"
+        },
+        "success": {
+            "added": "Pinned to dashboard",
+            "removed": "Unpinned from dashboard"
+        }
     },
     "customize": {
         "title": "Customize Dashboard",
@@ -882,13 +1136,17 @@
         "performance_score": "Performance Score",
         "pending_leave": "Pending Leave",
         "new_hires": "New Hires",
-        "open_positions": "Open Positions"
+        "open_positions": "Open Positions",
+        "total_employees": "Total Employees",
+        "employee_engagement": "Employee Engagement"
     },
     "insights": {
         "attendance_rate": "Attendance Rate",
         "task_completion": "Task Completion",
         "training_progress": "Training Progress",
-        "response_time": "Response Time"
+        "response_time": "Response Time",
+        "my_work": "My Work",
+        "my_team": "My Team"
     },
     "prayer": {
         "remaining": "In",
@@ -910,5 +1168,49 @@
         "in": "In",
         "h": "h",
         "m": "m"
+    },
+    "time": {
+        "days_ago": "{{count}} days ago",
+        "day_ago": "1 day ago",
+        "days_ago_other": "{{count}} days ago",
+        "hours_ago": "{{count}} hours ago",
+        "about_hours_ago": "about {{count}} hours ago",
+        "about_hours_ago_one": "about 1 hour ago",
+        "minutes_ago": "{{count}} minutes ago"
+    },
+    "activity": {
+        "new_article": "New Article",
+        "read_article": "Read Article",
+        "comments_count": "{{count}} comments",
+        "comments_count_one": "1 comment",
+        "post": "Post",
+        "operations": "Operations",
+        "acknowledged": "Acknowledged"
+    },
+    "performance_overview": {
+        "title": "Performance Overview",
+        "week": "Week",
+        "month": "Month",
+        "quarter": "Quarter",
+        "export": "Export",
+        "real_time_metrics": "Real-time Metrics",
+        "total_tasks": "Total Tasks"
+    },
+    "action": {
+        "continue": "Continue"
+    },
+    "elite_spotlight": {
+        "title": "Spotlight",
+        "birthday_celebration": "Birthday Celebration",
+        "birthday_message": "Happy Birthday and best wishes from the team!",
+        "coming_up_on": "Coming up on"
+    },
+    "prayer_times": {
+        "in": "in {{time}}",
+        "duhr": "Dhuhr",
+        "fajr": "Fajr",
+        "asr": "Asr",
+        "maghrib": "Maghrib",
+        "isha": "Isha"
     }
 }

@@ -603,12 +603,12 @@ export function SmartAICourseCreatorModal({
                   {/* Tab 2: Knowledge Base Document */}
                   <TabsContent value="kb_doc" className="mt-4 space-y-3">
                     <div className="relative">
-                      <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                      <Search className="w-4 h-4 absolute start-3 top-3 text-slate-400" />
                       <Input
                         value={docSearch}
                         onChange={(e) => setDocSearch(e.target.value)}
                         placeholder="Search Knowledge Base SOPs & manuals..."
-                        className="pl-9 bg-white dark:bg-slate-950"
+                        className="ps-9 bg-white dark:bg-slate-950"
                       />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto p-1">

@@ -94,7 +94,7 @@ export default function UserManagement() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as Profile[]
+      return (data || []) as unknown as Profile[]
     },
   })
 
@@ -162,13 +162,13 @@ export default function UserManagement() {
       if (!actionTargetUser?.id) return []
       const { data, error } = await supabase
         .from('account_action_notes')
-        .select('id, action, note, created_at, created_by:profiles(id, full_name, email)')
+        .select('id, action, note, created_at, created_by:profiles!account_action_notes_created_by_fkey(id, full_name, email)')
         .eq('user_id', actionTargetUser.id)
         .order('created_at', { ascending: false })
         .limit(5)
 
       if (error) throw error
-      return ((data || []) as AccountActionNoteRow[]).map((note) => ({
+      return ((data || []) as unknown as AccountActionNoteRow[]).map((note) => ({
         ...note,
         created_by: Array.isArray(note.created_by) ? (note.created_by[0] ?? null) : note.created_by
       }))

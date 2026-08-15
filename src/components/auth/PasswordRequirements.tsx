@@ -137,7 +137,7 @@ export function PasswordRequirements({
               ? 'bg-amber-500'
               : 'bg-red-500'
           )}
-          style={{ width: `${(metCount / requirements.length) * 100}%` }}
+          style={{ width: `${requirements.length > 0 ? (metCount / requirements.length) * 100 : 0}%` }}
           role="progressbar"
           aria-valuenow={metCount}
           aria-valuemin={0}

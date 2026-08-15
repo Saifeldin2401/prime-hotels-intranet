@@ -1,10 +1,11 @@
 {
     "title": "صندوق الطلبات",
     "description": "عرض وإدارة جميع الطلبات عبر المؤسسة",
-    "search_placeholder": "البحث برقم الطلب أو اسم الموظف...",
+    "search_placeholder": "البحث بالموظف، أو المسؤول، أو المنشأة، أو رقم الطلب...",
     "filters": "الفلاتر",
     "clear_all": "مسح الكل",
     "status_label": "الحالة",
+    "priority_label": "الأولوية",
     "start_date": "تاريخ البدء",
     "end_date": "تاريخ الانتهاء",
     "pick_date": "اختر تاريخاً",
@@ -15,9 +16,32 @@
     "request_no": "طلب رقم {{no}}",
     "submitted": "تم التقديم: {{date}}",
     "current_assignee": "المسؤول الحالي: {{name}}",
+    "due_date": "تاريخ الاستحقاق",
     "view_details": "عرض التفاصيل",
+    "assigned_to_me": "المُعيَّنة لي",
+    "property_label": "المنشأة",
+    "job_title_label": "المسمى الوظيفي",
     "error_loading": "خطأ في تحميل الطلبات",
     "error_loading_desc": "يرجى المحاولة مرة أخرى لاحقاً",
+    "hero_title": "استخدم صندوق الوارد لمعالجة طلبات الموظفين التي تتطلب اتخاذ إجراء",
+    "hero_description": "يجمع هذا الطابور طلبات الإجازات والمطالبات المالية والتنقلات وموافقات الموارد البشرية الأخرى. ابدأ بالعناصر المتأخرة أو المعينة لك، ثم افتح التفاصيل للموافقة أو الرفض أو الإعادة أو التوجيه.",
+    "summary": {
+        "actionable": "جاهزة للإجراء",
+        "mine": "المُعيَّنة لي",
+        "overdue": "متأخرة",
+        "urgent": "أولوية عالية"
+    },
+    "quick_views": {
+        "inbox_label": "طابور الموافقات",
+        "all": "جميع الطلبات القابلة للإجراء",
+        "mine": "المُعيَّنة لي",
+        "overdue": "متأخرة",
+        "urgent": "عاجلة",
+        "pending_hr": "في انتظار الموارد البشرية",
+        "pending_supervisor": "في انتظار المشرف"
+    },
+    "search_hint": "ابحث بالموظف، أو المسؤول، أو المنشأة، أو نوع الطلب، أو رقم الطلب.",
+    "search_hint_numeric": "مطابقة رقم الطلب وتفاصيل الطلب المرئية.",
     "status": {
         "draft": "مسودة",
         "pending_supervisor": "في انتظار المدير المباشر",
@@ -27,15 +51,14 @@
         "returned": "معاد للتصحيح",
         "closed": "مغلق"
     },
+    "priority": {
+        "low": "منخفضة",
+        "normal": "عادية",
+        "high": "عالية",
+        "urgent": "عاجلة"
+    },
     "leave_request": "طلب إجازة",
     "document": "مستند",
     "transfer": "نقل موظف",
-    "priority_label": "Priority",
-    "due_date": "Due",
-    "priority": {
-        "low": "Low",
-        "normal": "Normal",
-        "high": "High",
-        "urgent": "Urgent"
-    }
+    "expense_claim": "مطالبة مصروفات"
 }

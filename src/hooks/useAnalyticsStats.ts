@@ -40,14 +40,33 @@ export function useAnalyticsStats(options?: { enabled?: boolean }) {
             if (eventsRes.error) throw eventsRes.error
             if (searchRes.error) throw searchRes.error
 
-            // Parse Search Metrics (comes as a single row)
-            const searchData = searchRes.data[0] || { total_searches: 0, zero_results_count: 0, avg_results_count: 0, top_queries: [] }
+            const rawSummary = summaryRes.data as Record<string, unknown> | null
+            const summary: AnalyticsSummary = {
+                active_now: typeof rawSummary?.active_now === 'number' ? rawSummary.active_now : 0,
+                active_today: typeof rawSummary?.active_today === 'number' ? rawSummary.active_today : 0,
+                sessions_today: typeof rawSummary?.sessions_today === 'number' ? rawSummary.sessions_today : 0,
+            }
+
+            const rawSearch = searchRes.data?.[0]
+            const topQueries: { query: string; count: number }[] = Array.isArray(rawSearch?.top_queries)
+                ? (rawSearch.top_queries as Array<{ query?: unknown; count?: unknown }>).map((item) => ({
+                    query: typeof item?.query === 'string' ? item.query : '',
+                    count: typeof item?.count === 'number' ? item.count : 0,
+                }))
+                : []
+
+            const searchMetrics = {
+                total_searches: rawSearch?.total_searches ?? 0,
+                zero_results_count: rawSearch?.zero_results_count ?? 0,
+                avg_results_count: rawSearch?.avg_results_count ?? 0,
+                top_queries: topQueries,
+            }
 
             return {
-                summary: summaryRes.data,
-                dau: dauRes.data,
-                topEvents: eventsRes.data,
-                searchMetrics: searchData
+                summary,
+                dau: dauRes.data ?? [],
+                topEvents: eventsRes.data ?? [],
+                searchMetrics,
             }
         },
         enabled: options?.enabled ?? true,

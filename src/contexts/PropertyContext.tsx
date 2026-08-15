@@ -33,12 +33,52 @@ const createPseudoProperty = (name: string, address: string): Property => ({
     created_at: new Date().toISOString()
 })
 
+const mapDbPropertyToProperty = (p: {
+    id: string
+    name: string
+    address?: string | null
+    phone?: string | null
+    is_active?: boolean | null
+    created_at?: string | null
+    company_id?: string | null
+    brand_id?: string | null
+    latitude?: number | null
+    longitude?: number | null
+}): Property => ({
+    id: p.id,
+    name: p.name,
+    address: p.address ?? null,
+    phone: p.phone ?? null,
+    is_active: p.is_active ?? true,
+    latitude: p.latitude ?? null,
+    longitude: p.longitude ?? null,
+    created_at: p.created_at ?? new Date().toISOString(),
+    company_id: p.company_id ?? null,
+    brand_id: p.brand_id ?? null,
+})
+
 const toProperty = (value: unknown): Property | null => {
     if (!value || Array.isArray(value) || typeof value !== 'object') {
         return null
     }
 
-    return value as Property
+    const candidate = value as Record<string, unknown>
+    if (typeof candidate.id !== 'string' || typeof candidate.name !== 'string') {
+        return null
+    }
+
+    return {
+        id: candidate.id,
+        name: candidate.name,
+        address: typeof candidate.address === 'string' ? candidate.address : null,
+        phone: typeof candidate.phone === 'string' ? candidate.phone : null,
+        is_active: typeof candidate.is_active === 'boolean' ? candidate.is_active : true,
+        latitude: typeof candidate.latitude === 'number' ? candidate.latitude : null,
+        longitude: typeof candidate.longitude === 'number' ? candidate.longitude : null,
+        created_at: typeof candidate.created_at === 'string' ? candidate.created_at : new Date().toISOString(),
+        company_id: typeof candidate.company_id === 'string' ? candidate.company_id : null,
+        brand_id: typeof candidate.brand_id === 'string' ? candidate.brand_id : null,
+    }
 }
 
 export function PropertyProvider({ children }: { children: React.ReactNode }) {
@@ -79,7 +119,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 )
 
                 // Filter out redundant head office and deduplicate properties by ID
-                const rawProps = (data || []).filter(p => p.name !== 'ALTUS Head Office')
+                const rawProps = (data || []).filter(p => p.name !== 'ALTUS Head Office').map(mapDbPropertyToProperty)
                 const filteredData = Array.from(
                     new Map(rawProps.map(p => [p.id, p])).values()
                 )

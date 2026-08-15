@@ -37,7 +37,7 @@ export interface LearningProgress {
         id: string
         title: string
         description?: string
-    }
+    } | null
 }
 
 export function useLearningProgress() {
@@ -99,13 +99,61 @@ export function useLearningProgress() {
                 modulesById = new Map((modules || []).map((module) => [module.id, module]))
             }
 
-            return (data || []).map((row) => ({
-                ...row,
-                status: STATUS_MAP[row.status],
-                training_modules: row.content_type === 'module'
-                    ? (modulesById.get(row.content_id) || null)
+            // training_progress columns are mostly nullable at the DB level (many with
+            // defaults like now()/0 that make them effectively always-populated), while
+            // LearningProgress models the shape the UI actually consumes. Normalize
+            // null -> the interface's declared optional/undefined or a sane default here
+            // instead of casting past the mismatch.
+            return (data || []).map((row): LearningProgress => {
+                const rawProfile = row.profiles as unknown as {
+                    full_name: string | null
+                    email: string
+                    avatar_url: string | null
+                    user_departments?: Array<{ departments: LearningProgressDept | null }> | null
+                    user_properties?: Array<{ properties: { name: string } | null }> | null
+                } | null
+
+                const trainingModule = row.content_type === 'module'
+                    ? modulesById.get(row.content_id)
                     : null
-            })) as LearningProgress[]
+
+                return {
+                    id: row.id,
+                    user_id: row.user_id,
+                    assignment_id: row.assignment_id ?? undefined,
+                    content_type: row.content_type || '',
+                    content_id: row.content_id,
+                    status: STATUS_MAP[row.status],
+                    progress_percentage: row.progress_percentage ?? 0,
+                    score_percentage: row.score_percentage ?? undefined,
+                    passed: row.passed ?? undefined,
+                    completed_at: row.completed_at ?? undefined,
+                    last_accessed_at: row.last_accessed_at ?? undefined,
+                    last_block_index: row.last_block_index,
+                    last_block_id: row.last_block_id,
+                    time_spent_seconds: row.time_spent_seconds,
+                    // metadata is a Json column with a known object shape in practice.
+                    metadata: (row.metadata as Record<string, unknown> | null) ?? null,
+                    created_at: row.created_at || new Date().toISOString(),
+                    updated_at: row.updated_at || new Date().toISOString(),
+                    profiles: rawProfile
+                        ? {
+                            full_name: rawProfile.full_name || 'Unknown',
+                            email: rawProfile.email,
+                            avatar_url: rawProfile.avatar_url ?? undefined,
+                            user_departments: rawProfile.user_departments ?? undefined,
+                            user_properties: rawProfile.user_properties ?? undefined
+                        }
+                        : undefined,
+                    training_modules: trainingModule
+                        ? {
+                            id: trainingModule.id,
+                            title: trainingModule.title,
+                            description: trainingModule.description ?? undefined
+                        }
+                        : null
+                }
+            })
         }
     })
 }

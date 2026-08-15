@@ -85,7 +85,7 @@ export function useUploadEmployeeDocument() {
             targetUserId
         }: {
             file: File,
-            category: string,
+            category: 'cv' | 'certificate' | 'contract' | 'other' | string,
             title?: string,
             expiry_date?: string,
             document_number?: string,
@@ -105,13 +105,22 @@ export function useUploadEmployeeDocument() {
 
             if (uploadError) throw uploadError
 
+            const validCategories = ['cv', 'certificate', 'contract', 'other'] as const
+            type DocCategory = (typeof validCategories)[number]
+            const isDocCategory = (val: string): val is DocCategory =>
+                (validCategories as readonly string[]).includes(val)
+
+            const resolvedCategory: DocCategory = isDocCategory(category)
+                ? category
+                : 'other'
+
             // 2. Insert record into database
             const { data, error: dbError } = await supabase
                 .from('employee_documents')
                 .insert({
                     user_id: ownerId,
                     title: title || file.name,
-                    category,
+                    category: resolvedCategory,
                     file_path: filePath,
                     file_type: file.type,
                     file_size: file.size,

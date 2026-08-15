@@ -1,6 +1,8 @@
 import { supabase } from '@/lib/supabase'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import type { AppRole } from '@/lib/constants'
+
 export interface ScopableAdmin {
     user_id: string
     full_name: string | null
@@ -8,7 +10,7 @@ export interface ScopableAdmin {
     role: string
 }
 
-const SCOPABLE_ROLES = ['corporate_admin', 'regional_admin', 'regional_hr'] as const
+const SCOPABLE_ROLES: AppRole[] = ['corporate_admin', 'regional_admin', 'regional_hr']
 
 /** Every user holding a company-scopable admin role (corporate_admin/regional_admin/regional_hr). */
 export function useScopableAdmins() {
@@ -18,7 +20,7 @@ export function useScopableAdmins() {
             const { data: roleRows, error: roleError } = await supabase
                 .from('user_roles')
                 .select('user_id, role')
-                .in('role', SCOPABLE_ROLES as unknown as string[])
+                .in('role', SCOPABLE_ROLES)
 
             if (roleError) throw roleError
             if (!roleRows || roleRows.length === 0) return []

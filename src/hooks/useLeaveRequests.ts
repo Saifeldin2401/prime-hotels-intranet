@@ -53,7 +53,7 @@ export function useMyLeaveRequests() {
       const { data, error } = await query
 
       if (error) throw error
-      return data as LeaveRequest[]
+      return (data || []) as unknown as LeaveRequest[]
     },
     enabled: !!user?.id
   })
@@ -123,7 +123,7 @@ export function useTeamLeaveRequests() {
       const { data, error } = await query
 
       if (error) throw error
-      return data as LeaveRequest[]
+      return (data || []) as unknown as LeaveRequest[]
     },
     enabled: !!user?.id
   })
@@ -170,9 +170,10 @@ export function usePendingLeaveRequests() {
 
       if (workflowError) throw workflowError
 
-      const workflowItems = (workflowRows || [])
-        .map((row) => row.leave_request)
-        .filter(Boolean)
+      const workflowItems = (workflowRows || []).flatMap((row) => {
+        if (!row.leave_request) return []
+        return Array.isArray(row.leave_request) ? row.leave_request : [row.leave_request]
+      })
 
       // 2) Legacy pending leave requests without workflow linkage (fallback)
       let legacyQuery = supabase
@@ -220,11 +221,11 @@ export function usePendingLeaveRequests() {
       const combined = [...workflowItems, ...(legacyRows || [])]
       const seen = new Set<string>()
       return combined.filter((item) => {
-        if (!item?.id) return false
+        if (!item || !item.id) return false
         if (seen.has(item.id)) return false
         seen.add(item.id)
         return true
-      }) as LeaveRequest[]
+      }) as unknown as LeaveRequest[]
     },
     enabled: !!user?.id
   })
@@ -354,10 +355,10 @@ export function useApproveLeaveRequest() {
 
         if (error) throw error
         const result = Array.isArray(data) ? data[0] : data
-        if (result && result.success === false) {
-          throw new Error(result.message || 'Approval failed')
+        if (result && typeof result === 'object' && 'success' in result && (result as { success?: boolean }).success === false) {
+          throw new Error((result as { message?: string }).message || 'Approval failed')
         }
-        return { id: requestId } as LeaveRequest
+        return { id: requestId } as unknown as LeaveRequest
       }
 
       const notificationPayload = {
@@ -375,7 +376,7 @@ export function useApproveLeaveRequest() {
       })
 
       if (error) throw error
-      return data as LeaveRequest
+      return (typeof data === 'object' && data !== null ? data : { id: requestId }) as unknown as LeaveRequest
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
@@ -425,10 +426,10 @@ export function useRejectLeaveRequest() {
 
         if (error) throw error
         const result = Array.isArray(data) ? data[0] : data
-        if (result && result.success === false) {
-          throw new Error(result.message || 'Rejection failed')
+        if (result && typeof result === 'object' && 'success' in result && (result as { success?: boolean }).success === false) {
+          throw new Error((result as { message?: string }).message || 'Rejection failed')
         }
-        return { id: requestId, rejectionReason: reason } as LeaveRequest & { rejectionReason: string }
+        return { id: requestId, rejectionReason: reason } as unknown as LeaveRequest & { rejectionReason: string }
       }
 
       const notificationPayload = {
@@ -447,7 +448,8 @@ export function useRejectLeaveRequest() {
       })
 
       if (error) throw error
-      return { ...data, rejectionReason: reason } as LeaveRequest & { rejectionReason: string }
+      const rowData = typeof data === 'object' && data !== null ? data : {}
+      return { ...rowData, id: requestId, rejectionReason: reason } as unknown as LeaveRequest & { rejectionReason: string }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['leave-requests'] })

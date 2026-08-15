@@ -14,6 +14,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { useAuth } from '@/hooks/useAuth'
 import { useTrainingProgress } from '@/hooks/useTraining'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 import type {
     TrainingModule,
     TrainingPath,
@@ -47,7 +48,7 @@ interface PathForm {
   is_mandatory: boolean
   certificate_enabled: boolean
   module_ids: string[]
-  target_role?: string | null
+  target_role?: Database['public']['Enums']['app_role'] | null
   target_department_id?: string | null
   target_property_id?: string | null
   target_user_ids: string[]
@@ -98,7 +99,10 @@ export default function TrainingPaths() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (TrainingPath & {
+      return ((data || []).map(p => ({
+        ...p,
+        is_published: p.is_active ?? true,
+      })) as unknown) as (TrainingPath & {
         training_path_modules: (TrainingPathModule & {
           training_modules: TrainingModule
         })[]
@@ -127,7 +131,13 @@ export default function TrainingPaths() {
         .order('enrolled_at', { ascending: false })
 
       if (error) throw error
-      return data as (UserPathEnrollment & {
+      return ((data || []).map(row => ({
+        ...row,
+        training_paths: {
+          ...row.training_paths,
+          is_published: row.training_paths?.is_active ?? true,
+        }
+      })) as unknown) as (UserPathEnrollment & {
         training_paths: TrainingPath & {
           training_path_modules: (TrainingPathModule & {
             training_modules: TrainingModule
@@ -202,10 +212,10 @@ export default function TrainingPaths() {
             estimated_duration_hours: data.estimated_duration_hours,
             is_mandatory: data.is_mandatory,
             certificate_enabled: data.certificate_enabled,
-            target_role: data.target_role || null,
-            target_department_id: data.target_department_id || null,
-            target_property_id: data.target_property_id || null,
-            target_user_ids: data.target_user_ids || [],
+            target_role: data.target_role ?? null,
+            target_department_id: data.target_department_id ?? null,
+            target_property_id: data.target_property_id ?? null,
+            target_user_ids: data.target_user_ids ?? [],
             updated_at: new Date().toISOString()
           })
           .eq('id', data.id)
@@ -240,11 +250,11 @@ export default function TrainingPaths() {
             estimated_duration_hours: data.estimated_duration_hours,
             is_mandatory: data.is_mandatory,
             certificate_enabled: data.certificate_enabled,
-            target_role: data.target_role || null,
-            target_department_id: data.target_department_id || null,
-            target_property_id: data.target_property_id || null,
-            target_user_ids: data.target_user_ids || [],
-            created_by: profile?.id
+            target_role: data.target_role ?? null,
+            target_department_id: data.target_department_id ?? null,
+            target_property_id: data.target_property_id ?? null,
+            target_user_ids: data.target_user_ids ?? [],
+            created_by: profile?.id ?? null
           })
           .select()
           .single()
@@ -323,7 +333,7 @@ export default function TrainingPaths() {
       is_mandatory: path.is_mandatory,
       certificate_enabled: path.certificate_enabled,
       module_ids: (path as any).training_path_modules?.map((m) => m.module_id) || [],
-      target_role: path.target_role || null,
+      target_role: (path.target_role as Database['public']['Enums']['app_role'] | null) || null,
       target_department_id: path.target_department_id || null,
       target_property_id: path.target_property_id || null,
       target_user_ids: path.target_user_ids || []
@@ -375,7 +385,7 @@ export default function TrainingPaths() {
       return progress?.status === 'completed'
     }).length
 
-    return Math.round((completedCount / modules.length) * 100)
+    return modules.length > 0 ? Math.round((completedCount / modules.length) * 100) : 0
   }
 
   return (
@@ -680,7 +690,7 @@ export default function TrainingPaths() {
                 <Label>{t('targetRole')}</Label>
                 <Select
                   value={formData.target_role || 'none'}
-                  onValueChange={(value) => setFormData({ ...formData, target_role: value === 'none' ? null : value })}
+                  onValueChange={(value) => setFormData({ ...formData, target_role: value === 'none' ? null : (value as Database['public']['Enums']['app_role']) })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder={t('selectRole')} />

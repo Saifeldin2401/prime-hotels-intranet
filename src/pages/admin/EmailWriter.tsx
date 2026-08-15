@@ -513,15 +513,41 @@ export default function EmailWriter() {
   // PERSISTENCE: Save to localStorage on changes
   // ============================================
   const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const isClearingDraftRef = useRef(false)
 
   useEffect(() => {
-    if (!hasMounted || typeof window === 'undefined') return
+    if (!hasMounted || typeof window === 'undefined' || isClearingDraftRef.current) return
 
     // Debounce save to reduce storage writes
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
-    
+
+    const hasContent = Boolean(
+      subject.trim() ||
+      subjectAr.trim() ||
+      shortMessage.trim() ||
+      shortMessageAr.trim() ||
+      body.trim() ||
+      bodyAr.trim() ||
+      htmlBody.trim() ||
+      (targetMode === 'users' && selectedUserIds.length > 0)
+    )
+
     saveTimeoutRef.current = setTimeout(() => {
       try {
+        if (!hasContent) {
+          const keys = [
+            'email_writer_language', 'email_writer_bilingual', 'email_writer_subject',
+            'email_writer_subjectAr', 'email_writer_shortMessage', 'email_writer_shortMessageAr',
+            'email_writer_body', 'email_writer_bodyAr', 'email_writer_htmlBody',
+            'email_writer_textBody', 'email_writer_actionUrl', 'email_writer_actionLabel',
+            'email_writer_actionLabelAr', 'email_writer_targetMode', 'email_writer_selectedUsers',
+            'email_writer_selectedProperty', 'email_writer_selectedDepartment',
+            'email_writer_templateKey', 'email_writer_contentMode', 'email_writer_priority'
+          ]
+          keys.forEach(key => localStorage.removeItem(key))
+          return
+        }
+
         localStorage.setItem('email_writer_language', language)
         localStorage.setItem('email_writer_bilingual', String(bilingualEnabled))
         localStorage.setItem('email_writer_subject', subject)
@@ -557,7 +583,10 @@ export default function EmailWriter() {
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current)
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current)
+        saveTimeoutRef.current = null
+      }
     }
   }, [])
 
@@ -704,6 +733,12 @@ export default function EmailWriter() {
   }, [])
 
   const clearAllDrafts = useCallback(() => {
+    isClearingDraftRef.current = true
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current)
+      saveTimeoutRef.current = null
+    }
+
     // Reset all form state
     setSubject('')
     setSubjectAr('')
@@ -742,6 +777,10 @@ export default function EmailWriter() {
     
     setShowRestorePrompt(false)
     toast.success('Draft cleared')
+
+    setTimeout(() => {
+      isClearingDraftRef.current = false
+    }, 400)
   }, [])
 
   const handleAIDraft = useCallback(async () => {

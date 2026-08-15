@@ -50,7 +50,7 @@ export default function QuizList() {
     const [questionCount, setQuestionCount] = useState<number>(5)
     const [targetLanguage, setTargetLanguage] = useState<string>('English')
     const [questionTypes, setQuestionTypes] = useState<string[]>(['mcq', 'true_false'])
-    const [difficulty, setDifficulty] = useState<string>('medium')
+    const [difficulty, setDifficulty] = useState<'easy' | 'medium' | 'hard' | 'expert'>('medium')
     const [includeHints, setIncludeHints] = useState(false)
     const [includeExplanations, setIncludeExplanations] = useState(true)
     const [timeLimitMinutes, setTimeLimitMinutes] = useState<number>(20)
@@ -306,7 +306,7 @@ export default function QuizList() {
                             </div>
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">Difficulty</label>
-                                <Select value={difficulty} onValueChange={setDifficulty}>
+                                <Select value={difficulty} onValueChange={(val) => setDifficulty(val as 'easy' | 'medium' | 'hard' | 'expert')}>
                                     <SelectTrigger>
                                         <SelectValue />
                                     </SelectTrigger>

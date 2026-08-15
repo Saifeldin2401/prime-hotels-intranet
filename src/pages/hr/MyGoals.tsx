@@ -25,6 +25,21 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 
+interface LinkedTrainingModule {
+    title: string
+    progress?: {
+        status?: string | null
+        quiz_score?: number | null
+    }
+}
+
+function getGoalTrainingModule(goal: unknown): LinkedTrainingModule | undefined {
+    if (typeof goal === 'object' && goal !== null && 'training_module' in goal) {
+        return (goal as { training_module?: LinkedTrainingModule }).training_module
+    }
+    return undefined
+}
+
 export default function MyGoals() {
     const { t, i18n } = useTranslation('hr')
     const dateLocale = i18n.language.startsWith('ar') ? ar : enUS
@@ -57,12 +72,12 @@ export default function MyGoals() {
         }
     }
 
-    const handleToggleStatus = async (id: string, currentStatus: string) => {
+    const handleToggleStatus = async (id: string, currentStatus: string | null) => {
         const nextStatus = currentStatus === 'completed' ? 'in_progress' : 'completed'
         try {
             await updateGoalMutation.mutateAsync({
                 id,
-                updates: { status: nextStatus as any }
+                updates: { status: nextStatus }
             })
             toast.success(t('career_goals.success_update', { status: nextStatus.replace('_', ' ') }))
         } catch (_error) {
@@ -233,28 +248,32 @@ export default function MyGoals() {
                                                             </div>
                                                         </div>
 
-                                                        {goal.training_module && (
-                                                            <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 space-y-2">
-                                                                <div className="flex justify-between items-center text-xs">
-                                                                    <span className="font-medium text-blue-700 flex items-center gap-1">
-                                                                        <BookOpen className="w-3 h-3" />
-                                                                        {t('career_goals.linked_training')}: {goal.training_module.title}
-                                                                    </span>
-                                                                    <span className="font-bold text-blue-700">
-                                                                        {goal.training_module.progress?.status === 'completed' ? '100%' : goal.training_module.progress?.status === 'in_progress' ? '50%' : '0%'}
-                                                                    </span>
+                                                        {(() => {
+                                                            const trainingModule = getGoalTrainingModule(goal)
+                                                            if (!trainingModule) return null
+                                                            return (
+                                                                <div className="mt-3 p-3 bg-blue-50/50 rounded-lg border border-blue-100 space-y-2">
+                                                                    <div className="flex justify-between items-center text-xs">
+                                                                        <span className="font-medium text-blue-700 flex items-center gap-1">
+                                                                            <BookOpen className="w-3 h-3" />
+                                                                            {t('career_goals.linked_training')}: {trainingModule.title}
+                                                                        </span>
+                                                                        <span className="font-bold text-blue-700">
+                                                                            {trainingModule.progress?.status === 'completed' ? '100%' : trainingModule.progress?.status === 'in_progress' ? '50%' : '0%'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <Progress
+                                                                        value={trainingModule.progress?.status === 'completed' ? 100 : trainingModule.progress?.status === 'in_progress' ? 50 : 0}
+                                                                        className="h-1.5 bg-blue-100"
+                                                                    />
+                                                                    {trainingModule.progress?.quiz_score !== null && trainingModule.progress?.quiz_score !== undefined && (
+                                                                        <p className="text-[10px] text-blue-600">
+                                                                            {t('career_goals.quiz_score')}: {trainingModule.progress.quiz_score}%
+                                                                        </p>
+                                                                    )}
                                                                 </div>
-                                                                <Progress
-                                                                    value={goal.training_module.progress?.status === 'completed' ? 100 : goal.training_module.progress?.status === 'in_progress' ? 50 : 0}
-                                                                    className="h-1.5 bg-blue-100"
-                                                                />
-                                                                {goal.training_module.progress?.quiz_score !== null && (
-                                                                    <p className="text-[10px] text-blue-600">
-                                                                        {t('career_goals.quiz_score')}: {goal.training_module.progress.quiz_score}%
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                        )}
+                                                            )
+                                                        })()}
                                                     </div>
                                                 </div>
                                             </div>

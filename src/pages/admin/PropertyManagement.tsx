@@ -223,7 +223,7 @@ export default function PropertyManagement() {
                 .order('name')
 
             if (error) throw error
-            return data as Property[]
+            return (data || []) as unknown as Property[]
         }
     })
 

@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import type { Document } from '@/lib/types'
+import type { DocumentStatus, DocumentVisibility } from '@/lib/constants'
 import { secureSearchDocuments, secureCountDocuments } from '@/lib/secureSearch'
 import { useQuery } from '@tanstack/react-query'
 import type { DocumentFilters } from './types'
@@ -53,8 +54,8 @@ export function useDocumentsPaginated(
           countQuery = countQuery.eq('content_type', contentTypeFilter)
         }
 
-        if (filters?.status) countQuery = countQuery.eq('status', filters.status)
-        if (filters?.visibility) countQuery = countQuery.eq('visibility', filters.visibility)
+        if (filters?.status) countQuery = countQuery.eq('status', filters.status as DocumentStatus)
+        if (filters?.visibility) countQuery = countQuery.eq('visibility', filters.visibility as DocumentVisibility)
         if (filters?.property_id) countQuery = countQuery.eq('property_id', filters.property_id)
         if (filters?.department_id) countQuery = countQuery.eq('department_id', filters.department_id)
         if (filters?.folder_id !== undefined) {
@@ -125,7 +126,7 @@ export function useDocumentsPaginated(
           limit: pageSize,
           offset: from
         })
-        data = secureData as Document[]
+        data = secureData as unknown as Document[]
       } else {
         let query = supabase
           .from('documents')
@@ -179,8 +180,8 @@ export function useDocumentsPaginated(
         if (contentTypeFilter) {
           query = query.eq('content_type', contentTypeFilter)
         }
-        if (filters?.status) query = query.eq('status', filters.status)
-        if (filters?.visibility) query = query.eq('visibility', filters.visibility)
+        if (filters?.status) query = query.eq('status', filters.status as DocumentStatus)
+        if (filters?.visibility) query = query.eq('visibility', filters.visibility as DocumentVisibility)
         if (filters?.property_id) query = query.eq('property_id', filters.property_id)
         if (filters?.department_id) query = query.eq('department_id', filters.department_id)
         if (filters?.folder_id !== undefined) {

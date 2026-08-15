@@ -6,6 +6,7 @@
  */
 
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/types/database.generated'
 
 // Extended notification types covering all system events
 export type NotificationType =
@@ -212,7 +213,7 @@ export async function createNotification(params: CreateNotificationParams): Prom
       ...(metadata || {}),
       entity_type: entityType || null,
       entity_id: entityId || null,
-    } as Record<string, unknown>,
+    } as unknown as Json,
     p_action_url: link || null,
     p_related_entity_type: entityType || null,
     p_related_entity_id: (entityId || null) as string | null,
@@ -276,7 +277,7 @@ export async function createBulkNotifications(params: BulkNotificationParams): P
         ...(metadata || {}),
         entity_type: entityType || null,
         entity_id: entityId || null,
-      } as Record<string, unknown>,
+      } as unknown as Json,
       p_action_url: link || null,
       p_related_entity_type: entityType || null,
       p_related_entity_id: (entityId || null) as string | null,

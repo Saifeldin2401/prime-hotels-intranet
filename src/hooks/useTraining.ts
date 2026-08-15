@@ -14,6 +14,7 @@ import { learningService } from '@/services/learningService'
 import type {
     LearningAssignment
 } from '@/types/learning'
+import type { Json } from '@/types/database.generated'
 import type { QuestionStatus } from '@/types/questions'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect } from 'react'
@@ -180,10 +181,6 @@ export function useTrainingModule(moduleId: string) {
           profiles!training_modules_created_by_fkey(
             full_name,
             email
-          ),
-          training_quizzes(
-            *,
-            order
           )
         `)
         // training_content_blocks removed – now in documents (content_type='training_block').
@@ -209,13 +206,14 @@ export function useCreateTrainingModule() {
   const { user } = useAuth()
 
   return useMutation({
-    mutationFn: async (module: Partial<TrainingModule>) => {
+    mutationFn: async (module: Partial<TrainingModule> & { title: string }) => {
       if (!user) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
         .from('training_modules')
         .insert({
           ...module,
+          title: module.title,
           created_by: user.id,
         })
         .select()
@@ -263,15 +261,17 @@ export function useCreateContentBlock() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: async (block: Partial<TrainingContentBlock>) => {
-      const { type, order, ...rest } = block as Record<string, unknown>
+    mutationFn: async (block: Partial<TrainingContentBlock> & { training_module_id: string; title?: string }) => {
+      const { type, order, title, ...rest } = block as Record<string, unknown>
       const { data, error } = await supabase
         .from('documents')
         .insert({
-          ...rest,
+          ...(rest as Record<string, Json>),
+          title: typeof title === 'string' && title ? title : 'Untitled Block',
+          training_module_id: block.training_module_id,
           content_type: 'training_block',
-          block_type: type,
-          block_order: order,
+          block_type: typeof type === 'string' ? type : 'text',
+          block_order: typeof order === 'number' ? order : 0,
         })
         .select()
         .single()
@@ -590,6 +590,7 @@ export function useCompleteTraining() {
       let certificateError: string | null = null
 
       if (data && data.training_modules) {
+        const moduleInfo = Array.isArray(data.training_modules) ? data.training_modules[0] : data.training_modules
         try {
           // Get user info for certificate
           const { data: { user } } = await supabase.auth.getUser()
@@ -600,16 +601,21 @@ export function useCompleteTraining() {
               .eq('id', user.id)
               .single()
 
+            const certNumber = `CERT-${Date.now()}-${Math.random().toString(36).substring(2, 7).toUpperCase()}`
+            const verificationCode = `V-${Math.random().toString(36).substring(2, 9).toUpperCase()}`
+
             // Create certificate
             const { error: certInsertError } = await supabase.from('certificates').insert({
+              certificate_number: certNumber,
+              verification_code: verificationCode,
               user_id: user.id,
               recipient_name: profile?.full_name || user.email || 'Participant',
               recipient_email: user.email,
               certificate_type: 'training',
-              title: data.training_modules.title,
+              title: moduleInfo?.title || 'Training Completion Certificate',
               completion_date: new Date().toISOString(),
               score: quizScore,
-              training_module_id: data.training_modules.id,
+              training_module_id: moduleInfo?.id || data.training_id,
               training_progress_id: progressId
             })
 
@@ -618,9 +624,9 @@ export function useCompleteTraining() {
             }
             certificateGenerated = true
           }
-        } catch (certError) {
+        } catch (certError: unknown) {
           console.error('Certificate generation failed:', certError)
-          certificateError = certError.message || 'Certificate generation failed'
+          certificateError = (certError instanceof Error ? certError.message : 'Certificate generation failed')
           // Don't throw - training completion should succeed even if cert fails
           // But we'll communicate the issue to the user via toast
         }

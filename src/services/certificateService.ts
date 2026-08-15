@@ -12,6 +12,7 @@
 import QRCode from 'qrcode'
 import { supabase } from '@/lib/supabase'
 import { buildCertificateHtml, CERTIFICATE_TEMPLATE_STYLES, CERTIFICATE_HEIGHT_PX, CERTIFICATE_WIDTH_PX } from '@/lib/certificateTemplate'
+import type { Json } from '@/types/database.generated'
 
 export interface CertificateData {
     // Recipient
@@ -80,14 +81,12 @@ type CertificateRecord = {
     property_id?: string | null
     department_id?: string | null
     issued_by?: string | null
-    status: string
+    status: string | null
     pdf_url?: string | null
-    created_at: string
-    metadata?: {
-        propertyName?: string
-        departmentName?: string
-        issuedByName?: string
-    } | null
+    created_at: string | null
+    // The DB column is JSONB; we control the write shape in createCertificate() below,
+    // so it is known to be this shape (or null/absent) even though the generated type is just Json.
+    metadata?: Json | null
 }
 
 function resolveCertificateStatus(
@@ -543,7 +542,7 @@ export async function verifyCertificate(verificationCode: string): Promise<{
             verificationCode: result.verification_code,
             recipientName: result.recipient_name,
             title: result.title,
-            certificateType: result.certificate_type,
+            certificateType: result.certificate_type as CertificateData['certificateType'],
             completionDate: new Date(result.completion_date),
             expiryDate: result.expiry_date ? new Date(result.expiry_date) : undefined,
             status: resolvedStatus,
@@ -606,6 +605,10 @@ export async function revokeCertificate(
  * Map database record to Certificate type
  */
 export function mapCertificateFromDb(record: CertificateRecord): Certificate {
+    // metadata is JSONB; createCertificate() always writes this shape, so the cast is safe
+    // even though the generated column type is the generic Json union.
+    const metadata = record.metadata as { propertyName?: string; departmentName?: string; issuedByName?: string } | null | undefined
+
     return {
         id: record.id,
         certificateNumber: record.certificate_number,
@@ -625,14 +628,14 @@ export function mapCertificateFromDb(record: CertificateRecord): Certificate {
         sopId: record.sop_id,
         quizAttemptId: record.quiz_attempt_id,
         propertyId: record.property_id,
-        propertyName: record.metadata?.propertyName,
+        propertyName: metadata?.propertyName,
         departmentId: record.department_id,
-        departmentName: record.metadata?.departmentName,
+        departmentName: metadata?.departmentName,
         issuedBy: record.issued_by,
-        issuedByName: record.metadata?.issuedByName,
+        issuedByName: metadata?.issuedByName,
         status: resolveCertificateStatus(record.status, record.expiry_date),
         pdfUrl: record.pdf_url,
-        createdAt: new Date(record.created_at)
+        createdAt: record.created_at ? new Date(record.created_at) : new Date()
     }
 }
 

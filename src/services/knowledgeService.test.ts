@@ -20,6 +20,11 @@ import {
 } from './knowledgeService'
 import { supabase } from '@/lib/supabase'
 
+type MockQueryResult = ReturnType<typeof supabase.from>
+type MockRpcResolved = Awaited<ReturnType<typeof supabase.rpc>>
+const asQueryMock = (obj: unknown): MockQueryResult => obj as unknown as MockQueryResult
+const asRpcMock = (obj: unknown): MockRpcResolved => obj as unknown as MockRpcResolved
+
 // Mock supabase
 vi.mock('@/lib/supabase', () => ({
   supabase: {
@@ -60,7 +65,7 @@ describe('knowledgeService', () => {
   })
 
   describe('getArticles', () => {
-    it('should return articles with pagination', async () => {
+    it('should return paginated articles on success', async () => {
       const mockArticles = [
         { id: '1', title: 'Test Article', is_deleted: false },
         { id: '2', title: 'Another Article', is_deleted: false },
@@ -68,21 +73,21 @@ describe('knowledgeService', () => {
 
       // Queries with a search term go through the search_knowledge_articles RPC
       // (ranked full-text search), then fetch the joined article rows by id.
-      vi.mocked(supabase.rpc).mockResolvedValue({
+      vi.mocked(supabase.rpc).mockResolvedValue(asRpcMock({
         data: [
           { id: '1', rank: 0.5, total_count: 2 },
           { id: '2', rank: 0.3, total_count: 2 },
         ],
         error: null,
-      } as any)
+      }))
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockResolvedValue({
           data: mockArticles,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getArticles({ query: 'test' }, 1, 20)
 
@@ -92,7 +97,7 @@ describe('knowledgeService', () => {
     })
 
     it('should handle errors gracefully', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
@@ -102,7 +107,7 @@ describe('knowledgeService', () => {
           error: { message: 'Database error' },
           count: 0,
         }),
-      } as any)
+      }))
 
       const result = await getArticles({}, 1, 20)
 
@@ -114,7 +119,7 @@ describe('knowledgeService', () => {
       const mockSelect = vi.fn().mockReturnThis()
       const mockEq = vi.fn().mockReturnThis()
       
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: mockSelect,
         eq: mockEq,
         or: vi.fn().mockReturnThis(),
@@ -124,7 +129,7 @@ describe('knowledgeService', () => {
           error: null,
           count: 0,
         }),
-      } as any)
+      }))
 
       await getArticles({ content_type: 'sop' }, 1, 20)
 
@@ -141,14 +146,14 @@ describe('knowledgeService', () => {
         is_deleted: false,
       }
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: mockArticle,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getArticleById('article-123')
 
@@ -157,14 +162,14 @@ describe('knowledgeService', () => {
     })
 
     it('should return null for non-existent article', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         single: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'Not found' },
         }),
-      } as any)
+      }))
 
       const result = await getArticleById('non-existent')
 
@@ -180,29 +185,29 @@ describe('knowledgeService', () => {
         is_deleted: false,
       }
 
-      vi.mocked(supabase.from).mockImplementation((table) => {
+      vi.mocked(supabase.from).mockImplementation(((table: string) => {
         if (table === 'documents') {
-          return {
+          return asQueryMock({
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({
               data: mockArticle,
               error: null,
             }),
-          } as any
+          })
         }
         if (table === 'document_acknowledgments') {
-          return {
+          return asQueryMock({
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             maybeSingle: vi.fn().mockResolvedValue({
               data: { acknowledged_at: '2024-01-01' },
               error: null,
             }),
-          } as any
+          })
         }
-        return {} as any
-      })
+        return asQueryMock({})
+      }) as unknown as typeof supabase.from)
 
       const result = await getArticleById('article-123', 'user-123')
 
@@ -239,7 +244,7 @@ describe('knowledgeService', () => {
         { id: '2', title: 'Featured 2', status: 'PUBLISHED' },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
@@ -248,7 +253,7 @@ describe('knowledgeService', () => {
           data: mockArticles,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getFeaturedArticles(5)
 
@@ -258,7 +263,7 @@ describe('knowledgeService', () => {
     it('should filter by propertyId when provided', async () => {
       const mockOr = vi.fn().mockReturnThis()
       
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: mockOr,
@@ -267,7 +272,7 @@ describe('knowledgeService', () => {
           data: [],
           error: null,
         }),
-      } as any)
+      }))
 
       await getFeaturedArticles(5, 'property-123')
 
@@ -275,13 +280,59 @@ describe('knowledgeService', () => {
     })
   })
 
+  describe('getRecentArticles', () => {
+    it('should return recent articles', async () => {
+      const mockArticles = [
+        { id: '1', title: 'Recent 1', updated_at: '2024-01-02' },
+        { id: '2', title: 'Recent 2', updated_at: '2024-01-01' },
+      ]
+
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockResolvedValue({
+          data: mockArticles,
+          error: null,
+        }),
+      }))
+
+      const result = await getRecentArticles(5)
+
+      expect(result).toHaveLength(2)
+    })
+  })
+
+  describe('getRequiredReading', () => {
+    it('should return required reading with ack status', async () => {
+      const mockDocs = [
+        { id: 'doc-1', title: 'Required 1', requires_acknowledgment: true },
+      ]
+
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(),
+        in: vi.fn().mockResolvedValue({
+          data: [],
+          error: null,
+        }),
+      }))
+
+      const result = await getRequiredReading('user-123')
+
+      expect(Array.isArray(result)).toBe(true)
+    })
+  })
+
   describe('acknowledgeArticle', () => {
     it('should upsert acknowledgment', async () => {
       const mockUpsert = vi.fn().mockResolvedValue({ error: null })
       
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         upsert: mockUpsert,
-      } as any)
+      }))
 
       await acknowledgeArticle('article-123', 'user-123')
 
@@ -296,11 +347,11 @@ describe('knowledgeService', () => {
     })
 
     it('should throw on error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         upsert: vi.fn().mockResolvedValue({
           error: { message: 'DB error' },
         }),
-      } as any)
+      }))
 
       await expect(acknowledgeArticle('article-123', 'user-123')).rejects.toThrow()
     })
@@ -313,13 +364,13 @@ describe('knowledgeService', () => {
         { id: 'bm-2', document_id: 'doc-2', article: { id: 'doc-2', title: 'Article 2' } },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
           data: mockBookmarks,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getBookmarks('user-123')
 
@@ -327,13 +378,13 @@ describe('knowledgeService', () => {
     })
 
     it('should return empty array on error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'DB error' },
         }),
-      } as any)
+      }))
 
       const result = await getBookmarks('user-123')
 
@@ -345,18 +396,18 @@ describe('knowledgeService', () => {
     it('should add bookmark if not exists', async () => {
       const mockInsert = vi.fn().mockResolvedValue({ error: null })
 
-      vi.mocked(supabase.from).mockImplementation((table) => {
+      vi.mocked(supabase.from).mockImplementation(((table: string) => {
         if (table === 'document_bookmarks') {
-          return {
+          return asQueryMock({
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: null }),
             insert: mockInsert,
             delete: vi.fn().mockReturnThis(),
-          } as any
+          })
         }
-        return {} as any
-      })
+        return asQueryMock({})
+      }) as unknown as typeof supabase.from)
 
       const result = await toggleBookmark('doc-123', 'user-123')
 
@@ -369,17 +420,17 @@ describe('knowledgeService', () => {
         eq: mockDeleteEq,
       })
 
-      vi.mocked(supabase.from).mockImplementation((table) => {
+      vi.mocked(supabase.from).mockImplementation(((table: string) => {
         if (table === 'document_bookmarks') {
-          return {
+          return asQueryMock({
             select: vi.fn().mockReturnThis(),
             eq: vi.fn().mockReturnThis(),
             single: vi.fn().mockResolvedValue({ data: { id: 'bm-123' } }),
             delete: mockDelete,
-          } as any
+          })
         }
-        return {} as any
-      })
+        return asQueryMock({})
+      }) as unknown as typeof supabase.from)
 
       const result = await toggleBookmark('doc-123', 'user-123')
 
@@ -391,9 +442,9 @@ describe('knowledgeService', () => {
     it('should upsert feedback', async () => {
       const mockUpsert = vi.fn().mockResolvedValue({ error: null })
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         upsert: mockUpsert,
-      } as any)
+      }))
 
       await submitFeedback('doc-123', 'user-123', true, 'Great article!')
 
@@ -417,12 +468,12 @@ describe('knowledgeService', () => {
         { helpful: false },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockResolvedValue({
           data: mockData,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getFeedbackStats()
 
@@ -432,12 +483,12 @@ describe('knowledgeService', () => {
     })
 
     it('should return zeros on error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'DB error' },
         }),
-      } as any)
+      }))
 
       const result = await getFeedbackStats()
 
@@ -452,7 +503,7 @@ describe('knowledgeService', () => {
         { id: '2', title: 'Help 2', content_type: 'sop', view_count: 5 },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
@@ -462,7 +513,7 @@ describe('knowledgeService', () => {
           data: mockDocs,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getContextualHelp('task', 'maintenance')
 
@@ -472,14 +523,14 @@ describe('knowledgeService', () => {
     it('should map trigger types to content types', async () => {
       const mockLimit = vi.fn().mockResolvedValue({ data: [], error: null })
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         in: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockReturnThis(),
         order: vi.fn().mockReturnThis(),
         limit: mockLimit,
-      } as any)
+      }))
 
       await getContextualHelp('training', 'safety')
 
@@ -520,13 +571,13 @@ describe('knowledgeService', () => {
         { id: '2', name: 'Category 2' },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         order: vi.fn().mockResolvedValue({
           data: mockCategories,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getCategories()
 
@@ -539,19 +590,19 @@ describe('knowledgeService', () => {
       const mockResolveValue = { data: [], error: null }
       
       // Create a builder that properly chains and is awaitable
-      const createBuilder = (): any => {
-        const self: any = {}
+      const createBuilder = () => {
+        const self: Record<string, unknown> = {}
         self.order = vi.fn(() => self)
         self.eq = vi.fn(() => self)
-        self.then = (onfulfilled: any) => Promise.resolve(mockResolveValue).then(onfulfilled)
+        self.then = (onfulfilled: (res: { data: unknown[]; error: null }) => unknown) => Promise.resolve(mockResolveValue).then(onfulfilled)
         return self
       }
       
       const builder = createBuilder()
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn(() => builder),
-      } as any)
+      }))
 
       // The getCategories function calls query.eq which should work with the mock
       const result = await getCategories('dept-123')
@@ -569,14 +620,14 @@ describe('knowledgeService', () => {
         { content_type: 'guide' },
       ]
 
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockResolvedValue({
           data: mockData,
           error: null,
         }),
-      } as any)
+      }))
 
       const result = await getContentTypeCounts()
 
@@ -585,14 +636,14 @@ describe('knowledgeService', () => {
     })
 
     it('should return empty object on error', async () => {
-      vi.mocked(supabase.from).mockReturnValue({
+      vi.mocked(supabase.from).mockReturnValue(asQueryMock({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
         or: vi.fn().mockResolvedValue({
           data: null,
           error: { message: 'DB error' },
         }),
-      } as any)
+      }))
 
       const result = await getContentTypeCounts()
 

@@ -71,7 +71,9 @@ interface TransferRecord {
     to_department_id: string | null
     effective_date: string
     notes: string | null
-    status: 'pending' | 'completed' | 'cancelled' | 'approved' | 'rejected'
+    // employee_transfers has no status column of its own; status is derived from the
+    // linked request when present, so it is optional on this record shape.
+    status?: 'pending' | 'completed' | 'cancelled' | 'approved' | 'rejected'
     created_at: string
     employee?: { full_name: string }
     from_property?: { name: string }
@@ -118,7 +120,9 @@ export default function PromotionTransferHistory() {
 
             // Map to HistoryRecord shape
             return data.map(r => {
-                const meta = r.metadata || {};
+                const meta = (r.metadata && typeof r.metadata === 'object' && !Array.isArray(r.metadata)
+                    ? (r.metadata as Record<string, unknown>)
+                    : {})
 
                 // Construct record based on metadata (available since implementation)
                 // NOTE: Older records might miss metadata, but since this is a new system, it's fine.
@@ -129,36 +133,16 @@ export default function PromotionTransferHistory() {
                     entity_id: r.entity_id,
 
                     status: r.status,
-                    created_at: r.created_at,
+                    created_at: r.created_at || '',
 
                     // Metadata mapping
-                    employee: { full_name: meta.employee_name || 'Unknown' },
-                    effective_date: meta.effective_date,
-                    notes: meta.notes, // If we added notes to metadata? We probably didn't.
+                    employee: { full_name: typeof meta.employee_name === 'string' ? meta.employee_name : 'Unknown' },
+                    effective_date: typeof meta.effective_date === 'string' ? meta.effective_date : '',
+                    notes: typeof meta.notes === 'string' ? meta.notes : null,
 
                     // Promotion specific
-                    to_role: meta.to_role,
-                    to_title: meta.to_title, // Did we add this?
-                    // Check `submit_promotion_request`: 
-                    // jsonb_build_object('employee_name', ..., 'new_role', ..., 'effective_date', p_effective_date)
-                    // Missing job_title in metadata. 
-
-                    // Ah, switching to Requests table ONLY is risky if metadata is incomplete.
-                    // HYBRID APPROACH:
-                    // Fetch Promotions/Transfers + Join Requests via client side or complex query?
-                    // I will stick to original tables but I NEED Request ID.
-                    // I will use `rpc` to get the history with request IDs?
-                    // OR I can use `cancel_request` by `entity_id`?
-                    // I'll modify `cancel_request` to verify by entity_id if provided?
-                    // No, let's keep it clean.
-
-                    // Let's create a View or RPC `get_history_with_requests`?
-                    // Too much SQL.
-
-                    // Fast fix:
-                    // Fetch `requests` filtering by entity_type.
-                    // Create a map of entity_id -> request_id.
-                    // Pass that to the records.
+                    to_role: typeof meta.to_role === 'string' ? meta.to_role : '',
+                    to_title: typeof meta.to_title === 'string' ? meta.to_title : '',
                 }
             });
         }
@@ -194,7 +178,7 @@ export default function PromotionTransferHistory() {
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            return (data || []).map(p => ({ ...p, type: 'promotion' })) as PromotionRecord[]
+            return (data || []).map(p => ({ ...p, created_at: p.created_at || '', type: 'promotion' })) as unknown as PromotionRecord[]
         }
     })
 
@@ -214,7 +198,7 @@ export default function PromotionTransferHistory() {
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            return (data || []).map(t => ({ ...t, type: 'transfer' })) as TransferRecord[]
+            return (data || []).map(t => ({ ...t, created_at: t.created_at || '', type: 'transfer' })) as unknown as TransferRecord[]
         }
     })
 

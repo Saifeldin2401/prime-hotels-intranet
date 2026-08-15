@@ -33,7 +33,7 @@ export function DashboardHeroBanner({ onStatusClick }: DashboardHeroBannerProps)
   const [taskModalOpen, setTaskModalOpen] = useState(false)
 
   const { data: tasks } = useTasks({
-    statuses: ['open', 'todo', 'in_progress', 'pending'],
+    statuses: ['todo', 'in_progress', 'review'],
     assignedTo: user?.id,
     ignorePropertyFilter: true
   })

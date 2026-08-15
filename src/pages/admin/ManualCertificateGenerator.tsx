@@ -82,10 +82,14 @@ export default function ManualCertificateGenerator() {
                 // Prefer the property the admin is currently working in when the target
                 // employee is assigned to it (common case); otherwise fall back to the
                 // employee's first assigned property for multi-property staff.
-                propertyId: selectedUser.properties?.find(p => p.id === currentProperty?.id)?.id
-                    ?? selectedUser.properties?.[0]?.id
-                    ?? undefined,
-                departmentId: selectedUser.departments?.[0]?.id || undefined,
+                propertyId: ('user_properties' in selectedUser && Array.isArray(selectedUser.user_properties))
+                    ? (selectedUser.user_properties.find(up => up.property?.id === currentProperty?.id)?.property?.id
+                        ?? selectedUser.user_properties[0]?.property?.id
+                        ?? undefined)
+                    : (currentProperty?.id ?? undefined),
+                departmentId: ('user_departments' in selectedUser && Array.isArray(selectedUser.user_departments))
+                    ? (selectedUser.user_departments[0]?.department?.id ?? undefined)
+                    : undefined,
                 issuedBy: profile?.id,
                 metadata: {
                     issuedByName: issuedByName || undefined,

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { executeWorkflow, getWorkflowExecutions } from '@/services/workflowEngine'
+import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from './useAuth'
 
@@ -125,7 +126,15 @@ export function useCreateWorkflow() {
         mutationFn: async (workflow: Omit<WorkflowDefinition, 'id'>) => {
             const { data, error } = await supabase
                 .from('workflow_definitions')
-                .insert(workflow)
+                .insert({
+                    name: workflow.name,
+                    description: workflow.description,
+                    type: workflow.type,
+                    trigger_config: workflow.trigger_config as unknown as Json,
+                    action_config: workflow.action_config as unknown as Json,
+                    is_active: workflow.is_active,
+                    is_deleted: workflow.is_deleted,
+                })
                 .select()
                 .single()
 
@@ -148,7 +157,16 @@ export function useUpdateWorkflow() {
         mutationFn: async ({ id, ...workflow }: Partial<WorkflowDefinition> & { id: string }) => {
             const { data, error } = await supabase
                 .from('workflow_definitions')
-                .update(workflow)
+                .update({
+                    ...(workflow.name !== undefined ? { name: workflow.name } : {}),
+                    ...(workflow.description !== undefined ? { description: workflow.description } : {}),
+                    ...(workflow.type !== undefined ? { type: workflow.type } : {}),
+                    ...(workflow.trigger_config !== undefined ? { trigger_config: workflow.trigger_config as unknown as Json } : {}),
+                    ...(workflow.action_config !== undefined ? { action_config: workflow.action_config as unknown as Json } : {}),
+                    ...(workflow.is_active !== undefined ? { is_active: workflow.is_active } : {}),
+                    ...(workflow.is_deleted !== undefined ? { is_deleted: workflow.is_deleted } : {}),
+                    ...(workflow.updated_at !== undefined ? { updated_at: workflow.updated_at } : {}),
+                })
                 .eq('id', id)
                 .select()
                 .single()
@@ -179,7 +197,7 @@ export function useUpdateWorkflowSteps(workflowId: string) {
 
             const { data, error } = await supabase.rpc('replace_workflow_steps', {
                 p_workflow_id: workflowId,
-                p_steps: stepsPayload
+                p_steps: stepsPayload as unknown as Json
             })
 
             if (error) {

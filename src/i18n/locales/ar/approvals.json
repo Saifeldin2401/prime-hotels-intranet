@@ -1,6 +1,12 @@
 {
     "title": "الموافقات",
     "description": "مراجعة وإدارة طلبات الموافقة المعلقة.",
+    "unknown_date": "تاريخ غير معروف",
+    "document": "مستند",
+    "document_not_available": "المستند غير متوفر",
+    "requested": "تم الطلب",
+    "reported": "تم الإبلاغ",
+    "filter": "تصفية",
     "documents_tab": "المستندات",
     "leaves_tab": "طلبات الإجازة",
     "maintenance_tab": "الصيانة",

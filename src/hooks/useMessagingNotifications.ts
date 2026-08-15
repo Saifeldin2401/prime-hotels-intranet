@@ -13,7 +13,7 @@ interface CreateNotificationData {
   message: string
   type: 'message_received' | 'system'
   link?: string
-  metadata?
+  metadata?: Record<string, unknown>
 }
 
 export function useCreateNotification() {
@@ -32,7 +32,7 @@ export function useCreateNotification() {
 		  title: data.title,
 		  message: data.message,
 		  entityType: 'message',
-		  entityId: data.metadata?.message_id,
+		  entityId: typeof data.metadata?.message_id === 'string' ? data.metadata.message_id : undefined,
 		  metadata: data.metadata,
 		  link: data.link || null,
 	  })
@@ -141,34 +141,77 @@ export function useMessageNotifications() {
   }
 }
 
+export interface NotificationPreferencesState {
+  email_notifications: boolean
+  push_notifications: boolean
+  message_notifications: boolean
+  task_notifications: boolean
+  approval_notifications: boolean
+  system_notifications: boolean
+  quiet_hours: {
+    enabled: boolean
+    start: string
+    end: string
+  }
+}
+
 export function useNotificationSettings() {
   const { profile } = useAuth()
 
   return useQuery({
     queryKey: ['notification-settings', profile?.id],
-    queryFn: async () => {
-      if (!profile?.id) return null
+    queryFn: async (): Promise<NotificationPreferencesState> => {
+      if (!profile?.id) {
+        return {
+          email_notifications: true,
+          push_notifications: true,
+          message_notifications: true,
+          task_notifications: true,
+          approval_notifications: true,
+          system_notifications: true,
+          quiet_hours: {
+            enabled: false,
+            start: '22:00',
+            end: '08:00'
+          }
+        }
+      }
 
       const { data, error } = await supabase
-        .from('user_settings')
+        .from('notification_preferences')
         .select('*')
         .eq('user_id', profile.id)
-        .eq('category', 'notifications')
-        .single()
+        .maybeSingle()
 
-      if (error && error.code !== 'PGRST116') throw error
+      if (error) throw error
 
-      return data?.settings || {
-        email_notifications: true,
-        push_notifications: true,
+      if (!data) {
+        return {
+          email_notifications: true,
+          push_notifications: true,
+          message_notifications: true,
+          task_notifications: true,
+          approval_notifications: true,
+          system_notifications: true,
+          quiet_hours: {
+            enabled: false,
+            start: '22:00',
+            end: '08:00'
+          }
+        }
+      }
+
+      return {
+        email_notifications: data.email_enabled ?? true,
+        push_notifications: data.browser_push_enabled ?? true,
         message_notifications: true,
         task_notifications: true,
-        approval_notifications: true,
+        approval_notifications: data.approval_push ?? true,
         system_notifications: true,
         quiet_hours: {
-          enabled: false,
-          start: '22:00',
-          end: '08:00'
+          enabled: data.quiet_hours_enabled ?? false,
+          start: data.quiet_hours_start ?? '22:00',
+          end: data.quiet_hours_end ?? '08:00'
         }
       }
     },
@@ -181,17 +224,22 @@ export function useUpdateNotificationSettings() {
   const { profile } = useAuth()
 
   return useMutation({
-    mutationFn: async (settings) => {
+    mutationFn: async (settings: Partial<NotificationPreferencesState>) => {
       if (!profile?.id) throw new Error('User must be authenticated')
 
       const { data, error } = await supabase
-        .from('user_settings')
+        .from('notification_preferences')
         .upsert({
           user_id: profile.id,
-          category: 'notifications',
-          settings,
+          email_enabled: settings.email_notifications,
+          browser_push_enabled: settings.push_notifications,
+          approval_push: settings.approval_notifications,
+          approval_email: settings.approval_notifications,
+          quiet_hours_enabled: settings.quiet_hours?.enabled,
+          quiet_hours_start: settings.quiet_hours?.start,
+          quiet_hours_end: settings.quiet_hours?.end,
           updated_at: new Date().toISOString()
-        })
+        }, { onConflict: 'user_id' })
         .select()
         .single()
 

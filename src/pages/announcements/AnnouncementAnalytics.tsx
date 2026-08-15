@@ -2,6 +2,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
+import type { Database } from '@/types/database.generated'
 import { useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
@@ -30,6 +31,11 @@ interface UserReadStatus {
     email?: string
     read_at?: string
     acknowledged_at?: string
+}
+
+interface TargetAudience {
+    type?: 'all' | 'role' | 'department' | 'property' | 'individual'
+    values?: string[]
 }
 
 interface ComplianceBreakdownRow {
@@ -62,14 +68,16 @@ const UserList = ({ users, showAckTime = false }: { users: UserReadStatus[], sho
                             </AvatarFallback>
                         </Avatar>
                         <div>
-                            <p className="font-medium">{user.full_name}</p>
-                            <p className="text-sm text-muted-foreground">{user.email}</p>
+                            <p className="font-medium text-sm">{user.full_name}</p>
+                            {user.email && (
+                                <p className="text-xs text-muted-foreground">{user.email}</p>
+                            )}
                         </div>
                     </div>
                     <div className="text-right">
                         {showAckTime && user.acknowledged_at && (
-                            <div className="flex items-center gap-1 text-green-600 text-sm">
-                                <ThumbsUp className="w-4 h-4" />
+                            <div className="flex items-center gap-1 text-emerald-600 text-sm">
+                                <CheckCircle className="w-4 h-4" />
                                 {formatDistanceToNow(new Date(user.acknowledged_at), { addSuffix: true })}
                             </div>
                         )}
@@ -124,7 +132,7 @@ export default function AnnouncementAnalytics() {
                 p_announcement_id: id
             })
             if (error) {
-                const msg = (error as any)?.message || ''
+                const msg = error instanceof Error ? error.message : ((error as { message?: string })?.message || '')
                 if (typeof msg === 'string' && msg.toLowerCase().includes('not authorized')) {
                     return [] as ComplianceBreakdownRow[]
                 }
@@ -151,7 +159,10 @@ export default function AnnouncementAnalytics() {
                 .select('id, name, property:properties(name)')
                 .in('id', uniqueIds)
 
-            if (error) throw error
+            if (error) {
+                console.error('Failed to resolve department scopes for announcement compliance:', error)
+                return new Map<string, { departmentName: string; propertyName?: string }>()
+            }
 
             const map = new Map<string, { departmentName: string; propertyName?: string }>()
             ;((data || []) as DepartmentLookupRow[]).forEach((row) => {
@@ -169,7 +180,7 @@ export default function AnnouncementAnalytics() {
         queryKey: ['announcement-target-users', id, announcement?.target_audience],
         enabled: !!id && !!announcement,
         queryFn: async () => {
-            const audience = announcement?.target_audience
+            const audience = announcement?.target_audience as TargetAudience | null
             let userIds: string[] = []
 
             if (!audience || audience.type === 'all') {
@@ -187,7 +198,7 @@ export default function AnnouncementAnalytics() {
                             const { data } = await supabase
                                 .from('user_roles')
                                 .select('user_id')
-                                .eq('role', role)
+                                .eq('role', role as Database['public']['Enums']['app_role'])
                             if (data) userIds.push(...data.map(u => u.user_id))
                         }
                         break

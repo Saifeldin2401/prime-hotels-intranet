@@ -46,7 +46,7 @@ export default function TransferWorkflow() {
                 .order('full_name')
 
             if (error) throw error
-            return data as Profile[]
+            return (data || []) as unknown as (Profile & { user_properties?: { property_id?: string | null; properties?: { id: string; name: string } | null }[] })[]
         }
     })
 
@@ -61,7 +61,7 @@ export default function TransferWorkflow() {
                 .order('name')
 
             if (error) throw error
-            return data as Property[]
+            return (data || []) as unknown as Property[]
         }
     })
 
@@ -79,13 +79,13 @@ export default function TransferWorkflow() {
                 .order('name')
 
             if (error) throw error
-            return data as Department[]
+            return (data || []) as unknown as Department[]
         },
         enabled: !!formData.to_property_id
     })
 
     const selectedEmployee = employees?.find(e => e.id === formData.employee_id)
-    const currentProperty = (selectedEmployee as any)?.user_properties?.[0]?.properties
+    const currentProperty = selectedEmployee?.user_properties?.[0]?.properties
 
     const transferMutation = useMutation({
         mutationFn: async () => {

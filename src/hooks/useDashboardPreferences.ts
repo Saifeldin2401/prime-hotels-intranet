@@ -116,14 +116,33 @@ export function useDashboardPreferences() {
             }
 
             if (data) {
-                // Sync to localStorage for cache
-                saveToLocalStorage({
-                    widget_visibility: data.widget_visibility,
-                    widget_order: data.widget_order,
+                const widgetVisibility = (typeof data.widget_visibility === 'object' && data.widget_visibility !== null && !Array.isArray(data.widget_visibility))
+                    ? (data.widget_visibility as Record<string, boolean>)
+                    : getDefaultPreferences().widget_visibility
+
+                const widgetOrder = Array.isArray(data.widget_order)
+                    ? (data.widget_order as string[])
+                    : getDefaultPreferences().widget_order
+
+                const prefs: DashboardPreferences = {
+                    id: data.id,
+                    user_id: data.user_id,
+                    widget_visibility: widgetVisibility,
+                    widget_order: widgetOrder,
                     property_filter: data.property_filter,
                     department_filter: data.department_filter,
+                    created_at: data.created_at ?? undefined,
+                    updated_at: data.updated_at ?? undefined,
+                }
+
+                // Sync to localStorage for cache
+                saveToLocalStorage({
+                    widget_visibility: prefs.widget_visibility,
+                    widget_order: prefs.widget_order,
+                    property_filter: prefs.property_filter,
+                    department_filter: prefs.department_filter,
                 })
-                return data as DashboardPreferences
+                return prefs
             }
 
             return getDefaultPreferences()

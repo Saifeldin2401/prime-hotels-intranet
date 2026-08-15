@@ -633,15 +633,18 @@ export async function getActiveSessions(userId: string): Promise<Array<{
 }>> {
   try {
     const { data, error } = await supabase.rpc('get_user_sessions', { p_user_id: userId });
-    if (error || !data) return [];
-    return data.map((s: Record<string, unknown>) => ({
-      id: s.id as string,
-      createdAt: new Date(s.created_at as string),
-      lastActiveAt: new Date(s.last_active_at as string),
-      ipAddress: s.ip_address as string,
-      userAgent: s.user_agent as string,
-      isCurrent: s.is_current as boolean,
-    }));
+    if (error || !data || !Array.isArray(data)) return [];
+    return data.map((item) => {
+      const s = (typeof item === 'object' && item !== null ? item : {}) as Record<string, unknown>;
+      return {
+        id: (s.id as string) || '',
+        createdAt: new Date((s.created_at as string) || Date.now()),
+        lastActiveAt: new Date((s.last_active_at as string) || Date.now()),
+        ipAddress: (s.ip_address as string) || '',
+        userAgent: (s.user_agent as string) || '',
+        isCurrent: Boolean(s.is_current),
+      };
+    });
   } catch {
     return [];
   }

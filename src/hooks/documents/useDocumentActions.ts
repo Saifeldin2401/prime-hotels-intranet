@@ -13,7 +13,7 @@ export function useCreateDocument() {
   const { currentProperty, propertyIds } = useProperty()
 
   return useMutation({
-    mutationFn: async (document: Partial<Document>) => {
+    mutationFn: async (document: Partial<Document> & { title: string }) => {
       if (!user) throw new Error('User must be authenticated')
 
       const resolvedPropertyId = isRealPropertyId(document.property_id)

@@ -86,14 +86,14 @@ export function useDelegations() {
                 .from('delegations')
                 .select(`
           *,
-          delegator:delegator_id(id, full_name, email),
-          delegate:delegate_id(id, full_name, email)
+          delegator:profiles!delegator_id(id, full_name, email),
+          delegate:profiles!delegate_id(id, full_name, email)
         `)
                 .eq('delegation_category', 'admin')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
-            return data as Delegation[]
+            return (data || []) as unknown as Delegation[]
         },
     })
 

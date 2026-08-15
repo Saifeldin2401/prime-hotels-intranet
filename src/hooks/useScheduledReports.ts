@@ -5,11 +5,13 @@
 
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/types/database.generated'
 import type {
     AuditExportFormat,
     ExportScope,
     ScheduledComplianceReport,
     ScheduledReportExecution,
+    ScheduledReportType,
 } from '@/types/audit'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -33,7 +35,19 @@ export function useScheduledReports() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as ScheduledComplianceReport[]
+      return (data || []).map((r) => ({
+        ...r,
+        report_type: r.report_type as unknown as ScheduledReportType,
+        report_scope: r.report_scope as unknown as ExportScope,
+        delivery_config: r.delivery_config as unknown as ScheduledComplianceReport['delivery_config'],
+        format: r.format as AuditExportFormat,
+        created_at: r.created_at ?? new Date().toISOString(),
+        updated_at: r.updated_at ?? new Date().toISOString(),
+        is_active: r.is_active ?? true,
+        failure_count: r.failure_count ?? 0,
+        run_count: r.run_count ?? 0,
+        recipient_roles: r.recipient_roles ?? [],
+      }))
     },
   })
 }
@@ -65,18 +79,22 @@ export function useCreateScheduledReport() {
 
   return useMutation({
     mutationFn: async (params: CreateScheduledReportParams) => {
+      const { data: authData } = await supabase.auth.getUser()
+      const createdBy = authData?.user?.id ?? 'system'
+
       const { data, error } = await supabase
         .from('scheduled_compliance_reports')
         .insert({
+          created_by: createdBy,
           report_name: params.reportName,
           description: params.description,
           report_type: params.reportType,
           schedule_cron: params.scheduleCron,
           schedule_timezone: params.scheduleTimezone || 'Asia/Riyadh',
-          report_scope: params.reportScope,
+          report_scope: params.reportScope as unknown as Json,
           format: params.format,
           template_name: params.templateName,
-          delivery_config: params.deliveryConfig,
+          delivery_config: params.deliveryConfig as unknown as Json,
           recipient_roles: params.recipientRoles || [],
         })
         .select()
@@ -258,7 +276,7 @@ export function useSeedDefaultReports() {
 
   return useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.rpc('seed_default_scheduled_reports')
+      const { error } = await (supabase as unknown as { rpc: (fn: string) => Promise<{ error: { message: string } | null }> }).rpc('seed_default_scheduled_reports')
       if (error) throw error
     },
     onSuccess: () => {

@@ -1,4 +1,5 @@
 export type AppRole =
+  | 'super_admin'
   | 'corporate_admin'
   | 'regional_admin'
   | 'regional_hr'
@@ -9,6 +10,7 @@ export type AppRole =
   | 'staff'
 
 export const ROLES: Record<AppRole, { label: string; level: number }> = {
+  super_admin: { label: 'Super Admin', level: 0 },
   corporate_admin: { label: 'Corporate Admin', level: 1 },
   regional_admin: { label: 'Regional Admin', level: 2 },
   regional_hr: { label: 'Regional HR', level: 3 },
@@ -20,6 +22,7 @@ export const ROLES: Record<AppRole, { label: string; level: number }> = {
 }
 
 export const ROLE_HIERARCHY: AppRole[] = [
+  'super_admin',
   'corporate_admin',
   'regional_admin',
   'regional_hr',

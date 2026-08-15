@@ -308,7 +308,7 @@ export function useCapexProjectTemplates() {
         .order('template_name')
 
       if (error) throw error
-      return (data || []) as CapexProjectTemplate[]
+      return ((data || []) as unknown) as CapexProjectTemplate[]
     },
   })
 }

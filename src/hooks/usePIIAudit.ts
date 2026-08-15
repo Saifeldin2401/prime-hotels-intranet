@@ -1,6 +1,39 @@
 import { supabase } from '@/lib/supabase'
 import type { PIIAccessLog, PIIAccessSummary } from '@/lib/types'
+import type { Database } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+
+type PiiLogRow = Database['public']['Views']['pii_access_logs_v']['Row']
+type ProfileSnapshot = { full_name?: string; email?: string } | null
+
+/**
+ * pii_access_logs_v is a view over system_events (see log_pii_access RPC), not a
+ * real "pii access log" table -- its columns are actor_id/target_user_id/
+ * fields_accessed rather than the accessed_by/pii_fields/resource_id/ip_address/
+ * user_agent/session_id shape the shared PIIAccessLog interface (lib/types/compliance.ts)
+ * still declares. resource_id/ip_address/user_agent/session_id were never captured by
+ * this consolidated view, so we map what the view actually has and leave those as ''.
+ * The `user`/`accessed_by_profile`/`approved_by_profile` relations only carry a
+ * {full_name, email} snapshot (not a full Profile row), so we leave those optional
+ * fields unset rather than fabricate a Profile.
+ */
+function mapPiiLogRow(row: PiiLogRow): PIIAccessLog {
+  return {
+    id: row.id || '',
+    user_id: row.user_id || row.target_user_id || '',
+    accessed_by: row.actor_id || '',
+    resource_type: (row.resource_type || 'profile') as PIIAccessLog['resource_type'],
+    resource_id: row.user_id || row.target_user_id || '',
+    access_type: (row.access_type || 'view') as PIIAccessLog['access_type'],
+    pii_fields: row.fields_accessed || [],
+    ip_address: '',
+    user_agent: '',
+    session_id: '',
+    justification: row.justification,
+    approved_by: row.approved_by,
+    created_at: row.created_at || ''
+  }
+}
 
 // PII Access Logs Hooks
 export function usePIIAccessLogs(filters?: {
@@ -47,7 +80,7 @@ export function usePIIAccessLogs(filters?: {
       const { data, error } = await query
 
       if (error) throw error
-      return data as PIIAccessLog[]
+      return (data || []).map(mapPiiLogRow)
     }
   })
 }
@@ -58,7 +91,7 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
     queryFn: async (): Promise<PIIAccessSummary> => {
       let query = supabase
         .from('pii_access_logs_v')
-        .select('id, accessed_by, pii_fields, access_type, resource_type')
+        .select('id, actor_id, fields_accessed, access_type, resource_type')
 
       if (dateRange?.from) {
         query = query.gte('created_at', dateRange.from)
@@ -71,24 +104,26 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
       if (error) throw error
 
       const logs = data || []
-      const uniqueUsers = new Set(logs.map(l => l.accessed_by))
-      const allPiiFields = logs.flatMap(l => l.pii_fields || [])
+      const uniqueUsers = new Set(logs.map(l => l.actor_id))
+      const allPiiFields = logs.flatMap(l => l.fields_accessed || [])
       const sensitiveFields = [...new Set(allPiiFields)]
 
       const accessByType = logs.reduce((acc, log) => {
-        acc[log.access_type] = (acc[log.access_type] || 0) + 1
+        const type = log.access_type || 'unknown'
+        acc[type] = (acc[type] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
       const accessByResource = logs.reduce((acc, log) => {
-        acc[log.resource_type] = (acc[log.resource_type] || 0) + 1
+        const type = log.resource_type || 'unknown'
+        acc[type] = (acc[type] || 0) + 1
         return acc
       }, {} as Record<string, number>)
 
       const highRiskAccesses = logs.filter(l =>
         l.access_type === 'delete' ||
         l.access_type === 'export' ||
-        (l.pii_fields || []).some((f: string) =>
+        (l.fields_accessed || []).some((f: string) =>
           f.toLowerCase().includes('salary') ||
           f.toLowerCase().includes('ssn') ||
           f.toLowerCase().includes('national_id')
@@ -102,7 +137,8 @@ export function usePIIAccessSummary(dateRange?: { from: string; to: string }) {
         access_by_type: accessByType,
         access_by_resource: accessByResource,
         recent_accesses: [], // Not used in summary cards
-        high_risk_accesses: highRiskAccesses as any // The UI only needs .length usually
+        // UI only needs .length; map the partial select into the shared shape rather than `as any`.
+        high_risk_accesses: highRiskAccesses.map(row => mapPiiLogRow(row as PiiLogRow))
       }
     }
   })
@@ -198,17 +234,19 @@ export function useExportPIIAccessLogs() {
       if (error) throw error
 
       // Simple CSV generation
-      const headers = ['Timestamp', 'Accessed By', 'Target User', 'Resource Type', 'Access Type', 'Fields', 'Justification', 'IP Address']
-      const rows = (data || []).map(log => [
-        log.created_at,
-        log.accessed_by_profile?.full_name || log.accessed_by,
-        log.user_id,
-        log.resource_type,
-        log.access_type,
-        log.pii_fields?.join(', '),
-        log.justification || '',
-        log.ip_address || ''
-      ])
+      const headers = ['Timestamp', 'Accessed By', 'Target User', 'Resource Type', 'Access Type', 'Fields', 'Justification']
+      const rows = (data || []).map(log => {
+        const accessedByProfile = log.accessed_by_profile as ProfileSnapshot
+        return [
+          log.created_at,
+          accessedByProfile?.full_name || log.actor_id,
+          log.user_id,
+          log.resource_type,
+          log.access_type,
+          (log.fields_accessed || []).join(', '),
+          log.justification || ''
+        ]
+      })
 
       const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n")
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })

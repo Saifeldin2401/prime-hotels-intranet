@@ -628,7 +628,7 @@ export const BuilderCanvas = ({
               <span>{previewingBlock?.title || 'Lesson SOP Preview'}</span>
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 max-h-[60vh] pr-4 py-4">
+          <ScrollArea className="flex-1 max-h-[60vh] pe-4 py-4">
             {previewingBlock?.content ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed"

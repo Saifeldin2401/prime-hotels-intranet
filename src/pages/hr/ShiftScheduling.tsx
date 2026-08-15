@@ -159,7 +159,7 @@ export default function ShiftScheduling() {
 
       let query = supabase
         .from('shifts')
-        .select('*, user:profiles(id, full_name, email, job_title)')
+        .select('*, user:profiles!shifts_user_id_fkey(id, full_name, email, job_title)')
         .gte('start_time', start.toISOString())
         .lte('start_time', end.toISOString())
         .order('start_time', { ascending: true })
@@ -171,7 +171,7 @@ export default function ShiftScheduling() {
 
       const { data, error } = await query
       if (error) throw error
-      return data || []
+      return (data || []) as unknown as (Shift & { user?: { full_name?: string; email?: string } })[]
     },
     enabled: !!dateStart && !!dateEnd && !!isRealPropertyId(propertyId)
   })

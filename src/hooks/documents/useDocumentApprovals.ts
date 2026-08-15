@@ -2,6 +2,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { createNotification } from '@/services/notificationService'
 import type { Document, DocumentApproval } from '@/lib/types'
+import type { AppRole } from '@/lib/constants'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useSubmitForApproval() {
@@ -37,7 +38,7 @@ export function useSubmitForApproval() {
 
       if (!doc) throw new Error('Document not found')
 
-      let roleFilters: string[] = []
+      let roleFilters: AppRole[] = []
       if (doc.visibility === 'all_properties') {
         roleFilters = ['regional_admin']
       } else if (doc.visibility === 'property') {
@@ -74,7 +75,7 @@ export function useSubmitForApproval() {
       const approvalRows = approverIds.map(approverId => ({
         document_id: documentId,
         approver_id: approverId,
-        approver_role: (roleFilters[0] as any),
+        approver_role: roleFilters[0] ?? null,
         status: 'pending',
         is_active: true,
         entity_type: 'document',
@@ -148,9 +149,9 @@ export function usePendingApprovals() {
         .from('document_approvals')
         .select(`
           *,
-          document:documents(
+          document:documents!document_approvals_document_id_fkey(
             *,
-            profiles:created_by(full_name)
+            profiles:profiles!documents_created_by_fkey(full_name)
           )
         `)
         .eq('status', 'pending')
@@ -159,7 +160,7 @@ export function usePendingApprovals() {
         .order('created_at', { ascending: false })
 
       if (error) throw error
-      return data as (DocumentApproval & {
+      return data as unknown as (DocumentApproval & {
         document: Document & { profiles?: { full_name: string } }
       })[]
     },

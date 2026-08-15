@@ -1,6 +1,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import type { Document } from '@/lib/types'
+import type { DocumentStatus, DocumentVisibility } from '@/lib/constants'
 import { secureSearchDocuments } from '@/lib/secureSearch'
 import { useQuery } from '@tanstack/react-query'
 import type { DocumentFilters } from './types'
@@ -70,10 +71,10 @@ export function useDocuments(filters?: DocumentFilters) {
       }
 
       if (filters?.status) {
-        query = query.eq('status', filters.status)
+        query = query.eq('status', filters.status as DocumentStatus)
       }
       if (filters?.visibility) {
-        query = query.eq('visibility', filters.visibility)
+        query = query.eq('visibility', filters.visibility as DocumentVisibility)
       }
       if (filters?.property_id) {
         query = query.eq('property_id', filters.property_id)

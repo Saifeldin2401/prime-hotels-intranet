@@ -251,12 +251,12 @@ export default function TrainingAssignmentRules() {
                                 <div className="space-y-1">
                                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                                         <Shield className="w-4 h-4 text-hotel-gold" />
-                                        {rule.job_title_id
-                                            ? rule.job_titles?.title // Assuming join, fallback to checking ID if join missing in hook
-                                            : t(`common:roles.${rule.target_role}`) || t('unknown')
+                                        {rule.target_type === 'job_title' || rule.target_id
+                                            ? (jobTitles?.find(jt => jt.id === rule.target_id)?.title || rule.target_role || t('unknown'))
+                                            : (rule.target_role ? t(`common:roles.${rule.target_role}`) : t('unknown'))
                                         }
                                     </CardTitle>
-                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {rule.job_title_id ? t('rules.by_job_title') : t('rules.by_role')}</p>
+                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {(rule.target_type === 'job_title' || rule.target_id) ? t('rules.by_job_title') : t('rules.by_role')}</p>
                                 </div>
                                 <Badge variant={rule.is_active ? 'default' : 'secondary'}>
                                     {rule.is_active ? t('common:status_options.active') : t('common:status_options.inactive')}
@@ -265,7 +265,9 @@ export default function TrainingAssignmentRules() {
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
-                                <p className="font-medium text-hotel-navy">{rule.training_modules?.title}</p>
+                                <p className="font-medium text-hotel-navy">
+                                    {modules?.find(m => m.id === rule.training_module_id)?.title || rule.training_module_id}
+                                </p>
                                 {/* ... existing buttons ... */}
                                 <div className="flex items-center gap-2 pt-2 border-t mt-4">
                                     <Button

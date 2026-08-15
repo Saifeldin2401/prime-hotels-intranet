@@ -144,10 +144,10 @@ export function FloatingToolbar({ editor, disabled = false, onOpenAiPanel }: Flo
             />
             <button
               type="button"
-              className="ml-1 inline-flex h-8 items-center rounded-md border border-slate-700 bg-slate-800 px-2 text-xs font-medium text-hotel-gold transition-colors hover:bg-slate-700 hover:text-white"
+              className="ms-1 inline-flex h-8 items-center rounded-md border border-slate-700 bg-slate-800 px-2 text-xs font-medium text-hotel-gold transition-colors hover:bg-slate-700 hover:text-white"
               onClick={onOpenAiPanel}
             >
-              <Sparkles className="mr-1 h-3.5 w-3.5" />
+              <Sparkles className="me-1 h-3.5 w-3.5" />
               AI Assist
             </button>
           </div>

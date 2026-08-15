@@ -36,7 +36,7 @@ export function GrnVerificationModal({ open, onOpenChange, propertyId }: Props) 
                 <div className="space-y-4 py-2">
                     {isLoading ? (
                         <div className="flex items-center justify-center py-10 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                            <Loader2 className="h-5 w-5 animate-spin me-2" />
                             {t('grn.loading', { defaultValue: 'Loading GRNs...' })}
                         </div>
                     ) : !grns || grns.length === 0 ? (

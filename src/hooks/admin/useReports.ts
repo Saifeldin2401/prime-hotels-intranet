@@ -1,5 +1,6 @@
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
+import type { Json } from '@/types/database.generated'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface ReportDefinition {
@@ -10,7 +11,7 @@ export interface ReportDefinition {
     property_id: string | null
     department_id: string | null
     report_type: string
-    filters
+    filters?: Record<string, unknown> | null
     schedule_cron: string | null
     is_active: boolean
     created_by: string | null
@@ -41,10 +42,21 @@ export const useReports = () => {
     })
 
     const createMutation = useMutation({
-        mutationFn: async (report: Partial<ReportDefinition>) => {
+        mutationFn: async (report: Omit<ReportDefinition, 'id' | 'created_at' | 'updated_at'> & { id?: string }) => {
             const { data, error } = await supabase
                 .from('report_definitions')
-                .insert([report])
+                .insert({
+                    name: report.name,
+                    description: report.description,
+                    scope_type: report.scope_type,
+                    property_id: report.property_id,
+                    department_id: report.department_id,
+                    report_type: report.report_type,
+                    filters: report.filters as unknown as Json,
+                    schedule_cron: report.schedule_cron,
+                    is_active: report.is_active,
+                    created_by: report.created_by,
+                })
                 .select()
                 .single()
 
@@ -61,11 +73,22 @@ export const useReports = () => {
     })
 
     const updateMutation = useMutation({
-        mutationFn: async (report: Partial<ReportDefinition> & { id: string }) => {
+        mutationFn: async ({ id, ...report }: Partial<ReportDefinition> & { id: string }) => {
             const { data, error } = await supabase
                 .from('report_definitions')
-                .update({ ...report, updated_at: new Date().toISOString() })
-                .eq('id', report.id)
+                .update({
+                    ...(report.name !== undefined ? { name: report.name } : {}),
+                    ...(report.description !== undefined ? { description: report.description } : {}),
+                    ...(report.scope_type !== undefined ? { scope_type: report.scope_type } : {}),
+                    ...(report.property_id !== undefined ? { property_id: report.property_id } : {}),
+                    ...(report.department_id !== undefined ? { department_id: report.department_id } : {}),
+                    ...(report.report_type !== undefined ? { report_type: report.report_type } : {}),
+                    ...(report.filters !== undefined ? { filters: report.filters as unknown as Json } : {}),
+                    ...(report.schedule_cron !== undefined ? { schedule_cron: report.schedule_cron } : {}),
+                    ...(report.is_active !== undefined ? { is_active: report.is_active } : {}),
+                    updated_at: new Date().toISOString()
+                })
+                .eq('id', id)
                 .select()
                 .single()
 

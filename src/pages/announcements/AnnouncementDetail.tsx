@@ -95,7 +95,7 @@ export default function AnnouncementDetail() {
             return {
                 ...data,
                 created_by_profile: getAnnouncementProfile(data.created_by_profile as AnnouncementProfile | AnnouncementProfile[] | null | undefined) ?? undefined
-            } as Announcement & {
+            } as unknown as Announcement & {
                 created_by_profile?: AnnouncementProfile
                 requires_acknowledgment?: boolean
                 allow_comments?: boolean

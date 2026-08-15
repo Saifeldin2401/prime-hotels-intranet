@@ -43,8 +43,8 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
       email: user.email || '',
       name: profile?.full_name || user.email || 'Unknown',
       role: (primaryRole as string) || 'staff',
-      avatar: (profile as any)?.avatar_url,
-      department: (departments as any)?.[0]?.name,
+      avatar: profile?.avatar_url,
+      department: departments?.[0]?.name,
       property: currentProperty?.name
     })
   }, [currentProperty?.name, departments, primaryRole, profile, user?.email, user?.id])
@@ -101,9 +101,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
               idSet.add(row.user_id)
             }
           })
-        }
-
-        if (type === 'property') {
+        } else if (type === 'property') {
           const { data } = await supabase
             .from('user_properties')
             .select('user_id')
@@ -117,21 +115,31 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           })
         }
 
-        return Array.from(idSet)
+        return idSet
       }
 
-      const teamUserIds = shouldResolveTeamScope
-        ? await resolveTeamUserIds(scopeType === 'department' ? 'department' : 'property')
-        : []
-      const scopedTeamUserIds = teamUserIds.slice(0, 200)
+      const teamUserIdsSet = shouldResolveTeamScope ? await resolveTeamUserIds(scopeType as 'department' | 'property') : null
+      const scopedTeamUserIds = teamUserIdsSet ? Array.from(teamUserIdsSet).slice(0, 200) : []
       const hasTeamScope = scopedTeamUserIds.length > 0
       const shouldScopeToTeam = !isGlobalOverride && hasTeamScope
       const allowGlobalFallback = isGlobalOverride
 
+      const mapAnnouncementPriority = (priority: string | null | undefined): 'low' | 'medium' | 'high' | 'urgent' => {
+        switch (priority) {
+          case 'critical':
+            return 'urgent'
+          case 'important':
+            return 'high'
+          case 'normal':
+          default:
+            return 'medium'
+        }
+      }
+
       // 1. Announcements
       const { data: announcements } = await supabase
         .from('announcements')
-        .select('*')
+        .select('*, created_by_profile:profiles!created_by_id(full_name)')
         .order('created_at', { ascending: false })
         .limit(40)
 
@@ -139,7 +147,11 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         const filteredAnnouncements = announcements.filter((announcement) => {
           if (announcement.created_by === user.id) return true
 
-          const audience = announcement.target_audience
+          const rawAudience = announcement.target_audience
+          const audience = (rawAudience && typeof rawAudience === 'object' && !Array.isArray(rawAudience))
+            ? (rawAudience as { type?: 'all' | 'role' | 'department' | 'property' | 'individual'; values?: string[] })
+            : null
+
           if (!audience || audience.type === 'all') return true
 
           const values = audience.values || []
@@ -159,12 +171,13 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
         })
 
         filteredAnnouncements.slice(0, 10).forEach((a) => {
+          const authorProfile = a.created_by_profile as { full_name?: string } | null
           feedItems.push({
             id: `ann-${a.id}`,
             type: 'announcement',
             author: {
               id: a.created_by_id || a.created_by || 'system',
-              name: a.created_by_profile?.full_name || t('social_feed.labels.admin', 'Admin'),
+              name: authorProfile?.full_name || t('social_feed.labels.admin', 'Admin'),
               email: '',
               avatar: null,
               role: 'corporate_admin',
@@ -174,8 +187,8 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
             },
             title: a.title,
             content: a.content,
-            timestamp: new Date(a.created_at),
-            priority: a.priority,
+            timestamp: new Date(a.created_at || Date.now()),
+            priority: mapAnnouncementPriority(a.priority),
             tags: a.pinned ? ['pinned'] : undefined,
             reactions: {},
             comments: []
@@ -247,7 +260,7 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           id: `task-${task.id}`,
           type: 'task',
           author: {
-            id: task.created_by_id || task.assigned_by || 'system',
+            id: task.created_by_id || 'system',
             name: t('social_feed.labels.manager', 'Manager'),
             email: '',
             avatar: null,
@@ -274,16 +287,17 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
       // 4. My training assignments
       const { data: trainings } = await supabase
         .from('training_assignment_rules')
-        .select('*')
+        .select('*, training_module:training_modules(id, title)')
         .eq('target_type', 'user')
         .eq('target_id', user.id)
         .order('created_at', { ascending: false })
         .limit(10)
 
       trainings?.forEach((assignment) => {
-        const trainingTitle = assignment.training?.title || t('social_feed.defaults.new_training', 'New Training')
-        const trainingContent = assignment.deadline
-          ? t('social_feed.messages.training_due', { date: formatDate(new Date(assignment.deadline), { dateStyle: 'medium' }) })
+        const trainingModule = assignment.training_module as { id?: string; title?: string } | null
+        const trainingTitle = trainingModule?.title || t('social_feed.defaults.new_training', 'New Training')
+        const trainingContent = assignment.due_date
+          ? t('social_feed.messages.training_due', { date: formatDate(new Date(assignment.due_date), { dateStyle: 'medium' }) })
           : t('social_feed.messages.training_no_deadline', 'Please complete this training module.')
         feedItems.push({
           id: `train-${assignment.id}`,
@@ -300,13 +314,13 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           },
           title: t('social_feed.titles.training_assigned', { title: trainingTitle }),
           content: trainingContent,
-          timestamp: new Date(assignment.created_at),
+          timestamp: new Date(assignment.created_at || Date.now()),
           reactions: {},
           comments: [],
           actionButton: {
             text: t('social_feed.actions.start_training', 'Start Training'),
             onClick: () => {
-              navigate(`/training/${assignment.training_module_id}`)
+              navigate(`/training/${assignment.training_module_id || assignment.content_id}`)
             }
           }
         })
@@ -314,15 +328,26 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
 
       // 5. Team achievements (completed training in last 7 days)
       const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000)
-      let achievements = []
+      let achievements: Array<{
+        id: string
+        user_id: string
+        training_id: string
+        completed_at: string | null
+        updated_at: string | null
+        user?: { id: string; full_name: string; avatar_url: string | null } | null
+      }> = []
+
       if (shouldScopeToTeam || allowGlobalFallback) {
         const buildAchievementsQuery = () => {
           let base = supabase
             .from('training_progress')
             .select(`
-              *,
-              user:profiles!training_progress_user_id_fkey(id, full_name, avatar_url),
-              training:training_modules!training_progress_training_id_fkey(id, title)
+              id,
+              user_id,
+              training_id,
+              completed_at,
+              updated_at,
+              user:profiles!training_progress_user_id_fkey(id, full_name, avatar_url)
             `)
             .eq('status', 'completed')
             .gte('completed_at', sevenDaysAgo.toISOString())
@@ -347,11 +372,22 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
           }
         }
 
-        achievements = data || []
+        achievements = (data as unknown as typeof achievements) || []
+      }
+
+      const trainingIds = Array.from(new Set(achievements.map(a => a.training_id).filter(Boolean)))
+      const modulesMap = new Map<string, string>()
+      if (trainingIds.length > 0) {
+        const { data: modules } = await supabase
+          .from('training_modules')
+          .select('id, title')
+          .in('id', trainingIds)
+        modules?.forEach(m => modulesMap.set(m.id, m.title))
       }
 
       achievements.forEach((a) => {
-        if (a.user && a.training) {
+        if (a.user) {
+          const moduleTitle = modulesMap.get(a.training_id) || t('social_feed.training_module', 'Training Module')
           feedItems.push({
             id: `ach-${a.id}`,
             type: 'recognition',
@@ -365,9 +401,9 @@ export function useUnifiedSocialFeed(options?: { enabled?: boolean }) {
               property: '',
               permissions: []
             },
-            title: t('social_feed.titles.training_completed', { name: a.user.full_name, title: a.training.title }),
+            title: t('social_feed.titles.training_completed', { name: a.user.full_name, title: moduleTitle }),
             content: t('social_feed.messages.training_congrats', 'Congratulations on completing the training!'),
-            timestamp: new Date(a.completed_at),
+            timestamp: new Date(a.completed_at || a.updated_at || Date.now()),
             reactions: {},
             comments: []
           })

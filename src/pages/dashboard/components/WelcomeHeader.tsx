@@ -75,7 +75,7 @@ export function WelcomeHeader({
   const [focusMode, setFocusMode] = useState(false)
 
   const { data: tasks } = useTasks({
-    statuses: ['open', 'todo', 'in_progress', 'pending'],
+    statuses: ['todo', 'in_progress', 'review'],
     assignedTo: user?.id,
     ignorePropertyFilter: true
   })
