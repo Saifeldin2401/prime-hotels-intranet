@@ -24,6 +24,12 @@ export interface UserDataContextType {
   properties: Property[]
   departments: Department[]
   rolesLoading: boolean
+  /**
+   * Set when the roles/profile load definitively failed (query error or exhausted timeout),
+   * as opposed to rolesLoading=true which means "still in flight". Route guards must treat
+   * these as distinct states - an error should surface a retry action, not spin forever.
+   */
+  rolesError: string | null
   primaryRole: AppRole | null
   loadUserData: (userId: string, isBackground?: boolean) => Promise<void>
   shouldRefreshUserData: (userId: string) => boolean
@@ -74,6 +80,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const [properties, setProperties] = useState<Property[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [rolesLoading, setRolesLoading] = useState(true)
+  const [rolesError, setRolesError] = useState<string | null>(null)
 
   // Refs to track user data loading
   const profileRef = useRef<Profile | null>(null)
@@ -85,12 +92,13 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     setProperties([])
     setDepartments([])
     setRolesLoading(false)
+    setRolesError(null)
     profileRef.current = null
     rolesRef.current = []
   }, [])
 
   const stateSetters = useMemo(
-    () => ({ setProfile, setRoles, setProperties, setDepartments, setRolesLoading }),
+    () => ({ setProfile, setRoles, setProperties, setDepartments, setRolesLoading, setRolesError }),
     []
   )
 
@@ -177,12 +185,13 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     properties,
     departments,
     rolesLoading,
+    rolesError,
     primaryRole,
     loadUserData,
     shouldRefreshUserData,
     resetUserData,
     setRolesLoading,
-  }), [profile, roles, properties, departments, rolesLoading, primaryRole, loadUserData, shouldRefreshUserData, resetUserData])
+  }), [profile, roles, properties, departments, rolesLoading, rolesError, primaryRole, loadUserData, shouldRefreshUserData, resetUserData])
 
   return (
     <UserDataContext.Provider value={value}>

@@ -1,10 +1,12 @@
 import { memo, useCallback, useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { LazyMotion, domAnimation, m, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
   AlertTriangle,
   ArrowRight,
+  Clock,
   Loader2,
   Mail,
   Shield,
@@ -24,7 +26,7 @@ import { cn } from '@/lib/utils';
 import { showErrorToast } from '@/lib/toastHelpers';
 import { useAuth } from '@/hooks/useAuth';
 import { getRemainingAttempts } from '@/lib/authSecurityService';
-import { safeLocalStorage } from '@/lib/storage';
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage';
 import { REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout';
 
 export type ErrorType = 'auth' | 'network' | 'rate' | 'lockout';
@@ -39,10 +41,16 @@ export interface LoginViewProps {
 function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }: LoginViewProps) {
   const { t } = useTranslation('auth');
   const { signIn, user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const isTimeoutRedirect = searchParams.get('reason') === 'timeout';
 
   const [email, setEmail] = useState(() => safeLocalStorage.getItem('remembered_email') || '');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(() => safeLocalStorage.hasItem('remembered_email'));
+  const [rememberMe, setRememberMe] = useState(() => {
+    const isRemembered = safeLocalStorage.getItem(REMEMBER_ME_KEY) === 'true';
+    const hasSavedEmail = safeLocalStorage.hasItem('remembered_email');
+    return isRemembered || hasSavedEmail;
+  });
   const [error, setError] = useState<string | null>(null);
   const [errorType, setErrorType] = useState<ErrorType>('auth');
   const [loading, setLoading] = useState(false);
@@ -54,14 +62,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
     return null;
   });
 
-  // Keep remembered_email in local storage reactively synchronized whenever email or rememberMe changes
-  useEffect(() => {
-    if (rememberMe && email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      safeLocalStorage.setItem('remembered_email', email);
-    } else if (!rememberMe) {
-      safeLocalStorage.removeItem('remembered_email');
-    }
-  }, [rememberMe, email]);
   const [capsLockOn, setCapsLockOn] = useState(false);
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [remainingAttempts, setRemainingAttempts] = useState<number | null>(null);
@@ -144,14 +144,6 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
       setError(null);
       setLoading(true);
 
-      if (rememberMe) {
-        safeLocalStorage.setItem('remembered_email', email);
-        safeLocalStorage.setItem(REMEMBER_ME_KEY, 'true');
-      } else {
-        safeLocalStorage.removeItem('remembered_email');
-        safeLocalStorage.removeItem(REMEMBER_ME_KEY);
-      }
-
       try {
         const { error: signInError } = await signIn(
           email, 
@@ -199,6 +191,17 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           showErrorToast(t('errors.title'), errorMessage);
           setLoading(false);
           return;
+        }
+
+        // On successful sign-in, persist or clear remember-me credentials and flags
+        if (rememberMe) {
+          safeLocalStorage.setItem('remembered_email', email);
+          safeLocalStorage.setItem(REMEMBER_ME_KEY, 'true');
+          safeSessionStorage.setItem('altus_session_active', 'true');
+        } else {
+          safeLocalStorage.removeItem('remembered_email');
+          safeLocalStorage.removeItem(REMEMBER_ME_KEY);
+          safeSessionStorage.setItem('altus_session_active', 'true');
         }
 
         // Success
@@ -305,6 +308,26 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
                 isFocused={focusedField === 'password'}
               />
             </m.div>
+
+            {/* Session Timeout Expiration Notice */}
+            <AnimatePresence>
+              {isTimeoutRedirect && (
+                <m.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <Alert className="bg-amber-50 dark:bg-amber-950/40 border-amber-300 dark:border-amber-700/60 shadow-sm">
+                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <AlertDescription className="text-amber-900 dark:text-amber-200 text-xs font-semibold">
+                      {t('session_timeout.expired_message', {
+                        defaultValue: 'Your session expired due to inactivity. Please sign in again to continue.'
+                      })}
+                    </AlertDescription>
+                  </Alert>
+                </m.div>
+              )}
+            </AnimatePresence>
 
             {/* Remaining Attempts Warning */}
             <AnimatePresence>

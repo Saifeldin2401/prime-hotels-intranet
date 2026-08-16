@@ -86,9 +86,12 @@ export default function CompleteInvite() {
                 const code = queryParams.get('code')
                 const tokenHash = queryParams.get('token_hash')
                 const otpType = queryParams.get('type')
+                // Session credentials come from the fragment only - Supabase puts them there
+                // specifically so they never reach the server (no logs, no history, no Referer
+                // leakage). Reading them from the query string as a fallback would defeat that.
                 const hashParams = new URLSearchParams(window.location.hash.substring(1))
-                const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
-                const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
+                const accessToken = hashParams.get('access_token')
+                const refreshToken = hashParams.get('refresh_token')
 
                 if (code) {
                     const { data: exchangeData, error: exchangeError } = await withAuthLinkTimeout(

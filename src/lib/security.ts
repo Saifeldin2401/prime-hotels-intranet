@@ -80,9 +80,16 @@ function ensureHooksInitialized() {
     // Validate iframe src - only allow trusted video embed origins
     if (node instanceof HTMLIFrameElement) {
       const src = node.getAttribute('src') || '';
-      const isTrusted = TRUSTED_IFRAME_ORIGINS.some(origin => 
-        src.startsWith(origin) || src.startsWith(origin.replace('https:', 'http:'))
-      );
+      // Compare the exact parsed origin, not a string prefix: a startsWith() check against
+      // 'https://vimeo.com' also matches 'https://vimeo.com.attacker.tld/...', letting an
+      // attacker-controlled frame through with the trusted sandbox/allow attributes applied.
+      let isTrusted = false;
+      try {
+        const parsedOrigin = new URL(src, window.location.href).origin;
+        isTrusted = TRUSTED_IFRAME_ORIGINS.includes(parsedOrigin);
+      } catch {
+        isTrusted = false;
+      }
       if (!isTrusted) {
         node.remove();
       } else {

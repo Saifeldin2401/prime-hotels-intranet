@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
@@ -879,7 +880,7 @@ export function SmartAICourseCreatorModal({
 
                         {previewSectionId === section.id && section.rich_content && (
                           <div className="mt-2 p-3.5 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 text-xs text-slate-800 dark:text-slate-200 prose prose-xs max-w-none leading-relaxed">
-                            <div dangerouslySetInnerHTML={{ __html: section.rich_content }} />
+                            <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(section.rich_content) }} />
                           </div>
                         )}
 

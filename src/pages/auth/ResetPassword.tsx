@@ -59,10 +59,12 @@ export default function ResetPassword() {
         const url = new URL(window.location.href)
         const queryParams = url.searchParams
         const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        // access_token/refresh_token are session credentials and must only ever be read from the
+        // URL fragment (never sent to the server, so never logged/cached/leaked via Referer).
+        // code/token_hash are single-use exchange tokens designed to appear in the query string.
         return Boolean(
             queryParams.get('code') ||
             queryParams.get('token_hash') ||
-            queryParams.get('access_token') ||
             hashParams.get('access_token')
         )
     }, [])
@@ -130,9 +132,13 @@ export default function ResetPassword() {
                 }
 
                 if (!isTokenCurrentlyValid) {
+                    // Session credentials come from the fragment only - Supabase puts them there
+                    // specifically so they never reach the server (no logs, no history, no
+                    // Referer leakage). Reading them from the query string as a fallback would
+                    // defeat that.
                     const hashParams = new URLSearchParams(window.location.hash.substring(1))
-                    const accessToken = hashParams.get('access_token') || queryParams.get('access_token')
-                    const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token')
+                    const accessToken = hashParams.get('access_token')
+                    const refreshToken = hashParams.get('refresh_token')
 
                     if (accessToken && refreshToken) {
                         const { data, error: setSessionError } = await withAuthLinkTimeout(

@@ -9,6 +9,7 @@ interface UserDataState {
   setProperties: (p: Property[]) => void
   setDepartments: (d: Department[]) => void
   setRolesLoading: (v: boolean) => void
+  setRolesError: (v: string | null) => void
 }
 
 interface SessionHelpers {
@@ -90,15 +91,16 @@ export function useUserDataLoader(
   const loadUserData = useCallback(
     async (userId: string, isBackground = false) => {
       const { isAuthError, withTimeout, clearLocalSession } = session
-      const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading } = state
+      const { setProfile, setRoles, setProperties, setDepartments, setRolesLoading, setRolesError } = state
 
       try {
         const loadId = ++loadSeqRef.current
         activeUserIdRef.current = userId
-        
+
         // Only trigger global skeleton if not a background refresh
         if (!isBackground) {
           setRolesLoading(true)
+          setRolesError(null)
         }
         
         const isStale = () => activeUserIdRef.current !== userId || loadId !== loadSeqRef.current
@@ -182,13 +184,19 @@ export function useUserDataLoader(
           if (rolesError) {
             if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
             console.warn('Error loading roles.')
+            // Distinct from rolesLoading: this is a definitive failure, not "still working on
+            // it" - without this, a dropped/failed roles query left rolesLoading=false and
+            // roles=[], which route guards read as "resolved to no role" and spin forever.
+            setRolesError('Failed to load your account permissions. Please try again.')
             setRolesLoading(false)
           } else {
             setRoles(directRoles || [])
+            setRolesError(null)
             setRolesLoading(false)
           }
         } else {
           console.warn('Roles loading failed or timed out.')
+          setRolesError('Failed to load your account permissions. Please try again.')
           setRolesLoading(false)
         }
 
@@ -234,6 +242,7 @@ export function useUserDataLoader(
           return
         }
         console.warn('Unexpected error loading user data.')
+        state.setRolesError('Failed to load your account permissions. Please try again.')
       }
     },
     [session, state, resetLocalAuthState, attemptAuthRecovery]

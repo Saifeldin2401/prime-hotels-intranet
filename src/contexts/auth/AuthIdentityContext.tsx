@@ -16,6 +16,8 @@ import { shouldSuppressAuthenticatedAppState } from '@/lib/authFlowState'
 import { classifyAuthError, getErrorMessage, getErrorCode, getRetryDelay } from '@/lib/authErrorUtils'
 import { recordAuthEvent } from '@/lib/authMonitor'
 import { useAuthSession } from './useAuthSession'
+import { REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout'
+import { safeLocalStorage, safeSessionStorage } from '@/lib/storage'
 
 // ─── Configuration ─────────────────────────────────────────────────────────
 const isMobileBrowser = () => {
@@ -127,6 +129,23 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
           finishLoading()
           return
         }
+
+        // Check if user chose "Remember Me".
+        // If Remember Me was not set, and this is a new browser session (sessionStorage is empty):
+        const isRememberMe = safeLocalStorage.getItem(REMEMBER_ME_KEY) === 'true'
+        const isSessionActive = safeSessionStorage.getItem('altus_session_active') === 'true'
+
+        if (!isRememberMe && !isSessionActive) {
+          log.warn('[AuthIdentity] Session ended because Remember Me was disabled and browser was closed.')
+          await clearLocalSession('Session ended (Remember Me disabled)', () => {
+            setUser(null)
+          })
+          finishLoading()
+          return
+        }
+
+        // Mark session active in current browser session
+        safeSessionStorage.setItem('altus_session_active', 'true')
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         finishLoading()
@@ -148,10 +167,12 @@ export function AuthIdentityProvider({ children }: { children: ReactNode }) {
       }
 
       if (session?.user) {
+        safeSessionStorage.setItem('altus_session_active', 'true')
         authRecoveryInProgressRef.current = false
         setUser(session.user)
         finishLoading()
       } else {
+        safeSessionStorage.removeItem('altus_session_active')
         setUser(null)
         finishLoading()
       }

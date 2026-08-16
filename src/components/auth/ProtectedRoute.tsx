@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
 
+import { useUserData } from '@/contexts/auth'
 import { canRoleAccess, type Permission } from '@/features/access/policy'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -32,6 +33,7 @@ export function ProtectedRoute({
   smartFallback = true,
 }: ProtectedRouteProps) {
   const { user, primaryRole, rolesLoading, loading } = useAuth()
+  const { rolesError, loadUserData } = useUserData()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
   const location = useLocation()
@@ -59,20 +61,45 @@ export function ProtectedRoute({
     return <Navigate to={loginUrl} replace />
   }
 
+  // This route's access decision depends on primaryRole - wait for it to resolve before
+  // evaluating either the allowedRoles or requiredPermission branch below. Previously this
+  // check lived only inside the allowedRoles branch, so a route declared with only
+  // requiredPermission evaluated hasPermission() against a still-null primaryRole and bounced
+  // the user to /dashboard mid-load (REL-02).
+  const dependsOnRole = (allowedRoles && allowedRoles.length > 0) || !!requiredPermission
+  if (dependsOnRole && rolesLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">{t('status_options.verifying_access')}</p>
+        </div>
+      </div>
+    )
+  }
 
+  // A definitive load failure (query error or exhausted timeout) is not the same state as
+  // "still loading" - treating it as loading forever left the user on a permanent spinner with
+  // no way out but a manual reload (REL-01). Surface it as an explicit, retryable error instead.
+  if (dependsOnRole && rolesError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-sm px-4">
+          <p className="text-foreground font-medium">{t('status_options.verify_access_failed', 'We couldn\'t verify your access')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{rolesError}</p>
+          <button
+            type="button"
+            onClick={() => { void loadUserData(user.id) }}
+            className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+          >
+            {t('actions.retry', 'Retry')}
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   if (allowedRoles && allowedRoles.length > 0) {
-    if (rolesLoading || !primaryRole) {
-      return (
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-            <p className="mt-4 text-muted-foreground">{t('status_options.verifying_access')}</p>
-          </div>
-        </div>
-      )
-    }
-
     if (!canRoleAccess(primaryRole, allowedRoles)) {
       if (smartFallback) {
         return <Navigate to="/dashboard" replace />

@@ -31,7 +31,6 @@ import { AuthIdentityContext } from './AuthIdentityContext'
 import { AuthSecurityContext } from './AuthSecurityContext'
 import { UserDataContext } from './UserDataContext'
 import { useAuthSession } from './useAuthSession'
-import { REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout'
 
 // ─── Logger helper ───────────────────────────────────────────────────────────
 const log = {
@@ -203,9 +202,13 @@ export function AuthActionsProvider({ children }: { children: ReactNode }) {
 
   // ── Sign Out ──────────────────────────────────────────────────────────────
   const signOut = useCallback(async () => {
-    localStorage.removeItem('altus_current_property_id')
-    localStorage.removeItem('altus_last_activity')
-    localStorage.removeItem(REMEMBER_ME_KEY)
+    try {
+      localStorage.removeItem('altus_current_property_id')
+      localStorage.removeItem('altus_last_activity')
+      sessionStorage.removeItem('altus_session_active')
+    } catch {
+      // Ignore storage errors
+    }
 
     await logSecurityEvent('logout.user_initiated', {
       userId: identityContext?.user?.id,

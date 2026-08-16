@@ -579,6 +579,7 @@ export function useMedia(options: UseMediaOptions = {}) {
               .from('system_events')
               .insert({
                 event_type: 'media_access',
+                actor_id: currentUser.id,
                 entity_type: 'media',
                 entity_id: assetId,
                 metadata: { access_type: 'download', extra: {} },

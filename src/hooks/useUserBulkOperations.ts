@@ -57,12 +57,26 @@ export function useUserBulkOperations() {
                     if (upsertRoleError) throw upsertRoleError
 
                     if (staleRoles.length > 0) {
-                        const { error: deleteStaleError } = await supabase
+                        // RLS (get_role_priority(role) > get_user_role_priority(caller)) silently
+                        // matches 0 rows - not an error - when the caller lacks the priority to
+                        // remove a stale role (e.g. a regional_hr targeting a regional_admin).
+                        // Assert the affected rows to avoid reporting a revocation that never
+                        // happened as a success.
+                        const { data: deletedRoles, error: deleteStaleError } = await supabase
                             .from('user_roles')
                             .delete()
                             .eq('user_id', userId)
                             .in('role', staleRoles)
+                            .select('role')
                         if (deleteStaleError) throw deleteStaleError
+
+                        const deletedRoleSet = new Set((deletedRoles || []).map((r) => r.role))
+                        const undeletedRoles = staleRoles.filter((r) => !deletedRoleSet.has(r))
+                        if (undeletedRoles.length > 0) {
+                            throw new Error(
+                                `Insufficient privilege to revoke role(s): ${undeletedRoles.join(', ')}`
+                            )
+                        }
                     }
 
                     // Audit
@@ -107,7 +121,10 @@ export function useUserBulkOperations() {
 
             for (const userId of userIds) {
                 try {
-                    const { error } = await supabase
+                    // RLS (has_profile_access) silently matches 0 rows - not an error - when the
+                    // caller lacks access to this profile. Assert an affected row so a blocked
+                    // update isn't reported as a successful deactivation.
+                    const { data: updatedRows, error } = await supabase
                         .from('profiles')
                         .update({
                             is_active: false,
@@ -117,8 +134,12 @@ export function useUserBulkOperations() {
                             suspended_until: suspendUntil || null,
                         })
                         .eq('id', userId)
+                        .select('id')
 
                     if (error) throw error
+                    if (!updatedRows || updatedRows.length === 0) {
+                        throw new Error('Insufficient privilege to deactivate this user')
+                    }
 
                     if (note && note.trim()) {
                         const { error: noteError } = await supabase
@@ -183,7 +204,10 @@ export function useUserBulkOperations() {
 
             for (const userId of userIds) {
                 try {
-                    const { error } = await supabase
+                    // RLS (has_profile_access) silently matches 0 rows - not an error - when the
+                    // caller lacks access to this profile. Assert an affected row so a blocked
+                    // update isn't reported as a successful activation.
+                    const { data: updatedRows, error } = await supabase
                         .from('profiles')
                         .update({
                             is_active: true,
@@ -194,8 +218,12 @@ export function useUserBulkOperations() {
                             suspended_until: null,
                         })
                         .eq('id', userId)
+                        .select('id')
 
                     if (error) throw error
+                    if (!updatedRows || updatedRows.length === 0) {
+                        throw new Error('Insufficient privilege to activate this user')
+                    }
 
                     if (note && note.trim()) {
                         const { error: noteError } = await supabase

@@ -166,13 +166,24 @@ entrypoint = "./functions/scheduled-reports/index.ts"
 
 [functions.security-monitor]
 enabled = true
-# Cron-only endpoint; handler performs a timing-safe service-role check.
-verify_jwt = false
+# OPS-02: was declared verify_jwt=false here, but the live deployment has always run with
+# verify_jwt=true (confirmed via list_edge_functions) - this local value was config/deploy drift,
+# not an intentional setting. Corrected to match reality: a `supabase functions deploy` from this
+# repo would otherwise have silently removed the platform's JWT gate on the next deploy. The
+# handler's own timing-safe service-role check (isAuthorizedServiceRoleRequest) is defense in
+# depth on top of the platform gate, not a replacement for it - cron already authenticates with
+# the service-role key as its bearer token, which is itself a valid signed JWT, so verify_jwt=true
+# does not block the legitimate cron-triggered call.
+verify_jwt = true
 entrypoint = "./functions/security-monitor/index.ts"
 
 [functions.send-email]
 enabled = true
-verify_jwt = false
+# OPS-02: same drift as security-monitor above - live deployment runs verify_jwt=true; this was
+# incorrectly declared false. The handler only checks that an Authorization header is *present*,
+# not that it's valid, so it relies entirely on the platform gate for real authentication. Leaving
+# this at false would have made the next repo-driven deploy an open mail relay.
+verify_jwt = true
 entrypoint = "./functions/send-email/index.ts"
 
 [functions.slack-commands]

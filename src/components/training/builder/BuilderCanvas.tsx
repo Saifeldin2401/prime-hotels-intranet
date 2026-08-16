@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import {
   ArrowDown,
@@ -632,7 +633,7 @@ export const BuilderCanvas = ({
             {previewingBlock?.content ? (
               <div
                 className="prose prose-sm dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 leading-relaxed"
-                dangerouslySetInnerHTML={{ __html: previewingBlock.content }}
+                dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewingBlock.content) }}
               />
             ) : (
               <p className="text-xs text-muted-foreground italic">No SOP text content available for this lesson block.</p>

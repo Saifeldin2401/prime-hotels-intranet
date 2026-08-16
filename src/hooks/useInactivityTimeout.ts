@@ -12,20 +12,8 @@ interface UseInactivityTimeoutOptions {
     enabled?: boolean
 }
 
-const STORAGE_KEY = 'altus_last_activity'
+export const STORAGE_KEY = 'altus_last_activity'
 export const REMEMBER_ME_KEY = 'altus_remember_me'
-
-/**
- * Checks localStorage for the remember-me flag.
- * When set, inactivity timeout is suppressed.
- */
-function isRememberMeActive(): boolean {
-    try {
-        return localStorage.getItem(REMEMBER_ME_KEY) === 'true'
-    } catch {
-        return false
-    }
-}
 
 export function useInactivityTimeout({
     timeoutMs: customTimeoutMs,
@@ -36,48 +24,46 @@ export function useInactivityTimeout({
 }: UseInactivityTimeoutOptions = {}) {
     const { sessionTimeoutMinutes } = useSecuritySettings()
 
-    // Default: 30 minute timeout if setting is undefined, warning shows 2 minutes before timeout
-    const defaultTimeoutMs = (sessionTimeoutMinutes && sessionTimeoutMinutes > 0 ? sessionTimeoutMinutes : 30) * 60 * 1000
+    // Default timeout from security settings (default 30 min)
+    const timeoutMinutes = (sessionTimeoutMinutes && sessionTimeoutMinutes > 0) ? sessionTimeoutMinutes : 30
+    const defaultTimeoutMs = timeoutMinutes * 60 * 1000
     const timeoutMs = customTimeoutMs ?? defaultTimeoutMs
-    const warningMs = customWarningMs ?? Math.max(10000, timeoutMs - 2 * 60 * 1000)
+
+    // Warning lead time: 2 minutes, or 50% of total timeout if timeout is <= 2 minutes (min 10s)
+    const warningLeadTimeMs = customWarningMs !== undefined
+        ? Math.max(1000, timeoutMs - customWarningMs)
+        : Math.min(2 * 60 * 1000, Math.max(10_000, timeoutMs / 2))
+    const warningMs = customWarningMs ?? Math.max(5000, timeoutMs - warningLeadTimeMs)
 
     const { user, signOut } = useAuth()
     const navigate = useNavigate()
     const [showWarning, setShowWarning] = useState(false)
-    const [remainingTime, setRemainingTime] = useState(timeoutMs - warningMs)
-    const [rememberMe, setRememberMe] = useState(isRememberMeActive)
+    const [remainingTime, setRemainingTime] = useState(warningLeadTimeMs)
 
     const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const countdownRef = useRef<ReturnType<typeof setInterval> | null>(null)
-    const lastActivityRef = useRef(0)
+    const lastActivityRef = useRef<number>(Date.now())
+    const showWarningRef = useRef<boolean>(false)
 
-    // Keep remainingTime in sync when timeoutMs changes (e.g. admin updates the setting)
+    // Keep showWarningRef in sync with showWarning state
     useEffect(() => {
-        setRemainingTime(timeoutMs - warningMs)
-    }, [timeoutMs, warningMs])
-
-    // Listen for remember-me changes from other tabs
-    useEffect(() => {
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === REMEMBER_ME_KEY) {
-                setRememberMe(e.newValue === 'true')
-            }
-        }
-        window.addEventListener('storage', handleStorageChange)
-        return () => window.removeEventListener('storage', handleStorageChange)
-    }, [])
-
-    // Effective enabled state: disabled when remember-me is active
-    const effectiveEnabled = enabled && !rememberMe
+        showWarningRef.current = showWarning
+    }, [showWarning])
 
     const clearAllTimers = useCallback(() => {
-        if (timeoutRef.current) clearTimeout(timeoutRef.current)
-        if (warningRef.current) clearTimeout(warningRef.current)
-        if (countdownRef.current) clearInterval(countdownRef.current)
-        timeoutRef.current = null
-        warningRef.current = null
-        countdownRef.current = null
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current)
+            timeoutRef.current = null
+        }
+        if (warningRef.current) {
+            clearTimeout(warningRef.current)
+            warningRef.current = null
+        }
+        if (countdownRef.current) {
+            clearInterval(countdownRef.current)
+            countdownRef.current = null
+        }
     }, [])
 
     const handleTimeout = useCallback(async () => {
@@ -87,17 +73,26 @@ export function useInactivityTimeout({
         if (!user) return
 
         // Verify multi-tab activity before logging out
-        const lastActivityStr = localStorage.getItem(STORAGE_KEY)
-        if (lastActivityStr) {
-            const elapsed = Date.now() - parseInt(lastActivityStr, 10)
-            if (elapsed < timeoutMs - 5000) {
-                // User was active in another tab within the timeout window — do not log out
-                return
+        try {
+            const lastActivityStr = localStorage.getItem(STORAGE_KEY)
+            if (lastActivityStr) {
+                const lastActivity = parseInt(lastActivityStr, 10)
+                const elapsed = Date.now() - lastActivity
+                if (elapsed < timeoutMs - 3000) {
+                    // User was active in another tab within the timeout window — reschedule timers
+                    return
+                }
             }
+        } catch {
+            // Ignore storage errors
         }
 
-        // Clean up storage key
-        localStorage.removeItem(STORAGE_KEY)
+        // Clean up activity storage key
+        try {
+            localStorage.removeItem(STORAGE_KEY)
+        } catch {
+            // Ignore
+        }
 
         if (onTimeout) {
             onTimeout()
@@ -106,65 +101,115 @@ export function useInactivityTimeout({
 
         try {
             await signOut()
-            navigate('/login', { replace: true })
+            navigate('/login?reason=timeout', { replace: true })
         } catch (err) {
             console.error('[InactivityTimeout] Error signing out on timeout:', err)
+            navigate('/login?reason=timeout', { replace: true })
         }
-    }, [user, clearAllTimers, onTimeout, signOut, navigate, timeoutMs])
+    }, [user, clearAllTimers, timeoutMs, onTimeout, signOut, navigate])
 
-    const handleWarning = useCallback(() => {
-        if (!user) return
+    const startCountdown = useCallback((targetLastActivity: number) => {
+        if (countdownRef.current) {
+            clearInterval(countdownRef.current)
+            countdownRef.current = null
+        }
 
-        const now = Date.now()
-        const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
-        const elapsed = now - lastActivity
+        const updateCountdown = () => {
+            const now = Date.now()
+            let effectiveLastActivity = targetLastActivity
+            try {
+                const stored = localStorage.getItem(STORAGE_KEY)
+                if (stored) {
+                    effectiveLastActivity = Math.max(targetLastActivity, parseInt(stored, 10))
+                }
+            } catch {
+                // Ignore
+            }
 
-        if (elapsed >= warningMs && elapsed < timeoutMs) {
-            setShowWarning(true)
+            const elapsed = now - effectiveLastActivity
             const remaining = Math.max(0, timeoutMs - elapsed)
             setRemainingTime(remaining)
 
-            if (!countdownRef.current) {
-                countdownRef.current = setInterval(() => {
-                    setRemainingTime(prev => {
-                        if (prev <= 1000) {
-                            if (countdownRef.current) {
-                                clearInterval(countdownRef.current)
-                                countdownRef.current = null
-                            }
-                            return 0
-                        }
-                        return prev - 1000
-                    })
-                }, 1000)
+            if (remaining <= 0) {
+                if (countdownRef.current) {
+                    clearInterval(countdownRef.current)
+                    countdownRef.current = null
+                }
+                void handleTimeout()
             }
+        }
 
+        updateCountdown()
+        countdownRef.current = setInterval(updateCountdown, 1000)
+    }, [timeoutMs, handleTimeout])
+
+    const handleWarning = useCallback(() => {
+        if (!user || !enabled) return
+
+        const now = Date.now()
+        let lastActivity = lastActivityRef.current
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY)
+            if (stored) {
+                lastActivity = parseInt(stored, 10)
+            }
+        } catch {
+            // Ignore
+        }
+
+        const elapsed = now - lastActivity
+
+        if (elapsed >= timeoutMs) {
+            void handleTimeout()
+        } else if (elapsed >= warningMs) {
+            setShowWarning(true)
+            startCountdown(lastActivity)
             if (onWarning) {
                 onWarning()
             }
-        } else if (elapsed >= timeoutMs) {
-            void handleTimeout()
         }
-    }, [user, timeoutMs, warningMs, onWarning, handleTimeout])
+    }, [user, enabled, timeoutMs, warningMs, handleTimeout, startCountdown, onWarning])
 
-    const resetTimers = useCallback((isExternalUpdate = false) => {
-        if (!effectiveEnabled || !user) return
+    const scheduleTimers = useCallback(() => {
+        if (!enabled || !user) {
+            clearAllTimers()
+            setShowWarning(false)
+            return
+        }
 
         clearAllTimers()
-        setShowWarning(false)
 
         const now = Date.now()
-        if (!isExternalUpdate) {
-            localStorage.setItem(STORAGE_KEY, now.toString())
+        let lastActivity = lastActivityRef.current
+        try {
+            const stored = localStorage.getItem(STORAGE_KEY)
+            if (stored) {
+                lastActivity = parseInt(stored, 10)
+            }
+        } catch {
+            // Ignore
         }
-        lastActivityRef.current = now
 
-        // Set warning timer
-        warningRef.current = setTimeout(handleWarning, Math.max(1000, warningMs))
+        const elapsed = now - lastActivity
 
-        // Set timeout timer
-        timeoutRef.current = setTimeout(handleTimeout, Math.max(5000, timeoutMs))
-    }, [effectiveEnabled, user, clearAllTimers, handleWarning, handleTimeout, warningMs, timeoutMs])
+        if (elapsed >= timeoutMs) {
+            void handleTimeout()
+            return
+        }
+
+        if (elapsed >= warningMs) {
+            setShowWarning(true)
+            startCountdown(lastActivity)
+            return
+        }
+
+        // Reschedule warning and timeout for remaining durations
+        const timeUntilWarning = Math.max(1000, warningMs - elapsed)
+        const timeUntilTimeout = Math.max(5000, timeoutMs - elapsed)
+
+        warningRef.current = setTimeout(handleWarning, timeUntilWarning)
+        timeoutRef.current = setTimeout(handleTimeout, timeUntilTimeout)
+    }, [enabled, user, clearAllTimers, timeoutMs, warningMs, handleTimeout, handleWarning, startCountdown])
 
     const extendSession = useCallback(async () => {
         try {
@@ -172,82 +217,102 @@ export function useInactivityTimeout({
         } catch {
             // Ignore background refresh errors
         }
-        resetTimers()
-    }, [resetTimers])
 
-    // Activity event handler with 5-second throttle
-    const handleActivity = useCallback(() => {
-        if (!effectiveEnabled || !user) return
         const now = Date.now()
-        if (showWarning || now - lastActivityRef.current > 5000) {
-            resetTimers()
+        lastActivityRef.current = now
+        try {
+            localStorage.setItem(STORAGE_KEY, now.toString())
+        } catch {
+            // Ignore
         }
-    }, [effectiveEnabled, user, resetTimers, showWarning])
+
+        setShowWarning(false)
+        scheduleTimers()
+    }, [scheduleTimers])
+
+    // User activity listener with 3-second throttle
+    const handleActivity = useCallback(() => {
+        if (!enabled || !user) return
+
+        // While warning modal is active, background movements shouldn't secretly dismiss it.
+        // The user must explicitly choose "Stay Signed In" or "Sign Out Now" on the modal.
+        if (showWarningRef.current) return
+
+        const now = Date.now()
+        if (now - lastActivityRef.current > 3000) {
+            lastActivityRef.current = now
+            try {
+                localStorage.setItem(STORAGE_KEY, now.toString())
+            } catch {
+                // Ignore
+            }
+            scheduleTimers()
+        }
+    }, [enabled, user, scheduleTimers])
 
     useEffect(() => {
-        if (!effectiveEnabled || !user) {
+        if (!enabled || !user) {
             clearAllTimers()
             setShowWarning(false)
             return
         }
 
-        // Always write a fresh timestamp on mount so multi-tab checks don't
-        // read stale/missing data left over from a previous timed-out session.
-        localStorage.setItem(STORAGE_KEY, Date.now().toString())
+        const now = Date.now()
+        lastActivityRef.current = now
+        try {
+            localStorage.setItem(STORAGE_KEY, now.toString())
+        } catch {
+            // Ignore
+        }
 
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'hidden') {
-                return
-            }
+        scheduleTimers()
 
-            // Tab became visible — check elapsed inactivity time
-            const now = Date.now()
-            const lastActivity = parseInt(localStorage.getItem(STORAGE_KEY) || now.toString(), 10)
-            const elapsed = now - lastActivity
-
-            if (elapsed >= timeoutMs) {
-                void handleTimeout()
-            } else if (elapsed >= warningMs) {
-                handleWarning()
-            } else {
-                resetTimers(true)
+        const handleVisibilityOrFocus = () => {
+            if (document.visibilityState === 'visible') {
+                scheduleTimers()
             }
         }
 
-        // Listen for activity in other browser tabs
+        // Listen for activity in other tabs
         const handleStorageChange = (e: StorageEvent) => {
             if (e.key === STORAGE_KEY && e.newValue) {
-                resetTimers(true)
+                const otherTabActivity = parseInt(e.newValue, 10)
+                if (!isNaN(otherTabActivity)) {
+                    lastActivityRef.current = otherTabActivity
+                    if (showWarningRef.current) {
+                        setShowWarning(false)
+                    }
+                    scheduleTimers()
+                }
             }
         }
 
-        // Start timers
-        resetTimers(true)
-
-        // User activity listeners
-        const events = ['mousedown', 'keydown', 'touchstart', 'scroll']
-        events.forEach(event => {
+        const events = ['mousedown', 'keydown', 'touchstart', 'scroll', 'mousemove']
+        events.forEach((event) => {
             window.addEventListener(event, handleActivity, { passive: true })
         })
-        document.addEventListener('visibilitychange', handleVisibilityChange)
+        document.addEventListener('visibilitychange', handleVisibilityOrFocus)
+        window.addEventListener('focus', handleVisibilityOrFocus)
         window.addEventListener('storage', handleStorageChange)
 
         return () => {
             clearAllTimers()
-            events.forEach(event => {
+            events.forEach((event) => {
                 window.removeEventListener(event, handleActivity)
             })
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
+            document.removeEventListener('visibilitychange', handleVisibilityOrFocus)
+            window.removeEventListener('focus', handleVisibilityOrFocus)
             window.removeEventListener('storage', handleStorageChange)
         }
-    }, [effectiveEnabled, user, resetTimers, handleActivity, clearAllTimers, handleTimeout, handleWarning, timeoutMs, warningMs])
+    }, [enabled, user, scheduleTimers, handleActivity, clearAllTimers])
 
     return {
         showWarning,
         remainingTime,
-        remainingMinutes: Math.max(0, Math.ceil(remainingTime / 60000)),
+        remainingMinutes: Math.max(0, Math.floor(remainingTime / 60000)),
         remainingSeconds: Math.max(0, Math.ceil(remainingTime / 1000)),
         extendSession,
         signOutNow: handleTimeout
     }
 }
+

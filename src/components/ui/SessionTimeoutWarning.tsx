@@ -7,8 +7,9 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
-import { useInactivityTimeout, REMEMBER_ME_KEY } from '@/hooks/useInactivityTimeout'
-import { AlertCircle, Clock, LogOut, RefreshCw } from 'lucide-react'
+import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
+import { AlertTriangle, Clock, LogOut, RefreshCw } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface SessionTimeoutWarningProps {
@@ -16,15 +17,9 @@ interface SessionTimeoutWarningProps {
 }
 
 export function SessionTimeoutWarning({ enabled = true }: SessionTimeoutWarningProps) {
-    const { t } = useTranslation('common')
-
-    // Disable inactivity timeout when Remember Me is active
-    let rememberMeActive = false
-    try {
-        rememberMeActive = localStorage.getItem(REMEMBER_ME_KEY) === 'true'
-    } catch {
-        // Ignore storage errors
-    }
+    const { t, i18n } = useTranslation('common')
+    const [isExtending, setIsExtending] = useState(false)
+    const isRTL = i18n.dir() === 'rtl'
 
     const {
         showWarning,
@@ -32,57 +27,73 @@ export function SessionTimeoutWarning({ enabled = true }: SessionTimeoutWarningP
         remainingSeconds,
         extendSession,
         signOutNow
-    } = useInactivityTimeout({ enabled: enabled && !rememberMeActive })
+    } = useInactivityTimeout({ enabled })
 
-    const formatTime = () => {
-        if (remainingSeconds < 60) {
-            return t('session_timeout.seconds', { count: remainingSeconds, defaultValue: '{{count}} seconds' })
+    const handleExtend = async () => {
+        setIsExtending(true)
+        try {
+            await extendSession()
+        } finally {
+            setIsExtending(false)
         }
-        return t('session_timeout.minutes', { count: remainingMinutes, defaultValue: '{{count}} minutes' })
     }
+
+    const minutes = Math.floor(remainingSeconds / 60)
+    const seconds = remainingSeconds % 60
+    const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+    const isUrgent = remainingSeconds <= 30
 
     return (
         <AlertDialog open={showWarning}>
-            <AlertDialogContent className="max-w-md">
-                <AlertDialogHeader>
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-amber-100 dark:bg-amber-900/20 rounded-full">
-                            <AlertCircle className="h-6 w-6 text-amber-600 dark:text-amber-400" />
+            <AlertDialogContent className="max-w-md border-amber-500/30 dark:border-amber-500/20 shadow-2xl p-6">
+                <AlertDialogHeader className="space-y-3">
+                    <div className="flex items-center gap-3">
+                        <div className={`p-2.5 rounded-xl ${isUrgent ? 'bg-rose-100 text-rose-600 dark:bg-rose-950/50 dark:text-rose-400 animate-pulse' : 'bg-amber-100 text-amber-600 dark:bg-amber-950/50 dark:text-amber-400'}`}>
+                            <AlertTriangle className="h-6 w-6 shrink-0" />
                         </div>
-                        <AlertDialogTitle className="text-lg">
-                            {t('session_timeout.title', { defaultValue: 'Session Timeout Warning' })}
-                        </AlertDialogTitle>
+                        <div>
+                            <AlertDialogTitle className="text-lg font-bold text-slate-900 dark:text-slate-100">
+                                {t('session_timeout.title', { defaultValue: 'Session Timeout Warning' })}
+                            </AlertDialogTitle>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                                {t('session_timeout.description', { defaultValue: 'Your session is about to expire due to inactivity.' })}
+                            </p>
+                        </div>
                     </div>
-                    <AlertDialogDescription className="space-y-3">
-                        <p>
-                            {t('session_timeout.description', { defaultValue: 'Your session will expire due to inactivity.' })}
-                        </p>
-                        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                            <Clock className="h-5 w-5 text-muted-foreground" />
-                            <span className="font-medium">
-                                {t('session_timeout.time_remaining', { defaultValue: 'Time remaining:' })}{' '}
-                                <span className="text-primary">{formatTime()}</span>
-                            </span>
+                    <AlertDialogDescription asChild>
+                        <div className="space-y-4 pt-1">
+                            {/* Live Timer Card */}
+                            <div className={`flex items-center justify-between p-3.5 rounded-xl border transition-colors ${isUrgent ? 'bg-rose-50/80 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/50' : 'bg-amber-50/70 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800/50'}`}>
+                                <div className="flex items-center gap-2 text-xs font-medium text-slate-700 dark:text-slate-300">
+                                    <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    <span>{t('session_timeout.time_remaining', { defaultValue: 'Time remaining:' })}</span>
+                                </div>
+                                <span className={`font-mono font-extrabold text-base tracking-wider px-2.5 py-0.5 rounded-md ${isUrgent ? 'bg-rose-600 text-white' : 'bg-amber-600 text-white'}`}>
+                                    {formattedTime}
+                                </span>
+                            </div>
+
+                            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                                {t('session_timeout.guidance', { defaultValue: 'Click "Stay Signed In" to keep working, or you will be automatically logged out for security.' })}
+                            </p>
                         </div>
-                        <p className="text-sm">
-                            {t('session_timeout.guidance', { defaultValue: 'Click "Stay Signed In" to continue your session, or you will be automatically signed out.' })}
-                        </p>
                     </AlertDialogDescription>
                 </AlertDialogHeader>
-                <AlertDialogFooter className="gap-2 sm:gap-0">
+                <AlertDialogFooter className="gap-2 sm:gap-0 mt-5 pt-3 border-t border-slate-100 dark:border-slate-800">
                     <Button
                         variant="outline"
                         onClick={signOutNow}
-                        className="gap-2"
+                        className="gap-2 text-xs font-semibold h-10 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200"
                     >
-                        <LogOut className="h-4 w-4" />
+                        <LogOut className={`h-4 w-4 ${isRTL ? 'rotate-180' : ''}`} />
                         {t('session_timeout.sign_out', { defaultValue: 'Sign Out Now' })}
                     </Button>
                     <Button
-                        onClick={extendSession}
-                        className="gap-2"
+                        onClick={handleExtend}
+                        disabled={isExtending}
+                        className="gap-2 text-xs font-bold h-10 bg-amber-600 hover:bg-amber-700 text-white shadow-md shadow-amber-600/20"
                     >
-                        <RefreshCw className="h-4 w-4" />
+                        <RefreshCw className={`h-4 w-4 ${isExtending ? 'animate-spin' : ''}`} />
                         {t('session_timeout.stay_signed_in', { defaultValue: 'Stay Signed In' })}
                     </Button>
                 </AlertDialogFooter>
@@ -92,3 +103,4 @@ export function SessionTimeoutWarning({ enabled = true }: SessionTimeoutWarningP
 }
 
 export default SessionTimeoutWarning
+
