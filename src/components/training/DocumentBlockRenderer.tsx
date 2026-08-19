@@ -4,7 +4,7 @@ import { sanitizeHtml, sanitizeUrl } from '@/lib/sanitize'
 import { resolveStorageUrl } from '@/lib/secureFileAccess'
 import type { TrainingContentBlock } from '@/lib/types'
 import { Link as LinkIcon, Loader2 } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 interface DocumentBlockRendererProps {
@@ -98,11 +98,30 @@ export const DocumentBlockRenderer = ({
      */
     const getSafeUrl = (value?: string | null): string | null => {
         if (!value) return null
-        
-        // Use the centralized sanitizeUrl function for protocol validation
-        const sanitized = sanitizeUrl(value)
+        const trimmed = value.trim()
+        if (!trimmed) return null
+
+        // Bare storage object keys (e.g. "training/documents/<uuid>.pdf") are not
+        // navigable URLs -- resolveStorageUrl() below signs them against Supabase
+        // Storage. Routing a protocol-less key through sanitizeUrl() is wrong:
+        // `new URL(path, location.href)` silently resolves it as a RELATIVE path
+        // against the current page, turning a valid storage key into a same-origin
+        // URL that fetches the SPA's own index.html (looks like "storage is
+        // broken" but the file was never touched).
+        const hasSchemeOrIsProtocolRelative = /^([a-z][a-z0-9+.-]*:|\/\/)/i.test(trimmed)
+        if (!hasSchemeOrIsProtocolRelative) {
+            if (trimmed.includes('..')) {
+                console.warn('Blocked suspicious storage path in DocumentBlockRenderer:', trimmed.substring(0, 50))
+                return null
+            }
+            return trimmed
+        }
+
+        // Anything with an actual scheme (http(s):, javascript:, data:, //host, etc.)
+        // goes through the centralized sanitizer for protocol validation.
+        const sanitized = sanitizeUrl(trimmed)
         if (!sanitized) {
-            console.warn('Blocked dangerous URL in DocumentBlockRenderer:', value.substring(0, 50))
+            console.warn('Blocked dangerous URL in DocumentBlockRenderer:', trimmed.substring(0, 50))
         }
         return sanitized
     }
@@ -114,6 +133,7 @@ export const DocumentBlockRenderer = ({
     // for the current viewer before linking/rendering it.
     const [resolvedUrl, setResolvedUrl] = useState<string | null>(null)
     const [resolving, setResolving] = useState(!!safeContentUrl)
+    const [retryToken, setRetryToken] = useState(0)
 
     useEffect(() => {
         let cancelled = false
@@ -124,14 +144,22 @@ export const DocumentBlockRenderer = ({
         }
         // Training Builder uploads land in the private 'documents' bucket and are
         // stored as a bare object path, so tell the resolver which bucket to sign against.
-        resolveStorageUrl(safeContentUrl, 300, 'documents').then((url) => {
+        // 1hr TTL: a 5min TTL used to race against how long a learner actually spends
+        // on a step before opening the attached PDF, expiring the link under their feet.
+        resolveStorageUrl(safeContentUrl, 3600, 'documents').then((url) => {
             if (!cancelled) {
                 setResolvedUrl(url)
                 setResolving(false)
             }
         })
         return () => { cancelled = true }
-    }, [safeContentUrl])
+    }, [safeContentUrl, retryToken])
+
+    // Re-signs a fresh URL on demand (network hiccup, an unusually long-lived tab, etc.)
+    // instead of leaving the learner stuck on a dead link with only a "Download" fallback.
+    const handleRetry = useCallback(() => {
+        setRetryToken((t) => t + 1)
+    }, [])
 
     const isPdf = safeContentUrl?.toLowerCase().endsWith('.pdf')
 
@@ -195,6 +223,13 @@ export const DocumentBlockRenderer = ({
         return (
             <div className="flex flex-col items-center justify-center py-12 border rounded-lg bg-slate-50 text-slate-500 gap-3">
                 <p className="text-sm font-medium">{t('unableToLoadDocument', 'Unable to access attached PDF document.')}</p>
+                <button
+                    type="button"
+                    onClick={handleRetry}
+                    className="text-xs font-medium text-hotel-navy hover:text-hotel-gold transition-colors underline"
+                >
+                    {t('common:retry', 'Retry')}
+                </button>
                 <div className="mt-2">
                     <DocumentBlockDescription
                         originalMarkup={originalMarkup}
@@ -211,7 +246,7 @@ export const DocumentBlockRenderer = ({
 
     return (
         <div className="space-y-4">
-            <PdfViewer url={resolvedUrl} />
+            <PdfViewer key={retryToken} url={resolvedUrl} onRetry={handleRetry} />
             <div className="mt-2">
                 <DocumentBlockDescription
                     originalMarkup={originalMarkup}

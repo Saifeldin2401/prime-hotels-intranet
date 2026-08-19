@@ -13,11 +13,15 @@ import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { useGenerateModuleOutline } from '@/hooks/useAIModuleOutline'
+import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { aiService, type ModuleOutlineSection } from '@/lib/gemini'
+import { extractPdfText, extractPdfTextFromArrayBuffer } from '@/lib/pdfText'
 import { supabase } from '@/lib/supabase'
+import { generateAndLinkCheckpointQuestions } from '@/services/checkpointQuizGenerator'
 import { cn } from '@/lib/utils'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import {
+  AlertCircle,
   ArrowLeft,
   ArrowRight,
   BookOpen,
@@ -25,6 +29,7 @@ import {
   Eye,
   FileQuestion,
   FileText,
+  FolderOpen,
   HelpCircle,
   Lightbulb,
   Loader2,
@@ -34,7 +39,9 @@ import {
   Sparkles,
   Target,
   Trash2,
-  Wand2
+  Upload,
+  Wand2,
+  X
 } from 'lucide-react'
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -50,6 +57,8 @@ interface SmartAICourseCreatorModalProps {
     description: string
     sections: any[]
     checkpoints?: any[]
+    difficulty: 'beginner' | 'intermediate' | 'advanced'
+    language: 'English' | 'Arabic'
   }) => void
   initialTopic?: string
 }
@@ -96,10 +105,16 @@ export function SmartAICourseCreatorModal({
 
   // Step 1: Input state
   const [topic, setTopic] = useState(initialTopic)
-  const [sourceType, setSourceType] = useState<'scratch' | 'kb_doc' | 'paste'>('scratch')
+  const [sourceType, setSourceType] = useState<'scratch' | 'kb_doc' | 'paste' | 'pdf'>('scratch')
   const [selectedDocId, setSelectedDocId] = useState<string>('')
   const [docSearch, setDocSearch] = useState('')
   const [pastedContent, setPastedContent] = useState('')
+  const [pdfFile, setPdfFile] = useState<File | null>(null)
+  const [pdfSourceName, setPdfSourceName] = useState<string | null>(null)
+  const [pdfExtractedText, setPdfExtractedText] = useState('')
+  const [pdfExtracting, setPdfExtracting] = useState(false)
+  const [pdfExtractError, setPdfExtractError] = useState<string | null>(null)
+  const [showDocumentPicker, setShowDocumentPicker] = useState(false)
   const [department, setDepartment] = useState('general')
   const [difficulty, setDifficulty] = useState<'beginner' | 'intermediate' | 'advanced'>('beginner')
   const [language, setLanguage] = useState<'English' | 'Arabic'>('English')
@@ -154,8 +169,76 @@ export function SmartAICourseCreatorModal({
       setDraftDescription('')
       setDraftSections([])
       setDraftCheckpoints([])
+      setPdfFile(null)
+      setPdfSourceName(null)
+      setPdfExtractedText('')
+      setPdfExtractError(null)
     }
     onOpenChange(nextOpen)
+  }
+
+  const clearPdfSource = () => {
+    setPdfFile(null)
+    setPdfSourceName(null)
+    setPdfExtractedText('')
+    setPdfExtractError(null)
+  }
+
+  const handlePdfSelect = async (file: File | null) => {
+    setPdfExtractError(null)
+    setPdfExtractedText('')
+    setPdfFile(file)
+    setPdfSourceName(file?.name || null)
+    if (!file) return
+
+    if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
+      setPdfExtractError('Please select a PDF file.')
+      setPdfFile(null)
+      setPdfSourceName(null)
+      return
+    }
+
+    setPdfExtracting(true)
+    try {
+      const text = await extractPdfText(file)
+      setPdfExtractedText(text)
+    } catch (err: any) {
+      setPdfExtractError(err?.message || 'Could not read text from this PDF.')
+      setPdfFile(null)
+      setPdfSourceName(null)
+    } finally {
+      setPdfExtracting(false)
+    }
+  }
+
+  const handleLibraryDocSelect = async (docs: { title: string; file_url: string; file_extension?: string | null }[]) => {
+    const doc = docs[0]
+    if (!doc) return
+
+    setPdfExtractError(null)
+    setPdfExtractedText('')
+    setPdfFile(null)
+    setPdfSourceName(doc.title)
+
+    if (doc.file_extension && doc.file_extension.toLowerCase() !== 'pdf') {
+      setPdfExtractError('Only PDF documents can be used as a source right now.')
+      setPdfSourceName(null)
+      return
+    }
+
+    setPdfExtracting(true)
+    try {
+      const { data: blob, error } = await supabase.storage.from('documents').download(doc.file_url)
+      if (error || !blob) throw error || new Error('Could not download this document.')
+      const arrayBuffer = await blob.arrayBuffer()
+      const text = await extractPdfTextFromArrayBuffer(arrayBuffer)
+      setPdfExtractedText(text)
+    } catch (err: any) {
+      setPdfExtractError(err?.message || 'Could not read text from this document.')
+      setPdfSourceName(null)
+    } finally {
+      setPdfExtracting(false)
+    }
   }
 
   // Construct context and call AI generation
@@ -193,6 +276,16 @@ export function SmartAICourseCreatorModal({
         return
       }
       sourceContentForAI = pastedContent.trim()
+    } else if (sourceType === 'pdf') {
+      if (!pdfExtractedText.trim()) {
+        toast({
+          title: t('common:error', 'Required Field'),
+          description: t('builder.uploadPdfPrompt', 'Please upload a PDF with extractable text.'),
+          variant: 'destructive'
+        })
+        return
+      }
+      sourceContentForAI = `Source Document: ${pdfSourceName || 'Uploaded PDF'}\nTarget Department: ${department}\nContent:\n${pdfExtractedText.trim()}`
     }
 
     try {
@@ -329,7 +422,9 @@ export function SmartAICourseCreatorModal({
         title: draftTitle,
         description: draftDescription,
         sections: includedSections,
-        checkpoints: draftCheckpoints.filter((c) => c.include)
+        checkpoints: draftCheckpoints.filter((c) => c.include),
+        difficulty,
+        language
       })
       handleClose(false)
       toast({
@@ -364,6 +459,7 @@ export function SmartAICourseCreatorModal({
       // 2. Prepare doc rows and quizzes
       const docRows: any[] = []
       let blockOrder = 0
+      const checkpointFailures: string[] = []
 
       for (let sIdx = 0; sIdx < includedSections.length; sIdx++) {
         const sec = includedSections[sIdx]
@@ -402,63 +498,43 @@ export function SmartAICourseCreatorModal({
               .single()
 
             if (createdQuiz) {
-              const quizQuestions = await aiService.generateQuiz({
-                sopContent: `${sec.heading}\n${sec.summary}\n${cleanContent}`,
-                count: 3,
-                difficulty: difficulty,
-                language: language
+              const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
+                quizId: createdQuiz.id,
+                sectionContent: `${sec.heading}\n${sec.summary}\n${cleanContent}`,
+                difficulty,
+                language,
+                trainingModuleId: newModule.id,
+                createdBy: profile?.id
               })
 
-              for (let qIdx = 0; qIdx < quizQuestions.length; qIdx++) {
-                const q = quizQuestions[qIdx]
-                const { data: newQ } = await supabase
-                  .from('unified_questions')
-                  .insert({
-                    question_text: q.question_text,
-                    question_type: q.question_type || 'mcq',
-                    options: q.options.map((opt) => ({
-                      text: typeof opt === 'string' ? opt : (opt as any).text,
-                      is_correct: (typeof opt === 'string' ? opt : (opt as any).text) === q.correct_answer
-                    })),
-                    correct_answer: q.correct_answer,
-                    explanation: q.explanation,
-                    hint: q.hint,
-                    points: 10,
-                    department: department,
-                    difficulty_level: difficulty,
-                    status: 'active'
-                  } as any)
-                  .select()
-                  .single()
-
-                if (newQ) {
-                  await supabase.from('unified_quiz_questions').insert({
+              if (linkedQuestionCount > 0) {
+                // Push Quiz block into documents
+                docRows.push({
+                  training_module_id: newModule.id,
+                  content_type: 'training_block',
+                  block_type: 'quiz',
+                  block_order: blockOrder++,
+                  title: `Checkpoint Quiz: ${chk.topic || sec.heading}`,
+                  content: '',
+                  content_data: {
                     quiz_id: createdQuiz.id,
-                    question_id: newQ.id,
-                    question_order: qIdx + 1
-                  })
-                }
+                    passing_score: 80,
+                    is_checkpoint: true
+                  },
+                  is_mandatory: true,
+                  ai_generated: true
+                })
+              } else {
+                // No questions survived generation/insertion - a mandatory quiz
+                // block with nothing to submit would permanently block module
+                // completion, so skip the block and clean up the empty quiz.
+                await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)
+                checkpointFailures.push(chk.topic || sec.heading)
               }
-
-              // Push Quiz block into documents
-              docRows.push({
-                training_module_id: newModule.id,
-                content_type: 'training_block',
-                block_type: 'quiz',
-                block_order: blockOrder++,
-                title: `Checkpoint Quiz: ${chk.topic || sec.heading}`,
-                content: '',
-                content_data: {
-                  quiz_id: createdQuiz.id,
-                  passing_score: 80,
-                  is_checkpoint: true
-                },
-                is_mandatory: true,
-                ai_generated: true
-              })
             }
           } catch (qErr) {
             console.warn('Could not generate quiz checkpoint for section:', qErr)
+            checkpointFailures.push(chk.topic || sec.heading)
           }
         }
       }
@@ -475,6 +551,17 @@ export function SmartAICourseCreatorModal({
         title: shouldPublish ? t('builder.coursePublished', 'Course Published!') : t('builder.courseCreated', 'Course Created!'),
         description: t('builder.courseCreatedDesc', 'Opening course builder canvas...')
       })
+
+      if (checkpointFailures.length > 0) {
+        toast({
+          title: t('builder.checkpointGenerationIncomplete', 'Some checkpoint quizzes were skipped'),
+          description: t(
+            'builder.checkpointGenerationIncompleteDesc',
+            `Could not generate a usable quiz for: ${checkpointFailures.join(', ')}. Add one manually in the builder before publishing.`
+          ),
+          variant: 'destructive'
+        })
+      }
 
       handleClose(false)
 
@@ -554,7 +641,7 @@ export function SmartAICourseCreatorModal({
                 </Label>
 
                 <Tabs value={sourceType} onValueChange={(v: any) => setSourceType(v)}>
-                  <TabsList className="grid grid-cols-3 w-full bg-slate-200/70 p-1">
+                  <TabsList className="grid grid-cols-4 w-full bg-slate-200/70 p-1">
                     <TabsTrigger value="scratch" className="text-xs font-semibold flex items-center gap-1.5">
                       <Sparkles className="w-3.5 h-3.5" />
                       Generate from Scratch
@@ -566,6 +653,10 @@ export function SmartAICourseCreatorModal({
                     <TabsTrigger value="paste" className="text-xs font-semibold flex items-center gap-1.5">
                       <FileQuestion className="w-3.5 h-3.5" />
                       Paste Custom Text
+                    </TabsTrigger>
+                    <TabsTrigger value="pdf" className="text-xs font-semibold flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5" />
+                      Upload PDF
                     </TabsTrigger>
                   </TabsList>
 
@@ -642,6 +733,80 @@ export function SmartAICourseCreatorModal({
                       placeholder="Paste your standard operating procedures, policies, or lesson notes here..."
                       className="bg-white dark:bg-slate-950 text-xs font-mono"
                     />
+                  </TabsContent>
+
+                  {/* Tab 4: Upload PDF or pick from Document Library */}
+                  <TabsContent value="pdf" className="mt-4 space-y-2">
+                    {!pdfSourceName ? (
+                      <div className="space-y-2">
+                        <label
+                          htmlFor="smart-ai-pdf-upload"
+                          className="flex flex-col items-center justify-center gap-2 py-8 rounded-xl border-2 border-dashed border-slate-300 hover:border-amber-400 hover:bg-amber-50/30 bg-white dark:bg-slate-950 cursor-pointer transition-all text-center px-4"
+                        >
+                          <Upload className="w-6 h-6 text-slate-400" />
+                          <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                            Click to upload a PDF (SOP, manual, policy document)
+                          </p>
+                          <p className="text-[11px] text-muted-foreground">
+                            Text is extracted in your browser and used as the source material for AI generation.
+                          </p>
+                          <input
+                            id="smart-ai-pdf-upload"
+                            type="file"
+                            accept="application/pdf,.pdf"
+                            className="hidden"
+                            onChange={(e) => handlePdfSelect(e.target.files?.[0] || null)}
+                          />
+                        </label>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs font-semibold"
+                          onClick={() => setShowDocumentPicker(true)}
+                        >
+                          <FolderOpen className="w-3.5 h-3.5 me-1.5" />
+                          Or choose from Document Library
+                        </Button>
+                      </div>
+                    ) : (
+                      <div className="p-3.5 rounded-xl border border-slate-200 bg-white dark:bg-slate-950 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                              {pdfSourceName}
+                            </span>
+                          </div>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            className="h-6 w-6 p-0 shrink-0"
+                            onClick={clearPdfSource}
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                        {pdfExtracting ? (
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Extracting text from PDF...
+                          </p>
+                        ) : pdfExtractedText ? (
+                          <p className="text-[11px] text-emerald-700 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3 h-3" />
+                            Extracted {pdfExtractedText.length.toLocaleString()} characters of source text.
+                          </p>
+                        ) : null}
+                      </div>
+                    )}
+                    {pdfExtractError && (
+                      <p className="text-[11px] text-red-600 flex items-center gap-1.5">
+                        <AlertCircle className="w-3 h-3 shrink-0" />
+                        {pdfExtractError}
+                      </p>
+                    )}
                   </TabsContent>
                 </Tabs>
               </div>
@@ -912,7 +1077,7 @@ export function SmartAICourseCreatorModal({
               </Button>
               <Button
                 onClick={handleGenerate}
-                disabled={generateOutline.isPending}
+                disabled={generateOutline.isPending || pdfExtracting}
                 className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold px-6 shadow-md border-none"
               >
                 {generateOutline.isPending ? (
@@ -966,6 +1131,14 @@ export function SmartAICourseCreatorModal({
           )}
         </div>
       </DialogContent>
+
+      <DocumentPicker
+        open={showDocumentPicker}
+        onOpenChange={setShowDocumentPicker}
+        onSelect={(docs) => handleLibraryDocSelect(docs)}
+        config={{ allowedTypes: ['pdf'], multiple: false }}
+        title="Choose a PDF from the Document Library"
+      />
     </Dialog>
   )
 }

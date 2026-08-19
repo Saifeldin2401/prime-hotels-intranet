@@ -27,8 +27,8 @@ export function useMyMaintenanceTickets() {
         .select(`
           *,
           reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
-          property:properties(${PROPERTY_RELATION_COLUMNS}),
-          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          property:properties!property_id(${PROPERTY_RELATION_COLUMNS}),
+          department:departments!department_id(${DEPARTMENT_RELATION_COLUMNS}),
           assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS})
         `)
         .eq('reported_by_id', user.id)
@@ -64,8 +64,8 @@ export function useAssignedMaintenanceTickets() {
         .select(`
           *,
           reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
-          property:properties(${PROPERTY_RELATION_COLUMNS}),
-          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          property:properties!property_id(${PROPERTY_RELATION_COLUMNS}),
+          department:departments!department_id(${DEPARTMENT_RELATION_COLUMNS}),
           assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS})
         `)
         .eq('is_deleted', false)
@@ -131,8 +131,8 @@ export function useMaintenanceTicket(ticketId: string) {
         .select(`
           *,
           reported_by:profiles!reported_by_id(${PROFILE_RELATION_COLUMNS}),
-          property:properties(${PROPERTY_RELATION_COLUMNS}),
-          department:departments(${DEPARTMENT_RELATION_COLUMNS}),
+          property:properties!property_id(${PROPERTY_RELATION_COLUMNS}),
+          department:departments!department_id(${DEPARTMENT_RELATION_COLUMNS}),
           assigned_to:profiles!assigned_to_id(${PROFILE_RELATION_COLUMNS}),
           comments:maintenance_comments(
             *,

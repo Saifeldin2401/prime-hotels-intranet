@@ -32,7 +32,7 @@ import { useNavigate } from 'react-router-dom'
 
 interface LearningAssignment {
   id: string
-  target_type: 'all' | 'everyone' | 'user' | 'department' | 'property'
+  target_type: 'all' | 'everyone' | 'user' | 'department' | 'property' | 'role' | 'new_hire'
   target_id: string | null
   content_type: string
   content_id: string
@@ -1025,6 +1025,21 @@ export function TrainingAssignmentsProvider({
     })) as LearningAssignment[]
   }, [rawAssignments, modules])
 
+  // training_progress.status never becomes 'overdue' - nothing writes the DB
+  // enum value it maps from. Overdue is derived the same way the Assignments
+  // tab already derives it for rule cards (getAssignmentStatus): from the
+  // owning assignment's due_date, looked up via assignment_id.
+  const assignmentDueDateById = useMemo(() => {
+    return new Map((rawAssignments || []).map((a: any) => [a.id, a.due_date as string | null]))
+  }, [rawAssignments])
+
+  const isProgressOverdue = useCallback((record: { status?: string; assignment_id?: string | null }) => {
+    if (record.status === 'completed' || record.status === 'excused') return false
+    const dueDate = record.assignment_id ? assignmentDueDateById.get(record.assignment_id) : null
+    if (!dueDate) return false
+    return new Date(dueDate).getTime() < Date.now()
+  }, [assignmentDueDateById])
+
   const paginatedActiveRoster = useMemo(() => (
     (moduleRoster?.active || []).slice(activeRosterPagination.from, activeRosterPagination.to + 1)
   ), [activeRosterPagination.from, activeRosterPagination.to, moduleRoster?.active])
@@ -1083,8 +1098,16 @@ export function TrainingAssignmentsProvider({
         const name = user.full_name || user.email || t('unknownUser', 'Unknown User')
         return { label: name, meta: user.email && user.email !== name ? user.email : undefined }
       }
-      default:
+      case 'role': {
+        const role = assignment.target_id || t('unknownRole', 'Role')
+        return { label: t(`common:roles.${role}`, role), meta: t('rules.by_role') }
+      }
+      case 'new_hire':
+        return { label: t('newHires', 'New Hires'), meta: t('rules.by_new_hire', 'Future joiners only') }
+      case 'everyone':
         return { label: t('allUsers'), meta: undefined }
+      default:
+        return { label: assignment.target_type || t('allUsers'), meta: undefined }
     }
   }, [departmentLookup, propertyLookup, userLookup, t])
 
@@ -1254,22 +1277,26 @@ export function TrainingAssignmentsProvider({
         const moduleTitle = modules?.find(m => m.id === item.content_id)?.title || ''
         if (!userName.toLowerCase().includes(searchLower) && !moduleTitle.toLowerCase().includes(searchLower)) return false
       }
-      if (overviewFilterStatus !== 'all' && item.status !== overviewFilterStatus) return false
+      if (overviewFilterStatus === 'overdue') {
+        if (!isProgressOverdue(item)) return false
+      } else if (overviewFilterStatus !== 'all' && item.status !== overviewFilterStatus) {
+        return false
+      }
       const userDeptId = (userDepartments?.find(ud => ud.user_id === item.user_id)?.department as any)?.id
       const userPropId = (userProperties?.find(up => up.user_id === item.user_id)?.property as any)?.id
       if (overviewFilterDept !== 'all' && userDeptId !== overviewFilterDept) return false
       if (overviewFilterProp !== 'all' && userPropId !== overviewFilterProp) return false
       return true
     })
-  }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, overviewFilterProp, userDepartments, userProperties, users, modules])
+  }, [progressData, overviewSearch, overviewFilterStatus, overviewFilterDept, overviewFilterProp, userDepartments, userProperties, users, modules, isProgressOverdue])
 
   const progressMetrics = useMemo(() => ({
     total: filteredProgress.length,
     completed: filteredProgress.filter(p => p.status === 'completed').length,
     in_progress: filteredProgress.filter(p => p.status === 'in_progress').length,
-    overdue: filteredProgress.filter(p => p.status === 'overdue').length,
+    overdue: filteredProgress.filter(isProgressOverdue).length,
     uniqueModules: new Set(filteredProgress.map(p => p.content_id)).size
-  }), [filteredProgress])
+  }), [filteredProgress, isProgressOverdue])
 
   const enrichedProgress = useMemo<EnrichedProgressRecord[]>(() => {
     return filteredProgress.map((item) => {
@@ -1341,7 +1368,7 @@ export function TrainingAssignmentsProvider({
         const completedModules = records.filter((r) => r.status === 'completed').length
         const inProgressModules = records.filter((r) => r.status === 'in_progress').length
         const assignedModules = records.filter((r) => r.status === 'assigned').length
-        const overdueModules = records.filter((r) => r.status === 'overdue').length
+        const overdueModules = records.filter(isProgressOverdue).length
         const excusedModules = records.filter((r) => r.status === 'excused').length
         const activeModules = records.filter((r) => !['completed', 'excused'].includes(r.status)).length
         const averageProgress = records.length > 0
@@ -1349,7 +1376,7 @@ export function TrainingAssignmentsProvider({
         const scoreValues = records.map((r) => r.resolvedScore).filter((s): s is number => s !== null)
         const averageScore = scoreValues.length > 0
           ? Math.round(scoreValues.reduce((sum, s) => sum + s, 0) / scoreValues.length) : null
-        const highlightModule = records.find((r) => r.status === 'overdue')
+        const highlightModule = records.find(isProgressOverdue)
           || records.find((r) => r.status === 'in_progress')
           || records.find((r) => r.status === 'assigned')
           || records[0] || null
@@ -1370,7 +1397,7 @@ export function TrainingAssignmentsProvider({
         }
         return a.userName.localeCompare(b.userName)
       })
-  }, [enrichedProgress])
+  }, [enrichedProgress, isProgressOverdue])
 
   const employeeTrackingSummary = useMemo(() => {
     const employeeCount = employeeProgressGroups.length

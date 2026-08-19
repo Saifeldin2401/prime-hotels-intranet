@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
+import { InlineBlockPreview } from './InlineBlockPreview'
 import {
   ArrowDown,
   ArrowUp,
@@ -29,7 +30,7 @@ import {
   Trash2,
   Video
 } from 'lucide-react'
-import React, { useState } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
@@ -107,6 +108,39 @@ export const BuilderCanvas = ({
   const [previewingBlock, setPreviewingBlock] = useState<ContentBlockForm | null>(null)
   const [expandingLessonId, setExpandingLessonId] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
+  const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set())
+
+  const toggleBlockPreview = useCallback((blockId: string) => {
+    setExpandedBlocks(prev => {
+      const next = new Set(prev)
+      if (next.has(blockId)) {
+        next.delete(blockId)
+      } else {
+        next.add(blockId)
+      }
+      return next
+    })
+  }, [])
+
+  const expandAllInSection = useCallback((section: TrainingSection) => {
+    setExpandedBlocks(prev => {
+      const next = new Set(prev)
+      section.items.forEach(item => next.add(item.id))
+      return next
+    })
+  }, [])
+
+  const collapseAllInSection = useCallback((section: TrainingSection) => {
+    setExpandedBlocks(prev => {
+      const next = new Set(prev)
+      section.items.forEach(item => next.delete(item.id))
+      return next
+    })
+  }, [])
+
+  const isSectionFullyExpanded = useCallback((section: TrainingSection) => {
+    return section.items.length > 0 && section.items.every(item => expandedBlocks.has(item.id))
+  }, [expandedBlocks])
 
   const totalLessons = sections.reduce((acc, s) => acc + s.items.length, 0)
   const totalQuizzes = sections.reduce((acc, s) => acc + s.items.filter((i) => i.type === 'quiz').length, 0)
@@ -425,6 +459,28 @@ export const BuilderCanvas = ({
                           </Button>
                         </div>
 
+                        {/* Expand All / Collapse All toggle */}
+                        {section.items.length > 0 && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                            onClick={() => {
+                              if (isSectionFullyExpanded(section)) {
+                                collapseAllInSection(section)
+                              } else {
+                                expandAllInSection(section)
+                              }
+                            }}
+                          >
+                            {isSectionFullyExpanded(section) ? (
+                              <><ChevronUp className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.collapseAll', 'Collapse All')}</span></>
+                            ) : (
+                              <><Eye className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.expandAll', 'Expand All')}</span></>
+                            )}
+                          </Button>
+                        )}
+
                         {onGenerateQuizFromSection && (
                           <Button
                             size="sm"
@@ -483,101 +539,136 @@ export const BuilderCanvas = ({
                         </div>
                       ) : (
                         <div className="space-y-2">
-                          {filteredItems.map((item, itemIndex) => (
-                            <div
-                              key={item.id}
-                              draggable
-                              onDragStart={(e) => handleDragStartContent(e, section.id, itemIndex)}
-                              onDragOver={handleDragOver}
-                              onDrop={(e) => handleDropContent(e, section.id, itemIndex)}
-                              onClick={() => onEditContent(section.id, item.id)}
-                              className={cn(
-                                'group flex items-center gap-3 p-3 bg-white dark:bg-slate-950 rounded-xl border border-slate-200 hover:border-amber-400 hover:shadow-sm transition-all cursor-pointer',
-                                isRTL ? 'flex-row-reverse' : ''
-                              )}
-                            >
-                              <div className="cursor-grab active:cursor-grabbing text-slate-300 group-hover:text-slate-500">
-                                <GripVertical className="w-4 h-4" />
-                              </div>
+                          {filteredItems.map((item, itemIndex) => {
+                            const isBlockExpanded = expandedBlocks.has(item.id)
+                            const hasPreviewableContent = item.content || item.content_url || item.type === 'quiz'
 
-                              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
-                                {getContentIcon(item.type)}
-                              </div>
-
-                              <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
-                                <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                                  {item.title || 'Untitled Lesson Block'}
-                                </p>
-                                <p className="text-[11px] text-muted-foreground truncate capitalize">
-                                  {item.type.replace('_', ' ')} • {item.is_mandatory ? 'Mandatory' : 'Optional'}
-                                  {item.duration ? ` • ${item.duration} min` : ''}
-                                </p>
-                              </div>
-
+                            return (
                               <div
-                                className={cn('flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity', isRTL ? 'flex-row-reverse' : '')}
-                                onClick={(e) => e.stopPropagation()}
+                                key={item.id}
+                                draggable={!isBlockExpanded}
+                                onDragStart={(e) => handleDragStartContent(e, section.id, itemIndex)}
+                                onDragOver={handleDragOver}
+                                onDrop={(e) => handleDropContent(e, section.id, itemIndex)}
+                                className={cn(
+                                  'group rounded-xl border bg-white dark:bg-slate-950 transition-all overflow-hidden',
+                                  isBlockExpanded
+                                    ? 'border-amber-300 dark:border-amber-700 shadow-md'
+                                    : 'border-slate-200 hover:border-amber-400 hover:shadow-sm'
+                                )}
                               >
-                                {item.content && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-7 px-2 text-xs font-semibold text-slate-500 hover:text-slate-800"
-                                    onClick={() => setPreviewingBlock(item)}
-                                    title="Quick Preview SOP Content"
-                                  >
-                                    <Eye className="w-3.5 h-3.5 me-1" />
-                                    <span>Preview</span>
-                                  </Button>
-                                )}
-                                {item.type === 'text' && onDeepExpandLesson && (
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    disabled={expandingLessonId === item.id}
-                                    className="h-7 px-2 text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50"
-                                    onClick={async () => {
-                                      setExpandingLessonId(item.id)
-                                      try {
-                                        await onDeepExpandLesson(section.id, item.id)
-                                      } finally {
-                                        setExpandingLessonId(null)
-                                      }
-                                    }}
-                                    title="Deep Expand into 600-word 5-Star Operational SOP"
-                                  >
-                                    {expandingLessonId === item.id ? (
-                                      <>
-                                        <Loader2 className="w-3.5 h-3.5 me-1 animate-spin" />
-                                        <span>Expanding...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Sparkles className="w-3.5 h-3.5 me-1 text-indigo-600" />
-                                        <span>Deep Expand</span>
-                                      </>
-                                    )}
-                                  </Button>
-                                )}
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:text-amber-700 hover:bg-amber-50"
+                                {/* Compact header row (always visible) */}
+                                <div
+                                  className={cn(
+                                    'flex items-center gap-3 p-3 cursor-pointer',
+                                    isRTL ? 'flex-row-reverse' : ''
+                                  )}
                                   onClick={() => onEditContent(section.id, item.id)}
                                 >
-                                  Edit Lesson
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                                  onClick={() => onDeleteContent(section.id, item.id)}
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </Button>
+                                  <div className="cursor-grab active:cursor-grabbing text-slate-300 group-hover:text-slate-500">
+                                    <GripVertical className="w-4 h-4" />
+                                  </div>
+
+                                  <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                    {getContentIcon(item.type)}
+                                  </div>
+
+                                  <div className={cn('flex-1 min-w-0', isRTL ? 'text-right' : 'text-left')}>
+                                    <p className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                                      {item.title || 'Untitled Lesson Block'}
+                                    </p>
+                                    <p className="text-[11px] text-muted-foreground truncate capitalize">
+                                      {item.type.replace('_', ' ')} • {item.is_mandatory ? 'Mandatory' : 'Optional'}
+                                      {item.duration ? ` • ${item.duration} min` : ''}
+                                    </p>
+                                  </div>
+
+                                  <div
+                                    className={cn('flex items-center gap-1', isRTL ? 'flex-row-reverse' : '')}
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    {/* Inline Preview Toggle */}
+                                    {hasPreviewableContent && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className={cn(
+                                          'h-7 px-2 text-xs font-semibold transition-colors',
+                                          isBlockExpanded
+                                            ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
+                                            : 'text-slate-500 hover:text-slate-800 opacity-0 group-hover:opacity-100'
+                                        )}
+                                        onClick={() => toggleBlockPreview(item.id)}
+                                        title={isBlockExpanded ? t('builder.inlinePreview.collapse', 'Collapse preview') : t('builder.inlinePreview.expand', 'Expand preview')}
+                                      >
+                                        {isBlockExpanded ? (
+                                          <><ChevronUp className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.hide', 'Hide')}</span></>
+                                        ) : (
+                                          <><Eye className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.preview', 'Preview')}</span></>
+                                        )}
+                                      </Button>
+                                    )}
+                                    {item.type === 'text' && onDeepExpandLesson && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={expandingLessonId === item.id}
+                                        className="h-7 px-2 text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        onClick={async () => {
+                                          setExpandingLessonId(item.id)
+                                          try {
+                                            await onDeepExpandLesson(section.id, item.id)
+                                          } finally {
+                                            setExpandingLessonId(null)
+                                          }
+                                        }}
+                                        title="Deep Expand into 600-word 5-Star Operational SOP"
+                                      >
+                                        {expandingLessonId === item.id ? (
+                                          <>
+                                            <Loader2 className="w-3.5 h-3.5 me-1 animate-spin" />
+                                            <span>Expanding...</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <Sparkles className="w-3.5 h-3.5 me-1 text-indigo-600" />
+                                            <span>Deep Expand</span>
+                                          </>
+                                        )}
+                                      </Button>
+                                    )}
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:text-amber-700 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => onEditContent(section.id, item.id)}
+                                    >
+                                      Edit Lesson
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="ghost"
+                                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      onClick={() => onDeleteContent(section.id, item.id)}
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </Button>
+                                  </div>
+                                </div>
+
+                                {/* Inline Content Preview (expanded state) */}
+                                {isBlockExpanded && (
+                                  <div className="border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
+                                    <InlineBlockPreview
+                                      block={item}
+                                      isRTL={isRTL}
+                                      onRegenerateQuiz={onGenerateQuizFromSection ? () => onGenerateQuizFromSection(section.id) : undefined}
+                                    />
+                                  </div>
+                                )}
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
 
                           {/* Fast Add Inline Toolbar */}
                           <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">

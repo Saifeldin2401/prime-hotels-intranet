@@ -165,7 +165,11 @@ serve(async (req) => {
     const normalizeMaxTokens = (value: unknown) => {
       const n = typeof value === "number" ? value : Number(value);
       if (!Number.isFinite(n) || n <= 0) return 2048;
-      return Math.max(1, Math.min(4096, Math.floor(n)));
+      // Ceiling raised from 4096: long-form structured generation (a full training
+      // module's worth of sections as one JSON response) was routinely getting cut
+      // off mid-object, failing to parse, and silently falling back to generic
+      // template content -- looking like the AI "ignored" what was actually asked.
+      return Math.max(1, Math.min(8000, Math.floor(n)));
     };
 
     const effectiveTemperature = normalizeTemperature(temperature);

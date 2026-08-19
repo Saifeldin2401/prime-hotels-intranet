@@ -9064,6 +9064,8 @@ export type Database = {
           is_active: boolean | null
           is_deleted: boolean | null
           is_headquarters: boolean | null
+          latitude: number | null
+          longitude: number | null
           name: string
           phone: string | null
           property_code: string | null
@@ -9079,6 +9081,8 @@ export type Database = {
           is_active?: boolean | null
           is_deleted?: boolean | null
           is_headquarters?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name: string
           phone?: string | null
           property_code?: string | null
@@ -9094,6 +9098,8 @@ export type Database = {
           is_active?: boolean | null
           is_deleted?: boolean | null
           is_headquarters?: boolean | null
+          latitude?: number | null
+          longitude?: number | null
           name?: string
           phone?: string | null
           property_code?: string | null

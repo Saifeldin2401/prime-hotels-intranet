@@ -5,8 +5,11 @@ import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
 import { aiService } from '@/lib/gemini'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { generateAndLinkCheckpointQuestions } from '@/services/checkpointQuizGenerator'
 import { ChevronLeft, ChevronRight, Loader2, Plus, RotateCcw, RotateCw, Trash2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -29,6 +32,7 @@ import { TrainingBuilderProvider, useTrainingBuilderContext } from './contexts/T
 function TrainingBuilderInner() {
   const { t } = useTranslation('training')
   const { toast } = useToast()
+  const { profile } = useAuth()
   const ctx = useTrainingBuilderContext()
 
   const handleDeepExpandLesson = async (sectionId: string, contentId: string) => {
@@ -269,6 +273,7 @@ function TrainingBuilderInner() {
             validationChecklist={ctx.validationChecklist} moduleId={ctx.moduleId}
             openAIGeneratorForModule={ctx.openAIGeneratorForModule}
             setShowSmartWizard={ctx.setShowSmartWizard} isRTL={ctx.isRTL}
+            activeSection={ctx.activeSection}
           />
         </BuilderSidebar>
       </div>
@@ -314,12 +319,14 @@ function TrainingBuilderInner() {
         open={ctx.showSmartWizard}
         onOpenChange={ctx.setShowSmartWizard}
         initialTopic={ctx.title}
-        onApplyToBuilder={(generated) => {
+        onApplyToBuilder={async (generated) => {
           if (generated.title && !ctx.title) ctx.setTitle(generated.title)
           if (generated.description && !ctx.description) ctx.setDescription(generated.description)
 
           const checkpoints = generated.checkpoints || []
-          const newSections = (generated.sections || []).map((sec: any, idx: number) => {
+          const checkpointFailures: string[] = []
+
+          const newSections = await Promise.all((generated.sections || []).map(async (sec: any, idx: number) => {
             const sectionItems: any[] = [
               {
                 id: `block_${Date.now()}_${idx}_sop`,
@@ -336,20 +343,61 @@ function TrainingBuilderInner() {
             // Check if there is an associated quiz checkpoint for this section
             const checkpoint = checkpoints.find((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
             if (checkpoint) {
-              sectionItems.push({
-                id: `block_${Date.now()}_${idx}_quiz`,
-                title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
-                type: 'quiz' as any,
-                content: '',
-                content_url: '',
-                content_data: {
-                  is_checkpoint: true,
-                  passing_score: 80,
-                  topic: checkpoint.topic
-                },
-                is_mandatory: true,
-                order: 1
-              })
+              // Create the real quiz + AI-generated questions now, not just a
+              // placeholder block - a quiz-type block with no linked quiz_id
+              // (or a quiz with zero questions) permanently blocks completion
+              // once this module is saved/published.
+              try {
+                const { data: createdQuiz } = await supabase
+                  .from('learning_quizzes')
+                  .insert({
+                    title: `Checkpoint: ${checkpoint.topic || sec.heading}`,
+                    description: `Verification quiz for ${sec.heading}`,
+                    training_module_id: ctx.moduleId,
+                    passing_score_percentage: Number(ctx.passingScore) || 80,
+                    time_limit_minutes: 10,
+                    max_attempts: 3,
+                    status: 'published',
+                    created_by: profile?.id
+                  })
+                  .select()
+                  .single()
+
+                if (createdQuiz) {
+                  const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
+                    quizId: createdQuiz.id,
+                    sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
+                    difficulty: generated.difficulty,
+                    language: generated.language,
+                    trainingModuleId: ctx.moduleId,
+                    createdBy: profile?.id
+                  })
+
+                  if (linkedQuestionCount > 0) {
+                    sectionItems.push({
+                      id: `block_${Date.now()}_${idx}_quiz`,
+                      title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
+                      type: 'quiz' as any,
+                      content: '',
+                      content_url: '',
+                      content_data: {
+                        quiz_id: createdQuiz.id,
+                        is_checkpoint: true,
+                        passing_score: 80,
+                        topic: checkpoint.topic
+                      },
+                      is_mandatory: true,
+                      order: 1
+                    })
+                  } else {
+                    await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)
+                    checkpointFailures.push(checkpoint.topic || sec.heading)
+                  }
+                }
+              } catch (qErr) {
+                console.warn('Could not generate quiz checkpoint for section:', qErr)
+                checkpointFailures.push(checkpoint.topic || sec.heading)
+              }
             }
 
             return {
@@ -359,7 +407,7 @@ function TrainingBuilderInner() {
               order: idx,
               items: sectionItems
             }
-          })
+          }))
 
           if (ctx.sections.length === 0 || (ctx.sections.length === 1 && ctx.sections[0].items.length === 0)) {
             ctx.setSections(newSections)
@@ -369,6 +417,17 @@ function TrainingBuilderInner() {
 
           if (newSections.length > 0) {
             ctx.setActiveSection(newSections[0].id)
+          }
+
+          if (checkpointFailures.length > 0) {
+            toast({
+              title: t('builder.checkpointGenerationIncomplete', 'Some checkpoint quizzes were skipped'),
+              description: t(
+                'builder.checkpointGenerationIncompleteDesc',
+                `Could not generate a usable quiz for: ${checkpointFailures.join(', ')}. Add one manually before publishing.`
+              ),
+              variant: 'destructive'
+            })
           }
         }}
       />

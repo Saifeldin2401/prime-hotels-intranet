@@ -1,15 +1,18 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ScrollArea } from '@/components/ui/scroll-area'
+import { InlineBlockPreview } from '@/components/training/builder/InlineBlockPreview'
 import { ModuleSkillsEditor } from '@/components/training/ModuleSkillsEditor'
+import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
-import { AlertTriangle, CheckCircle2, FileQuestion, Layers, ListChecks, Sparkles } from 'lucide-react'
+import { AlertTriangle, BookOpen, CheckCircle2, Eye, FileQuestion, FileText, Headphones, Layers, ListChecks, Sparkles, Video } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { BuilderStep } from './trainingBuilderTypes'
+import type { BuilderStep, ContentBlockForm, TrainingSection } from './trainingBuilderTypes'
 import { VersionHistoryCard } from './VersionHistoryCard'
 
 interface RightPanelProps {
   builderStep: BuilderStep
-  sections: { length: number }
+  sections: TrainingSection[]
   totalItems: number
   totalPoints: number
   displayDuration: number
@@ -24,6 +27,7 @@ interface RightPanelProps {
   openAIGeneratorForModule: () => void
   setShowSmartWizard: (v: boolean) => void
   isRTL: boolean
+  activeSection?: string | null
 }
 
 export function RightPanel({
@@ -43,6 +47,7 @@ export function RightPanel({
   openAIGeneratorForModule,
   setShowSmartWizard,
   isRTL,
+  activeSection,
 }: RightPanelProps) {
   const { t } = useTranslation('training')
 
@@ -138,6 +143,72 @@ export function RightPanel({
           </CardContent>
         </Card>
         <ModuleSkillsEditor moduleId={moduleId || ''} />
+
+        {/* Live Section Preview */}
+        {(() => {
+          const currentSection = sections.find(s => s.id === activeSection) || sections[0]
+          if (!currentSection || currentSection.items.length === 0) return null
+
+          return (
+            <Card className="shadow-sm border-slate-200">
+              <CardHeader className="pb-2">
+                <CardTitle className={cn(
+                  'text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-2',
+                  isRTL ? 'flex-row-reverse' : ''
+                )}>
+                  <Eye className="w-3.5 h-3.5" />
+                  {t('builder.inlinePreview.livePreview', 'Live Preview')}
+                </CardTitle>
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {currentSection.title}
+                </p>
+              </CardHeader>
+              <CardContent className="p-0">
+                <ScrollArea className="max-h-[300px] px-3 pb-3">
+                  <div className="space-y-2">
+                    {currentSection.items.slice(0, 5).map((item) => {
+                      const iconMap: Record<string, React.ReactNode> = {
+                        text: <FileText className="w-3 h-3 text-blue-600" />,
+                        video: <Video className="w-3 h-3 text-rose-600" />,
+                        quiz: <FileQuestion className="w-3 h-3 text-purple-600" />,
+                        audio: <Headphones className="w-3 h-3 text-cyan-600" />,
+                        sop_reference: <BookOpen className="w-3 h-3 text-emerald-600" />,
+                      }
+
+                      return (
+                        <div key={item.id} className="flex items-start gap-2 p-2 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
+                          <div className="w-5 h-5 rounded bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 border border-slate-200 dark:border-slate-700 mt-0.5">
+                            {iconMap[item.type] || <FileText className="w-3 h-3 text-slate-400" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-[11px] font-semibold text-slate-800 dark:text-slate-200 truncate">
+                              {item.title || t('builder.untitledBlock', 'Untitled')}
+                            </p>
+                            {item.type === 'text' && item.content && (
+                              <p className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
+                                {item.content.replace(/<[^>]*>/g, '').slice(0, 120)}
+                              </p>
+                            )}
+                            {item.type === 'quiz' && (
+                              <p className="text-[10px] text-purple-600 dark:text-purple-400 mt-0.5">
+                                {t('builder.inlinePreview.quizCheckpoint', 'Quiz checkpoint')}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                    {currentSection.items.length > 5 && (
+                      <p className="text-[10px] text-center text-muted-foreground">
+                        +{currentSection.items.length - 5} {t('builder.inlinePreview.moreItems', 'more items')}
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
+          )
+        })()}
       </div>
     )
   }

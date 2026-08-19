@@ -10,9 +10,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 interface PdfViewerProps {
     url: string
     className?: string
+    /** Re-signs a fresh URL (e.g. the previous signed URL expired or a network hiccup occurred). */
+    onRetry?: () => void
 }
 
-export function PdfViewer({ url, className }: PdfViewerProps) {
+export function PdfViewer({ url, className, onRetry }: PdfViewerProps) {
     const [numPages, setNumPages] = useState<number>(0)
     const [pageNumber, setPageNumber] = useState(1)
     const [scale, setScale] = useState(1.0)
@@ -141,21 +143,22 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 }
 
                 const contentType = response.headers.get('content-type') || ''
-                if (contentType.includes('text/html')) {
-                    throw new Error('The document file could not be loaded from storage.')
-                }
-
-                if (contentType.includes('application/json')) {
-                    const text = await response.text()
-                    try {
-                        const parsed = JSON.parse(text)
-                        throw new Error(parsed.message || parsed.error || 'Server returned an error instead of the PDF document.')
-                    } catch (parseErr) {
-                        if (parseErr instanceof Error && parseErr.message !== 'Server returned an error instead of the PDF document.') {
-                            throw parseErr
+                if (!contentType.includes('pdf')) {
+                    if (contentType.includes('application/json')) {
+                        const text = await response.text()
+                        try {
+                            const parsed = JSON.parse(text)
+                            throw new Error(parsed.message || parsed.error || 'Server returned an error instead of the PDF document.')
+                        } catch (parseErr) {
+                            if (parseErr instanceof Error && parseErr.message !== 'Server returned an error instead of the PDF document.') {
+                                throw parseErr
+                            }
+                            throw new Error('Invalid file format received from server.')
                         }
-                        throw new Error('Invalid file format received from server.')
                     }
+                    // Any other unexpected content type (html error page, a stale/expired
+                    // signed link, an empty body, etc.) - the link is no longer valid.
+                    throw new Error('The document file could not be loaded from storage. The link may have expired.')
                 }
 
                 const arrayBuffer = await response.arrayBuffer()
@@ -202,14 +205,22 @@ export function PdfViewer({ url, className }: PdfViewerProps) {
                 <p className="text-xs text-red-400 mb-4 px-4 bg-red-50 py-2 rounded border border-red-100 max-w-md">
                     {error.message}
                 </p>
-                <a
-                    href={url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-hotel-navy hover:text-hotel-gold transition-colors hover:underline mt-2 text-sm"
-                >
-                    Download PDF
-                </a>
+                <div className="flex items-center gap-4">
+                    {onRetry && (
+                        <Button variant="outline" size="sm" onClick={onRetry} className="h-8">
+                            <RotateCw className="h-3.5 w-3.5 mr-1.5" />
+                            Retry
+                        </Button>
+                    )}
+                    <a
+                        href={url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-hotel-navy hover:text-hotel-gold transition-colors hover:underline text-sm"
+                    >
+                        Download PDF
+                    </a>
+                </div>
             </div>
         )
     }

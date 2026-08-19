@@ -5,13 +5,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { useCreateTrainingRule, useDeleteTrainingRule, useTrainingModulesList, useTrainingRules, useUpdateTrainingRule } from '@/hooks/useTrainingRules'
-import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
 import { Pencil, Plus, Shield, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
+// Job-title-based rules were removed: the UI let an admin pick a job_titles.id,
+// but training_assignment_rules has no job_title_id column and profiles only
+// stores job_title as free text (not linked by id) - there was no data path
+// that could ever resolve who a "by job title" rule applied to. Role-based
+// rules are backed by a real relationship (user_roles) end to end.
 export default function TrainingAssignmentRules() {
     const { t, i18n } = useTranslation(['training', 'common'])
     const isRTL = i18n.dir() === 'rtl'
@@ -24,21 +27,10 @@ export default function TrainingAssignmentRules() {
 
     const [isCreateOpen, setIsCreateOpen] = useState(false)
     const [editingRule, setEditingRule] = useState<any>(null)
-    const [targetType, setTargetType] = useState<'role' | 'job_title'>('role')
     const [newRule, setNewRule] = useState({
         training_module_id: '',
         target_role: '',
-        job_title_id: '',
         is_active: true
-    })
-
-    const { data: jobTitles } = useQuery({
-        queryKey: ['job_titles'],
-        queryFn: async () => {
-            const { data, error } = await supabase.from('job_titles').select('*').order('title')
-            if (error) throw error
-            return data
-        }
     })
 
     const roles = [
@@ -54,36 +46,35 @@ export default function TrainingAssignmentRules() {
         setNewRule({
             training_module_id: '',
             target_role: '',
-            job_title_id: '',
             is_active: true
         })
-        setTargetType('role')
         setEditingRule(null)
     }
 
     const handleSave = async () => {
         try {
-            if (!newRule.training_module_id) return
-            if (targetType === 'role' && !newRule.target_role) return
-            if (targetType === 'job_title' && !newRule.job_title_id) return
+            if (!newRule.training_module_id || !newRule.target_role) return
+
+            // Dual-write: target_role/training_module_id are the columns
+            // handle_new_user_training() reads to auto-assign this rule to
+            // anyone granted this role in the future. target_type/target_id/
+            // content_type/content_id are what generate_assignment_progress()
+            // reads to retroactively backfill CURRENT holders of the role
+            // right now. Both are needed - they cover different moments in time.
+            const payload = {
+                training_module_id: newRule.training_module_id,
+                target_role: newRule.target_role,
+                is_active: newRule.is_active,
+                target_type: 'role',
+                target_id: newRule.target_role,
+                content_type: 'module',
+                content_id: newRule.training_module_id
+            }
 
             if (editingRule?.id) {
-                await updateMutation.mutateAsync({
-                    id: editingRule.id,
-                    updates: {
-                        training_module_id: newRule.training_module_id,
-                        target_role: targetType === 'role' ? newRule.target_role : null,
-                        job_title_id: targetType === 'job_title' ? newRule.job_title_id : null,
-                        is_active: newRule.is_active
-                    }
-                })
+                await updateMutation.mutateAsync({ id: editingRule.id, updates: payload })
             } else {
-                await createMutation.mutateAsync({
-                    training_module_id: newRule.training_module_id,
-                    target_role: targetType === 'role' ? newRule.target_role : null,
-                    job_title_id: targetType === 'job_title' ? newRule.job_title_id : null,
-                    is_active: newRule.is_active
-                } as any)
+                await createMutation.mutateAsync(payload as any)
             }
 
             setIsCreateOpen(false)
@@ -95,11 +86,9 @@ export default function TrainingAssignmentRules() {
 
     const startEdit = (rule) => {
         setEditingRule(rule)
-        setTargetType(rule.job_title_id ? 'job_title' : 'role')
         setNewRule({
             training_module_id: rule.training_module_id || '',
             target_role: rule.target_role || '',
-            job_title_id: rule.job_title_id || '',
             is_active: rule.is_active ?? true
         })
         setIsCreateOpen(true)
@@ -151,63 +140,22 @@ export default function TrainingAssignmentRules() {
                             <DialogTitle>{editingRule ? t('rules.edit_title', { defaultValue: 'Edit Rule' }) : t('rules.create_title')}</DialogTitle>
                         </DialogHeader>
                         <div className="space-y-4 py-4">
-
                             <div className="space-y-2">
-                                <label className="text-sm font-medium">{t('rules.assignment_type')}</label>
-                                <div className="flex bg-gray-100 p-1 rounded-md">
-                                    <button
-                                        onClick={() => setTargetType('role')}
-                                        className={cn("flex-1 py-1 text-sm rounded-sm transition-all", targetType === 'role' ? "bg-white shadow-sm font-medium" : "text-gray-500 hover:text-gray-900")}
-                                    >
-                                        {t('rules.by_role')}
-                                    </button>
-                                    <button
-                                        onClick={() => setTargetType('job_title')}
-                                        className={cn("flex-1 py-1 text-sm rounded-sm transition-all", targetType === 'job_title' ? "bg-white shadow-sm font-medium" : "text-gray-500 hover:text-gray-900")}
-                                    >
-                                        {t('rules.by_job_title')}
-                                    </button>
-                                </div>
+                                <label className="text-sm font-medium">{t('rules.target_role')}</label>
+                                <Select
+                                    value={newRule.target_role}
+                                    onValueChange={(val) => setNewRule(prev => ({ ...prev, target_role: val }))}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={t('rules.select_role')} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {roles.map(role => (
+                                            <SelectItem key={role} value={role}>{t(`common:roles.${role}`)}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
-
-                            {targetType === 'role' ? (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t('rules.target_role')}</label>
-                                    <Select
-                                        value={newRule.target_role}
-                                        onValueChange={(val) => setNewRule(prev => ({ ...prev, target_role: val }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t('rules.select_role')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {roles.map(role => (
-                                                <SelectItem key={role} value={role}>{t(`common:roles.${role}`)}</SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            ) : (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium">{t('rules.target_job_title')}</label>
-                                    <Select
-                                        value={newRule.job_title_id}
-                                        onValueChange={(val) => setNewRule(prev => ({ ...prev, job_title_id: val }))}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder={t('rules.select_job_title')} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {jobTitles?.map(jt => (
-                                                <SelectItem key={jt.id} value={jt.id}>
-                                                    {jt.title}
-                                                    {jt.category && <span className="ms-2 text-xs text-muted-foreground">({jt.category})</span>}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            )}
 
                             <div className="space-y-2">
                                 <label className="text-sm font-medium">{t('module')}</label>
@@ -228,7 +176,7 @@ export default function TrainingAssignmentRules() {
                             <Button
                                 onClick={handleSave}
                                 className="w-full"
-                                disabled={(createMutation.isPending || updateMutation.isPending) || (targetType === 'role' && !newRule.target_role) || (targetType === 'job_title' && !newRule.job_title_id) || !newRule.training_module_id}
+                                disabled={(createMutation.isPending || updateMutation.isPending) || !newRule.target_role || !newRule.training_module_id}
                             >
                                 {(createMutation.isPending || updateMutation.isPending)
                                     ? t('rules.creating')
@@ -251,12 +199,9 @@ export default function TrainingAssignmentRules() {
                                 <div className="space-y-1">
                                     <CardTitle className="text-lg font-bold flex items-center gap-2">
                                         <Shield className="w-4 h-4 text-hotel-gold" />
-                                        {rule.target_type === 'job_title' || rule.target_id
-                                            ? (jobTitles?.find(jt => jt.id === rule.target_id)?.title || rule.target_role || t('unknown'))
-                                            : (rule.target_role ? t(`common:roles.${rule.target_role}`) : t('unknown'))
-                                        }
+                                        {rule.target_role ? t(`common:roles.${rule.target_role}`) : t('unknown')}
                                     </CardTitle>
-                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {(rule.target_type === 'job_title' || rule.target_id) ? t('rules.by_job_title') : t('rules.by_role')}</p>
+                                    <p className="text-sm text-gray-500">{t('rules.auto_assigns_to')} {t('rules.by_role')}</p>
                                 </div>
                                 <Badge variant={rule.is_active ? 'default' : 'secondary'}>
                                     {rule.is_active ? t('common:status_options.active') : t('common:status_options.inactive')}
@@ -268,7 +213,6 @@ export default function TrainingAssignmentRules() {
                                 <p className="font-medium text-hotel-navy">
                                     {modules?.find(m => m.id === rule.training_module_id)?.title || rule.training_module_id}
                                 </p>
-                                {/* ... existing buttons ... */}
                                 <div className="flex items-center gap-2 pt-2 border-t mt-4">
                                     <Button
                                         variant="ghost"
@@ -307,6 +251,6 @@ export default function TrainingAssignmentRules() {
                     </div>
                 )}
             </div>
-        </div >
+        </div>
     )
 }

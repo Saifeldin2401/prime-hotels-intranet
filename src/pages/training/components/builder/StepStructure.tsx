@@ -3,11 +3,16 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { useToast } from '@/components/ui/use-toast'
+import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
+import { generateAndLinkCheckpointQuestions } from '@/services/checkpointQuizGenerator'
 import { Plus, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SmartAICourseCreatorModal } from '@/components/training'
+import { useTrainingBuilderContext } from '../../contexts/TrainingBuilderContext'
 import type { TrainingSection } from './trainingBuilderTypes'
 
 interface StepStructureProps {
@@ -40,6 +45,9 @@ export function StepStructure({
   isRTL,
 }: StepStructureProps) {
   const { t } = useTranslation('training')
+  const { toast } = useToast()
+  const { profile } = useAuth()
+  const ctx = useTrainingBuilderContext()
   const [showAIOutline, setShowAIOutline] = useState(false)
 
   return (
@@ -145,16 +153,15 @@ export function StepStructure({
         open={showAIOutline}
         onOpenChange={setShowAIOutline}
         initialTopic={title}
-        onApplyToBuilder={(generated) => {
+        onApplyToBuilder={async (generated) => {
           if (generated.title && !title) setTitle(generated.title)
           if (generated.description && !description) setDescription(generated.description)
 
-          const newSections = (generated.sections || []).map((sec: any, idx: number) => ({
-            id: `section_${Date.now()}_${idx}`,
-            title: sec.heading,
-            description: sec.summary,
-            order: sections.length + idx,
-            items: [
+          const checkpoints = generated.checkpoints || []
+          const checkpointFailures: string[] = []
+
+          const newSections = await Promise.all((generated.sections || []).map(async (sec: any, idx: number) => {
+            const items: any[] = [
               {
                 id: `block_${Date.now()}_${idx}`,
                 title: sec.heading,
@@ -166,11 +173,89 @@ export function StepStructure({
                 order: 0
               }
             ]
+
+            const checkpoint = checkpoints.find((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
+            if (checkpoint) {
+              // Create the real quiz + AI-generated questions now, not just a
+              // placeholder block - a quiz-type block with no linked quiz_id
+              // (or a quiz with zero questions) permanently blocks completion
+              // once this module is saved/published.
+              try {
+                const { data: createdQuiz } = await supabase
+                  .from('learning_quizzes')
+                  .insert({
+                    title: `Checkpoint: ${checkpoint.topic || sec.heading}`,
+                    description: `Verification quiz for ${sec.heading}`,
+                    training_module_id: ctx.moduleId,
+                    passing_score_percentage: Number(ctx.passingScore) || 80,
+                    time_limit_minutes: 10,
+                    max_attempts: 3,
+                    status: 'published',
+                    created_by: profile?.id
+                  })
+                  .select()
+                  .single()
+
+                if (createdQuiz) {
+                  const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
+                    quizId: createdQuiz.id,
+                    sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
+                    difficulty: generated.difficulty,
+                    language: generated.language,
+                    trainingModuleId: ctx.moduleId,
+                    createdBy: profile?.id
+                  })
+
+                  if (linkedQuestionCount > 0) {
+                    items.push({
+                      id: `block_${Date.now()}_${idx}_quiz`,
+                      title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
+                      type: 'quiz' as any,
+                      content: '',
+                      content_url: '',
+                      content_data: {
+                        quiz_id: createdQuiz.id,
+                        is_checkpoint: true,
+                        passing_score: 80,
+                        topic: checkpoint.topic
+                      },
+                      is_mandatory: true,
+                      order: 1
+                    })
+                  } else {
+                    await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)
+                    checkpointFailures.push(checkpoint.topic || sec.heading)
+                  }
+                }
+              } catch (qErr) {
+                console.warn('Could not generate quiz checkpoint for section:', qErr)
+                checkpointFailures.push(checkpoint.topic || sec.heading)
+              }
+            }
+
+            return {
+              id: `section_${Date.now()}_${idx}`,
+              title: sec.heading,
+              description: sec.summary,
+              order: sections.length + idx,
+              items
+            }
           }))
 
           setSections((prev) => [...prev, ...newSections])
           if (newSections.length > 0) {
             setActiveSection(newSections[0].id)
+          }
+
+          if (checkpointFailures.length > 0) {
+            toast({
+              title: t('builder.checkpointGenerationIncomplete', 'Some checkpoint quizzes were skipped'),
+              description: t(
+                'builder.checkpointGenerationIncompleteDesc',
+                `Could not generate a usable quiz for: ${checkpointFailures.join(', ')}. Add one manually before publishing.`
+              ),
+              variant: 'destructive'
+            })
           }
         }}
       />

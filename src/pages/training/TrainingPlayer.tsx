@@ -972,15 +972,22 @@ export default function TrainingPlayer() {
                 }
             }
 
-            const isPassed = true
-
-            await learningService.completeTrainingModuleRPC(moduleData.module.id, {
+            // complete_training_module raises if any mandatory requirement
+            // isn't server-verified yet, so a successful await here already
+            // means the module is genuinely complete - but the score/passed
+            // values used below come from what the RPC actually persisted,
+            // not from client-side aggregation, so they can never drift from
+            // the row a certificate or completion screen would later re-read.
+            const rpcResult = await learningService.completeTrainingModuleRPC(moduleData.module.id, {
                 assignmentId: assignmentId || undefined,
                 completedBlockIds: resolvedCompletedBlocks,
                 lastBlockId: resolvedLastBlockId,
                 lastBlockIndex: resolvedLastBlockIndex,
                 timeSpentSeconds: timeSpent,
             })
+
+            const isPassed = rpcResult.passed
+            const finalScore = rpcResult.score_percentage ?? effectiveScore
 
             try {
                 await skillsService.awardModuleSkills(user.id, moduleData.module.id)
@@ -1005,7 +1012,7 @@ export default function TrainingPlayer() {
                             title: moduleData.module.title,
                             description: t('certificateEarned', { moduleName: moduleData.module.title }),
                             completionDate: new Date(),
-                            score: effectiveScore,
+                            score: finalScore,
                             passingScore: moduleData.module.passing_score_percentage ?? undefined,
                             trainingModuleId: moduleData.module.id,
                             trainingProgressId: linkedTrainingProgressId,
@@ -1088,7 +1095,7 @@ export default function TrainingPlayer() {
                 }
             }
 
-            setCompletionScore(typeof effectiveScore === 'number' ? effectiveScore : null)
+            setCompletionScore(typeof finalScore === 'number' ? finalScore : null)
             setCompletionPassed(isPassed)
             setIsFinished(true)
             setShowCelebrationModal(true)

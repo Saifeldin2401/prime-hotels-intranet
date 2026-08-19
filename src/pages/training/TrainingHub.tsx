@@ -188,7 +188,7 @@ export default function TrainingHub() {
 
       const { data: progress, error: progressError } = await supabase
         .from('training_progress')
-        .select('status, quiz_score')
+        .select('status, score_percentage')
 
       if (progressError) {
         console.error('Error fetching training progress:', progressError)
@@ -199,9 +199,9 @@ export default function TrainingHub() {
       const draft = 0
       const completed = progress?.filter(p => p.status === 'completed').length || 0
       const inProgress = progress?.filter(p => p.status === 'in_progress').length || 0
-      const scoresWithValues = progress?.filter(p => p.quiz_score != null) || []
+      const scoresWithValues = progress?.filter(p => p.score_percentage != null) || []
       const avgScore = scoresWithValues.length > 0
-        ? scoresWithValues.reduce((acc, p) => acc + (p.quiz_score || 0), 0) / scoresWithValues.length
+        ? scoresWithValues.reduce((acc, p) => acc + (p.score_percentage || 0), 0) / scoresWithValues.length
         : 0
 
       return {

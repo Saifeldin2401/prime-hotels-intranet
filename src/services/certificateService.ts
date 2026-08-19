@@ -57,7 +57,7 @@ export interface Certificate extends CertificateData {
 type TrainingProgressSnapshot = {
     id: string
     training_id: string
-    quiz_score: number | null
+    score_percentage: number | null
 }
 
 type CertificateRecord = {
@@ -260,7 +260,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
         const resolveProgressById = async (progressId: string): Promise<TrainingProgressSnapshot | null> => {
             const { data: progress, error } = await supabase
                 .from('training_progress')
-                .select('id, training_id, quiz_score')
+                .select('id, training_id, score_percentage')
                 .eq('id', progressId)
                 .eq('user_id', data.userId)
                 .eq('is_deleted', false)
@@ -273,7 +273,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
         const resolveProgressByModule = async (moduleId: string): Promise<TrainingProgressSnapshot | null> => {
             const { data: progress, error } = await supabase
                 .from('training_progress')
-                .select('id, training_id, quiz_score')
+                .select('id, training_id, score_percentage')
                 .eq('user_id', data.userId)
                 .eq('training_id', moduleId)
                 .eq('is_deleted', false)
@@ -292,7 +292,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
                     resolvedTrainingModuleId = progress.training_id
                 }
                 if (resolvedScore === undefined || resolvedScore === null) {
-                    resolvedScore = progress.quiz_score ?? undefined
+                    resolvedScore = progress.score_percentage ?? undefined
                 }
             }
         }
@@ -302,7 +302,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             if (progress) {
                 resolvedTrainingProgressId = progress.id
                 if (resolvedScore === undefined || resolvedScore === null) {
-                    resolvedScore = progress.quiz_score ?? undefined
+                    resolvedScore = progress.score_percentage ?? undefined
                 }
             }
         }

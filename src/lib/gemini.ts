@@ -12,6 +12,32 @@ const FALLBACK_MODELS = [
 ]
 
 /**
+ * Scans a string and returns the raw text of every complete, balanced top-level
+ * {...} object it contains (ignoring braces inside quoted strings). Used to
+ * salvage whatever was fully generated before an LLM response got truncated.
+ */
+function extractCompleteObjects(str: string): string[] {
+  const objects: string[] = []
+  let depth = 0, start = -1, inStr = false, escape = false
+  for (let i = 0; i < str.length; i++) {
+    const ch = str[i]
+    if (escape) { escape = false; continue }
+    if (ch === '\\') { escape = true; continue }
+    if (ch === '"') { inStr = !inStr; continue }
+    if (inStr) continue
+    if (ch === '{') { if (depth === 0) start = i; depth++ }
+    if (ch === '}') {
+      depth--
+      if (depth === 0 && start !== -1) {
+        objects.push(str.slice(start, i + 1))
+        start = -1
+      }
+    }
+  }
+  return objects
+}
+
+/**
  * Robust JSON parser for LLM outputs.
  * Handles trailing commas, unescaped newlines in strings, and truncated arrays.
  */
@@ -43,24 +69,7 @@ function safeParseJson<T>(raw: string, expectArray: boolean): T | null {
     // Second attempt: if array is truncated, extract only complete objects
     if (expectArray) {
       try {
-        // Find all complete {...} objects within the array
-        const objects: string[] = []
-        let depth = 0, start = -1, inStr = false, escape = false
-        for (let i = 0; i < match[0].length; i++) {
-          const ch = match[0][i]
-          if (escape) { escape = false; continue }
-          if (ch === '\\') { escape = true; continue }
-          if (ch === '"') { inStr = !inStr; continue }
-          if (inStr) continue
-          if (ch === '{') { if (depth === 0) start = i; depth++ }
-          if (ch === '}') {
-            depth--
-            if (depth === 0 && start !== -1) {
-              objects.push(match[0].slice(start, i + 1))
-              start = -1
-            }
-          }
-        }
+        const objects = extractCompleteObjects(match[0])
         if (objects.length > 0) {
           return JSON.parse(`[${objects.join(',')}]`) as T
         }
@@ -69,6 +78,55 @@ function safeParseJson<T>(raw: string, expectArray: boolean): T | null {
       }
     }
     return null
+  }
+}
+
+/**
+ * Best-effort salvage for a truncated ModuleOutline response: a cut-off "sections"
+ * array still means some sections rendered completely before the token limit hit.
+ * Returning those (instead of nothing) means a partially-generated course still
+ * reflects the actual topic instead of falling all the way back to generic content.
+ */
+function salvageTruncatedOutline(raw: string): ModuleOutline | null {
+  const text = raw.replace(/```json\n?|\n?```/g, '').trim()
+
+  const titleMatch = text.match(/"title"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+  const descriptionMatch = text.match(/"description"\s*:\s*"((?:[^"\\]|\\.)*)"/)
+  const sectionsStart = text.indexOf('"sections"')
+  if (sectionsStart === -1) return null
+
+  const arrayStart = text.indexOf('[', sectionsStart)
+  if (arrayStart === -1) return null
+
+  const objects = extractCompleteObjects(text.slice(arrayStart))
+  const validBlockTypes = new Set(['text', 'video', 'document_link', 'scenario'])
+  const sections: ModuleOutlineSection[] = []
+  for (const objText of objects) {
+    try {
+      const obj = JSON.parse(objText.replace(/,\s*}/g, '}')) as Partial<ModuleOutlineSection>
+      if (obj?.heading) {
+        sections.push({
+          heading: obj.heading,
+          suggestedBlockType: validBlockTypes.has(obj.suggestedBlockType as string)
+            ? (obj.suggestedBlockType as ModuleOutlineSection['suggestedBlockType'])
+            : 'text',
+          summary: obj.summary || '',
+          rich_content: obj.rich_content || `<h3>${obj.heading}</h3><p>${obj.summary || ''}</p>`
+        })
+      }
+    } catch {
+      // Skip the one section object that was mid-generation when the cutoff hit
+    }
+  }
+
+  if (sections.length === 0) return null
+
+  const unescape = (s: string) => s.replace(/\\n/g, ' ').replace(/\\"/g, '"').replace(/\\\\/g, '\\')
+  return {
+    title: titleMatch ? unescape(titleMatch[1]) : '',
+    description: descriptionMatch ? unescape(descriptionMatch[1]) : '',
+    sections,
+    suggestedQuizCheckpoints: []
   }
 }
 
@@ -199,62 +257,67 @@ const cleanText = (text: string): string => {
 
 // 🧱 PROXY AI CALLER via Supabase Edge Function
 
-async function callHuggingFace(model: string, prompt: string) {
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
-  try {
-    const request: ProcessAiRequest = { model, prompt }
-    const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
-      body: request
-    })
+async function callHuggingFaceOnce(model: string, prompt: string, maxTokens?: number) {
+  const request: ProcessAiRequest = { model, prompt, ...(maxTokens ? { max_tokens: maxTokens } : {}) }
+  const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
+    body: request
+  })
 
-
-
-    if (error) {
-
-      // Hard network error (500/404 from Supabase itself)
-
-      console.error("Critical Edge Error:", error)
-
-      throw new Error(`Edge Function Connectivity Error: ${error.message}`)
-
-    }
-
-
-
-    if (isProcessAiErrorResponse(data)) {
-
-      // Check for session expiry
-
-      if (data.error && (data.error.includes('Session expired') || data.error.includes('Unauthorized'))) {
-
-        throw new Error('Your session has expired. Please refresh the page to continue using AI features.')
-
+  if (error) {
+    // FunctionsHttpError carries the real edge-function response body on `.context` --
+    // read it so failures surface the actual reason instead of the generic
+    // "Edge Function returned a non-2xx status code" wrapper message.
+    let detail = error.message
+    const context = (error as { context?: Response }).context
+    if (context && typeof context.text === 'function') {
+      try {
+        const parsed = JSON.parse(await context.clone().text())
+        if (parsed?.error) detail = parsed.error
+      } catch {
+        // Non-JSON or unreadable body -- keep the generic message
       }
-
-      // Soft failure from Edge Function (e.g. HF API 400/500)
-
-      console.warn(`Model ${model} rejected:`, data.error)
-
-      throw new Error(data.error)
-
     }
-
-
-
-    // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
-
-    return (data.response || data.result) as string
-
-  } catch (error: unknown) {
-
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-
-    console.warn(`Model ${model} call failed via proxy:`, errorMessage)
-
-    throw error // Re-throw to trigger fallback loop
-
+    console.error('Critical Edge Error:', detail)
+    throw new Error(`Edge Function Connectivity Error: ${detail}`)
   }
 
+  if (isProcessAiErrorResponse(data)) {
+    if (data.error && (data.error.includes('Session expired') || data.error.includes('Unauthorized'))) {
+      throw new Error('Your session has expired. Please refresh the page to continue using AI features.')
+    }
+    console.warn(`Model ${model} rejected:`, data.error)
+    throw new Error(data.error)
+  }
+
+  // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
+  return (data.response || data.result) as string
+}
+
+/**
+ * Hugging Face's shared inference pool occasionally returns a transient
+ * error (cold start, brief rate limit) that clears up within a second or
+ * two. One automatic retry here means a single blip doesn't surface as a
+ * failed generation to the user.
+ */
+async function callHuggingFace(model: string, prompt: string, maxTokens?: number) {
+  try {
+    return await callHuggingFaceOnce(model, prompt, maxTokens)
+  } catch (firstError: unknown) {
+    const message = firstError instanceof Error ? firstError.message : 'Unknown error'
+    if (message.includes('session has expired')) throw firstError // Retrying won't help
+
+    console.warn(`Model ${model} call failed, retrying once in 1.5s:`, message)
+    await sleep(1500)
+    try {
+      return await callHuggingFaceOnce(model, prompt, maxTokens)
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      console.warn(`Model ${model} call failed via proxy after retry:`, errorMessage)
+      throw error // Re-throw to trigger the caller's fallback
+    }
+  }
 }
 
 
@@ -652,7 +715,7 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 
       try {
 
-        const generatedText = await callHuggingFace(model, prompt)
+        const generatedText = await callHuggingFace(model, prompt, 4000)
 
         const parsed = safeParseJson<QuizQuestion[]>(generatedText, true)
         if (Array.isArray(parsed) && parsed.length > 0) {
@@ -736,8 +799,11 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 
     for (const model of FALLBACK_MODELS) {
       try {
-        const generatedText = await callHuggingFace(model, prompt)
-        const parsed = safeParseJson<ModuleOutline>(generatedText, false)
+        // A full multi-section module (rich_content per section) is easily
+        // 4-6k+ tokens; the previous unset default (2048) truncated it almost
+        // every time, which silently fell back to generic template content.
+        const generatedText = await callHuggingFace(model, prompt, 7500)
+        const parsed = safeParseJson<ModuleOutline>(generatedText, false) || salvageTruncatedOutline(generatedText)
         if (parsed && parsed.title && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
           const validBlockTypes = new Set(['text', 'video', 'document_link', 'scenario'])
           const sections = parsed.sections
@@ -1034,7 +1100,7 @@ ${serializedQuestions}`
 
       try {
 
-        const generatedText = await callHuggingFace(model, prompt)
+        const generatedText = await callHuggingFace(model, prompt, 4000)
 
         const parsed = safeParseJson<QuizRepairQuestionOutput[]>(generatedText, true)
         if (Array.isArray(parsed) && parsed.length > 0) {
