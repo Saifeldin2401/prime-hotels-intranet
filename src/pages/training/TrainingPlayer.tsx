@@ -310,6 +310,58 @@ function getBlockMediaUrl(block: TrainingContentBlock | undefined | null): strin
     return null
 }
 
+/**
+ * Convert a YouTube or Vimeo URL to a proper embeddable iframe URL.
+ * Regular youtube.com/watch URLs refuse iframe embedding – we need
+ * youtube-nocookie.com/embed/ instead.
+ */
+function toEmbedUrl(url: string): string {
+    try {
+        const parsed = new URL(url)
+        const h = parsed.hostname
+
+        // YouTube
+        if (['youtube.com', 'www.youtube.com', 'youtu.be', 'www.youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(h)) {
+            let videoId: string | null = null
+
+            if (h === 'youtu.be' || h === 'www.youtu.be') {
+                videoId = parsed.pathname.replace('/', '').trim() || null
+            } else if (parsed.pathname.startsWith('/watch')) {
+                videoId = parsed.searchParams.get('v')
+            } else if (parsed.pathname.startsWith('/shorts/')) {
+                videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/embed/')) {
+                // Already an embed URL — normalise to nocookie domain
+                videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/live/')) {
+                videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
+            }
+
+            // Fallback regex
+            if (!videoId) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
+                const match = url.match(regExp)
+                videoId = match?.[2] || null
+            }
+
+            if (!videoId || videoId.length < 8) return url
+
+            const params = new URLSearchParams({ rel: '0', modestbranding: '1', playsinline: '1' })
+            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+        }
+
+        // Vimeo
+        if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(h)) {
+            const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
+            const id = match?.[2]
+            if (id) return `https://player.vimeo.com/video/${id}`
+        }
+    } catch {
+        // URL parsing failed — return as-is
+    }
+    return url
+}
+
 type VideoPlayerProps = {
     src: string
     blockId: string
@@ -1559,7 +1611,7 @@ export default function TrainingPlayer() {
                                         />
                                     ) : (
                                         <iframe
-                                            src={videoUrl}
+                                            src={toEmbedUrl(videoUrl)}
                                             className="w-full h-full"
                                             allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
                                             allowFullScreen

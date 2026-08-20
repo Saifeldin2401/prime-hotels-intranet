@@ -251,6 +251,28 @@ function generateVerificationCode(): string {
  * Create a new certificate in the database
  */
 export async function createCertificate(data: CertificateData): Promise<Certificate | null> {
+    // 'training' certificates are no longer client-insertable (RLS requires an
+    // admin/HR role or routing through this RPC, which re-validates the learner's
+    // own training_progress server-side before issuing).
+    if (data.certificateType === 'training' && data.trainingProgressId) {
+        const { data: cert, error } = await supabase
+            .rpc('issue_training_certificate', { p_training_progress_id: data.trainingProgressId })
+            .single()
+
+        if (error || !cert) {
+            console.error('Failed to issue training certificate:', error)
+            return null
+        }
+
+        const resultCertificate = mapCertificateFromDb(cert as CertificateRecord)
+
+        if (data.recipientEmail) {
+            void dispatchCertificateEmail(data, resultCertificate)
+        }
+
+        return resultCertificate
+    }
+
     let resolvedTrainingModuleId = data.trainingModuleId
     let resolvedTrainingProgressId = data.trainingProgressId
     let resolvedScore = data.score
@@ -433,62 +455,70 @@ export async function createCertificate(data: CertificateData): Promise<Certific
     }
 
     // Automated email dispatch for attained certificates
-    try {
-        if (data.recipientEmail) {
-            const resultCertificate = mapCertificateFromDb(cert)
-            let attachments: Array<{ filename: string; content: string }> | undefined
-            
-            try {
-                const logoDataUrl = await loadLogoAsDataUrl()
-                const pdfBlob = await generateCertificatePDF(resultCertificate, logoDataUrl || undefined)
-                const fileReader = new FileReader()
-                const base64Promise = new Promise<string>((resolve, reject) => {
-                    fileReader.onloadend = () => {
-                        const result = fileReader.result as string
-                        const base64Content = result.split(',')[1]
-                        resolve(base64Content)
-                    }
-                    fileReader.onerror = reject
-                    fileReader.readAsDataURL(pdfBlob)
-                })
-                const base64Content = await base64Promise
-                
-                attachments = [
-                    {
-                        filename: `${data.title.replace(/[^a-zA-Z0-9 -]/g, '')} - Certificate.pdf`,
-                        content: base64Content
-                    }
-                ]
-            } catch (pdfError) {
-                console.warn('Failed to generate PDF for email attachment:', pdfError)
-            }
-
-            await supabase.functions.invoke('send-email', {
-                body: {
-                    to: data.recipientEmail,
-                    userId: data.userId,
-                    templateKey: 'training_certificate_earned',
-                    subject: 'Your Certificate of Completion: ' + data.title,
-                    title: 'Certificate Attained',
-                    message: `Congratulations ${data.recipientName}! You have successfully earned the ${data.title} certificate.`,
-                    actionUrl: '/training/certificates',
-                    businessDomain: 'operations',
-                    notificationType: 'training_completed',
-                    attachments,
-                    variables: {
-                        recipient_name: data.recipientName,
-                        module_title: data.title,
-                        certificate_number: certificateNumber,
-                        verification_code: verificationCode
-                    }
-                }
-            })
-        }
-    } catch (emailError) {
-        console.error('Failed to dispatch certificate email:', emailError)
+    if (data.recipientEmail) {
+        void dispatchCertificateEmail(data, mapCertificateFromDb(cert))
     }
 
     return mapCertificateFromDb(cert)
+}
+
+/**
+ * Generate the certificate PDF and email it to the recipient. Failures here
+ * are logged, not thrown - the certificate itself is already persisted by
+ * the time this runs, so an email/PDF hiccup shouldn't fail the caller.
+ */
+async function dispatchCertificateEmail(data: CertificateData, resultCertificate: Certificate): Promise<void> {
+    try {
+        let attachments: Array<{ filename: string; content: string }> | undefined
+
+        try {
+            const logoDataUrl = await loadLogoAsDataUrl()
+            const pdfBlob = await generateCertificatePDF(resultCertificate, logoDataUrl || undefined)
+            const fileReader = new FileReader()
+            const base64Promise = new Promise<string>((resolve, reject) => {
+                fileReader.onloadend = () => {
+                    const result = fileReader.result as string
+                    const base64Content = result.split(',')[1]
+                    resolve(base64Content)
+                }
+                fileReader.onerror = reject
+                fileReader.readAsDataURL(pdfBlob)
+            })
+            const base64Content = await base64Promise
+
+            attachments = [
+                {
+                    filename: `${data.title.replace(/[^a-zA-Z0-9 -]/g, '')} - Certificate.pdf`,
+                    content: base64Content
+                }
+            ]
+        } catch (pdfError) {
+            console.warn('Failed to generate PDF for email attachment:', pdfError)
+        }
+
+        await supabase.functions.invoke('send-email', {
+            body: {
+                to: data.recipientEmail,
+                userId: data.userId,
+                templateKey: 'training_certificate_earned',
+                subject: 'Your Certificate of Completion: ' + data.title,
+                title: 'Certificate Attained',
+                message: `Congratulations ${data.recipientName}! You have successfully earned the ${data.title} certificate.`,
+                actionUrl: '/training/certificates',
+                businessDomain: 'operations',
+                notificationType: 'training_completed',
+                attachments,
+                variables: {
+                    recipient_name: data.recipientName,
+                    module_title: data.title,
+                    certificate_number: resultCertificate.certificateNumber,
+                    verification_code: resultCertificate.verificationCode
+                }
+            }
+        })
+    } catch (emailError) {
+        console.error('Failed to dispatch certificate email:', emailError)
+    }
 }
 
 /**

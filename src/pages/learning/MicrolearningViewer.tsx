@@ -24,12 +24,66 @@ function isYouTubeOrVimeoUrl(url: string): boolean {
         const validHosts = [
             'youtube.com', 'www.youtube.com',
             'youtu.be', 'www.youtu.be',
-            'vimeo.com', 'www.vimeo.com'
+            'youtube-nocookie.com', 'www.youtube-nocookie.com',
+            'vimeo.com', 'www.vimeo.com',
+            'player.vimeo.com',
         ]
         return validHosts.includes(parsed.hostname)
     } catch {
         return false
     }
+}
+
+// Convert any YouTube/Vimeo URL to a proper embeddable URL
+function getEmbedUrl(videoUrl: string): string {
+    if (!videoUrl) return ''
+    try {
+        const parsed = new URL(videoUrl)
+        const hostname = parsed.hostname
+
+        // YouTube
+        if (['youtube.com', 'www.youtube.com', 'youtu.be', 'www.youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com'].includes(hostname)) {
+            let videoId: string | null = null
+
+            if (hostname === 'youtu.be' || hostname === 'www.youtu.be') {
+                videoId = parsed.pathname.replace('/', '').trim() || null
+            } else if (parsed.pathname.startsWith('/watch')) {
+                videoId = parsed.searchParams.get('v')
+            } else if (parsed.pathname.startsWith('/shorts/')) {
+                videoId = parsed.pathname.split('/shorts/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/embed/')) {
+                videoId = parsed.pathname.split('/embed/')[1]?.split('/')[0] || null
+            } else if (parsed.pathname.startsWith('/live/')) {
+                videoId = parsed.pathname.split('/live/')[1]?.split('/')[0] || null
+            }
+
+            // Fallback regex
+            if (!videoId) {
+                const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=|shorts\/|live\/)([^#&?]*).*/
+                const match = videoUrl.match(regExp)
+                videoId = match?.[2] || null
+            }
+
+            if (!videoId || videoId.length < 8) return videoUrl
+
+            const params = new URLSearchParams({
+                rel: '0',
+                modestbranding: '1',
+                playsinline: '1',
+            })
+            return `https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?${params.toString()}`
+        }
+
+        // Vimeo
+        if (['vimeo.com', 'www.vimeo.com', 'player.vimeo.com'].includes(hostname)) {
+            const match = parsed.pathname.match(/(\/video\/)?(\d+)/)
+            const id = match?.[2]
+            if (id) return `https://player.vimeo.com/video/${id}`
+        }
+    } catch {
+        // If URL parsing fails, return as-is
+    }
+    return videoUrl
 }
 
 export default function MicrolearningViewer() {
@@ -154,11 +208,13 @@ export default function MicrolearningViewer() {
 
                 <div className="relative aspect-video bg-black rounded-xl overflow-hidden shadow-lg group">
                     {isYouTubeOrVimeoUrl(content.video_url) ? (
-                        // Naive embed for demo - in prod would use a proper player library
                         <iframe
-                            src={content.video_url.replace('watch?v=', 'embed/')}
+                            src={getEmbedUrl(content.video_url)}
                             className="w-full h-full"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                             allowFullScreen
+                            referrerPolicy="strict-origin-when-cross-origin"
+                            loading="lazy"
                             title={content.title}
                         />
                     ) : (

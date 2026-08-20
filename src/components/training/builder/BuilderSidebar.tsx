@@ -1,17 +1,21 @@
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
 
 interface BuilderSidebarProps {
-    className?: string
-    children?: React.ReactNode
+  className?: string
+  children?: React.ReactNode
 }
 
 export const BuilderSidebar = ({ className, children }: BuilderSidebarProps) => {
-    return (
-        <div className={cn("w-80 border-l bg-slate-50/50 flex flex-col h-[calc(100vh-4rem)] sticky top-16", className)}>
-            <ScrollArea className="flex-1">
-                {children}
-            </ScrollArea>
-        </div>
-    )
+  return (
+    <aside
+      className={cn(
+        "w-[260px] xl:w-[280px] shrink-0 border-s border-slate-200 dark:border-slate-800 bg-slate-50/40 dark:bg-slate-900/40 flex flex-col h-full overflow-y-auto overflow-x-hidden",
+        className
+      )}
+    >
+      <div className="w-full min-w-0">
+        {children}
+      </div>
+    </aside>
+  )
 }

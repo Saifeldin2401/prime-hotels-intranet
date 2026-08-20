@@ -3,22 +3,27 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import { InlineBlockPreview } from './InlineBlockPreview'
 import {
+  AlertCircle,
   ArrowDown,
   ArrowUp,
   BookOpen,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  Copy,
+  Edit3,
   Eye,
   FileQuestion,
   FileText,
   Gamepad2,
+  GraduationCap,
   GripVertical,
   Headphones,
   Image,
@@ -26,6 +31,7 @@ import {
   Link,
   Loader2,
   Plus,
+  SlidersHorizontal,
   Sparkles,
   Trash2,
   Video
@@ -35,7 +41,7 @@ import { useTranslation } from 'react-i18next'
 
 type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference'
 
-interface ContentBlockForm {
+export interface ContentBlockForm {
   id: string
   type: ContentType
   content: string
@@ -48,7 +54,7 @@ interface ContentBlockForm {
   order: number
 }
 
-interface TrainingSection {
+export interface TrainingSection {
   id: string
   title: string
   description?: string
@@ -73,6 +79,20 @@ interface BuilderCanvasProps {
   onRenameSection?: (sectionId: string, newTitle: string) => void
   onDuplicateSection?: (sectionId: string) => void
   onDeepExpandLesson?: (sectionId: string, contentId: string) => Promise<void>
+
+  // Course Metadata fields
+  title?: string
+  setTitle?: (v: string) => void
+  description?: string
+  setDescription?: (v: string) => void
+  category?: string
+  setCategory?: (v: string) => void
+  audience?: string
+  setAudience?: (v: string) => void
+  difficultyLevel?: string
+  setDifficultyLevel?: (v: string) => void
+  contentLanguage?: string
+  setContentLanguage?: (v: string) => void
 }
 
 const CONTENT_TYPES_CONFIG: Array<{ type: ContentType; label: string; icon: any; color: string; desc: string }> = [
@@ -99,7 +119,19 @@ export const BuilderCanvas = ({
   onOpenTemplateSelector,
   onRenameSection,
   onDuplicateSection,
-  onDeepExpandLesson
+  onDeepExpandLesson,
+  title = '',
+  setTitle,
+  description = '',
+  setDescription,
+  category = 'operations',
+  setCategory,
+  audience = 'all',
+  setAudience,
+  difficultyLevel = 'beginner',
+  setDifficultyLevel,
+  contentLanguage = 'english',
+  setContentLanguage,
 }: BuilderCanvasProps) => {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -109,6 +141,7 @@ export const BuilderCanvas = ({
   const [expandingLessonId, setExpandingLessonId] = useState<string | null>(null)
   const [filterType, setFilterType] = useState<string>('all')
   const [expandedBlocks, setExpandedBlocks] = useState<Set<string>>(new Set())
+  const [isMetadataExpanded, setIsMetadataExpanded] = useState<boolean>(!title.trim() || !category)
 
   const toggleBlockPreview = useCallback((blockId: string) => {
     setExpandedBlocks(prev => {
@@ -217,16 +250,242 @@ export const BuilderCanvas = ({
     setEditingSectionId(null)
   }
 
+  const categoryLabels: Record<string, string> = {
+    front_office: 'Front Office',
+    housekeeping: 'Housekeeping',
+    food_beverage: 'Food & Beverage',
+    culinary: 'Culinary & Kitchen',
+    operations: 'Hotel Operations',
+    safety_security: 'Safety & Security',
+    maintenance: 'Engineering & Maintenance',
+    compliance: 'Compliance',
+    onboarding: 'Onboarding',
+    skills: 'Hospitality Skills',
+  }
+
+  const audienceLabels: Record<string, string> = {
+    all: 'All Staff',
+    new_hires: 'New Hires',
+    frontline: 'Frontline Staff',
+    supervisors: 'Supervisors',
+    management: 'Management',
+  }
+
   return (
-    <div className="flex-1 p-6 md:p-8 bg-slate-50/60 dark:bg-slate-950/40 min-h-[calc(100vh-4rem)]">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <div className="flex-1 p-3 md:p-5 lg:p-6 bg-slate-50/60 dark:bg-slate-950/40 w-full overflow-x-hidden">
+      <div className="w-full max-w-3xl xl:max-w-4xl mx-auto space-y-5">
+
+        {/* Collapsible Course Metadata & Classification Card */}
+        <Card className={cn(
+          "overflow-hidden border transition-all duration-200 shadow-xs",
+          isMetadataExpanded
+            ? "bg-white dark:bg-slate-900 border-amber-300/80 dark:border-amber-700/80 shadow-sm"
+            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300"
+        )}>
+          {/* Collapsed Header / Summary Bar */}
+          <div
+            className={cn(
+              "px-4 py-3 flex items-center justify-between gap-3 cursor-pointer select-none",
+              isRTL ? "flex-row-reverse" : ""
+            )}
+            onClick={() => setIsMetadataExpanded(!isMetadataExpanded)}
+          >
+            <div className={cn("flex items-center gap-2.5 flex-1 min-w-0", isRTL ? "flex-row-reverse" : "")}>
+              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center shrink-0">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+              </div>
+              <div className={cn("flex items-center gap-2 flex-wrap min-w-0", isRTL ? "flex-row-reverse" : "")}>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 dark:text-white">
+                    {title.trim() || t('builder.untitledModule', 'Untitled Course')}
+                  </span>
+                  {(!title.trim() || title === 'Untitled Module' || title === 'Untitled Course') && (
+                    <Badge variant="outline" className="text-[10px] bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-300 font-bold animate-pulse flex items-center gap-1">
+                      <Edit3 className="w-3 h-3 text-amber-600" />
+                      <span>{t('builder.nameCoursePrompt', 'Click to set course name')}</span>
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <Badge variant="secondary" className="text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {categoryLabels[category] || category || 'Operations'}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px] font-medium text-slate-500">
+                    {audienceLabels[audience] || audience || 'All Staff'}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px] font-medium text-slate-500 capitalize">
+                    {difficultyLevel}
+                  </Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className={cn("flex items-center gap-2 shrink-0", isRTL ? "flex-row-reverse" : "")}>
+              {(!title.trim() || !category) && (
+                <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-300">
+                  <AlertCircle className="w-3 h-3 me-1 text-amber-600" />
+                  {t('builder.incompleteClassification', 'Setup needed')}
+                </Badge>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs font-semibold text-slate-600 hover:text-slate-900"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  setIsMetadataExpanded(!isMetadataExpanded)
+                }}
+              >
+                <Edit3 className="w-3 h-3 me-1 text-slate-400" />
+                <span>{isMetadataExpanded ? t('builder.collapse', 'Done') : t('builder.editDetails', 'Edit Details')}</span>
+                {isMetadataExpanded ? <ChevronUp className="w-3.5 h-3.5 ms-1" /> : <ChevronDown className="w-3.5 h-3.5 ms-1" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Expanded Metadata Form */}
+          {isMetadataExpanded && (
+            <CardContent className="p-4 md:p-5 pt-2 border-t border-slate-100 dark:border-slate-800 space-y-4 bg-slate-50/40 dark:bg-slate-900/40">
+              {/* Course Title Input (Prominent & First) */}
+              <div className="space-y-1.5 p-3.5 rounded-xl bg-white dark:bg-slate-950 border-2 border-amber-300/80 dark:border-amber-700/80 shadow-xs">
+                <div className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
+                  <Label className={cn("text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5", isRTL ? "flex-row-reverse" : "")}>
+                    <GraduationCap className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                    <span>{t('builder.courseTitleLabel', 'Training Course Name')}</span>
+                    <span className="text-amber-600 font-bold">*</span>
+                  </Label>
+                  <span className="text-[10px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-100/80 dark:bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-300 dark:border-amber-700">
+                    {t('builder.requiredField', 'Required')}
+                  </span>
+                </div>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle?.(e.target.value)}
+                  placeholder={t('builder.courseTitlePlaceholder', 'e.g., Front Desk Guest Check-In & Service Standards SOP')}
+                  className={cn(
+                    "text-sm font-bold bg-amber-50/20 dark:bg-amber-950/10 border-slate-200 dark:border-slate-800 focus:border-hotel-gold focus:ring-2 focus:ring-hotel-gold/20 h-9",
+                    isRTL ? "text-right" : "text-left"
+                  )}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  {t('builder.courseTitleHelper', 'Give this training a clear, descriptive name that employees will see across the LMS and on their completion certificates.')}
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Department / Category */}
+                <div className="space-y-1.5">
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                    {t('category', 'Department / Category')} <span className="text-amber-600">*</span>
+                  </Label>
+                  {setCategory && (
+                    <Select value={category || 'operations'} onValueChange={setCategory}>
+                      <SelectTrigger className={cn("bg-white dark:bg-slate-950 text-xs font-medium border-slate-200 dark:border-slate-800", isRTL ? "flex-row-reverse" : "")}>
+                        <SelectValue placeholder={t('builder.selectCategory', 'Select department')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="front_office">Front Office & Reception</SelectItem>
+                        <SelectItem value="housekeeping">Housekeeping & Laundry</SelectItem>
+                        <SelectItem value="food_beverage">Food & Beverage (F&B)</SelectItem>
+                        <SelectItem value="culinary">Culinary & Kitchen</SelectItem>
+                        <SelectItem value="operations">{t('operations', 'Hotel Operations')}</SelectItem>
+                        <SelectItem value="safety_security">Safety & Security</SelectItem>
+                        <SelectItem value="maintenance">Engineering & Maintenance</SelectItem>
+                        <SelectItem value="compliance">{t('builder.compliance', 'Compliance & Regulations')}</SelectItem>
+                        <SelectItem value="onboarding">{t('builder.onboarding', 'New Hire Onboarding')}</SelectItem>
+                        <SelectItem value="skills">{t('builder.skills', 'Hospitality Skills')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Target Audience */}
+                <div className="space-y-1.5">
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                    {t('builder.audience', 'Target Audience')}
+                  </Label>
+                  {setAudience && (
+                    <Select value={audience || 'all'} onValueChange={setAudience}>
+                      <SelectTrigger className={cn("bg-white dark:bg-slate-950 text-xs font-medium border-slate-200 dark:border-slate-800", isRTL ? "flex-row-reverse" : "")}>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Hotel Associates</SelectItem>
+                        <SelectItem value="new_hires">New Hires Onboarding</SelectItem>
+                        <SelectItem value="frontline">Frontline Associates</SelectItem>
+                        <SelectItem value="supervisors">Supervisors & Team Leads</SelectItem>
+                        <SelectItem value="management">Department Managers</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+                {/* Difficulty & Language */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1.5">
+                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                      {t('builder.difficulty', 'Difficulty')}
+                    </Label>
+                    {setDifficultyLevel && (
+                      <Select value={difficultyLevel || 'beginner'} onValueChange={setDifficultyLevel}>
+                        <SelectTrigger className={cn("bg-white dark:bg-slate-950 text-xs font-medium border-slate-200 dark:border-slate-800", isRTL ? "flex-row-reverse" : "")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="beginner">{t('beginner', 'Beginner')}</SelectItem>
+                          <SelectItem value="intermediate">{t('intermediate', 'Intermediate')}</SelectItem>
+                          <SelectItem value="advanced">{t('advanced', 'Advanced')}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                      {t('builder.contentLanguage', 'Language')}
+                    </Label>
+                    {setContentLanguage && (
+                      <Select value={contentLanguage || 'english'} onValueChange={setContentLanguage}>
+                        <SelectTrigger className={cn("bg-white dark:bg-slate-950 text-xs font-medium border-slate-200 dark:border-slate-800", isRTL ? "flex-row-reverse" : "")}>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="english">English</SelectItem>
+                          <SelectItem value="arabic">العربية (Arabic)</SelectItem>
+                          <SelectItem value="bilingual">Bilingual</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Course Description */}
+              {setDescription && (
+                <div className="space-y-1.5">
+                  <Label className={cn("text-xs font-bold text-slate-700 dark:text-slate-300", isRTL ? "text-right block" : "")}>
+                    {t('description', 'Course Description & Learning Outcomes')}
+                  </Label>
+                  <Textarea
+                    rows={2}
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder={t('builder.descriptionHint', 'Describe key learning objectives, target standards, and procedures covered...')}
+                    className={cn("text-xs bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 resize-none", isRTL ? "text-right" : "")}
+                  />
+                </div>
+              )}
+            </CardContent>
+          )}
+        </Card>
+
         {/* Top Action & Metrics Bar */}
         <div className={cn('flex flex-col md:flex-row md:items-center justify-between gap-4', isRTL ? 'md:flex-row-reverse' : '')}>
           <div className="space-y-1">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
+            <h2 className="text-lg md:text-xl font-bold text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
               <span>{t('builder.courseStructure', 'Course Curriculum & Lessons')}</span>
               {sections.length > 0 && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <Badge variant="secondary" className="font-bold text-xs bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
                     {sections.length} {sections.length === 1 ? 'Section' : 'Sections'}
                   </Badge>
@@ -254,9 +513,9 @@ export const BuilderCanvas = ({
               <Button
                 onClick={onOpenAICreator}
                 size="sm"
-                className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold shadow-sm border-none"
+                className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold shadow-xs border-none text-xs"
               >
-                <Sparkles className="w-4 h-4 me-1.5" />
+                <Sparkles className="w-3.5 h-3.5 me-1.5" />
                 {t('builder.aiDraft', 'Draft with AI')}
               </Button>
             )}
@@ -264,9 +523,9 @@ export const BuilderCanvas = ({
               onClick={onAddSection}
               size="sm"
               variant="outline"
-              className="font-semibold bg-white dark:bg-slate-900 shadow-sm hover:border-amber-400"
+              className="font-semibold bg-white dark:bg-slate-900 shadow-xs hover:border-amber-400 text-xs"
             >
-              <Plus className="w-4 h-4 me-1.5 text-amber-600" />
+              <Plus className="w-3.5 h-3.5 me-1.5 text-amber-600" />
               {t('builder.addSection', 'Add Section')}
             </Button>
           </div>
@@ -382,18 +641,18 @@ export const BuilderCanvas = ({
                   onDragOver={handleDragOver}
                   onDrop={(e) => handleDropSection(e, sectionIndex)}
                   className={cn(
-                    'overflow-hidden transition-all duration-200 border bg-white dark:bg-slate-900 shadow-sm',
-                    isExpanded ? 'border-slate-300 dark:border-slate-700 shadow-md' : 'border-slate-200 opacity-95'
+                    'overflow-hidden transition-all duration-200 border bg-white dark:bg-slate-900 shadow-xs',
+                    isExpanded ? 'border-slate-300 dark:border-slate-700 shadow-sm' : 'border-slate-200 dark:border-slate-800 opacity-95'
                   )}
                 >
                   {/* Section Header */}
                   <CardHeader
-                    className="py-3.5 px-5 bg-slate-50/80 dark:bg-slate-900/90 border-b border-slate-100 dark:border-slate-800 cursor-pointer select-none"
+                    className="py-3.5 px-4 md:px-5 bg-slate-50/80 dark:bg-slate-900/90 border-b border-slate-100 dark:border-slate-800 cursor-pointer select-none"
                     onClick={() => onSectionClick(activeSection === section.id ? null : section.id)}
                   >
                     <div className={cn('flex items-center justify-between gap-3', isRTL ? 'flex-row-reverse' : '')}>
                       <div className={cn('flex items-center gap-3 flex-1 min-w-0', isRTL ? 'flex-row-reverse' : '')}>
-                        <div className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-600 rounded">
+                        <div className="cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-600 rounded shrink-0">
                           <GripVertical className="w-4 h-4" />
                         </div>
 
@@ -464,7 +723,7 @@ export const BuilderCanvas = ({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 px-2 text-xs text-slate-600 hover:text-slate-800 hover:bg-slate-100"
+                            className="h-7 px-2 text-xs font-medium text-slate-600 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
                             onClick={() => {
                               if (isSectionFullyExpanded(section)) {
                                 collapseAllInSection(section)
@@ -476,7 +735,7 @@ export const BuilderCanvas = ({
                             {isSectionFullyExpanded(section) ? (
                               <><ChevronUp className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.collapseAll', 'Collapse All')}</span></>
                             ) : (
-                              <><Eye className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.expandAll', 'Expand All')}</span></>
+                              <><Eye className="w-3.5 h-3.5 me-1 text-slate-500" /><span>{t('builder.inlinePreview.expandAll', 'Expand All')}</span></>
                             )}
                           </Button>
                         )}
@@ -485,7 +744,7 @@ export const BuilderCanvas = ({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-7 px-2 text-xs text-purple-700 hover:text-purple-800 hover:bg-purple-50"
+                            className="h-7 px-2 text-xs font-semibold text-purple-700 dark:text-purple-300 hover:text-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/50"
                             onClick={() => onGenerateQuizFromSection(section.id)}
                           >
                             <Sparkles className="w-3.5 h-3.5 me-1 text-purple-600" />
@@ -496,7 +755,7 @@ export const BuilderCanvas = ({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                          className="h-7 w-7 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/50"
                           onClick={() => onDeleteSection(section.id)}
                           title="Delete section"
                         >
@@ -512,10 +771,10 @@ export const BuilderCanvas = ({
 
                   {/* Section Content & Lesson Blocks */}
                   {isExpanded && (
-                    <CardContent className="p-5 space-y-4 bg-white dark:bg-slate-900">
+                    <CardContent className="p-4 md:p-5 space-y-4 bg-white dark:bg-slate-900">
                       {/* Lesson Items */}
                       {section.items.length === 0 ? (
-                        <div className="p-6 text-center border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50">
+                        <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl bg-slate-50/50 dark:bg-slate-900/50">
                           <p className="text-xs font-semibold text-slate-500 mb-3">
                             This section has no lessons yet. Choose a content type below to add your first lesson:
                           </p>
@@ -528,7 +787,7 @@ export const BuilderCanvas = ({
                                   size="sm"
                                   variant="outline"
                                   onClick={() => onAddContent(config.type, section.id)}
-                                  className="h-8 text-xs font-semibold bg-white hover:border-amber-400 hover:bg-amber-50/50"
+                                  className="h-8 text-xs font-semibold bg-white dark:bg-slate-950 hover:border-amber-400 hover:bg-amber-50/50"
                                 >
                                   <IconComponent className="w-3.5 h-3.5 me-1.5 text-amber-600" />
                                   {config.label}
@@ -553,8 +812,8 @@ export const BuilderCanvas = ({
                                 className={cn(
                                   'group rounded-xl border bg-white dark:bg-slate-950 transition-all overflow-hidden',
                                   isBlockExpanded
-                                    ? 'border-amber-300 dark:border-amber-700 shadow-md'
-                                    : 'border-slate-200 hover:border-amber-400 hover:shadow-sm'
+                                    ? 'border-amber-300 dark:border-amber-700 shadow-sm'
+                                    : 'border-slate-200 dark:border-slate-800 hover:border-amber-400 hover:shadow-xs'
                                 )}
                               >
                                 {/* Compact header row (always visible) */}
@@ -583,20 +842,21 @@ export const BuilderCanvas = ({
                                     </p>
                                   </div>
 
+                                  {/* Ergonomic Action Toolbar: Primary Actions Always Visible */}
                                   <div
-                                    className={cn('flex items-center gap-1', isRTL ? 'flex-row-reverse' : '')}
+                                    className={cn('flex items-center gap-1.5', isRTL ? 'flex-row-reverse' : '')}
                                     onClick={(e) => e.stopPropagation()}
                                   >
-                                    {/* Inline Preview Toggle */}
+                                    {/* Inline Preview Toggle - ALWAYS VISIBLE if content exists */}
                                     {hasPreviewableContent && (
                                       <Button
                                         size="sm"
-                                        variant="ghost"
+                                        variant={isBlockExpanded ? "secondary" : "ghost"}
                                         className={cn(
                                           'h-7 px-2 text-xs font-semibold transition-colors',
                                           isBlockExpanded
-                                            ? 'text-amber-700 bg-amber-50 hover:bg-amber-100'
-                                            : 'text-slate-500 hover:text-slate-800 opacity-0 group-hover:opacity-100'
+                                            ? 'text-amber-900 bg-amber-100 hover:bg-amber-200 dark:bg-amber-950 dark:text-amber-300'
+                                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800'
                                         )}
                                         onClick={() => toggleBlockPreview(item.id)}
                                         title={isBlockExpanded ? t('builder.inlinePreview.collapse', 'Collapse preview') : t('builder.inlinePreview.expand', 'Expand preview')}
@@ -604,16 +864,18 @@ export const BuilderCanvas = ({
                                         {isBlockExpanded ? (
                                           <><ChevronUp className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.hide', 'Hide')}</span></>
                                         ) : (
-                                          <><Eye className="w-3.5 h-3.5 me-1" /><span>{t('builder.inlinePreview.preview', 'Preview')}</span></>
+                                          <><Eye className="w-3.5 h-3.5 me-1 text-slate-500" /><span>{t('builder.inlinePreview.preview', 'Preview')}</span></>
                                         )}
                                       </Button>
                                     )}
+
+                                    {/* Deep Expand with AI */}
                                     {item.type === 'text' && onDeepExpandLesson && (
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         disabled={expandingLessonId === item.id}
-                                        className="h-7 px-2 text-xs font-semibold text-indigo-700 hover:text-indigo-800 hover:bg-indigo-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="h-7 px-2 text-xs font-semibold text-indigo-700 dark:text-indigo-300 hover:text-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950"
                                         onClick={async () => {
                                           setExpandingLessonId(item.id)
                                           try {
@@ -622,7 +884,7 @@ export const BuilderCanvas = ({
                                             setExpandingLessonId(null)
                                           }
                                         }}
-                                        title="Deep Expand into 600-word 5-Star Operational SOP"
+                                        title="Deep Expand into 5-Star Operational SOP with AI"
                                       >
                                         {expandingLessonId === item.id ? (
                                           <>
@@ -631,25 +893,31 @@ export const BuilderCanvas = ({
                                           </>
                                         ) : (
                                           <>
-                                            <Sparkles className="w-3.5 h-3.5 me-1 text-indigo-600" />
-                                            <span>Deep Expand</span>
+                                            <Sparkles className="w-3.5 h-3.5 me-1 text-indigo-600 dark:text-indigo-400" />
+                                            <span className="hidden sm:inline">Deep Expand</span>
                                           </>
                                         )}
                                       </Button>
                                     )}
+
+                                    {/* Edit Button - ALWAYS VISIBLE */}
                                     <Button
                                       size="sm"
-                                      variant="ghost"
-                                      className="h-7 px-2.5 text-xs font-semibold text-slate-700 hover:text-amber-700 hover:bg-amber-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      variant="outline"
+                                      className="h-7 px-2.5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-amber-700 hover:border-amber-400"
                                       onClick={() => onEditContent(section.id, item.id)}
                                     >
-                                      Edit Lesson
+                                      <Edit3 className="w-3 h-3 me-1 text-slate-400" />
+                                      <span>Edit</span>
                                     </Button>
+
+                                    {/* Delete Button (Subtle hover action) */}
                                     <Button
-                                      size="sm"
+                                      size="icon"
                                       variant="ghost"
-                                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                      className="h-7 w-7 p-0 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950 opacity-60 group-hover:opacity-100 transition-opacity"
                                       onClick={() => onDeleteContent(section.id, item.id)}
+                                      title="Delete lesson"
                                     >
                                       <Trash2 className="w-3.5 h-3.5" />
                                     </Button>
@@ -671,8 +939,8 @@ export const BuilderCanvas = ({
                           })}
 
                           {/* Fast Add Inline Toolbar */}
-                          <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800">
-                            <span className="text-[11px] font-semibold text-slate-400">Add Lesson to this section:</span>
+                          <div className="pt-2 flex items-center justify-between border-t border-slate-100 dark:border-slate-800 flex-wrap gap-2">
+                            <span className="text-[11px] font-semibold text-slate-400">Add Lesson:</span>
                             <div className="flex flex-wrap gap-1.5">
                               {CONTENT_TYPES_CONFIG.map((config) => {
                                 const IconComponent = config.icon
@@ -682,7 +950,7 @@ export const BuilderCanvas = ({
                                     size="sm"
                                     variant="ghost"
                                     onClick={() => onAddContent(config.type, section.id)}
-                                    className="h-7 px-2 text-[11px] font-medium text-slate-600 hover:text-amber-700 hover:bg-amber-50/70"
+                                    className="h-7 px-2 text-[11px] font-medium text-slate-600 dark:text-slate-400 hover:text-amber-700 hover:bg-amber-50/70 dark:hover:bg-slate-800"
                                   >
                                     <IconComponent className="w-3 h-3 me-1" />
                                     {config.label.split(' ')[0]}
@@ -702,7 +970,7 @@ export const BuilderCanvas = ({
             {/* Bottom Add Section Card */}
             <div
               onClick={onAddSection}
-              className="p-4 rounded-xl border-2 border-dashed border-slate-200 hover:border-amber-400 hover:bg-amber-50/30 transition-all text-center cursor-pointer flex items-center justify-center gap-2 text-xs font-bold text-slate-600 hover:text-amber-800"
+              className="p-4 rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-800 hover:border-amber-400 hover:bg-amber-50/30 dark:hover:bg-slate-900/40 transition-all text-center cursor-pointer flex items-center justify-center gap-2 text-xs font-bold text-slate-600 dark:text-slate-400 hover:text-amber-800 dark:hover:text-amber-300"
             >
               <Plus className="w-4 h-4 text-amber-600" />
               <span>Add Another Section to Course</span>
