@@ -83,8 +83,8 @@ export function ContentBlockSlideOver({
   saveContent,
   isRTL,
 }: ContentBlockSlideOverProps) {
-  const { t } = useTranslation('training')
   const [showImageMediaPicker, setShowImageMediaPicker] = useState(false)
+  const [sopSearchTerm, setSopSearchTerm] = useState('')
 
   return (
     <>
@@ -191,42 +191,100 @@ export function ContentBlockSlideOver({
               )}
 
               {/* Type: SOP Reference */}
-              {currentBlock.type === 'sop_reference' && (
-                <div className={cn("bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-2", isRTL ? 'text-right' : '')}>
-                  <Label className="text-xs font-bold text-emerald-900 dark:text-emerald-300">{t('builder.selectSop', 'Link SOP Document')}</Label>
-                  <div className="mt-1.5 text-left">
-                    <Select
-                      value={(currentBlock.content_data?.sop_id as string) || ''}
-                      onValueChange={(val) => {
-                        const sop = availableSOPs?.find(s => s.id === val)
-                        setCurrentBlock({
-                          ...currentBlock,
-                          title: (!currentBlock.title || currentBlock.title === 'SOP Reference') ? (sop?.title || '') : currentBlock.title,
-                          content_data: { ...currentBlock.content_data, sop_id: val }
-                        })
-                      }}
-                    >
-                      <SelectTrigger className={cn("bg-white dark:bg-slate-950 border-emerald-200 dark:border-emerald-800 text-xs", isRTL ? "flex-row-reverse" : "")}>
-                        <SelectValue placeholder={t('builder.selectSopPlaceholder', 'Choose a published SOP...')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {sopOptions.length === 0 ? (
-                          <div className="p-2 text-xs text-muted-foreground text-center">{t('builder.noSopsFound', 'No published SOPs found')}</div>
-                        ) : (
-                          sopOptions.map(s => (
-                            <SelectItem key={s.id} value={s.id} className={isRTL ? "flex-row-reverse" : ""}>
-                              <span className="font-medium text-xs">{s.title}</span>
-                            </SelectItem>
-                          ))
+              {currentBlock.type === 'sop_reference' && (() => {
+                const selectedSopId = (currentBlock.content_data?.sop_id as string) || ''
+                const selectedSop = availableSOPs?.find(s => s.id === selectedSopId)
+                const filteredSops = sopSearchTerm.trim()
+                  ? sopOptions.filter(s => s.title.toLowerCase().includes(sopSearchTerm.toLowerCase()))
+                  : sopOptions
+
+                return (
+                  <div className={cn("bg-emerald-50/70 dark:bg-emerald-950/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-900/50 space-y-3", isRTL ? 'text-right' : '')}>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-emerald-900 dark:text-emerald-300 flex items-center gap-1.5">
+                        <BookOpen className="h-4 w-4 text-emerald-600" />
+                        <span>{t('builder.selectSop', 'Link SOP Document')}</span>
+                      </Label>
+                      {selectedSop && (
+                        <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-300">
+                          {t('builder.sopLinked', 'SOP Selected')}
+                        </Badge>
+                      )}
+                    </div>
+
+                    {/* Search SOP Filter */}
+                    <div className="relative">
+                      <Search className={cn("absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-600/70 pointer-events-none", isRTL ? "end-2.5" : "start-2.5")} />
+                      <Input
+                        placeholder={t('knowledgeBase.searchResources', 'Search SOPs by title...')}
+                        value={sopSearchTerm}
+                        onChange={(e) => setSopSearchTerm(e.target.value)}
+                        className={cn(
+                          "h-8 text-xs bg-white dark:bg-slate-950 border-emerald-200 dark:border-emerald-800 shadow-xs",
+                          isRTL ? "pe-8 ps-7 text-right" : "ps-8 pe-7 text-left"
                         )}
-                      </SelectContent>
-                    </Select>
+                      />
+                      {sopSearchTerm && (
+                        <button
+                          type="button"
+                          onClick={() => setSopSearchTerm('')}
+                          className={cn("absolute top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600", isRTL ? "start-2" : "end-2")}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* SOP Dropdown */}
+                    <div className="text-left">
+                      <Select
+                        value={selectedSopId}
+                        onValueChange={(val) => {
+                          const sop = availableSOPs?.find(s => s.id === val)
+                          setCurrentBlock({
+                            ...currentBlock,
+                            title: (!currentBlock.title || currentBlock.title === 'SOP Reference') ? (sop?.title || '') : currentBlock.title,
+                            content_data: { ...currentBlock.content_data, sop_id: val }
+                          })
+                        }}
+                      >
+                        <SelectTrigger className={cn("bg-white dark:bg-slate-950 border-emerald-200 dark:border-emerald-800 text-xs h-9", isRTL ? "flex-row-reverse" : "")}>
+                          <SelectValue placeholder={t('builder.selectSopPlaceholder', 'Choose a published SOP...')} />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-56">
+                          {filteredSops.length === 0 ? (
+                            <div className="p-3 text-xs text-muted-foreground text-center">
+                              {sopSearchTerm ? t('knowledgeBase.noResultsFilter', 'No SOPs match your search') : t('builder.noSopsFound', 'No published SOPs found')}
+                            </div>
+                          ) : (
+                            filteredSops.map(s => (
+                              <SelectItem key={s.id} value={s.id} className={isRTL ? "flex-row-reverse" : ""}>
+                                <div className="flex items-center gap-2">
+                                  <BookOpen className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                  <span className="font-medium text-xs truncate">{s.title}</span>
+                                </div>
+                              </SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedSop && (
+                      <div className="p-2.5 bg-white dark:bg-slate-900 rounded-lg border border-emerald-200 dark:border-emerald-800/80 flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{selectedSop.title}</p>
+                          <p className="text-[10px] text-emerald-600 dark:text-emerald-400">ID: {selectedSop.id.slice(0, 8)}...</p>
+                        </div>
+                      </div>
+                    )}
+
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
+                      {t('builder.sopEmbedHint', 'Select a published SOP to reference. Trainees will see the live content from the SOP.')}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
-                    {t('builder.sopEmbedHint', 'Select a published SOP to reference. Trainees will see the live content from the SOP.')}
-                  </p>
-                </div>
-              )}
+                )
+              })()}
 
               {/* Type: Rich Text */}
               {currentBlock.type === 'text' && (

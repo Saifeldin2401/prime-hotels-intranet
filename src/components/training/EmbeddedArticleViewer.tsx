@@ -1,7 +1,14 @@
-import { ArticleContent } from '@/components/knowledge/ArticleContent'
+import {
+    ArticleContent,
+    ChecklistRenderer,
+    FAQAccordion,
+    ImageGalleryRenderer,
+    VideoPlayer
+} from '@/components/knowledge/ContentRenderers'
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { PdfViewer } from '@/components/common/PdfViewer'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -9,11 +16,26 @@ import { useTranslationAI, type TranslationTargetLanguage } from '@/hooks/useTra
 import { supabase } from '@/lib/supabase'
 import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
 import { useQuery } from '@tanstack/react-query'
-import { AlertCircle, BookOpen, Download, ExternalLink, FileText, Loader2 } from 'lucide-react'
+import {
+    AlertCircle,
+    BookOpen,
+    Building2,
+    CheckSquare,
+    Download,
+    ExternalLink,
+    FileText,
+    HelpCircle,
+    Images,
+    Loader2,
+    ShieldCheck,
+    Video,
+    Zap
+} from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-
 import { resolveStorageUrl } from '@/lib/secureFileAccess'
+import { cn } from '@/lib/utils'
+import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
 type TranslationDiagnostics = {
     partialFailures: number
@@ -29,7 +51,7 @@ const embeddedContentTranslationRequests = new Map<string, Promise<RichTranslati
 
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
-interface EmbeddedArticleViewerProps {
+export interface EmbeddedArticleViewerProps {
     sopId: string
     fallbackTitle?: string
     fallbackContent?: string
@@ -39,16 +61,35 @@ interface EmbeddedArticleViewerProps {
     className?: string
 }
 
-type LegacySopDocument = {
+export type EnhancedSopDocument = {
     id: string
     title: string
+    title_ar?: string | null
     description?: string | null
+    description_ar?: string | null
     content?: string | null
+    content_ar?: string | null
+    summary?: string | null
     status?: string | null
+    content_type?: string | null
+    sop_code?: string | null
     file_url?: string | null
+    video_url?: string | null
+    checklist_items?: ChecklistItem[] | null
+    faq_items?: FAQItem[] | null
+    images?: Array<{
+        id: string
+        url: string
+        caption: string
+        order: number
+    }> | null
+    tags?: string[] | null
+    current_version?: number | null
+    version?: number | null
     updated_at?: string | null
     published_at?: string | null
-    code?: string | null
+    department?: { id: string; name: string } | null
+    category?: { id: string; name: string } | null
 }
 
 interface EmbeddedHtmlContentProps {
@@ -58,6 +99,7 @@ interface EmbeddedHtmlContentProps {
     isTranslating: boolean
     showBilingual?: boolean
     translationDir: 'ltr' | 'rtl'
+    cacheVersion?: string | null
 }
 
 const EmbeddedHtmlContent = ({
@@ -66,7 +108,8 @@ const EmbeddedHtmlContent = ({
     translatedContent,
     isTranslating,
     showBilingual,
-    translationDir
+    translationDir,
+    cacheVersion
 }: EmbeddedHtmlContentProps) => {
     const { t } = useTranslation('training')
 
@@ -93,17 +136,10 @@ const EmbeddedHtmlContent = ({
                     </div>
                 ) : (
                     <InlineErrorBoundary>
-                        {/*
-                         * Use ArticleContent instead of plain dangerouslySetInnerHTML.
-                         * ArticleContent pre-extracts <video> tags before DOMPurify runs,
-                         * replacing them with VideoPlayer components that handle signed-URL
-                         * refresh.  Plain dangerouslySetInnerHTML causes DOMPurify to strip
-                         * the src attribute from video elements whose URL contains query-string
-                         * tokens (e.g. Supabase signed URLs), leaving an empty black player.
-                         */}
                         <ArticleContent
                             content={displayContent ?? ''}
                             className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                            cacheVersion={cacheVersion || undefined}
                         />
                     </InlineErrorBoundary>
                 )}
@@ -111,7 +147,7 @@ const EmbeddedHtmlContent = ({
 
             {/* Original View (if Bilingual) */}
             {showBilingual && translationTarget && (
-                <div dir="auto" className="border-l ps-6 border-slate-100">
+                <div dir="auto" className="border-l ps-6 border-slate-100 dark:border-slate-800">
                     <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
                         {t('original', 'Original')}
                     </div>
@@ -119,6 +155,7 @@ const EmbeddedHtmlContent = ({
                         <ArticleContent
                             content={content}
                             className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                            cacheVersion={cacheVersion || undefined}
                         />
                     </InlineErrorBoundary>
                 </div>
@@ -126,9 +163,8 @@ const EmbeddedHtmlContent = ({
         </div>
     )
 }
+
 export const EmbeddedArticleViewer = (props: EmbeddedArticleViewerProps) => {
-    // Use a key to force re-mount when critical props change
-    // This is cleaner than useEffect for state resets and fixes the react-doctor error
     return (
         <EmbeddedArticleViewerInner
             key={`${props.sopId}-${props.translationTarget || 'original'}`}
@@ -147,48 +183,58 @@ const EmbeddedArticleViewerInner = ({
     className
 }: EmbeddedArticleViewerProps) => {
     const { t } = useTranslation('training')
+
     const { data: documentData, isLoading: isDocumentLoading, error: documentError } = useQuery({
-        queryKey: ['document-embed', sopId],
+        queryKey: ['document-embed-full', sopId],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('documents')
-                .select('id, title, description, content, status, file_url, updated_at, is_deleted')
+                .select(`
+                    id, title, title_ar, description, description_ar, content, content_ar, summary,
+                    status, content_type, sop_code, file_url, video_url, checklist_items, faq_items, images,
+                    tags, current_version, updated_at, published_at, is_deleted,
+                    department:departments(id, name),
+                    category:categories!documents_category_id_fkey(id, name)
+                `)
                 .eq('id', sopId)
                 .or('is_deleted.is.null,is_deleted.eq.false')
                 .maybeSingle()
 
             if (error) throw error
-            return data as LegacySopDocument | null
+            return data as unknown as EnhancedSopDocument | null
         },
         enabled: !!sopId,
         staleTime: 0
     })
-    // sop_documents has been consolidated into documents (content_type='sop').
-    // If the primary documents query didn't find the record by UUID, try matching
-    // by sop_code for the legacy "code" lookup pattern.
+
     const isLikelyUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
     const shouldTryBySopCode = !!sopId && !isDocumentLoading && !isLikelyUuid(sopId) && (!documentData || !!documentError)
 
     const { data: legacyDocument, isLoading: isLegacyLoading, error: legacyError } = useQuery({
-        queryKey: ['legacy-sop-document-by-code', sopId],
+        queryKey: ['legacy-sop-document-by-code-full', sopId],
         queryFn: async () => {
-            // Look up by sop_code in the unified documents table.
             const { data, error } = await supabase
                 .from('documents')
-                .select('id, title, description, content, status, updated_at, published_at, code:sop_code')
+                .select(`
+                    id, title, title_ar, description, description_ar, content, content_ar, summary,
+                    status, content_type, sop_code, file_url, video_url, checklist_items, faq_items, images,
+                    tags, current_version, updated_at, published_at, is_deleted,
+                    department:departments(id, name),
+                    category:categories!documents_category_id_fkey(id, name)
+                `)
                 .eq('content_type', 'sop')
                 .eq('sop_code', sopId)
                 .maybeSingle()
 
             if (error) throw error
-            return data as LegacySopDocument | null
+            return data as unknown as EnhancedSopDocument | null
         },
         enabled: shouldTryBySopCode,
         staleTime: 0
     })
 
-    const rawDocument = (documentData || legacyDocument) as LegacySopDocument | null
-    const document: LegacySopDocument | null = rawDocument
+    const rawDocument = (documentData || legacyDocument) as EnhancedSopDocument | null
+    const document: EnhancedSopDocument | null = rawDocument
         ? {
             ...rawDocument,
             title: rawDocument.title || fallbackTitle || '',
@@ -208,7 +254,7 @@ const EmbeddedArticleViewerInner = ({
             setResolvedFileUrl(null)
             return
         }
-        resolveStorageUrl(document.file_url, 3600).then(url => {
+        resolveStorageUrl(document.file_url, 3600, 'documents').then(url => {
             if (!cancelled) setResolvedFileUrl(url)
         })
         return () => { cancelled = true }
@@ -411,7 +457,7 @@ const EmbeddedArticleViewerInner = ({
 
     if (isLoading) {
         return (
-            <div className="space-y-4 p-6 border rounded-xl bg-white shadow-sm">
+            <div className="space-y-4 p-6 border rounded-xl bg-white dark:bg-slate-900 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
                     <Skeleton className="h-10 w-10 rounded-lg" />
                     <div className="space-y-2">
@@ -441,41 +487,78 @@ const EmbeddedArticleViewerInner = ({
         )
     }
 
-    const isPdf = document.file_url?.toLowerCase().endsWith('.pdf')
-    const isImage = document.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i)
-    const hasContent = !!document.content
-    const viewMode = (hasContent || isPdf || isImage) ? 'inline' : 'fallback'
+    // Content checks
+    const isPdf = Boolean(document.file_url?.toLowerCase().endsWith('.pdf'))
+    const isImage = Boolean(document.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+    const hasHtmlContent = Boolean(document.content || document.content_ar || fallbackContent)
+    const hasChecklist = Array.isArray(document.checklist_items) && document.checklist_items.length > 0
+    const hasFaq = Array.isArray(document.faq_items) && document.faq_items.length > 0
+    const hasImages = Array.isArray(document.images) && document.images.length > 0
+    const hasVideo = Boolean(document.video_url || (document.content_type === 'video' && (document.video_url || document.file_url)))
+    const hasAnyContent = hasHtmlContent || hasChecklist || hasFaq || hasImages || hasVideo || isPdf || isImage || Boolean(document.summary) || Boolean(document.description)
 
-    const displayTitle = (translationTarget && translatedTitle) ? translatedTitle : (document.title || t('sopReference', 'Standard Operating Procedure'))
-    const openInNewTabHref = documentData ? `/documents/${sopId}` : `/knowledge/${sopId}`
+    const displayTitle = (translationTarget && translatedTitle)
+        ? translatedTitle
+        : (document.title || t('sopReference', 'Standard Operating Procedure'))
+
+    // The official Knowledge Base article route is /knowledge/:id
+    const openInKnowledgeBaseHref = `/knowledge/${document.id || sopId}`
 
     return (
-        <Card className={`overflow-hidden border-slate-200 shadow-sm ${className}`}>
+        <Card className={cn("overflow-hidden border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900", className)}>
             <CardContent className="p-0">
                 {/* Header */}
-                <div className="bg-slate-50/80 border-b border-slate-100 p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                        <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
                             {isTranslating ? <Loader2 className="h-5 w-5 animate-spin" /> : <BookOpen className="h-5 w-5" />}
                         </div>
-                        <div>
-                            <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold text-lg text-hotel-navy leading-tight">
-                                    {displayTitle}
-                                </h3>
-                                {document.status && document.status !== 'PUBLISHED' && (
-                                    <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-bold tracking-wide">
+                        <div className="space-y-1.5 min-w-0">
+                            {/* Badges row */}
+                            <div className="flex flex-wrap items-center gap-2">
+                                {document.sop_code && (
+                                    <Badge variant="outline" className="text-[10px] font-mono font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                                        {document.sop_code}
+                                    </Badge>
+                                )}
+                                {document.content_type && (
+                                    <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80">
+                                        <FileText className="h-3 w-3 me-1" />
+                                        {document.content_type}
+                                    </Badge>
+                                )}
+                                {document.status && (
+                                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold tracking-wide">
                                         {document.status}
                                     </span>
                                 )}
+                                {document.current_version && (
+                                    <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">
+                                        <ShieldCheck className="inline-block h-3 w-3 me-0.5" />
+                                        {`v${document.current_version}`}
+                                    </span>
+                                )}
+                                {document.department?.name && (
+                                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                        <Building2 className="h-3 w-3" />
+                                        {document.department.name}
+                                    </span>
+                                )}
                             </div>
-                            <p className="text-sm text-slate-500 line-clamp-1">
-                                {document.description || t('sopReference', 'Standard Operating Procedure')}
-                            </p>
+
+                            <h3 className="font-bold text-xl text-slate-900 dark:text-slate-100 leading-tight">
+                                {displayTitle}
+                            </h3>
+
+                            {document.description && (
+                                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                                    {document.description}
+                                </p>
+                            )}
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
                         {translationError && (
                             <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">
                                 {translationError}
@@ -495,51 +578,114 @@ const EmbeddedArticleViewerInner = ({
                         ) : null}
                         {document.file_url && (
                             <Button variant="outline" size="sm" asChild className="h-9">
-                                <a href={document.file_url} target="_blank" rel="noreferrer">
+                                <a href={resolvedFileUrl || document.file_url} target="_blank" rel="noreferrer">
                                     <Download className="me-2 h-4 w-4" />
                                     {t('download', 'Download')}
                                 </a>
                             </Button>
                         )}
-                        <Button variant="ghost" size="sm" asChild className="h-9 text-slate-500 hover:text-hotel-navy">
-                            <a href={openInNewTabHref} target="_blank" rel="noreferrer">
-                                <ExternalLink className="me-2 h-4 w-4" />
-                                {t('openInNewTab', 'Open in New Tab')}
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            asChild
+                            className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:text-hotel-navy hover:border-hotel-gold text-slate-700 dark:text-slate-200 font-semibold"
+                        >
+                            <a href={openInKnowledgeBaseHref} target="_blank" rel="noreferrer">
+                                <ExternalLink className="me-2 h-4 w-4 text-hotel-gold" />
+                                {t('viewInKnowledgeBase', 'View in Knowledge Base')}
                             </a>
                         </Button>
                     </div>
                 </div>
 
                 {/* Content Area */}
-                <div className="p-6 md:p-8 bg-white min-h-[300px]">
-                    {viewMode === 'inline' ? (
+                <div className="p-6 md:p-8 space-y-8 bg-white dark:bg-slate-900 min-h-[250px]">
+                    {hasAnyContent ? (
                         <>
-                            {/* 1. Article/HTML Content */}
-                            {document.content && (
-                                <div className="mb-8">
-                                    <EmbeddedHtmlContent
-                                        content={document.content}
-                                        translationTarget={translationTarget}
-                                        translatedContent={translatedContent}
-                                        isTranslating={isTranslating}
-                                        showBilingual={showBilingual}
-                                        translationDir={translationDir}
+                            {/* 1. TL;DR / Quick Summary Banner */}
+                            {document.summary && (
+                                <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50">
+                                    <div className="flex items-center gap-2 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                                        <Zap className="h-4 w-4 text-amber-600 fill-amber-500" />
+                                        <span>{t('viewer.tldr', 'Key Summary')}</span>
+                                    </div>
+                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                                        "{document.summary}"
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* 2. Video Player if available */}
+                            {hasVideo && (
+                                <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+                                    <VideoPlayer
+                                        videoUrl={document.video_url || document.file_url!}
+                                        title={displayTitle}
                                     />
                                 </div>
                             )}
 
-                            {/* 2. PDF Viewer */}
-                            {isPdf && document.file_url && (
-                                <div className="rounded-xl overflow-hidden border border-slate-200 h-[600px] bg-slate-100">
-                                    <PdfViewer url={document.file_url} />
+                            {/* 3. HTML / Article Content */}
+                            {hasHtmlContent && (
+                                <EmbeddedHtmlContent
+                                    content={document.content || document.content_ar || fallbackContent}
+                                    translationTarget={translationTarget}
+                                    translatedContent={translatedContent}
+                                    isTranslating={isTranslating}
+                                    showBilingual={showBilingual}
+                                    translationDir={translationDir}
+                                    cacheVersion={document.updated_at}
+                                />
+                            )}
+
+                            {/* 4. Interactive Checklist Steps */}
+                            {hasChecklist && (
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
+                                        <CheckSquare className="h-5 w-5 text-emerald-600" />
+                                        <span>{t('checklistSteps', 'Checklist Procedure Steps')}</span>
+                                    </div>
+                                    <ChecklistRenderer items={document.checklist_items!} />
                                 </div>
                             )}
 
-                            {/* 3. Image Viewer */}
-                            {isImage && document.file_url && (
-                                <div className="flex justify-center bg-slate-50 rounded-xl border border-slate-200 p-4">
+                            {/* 5. FAQs Accordion */}
+                            {hasFaq && (
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
+                                        <HelpCircle className="h-5 w-5 text-hotel-gold" />
+                                        <span>{t('faqTitle', 'Frequently Asked Questions')}</span>
+                                    </div>
+                                    <FAQAccordion items={document.faq_items!} />
+                                </div>
+                            )}
+
+                            {/* 6. Visual Image Gallery */}
+                            {hasImages && (
+                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
+                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
+                                        <Images className="h-5 w-5 text-indigo-600" />
+                                        <span>{t('visualGallery', 'Visual Guide Gallery')}</span>
+                                    </div>
+                                    <ImageGalleryRenderer
+                                        images={document.images!}
+                                        cacheVersion={document.updated_at || undefined}
+                                    />
+                                </div>
+                            )}
+
+                            {/* 7. PDF Viewer if applicable */}
+                            {isPdf && resolvedFileUrl && (
+                                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 h-[600px] bg-slate-100 dark:bg-slate-950">
+                                    <PdfViewer url={resolvedFileUrl} />
+                                </div>
+                            )}
+
+                            {/* 8. Attached Image Viewer if applicable */}
+                            {isImage && resolvedFileUrl && (
+                                <div className="flex justify-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
                                     <img
-                                        src={document.file_url}
+                                        src={resolvedFileUrl}
                                         alt={document.title}
                                         className="max-h-[600px] w-auto object-contain rounded shadow-sm"
                                     />
@@ -547,22 +693,20 @@ const EmbeddedArticleViewerInner = ({
                             )}
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500">
-                            <FileText className="h-16 w-16 text-slate-200 mb-4" />
-                            <h4 className="text-lg font-medium text-hotel-navy mb-2">
-                                {t('previewNotAvailable', 'Preview Not Available')}
+                        <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 dark:text-slate-400">
+                            <FileText className="h-16 w-16 text-slate-200 dark:text-slate-700 mb-4" />
+                            <h4 className="text-lg font-medium text-hotel-navy dark:text-slate-200 mb-2">
+                                {displayTitle}
                             </h4>
-                            <p className="max-w-md mb-6">
-                                {t('documentCannotBePreviewed', 'This document type cannot be viewed directly in the player.')}
+                            <p className="max-w-md mb-6 text-sm text-slate-500">
+                                {t('sopReferenceHint', 'Standard Operating Procedure details can be viewed directly in the Knowledge Base.')}
                             </p>
-                            {document.file_url && (
-                                <Button asChild>
-                                    <a href={document.file_url} target="_blank" rel="noreferrer">
-                                        <Download className="me-2 h-4 w-4" />
-                                        {t('downloadToView', 'Download to View')}
-                                    </a>
-                                </Button>
-                            )}
+                            <Button asChild className="bg-hotel-navy hover:bg-hotel-navy-light text-white">
+                                <a href={openInKnowledgeBaseHref} target="_blank" rel="noreferrer">
+                                    <ExternalLink className="me-2 h-4 w-4" />
+                                    {t('viewInKnowledgeBase', 'View in Knowledge Base')}
+                                </a>
+                            </Button>
                         </div>
                     )}
                 </div>

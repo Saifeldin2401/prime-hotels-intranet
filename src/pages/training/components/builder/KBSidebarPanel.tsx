@@ -67,7 +67,7 @@ export function KBSidebarPanel({
         aria-hidden="true"
       />
 
-      <aside className="fixed inset-y-16 end-0 w-full sm:w-88 md:w-96 z-40 shadow-2xl border-s bg-background flex flex-col">
+      <aside className="fixed inset-y-16 end-0 w-full sm:w-[420px] md:w-[460px] lg:w-[500px] z-40 shadow-2xl border-s bg-background flex flex-col">
         <KnowledgeBaseSidebar
           moduleId={moduleId || undefined}
           moduleTopic={title}

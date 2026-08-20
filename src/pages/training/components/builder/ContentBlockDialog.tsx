@@ -133,10 +133,52 @@ export function ContentBlockDialog({
                 </Button>
               </div>
             )}
+            {/* Block Type */}
+            <div className={isRTL ? 'text-right' : ''}>
+              <Label>{t('builder.blockType')}</Label>
+              <div className="grid grid-cols-4 gap-2 mt-1.5">
+                {BLOCK_TYPES.map(({ type, label, icon: Icon, color, desc }) => {
+                  const isSelected = currentBlock.type === type
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => handleTypeChange(type)}
+                      className={cn(
+                        'flex flex-col items-center p-3 rounded-lg border-2 text-center transition-all cursor-pointer relative',
+                        isSelected
+                          ? cn('border-current shadow-sm', color)
+                          : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
+                      )}
+                    >
+                      <Icon className={cn('w-5 h-5 mb-1', isSelected ? '' : 'text-slate-400')} />
+                      <span className="text-xs font-semibold leading-tight">{label}</span>
+                      <span className="text-[10px] text-slate-400 leading-tight mt-0.5 hidden sm:block">{desc}</span>
+                      {isSelected && (
+                        <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-current" />
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
 
+            {/* Title */}
+            <div className={isRTL ? 'text-right' : ''}>
+              <Label>{t('builder.contentTitle')}</Label>
+              <Input
+                value={currentBlock.title}
+                onChange={(e) => setCurrentBlock({ ...currentBlock, title: e.target.value })}
+                placeholder={t('builder.titlePlaceholder')}
+                className="mt-1"
+                dir={isRTL ? 'rtl' : 'ltr'}
+              />
+            </div>
+
+            {/* Type: Quiz */}
             {currentBlock.type === 'quiz' && (
-              <div className={cn("bg-blue-50 p-4 rounded-md border border-blue-100", isRTL ? 'text-right' : '')}>
-                <Label className="text-blue-900">{t('builder.selectQuiz')}</Label>
+              <div className={cn("bg-purple-50 p-4 rounded-md border border-purple-100", isRTL ? 'text-right' : '')}>
+                <Label className="text-purple-900">{t('builder.selectQuiz')}</Label>
                 <div className="mt-1.5 text-left">
                   <Select
                     value={(currentBlock.content_data?.quiz_id as string) || ''}
@@ -149,7 +191,7 @@ export function ContentBlockDialog({
                       })
                     }}
                   >
-                    <SelectTrigger className={cn("bg-white border-blue-200", isRTL ? "flex-row-reverse" : "")}>
+                    <SelectTrigger className={cn("bg-white border-purple-200", isRTL ? "flex-row-reverse" : "")}>
                       <SelectValue placeholder={t('builder.selectQuizPlaceholder')} />
                     </SelectTrigger>
                     <SelectContent>
@@ -159,9 +201,6 @@ export function ContentBlockDialog({
                         quizOptions.map(q => (
                           <SelectItem key={q.id} value={q.id} className={isRTL ? "flex-row-reverse" : ""}>
                             <span className="font-medium">{q.title}</span>
-                            <span className={cn("text-xs text-slate-500", isRTL ? "me-2" : "ms-2")}>
-                              ({(q as unknown as { question_count?: number }).question_count ?? 0} {(q as unknown as { question_count?: number }).question_count === 1 ? t('builder.question', { defaultValue: 'question' }) : t('builder.questions', { defaultValue: 'questions' })})
-                            </span>
                           </SelectItem>
                         ))
                       )}
@@ -174,42 +213,101 @@ export function ContentBlockDialog({
               </div>
             )}
 
-            {currentBlock.type === 'sop_reference' && (
-              <div className={cn("bg-emerald-50 p-4 rounded-md border border-emerald-100", isRTL ? 'text-right' : '')}>
-                <Label className="text-emerald-900">{t('builder.selectSop')}</Label>
-                <div className="mt-1.5 text-left">
-                  <Select
-                    value={(currentBlock.content_data?.sop_id as string) || ''}
-                    onValueChange={(val) => {
-                      const sop = availableSOPs?.find(s => s.id === val)
-                      setCurrentBlock({
-                        ...currentBlock,
-                        title: (!currentBlock.title || currentBlock.title === 'SOP Reference') ? (sop?.title || '') : currentBlock.title,
-                        content_data: { ...currentBlock.content_data, sop_id: val }
-                      })
-                    }}
-                  >
-                    <SelectTrigger className={cn("bg-white border-emerald-200", isRTL ? "flex-row-reverse" : "")}>
-                      <SelectValue placeholder={t('builder.selectSopPlaceholder')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sopOptions.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500 text-center">{t('builder.noSopsFound')}</div>
-                      ) : (
-                        sopOptions.map(s => (
-                          <SelectItem key={s.id} value={s.id} className={isRTL ? "flex-row-reverse" : ""}>
-                            <span className="font-medium">{s.title}</span>
-                          </SelectItem>
-                        ))
+            {/* Type: SOP Reference */}
+            {currentBlock.type === 'sop_reference' && (() => {
+              const selectedSopId = (currentBlock.content_data?.sop_id as string) || ''
+              const selectedSop = availableSOPs?.find(s => s.id === selectedSopId)
+              const filteredSops = sopSearchTerm.trim()
+                ? sopOptions.filter(s => s.title.toLowerCase().includes(sopSearchTerm.toLowerCase()))
+                : sopOptions
+
+              return (
+                <div className={cn("bg-emerald-50/70 p-4 rounded-xl border border-emerald-100 space-y-3", isRTL ? 'text-right' : '')}>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                      <BookOpen className="h-4 w-4 text-emerald-600" />
+                      <span>{t('builder.selectSop', 'Link SOP Document')}</span>
+                    </Label>
+                    {selectedSop && (
+                      <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 border-emerald-300">
+                        {t('builder.sopLinked', 'SOP Selected')}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Search SOP Filter */}
+                  <div className="relative">
+                    <Search className={cn("absolute top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-emerald-600/70 pointer-events-none", isRTL ? "end-2.5" : "start-2.5")} />
+                    <Input
+                      placeholder={t('knowledgeBase.searchResources', 'Search SOPs by title...')}
+                      value={sopSearchTerm}
+                      onChange={(e) => setSopSearchTerm(e.target.value)}
+                      className={cn(
+                        "h-8 text-xs bg-white border-emerald-200 shadow-xs",
+                        isRTL ? "pe-8 ps-7 text-right" : "ps-8 pe-7 text-left"
                       )}
-                    </SelectContent>
-                  </Select>
+                    />
+                    {sopSearchTerm && (
+                      <button
+                        type="button"
+                        onClick={() => setSopSearchTerm('')}
+                        className={cn("absolute top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600", isRTL ? "start-2" : "end-2")}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* SOP Dropdown */}
+                  <div className="text-left">
+                    <Select
+                      value={selectedSopId}
+                      onValueChange={(val) => {
+                        const sop = availableSOPs?.find(s => s.id === val)
+                        setCurrentBlock({
+                          ...currentBlock,
+                          title: (!currentBlock.title || currentBlock.title === 'SOP Reference') ? (sop?.title || '') : currentBlock.title,
+                          content_data: { ...currentBlock.content_data, sop_id: val }
+                        })
+                      }}
+                    >
+                      <SelectTrigger className={cn("bg-white border-emerald-200 text-xs h-9", isRTL ? "flex-row-reverse" : "")}>
+                        <SelectValue placeholder={t('builder.selectSopPlaceholder', 'Choose a published SOP...')} />
+                      </SelectTrigger>
+                      <SelectContent className="max-h-56">
+                        {filteredSops.length === 0 ? (
+                          <div className="p-3 text-xs text-muted-foreground text-center">
+                            {sopSearchTerm ? t('knowledgeBase.noResultsFilter', 'No SOPs match your search') : t('builder.noSopsFound', 'No published SOPs found')}
+                          </div>
+                        ) : (
+                          filteredSops.map(s => (
+                            <SelectItem key={s.id} value={s.id} className={isRTL ? "flex-row-reverse" : ""}>
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                <span className="font-medium text-xs truncate">{s.title}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {selectedSop && (
+                    <div className="p-2.5 bg-white rounded-lg border border-emerald-200 flex items-center justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">{selectedSop.title}</p>
+                        <p className="text-[10px] text-emerald-600">ID: {selectedSop.id.slice(0, 8)}...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <p className="text-xs text-emerald-600 mt-2">
+                    {t('builder.sopEmbedHint')}
+                  </p>
                 </div>
-                <p className="text-xs text-emerald-600 mt-2">
-                  {t('builder.sopEmbedHint')}
-                </p>
-              </div>
-            )}
+              )
+            })()}
 
             {currentBlock.type === 'text' && (
               <div className={isRTL ? 'text-right' : ''}>
