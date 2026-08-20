@@ -1,26 +1,40 @@
+/**
+ * EmbeddedArticleViewer
+ * 
+ * Full-fidelity Knowledge Base article viewer embedded inside the Training Player.
+ * Uses the exact same knowledgeService data hydrator, styling tokens, and content renderers
+ * as the main KnowledgeViewer page.
+ */
+
+import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { PdfViewer } from '@/components/common/PdfViewer'
+import { ArticleContent } from '@/components/knowledge/ArticleContent'
 import {
-    ArticleContent,
     ChecklistRenderer,
     FAQAccordion,
     ImageGalleryRenderer,
     VideoPlayer
 } from '@/components/knowledge/ContentRenderers'
-import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
-import { PdfViewer } from '@/components/common/PdfViewer'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { useKnowledgeArticle } from '@/hooks/useKnowledge'
 import { useTranslationAI, type TranslationTargetLanguage } from '@/hooks/useTranslationAI'
+import { resolveDocumentUrl } from '@/lib/secureFileAccess'
 import { supabase } from '@/lib/supabase'
 import { normalizeTranslationErrorMessage } from '@/lib/translationUtils'
+import { cn } from '@/lib/utils'
+import '@/styles/knowledge-ui.css'
+import { STATUS_CONFIG, type KnowledgeArticle } from '@/types/knowledge'
 import { useQuery } from '@tanstack/react-query'
 import {
     AlertCircle,
     BookOpen,
     Building2,
     CheckSquare,
+    Clock,
     Download,
     ExternalLink,
     FileText,
@@ -33,9 +47,6 @@ import {
 } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { resolveStorageUrl } from '@/lib/secureFileAccess'
-import { cn } from '@/lib/utils'
-import type { ChecklistItem, FAQItem } from '@/types/knowledge'
 
 type TranslationDiagnostics = {
     partialFailures: number
@@ -59,37 +70,6 @@ export interface EmbeddedArticleViewerProps {
     translationDir?: 'ltr' | 'rtl'
     translationTarget?: TranslationTargetLanguage | null
     className?: string
-}
-
-export type EnhancedSopDocument = {
-    id: string
-    title: string
-    title_ar?: string | null
-    description?: string | null
-    description_ar?: string | null
-    content?: string | null
-    content_ar?: string | null
-    summary?: string | null
-    status?: string | null
-    content_type?: string | null
-    sop_code?: string | null
-    file_url?: string | null
-    video_url?: string | null
-    checklist_items?: ChecklistItem[] | null
-    faq_items?: FAQItem[] | null
-    images?: Array<{
-        id: string
-        url: string
-        caption: string
-        order: number
-    }> | null
-    tags?: string[] | null
-    current_version?: number | null
-    version?: number | null
-    updated_at?: string | null
-    published_at?: string | null
-    department?: { id: string; name: string } | null
-    category?: { id: string; name: string } | null
 }
 
 interface EmbeddedHtmlContentProps {
@@ -119,7 +99,7 @@ const EmbeddedHtmlContent = ({
     const isTranslatingContent = Boolean(translationTarget && isTranslating)
 
     return (
-        <div className={`prose md:prose-lg max-w-none dark:prose-invert leading-relaxed ${showBilingual ? 'grid md:grid-cols-2 gap-6' : ''}`}>
+        <div className={`prose md:prose-lg max-w-none dark:prose-invert leading-relaxed ${showBilingual ? 'grid md:grid-cols-2 gap-8' : ''}`}>
             {/* Translated or Main View */}
             <div dir={translationTarget && translatedContent ? translationDir : 'auto'} className="relative">
                 {showBilingual && (
@@ -138,7 +118,7 @@ const EmbeddedHtmlContent = ({
                     <InlineErrorBoundary>
                         <ArticleContent
                             content={displayContent ?? ''}
-                            className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                            className="prose md:prose-lg max-w-none text-slate-800 dark:text-slate-200 kb-prose transition-all duration-300"
                             cacheVersion={cacheVersion || undefined}
                         />
                     </InlineErrorBoundary>
@@ -148,13 +128,13 @@ const EmbeddedHtmlContent = ({
             {/* Original View (if Bilingual) */}
             {showBilingual && translationTarget && (
                 <div dir="auto" className="border-l ps-6 border-slate-100 dark:border-slate-800">
-                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2">
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-slate-400 mb-2 font-bold">
                         {t('original', 'Original')}
                     </div>
                     <InlineErrorBoundary>
                         <ArticleContent
                             content={content}
-                            className="prose md:prose-lg max-w-none dark:prose-invert leading-relaxed"
+                            className="prose md:prose-lg max-w-none text-slate-800 dark:text-slate-200 kb-prose transition-all duration-300"
                             cacheVersion={cacheVersion || undefined}
                         />
                     </InlineErrorBoundary>
@@ -183,96 +163,90 @@ const EmbeddedArticleViewerInner = ({
     className
 }: EmbeddedArticleViewerProps) => {
     const { t } = useTranslation('training')
-
-    const { data: documentData, isLoading: isDocumentLoading, error: documentError } = useQuery({
-        queryKey: ['document-embed-full', sopId],
-        queryFn: async () => {
-            const { data, error } = await supabase
-                .from('documents')
-                .select(`
-                    id, title, title_ar, description, description_ar, content, content_ar, summary,
-                    status, content_type, sop_code, file_url, video_url, checklist_items, faq_items, images,
-                    tags, current_version, updated_at, published_at, is_deleted,
-                    department:departments(id, name),
-                    category:categories!documents_category_id_fkey(id, name)
-                `)
-                .eq('id', sopId)
-                .or('is_deleted.is.null,is_deleted.eq.false')
-                .maybeSingle()
-
-            if (error) throw error
-            return data as unknown as EnhancedSopDocument | null
-        },
-        enabled: !!sopId,
-        staleTime: 0
-    })
-
     const isLikelyUuid = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
-    const shouldTryBySopCode = !!sopId && !isDocumentLoading && !isLikelyUuid(sopId) && (!documentData || !!documentError)
 
-    const { data: legacyDocument, isLoading: isLegacyLoading, error: legacyError } = useQuery({
-        queryKey: ['legacy-sop-document-by-code-full', sopId],
+    // Primary: fetch article via knowledgeService
+    const {
+        data: primaryArticle,
+        isLoading: isPrimaryLoading,
+        error: primaryError
+    } = useKnowledgeArticle(isLikelyUuid(sopId) ? sopId : undefined)
+
+    // Secondary fallback: if sopId is an sop_code or code string
+    const shouldTryBySopCode = Boolean(sopId && !isLikelyUuid(sopId))
+    const {
+        data: fallbackByCodeArticle,
+        isLoading: isCodeLoading,
+        error: codeError
+    } = useQuery({
+        queryKey: ['knowledge-article-by-code', sopId],
         queryFn: async () => {
             const { data, error } = await supabase
                 .from('documents')
                 .select(`
-                    id, title, title_ar, description, description_ar, content, content_ar, summary,
-                    status, content_type, sop_code, file_url, video_url, checklist_items, faq_items, images,
-                    tags, current_version, updated_at, published_at, is_deleted,
+                    *,
+                    author:profiles!documents_created_by_fkey(id, full_name, avatar_url),
+                    last_editor:profiles!documents_last_published_by_fkey(id, full_name, avatar_url),
                     department:departments(id, name),
                     category:categories!documents_category_id_fkey(id, name)
                 `)
                 .eq('content_type', 'sop')
                 .eq('sop_code', sopId)
+                .eq('is_deleted', false)
                 .maybeSingle()
 
             if (error) throw error
-            return data as unknown as EnhancedSopDocument | null
+            return data as unknown as KnowledgeArticle | null
         },
         enabled: shouldTryBySopCode,
-        staleTime: 0
+        staleTime: 1000 * 60 * 5
     })
 
-    const rawDocument = (documentData || legacyDocument) as EnhancedSopDocument | null
-    const document: EnhancedSopDocument | null = rawDocument
+    const rawArticle = primaryArticle || fallbackByCodeArticle
+    const article: KnowledgeArticle | null = rawArticle
         ? {
-            ...rawDocument,
-            title: rawDocument.title || fallbackTitle || '',
-            content: rawDocument.content || fallbackContent || null
+            ...rawArticle,
+            title: rawArticle.title || fallbackTitle || '',
+            content: rawArticle.content || fallbackContent || null
         }
-        : (fallbackContent ? {
+        : (fallbackContent ? ({
             id: sopId,
             title: fallbackTitle || t('sopReference', 'Standard Operating Procedure'),
             content: fallbackContent,
-            status: 'PUBLISHED'
-        } : null)
+            status: 'PUBLISHED',
+            content_type: 'sop'
+        } as unknown as KnowledgeArticle) : null)
 
+    const isLoading = isPrimaryLoading || (shouldTryBySopCode && isCodeLoading)
+    const resolvedError = article ? null : (primaryError || codeError)
+
+    // Secure URL resolution for attached files / PDFs
     const [resolvedFileUrl, setResolvedFileUrl] = useState<string | null>(null)
     useEffect(() => {
         let cancelled = false
-        if (!document?.file_url) {
+        if (!article?.id || !article?.file_url) {
             setResolvedFileUrl(null)
             return
         }
-        resolveStorageUrl(document.file_url, 3600, 'documents').then(url => {
+        resolveDocumentUrl(article.id, article.file_url).then((url) => {
             if (!cancelled) setResolvedFileUrl(url)
         })
         return () => { cancelled = true }
-    }, [document?.file_url])
+    }, [article?.id, article?.file_url])
 
-    const isLoading = isDocumentLoading || (shouldTryBySopCode && isLegacyLoading)
-    const resolvedError = document ? null : (documentError || legacyError)
-
-    // Translation state
+    // AI Translation
     const translateAI = useTranslationAI()
     const [translatedContentByLanguage, setTranslatedContentByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
     const [translatedTitleByLanguage, setTranslatedTitleByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
+    const [translatedSummaryByLanguage, setTranslatedSummaryByLanguage] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
     const [translationDiagnosticsByLanguage, setTranslationDiagnosticsByLanguage] = useState<Partial<Record<TranslationTargetLanguage, TranslationDiagnostics>>>({})
     const [isTranslating, setIsTranslating] = useState(false)
     const [translationError, setTranslationError] = useState<string | null>(null)
     const translationAttemptRef = useRef<{ key: string; status: 'pending' | 'success' | 'error' } | null>(null)
+
     const translatedContent = translationTarget ? translatedContentByLanguage[translationTarget] ?? null : null
     const translatedTitle = translationTarget ? translatedTitleByLanguage[translationTarget] ?? null : null
+    const translatedSummary = translationTarget ? translatedSummaryByLanguage[translationTarget] ?? null : null
     const translationDiagnostics = translationTarget ? translationDiagnosticsByLanguage[translationTarget] ?? null : null
 
     const invokeTranslationWithRetry = useCallback(async (request: {
@@ -283,26 +257,20 @@ const EmbeddedArticleViewerInner = ({
         strict_target_only?: boolean
     }) => {
         const maxAttempts = 2
-
         for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
             try {
                 return await translateAI.mutateAsync(request)
             } catch (error) {
-                if (attempt >= maxAttempts) {
-                    throw error
-                }
+                if (attempt >= maxAttempts) throw error
                 await delay(350 * attempt)
             }
         }
-
         throw new Error('Translation failed')
     }, [translateAI])
 
     const translateRichContent = useCallback(async (content: string, target: TranslationTargetLanguage, requestKey: string) => {
         const existingRequest = embeddedContentTranslationRequests.get(requestKey)
-        if (existingRequest) {
-            return existingRequest
-        }
+        if (existingRequest) return existingRequest
 
         const requestPromise = (async () => {
             let lastTranslatedHtml = content
@@ -322,24 +290,17 @@ const EmbeddedArticleViewerInner = ({
                 partialFailures = result.meta?.partial_failures ?? 0
                 totalSegments = result.meta?.total_segments ?? 0
 
-                if (partialFailures === 0) {
-                    break
-                }
-
+                if (partialFailures === 0) break
                 await delay(220 * pass)
             }
 
             return {
                 translatedHtml: lastTranslatedHtml,
-                diagnostics: {
-                    partialFailures,
-                    totalSegments
-                }
+                diagnostics: { partialFailures, totalSegments }
             }
         })()
 
         embeddedContentTranslationRequests.set(requestKey, requestPromise)
-
         try {
             return await requestPromise
         } finally {
@@ -348,68 +309,85 @@ const EmbeddedArticleViewerInner = ({
     }, [invokeTranslationWithRetry])
 
     const handleRetryTranslation = useCallback(() => {
-        if (!translationTarget) return
-
-        setTranslatedContentByLanguage(prev => {
-            const next = { ...prev }
-            delete next[translationTarget]
-            return next
-        })
-        setTranslationDiagnosticsByLanguage(prev => {
-            const next = { ...prev }
-            delete next[translationTarget]
-            return next
-        })
+        if (!translationTarget || !article) return
+        const attemptKey = `${article.id}:${translationTarget}:${Date.now()}`
         translationAttemptRef.current = null
+
+        setIsTranslating(true)
         setTranslationError(null)
-    }, [translationTarget])
+
+        const tasks: Promise<void>[] = []
+
+        if (article.content) {
+            tasks.push(
+                translateRichContent(article.content, translationTarget, `${attemptKey}:content`).then(({ translatedHtml, diagnostics }) => {
+                    setTranslatedContentByLanguage(prev => ({ ...prev, [translationTarget]: translatedHtml }))
+                    setTranslationDiagnosticsByLanguage(prev => ({ ...prev, [translationTarget]: diagnostics }))
+                })
+            )
+        }
+
+        if (article.title) {
+            tasks.push(
+                translateAI.mutateAsync({
+                    text: article.title,
+                    target_lang: translationTarget,
+                    source_lang: 'auto',
+                    strict_target_only: true
+                }).then((res) => {
+                    setTranslatedTitleByLanguage(prev => ({ ...prev, [translationTarget]: res.translated_text }))
+                })
+            )
+        }
+
+        if (article.summary) {
+            tasks.push(
+                translateAI.mutateAsync({
+                    text: article.summary,
+                    target_lang: translationTarget,
+                    source_lang: 'auto',
+                    strict_target_only: true
+                }).then((res) => {
+                    setTranslatedSummaryByLanguage(prev => ({ ...prev, [translationTarget]: res.translated_text }))
+                })
+            )
+        }
+
+        Promise.all(tasks)
+            .catch((err) => {
+                const message = normalizeTranslationErrorMessage(err instanceof Error ? err.message : 'Translation failed')
+                setTranslationError(message)
+            })
+            .finally(() => setIsTranslating(false))
+    }, [translationTarget, article, translateRichContent, translateAI])
 
     useEffect(() => {
-        setTranslatedContentByLanguage({})
-        setTranslatedTitleByLanguage({})
-        setTranslationDiagnosticsByLanguage({})
-        setTranslationError(null)
-        translationAttemptRef.current = null
-    }, [document?.id])
+        if (!translationTarget || !article) return
 
-    useEffect(() => {
-        setTranslationError(null)
-        translationAttemptRef.current = null
-    }, [translationTarget])
+        const attemptKey = `${article.id || sopId}:${translationTarget}`
+        if (translationAttemptRef.current?.key === attemptKey && translationAttemptRef.current.status !== 'error') {
+            return
+        }
 
-    // Effect to trigger translation
-    useEffect(() => {
         const translateContent = async () => {
-            if (!document || !translationTarget) return
+            const needsContentTranslation = Boolean(article.content && !translatedContentByLanguage[translationTarget])
+            const needsTitleTranslation = Boolean(article.title && !translatedTitleByLanguage[translationTarget])
+            const needsSummaryTranslation = Boolean(article.summary && !translatedSummaryByLanguage[translationTarget])
 
-            const needsContentTranslation = Boolean(document.content && !translatedContentByLanguage[translationTarget])
-            const needsTitleTranslation = Boolean(document.title && !translatedTitleByLanguage[translationTarget])
-
-            if ((!needsContentTranslation && !needsTitleTranslation) || isTranslating) return
-
-            const attemptKey = `${document.id}-${translationTarget}`
-            if (translationAttemptRef.current?.key === attemptKey) {
-                if (translationAttemptRef.current.status !== 'pending') return
-            } else {
-                translationAttemptRef.current = { key: attemptKey, status: 'pending' }
-            }
+            if (!needsContentTranslation && !needsTitleTranslation && !needsSummaryTranslation) return
 
             setIsTranslating(true)
             setTranslationError(null)
+            translationAttemptRef.current = { key: attemptKey, status: 'pending' }
+
             try {
                 const tasks: Promise<void>[] = []
 
-                if (needsContentTranslation && document.content) {
+                if (needsContentTranslation && article.content) {
                     tasks.push(
-                        translateRichContent(document.content, translationTarget, `${attemptKey}:content`).then(({ translatedHtml, diagnostics }) => {
-                            setTranslatedContentByLanguage(prev => ({
-                                ...prev,
-                                [translationTarget]: translatedHtml
-                            }))
-                            setTranslationDiagnosticsByLanguage(prev => ({
-                                ...prev,
-                                [translationTarget]: diagnostics
-                            }))
+                        translateRichContent(article.content, translationTarget, `${attemptKey}:content`).then(({ translatedHtml, diagnostics }) => {
+                            setTranslatedContentByLanguage(prev => ({ ...prev, [translationTarget]: translatedHtml }))
+                            setTranslationDiagnosticsByLanguage(prev => ({ ...prev, [translationTarget]: diagnostics }))
                             if (diagnostics.partialFailures > 0) {
                                 setTranslationError(`Translation incomplete. ${diagnostics.partialFailures} section${diagnostics.partialFailures === 1 ? '' : 's'} still need retry.`)
                             }
@@ -417,24 +395,33 @@ const EmbeddedArticleViewerInner = ({
                     )
                 }
 
-                if (needsTitleTranslation && document.title) {
+                if (needsTitleTranslation && article.title) {
                     tasks.push(
                         translateAI.mutateAsync({
-                            text: document.title,
+                            text: article.title,
                             target_lang: translationTarget,
                             source_lang: 'auto',
                             strict_target_only: true
                         }).then((titleRes) => {
-                            setTranslatedTitleByLanguage(prev => ({
-                                ...prev,
-                                [translationTarget]: titleRes.translated_text
-                            }))
+                            setTranslatedTitleByLanguage(prev => ({ ...prev, [translationTarget]: titleRes.translated_text }))
+                        })
+                    )
+                }
+
+                if (needsSummaryTranslation && article.summary) {
+                    tasks.push(
+                        translateAI.mutateAsync({
+                            text: article.summary,
+                            target_lang: translationTarget,
+                            source_lang: 'auto',
+                            strict_target_only: true
+                        }).then((sumRes) => {
+                            setTranslatedSummaryByLanguage(prev => ({ ...prev, [translationTarget]: sumRes.translated_text }))
                         })
                     )
                 }
 
                 await Promise.all(tasks)
-
                 if (translationAttemptRef.current?.key === attemptKey) {
                     translationAttemptRef.current.status = 'success'
                 }
@@ -450,34 +437,34 @@ const EmbeddedArticleViewerInner = ({
             }
         }
 
-        if (translationTarget && document && (document.content || document.title)) {
+        if (translationTarget && article && (article.content || article.title || article.summary)) {
             translateContent()
         }
-    }, [document, document?.id, document?.content, document?.title, translationTarget, translateAI, translatedContentByLanguage, translatedTitleByLanguage, isTranslating, translateRichContent])
+    }, [article, sopId, translationTarget, translateAI, translatedContentByLanguage, translatedTitleByLanguage, translatedSummaryByLanguage, translateRichContent])
 
     if (isLoading) {
         return (
-            <div className="space-y-4 p-6 border rounded-xl bg-white dark:bg-slate-900 shadow-sm">
+            <div className="space-y-4 p-6 sm:p-8 border rounded-2xl bg-white dark:bg-slate-900 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
-                    <Skeleton className="h-10 w-10 rounded-lg" />
-                    <div className="space-y-2">
-                        <Skeleton className="h-5 w-48" />
-                        <Skeleton className="h-3 w-24" />
+                    <Skeleton className="h-12 w-12 rounded-xl" />
+                    <div className="space-y-2 flex-1">
+                        <Skeleton className="h-6 w-3/4" />
+                        <Skeleton className="h-4 w-1/3" />
                     </div>
                 </div>
                 <Skeleton className="h-4 w-full" />
                 <Skeleton className="h-4 w-full" />
-                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-4 w-5/6" />
                 <div className="pt-4">
-                    <Skeleton className="h-32 w-full rounded-lg" />
+                    <Skeleton className="h-40 w-full rounded-xl" />
                 </div>
             </div>
         )
     }
 
-    if (resolvedError || !document) {
+    if (resolvedError || !article) {
         return (
-            <Alert variant="destructive">
+            <Alert variant="destructive" className="rounded-xl">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>{t('errorLoadingSop', 'Error Loading Resource')}</AlertTitle>
                 <AlertDescription>
@@ -488,76 +475,93 @@ const EmbeddedArticleViewerInner = ({
     }
 
     // Content checks
-    const isPdf = Boolean(document.file_url?.toLowerCase().endsWith('.pdf'))
-    const isImage = Boolean(document.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))
-    const hasHtmlContent = Boolean(document.content || document.content_ar || fallbackContent)
-    const hasChecklist = Array.isArray(document.checklist_items) && document.checklist_items.length > 0
-    const hasFaq = Array.isArray(document.faq_items) && document.faq_items.length > 0
-    const hasImages = Array.isArray(document.images) && document.images.length > 0
-    const hasVideo = Boolean(document.video_url || (document.content_type === 'video' && (document.video_url || document.file_url)))
-    const hasAnyContent = hasHtmlContent || hasChecklist || hasFaq || hasImages || hasVideo || isPdf || isImage || Boolean(document.summary) || Boolean(document.description)
+    const isPdf = Boolean(article.file_url?.toLowerCase().endsWith('.pdf'))
+    const isImage = Boolean(article.file_url?.match(/\.(jpg|jpeg|png|gif|webp)$/i))
+    const hasHtmlContent = Boolean(article.content || article.content_ar || fallbackContent)
+    const hasChecklist = Array.isArray(article.checklist_items) && article.checklist_items.length > 0
+    const hasFaq = Array.isArray(article.faq_items) && article.faq_items.length > 0
+    const hasImages = Array.isArray(article.images) && article.images.length > 0
+    const hasVideo = Boolean(article.video_url || (article.content_type === 'video' && (article.video_url || article.file_url)))
+    const hasSummary = Boolean(article.summary || article.description)
+    const hasAnyContent = hasHtmlContent || hasChecklist || hasFaq || hasImages || hasVideo || isPdf || isImage || hasSummary
 
     const displayTitle = (translationTarget && translatedTitle)
         ? translatedTitle
-        : (document.title || t('sopReference', 'Standard Operating Procedure'))
+        : (article.title || t('sopReference', 'Standard Operating Procedure'))
 
-    // The official Knowledge Base article route is /knowledge/:id
-    const openInKnowledgeBaseHref = `/knowledge/${document.id || sopId}`
+    const displaySummary = (translationTarget && translatedSummary)
+        ? translatedSummary
+        : (article.summary || article.description)
+
+    const statusStyle = article.status && STATUS_CONFIG[article.status]
+        ? STATUS_CONFIG[article.status]
+        : { label: article.status || 'PUBLISHED', color: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300' }
+
+    // External route to full article viewer
+    const openInKnowledgeBaseHref = `/knowledge/${article.id || sopId}`
 
     return (
-        <Card className={cn("overflow-hidden border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900", className)}>
+        <Card className={cn("overflow-hidden border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900 rounded-2xl", className)}>
             <CardContent className="p-0">
-                {/* Header */}
-                <div className="bg-slate-50/80 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 p-4 md:p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                        <div className="h-10 w-10 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
-                            {isTranslating ? <Loader2 className="h-5 w-5 animate-spin" /> : <BookOpen className="h-5 w-5" />}
+                {/* 1. Header Banner */}
+                <div className="bg-slate-50/90 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800 p-5 sm:p-7 flex flex-col md:flex-row md:items-center justify-between gap-5">
+                    <div className="flex items-start gap-4 min-w-0">
+                        <div className="h-11 w-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/70 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 shadow-xs">
+                            {isTranslating ? <Loader2 className="h-6 w-6 animate-spin" /> : <BookOpen className="h-6 w-6" />}
                         </div>
-                        <div className="space-y-1.5 min-w-0">
+                        <div className="space-y-2 min-w-0 flex-1">
                             {/* Badges row */}
                             <div className="flex flex-wrap items-center gap-2">
-                                {document.sop_code && (
-                                    <Badge variant="outline" className="text-[10px] font-mono font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
-                                        {document.sop_code}
+                                {article.sop_code && (
+                                    <Badge variant="outline" className="text-[11px] font-mono font-bold bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 px-2 py-0.5">
+                                        {article.sop_code}
                                     </Badge>
                                 )}
-                                {document.content_type && (
+                                {article.content_type && (
                                     <Badge variant="outline" className="text-[10px] uppercase font-bold text-slate-600 dark:text-slate-400 bg-white/80 dark:bg-slate-900/80">
                                         <FileText className="h-3 w-3 me-1" />
-                                        {document.content_type}
+                                        {article.content_type}
                                     </Badge>
                                 )}
-                                {document.status && (
-                                    <span className="text-[10px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full font-bold tracking-wide">
-                                        {document.status}
+                                {article.status && (
+                                    <span className={cn("text-[10px] px-2.5 py-0.5 rounded-full font-bold tracking-wide uppercase", statusStyle.color)}>
+                                        {statusStyle.label}
                                     </span>
                                 )}
-                                {document.current_version && (
+                                {article.current_version && (
                                     <span className="text-[10px] bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full font-semibold">
                                         <ShieldCheck className="inline-block h-3 w-3 me-0.5" />
-                                        {`v${document.current_version}`}
+                                        {`v${article.current_version}`}
                                     </span>
                                 )}
-                                {document.department?.name && (
+                                {article.department?.name && (
                                     <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
                                         <Building2 className="h-3 w-3" />
-                                        {document.department.name}
+                                        {article.department.name}
+                                    </span>
+                                )}
+                                {article.estimated_read_time && (
+                                    <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full font-medium flex items-center gap-1">
+                                        <Clock className="h-3 w-3" />
+                                        {`${article.estimated_read_time} min`}
                                     </span>
                                 )}
                             </div>
 
-                            <h3 className="font-bold text-xl text-slate-900 dark:text-slate-100 leading-tight">
+                            {/* Title */}
+                            <h2 className="font-extrabold text-xl sm:text-2xl text-slate-900 dark:text-slate-100 leading-snug">
                                 {displayTitle}
-                            </h3>
+                            </h2>
 
-                            {document.description && (
-                                <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
-                                    {document.description}
+                            {article.description && !article.summary && (
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-clamp-2">
+                                    {article.description}
                                 </p>
                             )}
                         </div>
                     </div>
 
+                    {/* Actions */}
                     <div className="flex items-center gap-2 shrink-0 self-start md:self-center">
                         {translationError && (
                             <span className="text-xs text-amber-700 bg-amber-50 border border-amber-200 px-2 py-1 rounded">
@@ -576,9 +580,9 @@ const EmbeddedArticleViewerInner = ({
                                 {t('retryTranslation', 'Retry Translation')}
                             </Button>
                         ) : null}
-                        {document.file_url && (
+                        {article.file_url && (
                             <Button variant="outline" size="sm" asChild className="h-9">
-                                <a href={resolvedFileUrl || document.file_url} target="_blank" rel="noreferrer">
+                                <a href={resolvedFileUrl || article.file_url} target="_blank" rel="noreferrer">
                                     <Download className="me-2 h-4 w-4" />
                                     {t('download', 'Download')}
                                 </a>
@@ -588,7 +592,7 @@ const EmbeddedArticleViewerInner = ({
                             variant="outline"
                             size="sm"
                             asChild
-                            className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:text-hotel-navy hover:border-hotel-gold text-slate-700 dark:text-slate-200 font-semibold"
+                            className="h-9 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:text-hotel-navy hover:border-hotel-gold text-slate-700 dark:text-slate-200 font-semibold shadow-xs"
                         >
                             <a href={openInKnowledgeBaseHref} target="_blank" rel="noreferrer">
                                 <ExternalLink className="me-2 h-4 w-4 text-hotel-gold" />
@@ -598,115 +602,122 @@ const EmbeddedArticleViewerInner = ({
                     </div>
                 </div>
 
-                {/* Content Area */}
-                <div className="p-6 md:p-8 space-y-8 bg-white dark:bg-slate-900 min-h-[250px]">
+                {/* 2. Content Area */}
+                <div className="p-6 sm:p-8 md:p-10 space-y-8 bg-white dark:bg-slate-900 min-h-[300px]">
                     {hasAnyContent ? (
                         <>
-                            {/* 1. TL;DR / Quick Summary Banner */}
-                            {document.summary && (
-                                <div className="p-4 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/50">
-                                    <div className="flex items-center gap-2 mb-1.5 text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
-                                        <Zap className="h-4 w-4 text-amber-600 fill-amber-500" />
-                                        <span>{t('viewer.tldr', 'Key Summary')}</span>
+                            {/* Key Highlights / Summary Banner */}
+                            {displaySummary && (
+                                <div className="relative group p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-transparent">
+                                    <div className="bg-slate-50/80 dark:bg-slate-800/60 rounded-[15px] p-5 sm:p-6 shadow-xs border border-indigo-100/50 dark:border-indigo-900/30">
+                                        <h3 className="text-[11px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
+                                            <Zap className="h-3.5 w-3.5 fill-indigo-600 dark:fill-indigo-400" />
+                                            {t('viewer.tldr', 'Key Summary')}
+                                        </h3>
+                                        <p className="text-sm sm:text-base font-medium text-slate-700 dark:text-slate-300 italic leading-relaxed">
+                                            "{displaySummary}"
+                                        </p>
                                     </div>
-                                    <p className="text-sm font-medium text-slate-700 dark:text-slate-300 italic leading-relaxed">
-                                        "{document.summary}"
-                                    </p>
                                 </div>
                             )}
 
-                            {/* 2. Video Player if available */}
+                            {/* Attached File Quick Preview */}
+                            {article.file_url && !isPdf && (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                                    <div className="flex items-center gap-3 min-w-0">
+                                        <div className="h-10 w-10 rounded-lg bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                            <FileText className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{t('viewer.attached_file', 'Attached Document')}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400">{article.file_url.split('/').pop()}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex w-full sm:w-auto gap-2">
+                                        <Button variant="ghost" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg hover:bg-white dark:hover:bg-slate-700" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
+                                            <ExternalLink className="h-4 w-4 me-2" />
+                                            {t('viewer.view', 'View')}
+                                        </Button>
+                                        <Button variant="outline" size="sm" className="h-9 flex-1 sm:flex-none px-3 sm:px-4 rounded-lg bg-white dark:bg-slate-800" disabled={!resolvedFileUrl} onClick={() => resolvedFileUrl && window.open(resolvedFileUrl, '_blank')}>
+                                            <Download className="h-4 w-4 me-2" />
+                                            {t('viewer.download', 'Download')}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* PDF Viewer if applicable */}
+                            {isPdf && resolvedFileUrl && (
+                                <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
+                                    <PdfViewer url={resolvedFileUrl} />
+                                </div>
+                            )}
+
+                            {/* Video Player if available */}
                             {hasVideo && (
                                 <div className="rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-800">
                                     <VideoPlayer
-                                        videoUrl={document.video_url || document.file_url!}
+                                        videoUrl={article.video_url || article.file_url!}
                                         title={displayTitle}
                                     />
                                 </div>
                             )}
 
-                            {/* 3. HTML / Article Content */}
+                            {/* Main Article Content Card */}
                             {hasHtmlContent && (
-                                <EmbeddedHtmlContent
-                                    content={document.content || document.content_ar || fallbackContent}
-                                    translationTarget={translationTarget}
-                                    translatedContent={translatedContent}
-                                    isTranslating={isTranslating}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    cacheVersion={document.updated_at}
-                                />
-                            )}
-
-                            {/* 4. Interactive Checklist Steps */}
-                            {hasChecklist && (
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
-                                        <CheckSquare className="h-5 w-5 text-emerald-600" />
-                                        <span>{t('checklistSteps', 'Checklist Procedure Steps')}</span>
-                                    </div>
-                                    <ChecklistRenderer items={document.checklist_items!} />
-                                </div>
-                            )}
-
-                            {/* 5. FAQs Accordion */}
-                            {hasFaq && (
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
-                                        <HelpCircle className="h-5 w-5 text-hotel-gold" />
-                                        <span>{t('faqTitle', 'Frequently Asked Questions')}</span>
-                                    </div>
-                                    <FAQAccordion items={document.faq_items!} />
-                                </div>
-                            )}
-
-                            {/* 6. Visual Image Gallery */}
-                            {hasImages && (
-                                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                                    <div className="flex items-center gap-2 text-base font-bold text-hotel-navy dark:text-slate-100">
-                                        <Images className="h-5 w-5 text-indigo-600" />
-                                        <span>{t('visualGallery', 'Visual Guide Gallery')}</span>
-                                    </div>
-                                    <ImageGalleryRenderer
-                                        images={document.images!}
-                                        cacheVersion={document.updated_at || undefined}
+                                <div className="article-content-wrapper">
+                                    <EmbeddedHtmlContent
+                                        content={article.content || article.content_ar || fallbackContent}
+                                        translationTarget={translationTarget}
+                                        translatedContent={translatedContent}
+                                        isTranslating={isTranslating}
+                                        showBilingual={showBilingual}
+                                        translationDir={translationDir}
+                                        cacheVersion={article.updated_at}
                                     />
                                 </div>
                             )}
 
-                            {/* 7. PDF Viewer if applicable */}
-                            {isPdf && resolvedFileUrl && (
-                                <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 h-[600px] bg-slate-100 dark:bg-slate-950">
-                                    <PdfViewer url={resolvedFileUrl} />
+                            {/* Checklist Procedure Steps */}
+                            {hasChecklist && (
+                                <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                                        <CheckSquare className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                                        <span>{t('checklistSteps', 'Checklist Procedure Steps')}</span>
+                                    </div>
+                                    <ChecklistRenderer items={article.checklist_items!} />
                                 </div>
                             )}
 
-                            {/* 8. Attached Image Viewer if applicable */}
-                            {isImage && resolvedFileUrl && (
-                                <div className="flex justify-center bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200 dark:border-slate-800 p-4">
-                                    <img
-                                        src={resolvedFileUrl}
-                                        alt={document.title}
-                                        className="max-h-[600px] w-auto object-contain rounded shadow-sm"
+                            {/* FAQ Accordion */}
+                            {hasFaq && (
+                                <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                                        <HelpCircle className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                                        <span>{t('faqTitle', 'Frequently Asked Questions')}</span>
+                                    </div>
+                                    <FAQAccordion items={article.faq_items!} />
+                                </div>
+                            )}
+
+                            {/* Visual Image Gallery */}
+                            {hasImages && (
+                                <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                                    <div className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-100">
+                                        <Images className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                        <span>{t('visualGallery', 'Visual Reference Gallery')}</span>
+                                    </div>
+                                    <ImageGalleryRenderer
+                                        images={article.images!}
+                                        cacheVersion={article.updated_at || undefined}
                                     />
                                 </div>
                             )}
                         </>
                     ) : (
-                        <div className="flex flex-col items-center justify-center py-12 text-center text-slate-500 dark:text-slate-400">
-                            <FileText className="h-16 w-16 text-slate-200 dark:text-slate-700 mb-4" />
-                            <h4 className="text-lg font-medium text-hotel-navy dark:text-slate-200 mb-2">
-                                {displayTitle}
-                            </h4>
-                            <p className="max-w-md mb-6 text-sm text-slate-500">
-                                {t('sopReferenceHint', 'Standard Operating Procedure details can be viewed directly in the Knowledge Base.')}
-                            </p>
-                            <Button asChild className="bg-hotel-navy hover:bg-hotel-navy-light text-white">
-                                <a href={openInKnowledgeBaseHref} target="_blank" rel="noreferrer">
-                                    <ExternalLink className="me-2 h-4 w-4" />
-                                    {t('viewInKnowledgeBase', 'View in Knowledge Base')}
-                                </a>
-                            </Button>
+                        <div className="flex flex-col items-center justify-center py-12 text-slate-400">
+                            <AlertCircle className="h-10 w-10 mb-3 opacity-20" />
+                            <p className="italic">{t('viewer.no_content', 'No content available for this procedure.')}</p>
                         </div>
                     )}
                 </div>

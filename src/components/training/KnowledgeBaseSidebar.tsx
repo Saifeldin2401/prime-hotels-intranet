@@ -9,8 +9,8 @@
  * - Quizzes and Question Bank integration
  */
 
+import { ArticleContent } from '@/components/knowledge/ArticleContent'
 import {
-    ArticleContent,
     ChecklistRenderer,
     FAQAccordion,
     ImageGalleryRenderer,
