@@ -1,6 +1,7 @@
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,7 +19,7 @@ import { cn } from '@/lib/utils'
 import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
-import { AlertTriangle, CheckCircle2, FileText, Sparkles, Upload } from 'lucide-react'
+import { AlertTriangle, BookOpen, CheckCircle2, FileText, Search, Sparkles, Upload, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
@@ -83,6 +84,7 @@ export function ContentBlockSlideOver({
   saveContent,
   isRTL,
 }: ContentBlockSlideOverProps) {
+  const { t } = useTranslation('training')
   const [showImageMediaPicker, setShowImageMediaPicker] = useState(false)
   const [sopSearchTerm, setSopSearchTerm] = useState('')
 

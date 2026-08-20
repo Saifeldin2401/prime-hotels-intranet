@@ -256,7 +256,7 @@ export async function createCertificate(data: CertificateData): Promise<Certific
     // own training_progress server-side before issuing).
     if (data.certificateType === 'training' && data.trainingProgressId) {
         const { data: cert, error } = await supabase
-            .rpc('issue_training_certificate', { p_training_progress_id: data.trainingProgressId })
+            .rpc('issue_training_certificate' as any, { p_training_progress_id: data.trainingProgressId })
             .single()
 
         if (error || !cert) {

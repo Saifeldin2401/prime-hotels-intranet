@@ -51,6 +51,7 @@ export const KNOWLEDGE_STATUS = {
 export interface KnowledgeArticle {
     id: string
     code: string
+    sop_code?: string | null
     title: string
     title_ar?: string
     description?: string
@@ -320,7 +321,12 @@ export const STATUS_CONFIG = {
     draft: { label: 'Draft', color: 'gray' },
     under_review: { label: 'Under Review', color: 'yellow' },
     approved: { label: 'Published', color: 'green' },
-    obsolete: { label: 'Archived', color: 'red' }
+    obsolete: { label: 'Archived', color: 'red' },
+    DRAFT: { label: 'Draft', color: 'gray' },
+    PENDING_REVIEW: { label: 'Pending Review', color: 'yellow' },
+    APPROVED: { label: 'Approved', color: 'blue' },
+    PUBLISHED: { label: 'Published', color: 'green' },
+    REJECTED: { label: 'Rejected', color: 'red' }
 } as const
 
 export const VISIBILITY_CONFIG = {

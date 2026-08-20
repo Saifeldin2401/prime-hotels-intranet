@@ -1,6 +1,7 @@
 import { AIQuestionGenerator } from '@/components/questions/AIQuestionGenerator'
 import { DocumentPicker } from '@/components/documents/DocumentPicker'
 import { MediaPicker } from '@/components/media/MediaPicker'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -12,7 +13,7 @@ import { cn } from '@/lib/utils'
 import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
-import { AlertTriangle, CheckCircle2, Upload } from 'lucide-react'
+import { AlertTriangle, BookOpen, CheckCircle2, Search, Upload, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
@@ -79,6 +80,7 @@ export function ContentBlockDialog({
 }: ContentBlockDialogProps) {
   const { t } = useTranslation('training')
   const [showImageMediaPicker, setShowImageMediaPicker] = useState(false)
+  const [sopSearchTerm, setSopSearchTerm] = useState('')
 
   return (
     <>
@@ -133,47 +135,6 @@ export function ContentBlockDialog({
                 </Button>
               </div>
             )}
-            {/* Block Type */}
-            <div className={isRTL ? 'text-right' : ''}>
-              <Label>{t('builder.blockType')}</Label>
-              <div className="grid grid-cols-4 gap-2 mt-1.5">
-                {BLOCK_TYPES.map(({ type, label, icon: Icon, color, desc }) => {
-                  const isSelected = currentBlock.type === type
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => handleTypeChange(type)}
-                      className={cn(
-                        'flex flex-col items-center p-3 rounded-lg border-2 text-center transition-all cursor-pointer relative',
-                        isSelected
-                          ? cn('border-current shadow-sm', color)
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600 bg-white'
-                      )}
-                    >
-                      <Icon className={cn('w-5 h-5 mb-1', isSelected ? '' : 'text-slate-400')} />
-                      <span className="text-xs font-semibold leading-tight">{label}</span>
-                      <span className="text-[10px] text-slate-400 leading-tight mt-0.5 hidden sm:block">{desc}</span>
-                      {isSelected && (
-                        <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-current" />
-                      )}
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-
-            {/* Title */}
-            <div className={isRTL ? 'text-right' : ''}>
-              <Label>{t('builder.contentTitle')}</Label>
-              <Input
-                value={currentBlock.title}
-                onChange={(e) => setCurrentBlock({ ...currentBlock, title: e.target.value })}
-                placeholder={t('builder.titlePlaceholder')}
-                className="mt-1"
-                dir={isRTL ? 'rtl' : 'ltr'}
-              />
-            </div>
 
             {/* Type: Quiz */}
             {currentBlock.type === 'quiz' && (
