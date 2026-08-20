@@ -330,6 +330,7 @@ function TrainingBuilderInner() {
             openAIGeneratorForModule={ctx.openAIGeneratorForModule}
             setShowSmartWizard={ctx.setShowSmartWizard} isRTL={ctx.isRTL}
             activeSection={ctx.activeSection}
+            setShowKBSidebar={ctx.setShowKBSidebar}
           />
         </BuilderSidebar>
       </div>
@@ -490,6 +491,7 @@ function TrainingBuilderInner() {
           sections={ctx.sections} setSections={ctx.setSections}
           contentBlocks={ctx.contentBlocks} setContentBlocks={ctx.setContentBlocks}
           availableSOPs={ctx.availableSOPs} availableQuizzes={ctx.availableQuizzes}
+          onClose={() => ctx.setShowKBSidebar(false)}
         />
       )}
     </div>

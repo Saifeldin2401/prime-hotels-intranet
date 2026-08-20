@@ -18,6 +18,7 @@ interface KBSidebarPanelProps {
   setContentBlocks: React.Dispatch<React.SetStateAction<ContentBlockForm[]>>
   availableSOPs: { id: string; title: string }[] | undefined
   availableQuizzes: LearningQuiz[] | undefined
+  onClose?: () => void
 }
 
 export function KBSidebarPanel({
@@ -30,163 +31,178 @@ export function KBSidebarPanel({
   setContentBlocks,
   availableSOPs,
   availableQuizzes,
+  onClose,
 }: KBSidebarPanelProps) {
   const { t } = useTranslation('training')
   const { toast } = useToast()
   const { profile } = useAuth()
   const queryClient = useQueryClient()
 
+  const addBlockToSections = (block: ContentBlockForm) => {
+    setSections(prev => {
+      if (prev.length === 0) {
+        return [{
+          id: `section-${Date.now()}`,
+          title: t('mainContent', 'Main Content'),
+          description: '',
+          items: [{ ...block, order: 0 }],
+          order: 0
+        }]
+      }
+      const targetSectionId = activeSection || prev[0].id
+      return prev.map(s =>
+        s.id === targetSectionId
+          ? { ...s, items: [...s.items, { ...block, order: s.items.length }] }
+          : s
+      )
+    })
+  }
+
   return (
-    <div className="fixed inset-x-0 sm:inset-x-auto sm:end-0 top-16 bottom-0 w-full sm:w-80 z-40 shadow-xl border-l bg-white">
-      <KnowledgeBaseSidebar
-        moduleId={moduleId || undefined}
-        moduleTopic={title}
-        onInsertContent={(content) => {
-          const newBlock: ContentBlockForm = {
-            id: `block_${Date.now()}`,
-            type: content.type === 'ai_generated' ? 'text' : content.type as ContentType,
-            title: content.title,
-            content: content.content,
-            content_url: '',
-            content_data: content.sourceId ? { source_document_id: content.sourceId } : {},
-            is_mandatory: true,
-            order: contentBlocks.length
-          }
-          setContentBlocks([...contentBlocks, newBlock])
-        }}
-        onLinkDocument={(docId) => {
-          const sop = availableSOPs?.find(s => s.id === docId)
-          if (!sop) return
+    <>
+      {/* Mobile backdrop */}
+      <div
+        className="fixed inset-0 bg-black/40 z-30 sm:hidden"
+        onClick={onClose}
+        aria-hidden="true"
+      />
 
-          const newBlock: ContentBlockForm = {
-            id: `sop-${Date.now()}`,
-            type: 'sop_reference',
-            title: sop.title,
-            content: '',
-            content_url: '',
-            content_data: { sop_id: docId },
-            is_mandatory: true,
-            order: 0
-          }
+      <aside className="fixed inset-y-16 end-0 w-full sm:w-88 md:w-96 z-40 shadow-2xl border-s bg-background flex flex-col">
+        <KnowledgeBaseSidebar
+          moduleId={moduleId || undefined}
+          moduleTopic={title}
+          onClose={onClose}
+          onInsertContent={(content) => {
+            const newBlock: ContentBlockForm = {
+              id: `block_${Date.now()}`,
+              type: content.type === 'ai_generated' ? 'text' : (content.type as ContentType || 'text'),
+              title: content.title,
+              content: content.content,
+              content_url: '',
+              content_data: content.sourceId
+                ? { source_document_id: content.sourceId, sop_id: content.sourceId }
+                : {},
+              is_mandatory: true,
+              order: contentBlocks.length
+            }
+            setContentBlocks(prev => [...prev, newBlock])
+            addBlockToSections(newBlock)
 
-          const targetSectionId = activeSection || sections[0]?.id
-          if (targetSectionId) {
-            setSections(prev => prev.map(s =>
-              s.id === targetSectionId
-                ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
-                : s
-            ))
             toast({
-              title: t('builder.added'),
-              description: t('builder.sopAdded', { title: sop.title })
+              title: t('builder.added', 'Added'),
+              description: t('builder.contentAdded', { defaultValue: `Content added for "${content.title}"` })
             })
-          }
-        }}
-        onLinkQuiz={(quizId) => {
-          const quiz = availableQuizzes?.find(q => q.id === quizId)
-          if (!quiz) return
-
-          const newBlock: ContentBlockForm = {
-            id: `quiz-${Date.now()}`,
-            type: 'quiz',
-            title: quiz.title,
-            content: '',
-            content_url: '',
-            content_data: { quiz_id: quizId },
-            is_mandatory: true,
-            order: 0
-          }
-
-          const targetSectionId = activeSection || sections[0]?.id
-          if (targetSectionId) {
-            setSections(prev => prev.map(s =>
-              s.id === targetSectionId
-                ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
-                : s
-            ))
-            toast({
-              title: t('builder.added'),
-              description: t('builder.quizAdded', { title: quiz.title })
-            })
-          }
-        }}
-        onAddQuestions={async (questionIds) => {
-          if (!questionIds.length) return
-          if (!moduleId) {
-            toast({
-              title: t('common:error'),
-              description: t('saveModuleFirst'),
-              variant: 'destructive'
-            })
-            return
-          }
-
-          try {
-            const { data: quizData, error: quizError } = await supabase
-              .from('learning_quizzes')
-              .insert({
-                title: `${title || t('builder.untitledModule')} - Generated Quiz`,
-                description: `Created from Knowledge Base questions`,
-                status: 'published',
-                training_module_id: moduleId,
-                passing_score_percentage: 80,
-                created_by: profile?.id
-              })
-              .select()
-              .single()
-
-            if (quizError) throw quizError
-
-            const quizQuestions = questionIds.map((qId, idx) => ({
-              quiz_id: quizData.id,
-              question_id: qId,
-              display_order: idx + 1,
-              points_override: 1
-            }))
-
-            const { error: linkError } = await supabase
-              .from('unified_quiz_questions')
-              .insert(quizQuestions)
-
-            if (linkError) throw linkError
+          }}
+          onLinkDocument={(docId, docTitle) => {
+            const sop = availableSOPs?.find(s => s.id === docId)
+            const resolvedTitle = sop?.title || docTitle || 'SOP Document'
 
             const newBlock: ContentBlockForm = {
-              id: `quiz-${Date.now()}`,
-              type: 'quiz',
-              title: quizData.title,
+              id: `sop-${Date.now()}`,
+              type: 'sop_reference',
+              title: resolvedTitle,
               content: '',
               content_url: '',
-              content_data: { quiz_id: quizData.id },
+              content_data: { sop_id: docId, source_document_id: docId },
               is_mandatory: true,
               order: 0
             }
 
-            const targetSectionId = activeSection || sections[0]?.id
-            if (targetSectionId) {
-              setSections(prev => prev.map(s =>
-                s.id === targetSectionId
-                  ? { ...s, items: [...s.items, { ...newBlock, order: s.items.length }] }
-                  : s
-              ))
+            addBlockToSections(newBlock)
 
+            toast({
+              title: t('builder.added', 'Added'),
+              description: t('builder.sopAdded', { title: resolvedTitle, defaultValue: `Linked "${resolvedTitle}"` })
+            })
+          }}
+          onLinkQuiz={(quizId, quizTitle) => {
+            const quiz = availableQuizzes?.find(q => q.id === quizId)
+            const resolvedTitle = quiz?.title || quizTitle || 'Quiz Assessment'
+
+            const newBlock: ContentBlockForm = {
+              id: `quiz-${Date.now()}`,
+              type: 'quiz',
+              title: resolvedTitle,
+              content: '',
+              content_url: '',
+              content_data: { quiz_id: quizId },
+              is_mandatory: true,
+              order: 0
+            }
+
+            addBlockToSections(newBlock)
+
+            toast({
+              title: t('builder.added', 'Added'),
+              description: t('builder.quizAdded', { title: resolvedTitle, defaultValue: `Linked "${resolvedTitle}"` })
+            })
+          }}
+          onAddQuestions={async (questionIds) => {
+            if (!questionIds.length) return
+
+            try {
+              const quizTitle = `${title || t('builder.untitledModule', 'Untitled Module')} - Knowledge Quiz`
+              const { data: quizData, error: quizError } = await supabase
+                .from('learning_quizzes')
+                .insert({
+                  title: quizTitle,
+                  description: `Created from Knowledge Base question bank`,
+                  status: 'published',
+                  training_module_id: moduleId || null,
+                  passing_score_percentage: 80,
+                  created_by: profile?.id
+                })
+                .select()
+                .single()
+
+              if (quizError) throw quizError
+
+              const quizQuestions = questionIds.map((qId, idx) => ({
+                quiz_id: quizData.id,
+                question_id: qId,
+                display_order: idx + 1,
+                points_override: 1
+              }))
+
+              const { error: linkError } = await supabase
+                .from('unified_quiz_questions')
+                .insert(quizQuestions)
+
+              if (linkError) throw linkError
+
+              const newBlock: ContentBlockForm = {
+                id: `quiz-${Date.now()}`,
+                type: 'quiz',
+                title: quizData.title,
+                content: '',
+                content_url: '',
+                content_data: { quiz_id: quizData.id },
+                is_mandatory: true,
+                order: 0
+              }
+
+              addBlockToSections(newBlock)
               queryClient.invalidateQueries({ queryKey: ['available-quizzes'] })
 
               toast({
-                title: t('builder.added'),
-                description: t('builder.questionsAdded', { count: questionIds.length })
+                title: t('builder.added', 'Added'),
+                description: t('builder.questionsAdded', {
+                  count: questionIds.length,
+                  defaultValue: `Created quiz with ${questionIds.length} question(s)`
+                })
+              })
+            } catch (err) {
+              const errorDetails = getUserFriendlyError(err)
+              toast({
+                title: t('common:error', 'Error'),
+                description: errorDetails.message || 'Failed to create quiz from questions.',
+                variant: 'destructive'
               })
             }
-
-          } catch (_err) {
-            toast({
-              title: t('common:error'),
-              description: 'Failed to create quiz from questions.',
-              variant: 'destructive'
-            })
-          }
-        }}
-        className="h-full"
-      />
-    </div>
+          }}
+          className="h-full border-none shadow-none rounded-none"
+        />
+      </aside>
+    </>
   )
 }

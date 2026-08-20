@@ -173,6 +173,7 @@ export interface TrainingBuilderContextValue {
 
   // KB sidebar
   showKBSidebar: boolean
+  setShowKBSidebar: (v: boolean) => void
 
   // Templates
   availableTemplates: TrainingTemplate[] | undefined
@@ -523,7 +524,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const [aiPrefillContent, setAiPrefillContent] = useState('')
   const [aiPrefillTitle, setAiPrefillTitle] = useState('')
   const [aiTargetSectionId, setAiTargetSectionId] = useState<string | null>(null)
-  const [showKBSidebar] = useState(false)
+  const [showKBSidebar, setShowKBSidebar] = useState(false)
   const [showSmartWizard, setShowSmartWizard] = useState(false)
   const [isValidatingQuizzes, setIsValidatingQuizzes] = useState(false)
 
@@ -1493,6 +1494,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // Map TrainingContentBlockInsert fields to the unified documents columns.
     // documents has no `type`/`order`/`source_document_id` columns (they are
     // block_type/block_order/linked_training_id), and title is NOT NULL.
+    // Note: linked_training_id on documents references training_modules(id), NOT documents(id).
+    // The source SOP / document ID is stored inside content_data.sop_id / content_data.source_document_id.
     const docRows = blocksToInsert.map((b) => ({
       training_module_id: b.training_module_id || targetId,
       content_type: 'training_block',
@@ -1501,8 +1504,11 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       title: b.title || 'Content block',
       content: b.content || '',
       content_url: b.content_url || null,
-      content_data: (b.content_data as Json) || {},
-      linked_training_id: b.source_document_id || null,
+      content_data: {
+        ...(b.content_data || {}),
+        ...(b.source_document_id ? { sop_id: b.source_document_id, source_document_id: b.source_document_id } : {})
+      } as Json,
+      linked_training_id: null,
       is_mandatory: b.is_mandatory ?? true,
       duration_seconds: b.duration_seconds ?? null,
       points: b.points ?? null,
@@ -1933,6 +1939,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
     // KB sidebar
     showKBSidebar,
+    setShowKBSidebar,
 
     // Templates
     availableTemplates,

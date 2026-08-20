@@ -635,6 +635,10 @@
         "aiGeneratedQuiz": "AI Generated Quiz",
         "questionsGenerated": "Questions Generated",
         "questionsAdded": "{{count}} questions added to section",
+        "browseKnowledgeBase": "Knowledge Base Bank",
+        "contentAdded": "Content added from knowledge base",
+        "sopAdded": "Linked \"{{title}}\"",
+        "quizAdded": "Linked \"{{title}}\"",
         "passingScore": "Passing Score",
         "passingScoreDesc": "Minimum score required to earn a certificate.",
         "steps": {

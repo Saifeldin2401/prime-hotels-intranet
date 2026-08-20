@@ -790,12 +790,22 @@ export default function TrainingPlayer() {
             if (blocksError) throw blocksError
 
             // Map raw DB column names to TrainingContentBlock shape
-            const mappedBlocks = (blocks || []).map(b => ({
-                ...b,
-                type: b.block_type,
-                order: b.block_order,
-                source_document_id: b.linked_training_id,
-            })) as TrainingContentBlock[]
+            const mappedBlocks = (blocks || []).map(b => {
+                const contentData = b.content_data as Record<string, unknown> | null
+                const resolvedSourceDocId =
+                    (contentData?.sop_id as string | undefined) ||
+                    (contentData?.source_document_id as string | undefined) ||
+                    (contentData?.document_id as string | undefined) ||
+                    b.linked_training_id ||
+                    null
+
+                return {
+                    ...b,
+                    type: b.block_type,
+                    order: b.block_order,
+                    source_document_id: resolvedSourceDocId,
+                }
+            }) as TrainingContentBlock[]
 
             // Fetch referenced content titles (SOPs, Quizzes) to show in sidebar
             const sopIds = mappedBlocks

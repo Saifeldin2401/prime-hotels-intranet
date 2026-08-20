@@ -44,6 +44,7 @@ interface RightPanelProps {
   moduleId: string | null
   openAIGeneratorForModule: () => void
   setShowSmartWizard: (v: boolean) => void
+  setShowKBSidebar?: (v: boolean) => void
   isRTL: boolean
   activeSection?: string | null
 }
@@ -64,6 +65,7 @@ export function RightPanel({
   moduleId,
   openAIGeneratorForModule,
   setShowSmartWizard,
+  setShowKBSidebar,
   isRTL,
   activeSection,
 }: RightPanelProps) {
@@ -156,7 +158,7 @@ export function RightPanel({
               <span>{t('builder.smartAiAssistant', 'Smart AI Assistant')}</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="px-3 pb-3">
+          <CardContent className="px-3 pb-3 space-y-2">
             <Button
               className={cn("w-full bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold text-xs shadow-xs border-none h-8 px-2 flex items-center justify-center gap-1.5", isRTL ? "flex-row-reverse" : "")}
               onClick={() => setShowSmartWizard(true)}
@@ -164,6 +166,16 @@ export function RightPanel({
               <Sparkles className="w-3.5 h-3.5 shrink-0 text-slate-950" />
               <span className="truncate">{t('builder.openSmartAiModal', 'AI Course Generator')}</span>
             </Button>
+            {setShowKBSidebar && (
+              <Button
+                variant="outline"
+                className={cn("w-full border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-xs font-semibold h-8 px-2 flex items-center justify-center gap-1.5", isRTL ? "flex-row-reverse" : "")}
+                onClick={() => setShowKBSidebar(true)}
+              >
+                <BookOpen className="w-3.5 h-3.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+                <span className="truncate">{t('builder.browseKnowledgeBase', 'Knowledge Base Bank')}</span>
+              </Button>
+            )}
           </CardContent>
         </Card>
 

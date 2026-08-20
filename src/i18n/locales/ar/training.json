@@ -635,6 +635,10 @@
         "aiGeneratedQuiz": "اختبار مولد بالذكاء الاصطناعي",
         "questionsGenerated": "تم توليد الأسئلة",
         "questionsAdded": "تمت إضافة {{count}} أسئلة إلى القسم",
+        "browseKnowledgeBase": "بنك المعرفة",
+        "contentAdded": "تمت إضافة المحتوى من قاعدة المعرفة",
+        "sopAdded": "تم ربط \"{{title}}\"",
+        "quizAdded": "تم ربط \"{{title}}\"",
         "passingScore": "درجة النجاح",
         "passingScoreDesc": "الحد الأدنى للدرجة المطلوبة للحصول على شهادة.",
         "steps": {

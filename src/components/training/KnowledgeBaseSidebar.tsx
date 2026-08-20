@@ -30,7 +30,8 @@ import {
     Loader2,
     Plus,
     Search,
-    Sparkles
+    Sparkles,
+    X
 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -39,9 +40,10 @@ interface KnowledgeBaseSidebarProps {
     moduleId?: string
     moduleTopic?: string
     onInsertContent?: (content: { type: string; title: string; content: string; sourceId?: string }) => void
-    onLinkDocument?: (documentId: string) => void
-    onLinkQuiz?: (quizId: string) => void
+    onLinkDocument?: (documentId: string, documentTitle?: string) => void
+    onLinkQuiz?: (quizId: string, quizTitle?: string) => void
     onAddQuestions?: (questionIds: string[]) => void
+    onClose?: () => void
     className?: string
 }
 
@@ -51,6 +53,7 @@ export function KnowledgeBaseSidebar({
     onLinkDocument,
     onLinkQuiz,
     onAddQuestions,
+    onClose,
     className
 }: KnowledgeBaseSidebarProps) {
     const { t, i18n } = useTranslation('training')
@@ -171,10 +174,22 @@ export function KnowledgeBaseSidebar({
     return (
         <Card className={cn("h-full flex flex-col", className)}>
             <CardHeader className="pb-3">
-                <CardTitle className={`text-lg flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
-                    <BookOpen className="h-5 w-5 text-hotel-navy" />
-                    {t('knowledgeBase.title')}
-                </CardTitle>
+                <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                    <CardTitle className={`text-lg flex items-center gap-2 ${isRTL ? 'flex-row-reverse' : 'flex-row'}`}>
+                        <BookOpen className="h-5 w-5 text-hotel-navy" />
+                        {t('knowledgeBase.title')}
+                    </CardTitle>
+                    {onClose && (
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 rounded-full text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                            onClick={onClose}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
                 <div className="relative mt-2">
                     <Search className={`absolute ${isRTL ? 'end-3' : 'start-3'} top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400`} />
                     <Input
@@ -235,7 +250,7 @@ export function KnowledgeBaseSidebar({
                                             size="sm"
                                             variant="outline"
                                             className="h-7 text-xs flex-1"
-                                            onClick={() => onLinkDocument?.(doc.id)}
+                                            onClick={() => onLinkDocument?.(doc.id, doc.title)}
                                         >
                                             <Link2 className={cn("h-3 w-3", isRTL ? "ms-1" : "me-1")} />
                                             {t('knowledgeBase.link')}
@@ -275,7 +290,7 @@ export function KnowledgeBaseSidebar({
                                     key={quiz.id}
                                     type="button"
                                     className="w-full p-3 rounded-lg border border-gray-100 hover:border-hotel-gold/50 hover:bg-gray-50/50 transition-colors cursor-pointer group text-left"
-                                    onClick={() => onLinkQuiz?.(quiz.id)}
+                                    onClick={() => onLinkQuiz?.(quiz.id, quiz.title)}
                                 >
                                     <div className={`flex items-center justify-between ${isRTL ? 'flex-row-reverse text-right' : 'flex-row text-left'}`}>
                                         <div className="flex-1 min-w-0">
