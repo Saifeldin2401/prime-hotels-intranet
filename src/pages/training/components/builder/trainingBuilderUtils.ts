@@ -160,5 +160,8 @@ export function getBlockValidation(block: ContentBlockForm, t: (key: string, opt
   if (block.type === 'text' && !block.content.trim()) {
     return { ok: false, message: t('builder.missingContent') }
   }
+  if ((block.type === 'assignment' || block.type === 'practical') && !block.content?.trim()) {
+    return { ok: false, message: t('builder.missingAssignmentPrompt', { defaultValue: 'Please provide instructions/prompt for the assignment' }) }
+  }
   return { ok: true, message: t('builder.readyToSave', { defaultValue: 'Ready to save' }) }
 }

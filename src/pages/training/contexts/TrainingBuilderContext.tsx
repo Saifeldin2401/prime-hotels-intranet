@@ -690,6 +690,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       { type: 'text', label: t('wizard.type_text', 'Text'), hint: t('builder.blockHints.text') },
       { type: 'video', label: t('wizard.type_video', 'Video'), hint: t('builder.blockHints.video') },
       { type: 'quiz', label: t('wizard.type_quiz', 'Quiz'), hint: t('builder.blockHints.quiz') },
+      { type: 'assignment', label: t('practicalAssignment', 'Practical Assignment'), hint: t('builder.blockHints.assignment', 'Open-ended task or submission graded by trainer') },
       { type: 'document_link', label: t('wizard.type_document_link', 'Document'), hint: t('builder.blockHints.document') },
       { type: 'sop_reference', label: t('wizard.type_sop_reference', 'Policy'), hint: t('builder.blockHints.policy') },
       { type: 'image', label: t('wizard.type_image', 'Image'), hint: t('builder.blockHints.image') },

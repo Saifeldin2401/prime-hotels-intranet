@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   Clock,
   Eye,
+  FileCheck,
   FileQuestion,
   FileText,
   Headphones,
@@ -208,6 +209,8 @@ export function RightPanel({
                         quiz: <FileQuestion className="w-3 h-3 text-purple-600" />,
                         audio: <Headphones className="w-3 h-3 text-cyan-600" />,
                         sop_reference: <BookOpen className="w-3 h-3 text-emerald-600" />,
+                        assignment: <FileCheck className="w-3 h-3 text-amber-600" />,
+                        practical: <FileCheck className="w-3 h-3 text-amber-600" />,
                       }
 
                       return (

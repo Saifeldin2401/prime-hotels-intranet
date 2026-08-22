@@ -12,6 +12,7 @@ import { cn } from '@/lib/utils'
 import {
   BookOpen,
   ExternalLink,
+  FileCheck,
   FileText,
   Headphones,
   Image as ImageIcon,
@@ -229,27 +230,45 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
     )
   }
 
-  // ------ Interactive ------
-  if (block.type === 'interactive') {
-    if (!block.content_url) {
-      return (
-        <div className="p-4 text-center text-xs text-muted-foreground italic border border-dashed border-slate-200 rounded-lg">
-          {t('builder.inlinePreview.noInteractive', 'No interactive content URL added yet')}
-        </div>
-      )
-    }
+  // ------ Practical Assignment ------
+  if (block.type === 'assignment' || block.type === 'practical') {
+    const prompt = (block.content_data?.instructions as string) || block.content
+    const rubric = block.content_data?.rubric as string | undefined
+    const requiresApproval = block.content_data?.requires_instructor_approval !== false
+
     return (
-      <div className="rounded-lg overflow-hidden bg-slate-900 border border-slate-700">
-        <div className="aspect-video">
-          <iframe
-            src={block.content_url}
-            className="w-full h-full"
-            allow="clipboard-read; clipboard-write; fullscreen"
-            sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
-            title={block.title || 'Interactive Preview'}
-            loading="lazy"
-          />
+      <div className={cn(
+        'p-3.5 bg-amber-50/60 dark:bg-amber-950/20 rounded-xl border border-amber-200/80 dark:border-amber-900/50 space-y-2.5',
+        isRTL ? 'text-right' : 'text-left'
+      )}>
+        <div className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
+          <div className="flex items-center gap-2">
+            <FileCheck className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-xs font-bold text-amber-950 dark:text-amber-200">
+              {block.title || t('practicalAssignment', 'Practical Assignment')}
+            </span>
+          </div>
+          {requiresApproval && (
+            <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-medium shrink-0">
+              {t('requiresInstructorReview', 'Requires Trainer Review')}
+            </span>
+          )}
         </div>
+        {prompt ? (
+          <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
+            {prompt}
+          </p>
+        ) : (
+          <p className="text-xs text-muted-foreground italic">
+            {t('builder.inlinePreview.noContent', 'No prompt/instructions provided yet')}
+          </p>
+        )}
+        {rubric && (
+          <div className="pt-2 border-t border-amber-200/60 text-[11px] text-slate-600 dark:text-slate-400">
+            <span className="font-semibold">{t('evaluationRubric', 'Rubric')}: </span>
+            <span>{rubric}</span>
+          </div>
+        )}
       </div>
     )
   }
