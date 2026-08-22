@@ -538,8 +538,30 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   // Builder step / navigation
   // -------------------------------------------------------------------------
 
+  const stepFromQuery = searchParams.get('step') as BuilderStep | null
+  const validSteps: readonly BuilderStep[] = useMemo(() => ['setup', 'structure', 'content', 'rules', 'preview', 'publish'] as const, [])
+  const initialStep: BuilderStep = stepFromQuery && validSteps.includes(stepFromQuery) ? stepFromQuery : 'content'
+
   const [activeSection, setActiveSection] = useState<string | null>(null)
-  const [builderStep, setBuilderStep] = useState<BuilderStep>('content')
+  const [builderStep, setBuilderStepState] = useState<BuilderStep>(initialStep)
+
+  // Keep URL query in sync when step changes
+  const setBuilderStep = useCallback((newStep: BuilderStep) => {
+    setBuilderStepState(newStep)
+    const currentParams = new URLSearchParams(window.location.search)
+    if (currentParams.get('step') !== newStep) {
+      currentParams.set('step', newStep)
+      navigate({ search: currentParams.toString() }, { replace: true })
+    }
+  }, [navigate])
+
+  // If searchParams step changes externally (e.g. back/forward navigation)
+  useEffect(() => {
+    if (stepFromQuery && validSteps.includes(stepFromQuery) && stepFromQuery !== builderStep) {
+      setBuilderStepState(stepFromQuery)
+    }
+  }, [stepFromQuery, builderStep, validSteps])
+
   const [selectedContent, setSelectedContent] = useState<ContentBlockForm | null>(null)
   const [showTitleField, setShowTitleField] = useState(true)
   const [showAdvancedBlockOptions, setShowAdvancedBlockOptions] = useState(false)

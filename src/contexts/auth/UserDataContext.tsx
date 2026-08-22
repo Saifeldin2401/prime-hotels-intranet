@@ -86,6 +86,8 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   const profileRef = useRef<Profile | null>(null)
   const rolesRef = useRef<UserRole[]>([])
 
+  const isAuthLoading = identityContext?.loading ?? true
+
   const resetUserData = useCallback(() => {
     setProfile(null)
     setRoles([])
@@ -158,11 +160,11 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!userId) {
-      resetUserData()
+      if (!isAuthLoading) {
+        resetUserData()
+      }
       return
     }
-
-
 
     if (!shouldRefreshUserData(userId)) return
 
@@ -171,7 +173,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
         console.warn('[UserData] Failed to auto-load user data.')
       }
     })
-  }, [userId, loadUserData, resetUserData, shouldRefreshUserData])
+  }, [userId, isAuthLoading, loadUserData, resetUserData, shouldRefreshUserData])
 
   // ── Derived: primary role ─────────────────────────────────────────────────
   const primaryRole = useMemo(() => {
@@ -179,19 +181,28 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
     return [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
   }, [roles])
 
+  // Effective roles loading: true if explicitly loading, or if we have an authenticated user
+  // whose roles have not arrived yet and no definitive error occurred.
+  const effectiveRolesLoading = useMemo(() => {
+    if (isAuthLoading) return true
+    if (rolesLoading) return true
+    if (userId && roles.length === 0 && !rolesError) return true
+    return false
+  }, [isAuthLoading, rolesLoading, userId, roles.length, rolesError])
+
   const value = useMemo(() => ({
     profile,
     roles,
     properties,
     departments,
-    rolesLoading,
+    rolesLoading: effectiveRolesLoading,
     rolesError,
     primaryRole,
     loadUserData,
     shouldRefreshUserData,
     resetUserData,
     setRolesLoading,
-  }), [profile, roles, properties, departments, rolesLoading, rolesError, primaryRole, loadUserData, shouldRefreshUserData, resetUserData])
+  }), [profile, roles, properties, departments, effectiveRolesLoading, rolesError, primaryRole, loadUserData, shouldRefreshUserData, resetUserData])
 
   return (
     <UserDataContext.Provider value={value}>

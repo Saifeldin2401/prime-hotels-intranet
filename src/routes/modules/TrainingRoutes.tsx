@@ -23,8 +23,9 @@ const MicrolearningViewer = lazy(() => import('@/pages/learning/MicrolearningVie
 const TrainingBuilderRedirect = () => {
     const { id } = useParams()
     const location = useLocation()
-    const search = location.search ? location.search.replace('?', '&') : ''
-    return <Navigate to={`/training/hub/${id}?view=builder${search}${location.hash}`} replace />
+    const params = new URLSearchParams(location.search)
+    params.set('view', 'builder')
+    return <Navigate to={`/training/hub/${id}?${params.toString()}${location.hash}`} replace />
 }
 
 export const TrainingRoutes = () => (

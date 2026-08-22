@@ -62,12 +62,11 @@ export function ProtectedRoute({
   }
 
   // This route's access decision depends on primaryRole - wait for it to resolve before
-  // evaluating either the allowedRoles or requiredPermission branch below. Previously this
-  // check lived only inside the allowedRoles branch, so a route declared with only
-  // requiredPermission evaluated hasPermission() against a still-null primaryRole and bounced
-  // the user to /dashboard mid-load (REL-02).
+  // evaluating either the allowedRoles or requiredPermission branch below.
   const dependsOnRole = (allowedRoles && allowedRoles.length > 0) || !!requiredPermission
-  if (dependsOnRole && rolesLoading) {
+  const isResolvingRole = rolesLoading || (!!user && primaryRole === null && !rolesError)
+
+  if (dependsOnRole && isResolvingRole) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
@@ -101,7 +100,7 @@ export function ProtectedRoute({
 
   if (allowedRoles && allowedRoles.length > 0) {
     if (!canRoleAccess(primaryRole, allowedRoles)) {
-      if (smartFallback) {
+      if (smartFallback && primaryRole) {
         return <Navigate to="/dashboard" replace />
       }
       return <Navigate to={fallbackPath} replace />
