@@ -5,15 +5,42 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 
-// 🛡️ PRIMARY MODEL - Ultra-fast OpenRouter Candidates with fallback
+// 🛡️ PRIMARY MODELS - Ultra-fast OpenRouter & Gemini Candidates (optimized for sub-second latency)
 const FALLBACK_MODELS = [
-  'openrouter/auto',
-  'google/gemini-2.0-flash-exp:free',
-  'meta-llama/llama-3.3-70b-instruct:free',
+  'google/gemini-2.0-flash-001',
+  'google/gemini-2.0-flash',
   'meta-llama/llama-3.3-70b-instruct',
+  'meta-llama/llama-3.1-8b-instruct',
   'qwen/qwen-2.5-72b-instruct',
-  'deepseek/deepseek-r1:free'
+  'openrouter/auto',
 ]
+
+// ⚡ Client-side In-Memory LRU Cache for Instant Deduplicated AI Responses
+interface AICacheEntry {
+  data: string
+  timestamp: number
+}
+const aiResponseCache = new Map<string, AICacheEntry>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const MAX_CACHE_ENTRIES = 200
+
+function getFromAICache(key: string): string | null {
+  const entry = aiResponseCache.get(key)
+  if (!entry) return null
+  if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+    aiResponseCache.delete(key)
+    return null
+  }
+  return entry.data
+}
+
+function setInAICache(key: string, data: string): void {
+  if (aiResponseCache.size >= MAX_CACHE_ENTRIES) {
+    const oldestKey = aiResponseCache.keys().next().value
+    if (oldestKey) aiResponseCache.delete(oldestKey)
+  }
+  aiResponseCache.set(key, { data, timestamp: Date.now() })
+}
 
 /**
  * Scans a string and returns the raw text of every complete, balanced top-level
@@ -264,6 +291,12 @@ const cleanText = (text: string): string => {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 async function callHuggingFaceOnce(model: string, prompt: string, maxTokens?: number) {
+  const cacheKey = `${model}:${maxTokens || 0}:${prompt.trim()}`
+  const cached = getFromAICache(cacheKey)
+  if (cached) {
+    return cached
+  }
+
   const request: ProcessAiRequest = { model, prompt, ...(maxTokens ? { max_tokens: maxTokens } : {}) }
   const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
     body: request
@@ -296,7 +329,11 @@ async function callHuggingFaceOnce(model: string, prompt: string, maxTokens?: nu
   }
 
   // Support both 'generated_text' (HF style), 'result' (OpenAI style), and 'response' (Edge Function format)
-  return (data.response || data.result) as string
+  const resultText = (data.response || data.result) as string
+  if (resultText) {
+    setInAICache(cacheKey, resultText)
+  }
+  return resultText
 }
 
 /**

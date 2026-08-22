@@ -142,9 +142,17 @@ Format as semantic HTML bullet list <ul><li>...</li></ul>.`
       break
   }
 
+  const tokenLimit =
+    fieldType === 'module_title' ? 40 :
+    fieldType === 'section_title' ? 30 :
+    fieldType === 'module_description' ? 150 :
+    fieldType === 'section_description' ? 100 :
+    fieldType === 'learning_objectives' ? 180 : 200
+
   try {
     const rawResult = await aiService.generateText({
       prompt: userPrompt,
+      maxTokens: tokenLimit,
       systemInstruction: isArabic
         ? 'أنت خبير تدريب وتطوير ضيافة فاخرة في فنادق 5 نجوم. إجاباتك محددة وعملية ومباشرة.'
         : 'You are an elite luxury hospitality training and development director. Your responses are highly specific, professional, and direct.',
@@ -203,12 +211,12 @@ Format as semantic HTML bullet list <ul><li>...</li></ul>.`
 }
 
 // ---------------------------------------------------------------------------
-// Hierarchical AI Audit & Optimization Plan
+// Hierarchical AI Audit & Optimization Plan (Parallel High-Speed Execution)
 // ---------------------------------------------------------------------------
 
 /**
  * Scans the complete course structure and produces an actionable AI improvement plan
- * while strictly protecting user-authored content.
+ * in parallel while strictly protecting user-authored content.
  */
 export async function buildAIImprovementPlan(params: {
   title: string
@@ -224,103 +232,117 @@ export async function buildAIImprovementPlan(params: {
   let improvedTitle = title
   let improvedDescription = description
 
-  // 1. Check Module Title
-  if (!title || title.trim().length === 0 || title.toLowerCase().startsWith('new training')) {
-    const allLessonTitles = sections.flatMap((s) => (s.items || []).map((i) => i.title)).filter(Boolean)
-    const gen = await generateMissingField('module_title', {
-      childLessonTitles: allLessonTitles,
-      department: category,
-      language,
+  const allLessonTitles = sections.flatMap((s) => (s.items || []).map((i) => i.title)).filter(Boolean)
+
+  // 1. Concurrently evaluate module title & description
+  const [titleGen, descGen] = await Promise.all([
+    (!title || title.trim().length === 0 || title.toLowerCase().startsWith('new training'))
+      ? generateMissingField('module_title', {
+          childLessonTitles: allLessonTitles,
+          department: category,
+          language,
+        })
+      : Promise.resolve(null),
+
+    (!description || description.trim().length < 20)
+      ? generateMissingField('module_description', {
+          courseTitle: title || category || 'Training Module',
+          childLessonTitles: allLessonTitles,
+          department: category,
+          audience,
+          language,
+        })
+      : Promise.resolve(null),
+  ])
+
+  if (titleGen?.text) {
+    improvedTitle = titleGen.text
+    suggestions.push({
+      fieldType: 'module_title',
+      suggestedValue: titleGen.text,
+      confidence: titleGen.confidence,
+      rationale: titleGen.rationale,
+      targetId: 'module-title',
     })
-    if (gen.text) {
-      improvedTitle = gen.text
-      suggestions.push({
-        fieldType: 'module_title',
-        suggestedValue: gen.text,
-        confidence: gen.confidence,
-        rationale: gen.rationale,
-        targetId: 'module-title',
-      })
-    }
   }
 
-  // 2. Check Module Description
-  if (!description || description.trim().length < 20) {
-    const allLessonTitles = sections.flatMap((s) => (s.items || []).map((i) => i.title)).filter(Boolean)
-    const gen = await generateMissingField('module_description', {
-      courseTitle: improvedTitle,
-      childLessonTitles: allLessonTitles,
-      department: category,
-      audience,
-      language,
+  if (descGen?.text) {
+    improvedDescription = descGen.text
+    suggestions.push({
+      fieldType: 'module_description',
+      suggestedValue: descGen.text,
+      confidence: descGen.confidence,
+      rationale: descGen.rationale,
+      targetId: 'module-description',
     })
-    if (gen.text) {
-      improvedDescription = gen.text
-      suggestions.push({
-        fieldType: 'module_description',
-        suggestedValue: gen.text,
-        confidence: gen.confidence,
-        rationale: gen.rationale,
-        targetId: 'module-description',
-      })
-    }
   }
 
-  // 3. Check Sections & Lessons
-  const improvedSections: TrainingSection[] = []
-
-  for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-    const sec = sections[sIdx]
+  // 2. Concurrently evaluate all sections in parallel
+  const sectionPromises = sections.map(async (sec) => {
     const childLessonTitles = (sec.items || []).map((i) => i.title).filter(Boolean)
-    let newSecTitle = sec.title
-    let newSecDesc = sec.description || ''
+    const needsTitle = !sec.title || sec.title.trim().length === 0 || sec.title.toLowerCase().startsWith('untitled')
+    const needsDesc = !sec.description || sec.description.trim().length === 0
 
-    // Section Title
-    if (!sec.title || sec.title.trim().length === 0 || sec.title.toLowerCase().startsWith('untitled')) {
-      const gen = await generateMissingField('section_title', {
-        courseTitle: improvedTitle,
-        childLessonTitles,
-        department: category,
-        language,
+    const [secTitleGen, secDescGen] = await Promise.all([
+      needsTitle
+        ? generateMissingField('section_title', {
+            courseTitle: improvedTitle,
+            childLessonTitles,
+            department: category,
+            language,
+          })
+        : Promise.resolve(null),
+
+      needsDesc
+        ? generateMissingField('section_description', {
+            courseTitle: improvedTitle,
+            sectionTitle: sec.title || (childLessonTitles[0] ? `Section on ${childLessonTitles[0]}` : 'Operational Section'),
+            childLessonTitles,
+            department: category,
+            language,
+          })
+        : Promise.resolve(null),
+    ])
+
+    const finalTitle = secTitleGen?.text || sec.title
+    const finalDesc = secDescGen?.text || sec.description || ''
+
+    const sectionSuggestions: AISuggestionResult[] = []
+    if (secTitleGen?.text) {
+      sectionSuggestions.push({
+        fieldType: 'section_title',
+        suggestedValue: secTitleGen.text,
+        confidence: secTitleGen.confidence,
+        rationale: secTitleGen.rationale,
+        targetId: sec.id,
       })
-      if (gen.text) {
-        newSecTitle = gen.text
-        suggestions.push({
-          fieldType: 'section_title',
-          suggestedValue: gen.text,
-          confidence: gen.confidence,
-          rationale: gen.rationale,
-          targetId: sec.id,
-        })
-      }
+    }
+    if (secDescGen?.text) {
+      sectionSuggestions.push({
+        fieldType: 'section_description',
+        suggestedValue: secDescGen.text,
+        confidence: secDescGen.confidence,
+        rationale: secDescGen.rationale,
+        targetId: sec.id,
+      })
     }
 
-    // Section Description
-    if (!sec.description || sec.description.trim().length === 0) {
-      const gen = await generateMissingField('section_description', {
-        courseTitle: improvedTitle,
-        sectionTitle: newSecTitle,
-        childLessonTitles,
-        department: category,
-        language,
-      })
-      if (gen.text) {
-        newSecDesc = gen.text
-        suggestions.push({
-          fieldType: 'section_description',
-          suggestedValue: gen.text,
-          confidence: gen.confidence,
-          rationale: gen.rationale,
-          targetId: sec.id,
-        })
-      }
+    return {
+      updatedSection: {
+        ...sec,
+        title: finalTitle,
+        description: finalDesc,
+      },
+      sectionSuggestions,
     }
+  })
 
-    improvedSections.push({
-      ...sec,
-      title: newSecTitle,
-      description: newSecDesc,
-    })
+  const sectionResults = await Promise.all(sectionPromises)
+
+  const improvedSections: TrainingSection[] = []
+  for (const res of sectionResults) {
+    improvedSections.push(res.updatedSection)
+    suggestions.push(...res.sectionSuggestions)
   }
 
   const safeAutoApplyCount = suggestions.filter((s) => s.confidence === 'HIGH').length

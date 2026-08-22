@@ -27,16 +27,18 @@ const LEGACY_MODEL_MAP: Record<string, string> = {
   "Qwen/Qwen2.5-32B-Instruct": "qwen/qwen-2.5-coder-32b-instruct",
   "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/llama-3.3-70b-instruct",
   "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/llama-3.1-8b-instruct",
-  "default": "openrouter/auto",
+  "default": "google/gemini-2.0-flash-001",
 };
 
 const DEFAULT_OPENROUTER_MODELS = [
-  "openrouter/auto",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "deepseek/deepseek-r1:free",
-  "google/gemini-2.0-flash-exp:free",
-  "qwen/qwen-2.5-72b-instruct",
+  "google/gemini-2.0-flash-001",
+  "google/gemini-2.0-flash",
   "meta-llama/llama-3.3-70b-instruct",
+  "meta-llama/llama-3.1-8b-instruct",
+  "qwen/qwen-2.5-72b-instruct",
+  "google/gemini-2.0-flash-exp:free",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "openrouter/auto",
 ];
 
 const DEFAULT_HF_MODELS = [
@@ -222,6 +224,7 @@ serve(async (req) => {
                       max_tokens: effectiveMaxTokens,
                       stream: true,
                     }),
+                    signal: AbortSignal.timeout(12000),
                   });
 
                   if (orRes.ok && orRes.body) {
@@ -420,6 +423,7 @@ serve(async (req) => {
               max_tokens: effectiveMaxTokens,
               ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
             }),
+            signal: AbortSignal.timeout(10000),
           });
 
           if (orRes.ok) {
