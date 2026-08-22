@@ -85,6 +85,8 @@ import { PlayerNotesDrawer } from '@/components/training/player/PlayerNotesDrawe
 import { PlayerCelebrationModal } from '@/components/training/player/PlayerCelebrationModal'
 import { FlashcardDeckWidget } from '@/components/training/player/widgets/FlashcardDeckWidget'
 import { ScenarioBranchSimulator } from '@/components/training/player/widgets/ScenarioBranchSimulator'
+import { PracticalAssignmentBlockRenderer } from '@/components/training/player/PracticalAssignmentBlockRenderer'
+import { assignmentSubmissionService, type TrainingAssignmentSubmission } from '@/services/assignmentSubmissionService'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import { marked } from 'marked'
@@ -603,6 +605,7 @@ export default function TrainingPlayer() {
     const [blockTranslations, setBlockTranslations] = useState<Record<string, Partial<Record<TranslationTargetLanguage, string>>>>({})
     const [moduleTitleTranslations, setModuleTitleTranslations] = useState<Partial<Record<TranslationTargetLanguage, string>>>({})
     const [completedMediaBlocks, setCompletedMediaBlocks] = useState<Set<string>>(new Set())
+    const [assignmentSubmissions, setAssignmentSubmissions] = useState<Record<string, TrainingAssignmentSubmission>>({})
     const [timeSpentSeconds, setTimeSpentSeconds] = useState(0)
     const [resumeNotice, setResumeNotice] = useState<string | null>(null)
     const [newlyEarnedAchievements, setNewlyEarnedAchievements] = useState<string[]>([])
@@ -895,13 +898,21 @@ export default function TrainingPlayer() {
         [moduleData?.blocks]
     )
 
+    useEffect(() => {
+        if (!id || !user?.id) return
+        assignmentSubmissionService.getModuleSubmissionsForUser(id, user.id)
+            .then(subs => setAssignmentSubmissions(subs || {}))
+            .catch(err => console.warn('Could not load assignment submissions:', err))
+    }, [id, user?.id])
+
     const learnerState: LearnerProgressState = useMemo(() => ({
         completedBlockIds: completedBlocks,
         completedMediaBlockIds: completedMediaBlocks,
         quizResultsByBlockId: quizResultsById,
         quizAttemptsByBlockId: {},
+        assignmentSubmissionsByBlockId: assignmentSubmissions,
         activeBlockId: activeBlock?.id || null,
-    }), [completedBlocks, completedMediaBlocks, quizResultsById, activeBlock?.id])
+    }), [completedBlocks, completedMediaBlocks, quizResultsById, assignmentSubmissions, activeBlock?.id])
 
     const progression = useMemo(() => evaluateModuleProgression({
         module: moduleData?.module,
@@ -915,7 +926,8 @@ export default function TrainingPlayer() {
         completedBlockIds: completedBlocks,
         completedMediaBlockIds: completedMediaBlocks,
         quizResultsByBlockId: quizResultsById,
-    }), [moduleData?.blocks, completedBlocks, completedMediaBlocks, quizResultsById])
+        assignmentSubmissionsByBlockId: assignmentSubmissions,
+    }), [moduleData?.blocks, completedBlocks, completedMediaBlocks, quizResultsById, assignmentSubmissions])
 
     const isLastBlock = activeBlockIndex === totalBlocks - 1
     const activeBlockState = activeBlock ? progression.blockStates[activeBlock.id] || 'AVAILABLE' : 'AVAILABLE'
@@ -928,13 +940,27 @@ export default function TrainingPlayer() {
             if (activeBlock.is_mandatory === false) return true
             return activeQuizPassed
         }
+        const cd = activeBlock.content_data as Record<string, unknown> | null
+        const isAssignment =
+            activeBlock.type === 'assignment' ||
+            activeBlock.type === 'practical' ||
+            Boolean(cd?.is_assignment) ||
+            Boolean(cd?.requires_submission)
+
+        if (isAssignment && activeBlock.is_mandatory !== false) {
+            const sub = assignmentSubmissions[activeBlock.id]
+            const reqApproval = cd?.requires_instructor_approval !== false
+            if (!sub) return false
+            if (sub.status === 'draft' || sub.status === 'revision_required' || sub.status === 'rejected') return false
+            if (reqApproval && sub.status !== 'approved') return false
+        }
         if (activeBlock.type === 'video' || activeBlock.type === 'audio' || activeBlock.type === 'interactive') {
             if (activeBlock.is_mandatory && !completedMediaBlocks.has(activeBlock.id) && !completedBlocks.has(activeBlock.id)) {
                 return false
             }
         }
         return true
-    }, [activeBlock, activeQuizPassed, completedMediaBlocks, completedBlocks])
+    }, [activeBlock, activeQuizPassed, completedMediaBlocks, completedBlocks, assignmentSubmissions])
 
     const progressPercentage = progression.realProgressPercentage
     const persistedProgressPercentage = isFinished ? 100 : Math.min(progressPercentage, 99)
@@ -2074,6 +2100,31 @@ export default function TrainingPlayer() {
                         />
                     )
                 })()}
+
+                {((block.type as string) === 'assignment' ||
+                  (block.type as string) === 'practical' ||
+                  Boolean((block.content_data as Record<string, unknown> | null)?.is_assignment) ||
+                  Boolean((block.content_data as Record<string, unknown> | null)?.requires_submission)) && moduleData && (
+                    <PracticalAssignmentBlockRenderer
+                        block={block}
+                        moduleId={moduleData.module.id}
+                        assignmentId={assignmentId}
+                        initialSubmission={assignmentSubmissions[block.id]}
+                        onSubmissionUpdated={(updatedSub) => {
+                            setAssignmentSubmissions(prev => ({
+                                ...prev,
+                                [block.id]: updatedSub
+                            }))
+                            const reqApproval = (block.content_data as Record<string, unknown> | null)?.requires_instructor_approval !== false
+                            if (updatedSub.status === 'approved' || (!reqApproval && updatedSub.status === 'submitted')) {
+                                setCompletedBlocks(prev => new Set(prev).add(block.id))
+                                void recordBlockCompletion(block.id)
+                            }
+                            scheduleProgressSave(200)
+                        }}
+                        isRTL={isRTL}
+                    />
+                )}
 
             </m.div>
         )

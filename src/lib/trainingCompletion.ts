@@ -12,7 +12,7 @@ export type QuizCompletionResult = EngineQuizResult
 export type TrainingCompletionBlocker = {
   blockId: string
   label: string
-  reason: 'content' | 'quiz-not-submitted' | 'quiz-not-passed'
+  reason: 'content' | 'quiz-not-submitted' | 'quiz-not-passed' | 'assignment-not-submitted' | 'assignment-under-review' | 'assignment-revision-required'
 }
 
 export type TrainingCompletionState = {
@@ -37,16 +37,19 @@ export const evaluateTrainingCompletion = ({
   completedBlockIds,
   completedMediaBlockIds,
   quizResultsByBlockId,
+  assignmentSubmissionsByBlockId,
 }: {
   blocks: TrainingContentBlock[]
   completedBlockIds: Iterable<string>
   completedMediaBlockIds?: Iterable<string>
   quizResultsByBlockId: Record<string, QuizCompletionResult | undefined>
+  assignmentSubmissionsByBlockId?: Record<string, any | undefined>
 }): TrainingCompletionState => {
   const learnerState: LearnerProgressState = {
     completedBlockIds,
     completedMediaBlockIds,
-    quizResultsByBlockId
+    quizResultsByBlockId,
+    assignmentSubmissionsByBlockId
   }
 
   const progression = evaluateModuleProgression({
@@ -59,6 +62,10 @@ export const evaluateTrainingCompletion = ({
     let legacyReason: TrainingCompletionBlocker['reason'] = 'content'
     if (b.reason === 'quiz_not_attempted') legacyReason = 'quiz-not-submitted'
     else if (b.reason === 'quiz_failed' || b.reason === 'max_attempts_reached') legacyReason = 'quiz-not-passed'
+    else if (b.reason === 'assignment_not_submitted') legacyReason = 'assignment-not-submitted'
+    else if (b.reason === 'assignment_under_review') legacyReason = 'assignment-under-review'
+    else if (b.reason === 'assignment_revision_required') legacyReason = 'assignment-revision-required'
+
     return {
       blockId: b.blockId,
       label: b.title,

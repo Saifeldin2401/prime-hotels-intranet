@@ -261,4 +261,99 @@ describe('Training Progression Engine', () => {
       expect(progression.realProgressPercentage).toBe(50)
     })
   })
+
+  describe('Practical Assignment Submission & Trainer Review Lifecycle', () => {
+    const blocks: TrainingContentBlock[] = [
+      createBlock('b-l1', 'text', 0, true),
+      createBlock('b-asg', 'assignment', 1, true, {
+        instructions: 'Submit a guest complaint resolution report',
+        requires_instructor_approval: true
+      }),
+      createBlock('b-l2', 'text', 2, true)
+    ]
+
+    it('requires assignment submission; unsubmitted assignment blocks subsequent lessons', () => {
+      const learnerState: LearnerProgressState = {
+        completedBlockIds: new Set(['b-l1']),
+        quizResultsByBlockId: {},
+        assignmentSubmissionsByBlockId: {}
+      }
+
+      const progression = evaluateModuleProgression({ blocks, learnerState, mode: 'sequential' })
+
+      expect(progression.blockStates['b-l1']).toBe('COMPLETED')
+      expect(progression.blockStates['b-asg']).toBe('AVAILABLE')
+      expect(progression.blockStates['b-l2']).toBe('LOCKED')
+      expect(progression.isModuleComplete).toBe(false)
+      expect(progression.blockers.some((b) => b.reason === 'assignment_not_submitted')).toBe(true)
+    })
+
+    it('marks assignment PENDING_REVIEW when submitted, preventing advance while under review', () => {
+      const learnerState: LearnerProgressState = {
+        completedBlockIds: new Set(['b-l1']),
+        quizResultsByBlockId: {},
+        assignmentSubmissionsByBlockId: {
+          'b-asg': {
+            submissionId: 'sub-1',
+            status: 'submitted',
+            submittedAt: new Date().toISOString()
+          }
+        }
+      }
+
+      const progression = evaluateModuleProgression({ blocks, learnerState, mode: 'sequential' })
+
+      expect(progression.blockStates['b-asg']).toBe('PENDING_REVIEW')
+      expect(progression.blockStates['b-l2']).toBe('LOCKED')
+      expect(progression.isModuleComplete).toBe(false)
+      expect(progression.blockers.some((b) => b.reason === 'assignment_under_review')).toBe(true)
+    })
+
+    it('marks assignment RETRY_REQUIRED when instructor requests revision', () => {
+      const learnerState: LearnerProgressState = {
+        completedBlockIds: new Set(['b-l1']),
+        quizResultsByBlockId: {},
+        assignmentSubmissionsByBlockId: {
+          'b-asg': {
+            submissionId: 'sub-1',
+            status: 'revision_required',
+            feedback: 'Please expand section 2 on VIP recovery procedures.',
+            submittedAt: new Date().toISOString()
+          }
+        }
+      }
+
+      const progression = evaluateModuleProgression({ blocks, learnerState, mode: 'sequential' })
+
+      expect(progression.blockStates['b-asg']).toBe('RETRY_REQUIRED')
+      expect(progression.blockStates['b-l2']).toBe('LOCKED')
+      expect(progression.isModuleComplete).toBe(false)
+      expect(progression.blockers.some((b) => b.reason === 'assignment_revision_required')).toBe(true)
+    })
+
+    it('unlocks subsequent lessons and completes module when instructor approves assignment', () => {
+      const learnerState: LearnerProgressState = {
+        completedBlockIds: new Set(['b-l1', 'b-l2']),
+        quizResultsByBlockId: {},
+        assignmentSubmissionsByBlockId: {
+          'b-asg': {
+            submissionId: 'sub-1',
+            status: 'approved',
+            score: 95,
+            passed: true,
+            feedback: 'Excellent attention to 5-star recovery standards.',
+            submittedAt: new Date().toISOString()
+          }
+        }
+      }
+
+      const progression = evaluateModuleProgression({ blocks, learnerState, mode: 'sequential' })
+
+      expect(progression.blockStates['b-asg']).toBe('COMPLETED')
+      expect(progression.blockStates['b-l2']).toBe('COMPLETED')
+      expect(progression.isModuleComplete).toBe(true)
+      expect(progression.realProgressPercentage).toBe(100)
+      expect(progression.blockers).toHaveLength(0)
+    })
+  })
 })

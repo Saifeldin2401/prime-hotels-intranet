@@ -507,6 +507,70 @@ export function ContentBlockSlideOver({
                 </div>
               )}
 
+              {/* Type: Assignment / Practical */}
+              {(currentBlock.type === 'assignment' || currentBlock.type === 'practical') && (
+                <div className={cn("space-y-4 bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/70 dark:border-amber-900/50", isRTL ? 'text-right' : '')}>
+                  <div>
+                    <Label className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                      {t('builder.assignmentPrompt', 'Assignment Instructions & Prompt')}
+                    </Label>
+                    <Textarea
+                      value={(currentBlock.content_data?.instructions as string) || currentBlock.content}
+                      onChange={(e) => setCurrentBlock({
+                        ...currentBlock,
+                        content: e.target.value,
+                        content_data: {
+                          ...currentBlock.content_data,
+                          instructions: e.target.value,
+                          is_assignment: true
+                        }
+                      })}
+                      placeholder={t('builder.assignmentPromptPlaceholder', 'Describe what the learner must produce, submit, or demonstrate...')}
+                      className="mt-1.5 min-h-[100px] text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {t('builder.evaluationRubric', 'Evaluation Rubric / Criteria')}
+                    </Label>
+                    <Textarea
+                      value={(currentBlock.content_data?.rubric as string) || ''}
+                      onChange={(e) => setCurrentBlock({
+                        ...currentBlock,
+                        content_data: {
+                          ...currentBlock.content_data,
+                          rubric: e.target.value
+                        }
+                      })}
+                      placeholder={t('builder.rubricPlaceholder', 'Criteria used by instructor to grade this assignment...')}
+                      className="mt-1 min-h-[70px] text-xs"
+                    />
+                  </div>
+
+                  <div className={cn("flex items-center justify-between pt-2 border-t border-amber-200/50", isRTL ? "flex-row-reverse" : "")}>
+                    <div>
+                      <p className="text-xs font-semibold text-hotel-navy">
+                        {t('builder.requiresInstructorApproval', 'Requires Trainer Approval')}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        {t('builder.requiresApprovalHint', 'Module completion will pause until an instructor grades & approves the submission.')}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={(currentBlock.content_data?.requires_instructor_approval as boolean) !== false}
+                      onCheckedChange={(checked) => setCurrentBlock({
+                        ...currentBlock,
+                        content_data: {
+                          ...currentBlock.content_data,
+                          requires_instructor_approval: checked
+                        }
+                      })}
+                    />
+                  </div>
+                </div>
+              )}
+
               {/* Optional Settings Collapsible */}
               <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 overflow-hidden">
                 <button

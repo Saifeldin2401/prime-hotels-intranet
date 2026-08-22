@@ -163,8 +163,8 @@ export interface TrainingAssignmentsContextValue {
   hideHeaderActions: boolean
 
   // Tab state
-  activeTab: 'overview' | 'assignments'
-  setActiveTab: Dispatch<SetStateAction<'overview' | 'assignments'>>
+  activeTab: 'overview' | 'assignments' | 'grading'
+  setActiveTab: Dispatch<SetStateAction<'overview' | 'assignments' | 'grading'>>
 
   // Assignment dialog
   showAssignmentDialog: boolean
@@ -384,7 +384,7 @@ export function useTrainingAssignmentsContext(): TrainingAssignmentsContextValue
 interface TrainingAssignmentsProviderProps {
   children: ReactNode
   embedded?: boolean
-  initialTab?: 'overview' | 'assignments'
+  initialTab?: 'overview' | 'assignments' | 'grading'
   defaultModuleId?: string
   autoOpen?: boolean
   hideCreateButton?: boolean
@@ -418,7 +418,7 @@ export function TrainingAssignmentsProvider({
     setPrevAutoOpen(autoOpen)
   }
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'assignments'>(initialTab)
+  const [activeTab, setActiveTab] = useState<'overview' | 'assignments' | 'grading'>(initialTab)
   const [prevInitialTab, setPrevInitialTab] = useState(initialTab)
   if (initialTab !== prevInitialTab) {
     if (initialTab) setActiveTab(initialTab)

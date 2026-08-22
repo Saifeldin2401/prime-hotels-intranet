@@ -9,11 +9,12 @@ import { CreateAssignmentDialog } from './TrainingAssignments/CreateAssignmentDi
 import { ManageAssigneesDialog } from './TrainingAssignments/ManageAssigneesDialog'
 import { OverviewTab } from './TrainingAssignments/OverviewTab'
 import { ProgressDetailDialog } from './TrainingAssignments/ProgressDetailDialog'
+import { SubmissionsGradingTab } from './TrainingAssignments/SubmissionsGradingTab'
 import { TrainingAssignmentsProvider, useTrainingAssignmentsContext } from './contexts/TrainingAssignmentsContext'
 
 interface TrainingAssignmentsPanelProps {
   embedded?: boolean
-  initialTab?: 'overview' | 'assignments'
+  initialTab?: 'overview' | 'assignments' | 'grading'
   defaultModuleId?: string
   autoOpen?: boolean
   hideCreateButton?: boolean
@@ -64,7 +65,7 @@ function TrainingAssignmentsPanelInner() {
 
       <Tabs
         value={activeTab}
-        onValueChange={(value) => setActiveTab(value as 'overview' | 'assignments')}
+        onValueChange={(value) => setActiveTab(value as 'overview' | 'assignments' | 'grading')}
         className="space-y-6"
       >
         <TabsList className="w-full sm:w-auto bg-white p-1 border rounded-lg">
@@ -82,6 +83,13 @@ function TrainingAssignmentsPanelInner() {
             <Edit className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
             {t('manageAssignments')}
           </TabsTrigger>
+          <TabsTrigger
+            value="grading"
+            className="flex-1 sm:flex-none data-[state=active]:bg-hotel-navy data-[state=active]:text-white"
+          >
+            <Settings className={cn('w-4 h-4', isRTL ? 'ms-2' : 'me-2')} />
+            {t('submissionsAndGrading', 'Submissions & Grading')}
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -90,6 +98,10 @@ function TrainingAssignmentsPanelInner() {
 
         <TabsContent value="assignments" className="space-y-6">
           <AssignmentsTab />
+        </TabsContent>
+
+        <TabsContent value="grading" className="space-y-6">
+          <SubmissionsGradingTab />
         </TabsContent>
       </Tabs>
 

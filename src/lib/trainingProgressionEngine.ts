@@ -53,6 +53,19 @@ export type ProgressionBlockerReason =
   | 'quiz_failed'
   | 'max_attempts_reached'
   | 'locked_by_sequential_mode'
+  | 'assignment_not_submitted'
+  | 'assignment_under_review'
+  | 'assignment_revision_required'
+
+export interface PracticalAssignmentResult {
+  submissionId?: string
+  status: 'draft' | 'submitted' | 'under_review' | 'revision_required' | 'approved' | 'rejected'
+  score?: number | null
+  passed?: boolean | null
+  feedback?: string | null
+  submittedAt?: string | null
+  attemptNumber?: number
+}
 
 export interface ProgressionBlocker {
   blockId: string
@@ -68,6 +81,7 @@ export interface LearnerProgressState {
   completedMediaBlockIds?: Iterable<string>
   quizResultsByBlockId: Record<string, QuizCompletionResult | undefined>
   quizAttemptsByBlockId?: Record<string, number | undefined>
+  assignmentSubmissionsByBlockId?: Record<string, PracticalAssignmentResult | undefined>
   exemptedBlockIds?: Iterable<string>
   skippedBlockIds?: Iterable<string>
   activeBlockId?: string | null
@@ -285,7 +299,126 @@ export function evaluateSingleBlockState({
     }
   }
 
-  // 3. Evaluate Standard Content Blocks (Lesson, Video, Reading, Interactive, SOP, etc.)
+  // 3. Evaluate Practical / Assignment Blocks
+  const contentData = block.content_data as Record<string, unknown> | null
+  const isAssignmentBlock =
+    block.type === 'assignment' ||
+    block.type === 'practical' ||
+    Boolean(contentData?.is_assignment) ||
+    Boolean(contentData?.requires_submission)
+
+  if (isAssignmentBlock) {
+    // A: Check explicit prerequisites
+    const explicitPrereqs = getBlockPrerequisites(block)
+    for (const prereqId of explicitPrereqs) {
+      const prereqState = blockStatesSoFar[prereqId]
+      const prereqBlock = allBlocks.find((b) => b.id === prereqId)
+      if (prereqState !== 'COMPLETED' && prereqState !== 'EXEMPTED' && prereqState !== 'SKIPPED') {
+        return {
+          state: 'LOCKED',
+          blocker: {
+            blockId: block.id,
+            title: block.title || `Assignment ${index + 1}`,
+            reason: 'unmet_prerequisite',
+            description: `Requires completion of ${prereqBlock?.title || 'prerequisite lesson'}.`,
+            prerequisiteBlockId: prereqId,
+            prerequisiteTitle: prereqBlock?.title || 'Prerequisite lesson'
+          }
+        }
+      }
+    }
+
+    // B: Sequential mode check
+    if (mode === 'sequential') {
+      for (let prevIdx = 0; prevIdx < index; prevIdx++) {
+        const prevBlock = allBlocks[prevIdx]
+        const prevState = blockStatesSoFar[prevBlock.id]
+        if (
+          prevBlock.is_mandatory !== false &&
+          prevState !== 'COMPLETED' &&
+          prevState !== 'EXEMPTED' &&
+          prevState !== 'SKIPPED'
+        ) {
+          return {
+            state: 'LOCKED',
+            blocker: {
+              blockId: block.id,
+              title: block.title || `Assignment ${index + 1}`,
+              reason: 'locked_by_sequential_mode',
+              description: `Must complete ${prevBlock.title || `Lesson ${prevIdx + 1}`} first.`,
+              prerequisiteBlockId: prevBlock.id,
+              prerequisiteTitle: prevBlock.title || `Lesson ${prevIdx + 1}`
+            }
+          }
+        }
+      }
+    }
+
+    // C: Check submission state
+    const sub = learnerState.assignmentSubmissionsByBlockId?.[block.id]
+    const requiresApproval = contentData?.requires_instructor_approval !== false
+
+    if (sub?.status === 'approved' || completedIds.has(block.id)) {
+      return { state: 'COMPLETED' }
+    }
+
+    if (sub?.status === 'revision_required' || sub?.status === 'rejected') {
+      return {
+        state: 'RETRY_REQUIRED',
+        blocker: {
+          blockId: block.id,
+          title: block.title || `Assignment ${index + 1}`,
+          reason: 'assignment_revision_required',
+          description: sub.feedback
+            ? `Revisions requested: ${sub.feedback}`
+            : 'Instructor requested revisions for this assignment before advancing.'
+        }
+      }
+    }
+
+    if (sub?.status === 'submitted' || sub?.status === 'under_review') {
+      if (requiresApproval) {
+        return {
+          state: 'PENDING_REVIEW',
+          blocker: {
+            blockId: block.id,
+            title: block.title || `Assignment ${index + 1}`,
+            reason: 'assignment_under_review',
+            description: 'Assignment submitted and awaiting instructor review & approval.'
+          }
+        }
+      }
+      return { state: 'COMPLETED' }
+    }
+
+    if (sub?.status === 'draft') {
+      return {
+        state: 'IN_PROGRESS',
+        blocker: isMandatory
+          ? {
+              blockId: block.id,
+              title: block.title || `Assignment ${index + 1}`,
+              reason: 'assignment_not_submitted',
+              description: 'Assignment draft saved. Please submit for instructor review.'
+            }
+          : undefined
+      }
+    }
+
+    return {
+      state: learnerState.activeBlockId === block.id ? 'IN_PROGRESS' : 'AVAILABLE',
+      blocker: isMandatory
+        ? {
+            blockId: block.id,
+            title: block.title || `Assignment ${index + 1}`,
+            reason: 'assignment_not_submitted',
+            description: 'Assignment must be submitted.'
+          }
+        : undefined
+    }
+  }
+
+  // 4. Evaluate Standard Content Blocks (Lesson, Video, Reading, Interactive, SOP, etc.)
   // A: Check explicit prerequisites
   const explicitPrereqs = getBlockPrerequisites(block)
   for (const prereqId of explicitPrereqs) {
