@@ -258,7 +258,7 @@ export function SubmissionsGradingTab() {
                   <tr key={sub.id} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-4 py-3">
                       <div className="font-semibold text-hotel-navy">{sub.learner?.full_name || sub.learner?.email || 'Unknown Learner'}</div>
-                      <div className="text-xs text-muted-foreground">{sub.learner?.department || sub.learner?.job_title || ''}</div>
+                      <div className="text-xs text-muted-foreground">{sub.learner?.job_title || sub.learner?.email || ''}</div>
                     </td>
                     <td className="px-4 py-3">
                       <div className="font-medium text-slate-800">{sub.module?.title || 'Training Module'}</div>

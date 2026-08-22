@@ -285,7 +285,7 @@ export const assignmentSubmissionService = {
       .from('training_assignment_submissions')
       .select(`
         *,
-        learner:user_id (id, full_name, email, avatar_url, job_title, department),
+        learner:user_id (id, full_name, email, avatar_url, job_title),
         module:training_module_id (id, title, category),
         reviewer:reviewed_by (id, full_name)
       `, { count: 'exact' })
