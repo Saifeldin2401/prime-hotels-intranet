@@ -6,7 +6,7 @@ CREATE TABLE IF NOT EXISTS public.training_assignment_submissions (
   training_module_id uuid NOT NULL REFERENCES public.training_modules(id) ON DELETE CASCADE,
   block_id text NOT NULL,
   user_id uuid NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
-  assignment_id uuid REFERENCES public.learning_assignments(id) ON DELETE SET NULL,
+  assignment_id uuid REFERENCES public.training_assignment_rules(id) ON DELETE SET NULL,
   status text NOT NULL DEFAULT 'submitted' CHECK (status IN ('draft', 'submitted', 'under_review', 'revision_required', 'approved', 'rejected')),
   submission_content text,
   attachment_urls jsonb DEFAULT '[]'::jsonb,
@@ -35,15 +35,15 @@ CREATE INDEX IF NOT EXISTS idx_training_assignment_subs_module
 -- Enable RLS
 ALTER TABLE public.training_assignment_submissions ENABLE ROW LEVEL SECURITY;
 
--- Learner policies: can read their own submissions
-DROP POLICY IF EXISTS "Learners can view own submissions" ON public.training_assignment_submissions;
-CREATE POLICY "Learners can view own submissions"
+-- Learner & Instructor policies: can read their own submissions or if instructor/manager
+DROP POLICY IF EXISTS "Learners and instructors can view submissions" ON public.training_assignment_submissions;
+CREATE POLICY "Learners and instructors can view submissions"
   ON public.training_assignment_submissions
   FOR SELECT
   TO authenticated
-  USING (user_id = auth.uid() OR public.has_training_permission(auth.uid(), 'view_assignments'));
+  USING (user_id = auth.uid() OR public.can_manage_assignments(auth.uid()));
 
--- Learner policies: can insert/update their own submissions
+-- Learner policies: can insert their own submissions
 DROP POLICY IF EXISTS "Learners can submit own assignments" ON public.training_assignment_submissions;
 CREATE POLICY "Learners can submit own assignments"
   ON public.training_assignment_submissions
@@ -51,13 +51,14 @@ CREATE POLICY "Learners can submit own assignments"
   TO authenticated
   WITH CHECK (user_id = auth.uid());
 
-DROP POLICY IF EXISTS "Learners can update own draft/resubmissions" ON public.training_assignment_submissions;
-CREATE POLICY "Learners can update own draft/resubmissions"
+-- Update policy: learners can update their own drafts, instructors can update to grade
+DROP POLICY IF EXISTS "Learners and instructors can update submissions" ON public.training_assignment_submissions;
+CREATE POLICY "Learners and instructors can update submissions"
   ON public.training_assignment_submissions
   FOR UPDATE
   TO authenticated
-  USING (user_id = auth.uid() OR public.has_training_permission(auth.uid(), 'manage_assignments'))
-  WITH CHECK (user_id = auth.uid() OR public.has_training_permission(auth.uid(), 'manage_assignments'));
+  USING (user_id = auth.uid() OR public.can_manage_assignments(auth.uid()))
+  WITH CHECK (user_id = auth.uid() OR public.can_manage_assignments(auth.uid()));
 
 -- Trigger for updated_at
 CREATE OR REPLACE FUNCTION public.handle_training_assignment_submissions_updated_at()
