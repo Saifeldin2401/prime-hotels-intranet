@@ -162,14 +162,14 @@ export function StepPublish({
 
             <div className={cn("flex items-center justify-end gap-3", isRTL ? "flex-row-reverse" : "")}>
               <Button variant="outline" onClick={handleSave} disabled={builderBusy}>
-                {t('builder.saveDraft')}
+                {t('builder.saveDraft', 'Save Draft')}
               </Button>
               <Button
                 onClick={publishTraining}
                 disabled={!publishReady || builderBusy}
                 className="bg-hotel-gold hover:bg-hotel-gold-dark text-white"
               >
-                {t('builder.publish')}
+                {t('builder.publish', 'Publish Module')}
               </Button>
             </div>
           </CardContent>
