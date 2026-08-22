@@ -19,7 +19,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { buildOrgTree, useOrgHierarchy, type OrgTreeNode } from '@/hooks/useOrganization'
 import { useProperties } from '@/hooks/useProperties'
 import { supabase } from '@/lib/supabase'
-import { cn, formatDateTime } from '@/lib/utils'
+import { cn, escapeSearchQuery, formatDateTime } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import {
     Building2,
@@ -353,7 +353,8 @@ function AssignmentsTable({
                 .order('full_name')
 
             if (searchTerm) {
-                query = query.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%`)
+                const escaped = escapeSearchQuery(searchTerm)
+                query = query.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
             }
 
             const { data: profiles, error: profilesError } = await query.limit(100)

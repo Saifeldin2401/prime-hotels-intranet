@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/lib/supabase'
+import { altusAI } from '@/lib/ai'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -198,22 +199,17 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
     }
 
     const callAI = async (prompt: string): Promise<string | null> => {
-        for (const model of FALLBACK_MODELS) {
-            try {
-                const { data, error } = await supabase.functions.invoke('process-ai-request', {
-                    body: { model, prompt }
-                })
-
-                if (error) throw error
-                if (data?.success === false) throw new Error(data.error)
-
-                // Support both 'generated_text' (HF style) and 'result' (OpenAI style)
-                return (data.generated_text || data.result) as string
-            } catch (e) {
-                console.warn(`Model ${model} failed:`, e)
-            }
+        try {
+            const res = await altusAI.executePrompt(prompt, {
+                task: 'generation',
+                temperature: 0.3,
+                maxTokens: 2048,
+            })
+            return res.data
+        } catch (e) {
+            console.warn('Knowledge AI call failed:', e)
+            return null
         }
-        return null
     }
 
     const askQuestion = async (question: string) => {

@@ -225,9 +225,10 @@ export interface TrainingBuilderContextValue {
   publishReady: boolean
   builderBusy: boolean
   isValidatingQuizzes: boolean
+  hasUnsavedChanges: boolean
 
   // Save / publish
-  handleSave: () => Promise<void>
+  handleSave: () => Promise<boolean>
   publishTraining: () => Promise<void>
 
   // Hasmounted (loading guard)
@@ -357,7 +358,17 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const templateAppliedRef = useRef(false)
   const hydratedModuleRef = useRef<string | null>(null)
 
+  // Suppresses the dirty-tracking effect (below, near autosave) for programmatic
+  // state updates that load *already-persisted* data -- hydrateModuleState here,
+  // and the content-blocks-load effect further down -- so opening an existing
+  // module doesn't immediately show a false "Unsaved changes" badge. Draft
+  // restoration explicitly clears it back to false, since a restored draft IS
+  // genuinely unsaved. Mirrors the existing skipHistoryRef pattern used for
+  // undo/redo history tracking.
+  const suppressDirtyRef = useRef(true)
+
   const hydrateModuleState = useCallback((loadedModule: TrainingModule) => {
+    suppressDirtyRef.current = true
     setModuleStatus(loadedModule.status || 'draft')
     setTitle(loadedModule.title)
     setDescription(loadedModule.description || '')
@@ -390,7 +401,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     setCreatedModuleId(null)
   }, [isNewRoute])
 
-  useQuery({
+  const { data: loadedTrainingModule } = useQuery({
     queryKey: ['training-module', moduleId],
     queryFn: async () => {
       if (!moduleId) return null
@@ -479,13 +490,40 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         order: block.block_order || index
       }))
 
-      setSections([{
-        id: 'main-section',
-        title: t('mainContent'),
-        description: t('mainContentDescription'),
-        items: blocks,
-        order: 0
-      }])
+      // Section grouping is persisted inside each block's content_data
+      // (section_id/section_title/section_description/section_order) since
+      // the underlying storage (documents rows) has no dedicated
+      // section-grouping column. Rebuild the real multi-section structure
+      // from it instead of collapsing everything into one hardcoded
+      // section. Blocks saved before this existed have no section_id -
+      // group those into a single fallback section so older modules still
+      // load correctly.
+      const sectionsById = new Map<string, TrainingSection>()
+      const fallbackId = 'main-section'
+      for (const b of blocks) {
+        const data = b.content_data as Record<string, unknown>
+        const sectionId = typeof data.section_id === 'string' && data.section_id ? data.section_id : fallbackId
+        let section = sectionsById.get(sectionId)
+        if (!section) {
+          section = {
+            id: sectionId,
+            title: sectionId === fallbackId
+              ? t('mainContent')
+              : (typeof data.section_title === 'string' && data.section_title ? data.section_title : t('mainContent')),
+            description: sectionId === fallbackId
+              ? t('mainContentDescription')
+              : (typeof data.section_description === 'string' ? data.section_description : ''),
+            items: [],
+            order: typeof data.section_order === 'number' ? data.section_order : sectionsById.size
+          }
+          sectionsById.set(sectionId, section)
+        }
+        section.items.push(b)
+      }
+      const rebuiltSections = Array.from(sectionsById.values()).sort((a, b) => a.order - b.order)
+
+      suppressDirtyRef.current = true
+      setSections(rebuiltSections)
 
       setContentBlocks(blocks)
       isLoadedRef.current = true
@@ -716,8 +754,10 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       handleStepChange(next)
       return
     }
-    await handleSave()
-    setBuilderStep(next)
+    const saved = await handleSave()
+    if (saved) {
+      setBuilderStep(next)
+    }
   }
 
   const goPrevStep = () => {
@@ -745,6 +785,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       const moduleContext = buildModuleSourceText(sections)
       const currentSections = [...sections]
       let sectionsModified = false
+      const quizCreationFailures: string[] = []
 
       // 1. Ensure every quiz block has a concrete quiz_id in learning_quizzes
       for (let sIdx = 0; sIdx < currentSections.length; sIdx++) {
@@ -780,6 +821,16 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
                   content_data: { ...contentData, quiz_id: newQuiz.id }
                 }
                 itemsModified = true
+              } else {
+                // No else branch existed here before: a failed auto-create left
+                // quiz_id empty, and the allQuizIds filter below silently drops
+                // items with an empty quiz_id, so the integrity check never even
+                // saw this block and Save/Publish proceeded as if it validated.
+                const failedBlockLabel = item.title?.trim() || quizTitle
+                const errorDetails = newQuizError ? getUserFriendlyError(newQuizError) : null
+                quizCreationFailures.push(
+                  `${failedBlockLabel}: could not create a linked quiz${errorDetails ? ` (${errorDetails.message})` : ''}.`
+                )
               }
             }
           }
@@ -805,6 +856,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       ))
 
       if (allQuizIds.length === 0) {
+        if (quizCreationFailures.length > 0) {
+          toast({
+            title: 'Quiz configuration needs review',
+            description: quizCreationFailures.slice(0, 2).join(' '),
+            variant: 'destructive'
+          })
+          return false
+        }
         return true
       }
 
@@ -819,11 +878,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
       const repairedCount = reports.reduce((count, report) => count + report.repairedQuestionIds.length, 0)
       const publishedCount = reports.filter(report => report.autoPublished).length
-      const blockingIssues = reports.flatMap(report =>
-        report.issues
-          .filter(issue => issue.severity === 'error')
-          .map(issue => `${report.quizTitle}: ${issue.message}`)
-      )
+      const blockingIssues = [
+        ...quizCreationFailures,
+        ...reports.flatMap(report =>
+          report.issues
+            .filter(issue => issue.severity === 'error')
+            .map(issue => `${report.quizTitle}: ${issue.message}`)
+        )
+      ]
 
       if (repairedCount > 0) {
         toast({
@@ -882,6 +944,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [autosaveStatus, setAutosaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [lastAutosaveAt, setLastAutosaveAt] = useState<Date | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const draftRestoreRef = useRef(false)
   const skipAutosaveRef = useRef(true)
 
@@ -942,6 +1005,62 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     }
   }, [draftKey, isNewRoute, moduleId, templateFromQuery, t, toast])
 
+  // -------------------------------------------------------------------------
+  // Draft restore for EXISTING modules
+  // -------------------------------------------------------------------------
+  // The autosave effect below writes the full draft (including `sections`) to
+  // localStorage for existing modules too, but the background saveModuleMutation
+  // it also fires only persists metadata fields -- never `sections`/content
+  // blocks. Without this, a user editing an existing module who navigates away
+  // or hits a crash before an explicit Save loses their content-block edits
+  // permanently, even though a fresher draft is sitting right there in
+  // localStorage. Gated on both the module metadata AND content blocks having
+  // already loaded from the DB so this can't race hydrateModuleState / the
+  // content-load effect above and get immediately overwritten by them.
+  const existingDraftRestoreRef = useRef(false)
+
+  useEffect(() => {
+    if (isNewRoute || !moduleId) return
+    if (existingDraftRestoreRef.current) return
+    if (loadedTrainingModule === undefined || contentBlocksData === undefined) return
+
+    existingDraftRestoreRef.current = true
+
+    try {
+      const draft = safeLocalStorage.getObject<BuilderDraftPayload>(draftKey)
+      if (!draft || !Array.isArray(draft.sections) || draft.sections.length === 0) {
+        return
+      }
+
+      // Unlike the DB-hydration paths above, this genuinely restores content
+      // that was never persisted -- keep the dirty flag on so the "Unsaved"
+      // badge (and the restore banner) correctly reflect that.
+      suppressDirtyRef.current = false
+
+      setTitle(draft.title || '')
+      setDescription(draft.description || '')
+      setCategory(draft.category || '')
+      setDifficultyLevel(draft.difficultyLevel || 'beginner')
+      setEstimatedDuration(String(draft.estimatedDuration || ''))
+      setUseEstimatedDuration(draft.useEstimatedDuration ?? !!draft.estimatedDuration)
+      setValidityPeriod(String(draft.validityPeriod || ''))
+      setPassingScore(String(draft.passingScore || '80'))
+      setCertificateEnabled(draft.certificateEnabled ?? true)
+      setAudience(draft.audience || 'all')
+      setContentLanguage(draft.contentLanguage || 'bilingual')
+      setTemplatePreset(draft.templatePreset || 'none')
+      setSections(draft.sections)
+      if (draft.activeSection) {
+        setActiveSection(draft.activeSection)
+      }
+      setShowRestorePrompt(true)
+      setTimeout(() => setShowRestorePrompt(false), 8000)
+    } catch (error) {
+      const errorDetails = getUserFriendlyError(error)
+      console.warn('Failed to restore training draft for existing module:', errorDetails.message)
+    }
+  }, [draftKey, isNewRoute, moduleId, loadedTrainingModule, contentBlocksData])
+
   useEffect(() => {
     if (skipAutosaveRef.current) return
     setAutosaveStatus('saving')
@@ -999,6 +1118,26 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     title, description, category, difficultyLevel, estimatedDuration, useEstimatedDuration,
     validityPeriod, passingScore, certificateEnabled, audience, contentLanguage,
     templatePreset, sections, activeSection, draftKey, moduleId
+  ])
+
+  // -------------------------------------------------------------------------
+  // Dirty tracking ("Unsaved changes" badge)
+  // -------------------------------------------------------------------------
+  // Mirrors skipHistoryRef (used below for undo/redo): any programmatic load of
+  // already-persisted state (hydrateModuleState, the content-load effect) sets
+  // suppressDirtyRef to true right before its setState calls; this effect
+  // consumes-and-resets it. A genuine user edit -- or a restored draft, which
+  // explicitly clears the ref -- falls through and marks the module dirty.
+  useEffect(() => {
+    if (suppressDirtyRef.current) {
+      suppressDirtyRef.current = false
+      return
+    }
+    setHasUnsavedChanges(true)
+  }, [
+    title, description, category, difficultyLevel, estimatedDuration, useEstimatedDuration,
+    validityPeriod, passingScore, certificateEnabled, audience, contentLanguage,
+    templatePreset, sections, activeSection
   ])
 
   // -------------------------------------------------------------------------
@@ -1292,7 +1431,24 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   }
 
   const saveContent = () => {
-    if (!activeSection) return
+    // The section that actually contains the block being edited is the source
+    // of truth. `activeSection` is an ambient ref that is never (re)initialized
+    // when an existing module's blocks first load, so trusting it alone used to
+    // silently drop every edit to a pre-existing block: it stayed null and this
+    // function bailed out on its very first line with nothing saved.
+    const resolvedSectionId = selectedContent
+      ? sections.find(section => section.items.some(item => item.id === selectedContent.id))?.id ?? activeSection
+      : activeSection
+
+    if (!resolvedSectionId) {
+      toast({
+        title: t('error', 'Error'),
+        description: t('builder.noSectionSelected', 'Could not determine which section to save this content to. Please reopen the block and try again.'),
+        variant: 'destructive'
+      })
+      return
+    }
+
     const validation = getBlockValidation(currentBlock, t)
     if (!validation.ok) {
       toast({
@@ -1318,7 +1474,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     }
 
     setSections(sections.map(section => {
-      if (section.id === activeSection) {
+      if (section.id === resolvedSectionId) {
         if (selectedContent) {
           return {
             ...section,
@@ -1335,6 +1491,10 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }
       return section
     }))
+
+    if (resolvedSectionId !== activeSection) {
+      setActiveSection(resolvedSectionId)
+    }
 
     setShowContentDialog(false)
     setSelectedContent(null)
@@ -1447,7 +1607,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     const blocksToInsert: TrainingContentBlockInsert[] = []
     let orderIndex = 0
 
-    for (const section of sections) {
+    sections.forEach((section, sectionIndex) => {
       for (const item of section.items) {
         blocksToInsert.push({
           training_module_id: targetId,
@@ -1455,7 +1615,15 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
           title: item.title || null,
           content: item.content || item.title || '',
           content_url: item.content_url || null,
-          content_data: item.content_data || {},
+          // Section grouping has no dedicated storage column - it's carried
+          // inside content_data and reconstructed into real sections on load.
+          content_data: {
+            ...(item.content_data || {}),
+            section_id: section.id,
+            section_title: section.title,
+            section_description: section.description || '',
+            section_order: sectionIndex
+          },
           source_document_id: (item.content_data as Record<string, unknown> | undefined)?.sop_id as string | undefined || null,
           order: orderIndex++,
           is_mandatory: item.is_mandatory ?? true,
@@ -1463,7 +1631,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
           points: item.points
         })
       }
-    }
+    })
 
     // Fallback removed to prevent sync issues where clearing sections restores initial contentBlocks
 
@@ -1650,7 +1818,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         certificate_enabled: certificateEnabled,
         passing_score_percentage: passingScore ? Number(passingScore) : 80,
         allow_retake: allowRetake,
-        max_attempts: allowRetake ? Number(maxAttempts) : null,
+        max_attempts: allowRetake ? (maxAttempts ? Number(maxAttempts) : 3) : null,
         auto_advance: autoAdvance,
         show_feedback: showFeedback,
         randomize_questions: randomizeQuestions,
@@ -1698,14 +1866,14 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
   const builderBusy = isValidatingQuizzes || saveModuleMutation.isPending || saveContentBlocksMutation.isPending
 
-  const handleSave = async () => {
-    if (builderBusy || isSavingOperationInFlightRef.current) return
+  const handleSave = async (): Promise<boolean> => {
+    if (builderBusy || isSavingOperationInFlightRef.current) return false
     isSavingOperationInFlightRef.current = true
 
     try {
       const integrityMode = moduleStatus === 'published' ? 'publish' : 'save'
       const quizzesReady = await ensureLinkedQuizzesIntegrity(integrityMode)
-      if (!quizzesReady) return
+      if (!quizzesReady) return false
 
       const savedModuleId = await saveModuleMutation.mutateAsync()
 
@@ -1717,6 +1885,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       })
 
       clearDraft()
+      setHasUnsavedChanges(false)
+      return true
     } catch (error: unknown) {
       const errorDetails = getUserFriendlyError(error)
       toast({
@@ -1724,6 +1894,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
         description: errorDetails.message,
         variant: 'destructive'
       })
+      return false
     } finally {
       isSavingOperationInFlightRef.current = false
     }
@@ -1771,6 +1942,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       }
 
       setModuleStatus('published')
+      setHasUnsavedChanges(false)
 
       safeLocalStorage.removeItem(draftKey)
 
@@ -1991,6 +2163,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     publishReady,
     builderBusy,
     isValidatingQuizzes,
+    hasUnsavedChanges,
 
     // Save / publish
     handleSave,

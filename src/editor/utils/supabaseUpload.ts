@@ -1,11 +1,13 @@
 import { supabase } from '@/lib/supabase'
 
+// image/svg+xml is deliberately excluded: SVG is XML and can carry an
+// embedded <script>/onload payload, which the public content-media bucket
+// would serve back as live script (stored XSS).
 const ALLOWED_IMAGE_TYPES = new Set([
   'image/jpeg',
   'image/png',
   'image/gif',
   'image/webp',
-  'image/svg+xml',
 ])
 
 const ALLOWED_VIDEO_TYPES = new Set([

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/lib/supabase'
+import { altusAI } from '@/lib/ai'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import { BrainCircuit, Loader2, RefreshCcw, Settings, Sparkles, User, X, Zap } from 'lucide-react'
@@ -56,19 +57,16 @@ export function AdminAIAssistant({ isOpen, onClose }: { isOpen: boolean, onClose
     }, [isOpen])
 
     const callAI = async (prompt: string): Promise<string | null> => {
-        for (const model of FALLBACK_MODELS) {
-            try {
-                const { data, error } = await supabase.functions.invoke('process-ai-request', {
-                    body: { model, prompt }
-                })
-                if (error) throw error
-                if (data?.success === false) throw new Error(data.error)
-                return (data.generated_text || data.result) as string
-            } catch (e) {
-                console.warn(`Model ${model} failed:`, e)
-            }
+        try {
+            const res = await altusAI.executePrompt(prompt, {
+                task: 'generation',
+                temperature: 0.3,
+            })
+            return res.data
+        } catch (e) {
+            console.warn('Admin AI call failed:', e)
+            return null
         }
-        return null
     }
 
     const askQuestion = async (question: string) => {

@@ -24,6 +24,10 @@ const KeyboardShortcutsModal = lazy(() =>
 const WizardTrigger = lazy(() =>
   import('@/components/common/WizardTrigger').then((module) => ({ default: module.WizardTrigger }))
 )
+const AltusCopilotDrawer = lazy(() =>
+  import('@/components/ai/AltusCopilotDrawer').then((module) => ({ default: module.AltusCopilotDrawer }))
+)
+import { Sparkles } from 'lucide-react'
 
 interface AppLayoutProps {
   children: React.ReactNode
@@ -39,6 +43,7 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { hasPermission } = usePermissions()
   const { currentProperty, availableProperties, switchProperty } = useProperty()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
+  const [copilotOpen, setCopilotOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
 
   // Track page transitions for recently visited shortcuts cleanly without hook loops
@@ -237,12 +242,24 @@ export function AppLayout({ children }: AppLayoutProps) {
         <PageTransition className="w-full">{children}</PageTransition>
       </AnimatePresence>
 
+      {/* Floating Altus Copilot Trigger Button */}
+      <button
+        onClick={() => setCopilotOpen(true)}
+        className="fixed bottom-6 end-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-semibold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
+        aria-label="Open Altus AI Copilot"
+        title="Open Altus AI Copilot (Cmd+K / Ctrl+K)"
+      >
+        <Sparkles className="w-4 h-4 animate-pulse" />
+        <span className="hidden sm:inline">Altus Copilot</span>
+      </button>
+
       <Suspense fallback={null}>
         {shouldRenderDeferredChrome && <WizardTrigger />}
         {shouldRenderDeferredChrome && (
           <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
         )}
         {shouldRenderDeferredChrome && <KeyboardShortcutsModal />}
+        <AltusCopilotDrawer isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
       </Suspense>
     </DashboardLayout>
   )

@@ -24,7 +24,7 @@ const TrainingBuilderRedirect = () => {
     const { id } = useParams()
     const location = useLocation()
     const search = location.search ? location.search.replace('?', '&') : ''
-    return <Navigate to={`/training/hub/${id}?view=builder${search}`} replace />
+    return <Navigate to={`/training/hub/${id}?view=builder${search}${location.hash}`} replace />
 }
 
 export const TrainingRoutes = () => (

@@ -98,6 +98,7 @@ serve(async (req) => {
       req.headers.get("apikey") === SUPABASE_SERVICE_ROLE_KEY;
 
     let user: { id: string; email?: string | null } | null = null;
+    let isSelfCertificateEmail = false;
     if (!isServiceRoleCall) {
       const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
         global: { headers: { Authorization: authHeader } },
@@ -158,7 +159,7 @@ serve(async (req) => {
 
       const isAdmin = Boolean(roleRows && roleRows.length > 0);
       const normalizedUserEmail = (user.email || "").trim().toLowerCase();
-      const isSelfCertificateEmail =
+      isSelfCertificateEmail =
         body.templateKey === "certificate_earned" &&
         normalizedUserEmail.length > 0 &&
         cleanedRecipients.every(
@@ -210,27 +211,37 @@ serve(async (req) => {
         sanitizedTemplate?.subject_template ||
           "Altus Connect Notification - {{title}}",
         context,
+        false,
       );
     // Fallback chain: caller HTML → DB template → code template → generic default
+    // For the self-certificate-email bypass (a non-admin caller emailing
+    // themselves their own earned-certificate notice), the caller-supplied
+    // html/fromName/fromEmail are ignored entirely so this path always
+    // renders the resolved certificate_earned template rather than
+    // arbitrary caller-controlled markup or a spoofed sender identity.
     const resolvedHtmlTemplate =
       sanitizedTemplate?.html_template ||
       (body.templateKey ? getCodeTemplate(body.templateKey) : null) ||
       defaultHtmlTemplate();
+    const effectiveHtml = isSelfCertificateEmail ? undefined : body.html;
     const html =
-      body.html ||
-      renderTemplate(resolvedHtmlTemplate, context);
+      effectiveHtml ||
+      renderTemplate(resolvedHtmlTemplate, context, true);
     const text =
       body.text ||
       renderTemplate(
         sanitizedTemplate?.text_template || defaultTextTemplate(),
         context,
+        false,
       );
-    const fromName =
-      body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
-    const fromEmail =
-      body.fromEmail ||
-      sanitizedTemplate?.from_email ||
-      runtimeConfig.fromEmail;
+    const fromName = isSelfCertificateEmail
+      ? sanitizedTemplate?.from_name || runtimeConfig.fromName
+      : body.fromName || sanitizedTemplate?.from_name || runtimeConfig.fromName;
+    const fromEmail = isSelfCertificateEmail
+      ? sanitizedTemplate?.from_email || runtimeConfig.fromEmail
+      : body.fromEmail ||
+        sanitizedTemplate?.from_email ||
+        runtimeConfig.fromEmail;
 
     const resendResult = await sendWithResendWithRetry({
       apiKey: runtimeConfig.resendApiKey,
@@ -451,15 +462,36 @@ function resolveBranding(domain: string) {
   return map[domain] || map.system;
 }
 
+// context values include DB-stored / caller-supplied strings (message,
+// data_box_content, arbitrary body.variables entries, and even a
+// self-editable profile field like full_name reaching this via message
+// text). None of it is escaped upstream, so every substitution here must be
+// - this is the one place all of it funnels through before landing in a
+// real HTML email sent to potentially privileged recipients.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// `escapeValues` must be true for the HTML template render (the only
+// context where these are actual markup-injection sinks) and false for the
+// plain-text subject/text renders, which should show raw characters, not
+// HTML entities.
 function renderTemplate(
   template: string,
   context: Record<string, string>,
+  escapeValues: boolean,
 ): string {
   let rendered = template.replace(
     /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
     (_match, rawKey: string) => {
       const key = rawKey.trim();
-      return context[key] ?? "";
+      const value = context[key] ?? "";
+      return escapeValues ? escapeHtml(value) : value;
     },
   );
 

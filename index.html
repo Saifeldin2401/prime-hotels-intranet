@@ -8,26 +8,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <script>
     (() => {
-      const authSensitivePrefixes = ['/login', '/forgot-password', '/reset-password', '/complete-invite']
-      const normalizePathname = (pathname) => {
-        if (!pathname) return '/'
-        const normalized = pathname.endsWith('/') && pathname.length > 1
-          ? pathname.replace(/\/+$/, '')
-          : pathname
-        return normalized || '/'
-      }
-
-      const currentPathname = normalizePathname(window.location.pathname)
-      const hasAuthParams =
-        /(?:^|[?&])(token_hash|code|access_token|refresh_token)=/i.test(window.location.search)
-        || /(?:^|[?&])type=(?:recovery|invite|signup|magiclink|email|email_change)\b/i.test(window.location.search)
-        || /(?:^|[#&])(access_token|refresh_token)=/i.test(window.location.hash)
-
-      const isSensitiveEntry = authSensitivePrefixes.some((prefix) =>
-        currentPathname === prefix || currentPathname.startsWith(`${prefix}/`)
-      ) || hasAuthParams
-
-      if (window.location.hostname !== 'www.phg-connect.com' || !isSensitiveEntry) return
+      if (window.location.hostname !== 'www.phg-connect.com') return
 
       const hostRedirectKey = '__altus_www_host_redirect_attempted__'
       try {

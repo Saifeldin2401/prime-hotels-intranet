@@ -9,6 +9,14 @@ const VALID_QUESTION_TYPES = new Set<string>(['mcq', 'mcq_multi', 'true_false', 
 export const toValidQuestionType = (value: string): QuestionType =>
     (VALID_QUESTION_TYPES.has(value) ? value : 'mcq') as QuestionType
 
+// AI-generated JSON frequently has small textual drift between the
+// `correct_answer` field and the matching entry in `options` (trailing
+// punctuation, case, whitespace) even when the model is told to copy
+// verbatim. Normalize before comparing so a bare strict-equality check
+// doesn't silently leave every option `is_correct: false`.
+export const normalizeAnswerText = (value: string): string =>
+    value.trim().toLowerCase().replace(/[.!?]+$/, '')
+
 export type CourseDifficulty = 'beginner' | 'intermediate' | 'advanced'
 
 export interface CheckpointQuizParams {
@@ -74,14 +82,27 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
         if (!newQ) continue
 
         if (q.options?.length) {
-            const { error: optionsError } = await supabase.from('unified_question_options').insert(
-                q.options.map((optText, idx) => ({
-                    question_id: newQ.id,
-                    option_text: optText,
-                    is_correct: optText === q.correct_answer,
-                    display_order: idx + 1
-                }))
-            )
+            const optionsToInsert = q.options.map((optText, idx) => ({
+                question_id: newQ.id,
+                option_text: optText,
+                is_correct: normalizeAnswerText(optText) === normalizeAnswerText(q.correct_answer),
+                display_order: idx + 1
+            }))
+
+            if (!optionsToInsert.some(o => o.is_correct)) {
+                // The AI's correct_answer didn't match any option even after
+                // normalization - shipping this would be a permanently
+                // unwinnable question. Drop the orphaned question row and
+                // skip it rather than silently linking an unanswerable quiz.
+                console.warn('Checkpoint question skipped: correct_answer did not match any option', {
+                    questionId: newQ.id,
+                    correct_answer: q.correct_answer
+                })
+                await supabase.from('unified_questions').delete().eq('id', newQ.id)
+                continue
+            }
+
+            const { error: optionsError } = await supabase.from('unified_question_options').insert(optionsToInsert)
             if (optionsError) {
                 console.warn('Checkpoint question options insert failed:', optionsError)
                 continue

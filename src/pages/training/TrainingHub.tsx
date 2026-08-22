@@ -416,6 +416,9 @@ export default function TrainingHub() {
         title: t('statusUpdated', { defaultValue: 'Status Updated' }),
         description: t('moduleSavedDescription')
       })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('statusUpdateError'), variant: 'destructive' })
     }
   })
 
@@ -434,6 +437,9 @@ export default function TrainingHub() {
         title: t('moduleDeleted'),
         description: t('moduleDeletedDesc')
       })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('moduleDeleteError'), variant: 'destructive' })
     }
   })
 
@@ -453,6 +459,9 @@ export default function TrainingHub() {
         title: t('modulePublished'),
         description: t('bulkPublishSuccess', { count: ids.length })
       })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('bulkPublishError'), variant: 'destructive' })
     }
   })
 
@@ -472,6 +481,9 @@ export default function TrainingHub() {
         title: t('archived'),
         description: t('bulkArchiveSuccess', { count: ids.length })
       })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('bulkArchiveError'), variant: 'destructive' })
     }
   })
 
@@ -492,6 +504,9 @@ export default function TrainingHub() {
         title: t('moduleDeleted'),
         description: t('bulkDeleteSuccess', { count: ids.length })
       })
+    },
+    onError: () => {
+      toast({ title: t('error'), description: t('bulkDeleteError'), variant: 'destructive' })
     }
   })
 

@@ -9,6 +9,14 @@ interface BulkOperationResult {
     errors: string[]
 }
 
+const MAX_BULK_OPERATION_IDS = 200
+
+const assertBulkOperationSize = (ids: string[], operationLabel: string) => {
+    if (ids.length > MAX_BULK_OPERATION_IDS) {
+        throw new Error(`${operationLabel} limited to ${MAX_BULK_OPERATION_IDS} items per operation. Selected: ${ids.length}`)
+    }
+}
+
 export function useUserBulkOperations() {
     const queryClient = useQueryClient()
     const { toast } = useToast()
@@ -32,20 +40,33 @@ export function useUserBulkOperations() {
     // Bulk role assignment
     const bulkAssignRole = useMutation({
         mutationFn: async ({ userIds, role }: { userIds: string[]; role: AppRole }) => {
+            assertBulkOperationSize(userIds, 'Bulk role assignment')
+
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            for (const userId of userIds) {
-                try {
-                    // Check current roles first so we can preserve at least one role during updates.
-                    const { data: existingRoles, error: existingRolesError } = await supabase
-                        .from('user_roles')
-                        .select('role')
-                        .eq('user_id', userId)
-                    if (existingRolesError) throw existingRolesError
+            // Batch the pre-check: fetch every selected user's current roles in one
+            // round-trip instead of querying per user inside the loop.
+            const { data: existingRoleRows, error: existingRolesError } = await supabase
+                .from('user_roles')
+                .select('user_id, role')
+                .in('user_id', userIds)
+            if (existingRolesError) throw existingRolesError
 
-                    const currentRoles = new Set((existingRoles || []).map((r) => r.role))
+            const existingRolesByUser = new Map<string, Set<AppRole>>()
+            for (const row of existingRoleRows || []) {
+                const set = existingRolesByUser.get(row.user_id) ?? new Set<AppRole>()
+                set.add(row.role)
+                existingRolesByUser.set(row.user_id, set)
+            }
+
+            const succeededUserIds: string[] = []
+
+            await Promise.all(userIds.map(async (userId) => {
+                try {
+                    // Preserve at least one role during updates using the pre-fetched roles.
+                    const currentRoles = existingRolesByUser.get(userId) ?? new Set<AppRole>()
                     const staleRoles = [...currentRoles].filter((r) => r !== role)
 
                     const { error: upsertRoleError } = await supabase
@@ -79,22 +100,31 @@ export function useUserBulkOperations() {
                         }
                     }
 
-                    // Audit
-                    const { error: auditError } = await supabase.from('system_events').insert({
+                    result.success++
+                    succeededUserIds.push(userId)
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }))
+
+            // Batch the audit trail into a single multi-row insert instead of one
+            // insert per user.
+            if (succeededUserIds.length > 0) {
+                const { error: auditError } = await supabase.from('system_events').insert(
+                    succeededUserIds.map((userId) => ({
                         event_type: 'audit',
                         actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
                         metadata: { action: 'bulk_role_assign', details: { new_role: role, bulk_operation: true } },
-                    })
-                    if (auditError) throw auditError
-
-                    result.success++
-                } catch (err) {
-                    result.failed++
-                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                    }))
+                )
+                if (auditError) {
+                    console.error('Failed to record audit log for bulk role assignment:', auditError)
                 }
             }
+
             return result
         },
         onSuccess: (result) => showResult('Role Assignment', result),
@@ -115,11 +145,15 @@ export function useUserBulkOperations() {
             notifyUser?: boolean
             note?: string
         }) => {
+            assertBulkOperationSize(userIds, 'Bulk deactivation')
+
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            for (const userId of userIds) {
+            const succeededUserIds: string[] = []
+
+            await Promise.all(userIds.map(async (userId) => {
                 try {
                     // RLS (has_profile_access) silently matches 0 rows - not an error - when the
                     // caller lacks access to this profile. Assert an affected row so a blocked
@@ -167,21 +201,29 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('system_events').insert({
+                    result.success++
+                    succeededUserIds.push(userId)
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }))
+
+            if (succeededUserIds.length > 0) {
+                const { error: auditError } = await supabase.from('system_events').insert(
+                    succeededUserIds.map((userId) => ({
                         event_type: 'audit',
                         actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
                         metadata: { action: 'bulk_deactivate', details: { reason, bulk_operation: true, suspend_until: suspendUntil || null } },
-                    })
-                    if (auditError) throw auditError
-
-                    result.success++
-                } catch (err) {
-                    result.failed++
-                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                    }))
+                )
+                if (auditError) {
+                    console.error('Failed to record audit log for bulk deactivation:', auditError)
                 }
             }
+
             return result
         },
         onSuccess: (result) => showResult('Deactivation', result),
@@ -198,11 +240,15 @@ export function useUserBulkOperations() {
             notifyUser?: boolean
             note?: string
         }) => {
+            assertBulkOperationSize(userIds, 'Bulk activation')
+
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            for (const userId of userIds) {
+            const succeededUserIds: string[] = []
+
+            await Promise.all(userIds.map(async (userId) => {
                 try {
                     // RLS (has_profile_access) silently matches 0 rows - not an error - when the
                     // caller lacks access to this profile. Assert an affected row so a blocked
@@ -249,21 +295,29 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('system_events').insert({
+                    result.success++
+                    succeededUserIds.push(userId)
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }))
+
+            if (succeededUserIds.length > 0) {
+                const { error: auditError } = await supabase.from('system_events').insert(
+                    succeededUserIds.map((userId) => ({
                         event_type: 'audit',
                         actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
                         metadata: { action: 'bulk_activate', details: { bulk_operation: true } },
-                    })
-                    if (auditError) throw auditError
-
-                    result.success++
-                } catch (err) {
-                    result.failed++
-                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                    }))
+                )
+                if (auditError) {
+                    console.error('Failed to record audit log for bulk activation:', auditError)
                 }
             }
+
             return result
         },
         onSuccess: (result) => showResult('Activation', result),
@@ -280,11 +334,15 @@ export function useUserBulkOperations() {
             notifyUser?: boolean
             note?: string
         }) => {
+            assertBulkOperationSize(userIds, 'Bulk force password reset')
+
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            for (const userId of userIds) {
+            const succeededUserIds: string[] = []
+
+            await Promise.all(userIds.map(async (userId) => {
                 try {
                     // Call the edge function which sets the flag, generates recovery link, and sends email
                     const response = await supabase.functions.invoke('admin-account-actions', {
@@ -323,21 +381,29 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('system_events').insert({
+                    result.success++
+                    succeededUserIds.push(userId)
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }))
+
+            if (succeededUserIds.length > 0) {
+                const { error: auditError } = await supabase.from('system_events').insert(
+                    succeededUserIds.map((userId) => ({
                         event_type: 'audit',
                         actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
                         metadata: { action: 'bulk_force_password_reset', details: { bulk_operation: true } },
-                    })
-                    if (auditError) throw auditError
-
-                    result.success++
-                } catch (err) {
-                    result.failed++
-                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                    }))
+                )
+                if (auditError) {
+                    console.error('Failed to record audit log for bulk force password reset:', auditError)
                 }
             }
+
             return result
         },
         onSuccess: (result) => showResult('Password Reset', result),
@@ -354,11 +420,15 @@ export function useUserBulkOperations() {
             notifyUser?: boolean
             note?: string
         }) => {
+            assertBulkOperationSize(userIds, 'Bulk cancel password reset')
+
             const result: BulkOperationResult = { success: 0, failed: 0, errors: [] }
             const { data: authData } = await supabase.auth.getUser()
             const actorId = authData.user?.id ?? null
 
-            for (const userId of userIds) {
+            const succeededUserIds: string[] = []
+
+            await Promise.all(userIds.map(async (userId) => {
                 try {
                     const response = await supabase.functions.invoke('admin-account-actions', {
                         body: {
@@ -396,21 +466,29 @@ export function useUserBulkOperations() {
                         if (notifyError) throw notifyError
                     }
 
-                    const { error: auditError } = await supabase.from('system_events').insert({
+                    result.success++
+                    succeededUserIds.push(userId)
+                } catch (err) {
+                    result.failed++
+                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                }
+            }))
+
+            if (succeededUserIds.length > 0) {
+                const { error: auditError } = await supabase.from('system_events').insert(
+                    succeededUserIds.map((userId) => ({
                         event_type: 'audit',
                         actor_id: actorId,
                         entity_type: 'user',
                         entity_id: userId,
                         metadata: { action: 'bulk_cancel_password_reset', details: { bulk_operation: true } },
-                    })
-                    if (auditError) throw auditError
-
-                    result.success++
-                } catch (err) {
-                    result.failed++
-                    result.errors.push(`User ${userId}: ${(err as Error).message}`)
+                    }))
+                )
+                if (auditError) {
+                    console.error('Failed to record audit log for bulk cancel password reset:', auditError)
                 }
             }
+
             return result
         },
         onSuccess: (result) => showResult('Cancel Reset', result),

@@ -134,7 +134,7 @@ function TrainingBuilderInner() {
           onEditContent={(sectionId, contentId) => {
             const block = ctx.contentBlocks.find(c => c.id === contentId)
             if (block) {
-              ctx.openContentDialogForBlock({ ...block }, { selected: block })
+              ctx.openContentDialogForBlock({ ...block }, { selected: block, sectionId })
             } else {
               const item = ctx.sections.find(s => s.id === sectionId)?.items.find(i => i.id === contentId)
               if (item) ctx.openContentDialogForBlock(item, { selected: item, sectionId })
@@ -214,7 +214,7 @@ function TrainingBuilderInner() {
     <div className={`h-[calc(100vh-4rem)] max-h-[calc(100vh-4rem)] flex flex-col w-full max-w-full overflow-hidden bg-background ${ctx.isRTL ? 'text-right' : 'text-left'}`}>
 
       {/* Draft restore banner */}
-      {ctx.isNewRoute && ctx.showRestorePrompt && (
+      {ctx.showRestorePrompt && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 p-3">
           <div className="container mx-auto flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -226,7 +226,15 @@ function TrainingBuilderInner() {
             <div className="flex gap-2">
               <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => ctx.setShowRestorePrompt(false)}>{t('builder.keepDraft', 'Keep')}</Button>
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={() => {
-                ctx.clearDraft(); ctx.setTitle(''); ctx.setDescription(''); ctx.setSections([]); ctx.setShowRestorePrompt(false)
+                ctx.clearDraft()
+                // Only blank the form for a brand new, never-saved module -- for an
+                // existing module this banner means "we recovered a newer local
+                // draft", and blanking title/description/sections here would wipe
+                // out already-published content that just hasn't been re-saved yet.
+                if (ctx.isNewRoute) {
+                  ctx.setTitle(''); ctx.setDescription(''); ctx.setSections([])
+                }
+                ctx.setShowRestorePrompt(false)
               }}>{t('builder.clearDraftBtn', 'Clear Draft')}</Button>
             </div>
           </div>
@@ -237,7 +245,7 @@ function TrainingBuilderInner() {
       <BuilderHeader
         title={ctx.title}
         isSaving={ctx.builderBusy}
-        hasUnsavedChanges={ctx.builderBusy}
+        hasUnsavedChanges={ctx.hasUnsavedChanges}
         onSave={ctx.handleSave}
         onPreview={() => ctx.handleStepChange('preview')}
         onMagic={() => ctx.setShowSmartWizard(true)}
@@ -397,9 +405,13 @@ function TrainingBuilderInner() {
               }
             ]
 
-            // Check if there is an associated quiz checkpoint for this section
-            const checkpoint = checkpoints.find((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
-            if (checkpoint) {
+            // Check if there are any associated quiz checkpoints for this section.
+            // `.filter()` (not `.find()`) because nothing enforces afterSectionIndex
+            // uniqueness in the AI's suggested output -- two checkpoints targeting
+            // the same section used to silently collapse to just the first one.
+            const sectionCheckpoints = checkpoints.filter((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
+            for (let cpIdx = 0; cpIdx < sectionCheckpoints.length; cpIdx++) {
+              const checkpoint = sectionCheckpoints[cpIdx]
               try {
                 const { data: createdQuiz } = await supabase
                   .from('learning_quizzes')
@@ -428,7 +440,7 @@ function TrainingBuilderInner() {
 
                   if (linkedQuestionCount > 0) {
                     sectionItems.push({
-                      id: `block_${Date.now()}_${idx}_quiz`,
+                      id: `block_${Date.now()}_${idx}_quiz_${cpIdx}`,
                       title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
                       type: 'quiz' as any,
                       content: '',
@@ -440,7 +452,7 @@ function TrainingBuilderInner() {
                         topic: checkpoint.topic
                       },
                       is_mandatory: true,
-                      order: 1
+                      order: sectionItems.length
                     })
                   } else {
                     await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)

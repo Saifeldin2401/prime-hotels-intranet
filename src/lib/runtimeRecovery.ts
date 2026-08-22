@@ -1,4 +1,4 @@
-const DEFAULT_CANONICAL_APP_URL = 'https://altus-advisory.com'
+const DEFAULT_CANONICAL_APP_URL = 'https://phg-connect.com'
 
 const AUTH_SENSITIVE_PREFIXES = [
   '/login',

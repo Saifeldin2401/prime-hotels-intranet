@@ -411,7 +411,7 @@ export default function CompleteInvite() {
             setSuccess(true)
 
             window.setTimeout(() => {
-                navigate('/home', { replace: true })
+                navigate('/dashboard', { replace: true })
             }, 1200)
         } catch (candidateError: unknown) {
             console.error('Complete invite error:', candidateError)

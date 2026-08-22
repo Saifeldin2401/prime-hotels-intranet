@@ -664,9 +664,18 @@ export default function TrainingPlayer() {
         }
 
         const maxIndex = Math.max(blocks.length - 1, 0)
-        const nextIndex = typeof progress.last_block_index === 'number'
-            ? Math.min(Math.max(progress.last_block_index, 0), maxIndex)
-            : 0
+        // Prefer resolving resume position by block id, since an author
+        // reordering/inserting/deleting blocks after a learner starts a module
+        // shifts what sits at a given index. Fall back to the clamped index
+        // only when the id can't be found (e.g. the block was since deleted).
+        const idIndex = progress.last_block_id
+            ? blocks.findIndex(b => b.id === progress.last_block_id)
+            : -1
+        const nextIndex = idIndex >= 0
+            ? idIndex
+            : (typeof progress.last_block_index === 'number'
+                ? Math.min(Math.max(progress.last_block_index, 0), maxIndex)
+                : 0)
 
         if (nextIndex > 0) {
             setActiveBlockIndex(nextIndex)
@@ -1472,11 +1481,11 @@ export default function TrainingPlayer() {
                 filter: `user_id=eq.${user.id}`
             }, (payload) => {
                 const next = payload.new as PersistedModuleProgress & {
-                    content_type?: string
-                    content_id?: string
+                    lp_content_type?: string
+                    training_id?: string
                 }
 
-                if (next?.content_type !== 'module' || next?.content_id !== moduleData.module.id) {
+                if (next?.lp_content_type !== 'module' || next?.training_id !== moduleData.module.id) {
                     return
                 }
 
@@ -1742,28 +1751,14 @@ export default function TrainingPlayer() {
 
                 {block.type === 'interactive' && (() => {
                     const interactiveUrl = getBlockMediaUrl(block)
-                    return (
-                        <div className="space-y-6">
-                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                                {interactiveUrl ? (
-                                    <div className="aspect-video rounded-xl overflow-hidden bg-slate-900">
-                                        <iframe
-                                            src={interactiveUrl}
-                                            className="w-full h-full"
-                                            allow="clipboard-read; clipboard-write; fullscreen"
-                                            sandbox="allow-same-origin allow-scripts"
-                                            referrerPolicy="strict-origin-when-cross-origin"
-                                            loading="lazy"
-                                            title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div className="flex items-center gap-3 text-slate-500">
-                                        <Gamepad2 className="h-6 w-6" />
-                                        <span>{t('interactiveUrlMissing', 'Interactive URL missing')}</span>
-                                    </div>
-                                )}
-                            </div>
+                    const contentData = block.content_data as Record<string, unknown> | null
+                    const flashcards = contentData?.flashcards as any[] | undefined
+                    const scenario = contentData?.scenario as any | undefined
+
+                    // Shared trailing sections (mandatory-completion gate + authored
+                    // rich text) rendered under whichever primary widget below applies.
+                    const trailingSections = (
+                        <>
                             {block.is_mandatory && (
                                 <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
                                     <div>
@@ -1801,6 +1796,61 @@ export default function TrainingPlayer() {
                                     />
                                 </div>
                             )}
+                        </>
+                    )
+
+                    if (flashcards && flashcards.length > 0) {
+                        return (
+                            <div className="space-y-6">
+                                <FlashcardDeckWidget
+                                    title={block.title}
+                                    cards={flashcards}
+                                    isRTL={isRTL}
+                                />
+                                {trailingSections}
+                            </div>
+                        )
+                    }
+
+                    if (scenario && scenario.options) {
+                        return (
+                            <div className="space-y-6">
+                                <ScenarioBranchSimulator
+                                    title={block.title}
+                                    scenarioText={scenario.scenarioText || block.content}
+                                    scenarioText_ar={scenario.scenarioText_ar}
+                                    guestRole={scenario.guestRole}
+                                    options={scenario.options}
+                                    isRTL={isRTL}
+                                />
+                                {trailingSections}
+                            </div>
+                        )
+                    }
+
+                    return (
+                        <div className="space-y-6">
+                            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                                {interactiveUrl ? (
+                                    <div className="aspect-video rounded-xl overflow-hidden bg-slate-900">
+                                        <iframe
+                                            src={interactiveUrl}
+                                            className="w-full h-full"
+                                            allow="clipboard-read; clipboard-write; fullscreen"
+                                            sandbox="allow-same-origin allow-scripts"
+                                            referrerPolicy="strict-origin-when-cross-origin"
+                                            loading="lazy"
+                                            title={t('interactive_training_content', { defaultValue: 'Interactive training content' })}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center gap-3 text-slate-500">
+                                        <Gamepad2 className="h-6 w-6" />
+                                        <span>{t('interactiveUrlMissing', 'Interactive URL missing')}</span>
+                                    </div>
+                                )}
+                            </div>
+                            {trailingSections}
                         </div>
                     )
                 })()}
@@ -1917,73 +1967,6 @@ export default function TrainingPlayer() {
                         />
                     </div>
                 )}
-
-                {block.type === 'interactive' && (() => {
-                    const contentData = block.content_data as Record<string, unknown> | null
-                    const flashcards = contentData?.flashcards as any[] | undefined
-                    const scenario = contentData?.scenario as any | undefined
-
-                    if (flashcards && flashcards.length > 0) {
-                        return (
-                            <FlashcardDeckWidget
-                                title={block.title}
-                                cards={flashcards}
-                                isRTL={isRTL}
-                            />
-                        )
-                    }
-
-                    if (scenario && scenario.options) {
-                        return (
-                            <ScenarioBranchSimulator
-                                title={block.title}
-                                scenarioText={scenario.scenarioText || block.content}
-                                scenarioText_ar={scenario.scenarioText_ar}
-                                guestRole={scenario.guestRole}
-                                options={scenario.options}
-                                isRTL={isRTL}
-                            />
-                        )
-                    }
-
-                    return (
-                        <div className="space-y-4">
-                            {block.content && (
-                                <RichTextBlockContent
-                                    originalHtml={block.content}
-                                    translatedHtml={translatedBlockContent}
-                                    translationTarget={translationTarget}
-                                    showBilingual={showBilingual}
-                                    translationDir={translationDir}
-                                    originalLabel={t('original', 'Original')}
-                                    translatedLabel={t('translatedTo', { language: translationTargetMeta?.label || t('translated', 'Translated') })}
-                                />
-                            )}
-                            <FlashcardDeckWidget
-                                title={block.title || t('interactiveKnowledgeCheck', 'Key Standard Flashcards')}
-                                cards={[
-                                    {
-                                        id: '1',
-                                        front: `What is the primary standard requirement of ${block.title || 'this procedure'}?`,
-                                        front_ar: `ما هو المتطلب المعياري الأساسي لهذا الإجراء (${block.title || ''})؟`,
-                                        back: 'Execute all sequence steps with 100% compliance, proactive guest recognition, and strict safety adherence.',
-                                        back_ar: 'تنفيذ كافة الخطوات بدقة وامتثال بنسبة 100%، مع الترحيب الاستباقي بالضيوف والالتزام الصارم بمعايير السلامة.',
-                                        category: '5-Star Quality Standard'
-                                    },
-                                    {
-                                        id: '2',
-                                        front: 'When is supervisor escalation required for this standard?',
-                                        front_ar: 'متى يلزم تصعيد الحالة للمشرف المسؤول؟',
-                                        back: 'Immediately when frontline empowerment limits are exceeded or special guest medical/security preferences arise.',
-                                        back_ar: 'فوراً عند تجاوز حدود صلاحيات موظف الخط الأمامي أو عند وجود متطلبات طبية أو أمنية خاصة للنزيل.',
-                                        category: 'Escalation & Safety'
-                                    }
-                                ]}
-                                isRTL={isRTL}
-                            />
-                        </div>
-                    )
-                })()}
 
                 {block.type === 'document_link' && (
                     <DocumentBlockRenderer

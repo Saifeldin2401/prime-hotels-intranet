@@ -478,9 +478,12 @@ export function SmartAICourseCreatorModal({
           ai_generated: true
         })
 
-        // Check if there is an active quiz checkpoint
-        const chk = draftCheckpoints.find((c) => c.afterSectionIndex === sec.originalIndex && c.include)
-        if (chk) {
+        // Check if there are any active quiz checkpoints for this section.
+        // `.filter()` (not `.find()`) because nothing enforces afterSectionIndex
+        // uniqueness in the AI's suggested output -- two checkpoints targeting
+        // the same section used to silently collapse to just the first one.
+        const sectionCheckpoints = draftCheckpoints.filter((c) => c.afterSectionIndex === sec.originalIndex && c.include)
+        for (const chk of sectionCheckpoints) {
           try {
             const { data: createdQuiz } = await supabase
               .from('learning_quizzes')
@@ -1049,16 +1052,17 @@ export function SmartAICourseCreatorModal({
                           </div>
                         )}
 
-                        {/* Associated quiz checkpoint if any */}
-                        {draftCheckpoints.some((c) => c.afterSectionIndex === section.originalIndex && c.include) && (
-                          <div className="mt-2 pt-2 border-t flex items-center gap-2 text-xs text-purple-700 bg-purple-50/50 p-2 rounded-lg">
-                            <FileQuestion className="w-3.5 h-3.5 shrink-0" />
-                            <span className="font-semibold">Knowledge Checkpoint:</span>
-                            <span className="truncate">
-                              {draftCheckpoints.find((c) => c.afterSectionIndex === section.originalIndex)?.topic}
-                            </span>
-                          </div>
-                        )}
+                        {/* Associated quiz checkpoint(s) if any -- a section can have more
+                            than one, so every match is shown, not just the first. */}
+                        {draftCheckpoints
+                          .filter((c) => c.afterSectionIndex === section.originalIndex && c.include)
+                          .map((c) => (
+                            <div key={c.id} className="mt-2 pt-2 border-t flex items-center gap-2 text-xs text-purple-700 bg-purple-50/50 p-2 rounded-lg">
+                              <FileQuestion className="w-3.5 h-3.5 shrink-0" />
+                              <span className="font-semibold">Knowledge Checkpoint:</span>
+                              <span className="truncate">{c.topic}</span>
+                            </div>
+                          ))}
                       </CardContent>
                     </Card>
                   ))}
@@ -1077,7 +1081,7 @@ export function SmartAICourseCreatorModal({
               </Button>
               <Button
                 onClick={handleGenerate}
-                disabled={generateOutline.isPending || pdfExtracting}
+                disabled={generateOutline.isPending || pdfExtracting || isExpandingAll}
                 className="bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-400 hover:to-yellow-300 text-slate-950 font-bold px-6 shadow-md border-none"
               >
                 {generateOutline.isPending ? (
@@ -1100,7 +1104,7 @@ export function SmartAICourseCreatorModal({
                   <ArrowLeft className="w-4 h-4 me-1.5" />
                   Edit Prompt
                 </Button>
-                <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={generateOutline.isPending}>
+                <Button variant="ghost" size="sm" onClick={handleGenerate} disabled={generateOutline.isPending || isExpandingAll}>
                   <RefreshCw className={cn('w-4 h-4 me-1.5', generateOutline.isPending && 'animate-spin')} />
                   Regenerate
                 </Button>

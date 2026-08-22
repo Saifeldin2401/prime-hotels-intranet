@@ -66,9 +66,10 @@ export function useUserKnowledgeCompliance() {
 }
 
 // Get Knowledge compliance by department
-export function useDepartmentKnowledgeCompliance(propertyId?: string) {
+export function useDepartmentKnowledgeCompliance(propertyId?: string, options?: { enabled?: boolean }) {
     const { currentProperty } = useProperty()
     const propId = propertyId || currentProperty?.id
+    const isEnabled = (options?.enabled ?? true) && !!propId && propId !== 'all'
 
     return useQuery({
         queryKey: ['knowledge-compliance', 'department', propId],
@@ -80,38 +81,68 @@ export function useDepartmentKnowledgeCompliance(propertyId?: string) {
 
             if (!departments || departments.length === 0) return []
 
-            const results: DepartmentKnowledgeCompliance[] = []
+            const deptIds = departments.map(d => d.id)
 
-            for (const dept of departments) {
-                const { data: deptUsers } = await supabase
+            // Batch-fetch department memberships and required documents for ALL
+            // departments in two round-trips instead of looping per department.
+            const [{ data: allDeptUsers }, { data: allDeptDocs }] = await Promise.all([
+                supabase
                     .from('user_departments')
-                    .select('user_id')
-                    .eq('department_id', dept.id)
-
-                const userIds = deptUsers?.map(u => u.user_id) || []
-
-                // Get documents for this department
-                const { data: deptDocs } = await supabase
+                    .select('user_id, department_id')
+                    .in('department_id', deptIds),
+                supabase
                     .from('documents')
-                    .select('id')
-                    .eq('department_id', dept.id)
+                    .select('id, department_id')
+                    .in('department_id', deptIds)
                     .eq('status', 'PUBLISHED')
                     .eq('requires_acknowledgment', true)
+            ])
 
-                const docIds = deptDocs?.map(d => d.id) || []
-                const totalRequired = docIds.length * userIds.length
+            const usersByDept = new Map<string, Set<string>>()
+            for (const row of allDeptUsers || []) {
+                if (!row.department_id) continue
+                const set = usersByDept.get(row.department_id) ?? new Set<string>()
+                set.add(row.user_id)
+                usersByDept.set(row.department_id, set)
+            }
 
-                let acknowledgedCount = 0
-                if (docIds.length > 0 && userIds.length > 0) {
-                    const { count } = await supabase
-                        .from('document_acknowledgments')
-                        .select('*', { count: 'exact', head: true })
-                        .in('document_id', docIds)
-                        .in('user_id', userIds)
-                    acknowledgedCount = count || 0
-                }
+            const docsByDept = new Map<string, string[]>()
+            const deptIdByDocId = new Map<string, string>()
+            for (const doc of allDeptDocs || []) {
+                if (!doc.department_id) continue
+                const list = docsByDept.get(doc.department_id) ?? []
+                list.push(doc.id)
+                docsByDept.set(doc.department_id, list)
+                deptIdByDocId.set(doc.id, doc.department_id)
+            }
 
-                results.push({
+            const allDocIds = allDeptDocs?.map(d => d.id) || []
+
+            // One more batched query for acknowledgments across every required
+            // document, then aggregate the per-department counts client-side.
+            const { data: allAcks } = allDocIds.length > 0
+                ? await supabase
+                    .from('document_acknowledgments')
+                    .select('document_id, user_id')
+                    .in('document_id', allDocIds)
+                : { data: [] as Array<{ document_id: string; user_id: string }> }
+
+            const acknowledgedCountByDept = new Map<string, number>()
+            for (const ack of allAcks || []) {
+                const deptId = deptIdByDocId.get(ack.document_id)
+                if (!deptId) continue
+                const deptUsers = usersByDept.get(deptId)
+                if (!deptUsers || !deptUsers.has(ack.user_id)) continue
+                acknowledgedCountByDept.set(deptId, (acknowledgedCountByDept.get(deptId) || 0) + 1)
+            }
+
+            const results: DepartmentKnowledgeCompliance[] = departments.map(dept => {
+                const userIds = usersByDept.get(dept.id) ?? new Set<string>()
+                const docIds = docsByDept.get(dept.id) ?? []
+                const totalRequired = docIds.length * userIds.size
+                const acknowledgedCount = acknowledgedCountByDept.get(dept.id) || 0
+
+                return {
                     department_id: dept.id,
                     department_name: dept.name,
                     total_required: totalRequired,
@@ -119,11 +150,11 @@ export function useDepartmentKnowledgeCompliance(propertyId?: string) {
                     compliance_rate: totalRequired > 0
                         ? Math.round((acknowledgedCount / totalRequired) * 100)
                         : 100
-                })
-            }
+                }
+            })
 
             return results.sort((a, b) => a.compliance_rate - b.compliance_rate)
         },
-        enabled: !!propId && propId !== 'all'
+        enabled: isEnabled
     })
 }

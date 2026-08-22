@@ -31,10 +31,10 @@ describe('runtimeRecovery', () => {
   })
 
   it('canonicalizes www hosts to the apex domain', () => {
-    expect(canonicalizeAppUrl('https://www.altus-advisory.com/some/path?x=1')).toBe('https://altus-advisory.com')
-    expect(canonicalizeAppUrl('https://altus-advisory.com')).toBe('https://altus-advisory.com')
-    expect(canonicalizeAppUrl('http://localhost:5173')).toBe('https://altus-advisory.com')
-    expect(canonicalizeAppUrl(undefined)).toBe('https://altus-advisory.com')
+    expect(canonicalizeAppUrl('https://www.phg-connect.com/some/path?x=1')).toBe('https://phg-connect.com')
+    expect(canonicalizeAppUrl('https://phg-connect.com')).toBe('https://phg-connect.com')
+    expect(canonicalizeAppUrl('http://localhost:5173')).toBe('https://phg-connect.com')
+    expect(canonicalizeAppUrl(undefined)).toBe('https://phg-connect.com')
     // www-stripping is host-agnostic, not hardcoded to one brand domain --
     // guards against this exact regression recurring on the next rebrand.
     expect(canonicalizeAppUrl('https://www.example.com/path')).toBe('https://example.com')
@@ -42,6 +42,6 @@ describe('runtimeRecovery', () => {
 
   it('builds canonical URLs with the preserved route context', () => {
     expect(buildCanonicalUrl('/reset-password', '?token_hash=abc&type=recovery', '#step=1'))
-      .toBe('https://altus-advisory.com/reset-password?token_hash=abc&type=recovery#step=1')
+      .toBe('https://phg-connect.com/reset-password?token_hash=abc&type=recovery#step=1')
   })
 })

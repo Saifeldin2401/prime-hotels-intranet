@@ -180,7 +180,7 @@ export function HotelNavigation({ user, onLogout }: HotelNavigationProps) {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link to="/help" className="w-full cursor-pointer">
+                  <Link to="/knowledge" className="w-full cursor-pointer">
                     <Icons.HelpCircle className="me-2 h-4 w-4" />
                     <span>Help & Support</span>
                   </Link>

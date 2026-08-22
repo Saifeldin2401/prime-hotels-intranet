@@ -18,7 +18,7 @@ export function PublicOnlyRoute({ children }: PublicOnlyRouteProps) {
     const redirectPath = getRedirectFromSearch(location.search)
     const storedRedirect = peekPostLoginRedirect()
     const destination = user
-        ? pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/home'
+        ? pendingAuthFlowPath ?? redirectPath ?? storedRedirect ?? '/dashboard'
         : null
 
     useEffect(() => {

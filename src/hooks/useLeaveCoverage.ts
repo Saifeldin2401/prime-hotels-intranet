@@ -119,51 +119,64 @@ export function useDepartmentCoverage(date?: Date) {
 
             if (!departments || departments.length === 0) return []
 
-            const coverage: DepartmentCoverage[] = []
+            const deptIds = departments.map(d => d.id)
+            const dateStr = targetDate.toISOString().split('T')[0]
+            const nextWeek = new Date(targetDate)
+            nextWeek.setDate(nextWeek.getDate() + 7)
+            const nextWeekStr = nextWeek.toISOString().split('T')[0]
 
-            for (const dept of departments) {
-                // Count total staff in department
-                const { count: totalStaff } = await supabase
+            // Batch-fetch total staff, staff on leave today, and upcoming leaves for ALL
+            // departments in 3 parallel queries instead of 3 sequential queries per department.
+            const [staffResult, onLeaveResult, upcomingResult] = await Promise.all([
+                supabase
                     .from('user_departments')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('department_id', dept.id)
-
-                // Count staff on leave today
-                const dateStr = targetDate.toISOString().split('T')[0]
-                const { count: onLeave } = await supabase
+                    .select('department_id')
+                    .in('department_id', deptIds),
+                supabase
                     .from('leave_requests')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('department_id', dept.id)
+                    .select('department_id')
+                    .in('department_id', deptIds)
                     .eq('status', 'approved')
                     .lte('start_date', dateStr)
-                    .gte('end_date', dateStr)
-
-                // Count upcoming leaves (next 7 days)
-                const nextWeek = new Date(targetDate)
-                nextWeek.setDate(nextWeek.getDate() + 7)
-                const { count: upcoming } = await supabase
+                    .gte('end_date', dateStr),
+                supabase
                     .from('leave_requests')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('department_id', dept.id)
+                    .select('department_id')
+                    .in('department_id', deptIds)
                     .in('status', ['approved', 'pending'])
                     .gte('start_date', dateStr)
-                    .lte('start_date', nextWeek.toISOString().split('T')[0])
+                    .lte('start_date', nextWeekStr)
+            ])
 
-                const staffCount = totalStaff || 0
-                const onLeaveCount = onLeave || 0
+            const countByDept = (rows: { department_id: string | null }[] | null) => {
+                const map = new Map<string, number>()
+                for (const row of rows || []) {
+                    if (!row.department_id) continue
+                    map.set(row.department_id, (map.get(row.department_id) || 0) + 1)
+                }
+                return map
+            }
+
+            const totalStaffMap = countByDept(staffResult.data)
+            const onLeaveMap = countByDept(onLeaveResult.data)
+            const upcomingMap = countByDept(upcomingResult.data)
+
+            const coverage: DepartmentCoverage[] = departments.map(dept => {
+                const staffCount = totalStaffMap.get(dept.id) || 0
+                const onLeaveCount = onLeaveMap.get(dept.id) || 0
                 const coveragePercentage = staffCount > 0
                     ? Math.round(((staffCount - onLeaveCount) / staffCount) * 100)
                     : 100
 
-                coverage.push({
+                return {
                     department_id: dept.id,
                     department_name: dept.name,
                     total_staff: staffCount,
                     staff_on_leave: onLeaveCount,
                     coverage_percentage: coveragePercentage,
-                    upcoming_leaves: upcoming || 0
-                })
-            }
+                    upcoming_leaves: upcomingMap.get(dept.id) || 0
+                }
+            })
 
             return coverage.sort((a, b) => a.coverage_percentage - b.coverage_percentage)
         },
@@ -180,36 +193,55 @@ export function useLeaveConflicts(startDate: Date, endDate: Date) {
         queryFn: async (): Promise<LeaveConflict[]> => {
             if (!isRealPropertyId(currentProperty?.id)) return []
 
+            // Get departments once for the whole range (was refetched on every day before)
+            const { data: departments } = await supabase
+                .from('departments')
+                .select('id, name')
+                .eq('property_id', currentProperty.id)
+
+            if (!departments || departments.length === 0) return []
+
+            const deptIds = departments.map(d => d.id)
+            const startStr = startDate.toISOString().split('T')[0]
+            const endStr = endDate.toISOString().split('T')[0]
+
+            // Batch-fetch total staff per department once, and every approved leave row that
+            // overlaps the date range once, instead of 2 queries per (day, department) pair.
+            const [staffResult, leaveResult] = await Promise.all([
+                supabase
+                    .from('user_departments')
+                    .select('department_id')
+                    .in('department_id', deptIds),
+                supabase
+                    .from('leave_requests')
+                    .select('department_id, start_date, end_date')
+                    .in('department_id', deptIds)
+                    .eq('status', 'approved')
+                    .lte('start_date', endStr)
+                    .gte('end_date', startStr)
+            ])
+
+            const totalStaffMap = new Map<string, number>()
+            for (const row of staffResult.data || []) {
+                if (!row.department_id) continue
+                totalStaffMap.set(row.department_id, (totalStaffMap.get(row.department_id) || 0) + 1)
+            }
+
+            const leaveRows = leaveResult.data || []
+
             const conflicts: LeaveConflict[] = []
             const currentDate = new Date(startDate)
 
             while (currentDate <= endDate) {
                 const dateStr = currentDate.toISOString().split('T')[0]
 
-                // Get departments
-                const { data: departments } = await supabase
-                    .from('departments')
-                    .select('id, name')
-                    .eq('property_id', currentProperty.id)
-
-                for (const dept of departments || []) {
-                    // Count total staff
-                    const { count: totalStaff } = await supabase
-                        .from('user_departments')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('department_id', dept.id)
-
-                    // Count staff on leave this day
-                    const { count: onLeave } = await supabase
-                        .from('leave_requests')
-                        .select('*', { count: 'exact', head: true })
-                        .eq('department_id', dept.id)
-                        .eq('status', 'approved')
-                        .lte('start_date', dateStr)
-                        .gte('end_date', dateStr)
-
-                    const staffCount = totalStaff || 0
-                    const onLeaveCount = onLeave || 0
+                for (const dept of departments) {
+                    const staffCount = totalStaffMap.get(dept.id) || 0
+                    const onLeaveCount = leaveRows.filter(row =>
+                        row.department_id === dept.id &&
+                        row.start_date <= dateStr &&
+                        row.end_date >= dateStr
+                    ).length
 
                     if (staffCount > 0 && onLeaveCount > 0) {
                         const coveragePercentage = Math.round(((staffCount - onLeaveCount) / staffCount) * 100)

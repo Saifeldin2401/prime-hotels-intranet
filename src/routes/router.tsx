@@ -11,6 +11,7 @@ import {
     getSpaRedirectFromSearch,
 } from '@/lib/authRedirect'
 import { clearAuthFlowState, getAuthFlowRedirectPath } from '@/lib/authFlowState'
+import { PreserveQueryNavigate } from './utils/QueryPreserveRedirect'
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import {
     createBrowserRouter,
@@ -83,7 +84,7 @@ const RootIndex = () => {
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? '/home'
+        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? '/dashboard'
     }, [user, location.search])
 
     useEffect(() => {
@@ -194,22 +195,6 @@ const LegacyScheduleRedirect = () => {
     return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
 }
 
-// Catch-all: authenticated users see a real 404, unauthenticated users go to login with original path preserved
-const CatchAllRedirect = () => {
-    const { user, loading } = useAuth()
-    const location = useLocation()
-
-    if (loading) {
-        return <PageSkeleton />
-    }
-
-    if (user) {
-        return <NotFoundWrapper />
-    }
-
-    return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
-}
-
 export const router = createBrowserRouter(
     createRoutesFromElements(
         <>
@@ -229,14 +214,14 @@ export const router = createBrowserRouter(
                 <Route path="/analytics" element={<LegacyAnalyticsRedirect />} />
                 <Route path="/calendar" element={<LegacyScheduleRedirect />} />
                 <Route path="/schedule" element={<LegacyScheduleRedirect />} />
-                <Route path="/social" element={<Navigate to="/announcements" replace />} />
-                <Route path="/support" element={<Navigate to="/knowledge" replace />} />
-                <Route path="/admin" element={<Navigate to="/admin/users" replace />} />
-                <Route path="/hr/leave-requests" element={<Navigate to="/hr/leave" replace />} />
-                <Route path="/hr/my-attendance" element={<Navigate to="/hr/attendance" replace />} />
-                <Route path="/hr/staff" element={<Navigate to="/directory" replace />} />
-                <Route path="/learning/reports" element={<Navigate to="/learning/analytics" replace />} />
-                <Route path="/learning/team" element={<Navigate to="/learning/analytics" replace />} />
+                <Route path="/social" element={<PreserveQueryNavigate to="/announcements" />} />
+                <Route path="/support" element={<PreserveQueryNavigate to="/knowledge" />} />
+                <Route path="/admin" element={<PreserveQueryNavigate to="/admin/users" />} />
+                <Route path="/hr/leave-requests" element={<PreserveQueryNavigate to="/hr/leave" />} />
+                <Route path="/hr/my-attendance" element={<PreserveQueryNavigate to="/hr/attendance" />} />
+                <Route path="/hr/staff" element={<PreserveQueryNavigate to="/directory" />} />
+                <Route path="/learning/reports" element={<PreserveQueryNavigate to="/learning/analytics" />} />
+                <Route path="/learning/team" element={<PreserveQueryNavigate to="/learning/analytics" />} />
 
                 {AuthRoutes()}
                 {AdminRoutes()}
@@ -252,11 +237,11 @@ export const router = createBrowserRouter(
                 {DashboardRoutes()}
                 {MiscRoutes()}
 
-                {/* 404 Not Found - Authenticated users see styled page, unauthenticated get redirected */}
+                {/* 404 Not Found - Authenticated users see styled page, unauthenticated get clean 404 */}
                 <Route path="/not-found" element={<NotFoundWrapper />} />
 
-                {/* Catch-all: authenticated users go to dashboard, unauthenticated users go to login with original path preserved */}
-                <Route path="*" element={<CatchAllRedirect />} />
+                {/* Catch-all: all unmatched URLs render 404 directly */}
+                <Route path="*" element={<NotFoundWrapper />} />
             </Route>
         </>
     )

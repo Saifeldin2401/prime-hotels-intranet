@@ -1,6 +1,7 @@
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
+import { supabase } from '@/lib/supabase'
 import { formatDateTime } from '@/lib/utils'
 import { useEffect, useState, useCallback } from 'react'
 import { useTranslation } from "react-i18next"
@@ -34,7 +35,7 @@ interface Session {
 
 export function SessionList() {
   const { t } = useTranslation('auth');
-  const { user, signOut } = useAuth()
+  const { user } = useAuth()
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [revokingId, setRevokingId] = useState<string | null>(null)
@@ -113,9 +114,15 @@ export function SessionList() {
   const handleSignOutAllDevices = async () => {
     try {
       await logSecurityEvent('session.sign_out_all_initiated')
-      
-      // Sign out globally
-      await signOut()
+
+      // The shared signOut() action intentionally uses scope: 'local' (a
+      // normal "log out" click shouldn't kill every other device someone's
+      // signed in on). This button explicitly promises to sign out
+      // everywhere, so it calls the real global-scope Auth API directly -
+      // that's the only thing that actually revokes every refresh token for
+      // this user, not just clears the local browser session.
+      const { error } = await supabase.auth.signOut({ scope: 'global' })
+      if (error) throw error
       window.location.href = '/login'
     } catch (err) {
       console.error('Error signing out:', err)

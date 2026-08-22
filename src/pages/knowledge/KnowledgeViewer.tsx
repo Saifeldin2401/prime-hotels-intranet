@@ -14,9 +14,9 @@ import {
     ChecklistRenderer,
     FAQAccordion,
     ImageGalleryRenderer,
-    VideoPlayer,
-    ArticleContent
+    VideoPlayer
 } from '@/components/knowledge/ContentRenderers'
+import { ArticleContent } from '@/components/knowledge/ArticleContent'
 import { SectionLinkInjector } from '@/components/knowledge/SectionLinkInjector'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'

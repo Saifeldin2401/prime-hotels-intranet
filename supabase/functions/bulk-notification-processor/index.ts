@@ -802,12 +802,18 @@ async function processNotifications(
           const subject = renderTemplate(
             item.email_subject || template.subject_template,
             context,
+            false,
           );
           const html = renderTemplate(
             item.email_html_override || template.html_template,
             context,
+            true,
           );
-          const text = renderTemplate(template.text_template || "", context);
+          const text = renderTemplate(
+            template.text_template || "",
+            context,
+            false,
+          );
 
           const resendResult = await sendWithResend({
             to: recipientEmail,
@@ -1487,16 +1493,31 @@ function resolveBranding(domain: string) {
   return map[domain] || map.system;
 }
 
+// context values come straight from notification/template rows and item
+// overrides, none of it HTML-escaped upstream - escapeValues must be true
+// for the HTML render (the only real markup-injection sink) and false for
+// the plain-text subject/text renders.
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function renderTemplate(
   template: string,
   context: Record<string, string>,
+  escapeValues: boolean,
 ): string {
   // Simple variable replacement
   let rendered = template.replace(
     /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g,
     (_match, rawKey: string) => {
       const key = rawKey.trim();
-      return context[key] ?? "";
+      const value = context[key] ?? "";
+      return escapeValues ? escapeHtml(value) : value;
     },
   );
 

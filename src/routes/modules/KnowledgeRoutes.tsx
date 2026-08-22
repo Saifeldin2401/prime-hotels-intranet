@@ -19,7 +19,7 @@ const SystemWiki = lazy(() => import('@/pages/knowledge/SystemWiki'))
 const SOPViewerRedirect = () => {
     const { id } = useParams()
     const location = useLocation()
-    return <Navigate to={id ? `/knowledge/${id}${location.search}` : `/knowledge${location.search}`} replace />
+    return <Navigate to={id ? `/knowledge/${id}${location.search}${location.hash}` : `/knowledge${location.search}${location.hash}`} replace />
 }
 
 export const KnowledgeRoutes = () => (
@@ -30,6 +30,14 @@ export const KnowledgeRoutes = () => (
         />
         <Route
             path="/sops/:id"
+            element={<SOPViewerRedirect />}
+        />
+        <Route
+            path="/operations/sops"
+            element={<PreserveQueryNavigate to="/knowledge" />}
+        />
+        <Route
+            path="/operations/sops/:id"
             element={<SOPViewerRedirect />}
         />
         <Route

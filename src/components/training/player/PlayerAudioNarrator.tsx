@@ -12,6 +12,7 @@ import {
     X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { sanitizeHtml } from '@/lib/sanitize'
 
 interface PlayerAudioNarratorProps {
     text: string
@@ -22,8 +23,9 @@ interface PlayerAudioNarratorProps {
 }
 
 function stripHtml(html: string): string {
+    const clean = sanitizeHtml(html)
     const tmp = document.createElement('div')
-    tmp.innerHTML = html
+    tmp.innerHTML = clean
     return (tmp.textContent || tmp.innerText || '').replace(/\s+/g, ' ').trim()
 }
 

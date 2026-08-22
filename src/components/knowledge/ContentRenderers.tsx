@@ -848,7 +848,3 @@ export function ImageGalleryRenderer({ images, cacheVersion }: ImageGalleryRende
         </>
     )
 }
-
-// Re-export ArticleContent from separate file
-export { ArticleContent } from './ArticleContent'
-export { default as ArticleContentDefault } from './ArticleContent'

@@ -1,0 +1,5 @@
+# Canonical Domain Redirect (301 Permanent)
+https://www.phg-connect.com/*   https://phg-connect.com/:splat   301!
+
+# SPA Catch-all Fallback (200 Rewrite)
+/*                              /index.html                     200

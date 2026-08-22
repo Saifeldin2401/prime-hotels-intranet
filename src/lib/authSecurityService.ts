@@ -672,12 +672,25 @@ export async function revokeAllOtherSessions(): Promise<boolean> {
   try {
     const { data: userData } = await supabase.auth.getUser();
     if (!userData.user) return false;
-    
+
     const { error } = await supabase.rpc('revoke_all_other_sessions', {
       p_user_id: userData.user.id,
     });
     if (error) return false;
-    
+
+    // The RPC above only updates our own bookkeeping table (user_sessions) -
+    // it never touched Supabase's real Auth sessions/refresh tokens, so the
+    // "other" devices stayed fully logged in regardless of what this button
+    // claimed. `scope: 'others'` is the real Supabase Auth API for exactly
+    // this: it revokes every refresh token for this user except the one
+    // backing the current session, callable directly from the client with
+    // no admin API or stored JWTs required.
+    const { error: signOutError } = await supabase.auth.signOut({ scope: 'others' });
+    if (signOutError) {
+      console.error('Failed to revoke other Auth sessions:', signOutError);
+      return false;
+    }
+
     await logSecurityEvent('session.revoke_all_other', { userId: userData.user.id });
     return true;
   } catch {

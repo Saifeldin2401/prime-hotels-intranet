@@ -194,7 +194,14 @@ export default function UserManagement() {
       refetch()
       setDeleteConfirmOpen(false)
       setUserToDelete(null)
-    }
+    },
+    onError: (error: Error) => {
+      toast({
+        title: t('bulk.deactivate_failed_title', 'Deactivation Failed'),
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
   })
 
   const hardDeleteUserMutation = useMutation({

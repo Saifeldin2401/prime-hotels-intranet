@@ -13,7 +13,7 @@ interface KnowledgeComplianceWidgetProps {
 
 export function KnowledgeComplianceWidget({ propertyId, variant = 'user', className }: KnowledgeComplianceWidgetProps) {
     const { data: userCompliance, isLoading: userLoading } = useUserKnowledgeCompliance()
-    const { data: deptCompliance, isLoading: deptLoading } = useDepartmentKnowledgeCompliance(propertyId)
+    const { data: deptCompliance, isLoading: deptLoading } = useDepartmentKnowledgeCompliance(propertyId, { enabled: variant === 'department' })
 
     if (variant === 'user') {
         if (userLoading || !userCompliance) {

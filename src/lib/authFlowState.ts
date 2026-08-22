@@ -24,8 +24,9 @@ function sanitizeFlowPath(candidate: string | null | undefined): string | null {
   if (!candidate) return null
 
   try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://phg-connect.com'
     const parsed = candidate.startsWith('/')
-      ? new URL(candidate, 'https://remal-connect.com')
+      ? new URL(candidate, base)
       : new URL(candidate)
 
     return `${parsed.pathname}${parsed.search}${parsed.hash}`

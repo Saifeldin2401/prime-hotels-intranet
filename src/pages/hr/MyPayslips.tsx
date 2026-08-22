@@ -51,6 +51,8 @@ export default function MyPayslips() {
             p_action: 'download',
             p_entity_type: 'payslip',
             p_entity_id: payslip.id
+        }).then(({ error: auditError }) => {
+            if (auditError) console.error('Failed to log payslip audit event:', auditError)
         })
 
         toast.success(t('payroll.download_success'))

@@ -468,7 +468,7 @@ export const ROUTES: RouteConfig[] = [
         hideFromNav: true,
     },
     {
-        path: '/training/modules',
+        path: '/training/hub?view=list',
         title: 'training_modules',
         icon: BookOpen,
         description: 'Module management',
@@ -478,7 +478,7 @@ export const ROUTES: RouteConfig[] = [
         hideFromNav: true,
     },
     {
-        path: '/training/builder',
+        path: '/training/hub?view=builder',
         title: 'training_builder',
         icon: ListTodo,
         description: 'Training builder',
@@ -488,7 +488,7 @@ export const ROUTES: RouteConfig[] = [
         hideFromNav: true,
     },
     {
-        path: '/training/assignments',
+        path: '/training/hub?view=assignments',
         title: 'training_assignments',
         icon: Users,
         description: 'Training assignments',

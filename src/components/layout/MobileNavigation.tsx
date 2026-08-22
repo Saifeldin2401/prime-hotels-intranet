@@ -89,7 +89,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
         {/* Home */}
         <NavButton
           to="/dashboard"
-          isActive={isActive('/dashboard', true) || isActive('/', true) || isActive('/home', true)}
+          isActive={isActive('/dashboard', true) || isActive('/', true)}
           onClick={handleHaptic}
           icon={<Home className="w-5 h-5" />}
           activeIcon={<Home className="w-5 h-5 fill-current" />}

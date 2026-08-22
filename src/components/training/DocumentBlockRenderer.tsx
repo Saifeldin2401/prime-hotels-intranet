@@ -161,7 +161,13 @@ export const DocumentBlockRenderer = ({
         setRetryToken((t) => t + 1)
     }, [])
 
-    const isPdf = safeContentUrl?.toLowerCase().endsWith('.pdf')
+    const isPdf = (() => {
+        try {
+            return new URL(safeContentUrl ?? '').pathname.toLowerCase().endsWith('.pdf')
+        } catch {
+            return safeContentUrl?.toLowerCase().endsWith('.pdf') ?? false
+        }
+    })()
 
     // SECURITY: Sanitize HTML content before rendering
     // This prevents XSS attacks from malicious content in the block

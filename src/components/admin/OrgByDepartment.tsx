@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase'
-import { cn } from '@/lib/utils'
+import { cn, escapeSearchQuery } from '@/lib/utils'
 import { useQuery } from '@tanstack/react-query'
 import {
     Briefcase,
@@ -96,7 +96,8 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
                 .order('full_name')
 
             if (searchTerm) {
-                empQuery = empQuery.or(`full_name.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%,job_title.ilike.%${searchTerm}%`)
+                const escaped = escapeSearchQuery(searchTerm)
+                empQuery = empQuery.or(`full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%`)
             }
 
             const { data: employees, error: empError } = await empQuery

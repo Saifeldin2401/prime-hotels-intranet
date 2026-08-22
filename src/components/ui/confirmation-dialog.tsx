@@ -8,6 +8,7 @@ import {
     AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { toast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import { AlertTriangle, CheckCircle, Info, Trash2 } from 'lucide-react'
 import React from 'react'
@@ -68,7 +69,16 @@ export function ConfirmationDialog({
     const Icon = config.icon
 
     const handleConfirm = async () => {
-        await onConfirm()
+        try {
+            await onConfirm()
+        } catch (error) {
+            console.error('Confirmation action failed:', error)
+            toast({
+                title: 'Action Failed',
+                description: error instanceof Error ? error.message : 'Something went wrong. Please try again.',
+                variant: 'destructive',
+            })
+        }
     }
 
     return (

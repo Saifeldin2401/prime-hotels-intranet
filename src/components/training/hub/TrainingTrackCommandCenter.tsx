@@ -142,12 +142,16 @@ export function TrainingTrackCommandCenter({
             if (modErr) throw modErr
 
             // 2. Fetch all progress records
+            // lp_content_type filters to real module completions only - this table also
+            // holds standalone quiz-attempt rows (lp_content_type='quiz'), which must not
+            // be counted as training-module assignments/completions in these KPIs.
             const { data: progressRows, error: progErr } = await supabase
                 .from('training_progress')
                 .select(`
                     id,
                     user_id,
                     training_id,
+                    assignment_id,
                     status,
                     progress_percentage,
                     score_percentage,
@@ -169,8 +173,26 @@ export function TrainingTrackCommandCenter({
                     )
                 `)
                 .eq('is_deleted', false)
+                .eq('lp_content_type', 'module')
                 .not('training_id', 'is', null)
             if (progErr) throw progErr
+
+            // 2b. Assignment due dates + per-user overrides, needed to compute a real
+            // overdue count (the correct data, joined per-row, below) instead of a
+            // fixed days-since-created heuristic.
+            const [{ data: assignmentRows, error: assignErr }, { data: overrideRows, error: overrideErr }] = await Promise.all([
+                supabase
+                    .from('training_assignment_rules')
+                    .select('id, due_date')
+                    .eq('content_type', 'module')
+                    .or('is_deleted.is.null,is_deleted.eq.false'),
+                supabase
+                    .from('learning_assignment_user_overrides')
+                    .select('user_id, content_id, due_date')
+                    .eq('content_type', 'module'),
+            ])
+            if (assignErr) console.warn('Assignment due-date warning:', assignErr)
+            if (overrideErr) console.warn('Override due-date warning:', overrideErr)
 
             // 3. Fetch authoritative certificates from certificates table
             const { data: certificates, error: certErr } = await supabase
@@ -242,7 +264,9 @@ export function TrainingTrackCommandCenter({
                 progressRows: progressRows || [],
                 certificates: certificates || [],
                 quizSessions: quizSessions || [],
-                contentBlocks: contentBlocks || []
+                contentBlocks: contentBlocks || [],
+                assignmentDueDates: assignmentRows || [],
+                userOverrideDueDates: overrideRows || []
             }
         }
     })
@@ -268,7 +292,20 @@ export function TrainingTrackCommandCenter({
             }
         }
 
-        const { modules, progressRows, certificates, quizSessions, contentBlocks } = rawData
+        const { modules, progressRows, certificates, quizSessions, contentBlocks, assignmentDueDates, userOverrideDueDates } = rawData
+
+        const dueDateByAssignmentId = new Map(
+            (assignmentDueDates || []).map((a: any) => [a.id, a.due_date as string | null])
+        )
+        const overrideDueDateByUserAndModule = new Map(
+            (userOverrideDueDates || []).map((o: any) => [`${o.user_id}:${o.content_id}`, o.due_date as string | null])
+        )
+        const resolveDueDate = (row: any): string | null => {
+            const overrideKey = row.user_id && row.training_id ? `${row.user_id}:${row.training_id}` : null
+            const overrideDue = overrideKey ? overrideDueDateByUserAndModule.get(overrideKey) : undefined
+            if (overrideDue !== undefined) return overrideDue
+            return row.assignment_id ? (dueDateByAssignmentId.get(row.assignment_id) ?? null) : null
+        }
 
         // Filter rows by property and department
         const filteredProgress = progressRows.filter((row: any) => {
@@ -290,9 +327,9 @@ export function TrainingTrackCommandCenter({
         const inProgressCount = filteredProgress.filter(r => r.status === 'in_progress').length
         const overdueCount = filteredProgress.filter(r => {
             if (r.status === 'completed') return false
-            const created = new Date(r.created_at || 0).getTime()
-            const now = Date.now()
-            return now - created > 14 * 24 * 60 * 60 * 1000 // 14 days threshold
+            const dueDate = resolveDueDate(r)
+            if (!dueDate) return false
+            return new Date(dueDate).getTime() < Date.now()
         }).length
 
         const complianceRate = totalAssignments > 0 ? Math.round((completedCount / totalAssignments) * 100) : 0

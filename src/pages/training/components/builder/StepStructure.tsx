@@ -174,8 +174,12 @@ export function StepStructure({
               }
             ]
 
-            const checkpoint = checkpoints.find((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
-            if (checkpoint) {
+            // `.filter()` (not `.find()`) because nothing enforces afterSectionIndex
+            // uniqueness in the AI's suggested output -- two checkpoints targeting
+            // the same section used to silently collapse to just the first one.
+            const sectionCheckpoints = checkpoints.filter((c: any) => c.afterSectionIndex === (sec.originalIndex ?? idx) && c.include)
+            for (let cpIdx = 0; cpIdx < sectionCheckpoints.length; cpIdx++) {
+              const checkpoint = sectionCheckpoints[cpIdx]
               // Create the real quiz + AI-generated questions now, not just a
               // placeholder block - a quiz-type block with no linked quiz_id
               // (or a quiz with zero questions) permanently blocks completion
@@ -208,7 +212,7 @@ export function StepStructure({
 
                   if (linkedQuestionCount > 0) {
                     items.push({
-                      id: `block_${Date.now()}_${idx}_quiz`,
+                      id: `block_${Date.now()}_${idx}_quiz_${cpIdx}`,
                       title: `Checkpoint Quiz: ${checkpoint.topic || sec.heading}`,
                       type: 'quiz' as any,
                       content: '',
@@ -220,7 +224,7 @@ export function StepStructure({
                         topic: checkpoint.topic
                       },
                       is_mandatory: true,
-                      order: 1
+                      order: items.length
                     })
                   } else {
                     await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)

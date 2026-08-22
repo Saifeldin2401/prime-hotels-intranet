@@ -294,18 +294,20 @@ export function useQuickCreateAnnouncement() {
         // Remove duplicates and exclude creator
         const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user.id)
 
-        // Send notifications
-        for (const userId of uniqueUserIds) {
-          await createNotification({
-            userId,
-            type: 'announcement_new',
-            title: announcement.title,
-            message: `A new announcement has been posted: "${announcement.title}"`,
-            entityType: 'announcement',
-            entityId: data.id,
-            link: '/announcements'
-          })
-        }
+        // Send notifications concurrently instead of one-at-a-time
+        await Promise.all(
+          uniqueUserIds.map(userId =>
+            createNotification({
+              userId,
+              type: 'announcement_new',
+              title: announcement.title,
+              message: `A new announcement has been posted: "${announcement.title}"`,
+              entityType: 'announcement',
+              entityId: data.id,
+              link: '/announcements'
+            })
+          )
+        )
       }
 
       return (data as unknown) as Announcement

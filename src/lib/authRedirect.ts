@@ -33,8 +33,8 @@ const cookies = {
     const host = window.location.hostname
     let domainAttr = ''
     // Use proper domain check to prevent subdomain bypass attacks
-    if (host === 'remal-connect.com' || host.endsWith('.remal-connect.com')) {
-      domainAttr = '; domain=.remal-connect.com'
+    if (host === 'phg-connect.com' || host.endsWith('.phg-connect.com')) {
+      domainAttr = '; domain=.phg-connect.com'
     }
 
     document.cookie = `${name}=${encodeURIComponent(value)}${expires}; path=/; SameSite=Lax; Secure${domainAttr}`

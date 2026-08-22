@@ -312,7 +312,9 @@ export function QuizComponentEnhanced({
     const [currentFeedback, setCurrentFeedback] = useState<'correct' | 'incorrect' | null>(null)
     const [eliminatedOptions, setEliminatedOptions] = useState<Set<string>>(new Set())
     const [questionStartTime, setQuestionStartTime] = useState<number>(() => Date.now())
-    const [quizStartTime] = useState<number>(() => Date.now())
+    // A ref (not state) so it can be reset on retry without needing a setter
+    // that would otherwise be unused for the rest of the component's life.
+    const quizStartTimeRef = useRef<number>(Date.now())
     const feedbackPauseMsRef = useRef(0)
     const feedbackPauseStartMsRef = useRef<number | null>(null)
 
@@ -474,6 +476,7 @@ export function QuizComponentEnhanced({
         setPowerUpsUsed([])
         setTimeFrozen(false)
         setQuestionStartTime(Date.now())
+        quizStartTimeRef.current = Date.now()
         feedbackPauseMsRef.current = 0
         feedbackPauseStartMsRef.current = null
     }, [buildInitialQuestionStates])
@@ -751,7 +754,7 @@ export function QuizComponentEnhanced({
             setSubmitted(true)
 
             const extraPauseMs = feedbackPauseStartMsRef.current ? Math.max(0, Date.now() - feedbackPauseStartMsRef.current) : 0
-            const totalTimeSpent = Math.floor(Math.max(0, (Date.now() - quizStartTime) - (feedbackPauseMsRef.current + extraPauseMs)) / 1000)
+            const totalTimeSpent = Math.floor(Math.max(0, (Date.now() - quizStartTimeRef.current) - (feedbackPauseMsRef.current + extraPauseMs)) / 1000)
 
             // Build answers payload for the server RPC
             const answersPayload = (quiz.questions || []).map(q => {
@@ -908,7 +911,7 @@ export function QuizComponentEnhanced({
     }, [showFeedback, submitted, t, timeFrozen, timeLeft, toast])
 
     // Power-up handlers
-    const activatePowerUp = (type: PowerUpType) => {
+    const activatePowerUp = async (type: PowerUpType) => {
         const powerUp = powerUps.find(p => p.type === type)
         if (!powerUp || powerUp.count <= 0) return
 
@@ -929,9 +932,25 @@ export function QuizComponentEnhanced({
                 break
             case 'fiftyFifty':
                 if (currentQuestion.question?.question_type === 'mcq' || (currentQuestion.question?.question_type === 'scenario' && (currentQuestion.question.options?.length || 0) > 0)) {
-                    const wrongOptions = currentQuestion.question.options?.filter(o => !o.is_correct) || []
-                    const toEliminate = wrongOptions.slice(0, Math.min(2, wrongOptions.length)).map(o => o.id)
-                    setEliminatedOptions(new Set(toEliminate))
+                    // The client never has answer-key data (getQuizForPlayerRPC masks
+                    // is_correct on every option), so eliminations must come from a
+                    // server RPC that reads the real answer key without leaking it.
+                    try {
+                        const { data, error } = await supabase.rpc('get_fifty_fifty_eliminations', {
+                            p_question_id: currentQuestion.question_id,
+                        })
+                        if (error) throw error
+                        const toEliminate = Array.isArray(data) ? (data as string[]) : []
+                        if (toEliminate.length > 0) {
+                            setEliminatedOptions(new Set(toEliminate))
+                        }
+                    } catch {
+                        toast({
+                            title: t('common.error'),
+                            description: t('training:quizzes.player.powerup_error', 'Could not activate power-up. Please try again.'),
+                            variant: 'destructive',
+                        })
+                    }
                 }
                 break
             case 'hint':
@@ -1149,14 +1168,12 @@ export function QuizComponentEnhanced({
                 quiz={quiz}
                 onExit={onExit}
                 onRetry={() => {
-                    setResult(null)
-                    setSubmitted(false)
-                    setAnswers({})
-                    setCurrentQuestionIndex(0)
-                    setStreak(0)
-                    setMaxStreak(0)
-                    setPowerUpsUsed([])
-                    loadQuiz(quiz.id)
+                    // Resets answers/streak/questionStates/feedback pauses AND
+                    // quizStartTimeRef — without this, a retry's "time spent"
+                    // would accumulate every prior attempt's duration plus all
+                    // idle time spent on the results screen in between.
+                    resetQuizSession(quiz)
+                    void loadQuiz(quiz.id)
                 }}
                 isRTL={isRTL}
                 t={t}
@@ -1705,7 +1722,6 @@ interface QuizResultsScreenProps {
 
 function QuizResultsScreen({
     result,
-    quiz,
     onExit,
     onRetry,
     canRetry,
@@ -1822,55 +1838,48 @@ function QuizResultsScreen({
                 <CardContent className="p-6">
                     <h3 className="font-bold text-lg text-hotel-navy mb-4">Review Answers</h3>
                     <div className="space-y-4">
-                        {result.gradedAnswers?.map((answer, index) => {
-                            const question = quiz.questions?.find(q => q.question_id === answer.question_id)?.question
-                            if (!question) return null
-                            const userAnswerDisplay = typeof answer.answer === 'object' ? JSON.stringify(answer.answer) : String(answer.answer || '')
-                            const correctAnswerDisplay = typeof question.correct_answer === 'object' ? JSON.stringify(question.correct_answer) : String(question.correct_answer || '')
-
-                            return (
-                                <m.div
-                                    key={answer.question_id || `answer-${index}`}
-                                    initial={{ opacity: 0, x: -10 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className={cn(
-                                        "p-4 rounded-xl border-2",
-                                        answer.correct ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100"
-                                    )}
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <div className={cn(
-                                            "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
-                                            answer.correct ? "bg-emerald-200 text-emerald-800" : "bg-red-200 text-red-800"
-                                        )}>
-                                            {index + 1}
-                                        </div>
-                                        <div className="flex-1 space-y-2">
-                                            <p className="font-medium text-slate-800">{question.question_text}</p>
-                                            <div className="flex items-center gap-4 text-sm">
-                                                <span className={answer.correct ? "text-emerald-700" : "text-red-700"}>
-                                                    Your answer: {userAnswerDisplay}
+                        {result.reviewItems?.map((item, index) => (
+                            <m.div
+                                key={item.questionId || `answer-${index}`}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className={cn(
+                                    "p-4 rounded-xl border-2",
+                                    item.correct ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100"
+                                )}
+                            >
+                                <div className="flex items-start gap-3">
+                                    <div className={cn(
+                                        "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
+                                        item.correct ? "bg-emerald-200 text-emerald-800" : "bg-red-200 text-red-800"
+                                    )}>
+                                        {index + 1}
+                                    </div>
+                                    <div className="flex-1 space-y-2">
+                                        <p className="font-medium text-slate-800">{item.questionText}</p>
+                                        <div className="flex items-center gap-4 text-sm">
+                                            <span className={item.correct ? "text-emerald-700" : "text-red-700"}>
+                                                Your answer: {item.selectedAnswer}
+                                            </span>
+                                            {!item.correct && (
+                                                <span className="text-emerald-700">
+                                                    Correct: {item.correctAnswer}
                                                 </span>
-                                                {!answer.correct && (
-                                                    <span className="text-emerald-700">
-                                                        Correct: {correctAnswerDisplay}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            {question.explanation && (
-                                                <p className="text-xs text-slate-500 italic">{question.explanation}</p>
                                             )}
                                         </div>
-                                        {answer.correct ? (
-                                            <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
-                                        ) : (
-                                            <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                        {item.explanation && (
+                                            <p className="text-xs text-slate-500 italic">{item.explanation}</p>
                                         )}
                                     </div>
-                                </m.div>
-                            )
-                        })}
+                                    {item.correct ? (
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                                    ) : (
+                                        <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                    )}
+                                </div>
+                            </m.div>
+                        ))}
                     </div>
                 </CardContent>
             </Card>

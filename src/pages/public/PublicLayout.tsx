@@ -11,7 +11,7 @@ import {
 import { AlertCircle, Linkedin, Lock, RefreshCw } from 'lucide-react';
 import { lazy, Suspense, useEffect, useState, createContext, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { BriefingDialog } from './publicComponents';
 import { canela, neueHaas, inter, COLOR } from './publicConstants';
@@ -95,7 +95,7 @@ export default function PublicLayout() {
         navigate(pendingAuthFlowPath, { replace: true });
         return;
       }
-      navigate('/home', { replace: true });
+      navigate('/dashboard', { replace: true });
     }
   }, [authUser, navigate, pendingAuthFlowPath, secureEntryRecoveryNeeded]);
 
@@ -198,9 +198,9 @@ export default function PublicLayout() {
                   {isRTL ? 'الشركة' : 'FIRM'}
                 </h5>
                 <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
-                  <li><a href="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'من نحن' : 'About'}</a></li>
-                  <li><a href="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'لماذا ألتوس' : 'Why Altus'}</a></li>
-                  <li><a href="/leadership" className="hover:text-amber-500 transition-colors">{isRTL ? 'القيادة' : 'Leadership'}</a></li>
+                  <li><Link to="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'من نحن' : 'About'}</Link></li>
+                  <li><Link to="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'لماذا ألتوس' : 'Why Altus'}</Link></li>
+                  <li><Link to="/leadership" className="hover:text-amber-500 transition-colors">{isRTL ? 'القيادة' : 'Leadership'}</Link></li>
                 </ul>
               </div>
               <div>
@@ -208,9 +208,9 @@ export default function PublicLayout() {
                   {isRTL ? 'الخدمات' : 'SERVICES'}
                 </h5>
                 <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
-                  <li><a href="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'حلول الضيافة' : 'Hospitality Solutions'}</a></li>
-                  <li><a href="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'نمو الأعمال' : 'Business Growth'}</a></li>
-                  <li><a href="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'منصة HK&P' : 'HK&P Platform'}</a></li>
+                  <li><Link to="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'حلول الضيافة' : 'Hospitality Solutions'}</Link></li>
+                  <li><Link to="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'نمو الأعمال' : 'Business Growth'}</Link></li>
+                  <li><Link to="/about" className="hover:text-amber-500 transition-colors">{isRTL ? 'منصة HK&P' : 'HK&P Platform'}</Link></li>
                 </ul>
               </div>
               <div>
@@ -218,8 +218,8 @@ export default function PublicLayout() {
                   {isRTL ? 'المنهجية' : 'METHODOLOGY'}
                 </h5>
                 <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
-                  <li><a href="/methodology" className="hover:text-amber-500 transition-colors">{isRTL ? 'ألتوس أسنت™' : 'Altus Ascent™'}</a></li>
-                  <li><a href="/vision-2030" className="hover:text-amber-500 transition-colors">{isRTL ? 'رؤية 2030' : 'Saudi Vision 2030'}</a></li>
+                  <li><Link to="/methodology" className="hover:text-amber-500 transition-colors">{isRTL ? 'ألتوس أسنت™' : 'Altus Ascent™'}</Link></li>
+                  <li><Link to="/vision-2030" className="hover:text-amber-500 transition-colors">{isRTL ? 'رؤية 2030' : 'Saudi Vision 2030'}</Link></li>
                 </ul>
               </div>
               <div>
@@ -227,7 +227,7 @@ export default function PublicLayout() {
                   {isRTL ? 'الموارد' : 'RESOURCES'}
                 </h5>
                 <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
-                  <li><button onClick={() => navigate('/verify')} className="hover:text-amber-500 transition-colors">{isRTL ? 'التحقق من الشهادات' : 'Verify Credentials'}</button></li>
+                  <li><Link to="/verify" className="hover:text-amber-500 transition-colors">{isRTL ? 'التحقق من الشهادات' : 'Verify Credentials'}</Link></li>
                   <li><button onClick={() => setBriefingOpen(true)} className="hover:text-amber-500 transition-colors">{isRTL ? 'تواصل معنا' : 'Contact'}</button></li>
                 </ul>
               </div>
@@ -236,7 +236,7 @@ export default function PublicLayout() {
                   {isRTL ? 'البوابة' : 'PORTAL'}
                 </h5>
                 <ul className="space-y-2 text-slate-400 text-xs" style={inter}>
-                  <li><button onClick={() => navigate('/login')} className="hover:text-amber-500 transition-colors flex items-center gap-1"><Lock className="w-3 h-3" />{isRTL ? 'الدخول المؤسسي' : 'Enterprise Access'}</button></li>
+                  <li><Link to="/login" className="hover:text-amber-500 transition-colors flex items-center gap-1"><Lock className="w-3 h-3" />{isRTL ? 'الدخول المؤسسي' : 'Enterprise Access'}</Link></li>
                 </ul>
               </div>
             </div>

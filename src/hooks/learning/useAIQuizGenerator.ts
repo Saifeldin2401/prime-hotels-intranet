@@ -2,6 +2,7 @@ import { useToast } from '@/components/ui/use-toast'
 import { aiService } from '@/lib/gemini'
 import { supabase } from '@/lib/supabase'
 import { learningService } from '@/services/learningService'
+import { normalizeAnswerText } from '@/services/checkpointQuizGenerator'
 import type { Database } from '@/types/database.generated'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -75,13 +76,16 @@ export const useAIQuizGenerator = () => {
             })
 
             // 4. Create Questions in `knowledge_questions` AND Link to Quiz
-            const questionIds: string[] = []
+            // Resolve the current user once (this is a real network call) rather
+            // than re-fetching it on every question, and insert all questions in
+            // a single batched multi-row insert instead of one round-trip each.
+            const { data: authData } = await supabase.auth.getUser()
+            const userId = authData.user?.id
 
-            for (const q of generatedQuestions) {
-                // Create Question Record in unified_questions (source_domain='knowledge')
-                const { data: qRecord, error: qError } = await supabase
-                    .from('unified_questions')
-                    .insert({
+            const { data: qRecords, error: qError } = await supabase
+                .from('unified_questions')
+                .insert(
+                    generatedQuestions.map(q => ({
                         source_domain: 'knowledge',
                         question_text: q.question_text,
                         question_type: (q.question_type as Database['public']['Enums']['question_type']) || 'mcq',
@@ -92,19 +96,79 @@ export const useAIQuizGenerator = () => {
                         linked_sop_id: sopId,
                         difficulty: (options.difficulty as Database['public']['Enums']['question_difficulty']) ?? 'medium',
                         status: 'draft' as const,
-                        created_by: (await supabase.auth.getUser()).data.user?.id
+                        created_by: userId
+                    }))
+                )
+                .select('id')
+
+            if (qError) {
+                console.error('Failed to save generated questions:', qError)
+            }
+
+            // Supabase returns rows for a multi-row INSERT in the same order as
+            // the input array, so this lines up with `generatedQuestions`.
+            const insertedIds: string[] = (qRecords ?? []).map(r => r.id)
+
+            // 4b. Create the selectable answer choices in `unified_question_options`.
+            // `unified_questions` has no `options` column of its own - without this
+            // insert every question would come back with zero options and be
+            // unanswerable in the player. For each question, normalize before
+            // comparing option text to `correct_answer` (LLM output can have minor
+            // textual drift between the two fields) and drop any question whose
+            // correct_answer doesn't match any option even after normalization,
+            // rather than silently shipping an unwinnable question.
+            const optionsToInsert: {
+                question_id: string
+                option_text: string
+                is_correct: boolean
+                display_order: number
+            }[] = []
+            const questionIds: string[] = []
+
+            insertedIds.forEach((questionId, idx) => {
+                const q = generatedQuestions[idx]
+                const opts = q.options ?? []
+
+                if (opts.length === 0) {
+                    // Nothing to validate (e.g. fill_blank questions carry no
+                    // option list) - keep the question as-is.
+                    questionIds.push(questionId)
+                    return
+                }
+
+                const questionOptions = opts.map((optText, optIdx) => ({
+                    question_id: questionId,
+                    option_text: optText,
+                    is_correct: normalizeAnswerText(optText) === normalizeAnswerText(q.correct_answer),
+                    display_order: optIdx + 1
+                }))
+
+                if (!questionOptions.some(o => o.is_correct)) {
+                    console.warn('Generated question skipped: correct_answer did not match any option', {
+                        questionId,
+                        correct_answer: q.correct_answer
                     })
-                    .select('id')
-                    .single()
-
-                if (qError) {
-                    console.error('Failed to save generated question:', qError)
-                    continue
+                    return
                 }
 
-                if (qRecord) {
-                    questionIds.push(qRecord.id)
+                optionsToInsert.push(...questionOptions)
+                questionIds.push(questionId)
+            })
+
+            if (optionsToInsert.length > 0) {
+                const { error: optionsError } = await supabase
+                    .from('unified_question_options')
+                    .insert(optionsToInsert)
+                if (optionsError) {
+                    console.error('Failed to save generated question options:', optionsError)
                 }
+            }
+
+            // Clean up question rows that were dropped above (unmatched
+            // correct_answer) so they don't linger unlinked in the bank.
+            const droppedIds = insertedIds.filter(id => !questionIds.includes(id))
+            if (droppedIds.length > 0) {
+                await supabase.from('unified_questions').delete().in('id', droppedIds)
             }
 
             // 5. Link Questions to Quiz

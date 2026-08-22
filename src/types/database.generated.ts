@@ -15646,6 +15646,10 @@ export type Database = {
           title: string
         }[]
       }
+      get_fifty_fifty_eliminations: {
+        Args: { p_question_id: string }
+        Returns: string[]
+      }
       get_media_asset_with_usage: {
         Args: { p_media_asset_id: string }
         Returns: {
@@ -16031,6 +16035,46 @@ export type Database = {
       is_task_creator: {
         Args: { p_task_id: string; p_user_id: string }
         Returns: boolean
+      }
+      issue_training_certificate: {
+        Args: { p_training_progress_id: string }
+        Returns: {
+          certificate_number: string
+          certificate_type: string
+          completion_date: string
+          created_at: string | null
+          department_id: string | null
+          description: string | null
+          expiry_date: string | null
+          id: string
+          issued_by: string | null
+          metadata: Json | null
+          passing_score: number | null
+          pdf_generated_at: string | null
+          pdf_url: string | null
+          property_id: string | null
+          quiz_attempt_id: string | null
+          recipient_email: string | null
+          recipient_name: string
+          revocation_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          score: number | null
+          sop_id: string | null
+          status: string | null
+          title: string
+          training_module_id: string | null
+          training_progress_id: string | null
+          updated_at: string | null
+          user_id: string
+          verification_code: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "certificates"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       lock_account: {
         Args: { p_duration_minutes?: number; p_email: string }
@@ -16432,6 +16476,7 @@ export type Database = {
           staff_id: string
         }[]
       }
+      seed_default_scheduled_reports: { Args: never; Returns: undefined }
       set_media_download_headers: {
         Args: { p_disposition?: string; p_media_asset_id: string }
         Returns: boolean
@@ -16439,6 +16484,19 @@ export type Database = {
       snapshot_training_module_version: {
         Args: { p_module_id: string }
         Returns: string
+      }
+      submit_expense_claim: {
+        Args: {
+          p_amount: number
+          p_category: string
+          p_currency?: string
+          p_department_id?: string
+          p_description?: string
+          p_expense_date?: string
+          p_property_id?: string
+          p_vendor_name?: string
+        }
+        Returns: Json
       }
       submit_promotion_request:
         | {
@@ -16521,6 +16579,10 @@ export type Database = {
       validate_document_access: {
         Args: { p_document_id: string }
         Returns: boolean
+      }
+      validate_module_quiz_integrity: {
+        Args: { p_module_id: string }
+        Returns: undefined
       }
       validate_uuid_array: { Args: { p_input: string[] }; Returns: string[] }
       verify_certificate: {

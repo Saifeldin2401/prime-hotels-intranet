@@ -28,6 +28,23 @@ import {
 import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
+// due_date/valid_from/expires_at are `timestamp with time zone` columns, but
+// the deadline pickers only collect a bare 'YYYY-MM-DD' calendar date. A raw
+// 'YYYY-MM-DD' string parses as UTC midnight, which makes an assignment go
+// "Overdue" at UTC midnight instead of the end of the assigner's intended
+// day (and shifts a day early for timezones behind UTC). Construct the
+// instant using the LOCAL Date constructor (interpreted in the assigner's
+// own timezone) at the end of that calendar day, then convert to UTC ISO
+// for storage - this round-trips correctly when read back and re-formatted
+// in the same local timezone.
+function endOfLocalDayIso(dateStr: string | null | undefined): string | null {
+  if (!dateStr) return null
+  const [year, month, day] = dateStr.split('-').map(Number)
+  if (!year || !month || !day) return null
+  const d = new Date(year, month - 1, day, 23, 59, 59, 999)
+  return Number.isNaN(d.getTime()) ? null : d.toISOString()
+}
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LearningAssignment {
@@ -468,6 +485,18 @@ export function TrainingAssignmentsProvider({
 
   const { data: progressData, isLoading: isLoadingProgress } = useLearningProgress()
 
+  const { data: rawUserOverrides } = useQuery({
+    queryKey: ['learning-assignment-user-overrides'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('learning_assignment_user_overrides')
+        .select('user_id, content_id, due_date')
+        .eq('content_type', 'module')
+      if (error) throw error
+      return data || []
+    },
+  })
+
   const { data: rawAssignments, isLoading: isLoadingAssignments } = useQuery({
     queryKey: ['learning-assignments'],
     queryFn: async () => {
@@ -759,7 +788,7 @@ export function TrainingAssignmentsProvider({
           content_type: 'module',
           content_id: formModuleId,
           assigned_by: profile?.id,
-          due_date: formDeadline || null,
+          due_date: endOfLocalDayIso(formDeadline),
           valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
           expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
           priority: formPriority,
@@ -779,7 +808,7 @@ export function TrainingAssignmentsProvider({
             content_type: 'module',
             content_id: formModuleId,
             assigned_by: profile?.id,
-            due_date: formDeadline || null,
+            due_date: endOfLocalDayIso(formDeadline),
             valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
             expires_at: formExpiresAt ? new Date(formExpiresAt).toISOString() : null,
             priority: formPriority,
@@ -1033,12 +1062,26 @@ export function TrainingAssignmentsProvider({
     return new Map((rawAssignments || []).map((a: any) => [a.id, a.due_date as string | null]))
   }, [rawAssignments])
 
-  const isProgressOverdue = useCallback((record: { status?: string; assignment_id?: string | null }) => {
+  // Per-user due-date overrides (Manage Assignees -> Override) live in a
+  // separate table and were previously invisible here - granting/tightening
+  // an override had no effect on this Overview tab's overdue calc even
+  // though the roster dialog itself correctly reflected it.
+  const overrideDueDateByUserAndContent = useMemo(() => {
+    return new Map(
+      (rawUserOverrides || []).map((o: any) => [`${o.user_id}:${o.content_id}`, o.due_date as string | null])
+    )
+  }, [rawUserOverrides])
+
+  const isProgressOverdue = useCallback((record: { status?: string; assignment_id?: string | null; user_id?: string | null; content_id?: string | null }) => {
     if (record.status === 'completed' || record.status === 'excused') return false
-    const dueDate = record.assignment_id ? assignmentDueDateById.get(record.assignment_id) : null
+    const overrideKey = record.user_id && record.content_id ? `${record.user_id}:${record.content_id}` : null
+    const overrideDueDate = overrideKey ? overrideDueDateByUserAndContent.get(overrideKey) : undefined
+    const dueDate = overrideDueDate !== undefined
+      ? overrideDueDate
+      : (record.assignment_id ? assignmentDueDateById.get(record.assignment_id) : null)
     if (!dueDate) return false
     return new Date(dueDate).getTime() < Date.now()
-  }, [assignmentDueDateById])
+  }, [assignmentDueDateById, overrideDueDateByUserAndContent])
 
   const paginatedActiveRoster = useMemo(() => (
     (moduleRoster?.active || []).slice(activeRosterPagination.from, activeRosterPagination.to + 1)
@@ -1755,7 +1798,7 @@ export function TrainingAssignmentsProvider({
     saveOverrideMutation.mutate({
       moduleId: manageModuleId,
       userId: overrideEntry.user_id,
-      dueDate: overrideDueDate || null,
+      dueDate: endOfLocalDayIso(overrideDueDate),
       priority: overridePriority === 'inherit' ? null : overridePriority,
       instructions: overrideInstructions || null
     })

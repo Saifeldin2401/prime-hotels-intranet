@@ -14,7 +14,7 @@ export const ROUTES = {
 
   // Dashboard
   DASHBOARD: '/dashboard',
-  HOME: '/home',
+  HOME: '/dashboard',
 
   // Admin
   ADMIN: {

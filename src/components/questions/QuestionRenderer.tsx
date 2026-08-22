@@ -71,11 +71,16 @@ export function QuestionRenderer({
     const [timeRemaining, setTimeRemaining] = useState(timeLimit || 0)
     const [startTime, setStartTime] = useState(() => Date.now())
 
+    // Bare truthiness on selectedAnswer is wrong for mcq_multi: an empty array
+    // (all checkboxes deselected) is truthy in JS even though it means "no
+    // selection", unlike null before any option is touched.
+    const hasSelection = Array.isArray(selectedAnswer) ? selectedAnswer.length > 0 : !!selectedAnswer
+
     const handleSubmit = useCallback(() => {
-        if (!selectedAnswer || hasSubmitted) return
+        if (!hasSelection || hasSubmitted) return
         setHasSubmitted(true)
-        onAnswer(selectedAnswer)
-    }, [selectedAnswer, hasSubmitted, onAnswer])
+        onAnswer(selectedAnswer as string | string[])
+    }, [hasSelection, selectedAnswer, hasSubmitted, onAnswer])
 
     // Randomize options if needed
     const [shuffledOptions, setShuffledOptions] = useState<QuestionOption[]>([])
@@ -375,7 +380,7 @@ export function QuestionRenderer({
                     {!hasSubmitted ? (
                         <Button
                             onClick={handleSubmit}
-                            disabled={!selectedAnswer || disabled}
+                            disabled={!hasSelection || disabled}
                         >
                             Submit Answer
                         </Button>

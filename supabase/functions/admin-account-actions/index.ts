@@ -366,6 +366,27 @@ Deno.serve(async (req: Request) => {
           );
         }
 
+        // Flipping account_status alone is cosmetic: nothing in RLS or the
+        // client's pre-login check enforces it, and an already-issued
+        // session/refresh token keeps working indefinitely. Ban the actual
+        // Supabase Auth user so the account genuinely cannot authenticate or
+        // refresh a session while suspended.
+        const { error: banError } = await adminClient.auth.admin
+          .updateUserById(user_id, { ban_duration: "876000h" });
+
+        if (banError) {
+          console.error("Failed to ban auth user on suspend:", banError);
+          return jsonResponse(
+            {
+              error:
+                "Account flagged as suspended, but the underlying login was NOT blocked: " +
+                banError.message,
+            },
+            500,
+            corsHeaders,
+          );
+        }
+
         console.log(
           `Account ${user_id} suspended by ${caller.email}. Reason: ${reason || "N/A"}`,
         );
@@ -385,6 +406,22 @@ Deno.serve(async (req: Request) => {
         if (updateError) {
           return jsonResponse(
             { error: "Failed to reactivate account: " + updateError.message },
+            500,
+            corsHeaders,
+          );
+        }
+
+        const { error: unbanError } = await adminClient.auth.admin
+          .updateUserById(user_id, { ban_duration: "none" });
+
+        if (unbanError) {
+          console.error("Failed to lift auth ban on reactivate:", unbanError);
+          return jsonResponse(
+            {
+              error:
+                "Account flagged as active, but the login block could NOT be lifted: " +
+                unbanError.message,
+            },
             500,
             corsHeaders,
           );
@@ -731,6 +768,16 @@ Deno.serve(async (req: Request) => {
             500,
             corsHeaders,
           );
+        }
+
+        // account_status is shared between the failed-login lockout and the
+        // deliberate-suspend states; if this account was also banned via a
+        // prior suspend, unlocking it should not leave a stale ban behind.
+        const { error: unbanError } = await adminClient.auth.admin
+          .updateUserById(user_id, { ban_duration: "none" });
+
+        if (unbanError) {
+          console.error("Failed to lift auth ban on unlock:", unbanError);
         }
 
         console.log(`Account ${user_id} unlocked by ${caller.email}`);

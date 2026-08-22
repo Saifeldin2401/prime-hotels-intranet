@@ -1,4 +1,3 @@
-
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -114,7 +113,6 @@ export default function ChangePassword() {
             }
 
             // Trigger onboarding wizard for first-time users BEFORE refreshSession
-            // Use the captured value, not the current state
             if (wasUsingTempPassword) {
                 markWizardPending()
             }
@@ -131,8 +129,8 @@ export default function ChangePassword() {
                 description: "Your password has been changed successfully.",
             })
 
-            // Redirect to home
-            navigate('/home', { replace: true })
+            // Redirect to dashboard
+            navigate('/dashboard', { replace: true })
 
         } catch (err: unknown) {
             console.error('Password change error:', err)
@@ -173,17 +171,6 @@ export default function ChangePassword() {
                     )}
 
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Current Password Field - Only for self service, technically auth.updateUser handles verification if reauth needed? 
-                Actually supabase.auth.updateUser doesn't strictly require old password if session is active.
-                But for extra security we might want to verify it?
-                However, for "isTempPassword" flow, they just logged in, so session is fresh.
-                For self-service, usually we want it.
-                But Supabase JS doesn't have "verifyPassword" easily without re-login.
-                We will skip "Current Password" for now unless user asked strictly.
-                Prompt said: "Require: Current password verification" for Anytime.
-                For First Login: Not needed (they just used it).
-            */}
-
                         {!isTempPassword && (
                             <div className="space-y-2">
                                 <Label htmlFor="current-password">Current Password</Label>
