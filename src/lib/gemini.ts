@@ -547,6 +547,48 @@ const heuristicOutline = (text: string, generateFullContent = true): ModuleOutli
 
 export const aiService = {
 
+  /**
+   * General text generation method with multi-model fallbacks and edge function support.
+   */
+  async generateText(request: {
+    prompt: string
+    systemInstruction?: string
+    temperature?: number
+    maxTokens?: number
+  }): Promise<string> {
+    const fullPrompt = request.systemInstruction
+      ? `${request.systemInstruction}\n\n${request.prompt}`
+      : request.prompt
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const text = await callHuggingFace(model, fullPrompt, request.maxTokens || 1024)
+        if (text && text.trim().length > 0) {
+          return text.trim()
+        }
+      } catch (e) {
+        console.warn(`AI model ${model} failed in generateText:`, e)
+      }
+    }
+
+    try {
+      const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
+        body: {
+          prompt: fullPrompt,
+          max_tokens: request.maxTokens || 1024,
+          temperature: request.temperature ?? 0.7,
+        }
+      })
+      if (!error && data && (data.response || data.result)) {
+        return ((data.response || data.result) as string).trim()
+      }
+    } catch (edgeErr) {
+      console.warn('Edge function direct call failed in generateText:', edgeErr)
+    }
+
+    return ''
+  },
+
   async analyzeSOP(text: string): Promise<SOPAnalysis> {
 
     const cleanedText = cleanText(text)

@@ -7,8 +7,8 @@ import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-import { generateAndLinkCheckpointQuestions } from '@/services/checkpointQuizGenerator'
-import { Plus, Sparkles } from 'lucide-react'
+import { generateMissingField } from '@/lib/trainingAICompletionEngine'
+import { Loader2, Plus, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { SmartAICourseCreatorModal } from '@/components/training'
@@ -49,6 +49,30 @@ export function StepStructure({
   const { profile } = useAuth()
   const ctx = useTrainingBuilderContext()
   const [showAIOutline, setShowAIOutline] = useState(false)
+  const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null)
+
+  const handleAISuggestSectionTitle = async (section: TrainingSection) => {
+    setGeneratingSectionId(section.id)
+    try {
+      const childLessonTitles = (section.items || []).map((i) => i.title).filter(Boolean)
+      const res = await generateMissingField('section_title', {
+        courseTitle: title,
+        childLessonTitles,
+        language: isRTL ? 'Arabic' : 'English',
+      })
+      if (res.text) {
+        handleRenameSection(section.id, res.text)
+        toast({
+          title: '✨ Section Title Generated',
+          description: `Applied: ${res.text}`,
+        })
+      }
+    } catch (e) {
+      console.warn('AI section title suggestion failed:', e)
+    } finally {
+      setGeneratingSectionId(null)
+    }
+  }
 
   return (
     <div className="p-6">
@@ -101,9 +125,28 @@ export function StepStructure({
                 <CardContent className="py-4 space-y-3">
                   <div className={cn("flex items-center justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
                     <div className="flex-1 space-y-2">
-                      <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
-                        {t('builder.sectionLabel', { number: index + 1 })}
-                      </Label>
+                      <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                        <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
+                          {t('builder.sectionLabel', { number: index + 1 })}
+                        </Label>
+                        {(!section.title || section.title.trim().length === 0 || section.title.toLowerCase().startsWith('section')) && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            disabled={generatingSectionId === section.id}
+                            onClick={() => handleAISuggestSectionTitle(section)}
+                            className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
+                          >
+                            {generatingSectionId === section.id ? (
+                              <Loader2 className="w-3 h-3 animate-spin me-1" />
+                            ) : (
+                              <Sparkles className="w-3 h-3 me-1" />
+                            )}
+                            {t('builder.aiSuggestTitle', 'AI Suggest Title')}
+                          </Button>
+                        )}
+                      </div>
                       <Input
                         value={section.title}
                         onChange={(e) => handleRenameSection(section.id, e.target.value)}

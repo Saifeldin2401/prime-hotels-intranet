@@ -43,6 +43,7 @@ import {
   normalizeDurationMinutes,
   toDurationSeconds,
 } from '../components/builder/trainingBuilderUtils'
+import { auditTrainingModule, type TrainingAuditResult } from '@/lib/trainingBuilderValidator'
 
 // ---------------------------------------------------------------------------
 // Context value shape
@@ -223,6 +224,9 @@ export interface TrainingBuilderContextValue {
   activeSectionName: string | undefined
   validationChecklist: Array<{ key: string; label: string; ok: boolean }>
   publishReady: boolean
+  auditResult: TrainingAuditResult
+  showAuditModal: boolean
+  setShowAuditModal: (v: boolean) => void
   builderBusy: boolean
   isValidatingQuizzes: boolean
   hasUnsavedChanges: boolean
@@ -712,11 +716,24 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     { key: 'publish' as BuilderStep, label: t('builder.steps.publish', 'Review & Publish'), description: t('builder.steps.publishDesc', 'Pre-flight check and publish') }
   ] as const
 
+  const [showAuditModal, setShowAuditModal] = useState(false)
+
+  const auditResult = useMemo(() => auditTrainingModule({
+    title,
+    description,
+    category,
+    difficultyLevel,
+    audience,
+    sections,
+    passingScore,
+    certificateEnabled,
+  }), [title, description, category, difficultyLevel, audience, sections, passingScore, certificateEnabled])
+
   const setupComplete = title.trim().length > 0 && !!category
   const structureComplete = sections.length > 0
   const contentComplete = totalItems > 0
   const rulesComplete = !certificateEnabled || (Number(passingScore) > 0 && Number(passingScore) <= 100)
-  const publishReady = setupComplete && structureComplete && contentComplete && rulesComplete
+  const publishReady = auditResult.isPublishReady
 
   const stepStatus: Record<BuilderStep, boolean> = {
     setup: setupComplete,
@@ -2161,6 +2178,9 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     activeSectionName,
     validationChecklist,
     publishReady,
+    auditResult,
+    showAuditModal,
+    setShowAuditModal,
     builderBusy,
     isValidatingQuizzes,
     hasUnsavedChanges,

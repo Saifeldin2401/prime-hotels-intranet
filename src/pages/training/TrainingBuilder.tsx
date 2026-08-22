@@ -14,6 +14,7 @@ import { CheckCircle2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 import { AIQuizDialog } from './components/builder/AIQuizDialog'
+import { AITrainingAuditModal } from './components/builder/AITrainingAuditModal'
 import { ContentBlockSlideOver } from './components/builder/ContentBlockSlideOver'
 import { KBSidebarPanel } from './components/builder/KBSidebarPanel'
 import { RightPanel } from './components/builder/RightPanel'
@@ -166,6 +167,7 @@ function TrainingBuilderInner() {
     if (builderStep === 'rules') {
       return (
         <StepRules
+          sections={ctx.sections}
           category={ctx.category} setCategory={ctx.setCategory}
           difficultyLevel={ctx.difficultyLevel} setDifficultyLevel={ctx.setDifficultyLevel}
           audience={ctx.audience} setAudience={ctx.setAudience}
@@ -202,6 +204,7 @@ function TrainingBuilderInner() {
           passingScore={ctx.passingScore} allowRetake={ctx.allowRetake} maxAttempts={ctx.maxAttempts}
           validationChecklist={ctx.validationChecklist} publishReady={ctx.publishReady}
           builderBusy={ctx.builderBusy} handleSave={ctx.handleSave} publishTraining={ctx.publishTraining}
+          auditResult={ctx.auditResult} onOpenAuditModal={() => ctx.setShowAuditModal(true)}
           isRTL={ctx.isRTL}
         />
       )
@@ -495,6 +498,22 @@ function TrainingBuilderInner() {
             })
           }
         }}
+      />
+
+      <AITrainingAuditModal
+        open={ctx.showAuditModal}
+        onOpenChange={ctx.setShowAuditModal}
+        auditResult={ctx.auditResult}
+        title={ctx.title}
+        setTitle={ctx.setTitle}
+        description={ctx.description}
+        setDescription={ctx.setDescription}
+        category={ctx.category}
+        difficultyLevel={ctx.difficultyLevel}
+        audience={ctx.audience}
+        sections={ctx.sections}
+        setSections={ctx.setSections}
+        isRTL={ctx.isRTL}
       />
 
       {ctx.showKBSidebar && (
