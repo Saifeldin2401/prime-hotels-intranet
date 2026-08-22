@@ -260,7 +260,7 @@ export default function MaintenanceTicketDetail() {
                                             </Button>
                                         )}
                                         {ticket.status === 'in_progress' && (
-                                            <Button onClick={handleComplete} size="sm" className="bg-green-600 hover:bg-green-700" disabled={completeMutation.isPending}>
+                                            <Button onClick={handleComplete} size="sm" className="bg-green-600 hover:bg-green-700 text-white" disabled={completeMutation.isPending}>
                                                 {completeMutation.isPending ? t('processing') : t('mark_complete')}
                                             </Button>
                                         )}

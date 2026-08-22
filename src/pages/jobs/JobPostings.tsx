@@ -143,7 +143,7 @@ export default function JobPostings({ embedded = false }: { embedded?: boolean }
                             </Link>
                             {canManageJobs && (
                                 <Link to="/jobs/new">
-                                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light">
+                                    <Button className="bg-hotel-navy hover:bg-hotel-navy-light text-white">
                                         <Plus className="h-4 w-4 me-2" />
                                         {t('create')}
                                     </Button>

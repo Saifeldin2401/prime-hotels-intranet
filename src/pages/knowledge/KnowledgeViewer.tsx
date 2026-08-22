@@ -1800,7 +1800,7 @@ export default function KnowledgeViewer() {
                                             className="min-h-[80px] border-none focus-visible:ring-0 p-0 text-sm resize-none"
                                         />
                                         <div className="flex justify-end pt-2 border-t border-slate-50">
-                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-indigo-600 hover:bg-indigo-700">
+                                            <Button size="sm" onClick={handleComment} disabled={!newComment.trim() || createComment.isPending} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                                                 <Send className="h-3.5 w-3.5 me-2" /> {t('viewer.post')}
                                             </Button>
                                         </div>

@@ -338,7 +338,7 @@ export function WikiEditorDialog({ article, open, onOpenChange, onSave }: WikiEd
                     <Button variant="outline" onClick={() => onOpenChange(false)}>
                         Cancel
                     </Button>
-                    <Button onClick={handleSave} disabled={isSaving} className="bg-rose-600 hover:bg-rose-700">
+                    <Button onClick={handleSave} disabled={isSaving} className="bg-rose-600 hover:bg-rose-700 text-white">
                         {isSaving ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Save className="w-4 h-4 me-2" />}
                         Save Changes
                     </Button>

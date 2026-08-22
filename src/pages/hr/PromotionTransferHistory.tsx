@@ -254,13 +254,13 @@ export default function PromotionTransferHistory() {
                         {canInitiate && (
                             <>
                                 <PromoteEmployeeDialog onSuccess={() => { refetchPromos(); }}>
-                                    <Button className="bg-purple-600 hover:bg-purple-700">
+                                    <Button className="bg-purple-600 hover:bg-purple-700 text-white">
                                         <ArrowUp className="h-4 w-4 me-2" />
                                         {t('history.promote_button')}
                                     </Button>
                                 </PromoteEmployeeDialog>
                                 <TransferEmployeeDialog onSuccess={() => { refetchTransfers(); }}>
-                                    <Button className="bg-blue-600 hover:bg-blue-700">
+                                    <Button className="bg-blue-600 hover:bg-blue-700 text-white">
                                         <Target className="h-4 w-4 me-2" />
                                         {t('history.transfer_button')}
                                     </Button>

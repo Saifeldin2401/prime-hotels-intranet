@@ -466,7 +466,7 @@ export default function MyProfile() {
                                     </div>
 
                                     <div className="flex justify-end pt-4 border-t border-gray-100">
-                                        <Button type="submit" disabled={loading} className="bg-gray-900 hover:bg-gray-800">
+                                        <Button type="submit" disabled={loading} className="bg-hotel-navy hover:bg-hotel-navy-light text-white">
                                             {loading ? <Loader2 className="w-4 h-4 animate-spin me-2" /> : <Save className="w-4 h-4 me-2" />}
                                             {t('save_changes')}
                                         </Button>

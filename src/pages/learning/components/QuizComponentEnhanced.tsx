@@ -1820,7 +1820,7 @@ function QuizResultsScreen({
                             </Button>
                         )}
                         {!result.passed && canRetry && (
-                            <Button onClick={onRetry} className="bg-hotel-navy hover:bg-hotel-navy-dark px-6">
+                            <Button onClick={onRetry} className="bg-hotel-navy hover:bg-hotel-navy-dark text-white px-6">
                                 Try Again
                             </Button>
                         )}

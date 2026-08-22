@@ -126,7 +126,7 @@ export function MobileHome() {
                         </p>
                         <div className="mt-3 flex items-center justify-end gap-2">
                             <Button size="sm" variant="ghost" className="h-7 text-xs">Dismiss</Button>
-                            <Button size="sm" className="h-7 text-xs bg-red-600 hover:bg-red-700">Accept</Button>
+                            <Button size="sm" className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white">Accept</Button>
                         </div>
                     </div>
 
