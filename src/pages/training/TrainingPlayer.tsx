@@ -664,7 +664,8 @@ export default function TrainingPlayer() {
 
     const applyRestoredProgress = useCallback((
         progress: PersistedModuleProgress | null,
-        blocks: TrainingContentBlock[]
+        blocks: TrainingContentBlock[],
+        moduleInfo?: Partial<TrainingModule> | null
     ) => {
         if (!progress) return
 
@@ -748,7 +749,7 @@ export default function TrainingPlayer() {
                 completedMediaBlockIds: restoredMediaCompleted,
                 quizResultsByBlockId: normalizedResults
             }
-            const smartNext = getNextRequiredLearningItem(moduleData?.module, blocks, restoredLearnerState)
+            const smartNext = getNextRequiredLearningItem(moduleInfo, blocks, restoredLearnerState)
             const targetIndex = smartNext.index >= 0 ? smartNext.index : 0
             setActiveBlockIndex(targetIndex)
             if (targetIndex > 0) {
@@ -759,7 +760,7 @@ export default function TrainingPlayer() {
                 }))
             }
         }
-    }, [resetModuleInteractionState, t, moduleData?.module])
+    }, [resetModuleInteractionState, t])
 
     // Close sidebar on mobile by default and when entering small breakpoints.
     useEffect(() => {
@@ -1520,7 +1521,7 @@ export default function TrainingPlayer() {
                 : null
 
             if (localData && isActive) {
-                applyRestoredProgress(localData, moduleData.blocks)
+                applyRestoredProgress(localData, moduleData.blocks, moduleData.module)
             }
 
             const { data } = await supabase
@@ -1537,7 +1538,7 @@ export default function TrainingPlayer() {
                 const localUpdated = localData?.saved_at ? new Date(localData.saved_at).getTime() : 0
                 const dbUpdated = data.updated_at ? new Date(data.updated_at).getTime() : 0
                 if (!localData || dbUpdated >= localUpdated) {
-                    applyRestoredProgress(data as any, moduleData.blocks)
+                    applyRestoredProgress(data as any, moduleData.blocks, moduleData.module)
                 }
             }
         }
@@ -1574,7 +1575,7 @@ export default function TrainingPlayer() {
                     safeLocalStorage.removeItem(storageKey)
                 }
 
-                applyRestoredProgress(next, moduleData.blocks)
+                applyRestoredProgress(next, moduleData.blocks, moduleData.module)
             })
             .subscribe()
 
