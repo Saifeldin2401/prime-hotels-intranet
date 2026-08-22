@@ -50,6 +50,7 @@ export function StepStructure({
   const ctx = useTrainingBuilderContext()
   const [showAIOutline, setShowAIOutline] = useState(false)
   const [generatingSectionId, setGeneratingSectionId] = useState<string | null>(null)
+  const [generatingDescSectionId, setGeneratingDescSectionId] = useState<string | null>(null)
 
   const handleAISuggestSectionTitle = async (section: TrainingSection) => {
     setGeneratingSectionId(section.id)
@@ -71,6 +72,32 @@ export function StepStructure({
       console.warn('AI section title suggestion failed:', e)
     } finally {
       setGeneratingSectionId(null)
+    }
+  }
+
+  const handleAISuggestSectionDescription = async (section: TrainingSection) => {
+    setGeneratingDescSectionId(section.id)
+    try {
+      const childLessonTitles = (section.items || []).map((i) => i.title).filter(Boolean)
+      const res = await generateMissingField('section_description', {
+        courseTitle: title,
+        sectionTitle: section.title,
+        childLessonTitles,
+        language: isRTL ? 'Arabic' : 'English',
+      })
+      if (res.text) {
+        setSections((prev) =>
+          prev.map((s) => (s.id === section.id ? { ...s, description: res.text } : s))
+        )
+        toast({
+          title: '✨ Section Description Generated',
+          description: `Applied: ${res.text}`,
+        })
+      }
+    } catch (e) {
+      console.warn('AI section description suggestion failed:', e)
+    } finally {
+      setGeneratingDescSectionId(null)
     }
   }
 
@@ -123,35 +150,70 @@ export function StepStructure({
             {sections.map((section, index) => (
               <Card key={section.id} className="border-slate-200 shadow-sm">
                 <CardContent className="py-4 space-y-3">
-                  <div className={cn("flex items-center justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
-                    <div className="flex-1 space-y-2">
-                      <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
-                        <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
-                          {t('builder.sectionLabel', { number: index + 1 })}
-                        </Label>
-                        {(!section.title || section.title.trim().length === 0 || section.title.toLowerCase().startsWith('section')) && (
+                  <div className={cn("flex items-start justify-between gap-4", isRTL ? "flex-row-reverse" : "")}>
+                    <div className="flex-1 space-y-3">
+                      <div className="space-y-1.5">
+                        <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                          <Label className={cn("text-xs font-semibold text-slate-500", isRTL ? "text-right block" : "")}>
+                            {t('builder.sectionLabel', { number: index + 1 })}
+                          </Label>
+                          {(!section.title || section.title.trim().length === 0 || section.title.toLowerCase().startsWith('section')) && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              disabled={generatingSectionId === section.id}
+                              onClick={() => handleAISuggestSectionTitle(section)}
+                              className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
+                            >
+                              {generatingSectionId === section.id ? (
+                                <Loader2 className="w-3 h-3 animate-spin me-1" />
+                              ) : (
+                                <Sparkles className="w-3 h-3 me-1" />
+                              )}
+                              {t('builder.aiSuggestTitle', 'AI Suggest Title')}
+                            </Button>
+                          )}
+                        </div>
+                        <Input
+                          value={section.title}
+                          onChange={(e) => handleRenameSection(section.id, e.target.value)}
+                          placeholder="e.g. Front Office Standard Operating Procedures"
+                          className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                          <Label className={cn("text-xs font-medium text-slate-400", isRTL ? "text-right block" : "")}>
+                            {t('builder.sectionDescription', 'Section Description / Objectives')}
+                          </Label>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            disabled={generatingSectionId === section.id}
-                            onClick={() => handleAISuggestSectionTitle(section)}
+                            disabled={generatingDescSectionId === section.id}
+                            onClick={() => handleAISuggestSectionDescription(section)}
                             className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
                           >
-                            {generatingSectionId === section.id ? (
+                            {generatingDescSectionId === section.id ? (
                               <Loader2 className="w-3 h-3 animate-spin me-1" />
                             ) : (
                               <Sparkles className="w-3 h-3 me-1" />
                             )}
-                            {t('builder.aiSuggestTitle', 'AI Suggest Title')}
+                            {t('builder.aiSuggestDescription', 'AI Suggest Description')}
                           </Button>
-                        )}
+                        </div>
+                        <Input
+                          value={section.description || ''}
+                          onChange={(e) =>
+                            setSections((prev) =>
+                              prev.map((s) => (s.id === section.id ? { ...s, description: e.target.value } : s))
+                            )
+                          }
+                          placeholder="e.g. Master guest check-in protocols and key card security."
+                          className={cn("bg-slate-50/50 text-xs border-slate-200", isRTL ? "text-right" : "")}
+                        />
                       </div>
-                      <Input
-                        value={section.title}
-                        onChange={(e) => handleRenameSection(section.id, e.target.value)}
-                        className={cn("bg-white border-slate-200 focus:ring-hotel-gold", isRTL ? "text-right" : "")}
-                      />
                     </div>
                     <div className={cn("flex items-center gap-2", isRTL ? "flex-row-reverse" : "")}>
                       <Badge variant="secondary" className="bg-slate-100 text-slate-600 font-normal">

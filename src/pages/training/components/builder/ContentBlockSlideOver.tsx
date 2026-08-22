@@ -15,11 +15,13 @@ import {
 } from '@/components/ui/sheet'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
-import { AlertTriangle, BookOpen, CheckCircle2, FileText, Search, Sparkles, Upload, X } from 'lucide-react'
+import { aiService } from '@/lib/gemini'
+import { AlertTriangle, BookOpen, CheckCircle2, FileText, Loader2, Search, Sparkles, Upload, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
@@ -85,8 +87,43 @@ export function ContentBlockSlideOver({
   isRTL,
 }: ContentBlockSlideOverProps) {
   const { t } = useTranslation('training')
+  const { toast } = useToast()
   const [showImageMediaPicker, setShowImageMediaPicker] = useState(false)
   const [sopSearchTerm, setSopSearchTerm] = useState('')
+  const [isGeneratingContent, setIsGeneratingContent] = useState(false)
+
+  const handleAIGenerateLessonContent = async () => {
+    setIsGeneratingContent(true)
+    try {
+      const heading = currentBlock.title?.trim() || '5-Star Hotel Standard Operating Procedure'
+      const generated = await aiService.expandLessonContent({
+        courseTitle: heading,
+        sectionHeading: heading,
+        department: 'Hotel Operations',
+        language: isRTL ? 'Arabic' : 'English',
+      })
+      if (generated) {
+        setCurrentBlock({
+          ...currentBlock,
+          content: generated,
+          duration: currentBlock.duration || 5,
+        })
+        toast({
+          title: '✨ Lesson Content Generated',
+          description: 'Synthesized complete 5-star operating guidelines.',
+        })
+      }
+    } catch (e) {
+      console.error('Failed to generate lesson content:', e)
+      toast({
+        title: 'Error',
+        description: 'Failed to generate lesson content. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsGeneratingContent(false)
+    }
+  }
 
   return (
     <>
@@ -291,7 +328,24 @@ export function ContentBlockSlideOver({
               {/* Type: Rich Text */}
               {currentBlock.type === 'text' && (
                 <div className={isRTL ? 'text-right' : ''}>
-                  <Label className="text-xs font-semibold">{t('content', 'Content')}</Label>
+                  <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                    <Label className="text-xs font-semibold">{t('content', 'Content')}</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      disabled={isGeneratingContent}
+                      onClick={handleAIGenerateLessonContent}
+                      className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
+                    >
+                      {isGeneratingContent ? (
+                        <Loader2 className="w-3 h-3 animate-spin me-1" />
+                      ) : (
+                        <Sparkles className="w-3 h-3 me-1" />
+                      )}
+                      {t('builder.aiGenerateContent', 'AI Generate Lesson / SOP')}
+                    </Button>
+                  </div>
                   <Suspense fallback={<div className="h-48 border rounded-lg animate-pulse bg-slate-50 mt-2" />}>
                     <RichTextEditor
                       value={currentBlock.content}

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -5,8 +6,11 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
+import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
+import { Loader2, Sparkles } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { generateMissingField } from '@/lib/trainingAICompletionEngine'
 import type { TrainingTemplate } from './trainingBuilderTypes'
 
 interface StepSetupProps {
@@ -73,6 +77,54 @@ export function StepSetup({
   isRTL,
 }: StepSetupProps) {
   const { t } = useTranslation('training')
+  const { toast } = useToast()
+  const [isSuggestingTitle, setIsSuggestingTitle] = useState(false)
+  const [isSuggestingDescription, setIsSuggestingDescription] = useState(false)
+
+  const handleAISuggestTitle = async () => {
+    setIsSuggestingTitle(true)
+    try {
+      const res = await generateMissingField('module_title', {
+        department: category || 'Hotel Operations',
+        audience: audience || 'all',
+        language: isRTL ? 'Arabic' : 'English',
+      })
+      if (res?.text) {
+        setTitle(res.text)
+        toast({
+          title: '✨ AI Title Generated',
+          description: `Set title: "${res.text}"`,
+        })
+      }
+    } catch (e) {
+      console.error('Failed to generate title:', e)
+    } finally {
+      setIsSuggestingTitle(false)
+    }
+  }
+
+  const handleAISuggestDescription = async () => {
+    setIsSuggestingDescription(true)
+    try {
+      const res = await generateMissingField('module_description', {
+        courseTitle: title || 'Hospitality Operational Excellence',
+        department: category || 'Hotel Operations',
+        audience: audience || 'all',
+        language: isRTL ? 'Arabic' : 'English',
+      })
+      if (res?.text) {
+        setDescription(res.text)
+        toast({
+          title: '✨ AI Description Generated',
+          description: 'Added 5-star course description.',
+        })
+      }
+    } catch (e) {
+      console.error('Failed to generate description:', e)
+    } finally {
+      setIsSuggestingDescription(false)
+    }
+  }
 
   const durationPresets = ['10', '15', '30', '45', '60', '90']
   const validityPresets = ['30', '90', '180', '365']
@@ -87,7 +139,24 @@ export function StepSetup({
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-2 gap-5">
               <div className="space-y-2">
-                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('title')}</Label>
+                <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                  <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('title')}</Label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={isSuggestingTitle}
+                    onClick={handleAISuggestTitle}
+                    className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
+                  >
+                    {isSuggestingTitle ? (
+                      <Loader2 className="w-3 h-3 animate-spin me-1" />
+                    ) : (
+                      <Sparkles className="w-3 h-3 me-1" />
+                    )}
+                    {t('builder.aiSuggestTitle', 'AI Suggest Title')}
+                  </Button>
+                </div>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
@@ -115,7 +184,24 @@ export function StepSetup({
             </div>
 
             <div className="space-y-2">
-              <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('description')}</Label>
+              <div className={cn("flex items-center justify-between", isRTL ? "flex-row-reverse" : "")}>
+                <Label className={cn("text-xs font-semibold text-slate-700", isRTL ? "text-right block" : "")}>{t('description')}</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={isSuggestingDescription}
+                  onClick={handleAISuggestDescription}
+                  className="h-6 text-[11px] px-2 text-purple-700 hover:bg-purple-50"
+                >
+                  {isSuggestingDescription ? (
+                    <Loader2 className="w-3 h-3 animate-spin me-1" />
+                  ) : (
+                    <Sparkles className="w-3 h-3 me-1" />
+                  )}
+                  {t('builder.aiSuggestDescription', 'AI Suggest Description')}
+                </Button>
+              </div>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}

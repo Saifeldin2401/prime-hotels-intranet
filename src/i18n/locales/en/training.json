@@ -1323,8 +1323,10 @@
         "certAutoIssue": "Certificates are cryptographically verified and issued upon 100% verified completion.",
         "mediaGateTitle": "Media & Video Watch Gate",
         "mediaGateActive": "Media Completion Gate is Active",
-        "mediaGateActiveDesc": "Learners must watch/listen to mandatory video and audio content to at least 90% before subsequent lesson blocks are unlocked in sequential mode.",
         "aiSuggestTitle": "AI Suggest Title",
+        "aiSuggestDescription": "AI Suggest Description",
+        "aiGenerateContent": "AI Generate Lesson / SOP",
+        "sectionDescription": "Section Description / Objectives",
         "validation": {
             "title": "Course title provided",
             "category": "Department / category assigned",

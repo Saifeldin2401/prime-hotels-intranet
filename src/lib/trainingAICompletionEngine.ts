@@ -235,8 +235,21 @@ export async function buildAIImprovementPlan(params: {
   const allLessonTitles = sections.flatMap((s) => (s.items || []).map((i) => i.title)).filter(Boolean)
 
   // 1. Concurrently evaluate module title & description
+  const isGenericTitle =
+    !title ||
+    title.trim().length === 0 ||
+    title.toLowerCase().startsWith('new training') ||
+    title.toLowerCase().startsWith('untitled') ||
+    title.toLowerCase().startsWith('new course') ||
+    title.toLowerCase() === 'module'
+
+  const isGenericDescription =
+    !description ||
+    description.trim().length < 20 ||
+    description.toLowerCase().startsWith('write a')
+
   const [titleGen, descGen] = await Promise.all([
-    (!title || title.trim().length === 0 || title.toLowerCase().startsWith('new training'))
+    isGenericTitle
       ? generateMissingField('module_title', {
           childLessonTitles: allLessonTitles,
           department: category,
@@ -244,7 +257,7 @@ export async function buildAIImprovementPlan(params: {
         })
       : Promise.resolve(null),
 
-    (!description || description.trim().length < 20)
+    isGenericDescription
       ? generateMissingField('module_description', {
           courseTitle: title || category || 'Training Module',
           childLessonTitles: allLessonTitles,
@@ -278,9 +291,14 @@ export async function buildAIImprovementPlan(params: {
   }
 
   // 2. Concurrently evaluate all sections in parallel
-  const sectionPromises = sections.map(async (sec) => {
+  const sectionPromises = sections.map(async (sec, secIndex) => {
     const childLessonTitles = (sec.items || []).map((i) => i.title).filter(Boolean)
-    const needsTitle = !sec.title || sec.title.trim().length === 0 || sec.title.toLowerCase().startsWith('untitled')
+    const needsTitle =
+      !sec.title ||
+      sec.title.trim().length === 0 ||
+      sec.title.toLowerCase().startsWith('untitled') ||
+      sec.title.toLowerCase().startsWith('new section') ||
+      sec.title.toLowerCase().startsWith('section')
     const needsDesc = !sec.description || sec.description.trim().length === 0
 
     const [secTitleGen, secDescGen] = await Promise.all([
@@ -296,7 +314,7 @@ export async function buildAIImprovementPlan(params: {
       needsDesc
         ? generateMissingField('section_description', {
             courseTitle: improvedTitle,
-            sectionTitle: sec.title || (childLessonTitles[0] ? `Section on ${childLessonTitles[0]}` : 'Operational Section'),
+            sectionTitle: sec.title || (childLessonTitles[0] ? `Section on ${childLessonTitles[0]}` : `Operational Section ${secIndex + 1}`),
             childLessonTitles,
             department: category,
             language,

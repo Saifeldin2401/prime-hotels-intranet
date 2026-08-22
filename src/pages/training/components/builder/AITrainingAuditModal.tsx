@@ -12,10 +12,12 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useToast } from '@/components/ui/use-toast'
 import { cn } from '@/lib/utils'
 import {
   AlertCircle,
   AlertTriangle,
+  Check,
   CheckCircle2,
   ChevronRight,
   Loader2,
@@ -24,7 +26,7 @@ import {
   Wand2,
 } from 'lucide-react'
 import type { TrainingAuditResult, AuditIssue } from '@/lib/trainingBuilderValidator'
-import { buildAIImprovementPlan, type AIImprovementPlan } from '@/lib/trainingAICompletionEngine'
+import { buildAIImprovementPlan, type AIImprovementPlan, type AISuggestionResult } from '@/lib/trainingAICompletionEngine'
 import type { TrainingSection } from './trainingBuilderTypes'
 
 interface AITrainingAuditModalProps {
@@ -59,9 +61,11 @@ export function AITrainingAuditModal({
   isRTL,
 }: AITrainingAuditModalProps) {
   const { t } = useTranslation('training')
+  const { toast } = useToast()
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false)
   const [improvementPlan, setImprovementPlan] = useState<AIImprovementPlan | null>(null)
   const [selectedTab, setSelectedTab] = useState<'overview' | 'errors' | 'warnings' | 'ai_plan'>('overview')
+  const [appliedSuggestionIds, setAppliedSuggestionIds] = useState<Set<string>>(new Set())
 
   const handleRunAIOptimizer = async () => {
     setIsGeneratingPlan(true)
@@ -77,24 +81,67 @@ export function AITrainingAuditModal({
         language: isRTL ? 'Arabic' : 'English',
       })
       setImprovementPlan(plan)
+      if (plan.totalSuggestions > 0) {
+        toast({
+          title: '✨ AI Plan Generated',
+          description: `Synthesized ${plan.totalSuggestions} contextual improvements.`,
+        })
+      }
     } catch (e) {
       console.error('Failed to generate AI improvement plan:', e)
+      toast({
+        title: 'Error',
+        description: 'Failed to generate AI improvement plan. Please try again.',
+        variant: 'destructive',
+      })
     } finally {
       setIsGeneratingPlan(false)
     }
   }
 
+  const handleApplySingleSuggestion = (sug: AISuggestionResult) => {
+    const sugKey = `${sug.targetId}_${sug.fieldType}`
+    if (sug.fieldType === 'module_title') {
+      setTitle(sug.suggestedValue)
+    } else if (sug.fieldType === 'module_description') {
+      setDescription(sug.suggestedValue)
+    } else if (sug.fieldType === 'section_title') {
+      setSections((prev) =>
+        prev.map((s) => (s.id === sug.targetId ? { ...s, title: sug.suggestedValue } : s))
+      )
+    } else if (sug.fieldType === 'section_description') {
+      setSections((prev) =>
+        prev.map((s) => (s.id === sug.targetId ? { ...s, description: sug.suggestedValue } : s))
+      )
+    }
+
+    setAppliedSuggestionIds((prev) => new Set(prev).add(sugKey))
+    toast({
+      title: '✓ Applied',
+      description: `Updated ${sug.fieldType.replace('_', ' ')}: "${sug.suggestedValue}"`,
+    })
+  }
+
   const handleApplyAllImprovements = () => {
     if (!improvementPlan) return
+    let appliedCount = 0
     if (improvementPlan.improvedTitle && improvementPlan.improvedTitle !== title) {
       setTitle(improvementPlan.improvedTitle)
+      appliedCount++
     }
     if (improvementPlan.improvedDescription && improvementPlan.improvedDescription !== description) {
       setDescription(improvementPlan.improvedDescription)
+      appliedCount++
     }
     if (improvementPlan.improvedSections && improvementPlan.improvedSections.length > 0) {
       setSections(improvementPlan.improvedSections)
+      appliedCount += improvementPlan.improvedSections.length
     }
+
+    toast({
+      title: '✨ All Improvements Applied',
+      description: `Successfully updated course overview and sections.`,
+    })
     onOpenChange(false)
   }
 
@@ -322,23 +369,54 @@ export function AITrainingAuditModal({
                     </Button>
                   </div>
 
-                  <div className="space-y-2 max-h-[220px] overflow-y-auto">
-                    {improvementPlan.suggestions.map((sug, idx) => (
-                      <div key={idx} className="p-3 border rounded-lg bg-white space-y-1 text-xs">
-                        <div className="flex items-center justify-between">
-                          <span className="font-bold text-slate-800 capitalize">
-                            {sug.fieldType.replace('_', ' ')}
-                          </span>
-                          <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200">
-                            {sug.confidence} Confidence
-                          </Badge>
+                  <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1">
+                    {improvementPlan.suggestions.map((sug, idx) => {
+                      const sugKey = `${sug.targetId}_${sug.fieldType}`
+                      const isApplied = appliedSuggestionIds.has(sugKey)
+
+                      return (
+                        <div key={idx} className="p-3 border rounded-lg bg-white dark:bg-slate-950 space-y-2 text-xs shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-slate-800 dark:text-slate-200 capitalize">
+                                {sug.fieldType.replace('_', ' ')}
+                              </span>
+                              <Badge variant="outline" className="text-[10px] bg-purple-50 dark:bg-purple-950 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800">
+                                {sug.confidence} Confidence
+                              </Badge>
+                            </div>
+                            <Button
+                              size="sm"
+                              variant={isApplied ? 'secondary' : 'outline'}
+                              disabled={isApplied}
+                              onClick={() => handleApplySingleSuggestion(sug)}
+                              className={cn(
+                                "h-6 text-[11px] px-2.5 font-semibold transition-colors",
+                                isApplied
+                                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300"
+                                  : "border-purple-200 text-purple-700 hover:bg-purple-50 dark:border-purple-800 dark:text-purple-300 dark:hover:bg-purple-950"
+                              )}
+                            >
+                              {isApplied ? (
+                                <>
+                                  <Check className="w-3 h-3 me-1 text-emerald-600" />
+                                  Applied
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles className="w-3 h-3 me-1" />
+                                  Apply
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                          <div className="p-2.5 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-200 font-medium">
+                            {sug.suggestedValue}
+                          </div>
+                          <div className="text-[10px] text-slate-400">{sug.rationale}</div>
                         </div>
-                        <div className="p-2 bg-slate-50 rounded text-slate-700 font-medium">
-                          {sug.suggestedValue}
-                        </div>
-                        <div className="text-[10px] text-slate-400">{sug.rationale}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}
