@@ -412,18 +412,19 @@ export function TrainingAssignmentsProvider({
 
   const [search, setSearch] = useState('')
   const [showAssignmentDialog, setShowAssignmentDialog] = useState(autoOpen)
-  const [prevAutoOpen, setPrevAutoOpen] = useState(autoOpen)
-  if (autoOpen !== prevAutoOpen) {
-    if (autoOpen) setShowAssignmentDialog(true)
-    setPrevAutoOpen(autoOpen)
-  }
-
   const [activeTab, setActiveTab] = useState<'overview' | 'assignments' | 'grading'>(initialTab)
-  const [prevInitialTab, setPrevInitialTab] = useState(initialTab)
-  if (initialTab !== prevInitialTab) {
-    if (initialTab) setActiveTab(initialTab)
-    setPrevInitialTab(initialTab)
-  }
+
+  useEffect(() => {
+    if (autoOpen) {
+      setShowAssignmentDialog(true)
+    }
+  }, [autoOpen])
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab)
+    }
+  }, [initialTab])
 
   // Overview filters
   const [overviewSearch, setOverviewSearch] = useState('')
