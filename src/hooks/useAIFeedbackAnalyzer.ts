@@ -76,7 +76,7 @@ Return ONLY valid JSON.`
                 const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
                     body: {
                         prompt,
-                        model: 'Qwen/Qwen2.5-72B-Instruct',
+                        model: 'meta-llama/Llama-3.3-70B-Instruct',
                         task: 'chat'
                     }
                 })

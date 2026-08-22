@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildCorsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "./_shared/cors.ts";
 
 const SUPPORTED_LANGUAGES = [
   "en",
@@ -484,9 +484,10 @@ serve(async (req: Request) => {
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
     const hfRouterUrl = "https://router.huggingface.co/v1/chat/completions";
 
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
     let hfToken = Deno.env.get("HUGGINGFACE_TOKEN") ?? "";
     let hfModel =
-      Deno.env.get("HF_TRANSLATION_MODEL") || "Qwen/Qwen2.5-7B-Instruct";
+      Deno.env.get("HF_TRANSLATION_MODEL") || "meta-llama/Llama-3.3-70B-Instruct";
 
     const minimaxToken = Deno.env.get("HUGGINGFACE_MINIMAX_TOKEN") ?? "";
     const minimaxModelId =
@@ -785,6 +786,43 @@ serve(async (req: Request) => {
             attempt > 1
               ? "Your previous answer contained untranslated or mixed-language text. Fix it and return only the clean final translation."
               : "";
+
+          // 1. Try OpenRouter first
+          if (OPENROUTER_API_KEY) {
+            try {
+              const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                  "HTTP-Referer": "https://connect.altusadvisory.com",
+                  "X-Title": "Altus Connect Translation",
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  model: "openrouter/auto",
+                  messages: [
+                    {
+                      role: "system",
+                      content: `You are a professional translator. ${translationInstruction} ${strictnessInstruction} ${retryInstruction} Preserve formatting and return only the translated text. Do not include any extra commentary or any language other than ${targetName}.`,
+                    },
+                    { role: "user", content: chunk },
+                  ],
+                  temperature: 0.2,
+                }),
+              });
+
+              if (orRes.ok) {
+                const data = await orRes.json();
+                const transText = data?.choices?.[0]?.message?.content;
+                if (transText) {
+                  return transText;
+                }
+              }
+            } catch (orErr) {
+              console.warn("OpenRouter translation attempt failed, falling back:", orErr);
+            }
+          }
+
           const payload = {
             model: hfModel,
             messages: [

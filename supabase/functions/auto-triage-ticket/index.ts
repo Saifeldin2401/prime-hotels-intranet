@@ -9,6 +9,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
 const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -25,11 +26,6 @@ async function analyzeTicket(
   title: string,
   description: string,
 ): Promise<TriageResult | null> {
-  if (!HF_TOKEN) {
-    console.error("Missing HF_TOKEN");
-    return null;
-  }
-
   const prompt = `You are a hotel maintenance manager. Analyze this maintenance ticket and provide triage information.
 
 TICKET TITLE: ${title}
@@ -51,39 +47,87 @@ RULES:
 
 Return ONLY valid JSON.`;
 
-  try {
-    const response = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "Qwen/Qwen2.5-72B-Instruct",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 500,
-          temperature: 0.1,
-        }),
-      },
-    );
+  // 1. Primary: OpenRouter
+  if (OPENROUTER_API_KEY) {
+    const orModels = [
+      "openrouter/auto",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "deepseek/deepseek-r1:free",
+      "google/gemini-2.0-flash-exp:free"
+    ];
 
-    if (!response.ok) {
-      console.error("AI API error:", await response.text());
-      return null;
+    for (const model of orModels) {
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://connect.altusadvisory.com",
+            "X-Title": "Altus Connect Ticket Triage",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: "user", content: prompt }],
+            max_tokens: 500,
+            temperature: 0.1,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || "";
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]) as TriageResult;
+          }
+        }
+      } catch (err) {
+        console.warn(`OpenRouter triage model ${model} failed:`, err);
+      }
     }
+  }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content || "";
+  // 2. Fallback: Hugging Face
+  if (HF_TOKEN) {
+    const candidateModels = [
+      "meta-llama/Llama-3.3-70B-Instruct",
+      "Qwen/Qwen2.5-Coder-32B-Instruct",
+      "meta-llama/Llama-3.1-8B-Instruct",
+    ];
 
-    // Parse JSON from response
-    const jsonMatch = content.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]) as TriageResult;
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          "https://router.huggingface.co/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${HF_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 500,
+              temperature: 0.1,
+            }),
+          },
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const content = data.choices?.[0]?.message?.content || "";
+          const jsonMatch = content.match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            return JSON.parse(jsonMatch[0]) as TriageResult;
+          }
+        }
+      } catch (err) {
+        console.warn(`HF triage model ${model} failed:`, err);
+      }
     }
-  } catch (err) {
-    console.error("AI analysis failed:", err);
   }
 
   return null;
@@ -96,9 +140,6 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    // ===================================
-    // SECURITY: JWT Authentication Required
-    // ===================================
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -110,7 +151,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Verify the JWT token
     const supabaseAuth = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -157,7 +197,6 @@ Deno.serve(async (req: Request) => {
       triageRoles.has(row.role),
     );
 
-    // Fetch ticket with user-scoped client to enforce RLS visibility
     const { data: scopedTicket, error: scopedError } = await supabaseAuth
       .from("maintenance_tickets")
       .select("id, reported_by_id, assigned_to_id")
@@ -188,7 +227,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Fetch the ticket
     const { data: ticket, error: fetchError } = await supabase
       .from("maintenance_tickets")
       .select("id, title, description, priority, category")
@@ -203,7 +241,6 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    // Skip if already triaged (has AI notes or explicit category)
     if (ticket.category && ticket.priority !== "medium") {
       return new Response(
         JSON.stringify({
@@ -217,7 +254,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Analyze with AI
     const triage = await analyzeTicket(ticket.title, ticket.description);
 
     if (!triage) {
@@ -232,7 +268,6 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Update the ticket with AI suggestions
     const { error: updateError } = await supabase
       .from("maintenance_tickets")
       .update({
@@ -257,10 +292,6 @@ Deno.serve(async (req: Request) => {
         },
       );
     }
-
-    console.log(
-      `âœ… Auto-triaged ticket ${ticket_id}: ${triage.priority} - ${triage.suggested_category}`,
-    );
 
     return new Response(
       JSON.stringify({

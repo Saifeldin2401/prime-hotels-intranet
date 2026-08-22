@@ -104,7 +104,7 @@ export function AIAssistPanel({
           selectedHtml: target.html,
           selectedText: target.text,
           targetLanguage: activeCommand.needsTargetLanguage ? targetLanguage : undefined,
-          model: aiConfig?.model || 'Qwen/Qwen2.5-7B-Instruct',
+          model: aiConfig?.model || 'meta-llama/Llama-3.3-70B-Instruct',
           temperature: aiConfig?.temperature ?? 0.4,
           maxOutputTokens: aiConfig?.maxOutputTokens ?? 800,
         },

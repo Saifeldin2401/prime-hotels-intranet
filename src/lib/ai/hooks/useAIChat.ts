@@ -76,6 +76,15 @@ export function useAIChat(options: UseAIChatOptions = {}) {
         }
       } catch (err) {
         console.error('Chat error:', err)
+        const errorMessage: AIMessage = {
+          id: crypto.randomUUID(),
+          role: 'assistant',
+          content: isArabic
+            ? 'عذراً، حدث خطأ أثناء معالجة طلبك. يرجى المحاولة مرة أخرى.'
+            : (err instanceof Error ? err.message : 'An error occurred while generating a response. Please try again.'),
+          timestamp: new Date(),
+        }
+        setMessages((prev) => [...prev, errorMessage])
       }
     },
     [department, isArabic, isStreaming, messages, property, role, startStream]

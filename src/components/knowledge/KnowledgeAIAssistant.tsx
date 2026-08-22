@@ -50,9 +50,12 @@ interface KnowledgeAIAssistantProps {
     onClose: () => void
 }
 
-// 🛡️ PRIMARY MODEL (Confirmed working on HF Router via 'together' provider)
 const FALLBACK_MODELS = [
-    'Qwen/Qwen2.5-7B-Instruct'
+    'openrouter/auto',
+    'google/gemini-2.0-flash-exp:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'meta-llama/llama-3.3-70b-instruct',
+    'qwen/qwen-2.5-72b-instruct'
 ]
 
 const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'sops', 'sop', 'ksa'])

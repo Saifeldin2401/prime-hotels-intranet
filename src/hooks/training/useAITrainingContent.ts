@@ -74,6 +74,7 @@ export const useAITrainingContent = () => {
             const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
                 body: {
                     action: 'generate_training_content',
+                    model: 'openrouter/auto',
                     prompt,
                     context: {
                         document_id: documentId,
@@ -153,6 +154,7 @@ Return a JSON object with:
             const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
                 body: {
                     action: 'generate_outline',
+                    model: 'openrouter/auto',
                     prompt,
                     context: { topic, documentIds }
                 }
@@ -417,6 +419,7 @@ REMEMBER:
             const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
                 body: {
                     action: 'generate_full_module',
+                    model: 'openrouter/auto',
                     prompt,
                     context: { topic, documentIds, category }
                 }

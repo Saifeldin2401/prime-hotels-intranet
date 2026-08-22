@@ -1,9 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { getServiceRoleToken } from "../_shared/auth.ts";
-import { buildCorsHeaders } from "../_shared/cors.ts";
+import { getServiceRoleToken } from "./_shared/auth.ts";
+import { buildCorsHeaders } from "./_shared/cors.ts";
 
-const defaultModel = "Qwen/Qwen2.5-72B-Instruct";
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+const defaultModel = "openrouter/auto";
 
 serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -117,59 +118,77 @@ serve(async (req) => {
       },
     });
 
-    const hfToken = Deno.env.get("HUGGINGFACE_TOKEN") ?? "";
-    if (!hfToken) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "HUGGINGFACE_TOKEN missing",
-        }),
-        {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        },
-      );
-    }
+    let rawOutput = "";
 
-    const aiResponse = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${hfToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          temperature: 0.2,
-          stream: false,
-        }),
-      },
-    );
+    // 1. Try OpenRouter
+    if (OPENROUTER_API_KEY) {
+      try {
+        const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://connect.altusadvisory.com",
+            "X-Title": "Altus Connect Optimizer",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "openrouter/auto",
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            temperature: 0.2,
+            response_format: { type: "json_object" },
+          }),
+        });
 
-    const aiData = await aiResponse.json();
-    if (aiData.error) {
-      if (
-        typeof aiData.error === "string" &&
-        aiData.error.includes("loading")
-      ) {
-        throw new Error(
-          "Hugging Face model is loading. Retry in 20-30 seconds.",
-        );
+        if (orRes.ok) {
+          const aiData = await orRes.json();
+          rawOutput = aiData.choices?.[0]?.message?.content ?? "";
+        }
+      } catch (orErr) {
+        console.warn("OpenRouter optimizer call failed, falling back:", orErr);
       }
-      throw new Error(
-        aiData.error.message || aiData.error || "Hugging Face request failed",
-      );
     }
 
-    const rawOutput = aiData.choices?.[0]?.message?.content ?? "";
+    // 2. Fallback: Hugging Face
+    if (!rawOutput) {
+      const hfToken = Deno.env.get("HUGGINGFACE_TOKEN") ?? "";
+      if (hfToken) {
+        const aiResponse = await fetch(
+          "https://router.huggingface.co/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${hfToken}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: "meta-llama/Llama-3.3-70B-Instruct",
+              messages: [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+              ],
+              temperature: 0.2,
+              stream: false,
+            }),
+          },
+        );
+
+        const aiData = await aiResponse.json();
+        rawOutput = aiData.choices?.[0]?.message?.content ?? "";
+      }
+    }
+
+    if (!rawOutput) {
+      throw new Error("AI optimizer failed across all providers");
+    }
+
     let proposalJson: Record<string, unknown>;
     try {
-      proposalJson = JSON.parse(rawOutput);
+      const cleanJson = rawOutput.replace(/```json\n?|\n?```/g, "").trim();
+      const match = cleanJson.match(/\{[\s\S]*\}/);
+      proposalJson = match ? JSON.parse(match[0]) : JSON.parse(rawOutput);
     } catch (_err) {
       await supabase.from("ai_audit_logs").insert({
         event_type: "optimizer_parse_failed",
@@ -223,7 +242,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: false,
-        error: "Internal server error",
+        error: (error as Error).message || "Internal server error",
       }),
       {
         status: 500,

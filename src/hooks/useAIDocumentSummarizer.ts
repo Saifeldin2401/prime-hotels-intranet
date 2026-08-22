@@ -102,7 +102,7 @@ RULES:
 Return ONLY valid JSON.`
 
             const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-                body: { prompt, model: 'Qwen/Qwen2.5-7B-Instruct' }
+                body: { prompt, model: 'meta-llama/Llama-3.3-70B-Instruct' }
             })
 
             if (aiError) throw aiError

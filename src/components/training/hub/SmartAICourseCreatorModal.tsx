@@ -319,29 +319,33 @@ export function SmartAICourseCreatorModal({
 
       setActiveStep('preview')
 
-      // If auto deep expand is selected, progressively expand all lessons in background
+      // If auto deep expand is selected, expand all lessons concurrently in the background in parallel
       if (autoDeepExpand && baseSections.length > 0) {
         setIsExpandingAll(true)
-        try {
-          const updated = [...baseSections]
-          for (let i = 0; i < updated.length; i++) {
-            setExpandingSectionId(updated[i].id)
-            const expanded = await aiService.expandLessonContent({
-              courseTitle: result.title || topic,
-              sectionHeading: updated[i].heading,
-              sectionSummary: updated[i].summary,
-              department: department,
-              language: language
-            })
-            updated[i] = { ...updated[i], rich_content: expanded }
-            setDraftSections([...updated])
-          }
-        } catch (expErr) {
-          console.warn('Auto expansion encountered error, keeping baseline:', expErr)
-        } finally {
+        const courseTitle = result.title || topic
+        Promise.allSettled(
+          baseSections.map(async (sec) => {
+            try {
+              const expanded = await aiService.expandLessonContent({
+                courseTitle,
+                sectionHeading: sec.heading,
+                sectionSummary: sec.summary,
+                department,
+                language
+              })
+              if (expanded) {
+                setDraftSections((prev) =>
+                  prev.map((s) => (s.id === sec.id ? { ...s, rich_content: expanded } : s))
+                )
+              }
+            } catch (expErr) {
+              console.warn(`Parallel expansion for "${sec.heading}" had warning, keeping outline content:`, expErr)
+            }
+          })
+        ).finally(() => {
           setIsExpandingAll(false)
           setExpandingSectionId(null)
-        }
+        })
       }
     } catch (err: any) {
       console.error('Failed to generate course:', err)
@@ -376,22 +380,30 @@ export function SmartAICourseCreatorModal({
   }
 
   const handleDeepExpandAll = async () => {
+    const activeSections = draftSections.filter((s) => s.include)
+    if (activeSections.length === 0) return
     setIsExpandingAll(true)
     try {
-      const updated = [...draftSections]
-      for (let i = 0; i < updated.length; i++) {
-        if (!updated[i].include) continue
-        setExpandingSectionId(updated[i].id)
-        const expandedHtml = await aiService.expandLessonContent({
-          courseTitle: draftTitle,
-          sectionHeading: updated[i].heading,
-          sectionSummary: updated[i].summary,
-          department: department,
-          language: language
+      await Promise.allSettled(
+        activeSections.map(async (sec) => {
+          try {
+            const expandedHtml = await aiService.expandLessonContent({
+              courseTitle: draftTitle,
+              sectionHeading: sec.heading,
+              sectionSummary: sec.summary,
+              department,
+              language
+            })
+            if (expandedHtml) {
+              setDraftSections((prev) =>
+                prev.map((s) => (s.id === sec.id ? { ...s, rich_content: expandedHtml } : s))
+              )
+            }
+          } catch (secErr) {
+            console.warn(`Parallel expansion error on "${sec.heading}":`, secErr)
+          }
         })
-        updated[i] = { ...updated[i], rich_content: expandedHtml }
-        setDraftSections([...updated])
-      }
+      )
       toast({
         title: '🚀 All Lessons Expanded',
         description: 'All active sections now contain full 5-star standard operating procedures.'

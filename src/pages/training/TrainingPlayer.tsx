@@ -32,12 +32,21 @@ import { sanitizeHtml } from '@/lib/sanitize'
 import { resolveStorageUrl, resolveHtmlStorageUrls } from '@/lib/secureFileAccess'
 import { safeLocalStorage } from '@/lib/storage'
 import { evaluateTrainingCompletion, getQuizProgressKey } from '@/lib/trainingCompletion'
+import {
+    evaluateModuleProgression,
+    getNextRequiredLearningItem,
+    validateNavigationTarget,
+    type LearnerProgressState,
+    type LearningItemState,
+    type ModuleProgressionResult
+} from '@/lib/trainingProgressionEngine'
 import type { TrainingContentBlock } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { QuizComponentEnhanced } from '@/pages/learning/components/QuizComponentEnhanced'
 import { learningService } from '@/services/learningService'
 import { skillsService } from '@/services/skillsService'
 import {
+    AlertCircle,
     Award,
     ArrowLeft,
     BookOpen,
@@ -56,10 +65,12 @@ import {
     Languages,
     Link as LinkIcon,
     Loader2,
+    Lock,
     Maximize2,
     Minimize2,
     Menu,
     MousePointer2,
+    RotateCcw,
     Sparkles,
     Trophy,
     Type,
@@ -663,47 +674,12 @@ export default function TrainingPlayer() {
             return
         }
 
-        const maxIndex = Math.max(blocks.length - 1, 0)
-        // Prefer resolving resume position by block id, since an author
-        // reordering/inserting/deleting blocks after a learner starts a module
-        // shifts what sits at a given index. Fall back to the clamped index
-        // only when the id can't be found (e.g. the block was since deleted).
-        const idIndex = progress.last_block_id
-            ? blocks.findIndex(b => b.id === progress.last_block_id)
-            : -1
-        const nextIndex = idIndex >= 0
-            ? idIndex
-            : (typeof progress.last_block_index === 'number'
-                ? Math.min(Math.max(progress.last_block_index, 0), maxIndex)
-                : 0)
-
-        if (nextIndex > 0) {
-            setActiveBlockIndex(nextIndex)
-            setResumeNotice(t('resumeNotice', 'Resumed from where you left off.'))
-        }
-
-        if (progress.metadata?.completed_blocks && Array.isArray(progress.metadata.completed_blocks)) {
-            setCompletedBlocks(new Set(progress.metadata.completed_blocks))
-        } else if (nextIndex > 0) {
-            const completedIds = blocks.slice(0, nextIndex).map(b => b.id)
-            setCompletedBlocks(new Set(completedIds))
-        } else {
-            setCompletedBlocks(new Set())
-        }
-
-        if (progress.metadata?.completed_media_blocks && Array.isArray(progress.metadata.completed_media_blocks)) {
-            setCompletedMediaBlocks(new Set(progress.metadata.completed_media_blocks))
-        } else {
-            setCompletedMediaBlocks(new Set())
-        }
-
-        if (typeof progress.time_spent_seconds === 'number') {
-            totalTimeRef.current = progress.time_spent_seconds
-            setTimeSpentSeconds(progress.time_spent_seconds)
-        } else {
-            totalTimeRef.current = 0
-            setTimeSpentSeconds(0)
-        }
+        const restoredCompleted = new Set<string>(
+            Array.isArray(progress.metadata?.completed_blocks) ? progress.metadata.completed_blocks : []
+        )
+        const restoredMediaCompleted = new Set<string>(
+            Array.isArray(progress.metadata?.completed_media_blocks) ? progress.metadata.completed_media_blocks : []
+        )
 
         const restoredQuizScores = restoreQuizProgressByBlock(
             blocks,
@@ -732,8 +708,9 @@ export default function TrainingPlayer() {
         }
 
         const restoredQuizResults = progress.metadata?.quiz_results_by_id
+        let normalizedResults: Record<string, PersistedQuizResult> = {}
         if (restoredQuizResults && typeof restoredQuizResults === 'object' && !Array.isArray(restoredQuizResults)) {
-            const normalizedResults = restoreQuizProgressByBlock(
+            normalizedResults = restoreQuizProgressByBlock(
                 blocks,
                 restoredQuizResults as Record<string, PersistedQuizResult>
             )
@@ -744,6 +721,17 @@ export default function TrainingPlayer() {
             quizResultsByIdRef.current = {}
         }
 
+        setCompletedBlocks(restoredCompleted)
+        setCompletedMediaBlocks(restoredMediaCompleted)
+
+        if (typeof progress.time_spent_seconds === 'number') {
+            totalTimeRef.current = progress.time_spent_seconds
+            setTimeSpentSeconds(progress.time_spent_seconds)
+        } else {
+            totalTimeRef.current = 0
+            setTimeSpentSeconds(0)
+        }
+
         const wasCompleted = progress.status === 'completed' || Boolean(progress.completed_at)
         setIsFinished(wasCompleted)
         setCompletionPassed(wasCompleted && typeof progress.passed === 'boolean' ? progress.passed : null)
@@ -752,7 +740,26 @@ export default function TrainingPlayer() {
                 ? (typeof progress.score_percentage === 'number' ? progress.score_percentage : restoredAggregatedScore)
                 : null
         )
-    }, [resetModuleInteractionState, t])
+
+        // Evaluate smart resume position using progression engine
+        if (!wasCompleted) {
+            const restoredLearnerState: LearnerProgressState = {
+                completedBlockIds: restoredCompleted,
+                completedMediaBlockIds: restoredMediaCompleted,
+                quizResultsByBlockId: normalizedResults
+            }
+            const smartNext = getNextRequiredLearningItem(moduleData?.module, blocks, restoredLearnerState)
+            const targetIndex = smartNext.index >= 0 ? smartNext.index : 0
+            setActiveBlockIndex(targetIndex)
+            if (targetIndex > 0) {
+                const targetTitle = smartNext.item?.title || t('blockTitle', { number: targetIndex + 1 })
+                setResumeNotice(t('resumeNoticeSpecific', {
+                    item: targetTitle,
+                    defaultValue: `Resumed from: ${targetTitle}`
+                }))
+            }
+        }
+    }, [resetModuleInteractionState, t, moduleData?.module])
 
     // Close sidebar on mobile by default and when entering small breakpoints.
     useEffect(() => {
@@ -886,16 +893,49 @@ export default function TrainingPlayer() {
             .map(getQuizProgressKey),
         [moduleData?.blocks]
     )
+
+    const learnerState: LearnerProgressState = useMemo(() => ({
+        completedBlockIds: completedBlocks,
+        completedMediaBlockIds: completedMediaBlocks,
+        quizResultsByBlockId: quizResultsById,
+        quizAttemptsByBlockId: {},
+        activeBlockId: activeBlock?.id || null,
+    }), [completedBlocks, completedMediaBlocks, quizResultsById, activeBlock?.id])
+
+    const progression = useMemo(() => evaluateModuleProgression({
+        module: moduleData?.module,
+        blocks: moduleData?.blocks || [],
+        learnerState,
+        mode: (moduleData?.module?.template_id === 'flexible' || (moduleData?.module as any)?.progression_mode === 'flexible') ? 'flexible' : 'sequential'
+    }), [moduleData?.module, moduleData?.blocks, learnerState])
+
     const trainingCompletion = useMemo(() => evaluateTrainingCompletion({
         blocks: moduleData?.blocks || [],
         completedBlockIds: completedBlocks,
         completedMediaBlockIds: completedMediaBlocks,
         quizResultsByBlockId: quizResultsById,
     }), [moduleData?.blocks, completedBlocks, completedMediaBlocks, quizResultsById])
+
     const isLastBlock = activeBlockIndex === totalBlocks - 1
-    const completedCount = new Set([...completedBlocks, ...completedMediaBlocks]).size
-    const progressSteps = Math.max(completedCount, activeBlockIndex + 1)
-    const progressPercentage = Math.min(100, Math.round((progressSteps / totalBlocks) * 100))
+    const activeBlockState = activeBlock ? progression.blockStates[activeBlock.id] || 'AVAILABLE' : 'AVAILABLE'
+    const activeQuizResult = activeBlock && activeBlock.type === 'quiz' ? quizResultsById[getQuizProgressKey(activeBlock)] : undefined
+    const activeQuizPassed = Boolean(activeQuizResult?.passed)
+
+    const canProceedToNext = useMemo(() => {
+        if (!activeBlock) return true
+        if (activeBlock.type === 'quiz') {
+            if (activeBlock.is_mandatory === false) return true
+            return activeQuizPassed
+        }
+        if (activeBlock.type === 'video' || activeBlock.type === 'audio' || activeBlock.type === 'interactive') {
+            if (activeBlock.is_mandatory && !completedMediaBlocks.has(activeBlock.id) && !completedBlocks.has(activeBlock.id)) {
+                return false
+            }
+        }
+        return true
+    }, [activeBlock, activeQuizPassed, completedMediaBlocks, completedBlocks])
+
+    const progressPercentage = progression.realProgressPercentage
     const persistedProgressPercentage = isFinished ? 100 : Math.min(progressPercentage, 99)
     const translationTargetMeta = translationTarget
         ? SUPPORTED_TRANSLATION_LANGUAGES.find(lang => lang.code === translationTarget)
@@ -905,20 +945,61 @@ export default function TrainingPlayer() {
         ? moduleTitleTranslations[translationTarget] as string
         : moduleData?.module.title
 
+    const handleSelectBlock = useCallback((targetIndex: number) => {
+        if (!moduleData?.blocks) return
+        const validation = validateNavigationTarget({
+            targetIndex,
+            blocks: moduleData.blocks,
+            progression
+        })
+
+        if (validation.allowed) {
+            setActiveBlockIndex(targetIndex)
+            window.scrollTo(0, 0)
+            scheduleProgressSave(300)
+        } else {
+            toast({
+                title: t('lessonLocked', 'Lesson Locked'),
+                description: validation.reason || t('completePrereqFirst', 'Please complete the previous required lesson or quiz first.'),
+                variant: 'destructive'
+            })
+            if (validation.safeIndex !== activeBlockIndex && validation.safeIndex >= 0) {
+                setActiveBlockIndex(validation.safeIndex)
+            }
+        }
+    }, [moduleData?.blocks, progression, activeBlockIndex, t, toast])
+
     const handleNext = () => {
         if (!moduleData) return
 
-        if (activeBlock) {
+        if (activeBlock && activeBlock.type !== 'quiz') {
             setCompletedBlocks(prev => new Set(prev).add(activeBlock.id))
             void recordBlockCompletion(activeBlock.id)
         }
 
-        if (isLastBlock) {
-            handleCompleteModule()
-        } else {
-            setActiveBlockIndex(prev => prev + 1)
+        const nextCompleted = activeBlock && activeBlock.type !== 'quiz'
+            ? new Set([...completedBlocks, activeBlock.id])
+            : completedBlocks
+
+        const evalProgression = evaluateModuleProgression({
+            module: moduleData.module,
+            blocks: moduleData.blocks,
+            learnerState: {
+                ...learnerState,
+                completedBlockIds: nextCompleted
+            }
+        })
+
+        if (evalProgression.isModuleComplete) {
+            handleCompleteModule({
+                completedBlocks: nextCompleted
+            })
+        } else if (evalProgression.nextRequiredIndex >= 0) {
+            setActiveBlockIndex(evalProgression.nextRequiredIndex)
             window.scrollTo(0, 0)
-            scheduleProgressSave(400)
+            scheduleProgressSave(300)
+        } else if (activeBlockIndex < totalBlocks - 1) {
+            handleSelectBlock(activeBlockIndex + 1)
         }
     }
 
@@ -1557,22 +1638,6 @@ export default function TrainingPlayer() {
         return blockTranslations[block.id]?.[translationTarget]
     }
 
-    const isGateBlock = !!(activeBlock && ['video', 'audio', 'interactive'].includes(activeBlock.type))
-    const isGateCompletionRequired = !!(activeBlock && activeBlock.is_mandatory && isGateBlock)
-    const isGateCompleted = !!(activeBlock && completedMediaBlocks.has(activeBlock.id))
-    const activeQuizResult = activeBlock?.type === 'quiz'
-        ? quizResultsById[getQuizProgressKey(activeBlock)]
-        : null
-    const activeQuizRequiresPass = activeBlock?.type === 'quiz'
-        && (activeBlock.content_data as Record<string, unknown> | null)?.completion_requirement !== 'submitted'
-        && (activeBlock.content_data as Record<string, unknown> | null)?.require_passing !== false
-    const activeQuizPassed = activeBlock?.type === 'quiz'
-        ? activeBlock.is_mandatory === false || (activeQuizRequiresPass ? Boolean(activeQuizResult?.passed) : Boolean(activeQuizResult?.completedAt))
-        : true
-
-    // Combined "Can Proceed" Logic
-    const canProceedToNext = (!isGateCompletionRequired || isGateCompleted) && activeQuizPassed
-
     const renderBlockContent = (block: TrainingContentBlock) => {
         const variants = {
             initial: { opacity: 0, x: isRTL ? -20 : 20 },
@@ -1909,7 +1974,9 @@ export default function TrainingPlayer() {
                                 const currentQuizId = (block.content_data?.quiz_id as string) || ''
                                 const progressKey = getQuizProgressKey(block)
                                 const nextCompletedBlocks = new Set(completedBlocks)
-                                nextCompletedBlocks.add(block.id)
+                                if (result.passed) {
+                                    nextCompletedBlocks.add(block.id)
+                                }
                                 let nextAggregatedScore = result.score
                                 let nextQuizScores = quizScoresByIdRef.current
                                 let nextQuizResults = quizResultsByIdRef.current
@@ -1949,17 +2016,26 @@ export default function TrainingPlayer() {
                                     setQuizScore(result.score)
                                 }
                                 setCompletedBlocks(nextCompletedBlocks)
-                                void recordBlockCompletion(block.id)
+                                if (result.passed) {
+                                    void recordBlockCompletion(block.id)
+                                }
                                 scheduleProgressSave(0)
                                 if (result.passed) {
                                     toast({
-                                        title: t('moduleQuizPassed'),
-                                        description: t('quizScoreProceed', { score: result.score })
+                                        title: t('moduleQuizPassed', 'Quiz Passed!'),
+                                        description: t('quizScoreProceed', {
+                                            score: result.score,
+                                            defaultValue: `Great job! You scored ${result.score}%. Proceeding to the next lesson.`
+                                        })
                                     })
                                 } else {
+                                    const passingScore = (block.content_data as Record<string, unknown> | null)?.passing_score_percentage ?? moduleData?.module.passing_score_percentage ?? 80
                                     toast({
-                                        title: t('quizNotPassed'),
-                                        description: t('quizScoreReview', { score: result.score }),
+                                        title: t('quizNotPassed', 'Quiz Not Passed'),
+                                        description: t('quizScoreReview', {
+                                            score: result.score,
+                                            defaultValue: `You scored ${result.score}%. A passing score of ${passingScore}% is required to unlock subsequent lessons.`
+                                        }),
                                         variant: 'destructive'
                                     })
                                 }
@@ -2209,84 +2285,103 @@ export default function TrainingPlayer() {
 
                         <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
                             <div className="space-y-1">
-                                {moduleData.blocks.map((block, idx) => (
-                                    <button
-                                        key={block.id}
-                                        onClick={() => setActiveBlockIndex(idx)}
-                                        className={cn(
-                                            "w-full flex items-start gap-4 p-4 rounded-xl text-sm transition-all duration-200 group relative overflow-hidden",
-                                            idx === activeBlockIndex
-                                                ? "bg-hotel-gold/15 text-white ring-1 ring-hotel-gold/30"
-                                                : "text-white/70 hover:bg-white/5 hover:text-white"
-                                        )}
-                                    >
-                                        {idx === activeBlockIndex && (
-                                            <m.div
-                                                layoutId="active-pill"
-                                                className={cn(
-                                                    "absolute top-0 bottom-0 w-1 bg-hotel-gold",
-                                                    isRTL ? "end-0" : "start-0"
-                                                )}
-                                            />
-                                        )}
-                                        <div className={cn(
-                                            "mt-0.5 shrink-0 transition-colors",
-                                            idx === activeBlockIndex ? "text-hotel-gold" : "text-white/40 group-hover:text-white/60"
-                                        )}>
-                                            {block.type === 'video' && <VideoIcon className="w-4 h-4" />}
-                                            {block.type === 'audio' && <Headphones className="w-4 h-4" />}
-                                            {block.type === 'interactive' && <Gamepad2 className="w-4 h-4" />}
-                                            {block.type === 'quiz' && <HelpCircle className="w-4 h-4" />}
-                                            {block.type === 'image' && <ImageIcon className="w-4 h-4" />}
-                                            {block.type === 'text' && <FileText className="w-4 h-4" />}
-                                            {block.type === 'document_link' && <LinkIcon className="w-4 h-4" />}
-                                            {block.type === 'sop_reference' && <BookOpen className="w-4 h-4" />}
-                                        </div>
-                                        <div className={cn(
-                                            "flex-1 text-left",
-                                            isRTL && "text-right"
-                                        )}>
-                                            <p className={cn(
-                                                "font-medium leading-tight line-clamp-2",
-                                                idx === activeBlockIndex ? "text-white" : ""
+                                {moduleData.blocks.map((block, idx) => {
+                                    const itemState = progression.blockStates[block.id] || 'AVAILABLE'
+                                    const isLocked = itemState === 'LOCKED'
+                                    const isActive = idx === activeBlockIndex
+
+                                    return (
+                                        <button
+                                            key={block.id}
+                                            onClick={() => handleSelectBlock(idx)}
+                                            className={cn(
+                                                "w-full flex items-start gap-4 p-4 rounded-xl text-sm transition-all duration-200 group relative overflow-hidden",
+                                                isActive
+                                                    ? "bg-hotel-gold/15 text-white ring-1 ring-hotel-gold/30"
+                                                    : isLocked
+                                                        ? "text-white/40 opacity-60 hover:bg-white/5 cursor-pointer"
+                                                        : "text-white/70 hover:bg-white/5 hover:text-white"
+                                            )}
+                                        >
+                                            {isActive && (
+                                                <m.div
+                                                    layoutId="active-pill"
+                                                    className={cn(
+                                                        "absolute top-0 bottom-0 w-1 bg-hotel-gold",
+                                                        isRTL ? "end-0" : "start-0"
+                                                    )}
+                                                />
+                                            )}
+                                            <div className={cn(
+                                                "mt-0.5 shrink-0 transition-colors",
+                                                isActive
+                                                    ? "text-hotel-gold"
+                                                    : isLocked
+                                                        ? "text-white/30"
+                                                        : "text-white/40 group-hover:text-white/60"
                                             )}>
-                                                {block.title ||
-                                                    (block.type === 'sop_reference'
-                                                        ? moduleData.referencedTitles?.[
-                                                            ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
-                                                            || (block as TrainingContentBlock).source_document_id
-                                                            || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
-                                                          ] : '') ||
-                                                    (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
-                                                    t('blockTitle', { number: idx + 1 })}
-                                            </p>
-                                            <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider">
-                                                {(block.title ||
-                                                    (block.type === 'sop_reference'
-                                                        ? moduleData.referencedTitles?.[
-                                                            ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
-                                                            || (block as TrainingContentBlock).source_document_id
-                                                            || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
-                                                          ] : '') ||
-                                                    (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
-                                                    ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
-                                                    : block.type.replace('_', ' ')
-                                                }
-                                            </p>
-                                        </div>
-                                        {block.type === 'quiz' ? (() => {
-                                            const quizResult = quizResultsById[getQuizProgressKey(block)]
-                                            if (!quizResult) return null
-                                            return quizResult.passed
-                                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                                : <XCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-                                        })() : (
-                                            (completedBlocks.has(block.id) || completedMediaBlocks.has(block.id)) && (
-                                                <CheckCircle className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                                            )
-                                        )}
-                                    </button>
-                                ))}
+                                                {isLocked ? (
+                                                    <Lock className="w-4 h-4" />
+                                                ) : block.type === 'video' ? (
+                                                    <VideoIcon className="w-4 h-4" />
+                                                ) : block.type === 'audio' ? (
+                                                    <Headphones className="w-4 h-4" />
+                                                ) : block.type === 'interactive' ? (
+                                                    <Gamepad2 className="w-4 h-4" />
+                                                ) : block.type === 'quiz' ? (
+                                                    <HelpCircle className="w-4 h-4" />
+                                                ) : block.type === 'image' ? (
+                                                    <ImageIcon className="w-4 h-4" />
+                                                ) : block.type === 'text' ? (
+                                                    <FileText className="w-4 h-4" />
+                                                ) : block.type === 'document_link' ? (
+                                                    <LinkIcon className="w-4 h-4" />
+                                                ) : (
+                                                    <BookOpen className="w-4 h-4" />
+                                                )}
+                                            </div>
+                                            <div className={cn(
+                                                "flex-1 text-left",
+                                                isRTL && "text-right"
+                                            )}>
+                                                <p className={cn(
+                                                    "font-medium leading-tight line-clamp-2",
+                                                    isActive ? "text-white" : isLocked ? "text-white/50" : ""
+                                                )}>
+                                                    {block.title ||
+                                                        (block.type === 'sop_reference'
+                                                            ? moduleData.referencedTitles?.[
+                                                                ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
+                                                                || (block as TrainingContentBlock).source_document_id
+                                                                || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
+                                                              ] : '') ||
+                                                        (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
+                                                        t('blockTitle', { number: idx + 1 })}
+                                                </p>
+                                                <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider">
+                                                    {(block.title ||
+                                                        (block.type === 'sop_reference'
+                                                            ? moduleData.referencedTitles?.[
+                                                                ((block.content_data as Record<string, unknown> | null)?.sop_id as string)
+                                                                || (block as TrainingContentBlock).source_document_id
+                                                                || ((block.content_data as Record<string, unknown> | null)?.document_id as string)
+                                                              ] : '') ||
+                                                        (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : ''))
+                                                        ? `${t('blockTitle', { number: idx + 1 })} • ${block.type.replace('_', ' ')}`
+                                                        : block.type.replace('_', ' ')
+                                                    }
+                                                </p>
+                                            </div>
+                                            {isLocked ? (
+                                                <Lock className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
+                                            ) : itemState === 'COMPLETED' ? (
+                                                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                            ) : itemState === 'RETRY_REQUIRED' || itemState === 'FAILED' ? (
+                                                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                                            ) : null}
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
                     </m.div>
@@ -2701,36 +2796,52 @@ export default function TrainingPlayer() {
                     >
                         {/* Intelligent Button Content */}
                         {(() => {
-                            if (isLastBlock) {
+                            if (progression.isModuleComplete || (isLastBlock && canProceedToNext && (!activeBlock || activeBlock.type !== 'quiz' || activeQuizPassed))) {
                                 return (
                                     <>
                                         <CheckCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
-                                        <span className="hidden sm:inline">
-                                            {activeBlock?.type === 'quiz' && !activeQuizPassed
-                                                ? t('completeQuiz', 'Complete quiz')
-                                                : t('completeModule')}
-                                        </span>
-                                        <span className="sm:hidden">
-                                            {activeBlock?.type === 'quiz' && !activeQuizPassed
-                                                ? t('completeQuiz', 'Complete quiz')
-                                                : t('complete', 'Complete')}
-                                        </span>
+                                        <span>{t('completeModule', 'Complete Module')}</span>
+                                    </>
+                                )
+                            }
+
+                            if (activeBlock?.type === 'quiz') {
+                                if (activeQuizPassed) {
+                                    return (
+                                        <>
+                                            <span className="hidden md:inline">{t('continueToNextLesson', 'Next Lesson')}</span>
+                                            <span className="md:hidden">{t('next', 'Next')}</span>
+                                            <ChevronRight className={cn(
+                                                "h-4 w-4 md:h-5 md:w-5",
+                                                isRTL ? "me-2 md:me-3 rotate-180" : "ms-2 md:ms-3"
+                                            )} />
+                                        </>
+                                    )
+                                }
+                                if (activeBlockState === 'RETRY_REQUIRED' || activeBlockState === 'FAILED') {
+                                    return (
+                                        <>
+                                            <RotateCcw className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
+                                            <span>{t('retryQuiz', 'Retry Quiz')}</span>
+                                        </>
+                                    )
+                                }
+                                return (
+                                    <>
+                                        <HelpCircle className={cn("h-4 w-4 md:h-5 md:w-5", isRTL ? "ms-2 md:ms-3" : "me-2 md:me-3")} />
+                                        <span>{t('takeQuiz', 'Take Quiz')}</span>
                                     </>
                                 )
                             }
 
                             return (
                                 <>
-                                    <span className="hidden md:inline">
-                                        {activeBlock?.type === 'quiz' && !activeQuizPassed
-                                            ? t('completeQuiz', 'Complete quiz')
-                                            : t('nextStep')}
-                                    </span>
+                                    <span className="hidden md:inline">{t('nextStep', 'Next Step')}</span>
+                                    <span className="md:hidden">{t('next', 'Next')}</span>
                                     <ChevronRight className={cn(
                                         "h-4 w-4 md:h-5 md:w-5",
                                         isRTL ? "me-2 md:me-3 rotate-180" : "ms-2 md:ms-3"
                                     )} />
-                                    <ChevronRight className="h-4 w-4 md:hidden" />
                                 </>
                             )
                         })()}

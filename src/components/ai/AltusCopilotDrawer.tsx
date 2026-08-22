@@ -69,9 +69,14 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, streamedText, isStreaming, isSearchingKnowledge])
 
-  // Keyboard shortcut listener (Cmd+K / Ctrl+K)
+  // Keyboard shortcut listener (Escape & Cmd+K / Ctrl+K)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (isOpen) {
+          onClose()
+        }
+      }
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         if (isOpen) {
@@ -147,32 +152,33 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 pointer-events-none flex justify-end">
-        {/* Backdrop for mobile */}
+      <div className="fixed inset-0 z-[9995] pointer-events-none flex justify-end">
+        {/* Backdrop for desktop & mobile to click outside and close */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm pointer-events-auto sm:hidden"
+          className="absolute inset-0 bg-black/50 backdrop-blur-xs pointer-events-auto cursor-pointer"
+          aria-label="Close drawer backdrop"
         />
 
         {/* Sliding Drawer Container */}
         <motion.div
-          initial={{ x: isArabic ? -400 : 400, opacity: 0 }}
+          initial={{ x: isArabic ? -450 : 450, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
-          exit={{ x: isArabic ? -400 : 400, opacity: 0 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          exit={{ x: isArabic ? -450 : 450, opacity: 0 }}
+          transition={{ type: 'spring', damping: 28, stiffness: 240 }}
           dir={isArabic ? 'rtl' : 'ltr'}
           className={cn(
-            'pointer-events-auto relative flex flex-col h-full bg-card/95 backdrop-blur-xl border-s border-border shadow-2xl transition-all duration-300',
-            isExpanded ? 'w-full md:w-[650px]' : 'w-full sm:w-[440px]'
+            'pointer-events-auto relative flex flex-col h-full bg-card border-s border-border shadow-2xl transition-all duration-300 z-10',
+            isExpanded ? 'w-full md:w-[680px]' : 'w-full sm:w-[460px]'
           )}
         >
-          {/* Header */}
-          <div className="p-4 border-b border-border flex items-center justify-between bg-muted/40">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md">
+          {/* Header with high contrast, distinct solid background and clear controls */}
+          <div className="px-4 py-3.5 border-b border-border flex items-center justify-between bg-card shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-500 to-indigo-600 flex items-center justify-center text-white shadow-md shrink-0">
                 <Sparkles className="w-5 h-5" />
               </div>
               <div>
@@ -180,21 +186,21 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
                   <h3 className="font-bold text-sm tracking-tight text-foreground">
                     Altus Copilot
                   </h3>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                  <Badge variant="outline" className="text-[10px] font-semibold px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
                     RAG 2.0
                   </Badge>
                 </div>
-                <p className="text-[11px] text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground line-clamp-1">
                   {isArabic ? 'المساعد الذكي لعمليات ألتوس' : 'Altus Hospitality Operations Intelligence'}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted"
                 onClick={() => {
                   clearChat()
                   setActiveSources([])
@@ -206,7 +212,7 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground hidden sm:inline-flex"
+                className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted hidden sm:inline-flex"
                 onClick={() => setIsExpanded(!isExpanded)}
                 title={isExpanded ? 'Collapse' : 'Expand'}
               >
@@ -215,10 +221,12 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                className="h-8 w-8 rounded-full bg-muted/60 hover:bg-muted text-foreground border border-border/60 hover:border-border transition-colors cursor-pointer"
                 onClick={onClose}
+                aria-label="Close Copilot"
+                title={isArabic ? 'إغلاق (Esc)' : 'Close (Esc)'}
               >
-                <X className="w-4 h-4" />
+                <X className="w-4.5 h-4.5" />
               </Button>
             </div>
           </div>

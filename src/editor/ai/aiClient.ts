@@ -12,7 +12,7 @@ export interface OpenAIResult {
   }
 }
 
-const DEFAULT_MODEL = 'Qwen/Qwen2.5-7B-Instruct'
+const DEFAULT_MODEL = 'meta-llama/Llama-3.3-70B-Instruct'
 const DEFAULT_MAX_TOKENS = 1200
 const DEFAULT_TEMPERATURE = 0.4
 

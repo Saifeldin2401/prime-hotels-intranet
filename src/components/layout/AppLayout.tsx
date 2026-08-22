@@ -243,15 +243,17 @@ export function AppLayout({ children }: AppLayoutProps) {
       </AnimatePresence>
 
       {/* Floating Altus Copilot Trigger Button */}
-      <button
-        onClick={() => setCopilotOpen(true)}
-        className="fixed bottom-6 end-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-semibold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
-        aria-label="Open Altus AI Copilot"
-        title="Open Altus AI Copilot (Cmd+K / Ctrl+K)"
-      >
-        <Sparkles className="w-4 h-4 animate-pulse" />
-        <span className="hidden sm:inline">Altus Copilot</span>
-      </button>
+      {!copilotOpen && (
+        <button
+          onClick={() => setCopilotOpen(true)}
+          className="fixed bottom-6 end-6 z-40 flex items-center gap-2 px-3.5 py-2.5 rounded-full bg-gradient-to-r from-amber-500 to-indigo-600 text-white font-semibold text-xs shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 cursor-pointer"
+          aria-label="Open Altus AI Copilot"
+          title="Open Altus AI Copilot (Cmd+K / Ctrl+K)"
+        >
+          <Sparkles className="w-4 h-4 animate-pulse" />
+          <span className="hidden sm:inline">Altus Copilot</span>
+        </button>
+      )}
 
       <Suspense fallback={null}>
         {shouldRenderDeferredChrome && <WizardTrigger />}

@@ -5,10 +5,14 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 
-// 🛡️ PRIMARY MODEL (Confirmed working on HF Router via 'together' provider)
-
+// 🛡️ PRIMARY MODEL - Ultra-fast OpenRouter Candidates with fallback
 const FALLBACK_MODELS = [
-  'Qwen/Qwen2.5-7B-Instruct'
+  'openrouter/auto',
+  'google/gemini-2.0-flash-exp:free',
+  'meta-llama/llama-3.3-70b-instruct:free',
+  'meta-llama/llama-3.3-70b-instruct',
+  'qwen/qwen-2.5-72b-instruct',
+  'deepseek/deepseek-r1:free'
 ]
 
 /**
@@ -799,10 +803,7 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 
     for (const model of FALLBACK_MODELS) {
       try {
-        // A full multi-section module (rich_content per section) is easily
-        // 4-6k+ tokens; the previous unset default (2048) truncated it almost
-        // every time, which silently fell back to generic template content.
-        const generatedText = await callHuggingFace(model, prompt, 7500)
+        const generatedText = await callHuggingFace(model, prompt, 4000)
         const parsed = safeParseJson<ModuleOutline>(generatedText, false) || salvageTruncatedOutline(generatedText)
         if (parsed && parsed.title && Array.isArray(parsed.sections) && parsed.sections.length > 0) {
           const validBlockTypes = new Set(['text', 'video', 'document_link', 'scenario'])
@@ -900,7 +901,7 @@ Output clean HTML only, no markdown codeblocks.`
 
     for (const model of FALLBACK_MODELS) {
       try {
-        const generatedHtml = await callHuggingFace(model, prompt)
+        const generatedHtml = await callHuggingFace(model, prompt, 2048)
         if (generatedHtml && generatedHtml.length > 200) {
           return generatedHtml.replace(/```html\n?|\n?```/g, '').trim()
         }

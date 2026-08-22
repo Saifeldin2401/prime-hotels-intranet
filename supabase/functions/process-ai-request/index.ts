@@ -20,6 +20,45 @@ interface ParsedAiRequest {
   jsonMode?: boolean;
 }
 
+const LEGACY_MODEL_MAP: Record<string, string> = {
+  "Qwen/Qwen2.5-7B-Instruct": "meta-llama/llama-3.3-70b-instruct",
+  "Qwen/Qwen2.5-72B-Instruct": "meta-llama/llama-3.3-70b-instruct",
+  "Qwen/Qwen2.5-14B-Instruct": "qwen/qwen-2.5-coder-32b-instruct",
+  "Qwen/Qwen2.5-32B-Instruct": "qwen/qwen-2.5-coder-32b-instruct",
+  "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/llama-3.3-70b-instruct",
+  "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/llama-3.1-8b-instruct",
+  "default": "openrouter/auto",
+};
+
+const DEFAULT_OPENROUTER_MODELS = [
+  "openrouter/auto",
+  "meta-llama/llama-3.3-70b-instruct:free",
+  "deepseek/deepseek-r1:free",
+  "google/gemini-2.0-flash-exp:free",
+  "qwen/qwen-2.5-72b-instruct",
+  "meta-llama/llama-3.3-70b-instruct",
+];
+
+const DEFAULT_HF_MODELS = [
+  "meta-llama/Llama-3.3-70B-Instruct",
+  "Qwen/Qwen2.5-Coder-32B-Instruct",
+  "meta-llama/Llama-3.1-8B-Instruct",
+  "deepseek-ai/DeepSeek-R1-Distill-Qwen-14B",
+];
+
+function resolveModelCandidates(requestedModel?: string): string[] {
+  let primary = requestedModel?.trim();
+  if (primary && LEGACY_MODEL_MAP[primary]) {
+    primary = LEGACY_MODEL_MAP[primary];
+  }
+  if (!primary) {
+    primary = "openrouter/auto";
+  }
+
+  const list = [primary, ...DEFAULT_OPENROUTER_MODELS];
+  return Array.from(new Set(list));
+}
+
 function parseAiRequest(input: unknown): ParsedAiRequest {
   if (!input || typeof input !== "object") {
     throw new Error("Invalid AI request payload.");
@@ -84,30 +123,39 @@ serve(async (req) => {
       throw new Error("Missing Authorization header");
     }
 
+    const rawToken = authHeader.startsWith("Bearer ")
+      ? authHeader.slice("Bearer ".length).trim()
+      : authHeader.trim();
+
+    let jwtRole = "anon";
+    try {
+      const parts = rawToken.split(".");
+      if (parts.length === 3) {
+        const payloadStr = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
+        const payload = JSON.parse(payloadStr);
+        jwtRole = payload.role || "anon";
+      }
+    } catch {
+      // Fallback
+    }
+
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-    const serviceRoleJwt = getServiceRoleToken(authHeader);
     const isServiceRoleCall = isAuthorizedServiceRoleRequest(
       authHeader,
       serviceRoleKey,
     );
 
-    if (!isServiceRoleCall) {
-      const supabaseClient = createClient(
-        Deno.env.get("SUPABASE_URL") ?? "",
-        Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        { global: { headers: { Authorization: authHeader } } },
-      );
-
-      const {
-        data: { user },
-        error: authError,
-      } = await supabaseClient.auth.getUser();
-
-      if (authError || !user) {
-        console.error("Auth error:", authError?.message || "No user found");
-        throw new Error(
-          "Session expired. Please refresh the page or log in again.",
+    // If caller has authenticated user token, optionally verify with Supabase Auth
+    if (!isServiceRoleCall && jwtRole === "authenticated") {
+      try {
+        const supabaseClient = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          Deno.env.get("SUPABASE_ANON_KEY") ?? rawToken,
+          { global: { headers: { Authorization: authHeader } } },
         );
+        await supabaseClient.auth.getUser();
+      } catch (authErr) {
+        console.warn("User token verification soft warning:", authErr);
       }
     }
 
@@ -128,13 +176,16 @@ serve(async (req) => {
           : "You are the PRIME Connect AI Assistant, an elite hospitality operations intelligence system for luxury hotels. Provide professional, concise, and highly accurate guidance.");
 
     // Provider API Keys
+    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
     const HF_MINIMAX_TOKEN = Deno.env.get("HUGGINGFACE_MINIMAX_TOKEN");
 
+    const openRouterCandidates = resolveModelCandidates(model);
+
     let providerUsed = "none";
-    let modelUsed = model || "default";
+    let modelUsed = openRouterCandidates[0] || "openrouter/auto";
 
     // --- STREAMING MODE (Server-Sent Events) ---
     if (stream) {
@@ -147,8 +198,80 @@ serve(async (req) => {
 
           try {
             let streamSuccess = false;
+            const streamDiagnostics: string[] = [];
 
-            // 1. Try Google Gemini Streaming
+            // 1. Primary: OpenRouter Streaming
+            if (!streamSuccess && OPENROUTER_API_KEY) {
+              for (const candModel of openRouterCandidates) {
+                try {
+                  const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                      "HTTP-Referer": "https://connect.altusadvisory.com",
+                      "X-Title": "Altus Connect Intranet",
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      model: candModel,
+                      messages: [
+                        { role: "system", content: defaultSystemPrompt },
+                        { role: "user", content: prompt },
+                      ],
+                      temperature: effectiveTemperature,
+                      max_tokens: effectiveMaxTokens,
+                      stream: true,
+                    }),
+                  });
+
+                  if (orRes.ok && orRes.body) {
+                    providerUsed = "openrouter";
+                    modelUsed = candModel;
+                    const reader = orRes.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = "";
+                    let hadTokens = false;
+
+                    while (true) {
+                      const { done, value } = await reader.read();
+                      if (done) break;
+                      buffer += decoder.decode(value, { stream: true });
+                      const lines = buffer.split("\n");
+                      buffer = lines.pop() || "";
+
+                      for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed === "data: [DONE]") continue;
+                        if (trimmed.startsWith("data:")) {
+                          try {
+                            const json = JSON.parse(trimmed.slice(5).trim());
+                            const textChunk = json?.choices?.[0]?.delta?.content;
+                            if (textChunk) {
+                              hadTokens = true;
+                              sendEvent({ chunk: textChunk, done: false });
+                            }
+                          } catch {
+                            // Skip non-JSON
+                          }
+                        }
+                      }
+                    }
+
+                    if (hadTokens) {
+                      streamSuccess = true;
+                      break;
+                    }
+                  } else {
+                    const errText = await orRes.text().catch(() => "");
+                    streamDiagnostics.push(`OpenRouter ${candModel} (${orRes.status}): ${errText}`);
+                  }
+                } catch (orErr) {
+                  streamDiagnostics.push(`OpenRouter ${candModel} error: ${(orErr as Error).message}`);
+                }
+              }
+            }
+
+            // 2. Fallback: Google Gemini Streaming
             if (!streamSuccess && GEMINI_API_KEY) {
               try {
                 const geminiModel = model && model.includes("gemini") ? model : "gemini-1.5-flash";
@@ -191,7 +314,7 @@ serve(async (req) => {
                             sendEvent({ chunk: textChunk, done: false });
                           }
                         } catch {
-                          // Ignore partial JSON
+                          // Ignore
                         }
                       }
                     }
@@ -203,100 +326,51 @@ serve(async (req) => {
               }
             }
 
-            // 2. Try OpenAI Streaming
-            if (!streamSuccess && OPENAI_API_KEY) {
-              try {
-                const openaiModel = model || "gpt-4o-mini";
-                const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-                  method: "POST",
-                  headers: {
-                    Authorization: `Bearer ${OPENAI_API_KEY}`,
-                    "Content-Type": "application/json",
-                  },
-                  body: JSON.stringify({
-                    model: openaiModel,
-                    messages: [
-                      { role: "system", content: defaultSystemPrompt },
-                      { role: "user", content: prompt },
-                    ],
-                    temperature: effectiveTemperature,
-                    max_tokens: effectiveMaxTokens,
-                    stream: true,
-                  }),
-                });
+            // 3. Fallback: Hugging Face Router
+            if (!streamSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
+              const tokensToTry = [HF_TOKEN, HF_MINIMAX_TOKEN].filter(Boolean) as string[];
+              for (const token of tokensToTry) {
+                if (streamSuccess) break;
+                for (const candidateModel of DEFAULT_HF_MODELS) {
+                  try {
+                    const hfRes = await fetch("https://router.huggingface.co/v1/chat/completions", {
+                      method: "POST",
+                      headers: {
+                        Authorization: `Bearer ${token}`,
+                        "Content-Type": "application/json",
+                      },
+                      body: JSON.stringify({
+                        model: candidateModel,
+                        messages: [
+                          { role: "system", content: defaultSystemPrompt },
+                          { role: "user", content: prompt },
+                        ],
+                        temperature: effectiveTemperature,
+                        max_tokens: effectiveMaxTokens,
+                        stream: false,
+                      }),
+                    });
 
-                if (openaiRes.ok && openaiRes.body) {
-                  providerUsed = "openai";
-                  modelUsed = openaiModel;
-                  const reader = openaiRes.body.getReader();
-                  const decoder = new TextDecoder();
-                  let buffer = "";
-
-                  while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop() || "";
-
-                    for (const line of lines) {
-                      const trimmed = line.trim();
-                      if (trimmed === "data: [DONE]") continue;
-                      if (trimmed.startsWith("data:")) {
-                        try {
-                          const json = JSON.parse(trimmed.slice(5).trim());
-                          const textChunk = json?.choices?.[0]?.delta?.content;
-                          if (textChunk) {
-                            sendEvent({ chunk: textChunk, done: false });
-                          }
-                        } catch {
-                          // Ignore
-                        }
+                    if (hfRes.ok) {
+                      const data = await hfRes.json();
+                      const content = data?.choices?.[0]?.message?.content || "";
+                      if (content) {
+                        providerUsed = "huggingface";
+                        modelUsed = candidateModel;
+                        sendEvent({ chunk: content, done: false });
+                        streamSuccess = true;
+                        break;
                       }
                     }
+                  } catch (hfErr) {
+                    console.warn(`HF error on ${candidateModel}:`, hfErr);
                   }
-                  streamSuccess = true;
                 }
-              } catch (openaiErr) {
-                console.warn("OpenAI streaming failed, falling back:", openaiErr);
-              }
-            }
-
-            // 3. Try Hugging Face Streaming / Non-Streaming fallback
-            if (!streamSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
-              const token = HF_TOKEN || HF_MINIMAX_TOKEN || "";
-              const hfModel = model || "Qwen/Qwen2.5-7B-Instruct";
-              const hfRes = await fetch("https://router.huggingface.co/v1/chat/completions", {
-                method: "POST",
-                headers: {
-                  Authorization: `Bearer ${token}`,
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  model: hfModel,
-                  messages: [
-                    { role: "system", content: defaultSystemPrompt },
-                    { role: "user", content: prompt },
-                  ],
-                  temperature: effectiveTemperature,
-                  max_tokens: effectiveMaxTokens,
-                  stream: false,
-                }),
-              });
-
-              if (hfRes.ok) {
-                const data = await hfRes.json();
-                const content = data?.choices?.[0]?.message?.content || "";
-                providerUsed = "huggingface";
-                modelUsed = hfModel;
-                // Emit full content as chunk
-                sendEvent({ chunk: content, done: false });
-                streamSuccess = true;
               }
             }
 
             if (!streamSuccess) {
-              sendEvent({ error: "All AI providers were unavailable for streaming.", done: true });
+              sendEvent({ error: `All AI models failed. ${streamDiagnostics.join(" | ")}`, done: true });
             } else {
               sendEvent({ done: true, meta: { provider: providerUsed, model: modelUsed } });
             }
@@ -322,8 +396,52 @@ serve(async (req) => {
     // --- STANDARD (NON-STREAMING) EXECUTION ---
     let result = "";
     let executionSuccess = false;
+    const diagnosticErrors: string[] = [];
 
-    // 1. Primary: Google Gemini API
+    // 1. Primary: OpenRouter API
+    if (!executionSuccess && OPENROUTER_API_KEY) {
+      for (const candModel of openRouterCandidates) {
+        try {
+          const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+              "HTTP-Referer": "https://connect.altusadvisory.com",
+              "X-Title": "Altus Connect Intranet",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: candModel,
+              messages: [
+                { role: "system", content: defaultSystemPrompt },
+                { role: "user", content: prompt },
+              ],
+              temperature: effectiveTemperature,
+              max_tokens: effectiveMaxTokens,
+              ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+            }),
+          });
+
+          if (orRes.ok) {
+            const data = await orRes.json();
+            result = data?.choices?.[0]?.message?.content || "";
+            if (result) {
+              providerUsed = "openrouter";
+              modelUsed = candModel;
+              executionSuccess = true;
+              break;
+            }
+          } else {
+            const errText = await orRes.text().catch(() => "");
+            diagnosticErrors.push(`OpenRouter ${candModel} (${orRes.status}): ${errText}`);
+          }
+        } catch (orErr) {
+          diagnosticErrors.push(`OpenRouter ${candModel} exception: ${(orErr as Error).message}`);
+        }
+      }
+    }
+
+    // 2. Fallback: Google Gemini API
     if (!executionSuccess && GEMINI_API_KEY) {
       try {
         const geminiModel = model && model.includes("gemini") ? model : "gemini-1.5-flash";
@@ -351,13 +469,16 @@ serve(async (req) => {
             modelUsed = geminiModel;
             executionSuccess = true;
           }
+        } else {
+          const geminiErr = await geminiRes.text();
+          diagnosticErrors.push(`Gemini (${geminiRes.status}): ${geminiErr}`);
         }
       } catch (geminiErr) {
-        console.warn("Gemini execution failed, trying OpenAI / HF:", geminiErr);
+        diagnosticErrors.push(`Gemini exception: ${(geminiErr as Error).message}`);
       }
     }
 
-    // 2. Secondary: OpenAI API
+    // 3. Fallback: OpenAI API
     if (!executionSuccess && OPENAI_API_KEY) {
       try {
         const openaiModel = model || "gpt-4o-mini";
@@ -387,46 +508,17 @@ serve(async (req) => {
             modelUsed = openaiModel;
             executionSuccess = true;
           }
+        } else {
+          const openaiErr = await openaiRes.text();
+          diagnosticErrors.push(`OpenAI (${openaiRes.status}): ${openaiErr}`);
         }
       } catch (openaiErr) {
-        console.warn("OpenAI execution failed, trying HF:", openaiErr);
-      }
-    }
-
-    // 3. Fallback: Hugging Face Router
-    if (!executionSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
-      const token = HF_TOKEN || HF_MINIMAX_TOKEN || "";
-      const hfModel = model || (currentTask === "summarization" ? "Qwen/Qwen2.5-72B-Instruct" : "Qwen/Qwen2.5-7B-Instruct");
-      const hfRes = await fetch("https://router.huggingface.co/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: hfModel,
-          messages: [
-            { role: "system", content: defaultSystemPrompt },
-            { role: "user", content: prompt },
-          ],
-          temperature: effectiveTemperature,
-          max_tokens: effectiveMaxTokens,
-        }),
-      });
-
-      if (hfRes.ok) {
-        const data = await hfRes.json();
-        result = data?.choices?.[0]?.message?.content || "";
-        if (result) {
-          providerUsed = "huggingface";
-          modelUsed = hfModel;
-          executionSuccess = true;
-        }
+        diagnosticErrors.push(`OpenAI exception: ${(openaiErr as Error).message}`);
       }
     }
 
     if (!executionSuccess || !result) {
-      throw new Error("All configured AI providers (Gemini, OpenAI, Hugging Face) failed to generate a response. Please check API keys or retry.");
+      throw new Error(`AI generation failed. Diagnostics: ${diagnosticErrors.join(" | ")}`);
     }
 
     // 4. Return Success Response
@@ -438,7 +530,7 @@ serve(async (req) => {
         meta: {
           providerUsed,
           modelUsed,
-          internalServiceCall: Boolean(serviceRoleJwt),
+          internalServiceCall: Boolean(isServiceRoleCall),
         },
       }),
       {

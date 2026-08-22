@@ -18,7 +18,13 @@ interface Message {
     timestamp: Date
 }
 
-const FALLBACK_MODELS = ['Qwen/Qwen2.5-7B-Instruct']
+const FALLBACK_MODELS = [
+    'openrouter/auto',
+    'google/gemini-2.0-flash-exp:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'meta-llama/llama-3.3-70b-instruct',
+    'qwen/qwen-2.5-72b-instruct'
+]
 
 const SYSTEM_PROMPT = `You are the Altus Advisory Configuration Assistant, an AI built to guide Corporate Administrators and HR Managers in modifying system variables.
 You understand the following 5 modules deeply:

@@ -812,7 +812,7 @@ Return ONLY valid JSON:
       const { data, error } = await supabase.functions.invoke('process-ai-request', {
         body: {
           task: 'chat',
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'meta-llama/Llama-3.3-70B-Instruct',
           prompt,
           temperature: 0.4,
           max_tokens: 900,
@@ -892,7 +892,7 @@ WARNING: Ensure that you do NOT include any raw, unescaped newlines inside the J
       const { data, error } = await supabase.functions.invoke('process-ai-request', {
         body: {
           task: 'chat',
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'meta-llama/Llama-3.3-70B-Instruct',
           prompt,
           temperature: 0.35,
           max_tokens: 1400,
@@ -963,7 +963,7 @@ Return ONLY valid JSON:
       const { data, error } = await supabase.functions.invoke('process-ai-request', {
         body: {
           task: 'chat',
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'meta-llama/Llama-3.3-70B-Instruct',
           prompt,
           temperature: 0.3,
           max_tokens: 900,
@@ -1007,7 +1007,7 @@ Return ONLY valid JSON:
         const { data: arData } = await supabase.functions.invoke('process-ai-request', {
           body: {
             task: 'chat',
-            model: 'Qwen/Qwen2.5-7B-Instruct',
+            model: 'meta-llama/Llama-3.3-70B-Instruct',
             prompt: arPrompt,
             temperature: 0.2,
           },
@@ -1063,7 +1063,7 @@ Return ONLY valid JSON:
       const { data, error } = await supabase.functions.invoke('process-ai-request', {
         body: {
           task: 'chat',
-          model: 'Qwen/Qwen2.5-7B-Instruct',
+          model: 'meta-llama/Llama-3.3-70B-Instruct',
           prompt,
           temperature: 0.2,
           max_tokens: 900,

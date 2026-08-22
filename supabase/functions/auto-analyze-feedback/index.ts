@@ -3,6 +3,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
+const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
 const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
@@ -16,9 +17,6 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // ===================================
-    // SECURITY: JWT Authentication Required
-    // ===================================
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(
@@ -30,7 +28,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Verify the JWT token
     const supabaseAuth = createClient(SUPABASE_URL!, SUPABASE_ANON_KEY!, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -71,7 +68,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Scope check with RLS using the authenticated user token.
     const { data: scopedFeedback, error: scopedError } = await supabaseAuth
       .from("document_feedback")
       .select(
@@ -112,7 +108,6 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_KEY!);
 
-    // Skip if already analyzed or no text
     if (
       scopedFeedback.ai_analysis_status === "completed" ||
       !scopedFeedback.feedback_text
@@ -125,7 +120,6 @@ Deno.serve(async (req) => {
       );
     }
 
-    // 2. Call Together.ai for analysis
     const prompt = `You are an AI assistant for a hotel intranet system. Analyze the following feedback left by an employee on a Knowledge Base document (SOP/Policy).
     
     DOCUMENT TITLE: ${scopedFeedback.documents?.title || "Unknown"}
@@ -144,27 +138,98 @@ Deno.serve(async (req) => {
       "actionable_item": "..."
     }`;
 
-    const response = await fetch(
-      "https://router.huggingface.co/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "Qwen/Qwen2.5-72B-Instruct",
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: 500,
-          temperature: 0.1,
-        }),
-      },
-    );
+    let analysis: any = null;
 
-    const aiResult = await response.json();
-    const content = aiResult.choices[0].message.content;
-    const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
-    const analysis = JSON.parse(cleanJson);
+    // 1. Primary: OpenRouter
+    if (OPENROUTER_API_KEY) {
+      const orModels = [
+        "openrouter/auto",
+        "meta-llama/llama-3.3-70b-instruct:free",
+        "deepseek/deepseek-r1:free",
+        "google/gemini-2.0-flash-exp:free"
+      ];
+
+      for (const model of orModels) {
+        try {
+          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+              "HTTP-Referer": "https://connect.altusadvisory.com",
+              "X-Title": "Altus Connect Feedback Analysis",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model,
+              messages: [{ role: "user", content: prompt }],
+              max_tokens: 500,
+              temperature: 0.1,
+              response_format: { type: "json_object" },
+            }),
+          });
+
+          if (response.ok) {
+            const aiResult = await response.json();
+            const content = aiResult.choices?.[0]?.message?.content || "";
+            const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
+            const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              analysis = JSON.parse(jsonMatch[0]);
+              break;
+            }
+          }
+        } catch (err) {
+          console.warn(`OpenRouter feedback model ${model} failed:`, err);
+        }
+      }
+    }
+
+    // 2. Fallback: Hugging Face
+    if (!analysis && HF_TOKEN) {
+      const candidateModels = [
+        "meta-llama/Llama-3.3-70B-Instruct",
+        "Qwen/Qwen2.5-Coder-32B-Instruct",
+        "meta-llama/Llama-3.1-8B-Instruct",
+      ];
+
+      for (const model of candidateModels) {
+        try {
+          const response = await fetch(
+            "https://router.huggingface.co/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${HF_TOKEN}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model,
+                messages: [{ role: "user", content: prompt }],
+                max_tokens: 500,
+                temperature: 0.1,
+              }),
+            },
+          );
+
+          if (response.ok) {
+            const aiResult = await response.json();
+            const content = aiResult.choices?.[0]?.message?.content || "";
+            const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
+            const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+            if (jsonMatch) {
+              analysis = JSON.parse(jsonMatch[0]);
+              break;
+            }
+          }
+        } catch (err) {
+          console.warn(`Feedback analysis model ${model} failed:`, err);
+        }
+      }
+    }
+
+    if (!analysis) {
+      throw new Error("Feedback analysis failed across all candidate AI models.");
+    }
 
     // 3. Update database
     const { error: updateError } = await supabase
@@ -188,7 +253,6 @@ Deno.serve(async (req) => {
         (scopedFeedback as any).documents?.title ?? "Knowledge Base Document";
       const deptId = (scopedFeedback as any).documents?.department_id ?? null;
 
-      // Resolve a department_head in the same department as the document
       let assigneeId: string | null = null;
       if (deptId) {
         const { data: deptUsers } = await supabase
@@ -222,13 +286,12 @@ Deno.serve(async (req) => {
         assigned_to_id: assigneeId,
         assigned_to: assigneeId,
         department_id: deptId,
-        due_date: new Date(Date.now() + 7 * 86400000).toISOString(), // 7-day default SLA
+        due_date: new Date(Date.now() + 7 * 86400000).toISOString(),
         is_deleted: false,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       });
     }
-    // ─────────────────────────────────────────────────────────────────────
 
     return new Response(JSON.stringify({ success: true, analysis }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
