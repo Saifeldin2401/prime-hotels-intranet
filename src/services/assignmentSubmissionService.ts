@@ -376,5 +376,42 @@ export const assignmentSubmissionService = {
     }
 
     return data as TrainingAssignmentSubmission
+  },
+
+  /**
+   * Fetches content block details (instructions, rubric, prompt) for a practical assignment.
+   */
+  async getAssignmentBlockDetails(
+    moduleId: string,
+    blockId: string
+  ): Promise<{
+    title?: string
+    instructions?: string
+    rubric?: string
+    passingScore?: number
+  } | null> {
+    try {
+      const { data, error } = await supabase
+        .from('training_content_blocks_v')
+        .select('id, title, content_data')
+        .eq('training_module_id', moduleId)
+        .eq('id', blockId)
+        .maybeSingle()
+
+      if (error || !data) {
+        return null
+      }
+
+      const cd = data.content_data as Record<string, unknown> | null
+      return {
+        title: data.title || (cd?.title as string),
+        instructions: (cd?.instructions as string) || (cd?.prompt as string) || (cd?.description as string) || '',
+        rubric: (cd?.instructor_rubric as string) || (cd?.grading_rubric as string) || (cd?.rubric as string) || '',
+        passingScore: typeof cd?.passing_score === 'number' ? cd.passing_score : undefined
+      }
+    } catch (e) {
+      console.warn('Failed to fetch block details for assignment:', e)
+      return null
+    }
   }
 }

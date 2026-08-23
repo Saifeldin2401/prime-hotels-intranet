@@ -1,7 +1,7 @@
 /**
  * Advanced Training Progression Engine
  *
- * Core state-driven learning flow engine for the PRIME Connect Training Player.
+ * Core state-driven learning flow engine for the ALTUS Connect Training Player.
  * Evaluates training item hierarchies, prerequisites, quiz passing thresholds,
  * retry/remediation logic, multi-quiz checkpoints, smart resume positions,
  * and direct navigation protection.

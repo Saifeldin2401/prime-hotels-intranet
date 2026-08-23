@@ -6,7 +6,7 @@ import {
   ModuleOutlineSchema,
 } from './schemas'
 
-describe('PRIME AI SDK & Client Architecture', () => {
+describe('ALTUS AI SDK & Client Architecture', () => {
   describe('extractJsonFromText', () => {
     it('extracts valid JSON from markdown code blocks', () => {
       const raw = '```json\n{"title": "Front Office SOP", "sections": []}\n```'

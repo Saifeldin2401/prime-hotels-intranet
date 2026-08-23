@@ -175,7 +175,7 @@ serve(async (req) => {
         ? "You are an expert hospitality operations analyst. Summarize the content concisely into structured key bullet points."
         : jsonMode
           ? "You are an expert luxury hotel operations AI. Respond ONLY with valid, minified JSON matching the requested structure."
-          : "You are the PRIME Connect AI Assistant, an elite hospitality operations intelligence system for luxury hotels. Provide professional, concise, and highly accurate guidance.");
+          : "You are the ALTUS Connect AI Assistant, an elite hospitality operations intelligence system for luxury hotels. Provide professional, concise, and highly accurate guidance.");
 
     // Provider API Keys
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";

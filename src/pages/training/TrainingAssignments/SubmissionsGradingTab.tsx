@@ -28,8 +28,13 @@ import {
   type TrainingAssignmentSubmission
 } from '@/services/assignmentSubmissionService'
 import {
+  aiService,
+  type AssignmentEvaluationResult
+} from '@/lib/gemini'
+import {
   AlertCircle,
   Award,
+  Check,
   CheckCircle2,
   Clock,
   Download,
@@ -37,17 +42,21 @@ import {
   FileCheck,
   FileText,
   Filter,
+  Lightbulb,
   Loader2,
   Paperclip,
   RotateCcw,
   Search,
+  Sparkles,
+  TrendingUp,
   UserCheck,
-  Users
+  Users,
+  Wand2
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 export function SubmissionsGradingTab() {
-  const { t } = useTranslation('training')
+  const { t, i18n } = useTranslation('training')
   const { toast } = useToast()
 
   const [submissions, setSubmissions] = useState<TrainingAssignmentSubmission[]>([])
@@ -61,6 +70,16 @@ export function SubmissionsGradingTab() {
   const [score, setScore] = useState<number>(100)
   const [feedback, setFeedback] = useState<string>('')
   const [isSubmittingReview, setIsSubmittingReview] = useState(false)
+
+  // AI Evaluation state
+  const [isEvaluatingAI, setIsEvaluatingAI] = useState(false)
+  const [aiResult, setAiResult] = useState<AssignmentEvaluationResult | null>(null)
+  const [blockDetails, setBlockDetails] = useState<{
+    title?: string
+    instructions?: string
+    rubric?: string
+    passingScore?: number
+  } | null>(null)
 
   useEffect(() => {
     loadSubmissions()
@@ -89,7 +108,63 @@ export function SubmissionsGradingTab() {
     setSelectedSubmission(sub)
     setScore(sub.score !== null && sub.score !== undefined ? sub.score : 100)
     setFeedback(sub.instructor_feedback || '')
+    setAiResult(null)
+    setBlockDetails(null)
     setReviewDialogOpen(true)
+
+    // Asynchronously retrieve assignment block configuration & rubric
+    assignmentSubmissionService
+      .getAssignmentBlockDetails(sub.training_module_id, sub.block_id)
+      .then((details) => {
+        setBlockDetails(details)
+      })
+  }
+
+  const handleRunAIEvaluation = async () => {
+    if (!selectedSubmission) return
+
+    setIsEvaluatingAI(true)
+    try {
+      const result = await aiService.evaluatePracticalAssignment({
+        moduleTitle: selectedSubmission.module?.title || 'Hotel Training Module',
+        blockTitle: blockDetails?.title,
+        assignmentInstructions: blockDetails?.instructions,
+        rubric: blockDetails?.rubric,
+        passingScore: blockDetails?.passingScore ?? 80,
+        submissionContent: selectedSubmission.submission_content || '',
+        attachmentNames: selectedSubmission.attachment_urls?.map((a) => a.name) || [],
+        language: i18n.language.startsWith('ar') ? 'Arabic' : 'English'
+      })
+
+      setAiResult(result)
+      toast({
+        title: t('aiEvaluationReady', 'AI Evaluation Ready'),
+        description: t('aiEvaluationReadyDesc', 'OpenRouter AI evaluated the submission based on hotel quality standards.')
+      })
+    } catch (err: any) {
+      console.error('AI evaluation error:', err)
+      toast({
+        title: t('aiEvaluationFailed', 'AI Evaluation Failed'),
+        description: err.message || 'Could not complete automated assessment.',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsEvaluatingAI(false)
+    }
+  }
+
+  const handleApplyAIAssessment = () => {
+    if (!aiResult) return
+    setScore(aiResult.score)
+    const localizedFeedback =
+      i18n.language.startsWith('ar') && aiResult.arabicFeedback
+        ? aiResult.arabicFeedback
+        : aiResult.feedback
+    setFeedback(localizedFeedback)
+    toast({
+      title: t('aiAssessmentApplied', 'AI Assessment Applied!'),
+      description: t('aiAssessmentAppliedDesc', 'Score and feedback have been populated. You can review and adjust before saving.')
+    })
   }
 
   const handleSaveReview = async (action: 'approved' | 'revision_required') => {
@@ -313,12 +388,14 @@ export function SubmissionsGradingTab() {
 
       {/* Review & Grading Modal */}
       <Dialog open={reviewDialogOpen} onOpenChange={setReviewDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="text-lg font-bold text-hotel-navy flex items-center gap-2">
-              <FileCheck className="h-5 w-5 text-hotel-gold" />
-              {t('gradePracticalAssignment', 'Evaluate Practical Assignment')}
-            </DialogTitle>
+            <div className="flex items-center justify-between pe-6">
+              <DialogTitle className="text-lg font-bold text-hotel-navy flex items-center gap-2">
+                <FileCheck className="h-5 w-5 text-hotel-gold" />
+                {t('gradePracticalAssignment', 'Evaluate Practical Assignment')}
+              </DialogTitle>
+            </div>
             <DialogDescription className="text-xs">
               {selectedSubmission?.learner?.full_name || 'Learner'} — {selectedSubmission?.module?.title}
             </DialogDescription>
@@ -326,6 +403,122 @@ export function SubmissionsGradingTab() {
 
           {selectedSubmission && (
             <div className="space-y-5 py-2">
+              {/* AI Evaluator Co-Pilot Card */}
+              <div className="rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 via-white to-amber-50/40 p-4 shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-indigo-100/80 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="h-7 w-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white shadow-sm">
+                      <Sparkles className="h-4 w-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-indigo-950 flex items-center gap-1.5">
+                        {t('aiGradingCoPilot', 'AI Evaluation Co-Pilot')}
+                        <Badge variant="outline" className="text-[10px] font-medium py-0 px-1.5 text-indigo-700 border-indigo-300 bg-indigo-50">
+                          OpenRouter AI
+                        </Badge>
+                      </h4>
+                      <p className="text-[11px] text-muted-foreground">
+                        {t('aiGradingHint', 'Automated rubric comparison & feedback generator for hotel instructors.')}
+                      </p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleRunAIEvaluation}
+                    disabled={isEvaluatingAI}
+                    className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 shadow-sm shrink-0"
+                  >
+                    {isEvaluatingAI ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>{t('evaluatingAI', 'Analyzing Submission...')}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Wand2 className="h-3.5 w-3.5" />
+                        <span>{aiResult ? t('reEvaluateAI', 'Re-Evaluate with AI') : t('autoEvaluateAI', 'Auto-Evaluate with AI')}</span>
+                      </>
+                    )}
+                  </Button>
+                </div>
+
+                {/* AI Results Presentation */}
+                {aiResult ? (
+                  <div className="space-y-3 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-lg bg-white border border-indigo-100 shadow-xs">
+                      <div className="flex items-center gap-3">
+                        <div className="text-center px-2 py-1 bg-slate-50 rounded-md border border-slate-200">
+                          <span className="block text-[10px] text-muted-foreground uppercase font-semibold">{t('suggestedScore', 'Suggested Score')}</span>
+                          <span className="font-mono font-bold text-base text-indigo-700">{aiResult.score}%</span>
+                        </div>
+                        <div>
+                          <span className="block text-[10px] text-muted-foreground uppercase font-semibold">{t('recommendation', 'AI Recommendation')}</span>
+                          {aiResult.decision === 'approved' ? (
+                            <Badge className="bg-emerald-600 text-white text-[11px] gap-1 mt-0.5">
+                              <CheckCircle2 className="h-3 w-3" />
+                              {t('approveAndPass', 'Approve & Pass')}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-rose-600 text-white text-[11px] gap-1 mt-0.5">
+                              <RotateCcw className="h-3 w-3" />
+                              {t('requestRevision', 'Request Revision')}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleApplyAIAssessment}
+                        className="h-8 text-xs bg-hotel-gold hover:bg-hotel-gold/90 text-hotel-navy font-semibold gap-1.5 shadow-sm"
+                      >
+                        <Check className="h-3.5 w-3.5" />
+                        {t('applyAIAssessment', 'Apply AI Score & Notes')}
+                      </Button>
+                    </div>
+
+                    {/* Strengths & Improvements */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                      {aiResult.strengths?.length > 0 && (
+                        <div className="p-2.5 rounded-lg bg-emerald-50/60 border border-emerald-200/70">
+                          <p className="font-semibold text-emerald-900 flex items-center gap-1 mb-1">
+                            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                            {t('keyStrengths', 'Key Strengths')}
+                          </p>
+                          <ul className="list-disc list-inside space-y-0.5 text-[11px] text-emerald-800 ps-1">
+                            {aiResult.strengths.map((st, i) => (
+                              <li key={i}>{st}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {aiResult.improvements?.length > 0 && (
+                        <div className="p-2.5 rounded-lg bg-amber-50/60 border border-amber-200/70">
+                          <p className="font-semibold text-amber-900 flex items-center gap-1 mb-1">
+                            <Lightbulb className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                            {t('areasForImprovement', 'Suggestions for Improvement')}
+                          </p>
+                          <ul className="list-disc list-inside space-y-0.5 text-[11px] text-amber-800 ps-1">
+                            {aiResult.improvements.map((im, i) => (
+                              <li key={i}>{im}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : isEvaluatingAI ? (
+                  <div className="py-4 text-center text-xs text-indigo-700 flex flex-col items-center justify-center gap-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-indigo-600" />
+                    <p className="font-medium">{t('aiAnalyzingRubric', 'Comparing submission with 5-star hotel operational standards...')}</p>
+                  </div>
+                ) : null}
+              </div>
+
               {/* Learner's Submitted Text */}
               <div>
                 <Label className="text-xs font-semibold text-slate-600 uppercase">

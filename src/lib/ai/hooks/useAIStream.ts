@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react'
-import { primeAI } from '../client'
+import { altusAI } from '../client'
 import type { AIRequestOptions } from '../types'
 
 export interface UseAIStreamResult {
@@ -43,7 +43,7 @@ export function useAIStream(): UseAIStreamResult {
 
       let accumulated = ''
       try {
-        const stream = primeAI.streamPrompt(prompt, {
+        const stream = altusAI.streamPrompt(prompt, {
           ...options,
           signal: controller.signal,
         })

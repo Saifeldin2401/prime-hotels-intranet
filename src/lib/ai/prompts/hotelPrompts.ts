@@ -1,5 +1,5 @@
 /**
- * PRIME Connect Hotel Operations & Hospitality AI Prompts
+ * ALTUS Connect Hotel Operations & Hospitality AI Prompts
  * Tuned for 5-Star Luxury Standards (Forbes Benchmarks) & KSA Regional Hospitality Context.
  */
 

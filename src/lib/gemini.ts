@@ -268,6 +268,28 @@ export interface ModuleOutline {
   suggestedQuizCheckpoints: ModuleOutlineQuizCheckpoint[]
 }
 
+export interface AssignmentEvaluationInput {
+  moduleTitle: string
+  blockTitle?: string
+  assignmentInstructions?: string
+  rubric?: string
+  passingScore?: number
+  submissionContent?: string
+  attachmentNames?: string[]
+  language?: 'English' | 'Arabic' | string
+}
+
+export interface AssignmentEvaluationResult {
+  score: number
+  passed: boolean
+  decision: 'approved' | 'revision_required'
+  strengths: string[]
+  improvements: string[]
+  feedback: string
+  arabicFeedback?: string
+  evaluationSummary: string
+}
+
 
 
 const cleanText = (text: string): string => {
@@ -444,7 +466,7 @@ const heuristicOutline = (text: string, generateFullContent = true): ModuleOutli
           heading: 'Executive Overview & Standards',
           suggestedBlockType: 'text',
           summary: 'Introduce operational context, quality benchmarks, and core service principles.',
-          rich_content: `<div class="space-y-5"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow border border-slate-800"><span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">PRIME Operations Standard</span><h3 class="text-xl font-bold text-white mb-2">Standard Operating Procedures</h3><p class="text-slate-300 text-sm leading-relaxed">Adherence to operational excellence, brand benchmarks, and safety compliance across all hotel touchpoints.</p></div></div>`
+          rich_content: `<div class="space-y-5"><div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow border border-slate-800"><span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">ALTUS Operations Standard</span><h3 class="text-xl font-bold text-white mb-2">Standard Operating Procedures</h3><p class="text-slate-300 text-sm leading-relaxed">Adherence to operational excellence, brand benchmarks, and safety compliance across all hotel touchpoints.</p></div></div>`
         }
       ],
       suggestedQuizCheckpoints: []
@@ -459,7 +481,7 @@ const heuristicOutline = (text: string, generateFullContent = true): ModuleOutli
       summary: sentences.slice(0, 2).join('. '),
       rich_content: `<div class="space-y-5">
         <div class="p-5 bg-gradient-to-r from-slate-900 to-indigo-950 text-white rounded-xl shadow-lg border border-slate-800">
-          <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">PRIME Operations Standard</span>
+          <span class="inline-block px-3 py-1 bg-amber-500/20 text-amber-300 rounded-full text-xs font-semibold uppercase tracking-wider mb-2">ALTUS Operations Standard</span>
           <h3 class="text-xl font-bold tracking-tight text-white mb-2">${title}</h3>
           <p class="text-slate-300 text-sm leading-relaxed">${sentences.slice(0, 2).join('. ')}.</p>
         </div>
@@ -1503,6 +1525,122 @@ ${serializedQuestions}`
 
 
     return { mapping: {}, headerRowIndex: 0 }
+  },
+
+  /**
+   * AI Practical Assignment Evaluation & Feedback Co-Pilot
+   * Analyzes learner practical submissions against hotel SOP criteria and rubrics.
+   */
+  async evaluatePracticalAssignment(
+    input: AssignmentEvaluationInput
+  ): Promise<AssignmentEvaluationResult> {
+    const language = input.language || 'English'
+    const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+    const passingThreshold = input.passingScore ?? 80
+
+    const submissionText = cleanText(input.submissionContent || 'No written response provided.')
+    const filesList = input.attachmentNames && input.attachmentNames.length > 0
+      ? input.attachmentNames.join(', ')
+      : 'No attached files'
+
+    const prompt = `You are a Senior Hotel Training & Quality Assurance Director evaluating a learner's practical assignment submission.
+
+Hotel Training Module: "${input.moduleTitle}"
+Practical Assignment: "${input.blockTitle || 'Practical Task'}"
+Assignment Instructions: "${input.assignmentInstructions || 'Complete the practical task according to hotel SOP.'}"
+Evaluation Rubric: "${input.rubric || 'Demonstrate thorough adherence to 5-star hotel standards, precision, professional communication, and guest-centric problem solving.'}"
+Required Passing Score: ${passingThreshold}%
+
+Learner's Written Response:
+"""
+${submissionText.slice(0, 3000)}
+"""
+
+Submitted Attachments: ${filesList}
+
+EVALUATION CRITERIA:
+1. Operational Accuracy: Does the learner demonstrate correct hotel standard operating procedures?
+2. Professional Tone & Hospitality Mindset: Is the communication polite, anticipatory, and 5-star standard?
+3. Completeness: Did the learner address all parts of the assignment instructions?
+4. Quality Benchmarks: If the score is >= ${passingThreshold}%, mark decision as "approved" (passed=true). If critical steps are missing or score < ${passingThreshold}%, mark decision as "revision_required" (passed=false).
+
+OUTPUT FORMAT:
+Return VALID JSON ONLY with this exact schema:
+{
+  "score": 90,
+  "passed": true,
+  "decision": "approved",
+  "strengths": [
+    "Clear, structured adherence to check-in protocol",
+    "Empathetic guest tone throughout the response"
+  ],
+  "improvements": [
+    "Remember to mention verifying the PMS profile notes"
+  ],
+  "feedback": "Excellent work. Your understanding of the guest arrival standard is thorough and well-articulated. Keep up the high standard of service.",
+  "arabicFeedback": "عمل ممتاز. استيعابك لمعايير استقبال الضيوف شامل وواضح للغاية. استمر في تقديم أعلى مستويات الخدمة.",
+  "evaluationSummary": "Meets 5-star luxury standards with comprehensive workflow coverage."
+}
+
+Do not include any Markdown wrap like \`\`\`json. Return pure JSON object only.`
+
+    for (const model of FALLBACK_MODELS) {
+      try {
+        const responseText = await callHuggingFace(model, prompt, 1200)
+        const parsed = safeParseJson<AssignmentEvaluationResult>(responseText, false)
+        if (parsed && typeof parsed.score === 'number' && parsed.feedback) {
+          const score = Math.max(0, Math.min(100, Math.round(parsed.score)))
+          const passed = score >= passingThreshold
+          const decision = (parsed.decision === 'approved' && passed) ? 'approved' : 'revision_required'
+
+          return {
+            score,
+            passed,
+            decision,
+            strengths: Array.isArray(parsed.strengths) ? parsed.strengths : ['Demonstrated solid operational effort.'],
+            improvements: Array.isArray(parsed.improvements) ? parsed.improvements : [],
+            feedback: parsed.feedback || (passed ? 'Submission approved.' : 'Please revise and resubmit.'),
+            arabicFeedback: parsed.arabicFeedback,
+            evaluationSummary: parsed.evaluationSummary || (passed ? 'Meets required standards.' : 'Revisions requested.')
+          }
+        }
+      } catch (err) {
+        console.warn(`Model ${model} failed in evaluatePracticalAssignment:`, err)
+      }
+    }
+
+    // Heuristic Fallback
+    const wordCount = submissionText.split(/\s+/).filter(Boolean).length
+    const hasAttachments = Boolean(input.attachmentNames && input.attachmentNames.length > 0)
+    const isGoodQuality = wordCount >= 30 || (wordCount >= 15 && hasAttachments)
+    const fallbackScore = isGoodQuality ? 88 : 65
+    const fallbackPassed = fallbackScore >= passingThreshold
+
+    return {
+      score: fallbackScore,
+      passed: fallbackPassed,
+      decision: fallbackPassed ? 'approved' : 'revision_required',
+      strengths: isGoodQuality
+        ? [
+            'Good attention to operational procedure and standard steps',
+            'Constructive and professional written response'
+          ]
+        : ['Initial submission provided for review'],
+      improvements: isGoodQuality
+        ? ['Continue applying these standards consistently across shifts']
+        : ['Please provide more detailed step-by-step explanations in accordance with the SOP'],
+      feedback: fallbackPassed
+        ? (isArabic
+            ? 'تمت مراجعة الإجابة واعتمادها بنجاح. أظهرت فهماً ممتازاً للإجراءات التشغيلية المعتمدة.'
+            : 'Well executed practical response. You have demonstrated a clear understanding of the operational standards. Approved.')
+        : (isArabic
+            ? 'يرجى التوسع في تفاصيل الخطوات وإعادة إرسال الواجب بعد إضافة التوضيحات اللازمة.'
+            : 'Please expand on the detailed steps and resubmit with additional operational context before final approval.'),
+      arabicFeedback: fallbackPassed
+        ? 'تمت مراجعة الإجابة واعتمادها بنجاح. أظهرت فهماً ممتازاً للإجراءات التشغيلية المعتمدة.'
+        : 'يرجى التوسع في تفاصيل الخطوات وإعادة إرسال الواجب بعد إضافة التوضيحات اللازمة.',
+      evaluationSummary: fallbackPassed ? 'Passed luxury hospitality benchmark.' : 'Requires revision before passing.'
+    }
   }
 }
 

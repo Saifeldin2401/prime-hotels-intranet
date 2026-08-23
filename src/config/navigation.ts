@@ -390,7 +390,7 @@ export const ROUTES: RouteConfig[] = [
         path: '/training/hub',
         title: 'lms_admin',
         icon: GraduationCap,
-        description: 'PRIME Academy training control center and course management',
+        description: 'ALTUS Academy training control center and course management',
         allowedRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
         keywords: ['academy', 'lms', 'curriculum', 'training creator', 'courses'],
         group: 'knowledge_sop',

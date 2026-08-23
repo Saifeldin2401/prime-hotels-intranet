@@ -294,7 +294,7 @@ export function RightPanel({
           <CardHeader className="pb-2 pt-3 px-3">
             <CardTitle className={cn("text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 flex items-center gap-1.5", isRTL ? 'flex-row-reverse' : '')}>
               <HelpCircle className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-              <span>{t('builder.bestPractices', 'PRIME Guidelines')}</span>
+              <span>{t('builder.bestPractices', 'ALTUS Guidelines')}</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 space-y-2 text-[11px] text-muted-foreground leading-relaxed">

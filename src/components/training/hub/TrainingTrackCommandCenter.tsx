@@ -222,33 +222,26 @@ export function TrainingTrackCommandCenter({
                 .order('completion_date', { ascending: false })
             if (certErr) throw certErr
 
-            // 4. Fetch unified quiz sessions & attempts for gap analysis
-            const { data: quizSessions, error: quizErr } = await supabase
-                .from('unified_quiz_sessions')
+            // 4. Fetch unified question attempts directly for gap analysis
+            const { data: questionAttempts, error: attemptsErr } = await supabase
+                .from('unified_question_attempts')
                 .select(`
-                    id,
-                    quiz_id,
-                    quiz_entity_id,
-                    score_percentage,
-                    passed,
-                    completed_at,
-                    unified_question_attempts (
-                        question_id,
-                        is_correct,
-                        selected_answer,
-                        time_spent_seconds,
-                        question:learning_questions (
-                            id,
-                            question_text,
-                            question_type,
-                            category,
-                            explanation
-                        )
+                    question_id,
+                    is_correct,
+                    selected_answer,
+                    time_spent_seconds,
+                    question:unified_questions (
+                        id,
+                        question_text,
+                        question_type,
+                        tags,
+                        source_domain,
+                        explanation
                     )
                 `)
-                .order('completed_at', { ascending: false })
-                .limit(400)
-            if (quizErr) console.warn('Quiz sessions warning:', quizErr)
+                .order('created_at', { ascending: false })
+                .limit(500)
+            if (attemptsErr) console.warn('Question attempts warning:', attemptsErr)
 
             // 5. Fetch all training content blocks for course funnels
             const { data: contentBlocks, error: blocksErr } = await supabase
@@ -263,7 +256,7 @@ export function TrainingTrackCommandCenter({
                 modules: modules || [],
                 progressRows: progressRows || [],
                 certificates: certificates || [],
-                quizSessions: quizSessions || [],
+                questionAttempts: questionAttempts || [],
                 contentBlocks: contentBlocks || [],
                 assignmentDueDates: assignmentRows || [],
                 userOverrideDueDates: overrideRows || []
@@ -292,7 +285,7 @@ export function TrainingTrackCommandCenter({
             }
         }
 
-        const { modules, progressRows, certificates, quizSessions, contentBlocks, assignmentDueDates, userOverrideDueDates } = rawData
+        const { modules, progressRows, certificates, questionAttempts, contentBlocks, assignmentDueDates, userOverrideDueDates } = rawData
 
         const dueDateByAssignmentId = new Map(
             (assignmentDueDates || []).map((a: any) => [a.id, a.due_date as string | null])
@@ -523,7 +516,7 @@ export function TrainingTrackCommandCenter({
             }
         }).sort((a, b) => b.enrolled - a.enrolled)
 
-        // Knowledge Gap Analyzer from Quiz Attempts
+        // Knowledge Gap Analyzer from Question Attempts
         const questionMap = new Map<string, {
             id: string
             text: string
@@ -535,33 +528,35 @@ export function TrainingTrackCommandCenter({
             recentAttempts: any[]
         }>()
 
-        quizSessions.forEach((qs: any) => {
-            (qs.unified_question_attempts || []).forEach((att: any) => {
-                const q = att.question
-                if (!q) return
-                if (!questionMap.has(q.id)) {
-                    questionMap.set(q.id, {
-                        id: q.id,
-                        text: q.question_text || 'Hotel SOP Assessment Question',
-                        type: q.question_type || 'multiple_choice',
-                        category: q.category || 'Hospitality Standards',
-                        explanation: q.explanation || 'Refer to the Prime Hotels Intranet Standard Operating Procedures repository.',
-                        total: 0,
-                        correct: 0,
-                        recentAttempts: []
-                    })
-                }
-                const qRec = questionMap.get(q.id)!
-                qRec.total += 1
-                if (att.is_correct) qRec.correct += 1
-                if (qRec.recentAttempts.length < 5) {
-                    qRec.recentAttempts.push({
-                        selectedAnswer: att.selected_answer,
-                        isCorrect: att.is_correct,
-                        timeSpent: att.time_spent_seconds
-                    })
-                }
-            })
+        ;(questionAttempts || []).forEach((att: any) => {
+            const q = att.question
+            if (!q) return
+            if (!questionMap.has(q.id)) {
+                const categoryTag = (Array.isArray(q.tags) && q.tags.length > 0 && q.tags[0])
+                    ? q.tags[0]
+                    : (q.source_domain === 'knowledge' ? 'Knowledge Base' : 'Hospitality Standards')
+
+                questionMap.set(q.id, {
+                    id: q.id,
+                    text: q.question_text || 'Hotel SOP Assessment Question',
+                    type: q.question_type || 'multiple_choice',
+                    category: categoryTag,
+                    explanation: q.explanation || 'Refer to the Altus Standard Operating Procedures repository.',
+                    total: 0,
+                    correct: 0,
+                    recentAttempts: []
+                })
+            }
+            const qRec = questionMap.get(q.id)!
+            qRec.total += 1
+            if (att.is_correct) qRec.correct += 1
+            if (qRec.recentAttempts.length < 5) {
+                qRec.recentAttempts.push({
+                    selectedAnswer: att.selected_answer,
+                    isCorrect: att.is_correct,
+                    timeSpent: att.time_spent_seconds
+                })
+            }
         })
 
         const knowledgeGaps = Array.from(questionMap.values())
@@ -672,7 +667,7 @@ export function TrainingTrackCommandCenter({
             const blobUrl = URL.createObjectURL(pdfBlob)
             const a = document.createElement('a')
             a.href = blobUrl
-            a.download = `Certificate-${certRecord.certificate_number || 'Prime-Hotels'}.pdf`
+            a.download = `Certificate-${certRecord.certificate_number || 'Altus-Hospitality'}.pdf`
             a.click()
             URL.revokeObjectURL(blobUrl)
 
@@ -706,14 +701,14 @@ export function TrainingTrackCommandCenter({
         metrics.filteredCertificates.forEach((c: any) => {
             const exp = c.expiry_date ? new Date(c.expiry_date).toISOString().slice(0, 10) : 'Lifetime'
             const iss = c.completion_date ? new Date(c.completion_date).toISOString().slice(0, 10) : '-'
-            csv += `"${c.certificate_number}","${c.recipient_name}","${c.recipient_email || ''}","${c.title}","${c.certificate_type}","${c.score ?? '-'}","${iss}","${exp}","${c.verification_code}","${c.status}","${c.metadata?.propertyName || 'Prime Hotels'}","${c.metadata?.departmentName || ''}"\n`
+            csv += `"${c.certificate_number}","${c.recipient_name}","${c.recipient_email || ''}","${c.title}","${c.certificate_type}","${c.score ?? '-'}","${iss}","${exp}","${c.verification_code}","${c.status}","${c.metadata?.propertyName || 'Altus Hospitality'}","${c.metadata?.departmentName || ''}"\n`
         })
 
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `Prime-Hotels-Ministry-Audit-Log-${new Date().toISOString().slice(0, 10)}.csv`
+        a.download = `Altus-Hospitality-Audit-Log-${new Date().toISOString().slice(0, 10)}.csv`
         a.click()
         URL.revokeObjectURL(url)
 
@@ -978,8 +973,8 @@ export function TrainingTrackCommandCenter({
                                 </Badge>
                             </CardHeader>
                             <CardContent className="pt-4">
-                                <div className="h-[280px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                <div className="h-[280px] w-full min-w-0">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={280}>
                                         <AreaChart data={metrics.completionTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                             <defs>
                                                 <linearGradient id="completedGrad" x1="0" y1="0" x2="0" y2="1">
