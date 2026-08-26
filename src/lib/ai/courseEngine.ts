@@ -518,7 +518,7 @@ export function validateCourseBlueprint(
     } else {
       totalLessons += mod.lessons.length
       mod.lessons.forEach((les, lIdx) => {
-        const key = les.title.toLowerCase().trim()
+        const key = (les.title || '').toLowerCase().trim()
         if (titlesSeen.has(key)) {
           warnings.push(`Potential duplicate topic detected: "${les.title}".`)
         }
@@ -616,7 +616,7 @@ export async function generateTemplatedLessonContent(
 - الوحدة: "${moduleTitle}"
 - عنوان الدرس: "${lesson.title}"
 - القالب التعليمي: ${lesson.templateType}
-- المخرجات التعليمية المستهدفة: ${lesson.learningOutcomes.join(' | ')}
+- المخرجات التعليمية المستهدفة: ${(lesson.learningOutcomes || []).join(' | ') || 'إتقان المعايير الفندقية والخدمة الممتازة'}
 - المكونات الإلزامية لتضمينها: [${componentsList}]
 - عمق المحتوى: ${config?.overallDepth || 'comprehensive'}
 
@@ -639,7 +639,7 @@ Write an exhaustive, publication-grade training manual lesson in clean semantic 
 - Module: "${moduleTitle}"
 - Lesson Title: "${lesson.title}"
 - Lesson Template: ${lesson.templateType}
-- Target Learning Outcomes: ${lesson.learningOutcomes.join(' | ')}
+- Target Learning Outcomes: ${(lesson.learningOutcomes || []).join(' | ') || '5-Star Operational Mastery & Procedural Compliance'}
 - Mandatory Components to Include: [${componentsList}]
 - Content Depth: ${config?.overallDepth || 'comprehensive'}
 

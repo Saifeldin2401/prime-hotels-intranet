@@ -3,6 +3,7 @@
  * Orchestrates multi-stage generation, AI image generation, Supabase persistence, presets, and QA audits.
  */
 
+import { aiCourseOrchestrator } from '@/lib/ai/agents/orchestrator'
 import {
   analyzeLessonVisualOpportunities,
   auditCourseQuality,
@@ -40,7 +41,7 @@ import type {
 
 export const aiCourseEngineService = {
   /**
-   * Orchestrates the 7-stage full course generation pipeline with live stage progress callbacks.
+   * Orchestrates the full multi-agent course generation pipeline with live stage progress callbacks.
    */
   async executeCoursePipeline(
     rawConfig: FullCourseGenerationConfig,
@@ -52,248 +53,32 @@ export const aiCourseEngineService = {
     durationMs: number
   }> {
     const startTime = Date.now()
-    // Intelligently auto-harmonize conflicting or unaligned inputs before pipeline execution
     const config = harmonizeCourseConfig(rawConfig)
 
-    // ── STAGE 1: Course Blueprint ──
-    onProgress?.(1, 'Course Blueprint', 'Synthesizing pedagogical outcomes, structure, and module pacing...')
-    const blueprint = await generateCourseBlueprint(config, (detail) => {
-      onProgress?.(1, 'Course Blueprint', detail)
+    // Map stage numbers from orchestrator progress events to the 6 studio UI cards
+    const phaseToStageMap: Record<string, { stage: number; name: string }> = {
+      discovery_and_research: { stage: 1, name: 'Pedagogical Blueprint Planning' },
+      curriculum_architecture: { stage: 2, name: 'Curriculum Structure & Modules' },
+      content_synthesis: { stage: 3, name: 'Lesson Text, SOPs & Dialogue Scripts' },
+      assessment_generation: { stage: 4, name: 'Knowledge Checks & Assessment Pools' },
+      multimedia_generation: { stage: 5, name: 'AI Visual Generation & Media' },
+      quality_assurance: { stage: 6, name: 'Automated 5-Star Quality Audit' },
+      revision_cycle: { stage: 6, name: 'Surgical Auto-Remediation' },
+      final_scoring: { stage: 6, name: 'Final Packaging & Delivery' },
+    }
+
+    const orchestrated = await aiCourseOrchestrator.orchestrate(config, {
+      preferredModel: config?.aiControls?.preferredModel,
+      skipAudio: config.audioConfig?.enableAudio !== true,
+      skipImages: config.imageConfig?.enableAIImages === false,
+      onProgress: (event) => {
+        const stageInfo = phaseToStageMap[event.phase] || { stage: 3, name: event.title }
+        onProgress?.(stageInfo.stage, stageInfo.name, `${event.title}: ${event.detail}`)
+      },
     })
 
-    // ── STAGE 2: Blueprint & Sequence Validation ──
-    onProgress?.(2, 'Blueprint Validation', 'Validating topic sequencing, prerequisites, and cognitive load...')
-    const valResult = validateCourseBlueprint(blueprint, config)
-    if (!valResult.isValid) {
-      console.warn('Blueprint validation encountered issues:', valResult.issues)
-    }
-
-    // ── STAGE 3: High-Throughput Concurrent Lesson Synthesis ──
-    const imageConfig = config.imageConfig || DEFAULT_IMAGE_CONFIG
-    const maxCourseImages = imageConfig.maxImagesPerCourse || 4
-    let totalGeneratedImages = 0
-
-    // Flatten lessons into a work queue for parallel execution
-    interface LessonWorkItem {
-      module: typeof blueprint.modules[0]
-      lesson: typeof blueprint.modules[0]['lessons'][0]
-      mIdx: number
-      lIdx: number
-      totalInModule: number
-      globalIndex: number
-    }
-
-    const allLessons: LessonWorkItem[] = []
-    let globalCounter = 0
-    blueprint.modules.forEach((mod, mIdx) => {
-      mod.lessons.forEach((les, lIdx) => {
-        globalCounter++
-        allLessons.push({
-          module: mod,
-          lesson: les,
-          mIdx,
-          lIdx,
-          totalInModule: mod.lessons.length,
-          globalIndex: globalCounter,
-        })
-      })
-    })
-
-    const totalLessons = allLessons.length
-    let completedLessons = 0
-    const pendingVisualPromises: Promise<void>[] = []
-
-    // Concurrency worker (6 parallel workers for optimum throughput)
-    const CONCURRENCY_LIMIT = 6
-    async function processLesson(item: LessonWorkItem) {
-      const { module, lesson, lIdx, totalInModule, globalIndex } = item
-      onProgress?.(
-        3,
-        'Lesson Synthesis',
-        `Writing Lesson ${globalIndex}/${totalLessons}: "${lesson.title}" (${lIdx + 1}/${totalInModule} in ${module.title})...`
-      )
-
-      // 3a. Generate High-Quality Structured Lesson Content
-      const renderedHtml = await generateTemplatedLessonContent({
-        courseTitle: blueprint.title,
-        moduleTitle: module.title,
-        lesson,
-        config,
-        components: config.lessonComponents,
-        depthConfig: config.depthConfig,
-        language: config?.aiControls?.targetLanguage || 'en',
-        preferredModel: config?.aiControls?.preferredModel || 'gemini-2.5-flash',
-        hotelContext: config.sourceContent,
-      })
-
-      lesson.renderedHtml = renderedHtml
-
-      // 3b. Non-Blocking AI Visual Opportunity via Cloudflare Workers AI
-      if (imageConfig.enableAIImages && totalGeneratedImages < maxCourseImages) {
-        try {
-          const opportunities = await analyzeLessonVisualOpportunities({
-            courseTitle: blueprint.title,
-            moduleTitle: module.title,
-            lesson,
-            lessonIndex: lIdx,
-            totalLessonsInModule: totalInModule,
-            config,
-            language: config?.aiControls?.targetLanguage || 'en',
-          })
-
-          if (opportunities.length > 0 && opportunities[0].shouldGenerate) {
-            const opp = opportunities[0]
-            totalGeneratedImages++
-
-            // Dispatch visual generation asynchronously without blocking lesson synthesis
-            const visualTask = (async () => {
-              try {
-                const asset = await aiCourseEngineService.generateLessonVisualAsset({
-                  courseId: 'temp_generating',
-                  moduleId: module.id,
-                  lessonId: lesson.id,
-                  opportunity: opp,
-                  provider: 'cloudflare',
-                  costTier: 'free_only',
-                  model: imageConfig.imageModel || '@cf/bytedance/stable-diffusion-xl-lightning',
-                  visualStyle: imageConfig.preferredStyle,
-                })
-
-                if (asset) {
-                  lesson.visualAssets = [asset]
-                  const captionText = (config?.aiControls?.targetLanguage || 'en').includes('ar')
-                    ? asset.caption_ar || asset.alt_text_ar || asset.title_ar || asset.title
-                    : asset.caption || asset.alt_text || asset.title
-
-                  const imgHtml = `
-<div class="my-6 rounded-xl overflow-hidden border border-border shadow-sm bg-muted/20">
-  <img src="${asset.image_url}" alt="${asset.alt_text}" class="w-full h-auto object-cover max-h-[380px]" loading="lazy" />
-  ${captionText ? `<p class="p-2.5 text-xs text-muted-foreground text-center italic bg-muted/40">${captionText}</p>` : ''}
-</div>`
-                  lesson.renderedHtml = `${imgHtml}\n${lesson.renderedHtml}`
-                }
-              } catch (imgErr) {
-                console.warn(`Visual generation background task failed for ${lesson.title}:`, imgErr)
-              }
-            })()
-
-            pendingVisualPromises.push(visualTask)
-          }
-        } catch (imgErr) {
-          console.warn(`Visual opportunity check skipped for lesson ${lesson.title}:`, imgErr)
-        }
-      }
-
-      completedLessons++
-      onProgress?.(
-        3,
-        'Lesson Synthesis',
-        `Completed ${completedLessons}/${totalLessons} lessons (${Math.round((completedLessons / totalLessons) * 100)}%)...`
-      )
-    }
-
-    // Execute lessons in high-concurrency parallel batches
-    for (let i = 0; i < allLessons.length; i += CONCURRENCY_LIMIT) {
-      const batch = allLessons.slice(i, i + CONCURRENCY_LIMIT)
-      await Promise.all(batch.map((item) => processLesson(item)))
-    }
-
-    // ── STAGE 4 & 5: High-Speed Parallel Assessment & Question Generation ──
-    onProgress?.(4, 'Assessment Blueprint', 'Mapping quiz checkpoints and question formats in parallel...')
-
-    const shouldGenerateModuleQuizzes =
-      config.quizConfig.placement === 'per_module' ||
-      config.quizConfig.placement === 'per_lesson' ||
-      config.quizConfig.placement === 'checkpoints' ||
-      config.generationMode === 'quiz_generation' ||
-      (config.quizConfig.placement !== 'none' && config.quizConfig.placement !== 'final_exam')
-
-    const shouldGenerateFinalExam =
-      config.quizConfig.placement === 'final_exam' ||
-      config.quizConfig.placement === 'final_assessment' ||
-      config.quizConfig.placement === 'mid_course' ||
-      config.generationMode === 'assessment_generation'
-
-    const quizTasks: Promise<void>[] = []
-
-    if (shouldGenerateModuleQuizzes) {
-      onProgress?.(5, 'Question Synthesis', 'Synthesizing module assessment questions in parallel...')
-      blueprint.modules.forEach((module) => {
-        quizTasks.push(
-          (async () => {
-            try {
-              const questions = await generateExpandedQuiz({
-                contextContent: `Module: ${module.title}\nDescription: ${module.description}\nLessons: ${module.lessons.map((l) => l.title).join(', ')}`,
-                title: module.title,
-                count: config.quizConfig.questionCount || 4,
-                questionTypes: config.questionTypes.length > 0 ? config.questionTypes : ['mcq', 'scenario', 'ordering'],
-                difficulty: module.difficultyLevel === 'advanced' ? 'hard' : module.difficultyLevel === 'beginner' ? 'easy' : 'medium',
-                bloomDistribution: config.bloomDistribution,
-                language: config?.aiControls?.targetLanguage || 'en',
-                distractorQuality: config.quizConfig.distractorQuality,
-                includeHints: config.quizConfig.includeHints,
-                includeExplanations: config.quizConfig.includeExplanations,
-                preferredModel: config?.aiControls?.preferredModel || 'gemini-2.5-flash',
-              })
-
-              const qaChecked = validateQuizQuestions(questions)
-              module.moduleQuiz = {
-                id: `quiz-${module.id}`,
-                title: `${module.title} Knowledge Check`,
-                title_ar: `اختبار التحقق من المعرفة: ${module.title_ar || module.title}`,
-                placement: config.quizConfig.placement,
-                questionCount: qaChecked.validQuestions.length,
-                passingScore: config.quizConfig.passingScore || 80,
-                questions: qaChecked.validQuestions,
-              }
-            } catch (qErr) {
-              console.warn(`Module quiz generation fallback for ${module.title}:`, qErr)
-            }
-          })()
-        )
-      })
-    }
-
-    if (shouldGenerateFinalExam) {
-      quizTasks.push(
-        (async () => {
-          try {
-            const finalQuestions = await generateExpandedQuiz({
-              contextContent: `Course: ${blueprint.title}\nTerminal Objectives: ${blueprint.terminalObjectives.join(' | ')}`,
-              title: blueprint.title,
-              count: Math.max(5, config.quizConfig.questionCount || 10),
-              questionTypes: config.questionTypes.length > 0 ? config.questionTypes : ['mcq', 'scenario', 'ordering', 'matching'],
-              bloomDistribution: config.bloomDistribution,
-              language: config?.aiControls?.targetLanguage || 'en',
-              distractorQuality: config.quizConfig.distractorQuality,
-              includeHints: config.quizConfig.includeHints,
-              includeExplanations: config.quizConfig.includeExplanations,
-              preferredModel: config?.aiControls?.preferredModel || 'gemini-2.5-flash',
-            })
-
-            const finalQa = validateQuizQuestions(finalQuestions)
-            blueprint.finalAssessment = {
-              id: `final-quiz-${Date.now()}`,
-              title: `${blueprint.title} Final Certification Exam`,
-              title_ar: `الاختبار النهائي والشهادة: ${blueprint.title_ar || blueprint.title}`,
-              placement: 'final_exam',
-              questionCount: finalQa.validQuestions.length,
-              passingScore: config.quizConfig.passingScore || 85,
-              questions: finalQa.validQuestions,
-            }
-          } catch (fErr) {
-            console.warn('Final assessment generation fallback:', fErr)
-          }
-        })()
-      )
-    }
-
-    // Await all quiz tasks and pending visual background generations concurrently
-    await Promise.all([...quizTasks, ...pendingVisualPromises])
-
-    // ── STAGE 7: Course Quality Assurance Audit ──
-    onProgress?.(7, 'Course QA Audit', 'Calculating LCMS Quality Index, gap analysis, and Saudi compliance...')
-    const qaReport = await auditCourseQuality(blueprint, config)
+    const blueprint = orchestrated.blueprint
+    const qaReport = orchestrated.legacyQaReport
     blueprint.qaReport = qaReport
     blueprint.qualityScore = qaReport.overallScore
 
@@ -310,7 +95,7 @@ export const aiCourseEngineService = {
           config: config as any,
           blueprint: blueprint as any,
           qa_report: qaReport as any,
-          models_used: [config?.aiControls?.preferredModel || 'auto', imageConfig.imageModel || 'recraft/recraft-v3:free'],
+          models_used: [config?.aiControls?.preferredModel || 'auto', 'recraft/recraft-vector:free', 'cloudflare/@cf/bytedance/stable-diffusion-xl-lightning:free'],
           duration_ms: durationMs,
         })
         .select('id')
@@ -318,7 +103,7 @@ export const aiCourseEngineService = {
 
       jobId = jobData?.id
     } catch (jobErr) {
-      console.warn('Could not record course_generation_job:', jobErr)
+      console.warn('Could not record course_generation_jobs record:', jobErr)
     }
 
     return {
@@ -366,7 +151,7 @@ export const aiCourseEngineService = {
           caption_ar: params.opportunity.caption_ar,
           educational_purpose: params.opportunity.purpose,
           visual_concept: params.opportunity.visualConcept,
-          provider: 'cloudflare',
+          provider: params.provider || (selectedModel.includes('recraft') ? 'recraft' : 'cloudflare'),
           cost_tier: 'free_only',
           model: selectedModel,
           num_steps: params.opportunity.numSteps || (selectedModel === DEFAULT_CLOUDFLARE_IMAGE_MODEL ? 6 : 20),

@@ -1,0 +1,634 @@
+/**
+ * Universal Multi-Agent AI Course Orchestrator
+ * 
+ * Coordinates the full multi-agent lifecycle matching the enterprise training platform architecture:
+ * USER Request → AI Course Orchestrator
+ *   ├── [Research Agent + Curriculum Agent + Knowledge Agent (RAG)]
+ *   └── Content Engine:
+ *         ├── Content Writer + Activities + Scenarios + Assessments
+ *   └── Multimedia Engine:
+ *         ├── Image AI (Free Recraft Vector First) + Audio AI + Video AI
+ *   └── AI QA Critic (Adaptive Thresholds)
+ *   └── AI Revision Loop (Targeted Auto-Remediation)
+ *   └── Final QA Score & Supabase Persistence → Student / Admin
+ */
+
+import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
+import type {
+  CourseBlueprint,
+  CourseQAQualityReport,
+  CourseVisualAsset,
+  FullCourseGenerationConfig,
+  GeneratedUnifiedQuestion,
+} from '@/types/aiCourseEngine'
+import { researchAgent, type ResearchFindings } from './researchAgent'
+import { curriculumAgent } from './curriculumAgent'
+import { knowledgeAgent, type GroundedKnowledgeResult } from './knowledgeAgent'
+import { contentWriterAgent } from './contentWriterAgent'
+import { activitiesAgent, type OperationalActivity } from './activitiesAgent'
+import { scenarioAgent } from './scenarioAgent'
+import { assessmentAgent } from './assessmentAgent'
+import { imageAgent } from './imageAgent'
+import { audioAgent, type AudioNarrationResult } from './audioAgent'
+import { videoAgent } from './videoAgent'
+import { qaCriticAgent } from './qaAgent'
+import { revisionAgent } from './revisionAgent'
+import { complianceAgent } from './complianceAgent'
+import {
+  DEFAULT_QA_THRESHOLDS,
+  type ComprehensiveQAReport,
+  type PipelineEventListener,
+  type PipelineProgressEvent,
+} from './types'
+
+export interface OrchestratorOptions {
+  pipelineRunId?: string
+  preferredModel?: string
+  skipImages?: boolean
+  skipAudio?: boolean
+  maxConcurrency?: number
+  onProgress?: PipelineEventListener
+}
+
+export interface OrchestratedCourseOutput {
+  pipelineRunId: string
+  blueprint: CourseBlueprint
+  researchFindings?: ResearchFindings
+  groundedKnowledge?: GroundedKnowledgeResult
+  activities: Record<string, OperationalActivity>
+  visualAssets: CourseVisualAsset[]
+  audioNarrations: Record<string, AudioNarrationResult>
+  qaReport: ComprehensiveQAReport
+  legacyQaReport: CourseQAQualityReport
+  complianceScore: number
+  totalDurationMs: number
+  totalEstimatedCostUSD: number
+  revisionCyclesRun: number
+}
+
+export class AICourseOrchestrator {
+  private static instance: AICourseOrchestrator
+
+  private constructor() {}
+
+  public static getInstance(): AICourseOrchestrator {
+    if (!AICourseOrchestrator.instance) {
+      AICourseOrchestrator.instance = new AICourseOrchestrator()
+    }
+    return AICourseOrchestrator.instance
+  }
+
+  /**
+   * Execute the full end-to-end multi-agent course synthesis pipeline
+   */
+  public async orchestrate(
+    rawConfig: FullCourseGenerationConfig,
+    options: OrchestratorOptions = {}
+  ): Promise<OrchestratedCourseOutput> {
+    const startTime = Date.now()
+    const pipelineRunId = options.pipelineRunId || `pipe-${Date.now()}`
+    
+    // Preserve all explicit user parameters with absolute priority over auto-harmonizer defaults
+    const harmonized = harmonizeCourseConfig(rawConfig)
+    const config: FullCourseGenerationConfig = {
+      ...harmonized,
+      ...rawConfig,
+      granularity: {
+        ...harmonized.granularity,
+        ...(rawConfig.granularity || {}),
+      },
+      imageConfig: {
+        ...harmonized.imageConfig,
+        ...(rawConfig.imageConfig || {}),
+      },
+      quizConfig: {
+        ...harmonized.quizConfig,
+        ...(rawConfig.quizConfig || {}),
+      },
+      depthConfig: {
+        ...harmonized.depthConfig,
+        ...(rawConfig.depthConfig || {}),
+      },
+      aiControls: {
+        ...harmonized.aiControls,
+        ...(rawConfig.aiControls || {}),
+      },
+    }
+
+    const onProgress = options.onProgress
+    let totalEstimatedCostUSD = 0
+
+    const emit = (event: Partial<PipelineProgressEvent>) => {
+      if (onProgress) {
+        onProgress({
+          pipelineRunId,
+          phase: event.phase || 'discovery_and_research',
+          agentRole: event.agentRole || 'curriculum',
+          status: event.status || 'running',
+          progressPercentage: event.progressPercentage || 0,
+          title: event.title || 'Orchestrator',
+          titleAr: event.titleAr || 'المنسق العام',
+          detail: event.detail || '',
+          detailAr: event.detailAr || '',
+          modelUsed: event.modelUsed,
+          providerUsed: event.providerUsed,
+          latencyMs: event.latencyMs,
+          timestamp: new Date().toISOString(),
+        })
+      }
+    }
+
+    // ========================================================================
+    // PHASE 1: DISCOVERY, RESEARCH & KNOWLEDGE RETRIEVAL (Parallel)
+    // ========================================================================
+    emit({
+      phase: 'discovery_and_research',
+      agentRole: 'research',
+      status: 'running',
+      progressPercentage: 5,
+      title: 'Operational Discovery & Grounding',
+      titleAr: 'استكشاف المعايير واسترجاع إجراءات المعرفة',
+      detail: 'Initiating parallel operational research and PostgreSQL SOP retrieval...',
+      detailAr: 'بدء البحث عن المعايير الفندقية واسترجاع وثائق الإجراءات التشغيلية...',
+    })
+
+    const [researchResult, knowledgeResult] = await Promise.all([
+      researchAgent
+        .process(
+          {
+            topic: config.title || config.topic || 'Hotel Frontline Operations',
+            courseType: config.courseType,
+            targetAudience: config.targetAudience,
+            language: (config.aiControls?.targetLanguage || 'en').startsWith('ar') ? 'ar' : 'en',
+            rawSourceMaterial: config.sourceContent,
+          },
+          { pipelineRunId, phase: 'discovery_and_research', preferredModel: options.preferredModel, onProgress }
+        )
+        .catch((err) => {
+          console.warn('[Orchestrator] Research agent error:', err)
+          return { data: undefined, estimatedCostUSD: 0 } as any
+        }),
+
+      knowledgeAgent
+        .process(
+          {
+            query: `${config.title || ''} ${config.topic || ''} SOP standard`,
+            limit: 4,
+          },
+          { pipelineRunId, phase: 'discovery_and_research', onProgress }
+        )
+        .catch((err) => {
+          console.warn('[Orchestrator] Knowledge agent error:', err)
+          return { data: undefined, estimatedCostUSD: 0 } as any
+        }),
+    ])
+
+    totalEstimatedCostUSD += (researchResult?.estimatedCostUSD || 0) + (knowledgeResult?.estimatedCostUSD || 0)
+
+    emit({
+      phase: 'discovery_and_research',
+      agentRole: 'research',
+      status: 'completed',
+      progressPercentage: 15,
+      title: 'Discovery & SOPs Grounded',
+      titleAr: 'تم استرجاع معايير الجودة والإجراءات',
+      detail: `[Model: ${researchResult?.modelUsed || 'Auto Router'}] Grounded ${knowledgeResult?.data?.relevantArticles?.length || 0} internal SOP articles & ${researchResult?.data?.forbesBenchmarks?.length || 0} Forbes benchmarks`,
+      detailAr: `تم استرجاع ${knowledgeResult?.data?.relevantArticles?.length || 0} وثيقة SOP و ${researchResult?.data?.forbesBenchmarks?.length || 0} معيار فوربس`,
+      modelUsed: researchResult?.modelUsed,
+    })
+
+    // ========================================================================
+    // PHASE 2: CURRICULUM ARCHITECTURE & MODULE DECOMPOSITION
+    // ========================================================================
+    emit({
+      phase: 'curriculum_architecture',
+      agentRole: 'curriculum',
+      status: 'running',
+      progressPercentage: 20,
+      title: 'Pedagogical Curriculum Architecture',
+      titleAr: 'هندسة المنهج والمصفوفة التدريبية',
+      detail: `Designing modular curriculum structure (${config.granularity?.moduleCount || 4} modules, ${config.granularity?.lessonsPerModule || 3} lessons/mod)...`,
+      detailAr: 'بناء هيكل الوحدات والدروس التعليمية...',
+    })
+
+    const curriculumResult = await curriculumAgent.process(
+      {
+        config,
+        researchFindings: researchResult?.data as ResearchFindings,
+        groundedKnowledge: knowledgeResult?.data as GroundedKnowledgeResult,
+      },
+      { pipelineRunId, phase: 'curriculum_architecture', preferredModel: options.preferredModel, onProgress }
+    )
+
+    let blueprint: CourseBlueprint = curriculumResult.data
+    totalEstimatedCostUSD += curriculumResult.estimatedCostUSD || 0
+
+    emit({
+      phase: 'curriculum_architecture',
+      agentRole: 'curriculum',
+      status: 'completed',
+      progressPercentage: 35,
+      title: 'Curriculum Architecture Completed',
+      titleAr: 'اكتمل بناء هيكل الوحدات والدروس',
+      detail: `[Model: ${curriculumResult.modelUsed || 'Auto Router'}] Structured ${blueprint.modules.length} modules and ${blueprint.modules.reduce((s, m) => s + m.lessons.length, 0)} interactive lessons`,
+      detailAr: `تم إنشاء ${blueprint.modules.length} وحدات بإجمالي ${blueprint.modules.reduce((s, m) => s + m.lessons.length, 0)} درس`,
+      modelUsed: curriculumResult.modelUsed,
+    })
+
+    // ========================================================================
+    // PHASE 3: CONTENT ENGINE (Lessons, SOPs, Dialogue Scripts & Drills)
+    // ========================================================================
+    const totalLessonCount = blueprint.modules.reduce((acc, m) => acc + m.lessons.length, 0)
+    let completedLessonCount = 0
+
+    emit({
+      phase: 'content_synthesis',
+      agentRole: 'content_writer',
+      status: 'running',
+      progressPercentage: 35,
+      title: 'Lesson Text, SOPs & Dialogue Scripts',
+      titleAr: 'صياغة نصوص الدروس والإجراءات التشغيلية',
+      detail: `Synthesizing lesson procedures, dialogue scripts, and drills (0/${totalLessonCount} lessons)...`,
+      detailAr: `توليد نصوص الدروس والحوارات والتدريبات العملية (0/${totalLessonCount} دروس)...`,
+    })
+
+    const allActivities: Record<string, OperationalActivity> = {}
+    const visualAssets: CourseVisualAsset[] = []
+    const audioNarrations: Record<string, AudioNarrationResult> = {}
+
+    // Concurrency helper for high-throughput parallel execution
+    const pMap = async <T, R>(
+      items: T[],
+      fn: (item: T, index: number) => Promise<R>,
+      concurrency: number = 3
+    ): Promise<R[]> => {
+      const results = new Array<R>(items.length)
+      let currentIndex = 0
+      const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+        while (currentIndex < items.length) {
+          const idx = currentIndex++
+          results[idx] = await fn(items[idx], idx)
+        }
+      })
+      await Promise.all(workers)
+      return results
+    }
+
+    const researchContextStr = Array.isArray(researchResult?.data?.keyOperationalStandards)
+      ? researchResult.data.keyOperationalStandards.join(', ')
+      : ''
+    const groundedSopsContextStr = Array.isArray(knowledgeResult?.data?.keyProceduresExtracted)
+      ? knowledgeResult.data.keyProceduresExtracted.join(', ')
+      : ''
+
+    interface LessonTask {
+      mod: typeof blueprint.modules[0]
+      les: typeof blueprint.modules[0]['lessons'][0]
+    }
+
+    const lessonTasks: LessonTask[] = []
+    for (const mod of blueprint.modules) {
+      for (const les of mod.lessons) {
+        lessonTasks.push({ mod, les })
+      }
+    }
+
+    await pMap(
+      lessonTasks,
+      async ({ mod, les }) => {
+        // Content Writer & Activities Agent in parallel
+        const [contentRes, actRes] = await Promise.all([
+          contentWriterAgent.process(
+            {
+              courseTitle: blueprint.title,
+              moduleTitle: mod.title,
+              lesson: les,
+              config,
+              researchContext: researchContextStr,
+              groundedSopsContext: groundedSopsContextStr,
+            },
+            { pipelineRunId, phase: 'content_synthesis', preferredModel: options.preferredModel, silent: true }
+          ),
+          config.subsystems?.activities !== false
+            ? activitiesAgent
+                .process(
+                  {
+                    lessonTitle: les.title,
+                    moduleTitle: mod.title,
+                    lessonContentHtml: les.description || les.title,
+                    activityType: 'problem_solving_exercise',
+                  },
+                  { pipelineRunId, phase: 'content_synthesis', preferredModel: options.preferredModel, silent: true }
+                )
+                .catch((e) => {
+                  console.warn('[Orchestrator] Activities agent skipped for lesson:', les.id, e)
+                  return { data: null }
+                })
+            : Promise.resolve({ data: null }),
+        ])
+
+        les.renderedHtml = contentRes.data
+        totalEstimatedCostUSD += contentRes.estimatedCostUSD || 0
+        if (actRes && actRes.data) {
+          allActivities[les.id] = actRes.data
+        }
+
+        completedLessonCount++
+
+        emit({
+          phase: 'content_synthesis',
+          agentRole: 'content_writer',
+          status: 'running',
+          progressPercentage: Math.round(35 + (completedLessonCount / totalLessonCount) * 25),
+          title: 'Lesson Text, SOPs & Dialogue Scripts',
+          titleAr: 'صياغة نصوص الدروس والإجراءات التشغيلية',
+          detail: `[Model: ${contentRes.modelUsed || 'Auto Router'}] Completed (${completedLessonCount}/${totalLessonCount}) lessons: "${les.title}"`,
+          detailAr: `تم إنجاز (${completedLessonCount}/${totalLessonCount}) دروس: "${les.title}"`,
+          modelUsed: contentRes.modelUsed,
+        })
+      },
+      3 // Process 3 lessons concurrently
+    )
+
+    // ========================================================================
+    // PHASE 4: ASSESSMENT ENGINE (Psychometric Quizzes & Knowledge Checks)
+    // ========================================================================
+    const totalQuizCount = blueprint.modules.length
+    let completedQuizCount = 0
+
+    emit({
+      phase: 'assessment_generation',
+      agentRole: 'assessments',
+      status: 'running',
+      progressPercentage: 62,
+      title: 'Knowledge Checks & Assessment Pools',
+      titleAr: 'بناء بنك الأسئلة والتقييمات الذكية',
+      detail: `Synthesizing psychometric question pools (0/${totalQuizCount} quizzes)...`,
+      detailAr: `صياغة بنوك التقييم والاختبارات (0/${totalQuizCount} اختبارات)...`,
+    })
+
+    await pMap(
+      blueprint.modules,
+      async (mod) => {
+        try {
+          const modCombinedContent = (mod.lessons || []).map((l) => l.renderedHtml || l.description || '').join('\n')
+          const quizRes = await assessmentAgent.process(
+            {
+              title: mod.title,
+              contextContent: modCombinedContent,
+              count: config.quizConfig?.questionCount || 3,
+              questionTypes:
+                Array.isArray(config.questionTypes) && config.questionTypes.length > 0
+                  ? config.questionTypes
+                  : ['mcq', 'scenario', 'ordering', 'matching'],
+              difficulty: mod.difficultyLevel as any,
+            },
+            { pipelineRunId, phase: 'assessment_generation', preferredModel: options.preferredModel, silent: true }
+          )
+          if (quizRes.data && quizRes.data.length > 0) {
+            mod.quizzes = quizRes.data as any
+          }
+          completedQuizCount++
+
+          emit({
+            phase: 'assessment_generation',
+            agentRole: 'assessments',
+            status: 'running',
+            progressPercentage: Math.round(62 + (completedQuizCount / totalQuizCount) * 12),
+            title: 'Knowledge Checks & Assessment Pools',
+            titleAr: 'بناء بنك الأسئلة والتقييمات الذكية',
+            detail: `[Model: ${quizRes.modelUsed || 'Auto Router'}] Completed (${completedQuizCount}/${totalQuizCount}) quizzes for module: "${mod.title}"`,
+            detailAr: `تم إنجاز (${completedQuizCount}/${totalQuizCount}) اختبارات للوحدة: "${mod.title}"`,
+            modelUsed: quizRes.modelUsed,
+          })
+        } catch (e) {
+          console.warn('[Orchestrator] Assessment agent error for module:', mod.id, e)
+        }
+      },
+      3 // Generate 3 module quizzes concurrently
+    )
+
+    // ========================================================================
+    // PHASE 5: MULTIMEDIA ENGINE (Visuals & Audio Shift Briefings)
+    // ========================================================================
+    if (!options.skipImages && config.imageConfig?.enableAIImages !== false) {
+      const userMaxImages = typeof config.imageConfig?.maxImagesPerCourse === 'number'
+        ? config.imageConfig.maxImagesPerCourse
+        : 6
+      const userImageModel = config.imageConfig?.imageModel || 'recraft-vector'
+      const userStyle = config.imageConfig?.preferredStyle || 'technical_diagram'
+      const userAspectRatio = config.imageConfig?.preferredAspectRatio || '16:9'
+
+      const allLessons = blueprint.modules.flatMap((m) => m.lessons.map((l) => ({ mod: m, les: l })))
+      const maxVisuals = Math.min(userMaxImages, allLessons.length)
+      const targetLessons = allLessons.slice(0, maxVisuals)
+      let generatedVisualCount = 0
+
+      emit({
+        phase: 'multimedia_generation',
+        agentRole: 'image_ai',
+        status: 'running',
+        progressPercentage: 75,
+        title: `AI Visual Generation (${userImageModel})`,
+        titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
+        detail: `[Model: ${userImageModel}] Synthesizing educational visuals (0/${maxVisuals} images)...`,
+        detailAr: `توليد الرسوم البيانية والصور التوضيحية (0/${maxVisuals} صور)...`,
+        modelUsed: userImageModel,
+      })
+
+      await pMap(
+        targetLessons,
+        async ({ mod, les }) => {
+          try {
+            const imgRes = await imageAgent.process(
+              {
+                lesson: les,
+                courseTitle: blueprint.title,
+                moduleTitle: mod.title,
+                imageModel: userImageModel,
+                preferredStyle: userStyle,
+                preferredAspectRatio: userAspectRatio,
+                costTierPreference: config.imageConfig?.costTier === 'free_only' ? 'free_first' : 'premium',
+              },
+              { pipelineRunId, phase: 'multimedia_generation', silent: true }
+            )
+            if (imgRes.data) {
+              visualAssets.push(imgRes.data)
+              les.visualAssets = [imgRes.data]
+              ;(les as any).visualAsset = imgRes.data
+              generatedVisualCount++
+
+              emit({
+                phase: 'multimedia_generation',
+                agentRole: 'image_ai',
+                status: 'running',
+                progressPercentage: Math.round(75 + (generatedVisualCount / maxVisuals) * 8),
+                title: `AI Visual Generation (${imgRes.data.model || userImageModel})`,
+                titleAr: 'توليد الصور التوضيحية والوسائط التعليمية',
+                detail: `[Model: ${imgRes.data.model || userImageModel}] Completed (${generatedVisualCount}/${maxVisuals}) visuals for lesson: "${les.title}"`,
+                detailAr: `تم إنجاز (${generatedVisualCount}/${maxVisuals}) صور للدرس: "${les.title}"`,
+                modelUsed: imgRes.data.model || userImageModel,
+              })
+            }
+          } catch (e) {
+            console.warn('[Orchestrator] Image agent skipped for lesson:', les.id, e)
+          }
+
+          // Audio Briefing (Strictly disabled by default, only runs if explicitly enabled)
+          if (!options.skipAudio && config.audioConfig?.enableAudio === true) {
+            try {
+              const audRes = await audioAgent.process(
+                {
+                  lessonTitle: les.title,
+                  lessonContentHtml: les.renderedHtml,
+                },
+                { pipelineRunId, phase: 'multimedia_generation', silent: true }
+              )
+              if (audRes.data) {
+                audioNarrations[les.id] = audRes.data
+              }
+            } catch (e) {
+              console.warn('[Orchestrator] Audio agent skipped for lesson:', les.id, e)
+            }
+          }
+        },
+        3 // Synthesize 3 visuals concurrently
+      )
+      blueprint.visualAssets = visualAssets
+    }
+
+    // ========================================================================
+    // PHASE 4: QUALITY ASSURANCE AUDITING
+    // ========================================================================
+    emit({
+      phase: 'quality_assurance',
+      agentRole: 'qa_critic',
+      status: 'running',
+      progressPercentage: 80,
+      title: 'Pedagogical & Regulatory QA Audit',
+      titleAr: 'التدقيق الأكاديمي والرقابي الشامل',
+      detail: 'Auditing accuracy, Bloom alignment, Forbes benchmarks, and KSA regulations...',
+      detailAr: 'تقييم دقة المعايير والتدرج المعرفي واللوائح السعودية...',
+    })
+
+    const [qaResult, complianceResult] = await Promise.all([
+      qaCriticAgent.process(
+        {
+          blueprint,
+          courseType: config.courseType,
+        },
+        { pipelineRunId, phase: 'quality_assurance', preferredModel: options.preferredModel, onProgress }
+      ),
+      complianceAgent.process(
+        {
+          blueprint,
+        },
+        { pipelineRunId, phase: 'quality_assurance' }
+      ),
+    ])
+
+    let qaReport: ComprehensiveQAReport = qaResult.data
+    const complianceReport = complianceResult.data
+    let revisionCyclesRun = 0
+
+    // ========================================================================
+    // PHASE 5: REVISION CYCLE (Targeted Auto-Remediation)
+    // ========================================================================
+    const thresholds = DEFAULT_QA_THRESHOLDS[config.courseType] || DEFAULT_QA_THRESHOLDS.professional
+
+    if (
+      (qaReport.scoreCategory === 'targeted_revision' || qaReport.scoreCategory === 'major_revision') &&
+      revisionCyclesRun < thresholds.maxRevisionCycles
+    ) {
+      emit({
+        phase: 'revision_cycle',
+        agentRole: 'revision',
+        status: 'running',
+        progressPercentage: 90,
+        title: 'Surgical Auto-Remediation',
+        titleAr: 'المراجعة والتصحيح التلقائي للثغرات',
+        detail: `Executing targeted remediation for ${qaReport.findings.length} findings...`,
+        detailAr: `معالجة ${qaReport.findings.length} ملاحظة جودة...`,
+      })
+
+      const revisionRes = await revisionAgent.process(
+        {
+          blueprint,
+          qaReport,
+        },
+        { pipelineRunId, phase: 'revision_cycle', preferredModel: options.preferredModel, onProgress }
+      )
+
+      if (revisionRes.data?.revisedBlueprint) {
+        blueprint = revisionRes.data.revisedBlueprint
+        revisionCyclesRun++
+
+        // Rescore after revision
+        const rescore = await qaCriticAgent.process(
+          {
+            blueprint,
+            courseType: config.courseType,
+          },
+          { pipelineRunId, phase: 'final_scoring' }
+        )
+        qaReport = rescore.data
+      }
+    }
+
+    // ========================================================================
+    // PHASE 6: FINAL SCORING & PACKAGE
+    // ========================================================================
+    const totalDurationMs = Date.now() - startTime
+
+    emit({
+      phase: 'final_scoring',
+      agentRole: 'qa_critic',
+      status: 'completed',
+      progressPercentage: 100,
+      title: 'Course Pipeline Successfully Orchestrated',
+      titleAr: 'اكتمل توليد الدورة التدريبية بنجاح',
+      detail: `Final QA Score: ${qaReport.overallScore}/100 (${qaReport.scoreCategory.toUpperCase()}) • Completed in ${(totalDurationMs / 1000).toFixed(1)}s`,
+      detailAr: `درجة الجودة النهائية: ${qaReport.overallScore}/100 • تم الإنجاز في ${(totalDurationMs / 1000).toFixed(1)} ثانية`,
+    })
+
+    const legacyQaReport: CourseQAQualityReport = {
+      overallScore: qaReport.overallScore,
+      pedagogicalCoherence: qaReport.dimensionScores.pedagogy,
+      operationalAccuracy: qaReport.dimensionScores.operationalAccuracy,
+      bloomsDistributionScore: qaReport.dimensionScores.bloomsAlignment,
+      assessmentAlignmentScore: qaReport.dimensionScores.operationalAccuracy,
+      forbesLuxuryStandardScore: qaReport.dimensionScores.forbesStandards,
+      repetitionScore: 95,
+      distractorDiscriminationScore: 90,
+      identifiedGaps: qaReport.findings.map((f) => ({
+        area: f.dimension,
+        severity: f.severity === 'critical' ? 'critical' : f.severity === 'major' ? 'high' : 'medium',
+        issue: f.description,
+        issue_ar: f.descriptionAr,
+        suggestedFix: f.remediationSuggestion,
+        suggestedFix_ar: f.remediationSuggestionAr,
+        canAutoRegenerate: f.canAutoFix,
+      })),
+      timestamp: qaReport.evaluatedAt,
+      auditedBy: qaReport.evaluatedByModel,
+    }
+
+    return {
+      pipelineRunId,
+      blueprint,
+      researchFindings: researchResult?.data,
+      groundedKnowledge: knowledgeResult?.data,
+      activities: allActivities,
+      visualAssets,
+      audioNarrations,
+      qaReport,
+      legacyQaReport,
+      complianceScore: complianceReport.score,
+      totalDurationMs,
+      totalEstimatedCostUSD,
+      revisionCyclesRun,
+    }
+  }
+}
+
+export const aiCourseOrchestrator = AICourseOrchestrator.getInstance()

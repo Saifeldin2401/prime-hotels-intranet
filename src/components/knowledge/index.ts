@@ -11,4 +11,6 @@ export { KnowledgeSidebar } from './KnowledgeSidebar'
 export { LinkedResourceSelector } from './LinkedResourceSelector'
 export { RelatedArticlesEditor } from './RelatedArticlesEditor'
 export { RequiredReadingWidget } from './RequiredReadingWidget'
+export { AIArticleStudioModal } from './AIArticleStudioModal'
+
 

@@ -253,31 +253,31 @@ export function StudioStageVisuals({
               </Select>
             </div>
 
-            {/* Cloudflare Model */}
+            {/* Image Model Engine */}
             <div className="space-y-1.5">
-              <Label className="text-xs font-semibold">{t('builder.imageModelEngine', 'Cloudflare Workers AI Model')}</Label>
+              <Label className="text-xs font-semibold">{t('builder.imageModelEngine', 'AI Visual Generation Engine')}</Label>
               <Select value={imageModel} onValueChange={onChangeImageModel}>
                 <SelectTrigger className="text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                    ✨ FLUX.1 Schnell (Ultra-HD Studio • 12B DiT • Best Diagrams & Text)
+                  <SelectItem value="recraft-vector">
+                    🎨 Recraft Vector v3 (Primary Free • SVG & Infographic Charts)
+                  </SelectItem>
+                  <SelectItem value="recraft-v3">
+                    🖼️ Recraft Educational Illustration (Free • 5-Star Hotel Visuals)
                   </SelectItem>
                   <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                    ⚡ SDXL-Lightning (Primary Free • $0.00/step • Fast 1024px)
+                    ⚡ Cloudflare SDXL-Lightning (Free • $0.00/step • Fast 1024px)
+                  </SelectItem>
+                  <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
+                    ✨ FLUX.1 Schnell (Ultra-HD Studio • 12B DiT • Best Text & Diagrams)
                   </SelectItem>
                   <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
                     🛡️ SDXL Base 1.0 (Detailed Free • $0.00/step)
                   </SelectItem>
                   <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
                     🎨 DreamShaper 8 LCM (Creative/Photo Free • $0.00/step)
-                  </SelectItem>
-                  <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-img2img">
-                    🔄 SD 1.5 Img2Img (Transformation)
-                  </SelectItem>
-                  <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-inpainting">
-                    🖌️ SD 1.5 Inpainting (Region Editing)
                   </SelectItem>
                 </SelectContent>
               </Select>

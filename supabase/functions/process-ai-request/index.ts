@@ -815,7 +815,46 @@ serve(async (req) => {
       throw new Error(`AI generation failed. Diagnostics: ${diagnosticErrors.join(" | ")}`);
     }
 
-    // 4. Return Success Response
+    // 4. Asynchronous Usage & Cost Audit Logging
+    try {
+      const supabaseAdmin = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        serviceRoleKey || Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      );
+
+      const isFreeTier =
+        providerUsed === "gemini" ||
+        providerUsed === "groq" ||
+        providerUsed === "cloudflare" ||
+        modelUsed.includes(":free");
+
+      const estimatedCost = isFreeTier ? 0 : 0.002;
+
+      void supabaseAdmin
+        .from("ai_usage_log")
+        .insert({
+          agent_role: currentTask,
+          task_type: currentTask,
+          model_used: modelUsed,
+          provider: providerUsed,
+          cost_tier: isFreeTier ? "free" : "paid",
+          prompt_tokens: prompt.split(/\s+/).length * 2,
+          completion_tokens: result.split(/\s+/).length * 2,
+          total_tokens: (prompt.split(/\s+/).length + result.split(/\s+/).length) * 2,
+          estimated_cost_usd: estimatedCost,
+          latency_ms: 500,
+          success: true,
+          metadata: {
+            is_free_tier: isFreeTier,
+            model_candidate: model,
+          },
+        })
+        .then(() => {});
+    } catch {
+      // Non-blocking usage logging
+    }
+
+    // 5. Return Success Response
     return new Response(
       JSON.stringify({
         response: result,

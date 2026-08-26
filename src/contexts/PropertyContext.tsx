@@ -90,7 +90,7 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
     // System roles that have access to all properties at group level.
     const isCorporateRole = roleSupportsConsolidatedView(primaryRole)
 
-    const fetchProperties = async () => {
+    const fetchProperties = async (retryCount = 0) => {
         if (!user) {
             setAvailableProperties([])
             setCurrentProperty(null)
@@ -110,7 +110,13 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                     .eq('is_active', true)
                     .order('name')
 
-                if (error) throw error
+                if (error) {
+                    if ((error.code === 'PGRST303' || error.message?.includes('JWT issued at future')) && retryCount < 2) {
+                        await new Promise((r) => setTimeout(r, 1000))
+                        return fetchProperties(retryCount + 1)
+                    }
+                    throw error
+                }
 
                 // Add Group-level option for corporate users (also acts as Head Office)
                 const allOption = createPseudoProperty(
@@ -131,7 +137,13 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                     .select('property:properties(*)')
                     .eq('user_id', user.id)
 
-                if (error) throw error
+                if (error) {
+                    if ((error.code === 'PGRST303' || error.message?.includes('JWT issued at future')) && retryCount < 2) {
+                        await new Promise((r) => setTimeout(r, 1000))
+                        return fetchProperties(retryCount + 1)
+                    }
+                    throw error
+                }
 
                 const mappedProperties = (data ?? [])
                     .map((item) => toProperty(item.property))
@@ -173,8 +185,10 @@ export function PropertyProvider({ children }: { children: React.ReactNode }) {
                 setCurrentProperty(null)
             }
 
-        } catch (error) {
-            console.error('Error fetching properties:', error)
+        } catch (error: any) {
+            if (error?.code !== 'PGRST303' && !error?.message?.includes('JWT issued at future')) {
+                console.error('Error fetching properties:', error)
+            }
         } finally {
             setIsLoading(false)
         }

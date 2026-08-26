@@ -7,8 +7,10 @@ import { Progress } from '@/components/ui/progress'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
   BookOpen,
+  BrainCircuit,
   Clock,
   Compass,
+  Cpu,
   FileQuestion,
   FileText,
   Image as ImageIcon,
@@ -34,6 +36,7 @@ import type {
   VisualStyle,
 } from '@/types/aiCourseEngine'
 import { cn } from '@/lib/utils'
+import { AVAILABLE_COURSE_AI_MODELS } from '@/lib/gemini'
 
 export interface CourseSummaryStats {
   generationMode: CourseGenerationMode
@@ -47,10 +50,12 @@ export interface CourseSummaryStats {
   lessonDuration: LessonDurationMinutes
   overallDepth: OverallContentDepth
   selectedComponentsCount: number
+  selectedComponents?: string[]
   quizPlacement: QuizPlacement
   quizQuestionCount: number
   quizPassingScore: number
   selectedQuestionTypesCount: number
+  selectedQuestionTypes?: string[]
   enableAIImages: boolean
   imageModel: string
   imageDensity: ImageDensity
@@ -80,7 +85,27 @@ export function StudioCourseSummaryPanel({
   const minutes = totalDurationMinutes % 60
   const durationString = hours > 0 ? `${hours}h ${minutes > 0 ? `${minutes}m` : ''}` : `${minutes}m`
 
-  const isFlux = stats.imageModel.includes('flux')
+  // Resolve AI Model details
+  const modelInfo = AVAILABLE_COURSE_AI_MODELS.find((m) => m.id === stats.preferredModel)
+  const modelDisplayName = modelInfo?.name || (stats.preferredModel === 'auto' ? 'Auto Intelligent Router' : stats.preferredModel)
+  const isModelFree = modelInfo?.badge?.includes('Free') || stats.preferredModel === 'auto' || stats.preferredModel.includes('gemini') || stats.preferredModel.includes('qwen')
+
+  // Resolve Visual Engine details
+  const resolveImageModelLabel = (modelId: string) => {
+    if (modelId === 'recraft-vector') return { name: '🎨 Recraft Vector v3 (SVG)', badge: 'Free Vectors', free: true }
+    if (modelId === 'recraft-v3') return { name: '🖼️ Recraft Illustration', badge: 'Free Tier', free: true }
+    if (modelId.includes('flux')) return { name: '✨ FLUX.1 Schnell (12B DiT)', badge: 'Ultra HD', free: false }
+    if (modelId.includes('lightning')) return { name: '⚡ SDXL-Lightning', badge: 'Free Tier', free: true }
+    if (modelId.includes('base-1.0')) return { name: '🛡️ SDXL Base 1.0', badge: 'Free Tier', free: true }
+    if (modelId.includes('dreamshaper')) return { name: '🎨 DreamShaper 8 LCM', badge: 'Free Tier', free: true }
+    return { name: modelId.replace(/^@cf\/[^/]+\//, ''), badge: 'Free Tier', free: true }
+  }
+
+  const imageInfo = resolveImageModelLabel(stats.imageModel)
+
+  const questionTypesDisplay = stats.selectedQuestionTypes && stats.selectedQuestionTypes.length > 0
+    ? stats.selectedQuestionTypes.map(q => q.toUpperCase()).join(', ')
+    : 'MCQ, Scenario, Ordering'
 
   return (
     <div className="w-full h-full flex flex-col bg-card/60 border-s backdrop-blur-sm">
@@ -104,7 +129,7 @@ export function StudioCourseSummaryPanel({
 
       <ScrollArea className="flex-1 p-4 space-y-4">
         {/* Quick Highlights Grid */}
-        <div className="grid grid-cols-2 gap-2 mb-4">
+        <div className="grid grid-cols-2 gap-2 mb-3">
           <div
             onClick={() => onJumpToStage('design')}
             className="p-2.5 rounded-lg border bg-card hover:border-purple-300 cursor-pointer transition-all"
@@ -195,12 +220,12 @@ export function StudioCourseSummaryPanel({
           <p className="text-xs text-muted-foreground">
             <span className="font-semibold text-foreground">{stats.quizPlacement.replace('_', ' ')}</span> • {stats.quizQuestionCount} Qs ({stats.quizPassingScore}% Pass)
           </p>
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <span>{stats.selectedQuestionTypesCount} Question Types (MCQ, Scenario, Ordering)</span>
+          <div className="flex items-center gap-1 text-[10px] text-muted-foreground truncate">
+            <span>{stats.selectedQuestionTypesCount} Types: {questionTypesDisplay}</span>
           </div>
         </div>
 
-        {/* Section 4: Visuals & Cloudflare Workers AI */}
+        {/* Section 4: Visuals & AI Image Engine */}
         <div
           onClick={() => onJumpToStage('visuals')}
           className="p-3 rounded-xl border bg-card hover:border-purple-300 cursor-pointer transition-all group space-y-1.5 mb-3"
@@ -217,9 +242,9 @@ export function StudioCourseSummaryPanel({
           {stats.enableAIImages ? (
             <div className="space-y-1">
               <div className="flex items-center justify-between text-xs">
-                <span className="text-foreground font-semibold">{isFlux ? '✨ FLUX.1 Schnell (Ultra HD)' : '⚡ SDXL-Lightning'}</span>
-                <Badge className={cn('text-[9px]', isFlux ? 'bg-purple-600 text-white' : 'bg-emerald-600 text-white')}>
-                  {isFlux ? 'Ultra HD DiT' : 'Free Tier'}
+                <span className="text-foreground font-semibold truncate pe-2">{imageInfo.name}</span>
+                <Badge className={cn('text-[9px] shrink-0', imageInfo.free ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white')}>
+                  {imageInfo.badge}
                 </Badge>
               </div>
               <p className="text-[10px] text-muted-foreground">
@@ -229,6 +254,34 @@ export function StudioCourseSummaryPanel({
           ) : (
             <p className="text-xs text-muted-foreground italic">{t('builder.visualsDisabled', 'Visual generation turned off')}</p>
           )}
+        </div>
+
+        {/* Section 5: AI Engine & Multi-Agent Orchestrator */}
+        <div
+          onClick={() => onJumpToStage('ai_settings')}
+          className="p-3 rounded-xl border bg-card hover:border-purple-300 cursor-pointer transition-all group space-y-1.5 mb-3"
+        >
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold text-foreground flex items-center gap-1.5">
+              <Cpu className="w-3.5 h-3.5 text-purple-600" />
+              <span>AI Engine & Agents</span>
+            </span>
+            <span className="text-[10px] text-purple-600 font-semibold group-hover:underline">
+              {t('common.edit', 'Edit')} →
+            </span>
+          </div>
+          <div className="space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-foreground font-semibold truncate pe-2">{modelDisplayName}</span>
+              <Badge className={cn('text-[9px] shrink-0', isModelFree ? 'bg-emerald-600 text-white' : 'bg-purple-600 text-white')}>
+                {isModelFree ? '⚡ Free Router' : '👑 Premier Tier'}
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3 text-emerald-600 inline" />
+              <span>KSA Safeguards • Forbes QA Critic • Auto-Revision</span>
+            </p>
+          </div>
         </div>
 
         {/* Harmonize Action Card */}

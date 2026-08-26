@@ -255,9 +255,9 @@ export function AICourseEngineStudioModal({
   const [includeHints, setIncludeHints] = useState(true)
   const [includeExplanations, setIncludeExplanations] = useState(true)
 
-  // 6. AI Visuals & Cloudflare Workers AI Image Engine
+  // 6. AI Visuals & Recraft Vector Image Engine
   const [enableAIImages, setEnableAIImages] = useState(true)
-  const [imageModel, setImageModel] = useState('@cf/bytedance/stable-diffusion-xl-lightning')
+  const [imageModel, setImageModel] = useState('recraft-vector')
   const [imageDensity, setImageDensity] = useState<ImageDensity>('balanced')
   const [imageSelectionStrategy, setImageSelectionStrategy] = useState<'auto_intelligent' | 'all_suitable_lessons' | 'high_benefit_only'>('auto_intelligent')
   const [preferredVisualStyle, setPreferredVisualStyle] = useState<VisualStyle>('educational_illustration')
@@ -270,6 +270,10 @@ export function AICourseEngineStudioModal({
   // 7. AI Engine & Language
   const [preferredModel, setPreferredModel] = useState('auto')
   const [targetLanguage, setTargetLanguage] = useState<'English' | 'Arabic' | 'Bilingual'>('English')
+  const [enableAudioBriefings, setEnableAudioBriefings] = useState(false)
+  const [enableActivitiesAgent, setEnableActivitiesAgent] = useState(true)
+  const [enableAutoRevision, setEnableAutoRevision] = useState(true)
+  const [enableComplianceAudit, setEnableComplianceAudit] = useState(true)
 
   // Preview & Review State
   const [generatedBlueprint, setGeneratedBlueprint] = useState<CourseBlueprint | null>(null)
@@ -628,7 +632,7 @@ export function AICourseEngineStudioModal({
       bloomDistribution,
       imageConfig: {
         enableAIImages,
-        provider: 'cloudflare',
+        provider: imageModel?.includes('recraft') ? 'recraft' : imageModel?.includes('flux') ? 'replicate' : 'cloudflare',
         costTier: 'free_only',
         imageModel,
         density: imageDensity,
@@ -637,6 +641,15 @@ export function AICourseEngineStudioModal({
         preferredAspectRatio,
         maxImagesPerLesson,
         maxImagesPerCourse,
+      },
+      audioConfig: {
+        enableAudio: enableAudioBriefings,
+      },
+      subsystems: {
+        activities: enableActivitiesAgent,
+        audio: enableAudioBriefings,
+        revision: enableAutoRevision,
+        compliance: enableComplianceAudit,
       },
       aiControls: {
         preferredModel,
@@ -886,10 +899,12 @@ export function AICourseEngineStudioModal({
     lessonDuration,
     overallDepth,
     selectedComponentsCount: selectedComponents.length,
+    selectedComponents,
     quizPlacement,
     quizQuestionCount,
     quizPassingScore,
     selectedQuestionTypesCount: selectedQuestionTypes.length,
+    selectedQuestionTypes,
     enableAIImages,
     imageModel,
     imageDensity,
@@ -1188,6 +1203,14 @@ export function AICourseEngineStudioModal({
                       onChangePreferredModel={setPreferredModel}
                       targetLanguage={targetLanguage}
                       onChangeTargetLanguage={setTargetLanguage}
+                      enableAudioBriefings={enableAudioBriefings}
+                      onChangeEnableAudioBriefings={setEnableAudioBriefings}
+                      enableActivitiesAgent={enableActivitiesAgent}
+                      onChangeEnableActivitiesAgent={setEnableActivitiesAgent}
+                      enableAutoRevision={enableAutoRevision}
+                      onChangeEnableAutoRevision={setEnableAutoRevision}
+                      enableComplianceAudit={enableComplianceAudit}
+                      onChangeEnableComplianceAudit={setEnableComplianceAudit}
                     />
                   )}
 
@@ -1295,6 +1318,7 @@ export function AICourseEngineStudioModal({
                 moduleCount={typeof moduleCount === 'number' ? moduleCount : 4}
                 lessonsPerModule={typeof lessonsPerModule === 'number' ? lessonsPerModule : 3}
                 enableImages={enableAIImages}
+                imageModel={imageModel}
                 isGenerating={executePipeline.isPending}
                 currentStage={executePipeline.currentStage}
                 stageName={executePipeline.stageName}
@@ -1428,41 +1452,83 @@ export function AICourseEngineStudioModal({
                           className="mb-6"
                         />
 
-                        {/* Attached Cloudflare Visual Asset Preview */}
-                        {activeLesson.visualAsset && (
-                          <div className="mb-6 p-3 rounded-xl border bg-muted/20 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-bold flex items-center gap-1.5 text-foreground">
-                                <ImageIcon className="w-3.5 h-3.5 text-orange-600" />
-                                Cloudflare AI Visual Asset ({activeLesson.visualAsset.imageModel.split('/').pop()})
-                              </span>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setSelectedAssetForEditor(activeLesson.visualAsset || null)
-                                  setVisualEditorOpen(true)
-                                }}
-                                className="h-6 text-[10px] font-semibold"
-                              >
-                                Edit / Transform
-                              </Button>
-                            </div>
+                        {/* Attached Visual Asset / Recraft SVG Preview */}
+                        {Boolean((activeLesson.visualAssets && activeLesson.visualAssets.length > 0) || (activeLesson as any).visualAsset) && (() => {
+                          const asset: any = (activeLesson.visualAssets && activeLesson.visualAssets[0]) || (activeLesson as any).visualAsset
+                          const imageUrl = asset?.image_url || asset?.publicUrl
+                          const modelDisplay = (asset?.model || asset?.imageModel || 'Recraft Vector').split('/').pop()
 
-                            {activeLesson.visualAsset.publicUrl ? (
-                              <div className="relative rounded-lg overflow-hidden border max-h-72 bg-black/5 flex items-center justify-center">
-                                <img
-                                  src={activeLesson.visualAsset.publicUrl}
-                                  alt={activeLesson.visualAsset.altText || activeLesson.title}
-                                  className="max-h-72 object-contain"
-                                />
+                          return (
+                            <div className="mb-6 p-3 rounded-xl border bg-muted/20 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold flex items-center gap-1.5 text-foreground">
+                                  <ImageIcon className="w-3.5 h-3.5 text-orange-600" />
+                                  Visual Guide & Schematic ({modelDisplay})
+                                </span>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setSelectedAssetForEditor(asset)
+                                    setVisualEditorOpen(true)
+                                  }}
+                                  className="h-6 text-[10px] font-semibold"
+                                >
+                                  Edit / Transform
+                                </Button>
                               </div>
-                            ) : (
-                              <p className="text-xs text-muted-foreground italic">Visual synthesis in progress or queued.</p>
-                            )}
-                            <p className="text-[11px] text-muted-foreground italic">{activeLesson.visualAsset.caption || activeLesson.visualAsset.prompt}</p>
-                          </div>
-                        )}
+
+                              {imageUrl ? (
+                                <div className="relative rounded-lg overflow-hidden border max-h-85 bg-slate-950/90 flex items-center justify-center">
+                                  {(() => {
+                                    // If imageUrl is SVG data URI or raw SVG, render directly to DOM
+                                    let rawSvg: string | null = null
+                                    if (imageUrl.startsWith('<svg') || imageUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
+                                      rawSvg = imageUrl
+                                    } else if (imageUrl.startsWith('data:image/svg+xml')) {
+                                      try {
+                                        const commaIndex = imageUrl.indexOf(',')
+                                        if (commaIndex !== -1) {
+                                          const header = imageUrl.slice(0, commaIndex)
+                                          const body = imageUrl.slice(commaIndex + 1)
+                                          if (header.includes('base64')) {
+                                            rawSvg = decodeURIComponent(escape(atob(body)))
+                                          } else {
+                                            rawSvg = decodeURIComponent(body)
+                                          }
+                                        }
+                                      } catch {
+                                        try {
+                                          rawSvg = decodeURIComponent(imageUrl.replace(/^data:image\/svg\+xml[^,]*,/, ''))
+                                        } catch {}
+                                      }
+                                    }
+
+                                    if (rawSvg) {
+                                      return (
+                                        <div
+                                          className="w-full flex items-center justify-center p-2 [&>svg]:w-full [&>svg]:max-h-80 [&>svg]:h-auto [&>svg]:rounded-lg shadow-sm"
+                                          dangerouslySetInnerHTML={{ __html: rawSvg }}
+                                        />
+                                      )
+                                    }
+
+                                    return (
+                                      <img
+                                        src={imageUrl}
+                                        alt={asset.alt_text || asset.altText || activeLesson.title}
+                                        className="max-h-80 w-full object-contain rounded-md"
+                                      />
+                                    )
+                                  })()}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground italic">Visual synthesis in progress or queued.</p>
+                              )}
+                              <p className="text-[11px] text-muted-foreground italic">{asset.caption || asset.visual_concept || asset.prompt}</p>
+                            </div>
+                          )
+                        })()}
 
                         {/* Rendered HTML or Raw Source */}
                         {viewRawHtml ? (

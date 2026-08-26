@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -60,6 +60,7 @@ interface StudioLiveGenerationProgressProps {
   moduleCount: number
   lessonsPerModule: number
   enableImages: boolean
+  imageModel?: string
   isGenerating: boolean
   currentStage?: number
   stageName?: string
@@ -73,6 +74,7 @@ export function StudioLiveGenerationProgress({
   moduleCount,
   lessonsPerModule,
   enableImages,
+  imageModel = 'recraft-vector',
   isGenerating,
   currentStage = 1,
   stageName = '',
@@ -87,39 +89,64 @@ export function StudioLiveGenerationProgress({
   const totalQuizzes = moduleCount
   const totalImages = enableImages ? Math.min(6, totalLessons) : 0
 
+  // Monotonic tracking to ensure counts never regress
+  const maxLessonsRef = useRef(0)
+  const maxQuizzesRef = useRef(0)
+  const maxImagesRef = useRef(0)
+
+  // Extract Model Name and Clean Narrative from pipeline stageDetail
+  const { activeModelName, cleanStageDetail } = useMemo(() => {
+    if (!stageDetail) return { activeModelName: undefined, cleanStageDetail: '' }
+    const modelMatch = stageDetail.match(/\[Model:\s*([^\]]+)\]/i)
+    const activeModel = modelMatch ? modelMatch[1].trim() : undefined
+    const clean = stageDetail.replace(/\[Model:\s*[^\]]+\]\s*/gi, '').trim()
+    return { activeModelName: activeModel, cleanStageDetail: clean }
+  }, [stageDetail])
+
   // Real-time parsed metrics from pipeline stageDetail
   const { parsedLessons, parsedQuizzes, parsedImages } = useMemo(() => {
-    let lCount = 0
-    let qCount = 0
-    let imgCount = 0
+    let lCount = maxLessonsRef.current
+    let qCount = maxQuizzesRef.current
+    let imgCount = maxImagesRef.current
 
     if (stageDetail) {
-      const lessonMatch = stageDetail.match(/Completed\s+(\d+)\/(\d+)\s+lessons/i)
+      // 1. Lessons progress regex (matches (2/6), 2/6, Completed 2/6, etc.)
+      const lessonMatch = stageDetail.match(/(?:Completed|Synthesizing|lessons?)\s*\(?(\d+)\/(\d+)\)?/i)
       if (lessonMatch) {
-        lCount = parseInt(lessonMatch[1], 10)
+        lCount = Math.max(lCount, parseInt(lessonMatch[1], 10))
       } else if (currentStage > 3) {
         lCount = totalLessons
       }
 
-      if (currentStage >= 5) {
+      // 2. Quizzes progress regex
+      const quizMatch = stageDetail.match(/(?:Completed|Synthesizing|quizzes?)\s*\(?(\d+)\/(\d+)\)?/i)
+      if (quizMatch) {
+        qCount = Math.max(qCount, parseInt(quizMatch[1], 10))
+      } else if (currentStage > 4) {
         qCount = totalQuizzes
-      } else if (currentStage === 4) {
-        qCount = Math.max(1, Math.floor(totalQuizzes / 2))
       }
 
-      if (currentStage >= 6) {
+      // 3. Images progress regex
+      const imgMatch = stageDetail.match(/(?:Completed|Synthesizing|visuals?|images?)\s*\(?(\d+)\/(\d+)\)?/i)
+      if (imgMatch) {
+        imgCount = Math.max(imgCount, parseInt(imgMatch[1], 10))
+      } else if (currentStage > 5) {
         imgCount = totalImages
       }
     } else {
       if (currentStage > 3) lCount = totalLessons
-      if (currentStage >= 5) qCount = totalQuizzes
-      if (currentStage >= 6) imgCount = totalImages
+      if (currentStage > 4) qCount = totalQuizzes
+      if (currentStage > 5) imgCount = totalImages
     }
 
+    maxLessonsRef.current = Math.min(totalLessons, lCount)
+    maxQuizzesRef.current = Math.min(totalQuizzes, qCount)
+    maxImagesRef.current = Math.min(totalImages, imgCount)
+
     return {
-      parsedLessons: lCount,
-      parsedQuizzes: qCount,
-      parsedImages: imgCount,
+      parsedLessons: maxLessonsRef.current,
+      parsedQuizzes: maxQuizzesRef.current,
+      parsedImages: maxImagesRef.current,
     }
   }, [stageDetail, currentStage, totalLessons, totalQuizzes, totalImages])
 
@@ -128,28 +155,34 @@ export function StudioLiveGenerationProgress({
     if (!isGenerating) return 100
 
     switch (currentStage) {
-      case 1: // Initializing
+      case 1: // Discovery & Grounding
         return 12
       case 2: // Curriculum Blueprint
         return 28
       case 3: { // Lesson Synthesis
         if (totalLessons > 0 && parsedLessons > 0) {
-          return Math.round(28 + (parsedLessons / totalLessons) * 40)
+          return Math.round(28 + (parsedLessons / totalLessons) * 32)
         }
         return 38
       }
-      case 4: // Assessment Blueprint
-        return 72
-      case 5: // Question Synthesis
-        return 84
-      case 6: // Visual Generation
-        return 92
-      case 7: // Automated 5-Star QA Audit
-        return 98
+      case 4: { // Assessment Pools
+        if (totalQuizzes > 0 && parsedQuizzes > 0) {
+          return Math.round(60 + (parsedQuizzes / totalQuizzes) * 15)
+        }
+        return 65
+      }
+      case 5: { // AI Visuals
+        if (totalImages > 0 && parsedImages > 0) {
+          return Math.round(75 + (parsedImages / totalImages) * 15)
+        }
+        return 80
+      }
+      case 6: // QA Critic & Compliance Audit
+        return 94
       default:
         return 50
     }
-  }, [isGenerating, currentStage, totalLessons, parsedLessons])
+  }, [isGenerating, currentStage, totalLessons, parsedLessons, totalQuizzes, parsedQuizzes, totalImages, parsedImages])
 
   // Track elapsed time for real estimate
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
@@ -169,6 +202,40 @@ export function StudioLiveGenerationProgress({
     const totalEstimatedSeconds = Math.max(12, Math.round((elapsedSeconds / calculatedProgress) * 100))
     return Math.max(1, totalEstimatedSeconds - elapsedSeconds)
   }, [calculatedProgress, elapsedSeconds])
+
+  // Resolve visual card title dynamically
+  const resolveVisualCardTitle = () => {
+    if (imageModel === 'recraft-vector') {
+      return {
+        title: 'Recraft Vector AI Image Generation',
+        title_ar: 'توليد الرسوم البيانية الفيكتور عبر Recraft AI',
+      }
+    }
+    if (imageModel === 'recraft-v3') {
+      return {
+        title: 'Recraft Educational Illustration Generation',
+        title_ar: 'توليد الرسومات التعليمية عبر Recraft AI',
+      }
+    }
+    if (imageModel.includes('flux')) {
+      return {
+        title: 'FLUX.1 Schnell Ultra-HD Image Generation',
+        title_ar: 'توليد الصور فائقة الدقة عبر FLUX.1 AI',
+      }
+    }
+    if (imageModel.includes('lightning')) {
+      return {
+        title: 'Cloudflare Workers AI (SDXL-Lightning)',
+        title_ar: 'توليد الصور عبر Cloudflare AI',
+      }
+    }
+    return {
+      title: 'AI Visual Assets & Media Generation',
+      title_ar: 'توليد الصور والوسائط التوضيحية',
+    }
+  }
+
+  const visualCardInfo = resolveVisualCardTitle()
 
   const phases: GenerationPhase[] = [
     {
@@ -202,7 +269,7 @@ export function StudioLiveGenerationProgress({
       id: 'quizzes',
       title: 'Knowledge Checks & Assessment Pools',
       title_ar: 'بناء بنك الأسئلة والتقييمات',
-      status: currentStage > 5 ? 'completed' : currentStage >= 4 ? 'in_progress' : 'pending',
+      status: currentStage > 4 ? 'completed' : currentStage === 4 ? 'in_progress' : 'pending',
       currentCount: parsedQuizzes,
       totalCount: totalQuizzes,
       unit: 'quizzes',
@@ -212,9 +279,9 @@ export function StudioLiveGenerationProgress({
       ? [
           {
             id: 'visuals',
-            title: 'Cloudflare Workers AI Image Generation',
-            title_ar: 'توليد الصور التوضيحية عبر Cloudflare AI',
-            status: (currentStage > 6 ? 'completed' : currentStage === 6 ? 'in_progress' : 'pending') as any,
+            title: visualCardInfo.title,
+            title_ar: visualCardInfo.title_ar,
+            status: (currentStage > 5 ? 'completed' : currentStage === 5 ? 'in_progress' : 'pending') as any,
             currentCount: parsedImages,
             totalCount: totalImages,
             unit: 'images',
@@ -226,7 +293,7 @@ export function StudioLiveGenerationProgress({
       id: 'qa',
       title: 'Automated 5-Star Quality Audit',
       title_ar: 'الفحص النهائي للجودة والمعايير',
-      status: currentStage >= 7 ? (calculatedProgress >= 100 ? 'completed' : 'in_progress') : 'pending',
+      status: currentStage >= 6 ? (calculatedProgress >= 100 ? 'completed' : 'in_progress') : 'pending',
       icon: Award,
     },
   ]
@@ -253,6 +320,12 @@ export function StudioLiveGenerationProgress({
           </div>
 
           <div className="flex items-center gap-2 self-start sm:self-center">
+            {activeModelName && (
+              <Badge variant="outline" className="bg-white/80 dark:bg-slate-900/80 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-800 text-[10px] px-2 py-0.5 font-mono flex items-center gap-1 shadow-xs">
+                <Cpu className="w-3 h-3 text-purple-600" />
+                <span className="truncate max-w-[150px]">{activeModelName}</span>
+              </Badge>
+            )}
             <Badge className="bg-purple-600 text-white text-xs px-2.5 py-1 font-mono">
               {calculatedProgress}%
             </Badge>
@@ -263,11 +336,11 @@ export function StudioLiveGenerationProgress({
         <div className="space-y-1.5 pt-1">
           <Progress value={calculatedProgress} className="h-2.5 bg-purple-100 dark:bg-purple-950/50" />
           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-            <div className="flex items-center gap-1.5 font-medium text-foreground">
-              <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin" />
-              <span>{stageDetail || stageName || activePhase.title}</span>
+            <div className="flex items-center gap-1.5 font-medium text-foreground truncate max-w-lg">
+              <Loader2 className="w-3.5 h-3.5 text-purple-600 animate-spin shrink-0" />
+              <span className="truncate">{cleanStageDetail || stageName || activePhase.title}</span>
             </div>
-            <div className="flex items-center gap-1 font-mono">
+            <div className="flex items-center gap-1 font-mono shrink-0">
               <Clock className="w-3 h-3 text-muted-foreground" />
               <span>Est. Remaining: ~{estimatedRemainingSeconds}s</span>
             </div>
@@ -280,28 +353,27 @@ export function StudioLiveGenerationProgress({
         <Card className="border-rose-300 bg-rose-50/70 dark:bg-rose-950/30 shadow-md">
           <CardContent className="p-4 space-y-3 text-start">
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold shrink-0 mt-0.5">
-                <AlertCircle className="w-4 h-4" />
-              </div>
-              <div className="space-y-1 min-w-0">
-                <h4 className="text-xs font-bold text-rose-950 dark:text-rose-200">
-                  {errorState.failedItemTitle || 'Generation Paused: Pipeline Anomaly'}
+              <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+              <div className="space-y-1 flex-1">
+                <h4 className="text-sm font-bold text-rose-900 dark:text-rose-200">
+                  {errorState.failedItemTitle || 'Synthesis Anomaly Detected'}
                 </h4>
-                <p className="text-[11px] text-rose-800 dark:text-rose-300 leading-relaxed">
-                  {errorState.errorMessage || 'AI generation encountered a transient rate limit or timeout. Choose a recovery path below to proceed without losing progress.'}
+                <p className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                  {errorState.errorMessage}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 border-t border-rose-200/80 flex-wrap">
+            <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-rose-200 dark:border-rose-900/50">
               {errorState.canRetry && (
                 <Button
                   size="sm"
+                  variant="default"
                   onClick={errorState.onRetry}
-                  className="h-7 text-xs bg-rose-600 hover:bg-rose-700 text-white font-bold"
+                  className="bg-rose-600 hover:bg-rose-700 text-white text-xs h-8"
                 >
-                  <RotateCcw className="w-3 h-3 me-1" />
-                  Retry Item
+                  <RotateCcw className="w-3.5 h-3.5 me-1.5" />
+                  Retry Agent Step
                 </Button>
               )}
               {errorState.canFallback && (
@@ -309,10 +381,10 @@ export function StudioLiveGenerationProgress({
                   size="sm"
                   variant="outline"
                   onClick={errorState.onFallback}
-                  className="h-7 text-xs border-rose-300 text-rose-800 dark:text-rose-200 hover:bg-rose-100/50 font-medium"
+                  className="border-rose-300 text-rose-700 hover:bg-rose-100 dark:border-rose-800 dark:text-rose-300 text-xs h-8"
                 >
-                  <Zap className="w-3 h-3 me-1 text-amber-600" />
-                  Fast Fallback Model
+                  <Zap className="w-3.5 h-3.5 me-1.5 text-amber-500" />
+                  Failover to Fast Gemini Tier
                 </Button>
               )}
               {errorState.canSkip && (
@@ -320,9 +392,19 @@ export function StudioLiveGenerationProgress({
                   size="sm"
                   variant="ghost"
                   onClick={errorState.onSkip}
-                  className="h-7 text-xs text-rose-700 dark:text-rose-300 hover:bg-rose-100/40"
+                  className="text-xs text-muted-foreground hover:text-foreground h-8"
                 >
-                  Skip & Continue Outline
+                  Skip & Assemble Blueprint
+                </Button>
+              )}
+              {errorState.onEditSettings && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={errorState.onEditSettings}
+                  className="text-xs text-muted-foreground hover:text-foreground h-8 ms-auto"
+                >
+                  Edit Configuration
                 </Button>
               )}
             </div>
@@ -330,39 +412,39 @@ export function StudioLiveGenerationProgress({
         </Card>
       )}
 
-      {/* 3. Detailed 6-Phase Pipeline Status Grid */}
+      {/* 3. Subsystem Stages Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {phases.map((phase) => {
           const Icon = phase.icon
-          const isComplete = phase.status === 'completed'
-          const isInProgress = phase.status === 'in_progress'
-          const isPending = phase.status === 'pending'
-          const isFailed = phase.status === 'failed'
+          const isDone = phase.status === 'completed'
+          const isCurrent = phase.status === 'in_progress'
 
           return (
             <div
               key={phase.id}
               className={cn(
-                'p-3.5 rounded-xl border transition-all duration-200 text-start flex items-center justify-between gap-3',
-                isInProgress && 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/30 ring-1 ring-purple-500 shadow-sm',
-                isComplete && 'border-emerald-200 bg-emerald-50/40 dark:bg-emerald-950/20 text-foreground',
-                isPending && 'border-border/70 bg-card/60 opacity-60',
-                isFailed && 'border-rose-300 bg-rose-50/50'
+                'p-4 rounded-xl border transition-all duration-300 flex items-center justify-between text-start',
+                isCurrent
+                  ? 'border-purple-500 bg-purple-50/40 dark:bg-purple-950/20 ring-1 ring-purple-500 shadow-sm'
+                  : isDone
+                  ? 'border-emerald-200 bg-emerald-50/30 dark:bg-emerald-950/10'
+                  : 'border-border/60 bg-card/40 opacity-70'
               )}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <div
                   className={cn(
-                    'w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors',
-                    isComplete && 'bg-emerald-600 text-white',
-                    isInProgress && 'bg-purple-600 text-white animate-spin-slow',
-                    isPending && 'bg-muted text-muted-foreground',
-                    isFailed && 'bg-rose-600 text-white'
+                    'w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-sm font-bold',
+                    isCurrent
+                      ? 'bg-purple-600 text-white animate-pulse'
+                      : isDone
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-muted text-muted-foreground'
                   )}
                 >
-                  {isComplete ? (
+                  {isDone ? (
                     <CheckCircle2 className="w-4 h-4" />
-                  ) : isInProgress ? (
+                  ) : isCurrent ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <Icon className="w-4 h-4" />
@@ -370,26 +452,34 @@ export function StudioLiveGenerationProgress({
                 </div>
 
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-foreground leading-snug truncate">
+                  <p className="text-xs font-bold text-foreground truncate">
                     {isRTL ? phase.title_ar : phase.title}
                   </p>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">
-                    {isComplete && 'Completed'}
-                    {isInProgress && 'Active generation...'}
-                    {isPending && 'Queued'}
-                    {isFailed && 'Failed - Action Needed'}
-                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <p className="text-[10px] text-muted-foreground truncate">
+                      {isDone ? 'Completed' : isCurrent ? 'Active generation...' : 'Queued'}
+                    </p>
+                    {isCurrent && activeModelName && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1.5 py-0.2 rounded bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300">
+                        <Cpu className="w-2.5 h-2.5" />
+                        {activeModelName}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              {/* Progress counter if present */}
+              {/* Progress Count Badge */}
               {phase.totalCount !== undefined && (
                 <Badge
-                  variant={isComplete ? 'default' : isInProgress ? 'secondary' : 'outline'}
+                  variant={isDone ? 'default' : 'secondary'}
                   className={cn(
-                    'text-[10px] font-mono px-2 py-0.5 h-5 shrink-0',
-                    isComplete && 'bg-emerald-600 text-white hover:bg-emerald-600',
-                    isInProgress && 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+                    'text-[10px] font-mono shrink-0 ms-2',
+                    isDone
+                      ? 'bg-emerald-700 text-white'
+                      : isCurrent
+                      ? 'bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300'
+                      : 'bg-muted text-muted-foreground'
                   )}
                 >
                   {phase.currentCount || 0} / {phase.totalCount} {phase.unit}
@@ -400,17 +490,17 @@ export function StudioLiveGenerationProgress({
         })}
       </div>
 
-      {/* 4. Cancel Generation Button */}
-      {onCancel && isGenerating && (
-        <div className="flex justify-center pt-2">
+      {/* 4. Footer Cancel Option */}
+      {onCancel && (
+        <div className="pt-2 text-center">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onCancel}
-            className="text-xs text-muted-foreground hover:text-rose-600 h-8"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
-            ✕ {t('builder.cancelGeneration', 'Cancel & Return to Configuration')}
+            ✕ {t('builder.cancelReturn', 'Cancel & Return to Configuration')}
           </Button>
         </div>
       )}

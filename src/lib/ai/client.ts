@@ -11,38 +11,84 @@ import type {
  * Robust JSON extraction from LLM text responses
  */
 export function extractJsonFromText<T = unknown>(rawText: string): T | null {
-  if (!rawText) return null
+  if (!rawText || typeof rawText !== 'string') return null
 
-  // Strip markdown code fences
-  let clean = rawText.replace(/```json\n?|\n?```/g, '').trim()
+  // 1. Direct parse attempt
+  const trimmed = rawText.trim()
+  try {
+    return JSON.parse(trimmed) as T
+  } catch {
+    // Continue to extraction
+  }
 
-  // Fix unescaped newlines/tabs inside JSON strings
-  clean = clean.replace(/"([^"]*)"/g, (_match, inner: string) => {
-    const fixed = inner
-      .replace(/\n/g, '\\n')
-      .replace(/\r/g, '\\r')
-      .replace(/\t/g, '\\t')
-    return `"${fixed}"`
-  })
-
-  // Strip trailing commas before ] or }
-  clean = clean.replace(/,\s*([\]}])/g, '$1')
-
-  const jsonStart = clean.search(/[\[{]/)
-  if (jsonStart === -1) return null
-
-  // Find balanced JSON object or array
-  const isArray = clean[jsonStart] === '['
-  const pattern = isArray ? /\[[\s\S]*\]/ : /\{[\s\S]*\}/
-  const match = clean.match(pattern)
-  if (!match) return null
+  // 2. Strip markdown code blocks
+  let clean = rawText
+    .replace(/```(?:json)?\s*([\s\S]*?)\s*```/gi, '$1')
+    .trim()
 
   try {
-    return JSON.parse(match[0]) as T
-  } catch (err) {
-    console.warn('Primary JSON parse failed, attempting partial extraction:', err)
-    return null
+    return JSON.parse(clean) as T
+  } catch {
+    // Continue to boundary matching
   }
+
+  // 3. Locate JSON start
+  const jsonStart = clean.search(/[[{]/)
+  if (jsonStart === -1) return null
+
+  clean = clean.slice(jsonStart)
+  const isArray = clean.startsWith('[')
+
+  // 4. Try stripping trailing commas and balancing
+  let candidate = clean
+  // Remove trailing commas before closing braces/brackets
+  candidate = candidate.replace(/,\s*([}\]])/g, '$1')
+
+  const lastClose = isArray ? candidate.lastIndexOf(']') : candidate.lastIndexOf('}')
+  if (lastClose !== -1) {
+    const bounded = candidate.slice(0, lastClose + 1)
+    try {
+      return JSON.parse(bounded) as T
+    } catch {
+      // Continue to partial extraction
+    }
+  }
+
+  // 5. Array-specific recovery: extract all complete JSON objects within the array
+  if (isArray) {
+    const objectMatches = clean.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)
+    if (objectMatches && objectMatches.length > 0) {
+      const recoveredObjects: unknown[] = []
+      for (const objStr of objectMatches) {
+        try {
+          const sanitizedObj = objStr.replace(/,\s*}/g, '}')
+          const parsedObj = JSON.parse(sanitizedObj)
+          if (parsedObj && typeof parsedObj === 'object') {
+            recoveredObjects.push(parsedObj)
+          }
+        } catch {
+          // Skip malformed individual object
+        }
+      }
+
+      if (recoveredObjects.length > 0) {
+        return recoveredObjects as unknown as T
+      }
+    }
+  }
+
+  // 6. Object-specific recovery
+  const objMatch = clean.match(/\{[\s\S]*\}/)
+  if (objMatch) {
+    try {
+      const sanitized = objMatch[0].replace(/,\s*}/g, '}')
+      return JSON.parse(sanitized) as T
+    } catch (err) {
+      console.warn('[extractJsonFromText] Failed all recovery attempts:', err)
+    }
+  }
+
+  return null
 }
 
 /**

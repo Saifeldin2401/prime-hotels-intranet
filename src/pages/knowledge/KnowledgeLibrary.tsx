@@ -25,17 +25,18 @@ import {
     RefreshCw,
     Search,
     SlidersHorizontal,
+    Sparkles,
     Star,
     Trash2,
     Video
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Breadcrumbs } from '@/components/common/Breadcrumbs'
 import { DeleteConfirmationDialog } from '@/components/common/ConfirmationDialog'
-import { KnowledgeSidebar } from '@/components/knowledge'
+import { KnowledgeSidebar, AIArticleStudioModal } from '@/components/knowledge'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import {
     Select,
@@ -82,11 +83,13 @@ function readTime(article: { estimated_read_time?: number; content?: string }): 
 export default function KnowledgeLibrary() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const { primaryRole } = useAuth()
+    const navigate = useNavigate()
     const isRTL = i18n.dir() === 'rtl'
     const [searchParams, setSearchParams] = useSearchParams()
 
     const [deleteId, setDeleteId] = useState<string | null>(null)
     const [deleting, setDeleting] = useState(false)
+    const [isAiStudioOpen, setIsAiStudioOpen] = useState(false)
 
     // Filters from search params
     const activeType = searchParams.get('type')
@@ -235,12 +238,21 @@ export default function KnowledgeLibrary() {
                                 {t('library.filters', 'Filters')}
                             </Button>
                             {primaryRole !== 'staff' && (
-                                <Link to="/knowledge/create">
-                                    <Button className="bg-hotel-navy text-white hover:bg-hotel-navy/90 gap-2 shadow-md">
-                                        <Plus className="h-4 w-4" />
-                                        <span className="hidden sm:inline">{t('library.create_new', 'New Article')}</span>
+                                <div className="flex items-center gap-2">
+                                    <Button
+                                        onClick={() => setIsAiStudioOpen(true)}
+                                        className="bg-purple-600 hover:bg-purple-700 text-white gap-2 shadow-md font-semibold"
+                                    >
+                                        <Sparkles className="h-4 w-4 text-purple-200 animate-pulse" />
+                                        <span className="hidden sm:inline">AI Article Studio</span>
                                     </Button>
-                                </Link>
+                                    <Link to="/knowledge/create">
+                                        <Button className="bg-hotel-navy text-white hover:bg-hotel-navy/90 gap-2 shadow-md">
+                                            <Plus className="h-4 w-4" />
+                                            <span className="hidden sm:inline">{t('library.create_new', 'New Article')}</span>
+                                        </Button>
+                                    </Link>
+                                </div>
                             )}
                         </div>
                     </div>
@@ -498,6 +510,29 @@ export default function KnowledgeLibrary() {
                 itemName={t('library.article', { defaultValue: 'article' })}
                 onConfirm={handleConfirmDelete}
                 isLoading={deleting}
+            />
+
+            {/* AI Knowledge Article Studio Modal */}
+            <AIArticleStudioModal
+                isOpen={isAiStudioOpen}
+                onClose={() => setIsAiStudioOpen(false)}
+                defaultContentType={(activeType as any) || 'sop'}
+                onApplyArticle={(article) => {
+                    navigate('/knowledge/create', {
+                        state: {
+                            prefillArticle: {
+                                title: article.title,
+                                description: article.description,
+                                summary: article.summary,
+                                content: article.content_html,
+                                content_type: article.content_type,
+                                checklist_items: article.checklist_items || [],
+                                faq_items: article.faq_items || [],
+                                ai_tags: article.suggested_tags || [],
+                            }
+                        }
+                    })
+                }}
             />
         </>
     )

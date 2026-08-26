@@ -166,8 +166,8 @@ export class ComplianceShieldEngine {
     let totalChecks = 0
     let passedChecks = 0
 
-    const fullContentText = sections
-      .map((s) => `${s.title} ${s.description || ''} ${s.items.map((i) => `${i.title} ${i.content || ''}`).join(' ')}`)
+    const fullContentText = (sections || [])
+      .map((s) => `${s.title} ${s.description || ''} ${(s.items || []).map((i) => `${i.title} ${i.content || ''}`).join(' ')}`)
       .join('\n')
       .toLowerCase()
 
@@ -187,7 +187,7 @@ export class ComplianceShieldEngine {
           // Find the most relevant section for this violation
           let targetSectionIdx = 0
           for (let sIdx = 0; sIdx < sections.length; sIdx++) {
-            const secText = `${sections[sIdx].title} ${sections[sIdx].items.map((i) => i.title).join(' ')}`.toLowerCase()
+            const secText = `${sections[sIdx].title} ${(sections[sIdx].items || []).map((i) => i.title).join(' ')}`.toLowerCase()
             if (rule.keywords.some((kw) => secText.includes(kw.toLowerCase()))) {
               targetSectionIdx = sIdx
               break
@@ -199,14 +199,15 @@ export class ComplianceShieldEngine {
             ruleId: rule.id,
             authority: rule.authority,
             authorityName: rule.authorityName,
+            severity: rule.severity,
             title: rule.title,
             titleAr: rule.titleAr,
-            severity: rule.severity,
-            sectionIndex: targetSectionIdx,
-            sectionTitle: sections[targetSectionIdx]?.title || 'Section',
+            description: rule.description,
+            descriptionAr: rule.descriptionAr,
             recommendation: rule.remediationTemplate,
             recommendationAr: rule.remediationTemplateAr,
-            canAutoFix: true,
+            remediationCategory: rule.remediationCategory,
+            targetSectionId: sections[targetSectionIdx]?.id || 'section-0',
           })
         } else {
           passedChecks++
@@ -216,34 +217,21 @@ export class ComplianceShieldEngine {
       }
     }
 
-    const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length
-    const warningCount = findings.filter((f) => f.severity === 'WARNING').length
-    const recommendationCount = findings.filter((f) => f.severity === 'RECOMMENDATION').length
-
-    // Score calculation: Critical deductions (-20), Warning (-10), Recommendation (-5)
-    let rawScore = 100 - criticalCount * 20 - warningCount * 10 - recommendationCount * 5
-    rawScore = Math.max(0, Math.min(100, rawScore))
-
-    let status: ComplianceAuditReport['status'] = 'EXCELLENT'
-    if (criticalCount > 0) status = 'NON_COMPLIANT'
-    else if (warningCount > 1 || rawScore < 70) status = 'NEEDS_REVISION'
-    else if (rawScore < 90) status = 'GOOD'
+    const overallScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 100
+    const isPassing = findings.every((f) => f.severity !== 'CRITICAL') && overallScore >= 80
 
     return {
-      score: rawScore,
-      status,
-      totalRulesChecked: totalChecks,
-      passedCount: passedChecks,
-      criticalCount,
-      warningCount,
-      recommendationCount,
+      overallScore,
+      isPassing,
+      totalChecks,
+      passedChecks,
       findings,
-      auditTimestamp: new Date().toISOString(),
+      timestamp: new Date().toISOString(),
     }
   }
 
   /**
-   * Auto-remediate a section by injecting verified KSA compliance standards with AI
+   * Auto-remediate a specific compliance gap using AI
    */
   public async autoRemediateSection(
     section: TrainingSection,

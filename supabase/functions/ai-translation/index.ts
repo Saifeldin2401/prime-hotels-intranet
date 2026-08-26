@@ -113,11 +113,12 @@ CRITICAL TRANSLATION RULES:
 
 // Fallback chain for OpenRouter models
 const OPENROUTER_MODELS = [
-  "google/gemini-2.0-flash-001",
-  "google/gemini-2.0-flash",
+  "anthropic/claude-3.5-sonnet",
+  "openai/gpt-4o-mini",
+  "deepseek/deepseek-chat",
   "meta-llama/llama-3.3-70b-instruct",
-  "meta-llama/llama-3.1-8b-instruct",
-  "qwen/qwen-2.5-72b-instruct",
+  "nvidia/nemotron-3.5-lightning:free",
+  "minimax/minimax-m3:free",
   "openrouter/auto",
 ];
 
@@ -179,7 +180,7 @@ async function translateWithGeminiDirect(
 ): Promise<{ text: string; model: string } | null> {
   try {
     const systemPrompt = buildSystemPrompt(targetLangName, targetLangCode);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
 
     const response = await fetch(url, {
       method: "POST",
@@ -204,7 +205,7 @@ async function translateWithGeminiDirect(
     if (candidate && typeof candidate === "string" && candidate.trim().length > 0) {
       return {
         text: sanitizeTranslation(candidate, targetLangCode),
-        model: "gemini-1.5-flash",
+        model: "gemini-2.5-flash",
       };
     }
   } catch (err) {
@@ -274,8 +275,22 @@ serve(async (req) => {
     }
 
     const targetName = LANGUAGE_NAMES[target_lang] || target_lang;
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+    let OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
+
+    // Dynamic Vault fallback for OpenRouter key
+    if (!OPENROUTER_API_KEY) {
+      try {
+        const { data: vKey } = await supabaseClient.rpc("get_vault_secret", {
+          secret_name: "OPENROUTER_API_KEY",
+        });
+        if (vKey && typeof vKey === "string") {
+          OPENROUTER_API_KEY = vKey;
+        }
+      } catch (vaultErr) {
+        console.warn("Vault secret lookup warning in ai-translation:", vaultErr);
+      }
+    }
 
     const results = new Array<string>(texts.length).fill("");
     const toTranslate: Array<{

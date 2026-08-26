@@ -101,7 +101,7 @@ export function VisualAssetEditorModal({
     }
   }
 
-  const [selectedModel, setSelectedModel] = useState(asset?.model || '@cf/bytedance/stable-diffusion-xl-lightning')
+  const [selectedModel, setSelectedModel] = useState(asset?.model || 'recraft-vector')
   const [negativePrompt, setNegativePrompt] = useState(asset?.negative_prompt || 'blurry, low quality, distorted anatomy, malformed hands, duplicate objects, watermark, text, logo, cluttered composition')
 
   const handleRegenerate = async () => {
@@ -124,7 +124,7 @@ export function VisualAssetEditorModal({
           altText,
           caption,
         },
-        provider: 'cloudflare',
+        provider: selectedModel?.includes('recraft') ? 'recraft' : 'cloudflare',
         costTier: 'free_only',
         model: selectedModel,
         visualStyle,
@@ -191,16 +191,52 @@ export function VisualAssetEditorModal({
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
           {/* Left Preview Box */}
           <div className="w-full md:w-1/2 p-6 bg-muted/10 border-e flex flex-col items-center justify-center space-y-4">
-            <div className="relative w-full rounded-2xl overflow-hidden border shadow-sm bg-card aspect-[16/9] flex items-center justify-center">
-              <img
-                src={asset.image_url || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
-                alt={altText}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.onerror = null
-                  e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-                }}
-              />
+            <div className="relative w-full rounded-2xl overflow-hidden border shadow-sm bg-slate-950 aspect-[16/9] flex items-center justify-center">
+              {(() => {
+                const imgUrl = asset.image_url || ''
+                let rawSvg: string | null = null
+                if (imgUrl.startsWith('<svg') || imgUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
+                  rawSvg = imgUrl
+                } else if (imgUrl.startsWith('data:image/svg+xml')) {
+                  try {
+                    const commaIdx = imgUrl.indexOf(',')
+                    if (commaIdx !== -1) {
+                      const header = imgUrl.slice(0, commaIdx)
+                      const body = imgUrl.slice(commaIdx + 1)
+                      if (header.includes('base64')) {
+                        rawSvg = decodeURIComponent(escape(atob(body)))
+                      } else {
+                        rawSvg = decodeURIComponent(body)
+                      }
+                    }
+                  } catch {
+                    try {
+                      rawSvg = decodeURIComponent(imgUrl.replace(/^data:image\/svg\+xml[^,]*,/, ''))
+                    } catch {}
+                  }
+                }
+
+                if (rawSvg) {
+                  return (
+                    <div
+                      className="w-full h-full p-2 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:object-contain"
+                      dangerouslySetInnerHTML={{ __html: rawSvg }}
+                    />
+                  )
+                }
+
+                return (
+                  <img
+                    src={imgUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
+                    alt={altText}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.onerror = null
+                      e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+                    }}
+                  />
+                )
+              })()}
               <div className="absolute top-2 end-2">
                 <Badge className="bg-black/60 backdrop-blur text-white text-[10px]">
                   {aspectRatio}
@@ -302,11 +338,17 @@ export function VisualAssetEditorModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="recraft-vector">
+                        🎨 Recraft Vector v3 (Primary Free • SVG & Infographic Charts)
+                      </SelectItem>
+                      <SelectItem value="recraft-v3">
+                        🖼️ Recraft Educational Illustration (Free • 5-Star Hotel Visuals)
+                      </SelectItem>
                       <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
                         ✨ FLUX.1 Schnell (Ultra-HD Studio • 12B DiT)
                       </SelectItem>
                       <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                        ⚡ SDXL-Lightning (Primary Free • $0.00/step)
+                        ⚡ SDXL-Lightning (Free • $0.00/step)
                       </SelectItem>
                       <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
                         🛡️ SDXL Base 1.0 (Detailed Free • $0.00/step)

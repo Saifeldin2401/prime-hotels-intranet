@@ -262,8 +262,8 @@ export function StudioInteractiveOutline({
                           <span className="text-xs text-foreground truncate">
                             {lesson.title}
                           </span>
-                          {lesson.visualAsset && (
-                            <Badge variant="outline" className="text-[8px] h-4 px-1 bg-orange-50 text-orange-700 border-orange-200 gap-0.5">
+                          {Boolean((lesson.visualAssets && lesson.visualAssets.length > 0) || (lesson as any).visualAsset) && (
+                            <Badge variant="outline" className="text-[8px] h-4 px-1 bg-orange-50 text-orange-700 dark:bg-orange-950/50 dark:text-orange-300 border-orange-200 gap-0.5">
                               <ImageIcon className="w-2.5 h-2.5" /> Visual
                             </Badge>
                           )}

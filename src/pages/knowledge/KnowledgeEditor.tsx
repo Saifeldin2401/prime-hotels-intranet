@@ -8,6 +8,7 @@
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import {
     AIDocumentSummary,
+    AIArticleStudioModal,
     ChecklistBuilder,
     ChecklistRenderer,
     FAQAccordion,
@@ -101,7 +102,7 @@ import {
 import { marked } from 'marked'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 
 interface ArticleFormData {
@@ -262,6 +263,7 @@ function categorizeDocument(tags: string[]): string {
 export default function KnowledgeEditor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
+    const location = useLocation()
     const { t } = useTranslation(['knowledge', 'common'])
     const { user, profile, primaryRole } = useAuth()
     const { currentProperty } = useProperty()
@@ -272,10 +274,29 @@ export default function KnowledgeEditor() {
     const [hasMounted, setHasMounted] = useState(false)
     const [showRestorePrompt, setShowRestorePrompt] = useState(false)
     const [allowUnsafeNavigation, setAllowUnsafeNavigation] = useState(false)
+    const [isAiStudioOpen, setIsAiStudioOpen] = useState(false)
     const allowUnsafeNavigationRef = useRef(false)
     const restoredDraftRef = useRef(false)
 
     const [formData, setFormData] = useState<ArticleFormData>(() => createEmptyArticleFormData())
+
+    // Handle prefill from AI Article Studio or other pages
+    useEffect(() => {
+        const prefill = (location.state as any)?.prefillArticle
+        if (prefill && !id) {
+            setFormData((prev) => ({
+                ...prev,
+                title: prefill.title || prev.title,
+                description: prefill.description || prev.description,
+                summary: prefill.summary || prev.summary,
+                content: prefill.content || prev.content,
+                content_type: prefill.content_type || prev.content_type,
+                checklist_items: prefill.checklist_items || prev.checklist_items,
+                faq_items: prefill.faq_items || prev.faq_items,
+                ai_tags: prefill.ai_tags || prev.ai_tags,
+            }))
+        }
+    }, [location.state, id])
 
     const formPersistence = useFormPersistence<ArticleFormData>({
         key: `knowledge_editor_${id || 'new'}`,
@@ -1534,6 +1555,16 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setIsAiStudioOpen(true)}
+                        className="bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 dark:bg-purple-950/40 dark:text-purple-300 text-xs h-9 font-bold shadow-sm"
+                    >
+                        <Sparkles className="h-3.5 w-3.5 me-1.5 text-purple-600 animate-pulse" />
+                        AI Article Studio
+                    </Button>
+
                     <Button variant="outline" size="sm" onClick={() => saveArticle('DRAFT')} disabled={isSaving || isUploading} className="text-xs h-9">
                         {isSaving ? <Loader2 className="animate-spin h-3.5 w-3.5 me-1.5" /> : <Save className="h-3.5 w-3.5 me-1.5" />}
                         {t('editor.draft', 'Save Draft')}
@@ -2279,6 +2310,28 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 onOpenChange={setShowMediaPicker}
                 onSelect={handleMediaSelect}
                 title="Select Media from Hotel Library"
+            />
+
+            {/* AI Knowledge Article & SOP Studio Modal */}
+            <AIArticleStudioModal
+                isOpen={isAiStudioOpen}
+                onClose={() => setIsAiStudioOpen(false)}
+                defaultContentType={formData.content_type}
+                defaultDepartment={departments?.find(d => d.id === formData.department_id)?.name || 'Front Office'}
+                onApplyArticle={(article) => {
+                    setFormData((prev) => ({
+                        ...prev,
+                        title: article.title,
+                        description: article.description,
+                        summary: article.summary,
+                        content: article.content_html,
+                        content_type: article.content_type,
+                        checklist_items: (article.checklist_items as ChecklistItem[]) || prev.checklist_items,
+                        faq_items: (article.faq_items as FAQItem[]) || prev.faq_items,
+                        ai_tags: article.suggested_tags || prev.ai_tags,
+                    }))
+                    toast.success(`Generated 5-star ${article.content_type.toUpperCase()} applied to editor!`)
+                }}
             />
         </div>
     )

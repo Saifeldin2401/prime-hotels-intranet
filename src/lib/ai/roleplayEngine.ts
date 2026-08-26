@@ -283,7 +283,7 @@ Return strict JSON:
     const prompt = `You are an elite Forbes 5-Star Hotel Quality & Training Evaluator.
 Scenario: ${scenario.title}
 Guest: ${scenario.guestName} (${scenario.guestTemperament})
-Target Standards: ${scenario.forbesStandardsTarget.join(', ')}
+Target Standards: ${(scenario.forbesStandardsTarget || []).join(', ') || '5-Star Guest Engagement'}
 
 Conversation History:
 ${history.map((m) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n')}
