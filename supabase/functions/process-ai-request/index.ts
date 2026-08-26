@@ -206,13 +206,31 @@ serve(async (req) => {
           : "You are the ALTUS Connect AI Assistant, an elite hospitality operations intelligence system for luxury hotels. Provide professional, concise, and highly accurate guidance.");
 
     // Provider API Keys
-    const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
-    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
+    let OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+    let GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
     const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
     const HF_MINIMAX_TOKEN = Deno.env.get("HUGGINGFACE_MINIMAX_TOKEN");
+
+    // Dynamic Vault fallback for OpenRouter & Groq keys
+    if (!OPENROUTER_API_KEY && serviceRoleKey) {
+      try {
+        const supabaseAdmin = createClient(
+          Deno.env.get("SUPABASE_URL") ?? "",
+          serviceRoleKey,
+        );
+        const { data: vKey } = await supabaseAdmin.rpc("get_vault_secret", {
+          secret_name: "OPENROUTER_API_KEY",
+        });
+        if (vKey && typeof vKey === "string") {
+          OPENROUTER_API_KEY = vKey;
+        }
+      } catch (vaultErr) {
+        console.warn("Vault secret lookup warning:", vaultErr);
+      }
+    }
 
     const openRouterCandidates = resolveModelCandidates(model);
 
