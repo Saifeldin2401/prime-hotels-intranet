@@ -8,7 +8,25 @@
 // ENUMS
 // ============================================================================
 
-export type QuestionType = 'mcq' | 'mcq_multi' | 'true_false' | 'fill_blank' | 'scenario' | 'ordering' | 'matching'
+export type QuestionType =
+    | 'mcq'
+    | 'mcq_multi'
+    | 'true_false'
+    | 'yes_no'
+    | 'fill_blank'
+    | 'short_answer'
+    | 'long_answer'
+    | 'matching'
+    | 'ordering'
+    | 'ranking'
+    | 'scenario'
+    | 'case_based'
+    | 'numeric'
+    | 'code_technical'
+    | 'categorization'
+    | 'hotspot_image'
+
+export type BloomLevel = 'remember' | 'understand' | 'apply' | 'analyze' | 'evaluate' | 'create'
 
 export type QuestionDifficulty = 'easy' | 'medium' | 'hard' | 'expert'
 
@@ -32,6 +50,8 @@ export interface KnowledgeQuestion {
     question_text_ar?: string
     question_type: QuestionType
     difficulty_level: QuestionDifficulty
+    bloom_level?: BloomLevel
+    cognitive_domain?: string
 
     // Answers & Feedback
     correct_answer?: string
@@ -40,11 +60,15 @@ export interface KnowledgeQuestion {
     explanation_ar?: string
     hint?: string
     hint_ar?: string
+    distractor_rationales?: Record<string, string>
+    rubric?: Record<string, unknown>
 
     // Links
     linked_sop_id?: string
     linked_sop_section?: string
-    // category_id removed
+    question_bank_id?: string
+    training_module_id?: string
+    training_section_id?: string
 
     // Metadata
     tags: string[]
@@ -332,17 +356,41 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, {
         color: 'green',
         description: 'Binary true or false answer'
     },
+    yes_no: {
+        label: 'Yes/No',
+        icon: 'CheckCircle2',
+        color: 'emerald',
+        description: 'Direct binary operational decision'
+    },
     fill_blank: {
         label: 'Fill in Blank',
         icon: 'TextCursor',
         color: 'purple',
-        description: 'Type the correct answer'
+        description: 'Type or choose the exact keyword'
+    },
+    short_answer: {
+        label: 'Short Answer',
+        icon: 'AlignLeft',
+        color: 'cyan',
+        description: 'Brief concept or term explanation'
+    },
+    long_answer: {
+        label: 'Long Answer / Essay',
+        icon: 'FileText',
+        color: 'amber',
+        description: 'Detailed analysis for rubric assessment'
     },
     scenario: {
         label: 'Scenario',
         icon: 'GitBranch',
         color: 'orange',
-        description: 'Multi-step interactive exercise'
+        description: 'Multi-step guest or operational dilemma'
+    },
+    case_based: {
+        label: 'Case-Based',
+        icon: 'Briefcase',
+        color: 'rose',
+        description: 'In-depth situational case analysis'
     },
     ordering: {
         label: 'Ordering',
@@ -354,7 +402,37 @@ export const QUESTION_TYPE_CONFIG: Record<QuestionType, {
         label: 'Matching',
         icon: 'Shuffle',
         color: 'pink',
-        description: 'Pair each item with its correct match'
+        description: 'Pair each term with its definition or action'
+    },
+    ranking: {
+        label: 'Ranking',
+        icon: 'ArrowUpDown',
+        color: 'violet',
+        description: 'Rank options by priority or urgency'
+    },
+    numeric: {
+        label: 'Numeric / Calculation',
+        icon: 'Calculator',
+        color: 'lime',
+        description: 'Mathematical, ADR, RevPAR, or dosage calculations'
+    },
+    code_technical: {
+        label: 'Technical / System',
+        icon: 'Code2',
+        color: 'slate',
+        description: 'PMS/POS syntax or technical reasoning'
+    },
+    categorization: {
+        label: 'Categorization',
+        icon: 'FolderTree',
+        color: 'sky',
+        description: 'Classify items into operational buckets'
+    },
+    hotspot_image: {
+        label: 'Hotspot / Visual',
+        icon: 'Image',
+        color: 'fuchsia',
+        description: 'Identify visual defects or safety hazards'
     }
 }
 

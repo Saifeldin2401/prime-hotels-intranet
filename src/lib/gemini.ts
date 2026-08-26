@@ -5,15 +5,216 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 
-// 🛡️ PRIMARY MODELS - Ultra-fast OpenRouter & Gemini Candidates (optimized for sub-second latency)
-const FALLBACK_MODELS = [
-  'google/gemini-2.0-flash-001',
-  'google/gemini-2.0-flash',
-  'meta-llama/llama-3.3-70b-instruct',
-  'meta-llama/llama-3.1-8b-instruct',
-  'qwen/qwen-2.5-72b-instruct',
-  'openrouter/auto',
+// 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, Groq LPU & OpenRouter for zero-downtime failover)
+export const DEFAULT_FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-3.1-flash-lite',
+  'qwen/qwen3.6-27b',
+  'allam-2-7b',
+  'groq/compound-mini',
+  'Qwen/Qwen2.5-72B-Instruct',
+  'mistralai/Mistral-7B-Instruct-v0.3',
+  'nvidia/nemotron-3.5-lightning:free',
+  'nvidia/nemotron-3-super-120b-a12b:free',
+  'minimax/minimax-m3:free',
+  'openrouter/free',
 ]
+
+const FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
+
+export interface AIModelOption {
+  id: string
+  name: string
+  provider: string
+  description: string
+  badge?: string
+  isDefault?: boolean
+}
+
+export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
+  {
+    id: 'auto',
+    name: 'Auto Multi-Provider Failover (Gemini + Groq + OpenRouter + HuggingFace)',
+    provider: 'Autonomous 5-Tier Fallback Gateway',
+    description: 'Autonomous multi-tier cascade (Gemini 2.5 Flash → Groq LPU → OpenRouter → HuggingFace → Cloudflare) with zero-downtime failover (Recommended)',
+    badge: 'Recommended',
+    isDefault: true,
+  },
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Google Gemini 2.5 Flash',
+    provider: 'Google AI Studio',
+    description: 'Flagship curriculum architect with deep pedagogical reasoning, 1M context, and luxury hospitality mastery',
+    badge: 'Flagship AI',
+  },
+  {
+    id: 'gemini-3.1-flash-lite',
+    name: 'Google Gemini 3.1 Flash-Lite',
+    provider: 'Google AI Studio',
+    description: 'High-throughput, ultra-fast generation optimized for rapid quiz, lesson, and metadata construction',
+    badge: 'High Speed',
+  },
+  {
+    id: 'qwen/qwen3.6-27b',
+    name: 'Qwen 3.6 27B on Groq LPU',
+    provider: 'Groq Ultra-Fast LPU',
+    description: 'Blazing-fast LPU inference (500+ tok/s) with exceptional structured JSON precision',
+    badge: '500+ Tok/s',
+  },
+  {
+    id: 'allam-2-7b',
+    name: 'ALLaM 2 7B (SDAIA Arabic AI)',
+    provider: 'Groq / SDAIA',
+    description: 'Saudi-specialized bilingual model for KSA hospitality regulations, Saudi Labor Law, and cultural nuances',
+    badge: 'KSA Arabic',
+  },
+  {
+    id: 'Qwen/Qwen2.5-72B-Instruct',
+    name: 'Qwen 2.5 72B Instruct (HuggingFace Serverless)',
+    provider: 'HuggingFace Inference',
+    description: 'Massive open-weights foundation model with high reasoning performance and zero vendor lock-in',
+    badge: 'HuggingFace',
+  },
+  {
+    id: 'mistralai/Mistral-7B-Instruct-v0.3',
+    name: 'Mistral 7B Instruct v0.3 (HuggingFace)',
+    provider: 'HuggingFace Inference',
+    description: 'Lightweight, rapid open-source instruction model for instant summaries and lesson structuring',
+    badge: 'Open Source',
+  },
+  {
+    id: 'groq/compound-mini',
+    name: 'Groq Compound Mini',
+    provider: 'Groq AI',
+    description: 'Optimized composite engine for rapid module & lesson drafting',
+    badge: 'Fast & Free',
+  },
+  {
+    id: 'nvidia/nemotron-3.5-lightning:free',
+    name: 'NVIDIA Nemotron 3.5 Lightning (Free)',
+    provider: 'NVIDIA AI',
+    description: 'Deep reasoning with high structural accuracy for standard operating procedures',
+    badge: 'Reasoning',
+  },
+  {
+    id: 'minimax/minimax-m3:free',
+    name: 'MiniMax M3 Bilingual (Free)',
+    provider: 'MiniMax',
+    description: 'Superior bilingual Arabic/English luxury hospitality nuances',
+    badge: 'Bilingual',
+  },
+]
+
+export type CourseArchetype =
+  | 'sop'
+  | 'compliance'
+  | 'onboarding'
+  | 'scenario'
+  | 'leadership'
+  | 'microlearning'
+
+export type CourseTone =
+  | 'luxury_formal'
+  | 'engaging'
+  | 'direct_sop'
+  | 'strict_compliance'
+
+export interface CourseInclusions {
+  includeDialogue?: boolean
+  includeChecklists?: boolean
+  includeServiceRecovery?: boolean
+  includeExecutiveSummary?: boolean
+  includeFaqs?: boolean
+}
+
+export interface ArchetypeConfig {
+  id: CourseArchetype
+  title: string
+  title_ar: string
+  description: string
+  description_ar: string
+  icon: string
+  badge: string
+  recommendedSectionCount: number
+  defaultQuizTypes: string[]
+}
+
+export const COURSE_ARCHETYPES: ArchetypeConfig[] = [
+  {
+    id: 'sop',
+    title: '5-Star Standard SOP',
+    title_ar: 'معايير وإجراءات 5 نجوم القياسية',
+    description: 'Comprehensive operational guidelines, Forbes luxury benchmarks, step-by-step phases, and dialogue scripts.',
+    description_ar: 'إجراءات تشغيلية شاملة، معايير فندقية فاخرة، خطوات تفصيلية ونصوص حوار معتمدة.',
+    icon: 'BookOpen',
+    badge: 'Forbes Standard',
+    recommendedSectionCount: 4,
+    defaultQuizTypes: ['mcq', 'scenario', 'true_false'],
+  },
+  {
+    id: 'compliance',
+    title: 'Compliance & Safety',
+    title_ar: 'الامتثال والسلامة المهنية',
+    description: 'KSA labor & municipal regulations, food hygiene, fire emergency protocols, and zero-defect rules.',
+    description_ar: 'اللوائح والأنظمة السعودية، سلامة الغذاء، بروتوكولات الطوارئ ومعايير عدم التساهل.',
+    icon: 'ShieldAlert',
+    badge: 'Mandatory',
+    recommendedSectionCount: 4,
+    defaultQuizTypes: ['mcq', 'true_false', 'fill_blank'],
+  },
+  {
+    id: 'onboarding',
+    title: 'New Hire Onboarding',
+    title_ar: 'التأهيل والترحيب بالموظفين الجدد',
+    description: 'Welcoming cultural orientation, core hospitality mindset, brand history, and team collaboration.',
+    description_ar: 'التوجيه الثقافي والترحيب، قيم الضيافة الأساسية، تاريخ العلامة التجارية والاندماج الجماعي.',
+    icon: 'Sparkles',
+    badge: 'Foundational',
+    recommendedSectionCount: 3,
+    defaultQuizTypes: ['mcq', 'true_false', 'matching'],
+  },
+  {
+    id: 'scenario',
+    title: 'Scenario & Guest Dilemmas',
+    title_ar: 'سيناريوهات وتحديات خدمة النزلاء',
+    description: 'Interactive guest dilemmas, VIP handling, conflict de-escalation, and LAST recovery frameworks.',
+    description_ar: 'تحديات واقعية مع النزلاء، خدمة كبار الشخصيات، معالجة الشكاوى ونموذج التعافي LAST.',
+    icon: 'GitBranch',
+    badge: 'Interactive',
+    recommendedSectionCount: 4,
+    defaultQuizTypes: ['scenario', 'mcq_multi', 'ordering'],
+  },
+  {
+    id: 'leadership',
+    title: 'Supervisory & Leadership',
+    title_ar: 'الإشراف وقيادة الجودة الفندقية',
+    description: 'Shift management, inspection audits, associate coaching, root-cause resolution, and handover rituals.',
+    description_ar: 'إدارة الورديات، تدقيق الجودة، تدريب المشرفين، تحليل الأسباب الجذرية واستلام وتسليم الورديات.',
+    icon: 'Crown',
+    badge: 'Leadership',
+    recommendedSectionCount: 5,
+    defaultQuizTypes: ['scenario', 'mcq_multi', 'ordering'],
+  },
+  {
+    id: 'microlearning',
+    title: 'Microlearning Fast-Track',
+    title_ar: 'التعلم المصغر السريع (3 دقائق)',
+    description: 'Bite-sized high-impact lessons, quick memory checklists, visual tables, and rapid-fire quiz.',
+    description_ar: 'دروس سريعة مركزة وعالية التأثير، قوائم تحقق سريعة، جداول بصرية واختبارات فورية.',
+    icon: 'Zap',
+    badge: 'Quick 3-Min',
+    recommendedSectionCount: 3,
+    defaultQuizTypes: ['mcq', 'true_false', 'fill_blank'],
+  },
+]
+
+export function resolveModelChain(preferredModel?: string): string[] {
+  if (!preferredModel || preferredModel === 'auto' || preferredModel === 'free') {
+    return DEFAULT_FALLBACK_MODELS
+  }
+  // Put requested model first, then the remaining fallbacks
+  return [preferredModel, ...DEFAULT_FALLBACK_MODELS.filter(m => m !== preferredModel)]
+}
 
 // ⚡ Client-side In-Memory LRU Cache for Instant Deduplicated AI Responses
 interface AICacheEntry {
@@ -72,7 +273,7 @@ function extractCompleteObjects(str: string): string[] {
  * Robust JSON parser for LLM outputs.
  * Handles trailing commas, unescaped newlines in strings, and truncated arrays.
  */
-function safeParseJson<T>(raw: string, expectArray: boolean): T | null {
+export function safeParseJson<T>(raw: string, expectArray: boolean): T | null {
   // Strip markdown fences
   let text = raw.replace(/```json\n?|\n?```/g, '').trim()
 
@@ -266,6 +467,12 @@ export interface ModuleOutline {
   description: string
   sections: ModuleOutlineSection[]
   suggestedQuizCheckpoints: ModuleOutlineQuizCheckpoint[]
+  meta?: {
+    modelUsed?: string
+    fallbackOccurred?: boolean
+    fallbackAttempts?: string[]
+    providerUsed?: string
+  }
 }
 
 export interface AssignmentEvaluationInput {
@@ -364,7 +571,7 @@ async function callHuggingFaceOnce(model: string, prompt: string, maxTokens?: nu
  * two. One automatic retry here means a single blip doesn't surface as a
  * failed generation to the user.
  */
-async function callHuggingFace(model: string, prompt: string, maxTokens?: number) {
+export async function callHuggingFace(model: string, prompt: string, maxTokens?: number) {
   try {
     return await callHuggingFaceOnce(model, prompt, maxTokens)
   } catch (firstError: unknown) {
@@ -730,21 +937,14 @@ export const aiService = {
 
 
   async generateQuiz(request: {
-
     sopContent: string,
-
     count?: number,
-
     types?: string[],
-
     difficulty?: string,
-
     language?: string,
-
     includeHints?: boolean,
-
-    includeExplanations?: boolean
-
+    includeExplanations?: boolean,
+    preferredModel?: string
   }): Promise<QuizQuestion[]> {
 
     // Use recursive sanitization to prevent bypass attempts with nested tags
@@ -754,11 +954,11 @@ export const aiService = {
       previous = sanitized;
       sanitized = previous.replace(/<[^>]*>/g, '');
     } while (sanitized !== previous);
-    const context = sanitized.substring(0, 3000)
+    const context = sanitized.substring(0, 3500)
 
     const requestedTypesList = request.types && request.types.length > 0
       ? request.types
-      : ['mcq', 'true_false', 'fill_blank']
+      : ['mcq', 'scenario', 'true_false', 'mcq_multi', 'ordering', 'matching', 'fill_blank']
     const typesDescription = requestedTypesList.join(', ')
 
     const difficulty = request.difficulty || 'medium'
@@ -774,15 +974,17 @@ Target Language: ${language}
 
 STRICT QUESTION TYPE REQUIREMENT:
 - You MUST ONLY generate questions whose "question_type" is one of the following requested types: [${typesDescription}].
-- Distribute the questions evenly across the requested types: [${typesDescription}].
+- Distribute the questions across the requested types: [${typesDescription}].
 - DO NOT produce any question type that is not in [${typesDescription}].
 
 Detailed rules per question type:
-- "mcq": Standard 4-choice question with 1 correct answer. "options" must have 4 distinct choices.
-- "mcq_multi": Multiple select question. "options" must have 4-5 choices.
+- "mcq": Standard 4-choice question with 1 correct answer. "options" must have 4 distinct choices. "correct_answer" must match the correct choice exactly.
+- "mcq_multi": Multiple select question. "options" has 4-5 choices. "correct_answer" contains 2 correct choices separated by ", ".
 - "true_false": True/False question. "options" MUST be ["True", "False"] (or ["صحيح", "خطأ"] if language is Arabic). "correct_answer" must be "True" or "False" (or "صحيح"/"خطأ").
 - "fill_blank": Sentence with a "___" blank. "options" contains 4 possible replacement terms. "correct_answer" is the exact term that fills the blank.
-- "scenario": Realistic hotel operational scenario describing a guest interaction, safety procedure, or operational challenge, followed by a decision question. "options" contains 4 practical actions.
+- "scenario": Realistic hotel operational dilemma describing a guest interaction, safety event, or operational challenge, followed by a decision question. "options" contains 4 practical actions.
+- "ordering": Sequence ordering question (e.g. "Arrange the check-in greeting steps in order"). "options" contains 4 distinct chronological steps. "correct_answer" contains the 4 steps joined with " -> ".
+- "matching": Concept/Term matching question. "options" contains 4 items formatted as "Term:::Definition" (e.g. "LAST Protocol:::Listen, Apologize, Solve, Thank"). "correct_answer" contains all 4 pairs joined with "; ".
 
 REQUIREMENTS:
 - Number of questions: EXACTLY ${count} (It is CRITICAL that you generate ${count} items)
@@ -804,31 +1006,19 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
   }
 ]
 
+Context Content:
+${context}`
 
-
-    Important: For true_false, options MUST be translated to ${language} equivalents.
-
-    
-
-    Context Content:
-
-    ${context}`
-
-
-
-    for (const model of FALLBACK_MODELS) {
-
+    const modelChain = resolveModelChain(request.preferredModel)
+    for (const model of modelChain) {
       try {
-
         const generatedText = await callHuggingFace(model, prompt, 4000)
-
         const parsed = safeParseJson<QuizQuestion[]>(generatedText, true)
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed
         }
-
       } catch (e) {
-        console.warn(`Quiz generation model ${model} failed:`, e)
+        console.warn(`Quiz generation model ${model} failed, switching to fallback model:`, e)
       }
     }
 
@@ -838,17 +1028,17 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 
   /**
    * Generates a structural DRAFT OUTLINE for a training module from pasted
-   * source material (an SOP excerpt, meeting notes, raw text). This is
-   * explicitly NOT full content generation -- it returns a suggested title,
-   * description, and an ordered list of section skeletons (heading +
-   * suggested block type + a short summary), plus optional quiz checkpoint
-   * suggestions. The author reviews/edits this in the Training Builder
-   * before inserting it, then fleshes out the real content themselves.
+   * source material or topic.
    */
   async generateModuleOutline(request: {
     sourceContent: string,
     targetLanguage?: string,
-    sectionCount?: number
+    sectionCount?: number,
+    archetype?: CourseArchetype,
+    tone?: CourseTone,
+    inclusions?: CourseInclusions,
+    preferredModel?: string,
+    onFallbackModelEngaged?: (failedModel: string, nextModel: string) => void
   }): Promise<ModuleOutline> {
 
     // Use recursive sanitization to prevent bypass attempts with nested tags
@@ -862,47 +1052,76 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 
     const language = request.targetLanguage || 'English'
     const isArabic = language.toLowerCase() === 'arabic' || language.toLowerCase() === 'arabic only'
-    const sectionGuidance = request.sectionCount
-      ? `Generate EXACTLY ${request.sectionCount} comprehensive sections.`
-      : 'Generate 4-6 comprehensive sections covering foundational standards to advanced mastery.'
+    const sectionCount = request.sectionCount || (request.archetype === 'microlearning' ? 3 : request.archetype === 'leadership' ? 5 : 4)
+    const archetype = request.archetype || 'sop'
+    const tone = request.tone || 'luxury_formal'
 
-    const prompt = `You are a Senior Hotel Operational Training Director for Altus Hotels. Read the source material or topic below and create a COMPLETE, PRODUCTION-READY hotel training module with rich, actionable educational content and scenario-based quiz checkpoints.
-
-    Target Audience: Luxury Hotel Staff & Operations Teams.
-    Target Language: ${language}
-    ${sectionGuidance}
-
-    CRITICAL RULES FOR REAL HOTEL OPERATIONAL CONTENT:
-    - Each section MUST contain substantial, ready-to-teach "rich_content" in clean, semantic HTML format (<h3>, <p>, <ul>, <li>, <strong>, <blockquote>).
-    - Include REAL, ACTIONABLE step-by-step Standard Operating Procedures (SOPs), actual guest dialogue scripts ("Welcome to Altus, Mr. Smith..."), quality standards, and critical dos and don'ts.
-    - NEVER generate placeholder text, generic summaries, or "Lorem ipsum". Write the full, professional hotel operational guidelines.
-    - "suggestedBlockType" must be one of: "text", "video", "document_link", "scenario".
-    - Include realistic "suggestedQuizCheckpoints" testing real-world operational scenarios.
-    ${isArabic ? '- OUTPUT FULLY IN ARABIC (العربية). All headings, rich_content, scripts, and quiz checkpoints must be in professional Arabic.' : ''}
-
-    Return VALID JSON ONLY with this exact structure:
-    {
-      "title": "Clear, Professional Course Title",
-      "description": "Comprehensive 2-3 sentence course description and learning objectives",
-      "sections": [
-        {
-          "heading": "Section 1: Specific Standard Heading",
-          "suggestedBlockType": "text",
-          "summary": "Concise summary of learning goals",
-          "rich_content": "<h3>Standard Operating Procedure</h3><p>Detailed explanation...</p><ul><li><strong>Step 1:</strong> Action...</li><li><strong>Step 2:</strong> Action...</li></ul><blockquote><strong>Guest Interaction Script:</strong> 'Exact words to say...'</blockquote>"
-        }
-      ],
-      "suggestedQuizCheckpoints": [
-        { "afterSectionIndex": 0, "topic": "Practical scenario testing understanding of Section 1" }
-      ]
+    const archetypeInstructions: Record<CourseArchetype, string> = {
+      sop: 'Focus on 5-Star Forbes luxury benchmarks, sequential procedure phases, exact timing standards, and associate dialogue scripts.',
+      compliance: 'Focus on KSA Labor, Health, Municipal & Civil Defense safety standards, mandatory compliance rules, hazard prevention, and zero-defect protocols.',
+      onboarding: 'Focus on welcoming culture, core hospitality mindset, brand values, department integration, and foundational standards for new hires.',
+      scenario: 'Focus on real-world guest dilemmas, VIP handling, service recovery (LAST framework), conflict de-escalation, and high-judgment operational situations.',
+      leadership: 'Focus on supervisory shift rituals, quality inspection audits, associate coaching, root-cause resolution, handover checklists, and escalation rules.',
+      microlearning: 'Focus on concise, high-impact bite-sized lessons (3-minute modules), bullet-point summaries, quick-reference memory cards, and practical tips.'
     }
 
-    Do not add markdown formatting like \`\`\`json. Just the raw JSON object.
+    const toneInstructions: Record<CourseTone, string> = {
+      luxury_formal: 'Tone: Prestigious, Forbes 5-Star Luxury, Elegant, Highly Professional.',
+      engaging: 'Tone: Warm, Highly Engaging, Motivational, Story-Driven.',
+      direct_sop: 'Tone: Action-Oriented, Clear, Concise, Direct Step-by-Step.',
+      strict_compliance: 'Tone: Regulatory, Strict, Safety-First, Uncompromising on Quality and Standards.'
+    }
 
-    Source Material / Topic:
-    ${context}`
+    const inclusionPrompt = [
+      request.inclusions?.includeDialogue !== false ? '- Include realistic staff-guest dialogue scripts in relevant sections.' : '',
+      request.inclusions?.includeChecklists !== false ? '- Include supervisor quality inspection checklists.' : '',
+      request.inclusions?.includeServiceRecovery !== false ? '- Include service recovery protocols (LAST framework).' : '',
+      request.inclusions?.includeExecutiveSummary !== false ? '- Include executive takeaways and pro tips.' : '',
+      request.inclusions?.includeFaqs ? '- Include common operational FAQs and edge cases.' : '',
+    ].filter(Boolean).join('\n')
 
-    for (const model of FALLBACK_MODELS) {
+    const prompt = `You are a Senior Hotel Operational Training Director for Altus Hotels. Read the source material or topic below and create a COMPLETE, PRODUCTION-READY hotel training module.
+
+Target Audience: Luxury Hotel Staff & Operations Teams.
+Course Pedagogical Archetype: ${archetype.toUpperCase()}
+Archetype Focus: ${archetypeInstructions[archetype]}
+${toneInstructions[tone]}
+Target Language: ${language}
+Generate EXACTLY ${sectionCount} comprehensive sections.
+
+CRITICAL INCLUSIONS & RULES:
+- Each section MUST contain substantial, ready-to-teach "rich_content" in clean, semantic HTML format (<h3>, <p>, <ul>, <ol>, <li>, <strong>, <blockquote>).
+${inclusionPrompt}
+- NEVER generate placeholder text, generic summaries, or "Lorem ipsum".
+- "suggestedBlockType" must be one of: "text", "video", "document_link", "scenario".
+- Include realistic "suggestedQuizCheckpoints" testing real-world operational scenarios.
+${isArabic ? '- OUTPUT FULLY IN ARABIC (العربية). All headings, rich_content, scripts, and quiz checkpoints must be in professional Arabic.' : ''}
+
+Return VALID JSON ONLY with this exact structure:
+{
+  "title": "Clear, Professional Course Title",
+  "description": "Comprehensive 2-3 sentence course description and learning objectives",
+  "sections": [
+    {
+      "heading": "Section 1: Specific Standard Heading",
+      "suggestedBlockType": "text",
+      "summary": "Concise summary of learning goals",
+      "rich_content": "<h3>Standard Operating Procedure</h3><p>Detailed explanation...</p><ol><li><strong>Step 1:</strong> Action...</li><li><strong>Step 2:</strong> Action...</li></ol><blockquote><strong>Guest Interaction Script:</strong> 'Exact words to say...'</blockquote>"
+    }
+  ],
+  "suggestedQuizCheckpoints": [
+    { "afterSectionIndex": 0, "topic": "Practical scenario testing understanding of Section 1" }
+  ]
+}
+
+Source Material / Topic:
+${context}`
+
+    const modelChain = resolveModelChain(request.preferredModel)
+    const failedModels: string[] = []
+
+    for (let i = 0; i < modelChain.length; i++) {
+      const model = modelChain[i]
       try {
         const generatedText = await callHuggingFace(model, prompt, 4000)
         const parsed = safeParseJson<ModuleOutline>(generatedText, false) || salvageTruncatedOutline(generatedText)
@@ -928,17 +1147,37 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
                 ? parsed.suggestedQuizCheckpoints.filter(checkpoint =>
                     typeof checkpoint?.afterSectionIndex === 'number' && !!checkpoint?.topic
                   )
-                : []
+                : [],
+              meta: {
+                modelUsed: model,
+                fallbackOccurred: failedModels.length > 0,
+                fallbackAttempts: failedModels,
+                providerUsed: 'openrouter'
+              }
             }
           }
         }
       } catch (e) {
-        console.warn(`Outline generation model ${model} failed:`, e)
+        failedModels.push(model)
+        const nextModel = modelChain[i + 1]
+        console.warn(`Outline generation model ${model} failed, engaging fallback ${nextModel || 'local engine'}:`, e)
+        if (nextModel && request.onFallbackModelEngaged) {
+          request.onFallbackModelEngaged(model, nextModel)
+        }
       }
     }
 
-    console.warn('🔥 Engaging Smart Operational Hotel Fallback Engine.')
-    return generateRichHotelModuleFallback(context, language, request.sectionCount || 4)
+    console.warn('🔥 All models failed. Engaging Smart Operational Hotel Fallback Engine.')
+    const fallbackOutline = generateRichHotelModuleFallback(context, language, sectionCount)
+    return {
+      ...fallbackOutline,
+      meta: {
+        modelUsed: 'smart-local-fallback',
+        fallbackOccurred: true,
+        fallbackAttempts: failedModels,
+        providerUsed: 'local-intelligence'
+      }
+    }
   },
 
   /**
@@ -951,10 +1190,16 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
     sectionSummary?: string
     department?: string
     language?: string
+    archetype?: CourseArchetype
+    tone?: CourseTone
+    inclusions?: CourseInclusions
+    preferredModel?: string
+    onFallbackModelEngaged?: (failedModel: string, nextModel: string) => void
   }): Promise<string> {
     const language = request.language || 'English'
     const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
     const department = request.department || 'Hotel Operations'
+    const archetype = request.archetype || 'sop'
 
     const prompt = isArabic
       ? `أنت خبير ومدير تدريب وتطوير فندقي فاخر في مجموعة فنادق ألتوس (Altus Hotels).
@@ -963,6 +1208,7 @@ Return VALID JSON ONLY. The output must be a single JSON Array containing EXACTL
 - عنوان الدرس: "${request.sectionHeading}"
 - الملخص: "${request.sectionSummary || ''}"
 - القسم: "${department}"
+- نوع ونمط المحتوى: ${archetype}
 
 المطلوب: كتابة محتوى تدريبي كامل وعملي (500 إلى 800 كلمة) بصيغة HTML دلالية نظيفة، يحتوي على الأقسام التالية بالضبط:
 1. <h3>1. المعيار والهدف التشغيلي (Operational Standard & Purpose)</h3>
@@ -984,8 +1230,9 @@ Write an exhaustive, publication-grade Standard Operating Procedure (SOP) traini
 - Lesson Title: "${request.sectionHeading}"
 - Summary: "${request.sectionSummary || ''}"
 - Department: "${department}"
+- Archetype Style: ${archetype}
 
-Requirements: Write fully developed, professional training content in clean semantic HTML with these exact structured sections:
+Requirements: Write fully developed, professional training content in clean semantic HTML with these structured sections:
 1. <h3>1. Executive Standard & Operational Purpose</h3>
    Forbes 5-star benchmarks, exact timeframes, and performance expectations.
 2. <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
@@ -1000,18 +1247,71 @@ Requirements: Write fully developed, professional training content in clean sema
 
 Output clean HTML only, no markdown codeblocks.`
 
-    for (const model of FALLBACK_MODELS) {
+    const modelChain = resolveModelChain(request.preferredModel)
+    for (let i = 0; i < modelChain.length; i++) {
+      const model = modelChain[i]
       try {
         const generatedHtml = await callHuggingFace(model, prompt, 2048)
         if (generatedHtml && generatedHtml.length > 200) {
           return generatedHtml.replace(/```html\n?|\n?```/g, '').trim()
         }
       } catch (e) {
-        console.warn(`Deep expansion model ${model} failed:`, e)
+        const nextModel = modelChain[i + 1]
+        console.warn(`Deep expansion model ${model} failed, trying fallback ${nextModel || 'local heuristic'}:`, e)
+        if (nextModel && request.onFallbackModelEngaged) {
+          request.onFallbackModelEngaged(model, nextModel)
+        }
       }
     }
 
     return generateDeepSectionFallback(request.sectionHeading, request.sectionSummary || '', language, department)
+  },
+
+  /**
+   * Refines or rewrites an existing lesson's HTML content based on custom user instructions.
+   */
+  async refineLessonContent(request: {
+    courseTitle?: string
+    sectionHeading: string
+    currentContent: string
+    instruction: string
+    language?: string
+    preferredModel?: string
+  }): Promise<string> {
+    const language = request.language || 'English'
+    const isArabic = language.toLowerCase().includes('ar') || language.toLowerCase().includes('arabic')
+
+    const prompt = isArabic
+      ? `أنت خبير تدريب وتطوير فندقي فاخر. قم بتعديل وتحسين محتوى الدرس التالي بناءً على طلب المستخدم بدقة واحترافية:
+- الدورة: "${request.courseTitle || 'دورة فندقية'}"
+- عنوان الدرس: "${request.sectionHeading}"
+- طلب التعديل: "${request.instruction}"
+- المحتوى الحالي:
+${request.currentContent}
+
+المطلوب: أعد صياغة وتحسين المحتوى بصيغة HTML دلالية نظيفة مع تطبيق التعديلات المطلوبة بدقة عالية. أخرج كود HTML فقط بدون كتل كود markdown.`
+      : `You are a Senior Luxury Hospitality Training Director. Refine and enhance the following hotel lesson content according to the user's specific refinement instruction:
+- Course: "${request.courseTitle || 'Hotel Training'}"
+- Lesson: "${request.sectionHeading}"
+- Refinement Instruction: "${request.instruction}"
+- Current Content:
+${request.currentContent}
+
+Requirements: Output the revised, professional lesson content in clean semantic HTML format. Output clean HTML only, no markdown codeblocks.`
+
+    const modelChain = resolveModelChain(request.preferredModel)
+    for (const model of modelChain) {
+      try {
+        const generated = await callHuggingFace(model, prompt, 2500)
+        if (generated && generated.length > 100) {
+          return generated.replace(/```html\n?|\n?```/g, '').trim()
+        }
+      } catch (e) {
+        console.warn(`Lesson refinement with model ${model} failed, cascading:`, e)
+      }
+    }
+
+    return request.currentContent
   },
 
   /**

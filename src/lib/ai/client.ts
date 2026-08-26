@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from './providers/multiProviderRouter'
 import type { z } from 'zod'
 import type {
   AIExecutionResult,
@@ -138,7 +139,7 @@ export class AltusAIClient {
   }
 
   /**
-   * Execute prompt with standard JSON response and automatic fallback
+   * Execute prompt with standard JSON response and automatic 5-tier multi-provider fallback
    */
   async executePrompt(
     prompt: string,
@@ -153,44 +154,30 @@ export class AltusAIClient {
       jsonMode = false,
     } = options
 
-    const { data, error } = await supabase.functions.invoke<{
-      success: boolean
-      response?: string
-      result?: string
-      error?: string
-      meta?: {
-        providerUsed?: string
-        modelUsed?: string
-      }
-    }>('process-ai-request', {
-      body: {
-        model,
-        prompt,
-        systemPrompt,
-        task,
-        temperature,
-        max_tokens: maxTokens,
-        jsonMode,
-        stream: false,
-      },
+    const routerTask =
+      task === 'code'
+        ? 'reasoning'
+        : task === 'translation'
+        ? 'compliance'
+        : task === 'summary'
+        ? 'fast'
+        : 'general'
+
+    const res = await multiProviderRouter.execute<string>(prompt, {
+      task: routerTask,
+      preferredModel: model,
+      systemPrompt,
+      temperature,
+      maxTokens,
+      jsonMode,
     })
 
-    if (error) {
-      throw new Error(`AI Request Failed: ${error.message}`)
-    }
-
-    if (data?.success === false || data?.error) {
-      throw new Error(data.error || 'AI generation failed')
-    }
-
-    const rawResponse = (data?.response || data?.result || '') as string
-
     return {
-      data: rawResponse,
-      rawResponse,
+      data: res.rawText,
+      rawResponse: res.rawText,
       meta: {
-        providerUsed: data?.meta?.providerUsed,
-        modelUsed: data?.meta?.modelUsed,
+        providerUsed: res.providerUsed,
+        modelUsed: res.modelUsed,
       },
     }
   }
@@ -229,6 +216,91 @@ export class AltusAIClient {
       rawResponse: result.rawResponse,
       meta: result.meta,
     }
+  }
+
+  /**
+   * High-accuracy multilingual translation for hotel SOPs, courses, and UI text
+   */
+  async translateText(
+    text: string,
+    targetLang: string,
+    targetLangName: string = targetLang
+  ): Promise<string> {
+    if (!text || !text.trim()) return text
+
+    const systemPrompt = `You are the master multilingual hospitality translation engine for ALTUS Hospitality & Hotels (Saudi Arabia / KSA).
+Translate the provided hotel operational content, Standard Operating Procedures (SOP), training course, or guest service guideline into ${targetLangName} (${targetLang}).
+
+RULES:
+1. Translate accurately into 5-star luxury hospitality phrasing suitable for Saudi Arabia and international hospitality.
+2. PRESERVE all HTML tags (<p>, <h3>, <ul>, <li>, <strong>, <table>, etc.) and markdown formatting intact.
+3. PRESERVE variables, placeholders, and technical IDs unchanged.
+4. Output ONLY the translated content without any commentary.`
+
+    const result = await this.executePrompt(text, {
+      systemPrompt,
+      temperature: 0.2,
+      task: 'chat',
+    })
+
+    return (result.data || text).trim()
+  }
+
+  /**
+   * Batch translation for multiple strings or training blocks
+   */
+  async translateBatch(
+    texts: string[],
+    targetLang: string,
+    targetLangName: string = targetLang
+  ): Promise<string[]> {
+    if (!Array.isArray(texts) || texts.length === 0) return []
+
+    const nonEmpties = texts.map((t, idx) => ({ t, idx })).filter(item => item.t && item.t.trim().length > 0)
+    if (nonEmpties.length === 0) return [...texts]
+
+    const systemPrompt = `You are the master multilingual hospitality translation engine for ALTUS Hospitality & Hotels.
+Translate each text item in the "items" array into ${targetLangName} (${targetLang}).
+PRESERVE all HTML and Markdown formatting.
+Respond ONLY with a valid JSON object matching this exact schema:
+{
+  "translations": ["translated string 1", "translated string 2"]
+}`
+
+    try {
+      const result = await this.executePrompt(
+        JSON.stringify({ items: nonEmpties.map(item => item.t) }),
+        {
+          systemPrompt,
+          temperature: 0.1,
+          jsonMode: true,
+        }
+      )
+
+      const parsed = extractJsonFromText<{ translations?: string[] } | string[]>(result.data)
+      const list = Array.isArray(parsed)
+        ? parsed
+        : (parsed && typeof parsed === 'object' && Array.isArray((parsed as { translations?: string[] }).translations))
+        ? (parsed as { translations?: string[] }).translations
+        : null
+
+      if (list && list.length === nonEmpties.length) {
+        const out = [...texts]
+        nonEmpties.forEach((item, i) => {
+          out[item.idx] = list[i] || item.t
+        })
+        return out
+      }
+    } catch (err) {
+      console.warn('Batch AI translation failed, falling back to sequential:', err)
+    }
+
+    // Sequential fallback
+    const out = [...texts]
+    for (const item of nonEmpties) {
+      out[item.idx] = await this.translateText(item.t, targetLang, targetLangName)
+    }
+    return out
   }
 }
 

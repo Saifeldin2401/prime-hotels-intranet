@@ -86,6 +86,7 @@ import { PlayerCelebrationModal } from '@/components/training/player/PlayerCeleb
 import { FlashcardDeckWidget } from '@/components/training/player/widgets/FlashcardDeckWidget'
 import { ScenarioBranchSimulator } from '@/components/training/player/widgets/ScenarioBranchSimulator'
 import { PracticalAssignmentBlockRenderer } from '@/components/training/player/PracticalAssignmentBlockRenderer'
+import { RoleplaySimulationBlockRenderer } from '@/components/training/player/RoleplaySimulationBlockRenderer'
 import { assignmentSubmissionService, type TrainingAssignmentSubmission } from '@/services/assignmentSubmissionService'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -2120,6 +2121,21 @@ export default function TrainingPlayer() {
                                 setCompletedBlocks(prev => new Set(prev).add(block.id))
                                 void recordBlockCompletion(block.id)
                             }
+                            scheduleProgressSave(200)
+                        }}
+                        isRTL={isRTL}
+                    />
+                )}
+
+                {((block.type as string) === 'roleplay' ||
+                  Boolean((block.content_data as Record<string, unknown> | null)?.is_roleplay) ||
+                  (block.content_data as Record<string, unknown> | null)?.interactive_type === 'roleplay') && moduleData && (
+                    <RoleplaySimulationBlockRenderer
+                        block={block}
+                        moduleId={moduleData.module.id}
+                        onBlockComplete={(blockId, score) => {
+                            setCompletedBlocks(prev => new Set(prev).add(blockId))
+                            void recordBlockCompletion(blockId)
                             scheduleProgressSave(200)
                         }}
                         isRTL={isRTL}

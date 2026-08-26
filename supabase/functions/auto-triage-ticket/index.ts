@@ -62,8 +62,8 @@ Return ONLY valid JSON.`;
           method: "POST",
           headers: {
             Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://connect.altusadvisory.com",
-            "X-Title": "Altus Connect Ticket Triage",
+            "HTTP-Referer": "https://phg-connect.com",
+            "X-Title": "PRIME Connect Ticket Triage",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({

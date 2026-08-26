@@ -155,8 +155,8 @@ Deno.serve(async (req) => {
             method: "POST",
             headers: {
               Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-              "HTTP-Referer": "https://connect.altusadvisory.com",
-              "X-Title": "Altus Connect Feedback Analysis",
+              "HTTP-Referer": "https://phg-connect.com",
+              "X-Title": "PRIME Connect Feedback Analysis",
               "Content-Type": "application/json",
             },
             body: JSON.stringify({

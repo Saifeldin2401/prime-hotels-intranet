@@ -807,11 +807,11 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
   }
 
   const validationChecklist = [
-    { key: 'title', label: t('builder.validation.title'), ok: title.trim().length > 0 },
-    { key: 'category', label: t('builder.validation.category'), ok: !!category },
-    { key: 'structure', label: t('builder.validation.structure'), ok: sections.length > 0 },
-    { key: 'content', label: t('builder.validation.content'), ok: totalItems > 0 },
-    { key: 'rules', label: t('builder.validation.rules'), ok: rulesComplete }
+    { key: 'title', label: t('builder.validation.title', 'Course Title Configured'), ok: title.trim().length > 0 },
+    { key: 'category', label: t('builder.validation.category', 'Department & Category Selected'), ok: !!category },
+    { key: 'structure', label: t('builder.validation.structure', 'Learning Modules & Sections Added'), ok: sections.length > 0 },
+    { key: 'content', label: t('builder.validation.content', 'Lesson Content & SOPs Added'), ok: totalItems > 0 },
+    { key: 'rules', label: t('builder.validation.rules', 'Completion & Exam Rules Configured'), ok: rulesComplete }
   ]
 
   // -------------------------------------------------------------------------

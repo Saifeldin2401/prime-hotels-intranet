@@ -1,8 +1,7 @@
 import { buildAIPrompt } from '@/editor/ai/promptBuilder'
 import type { AIConfig, AIRequestPayload } from '@/editor/types'
 import { extractTextFromAiResponse } from '@/lib/aiResponse'
-import { supabase } from '@/lib/supabase'
-import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse } from '@/types/ai'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 
 export interface OpenAIResult {
   html: string
@@ -12,48 +11,32 @@ export interface OpenAIResult {
   }
 }
 
-const DEFAULT_MODEL = 'meta-llama/Llama-3.3-70B-Instruct'
 const DEFAULT_MAX_TOKENS = 1200
 const DEFAULT_TEMPERATURE = 0.4
 
 export async function requestAISuggestion(
   payload: AIRequestPayload,
   aiConfig?: AIConfig,
-  _signal?: AbortSignal, // Supabase invoke doesn't easily support external signal in all versions
+  _signal?: AbortSignal,
 ): Promise<OpenAIResult> {
-  const model = aiConfig?.model || DEFAULT_MODEL
   const temperature = aiConfig?.temperature ?? DEFAULT_TEMPERATURE
   const maxOutputTokens = aiConfig?.maxOutputTokens ?? DEFAULT_MAX_TOKENS
 
   const prompt = buildAIPrompt({
     ...payload,
-    model,
     temperature,
     maxOutputTokens,
   })
 
   try {
-    const request: ProcessAiRequest = {
-      model,
-      prompt: prompt.system + '\n\n' + prompt.user,
+    const res = await multiProviderRouter.execute(prompt.user, {
+      task: 'reasoning',
+      systemPrompt: prompt.system,
       temperature,
-      max_tokens: maxOutputTokens,
-    }
-
-    const { data, error } = await supabase.functions.invoke<ProcessAiResponse>('process-ai-request', {
-      body: request
+      maxTokens: maxOutputTokens,
     })
 
-    if (error) {
-      throw new Error(`AI Gateway Error: ${error.message}`)
-    }
-
-    if (isProcessAiErrorResponse(data)) {
-      throw new Error(data.error || 'AI request failed')
-    }
-
-    // Extract content using the shared utility which handles multiple possible response fields
-    const rawContent = data?.response ?? data?.result ?? ''
+    const rawContent = res.rawText || ''
     const html = extractTextFromAiResponse(rawContent, [
       'contentHtml',
       'content_html',
@@ -71,11 +54,9 @@ export async function requestAISuggestion(
 
     return {
       html,
-      usage: data?.usage,
     }
   } catch (err) {
-    console.error('AI Edge Function Failure:', err)
+    console.error('Editor AI Failure:', err)
     throw err
   }
 }
-

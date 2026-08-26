@@ -4,7 +4,7 @@
  * Analyzes feedback text to identify sentiment, themes, and actionable insights
  */
 
-import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { useCallback, useState } from 'react'
 
 interface FeedbackAnalysis {
@@ -71,23 +71,16 @@ ANALYSIS RULES:
 
 Return ONLY valid JSON.`
 
-            // Perform Server-Side Analysis using Supabase Edge Function
+            // Perform Server-Side Analysis using MultiProviderRouter with cascading failover
             try {
-                const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-                    body: {
-                        prompt,
-                        model: 'meta-llama/Llama-3.3-70B-Instruct',
-                        task: 'chat'
-                    }
+                const aiResult = await multiProviderRouter.execute<FeedbackAnalysis>(prompt, {
+                    task: 'reasoning',
+                    jsonMode: true,
                 })
-
-                if (aiError) throw aiError
 
                 // Parse AI response
                 let parsed: FeedbackAnalysis | null = null
-
-                // The server returns { response: "string content", success: true }
-                let rawContent = aiResult?.response || ''
+                let rawContent = aiResult.rawText || ''
 
                 // Clean up Markdown code blocks if present
                 // Use recursive sanitization to prevent bypass attempts with nested patterns

@@ -8,7 +8,7 @@
  * summary) for the author to review, edit, and insert into the builder.
  */
 
-import { aiService, type ModuleOutline } from '@/lib/gemini'
+import { aiService, type CourseArchetype, type CourseInclusions, type CourseTone, type ModuleOutline } from '@/lib/gemini'
 import { useMutation } from '@tanstack/react-query'
 import { toast } from 'sonner'
 
@@ -16,6 +16,11 @@ export interface GenerateModuleOutlineRequest {
   sourceContent: string
   targetLanguage?: string
   sectionCount?: number
+  archetype?: CourseArchetype
+  tone?: CourseTone
+  inclusions?: CourseInclusions
+  preferredModel?: string
+  onFallbackModelEngaged?: (failedModel: string, nextModel: string) => void
 }
 
 export function useGenerateModuleOutline() {
@@ -24,7 +29,10 @@ export function useGenerateModuleOutline() {
       aiService.generateModuleOutline(request),
     onSuccess: (outline) => {
       const count = outline.sections.length
-      toast.success(`Draft outline ready: ${count} section${count === 1 ? '' : 's'}`)
+      const modelNote = outline.meta?.fallbackOccurred
+        ? ` (via fallback model)`
+        : ''
+      toast.success(`Draft outline ready: ${count} section${count === 1 ? '' : 's'}${modelNote}`)
     },
     onError: (error) => {
       toast.error('Failed to generate outline')

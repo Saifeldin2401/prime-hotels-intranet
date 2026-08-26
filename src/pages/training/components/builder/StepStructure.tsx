@@ -8,6 +8,10 @@ import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { generateMissingField } from '@/lib/trainingAICompletionEngine'
+import {
+  generateAndLinkCheckpointQuestions,
+  toValidQuestionType,
+} from '@/services/checkpointQuizGenerator'
 import { Loader2, Plus, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -306,14 +310,60 @@ export function StepStructure({
                   .single()
 
                 if (createdQuiz) {
-                  const linkedQuestionCount = await generateAndLinkCheckpointQuestions({
-                    quizId: createdQuiz.id,
-                    sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
-                    difficulty: generated.difficulty,
-                    language: generated.language,
-                    trainingModuleId: ctx.moduleId,
-                    createdBy: profile?.id
-                  })
+                  let linkedQuestionCount = 0
+
+                  // If questions were already synthesized by the AI Course Engine Studio, persist directly
+                  if (checkpoint.questions && checkpoint.questions.length > 0) {
+                    for (let qIdx = 0; qIdx < checkpoint.questions.length; qIdx++) {
+                      const q = checkpoint.questions[qIdx]
+                      const validQType = toValidQuestionType(q.question_type)
+                      const { data: newQ } = await supabase
+                        .from('unified_questions')
+                        .insert({
+                          source_domain: 'knowledge',
+                          question_text: q.question_text,
+                          question_type: validQType,
+                          difficulty: q.difficulty === 'hard' ? 'hard' : q.difficulty === 'easy' ? 'easy' : 'medium',
+                          correct_answer: q.correct_answer || q.options?.find((o: any) => o.is_correct)?.text || '',
+                          explanation: q.explanation || '',
+                          hint: q.hint || '',
+                          training_module_id: ctx.moduleId,
+                          ai_generated: true,
+                          status: 'published',
+                          created_by: profile?.id,
+                        })
+                        .select()
+                        .single()
+
+                      if (newQ) {
+                        linkedQuestionCount++
+                        if (q.options?.length) {
+                          const optionsToInsert = q.options.map((opt: any, oIdx: number) => ({
+                            question_id: newQ.id,
+                            option_text: opt.text,
+                            match_value: opt.match_value || null,
+                            is_correct: !!opt.is_correct,
+                            display_order: oIdx,
+                          }))
+                          await supabase.from('unified_question_options').insert(optionsToInsert)
+                          await supabase.from('unified_quiz_questions').insert({
+                            quiz_id: createdQuiz.id,
+                            question_id: newQ.id,
+                            order_index: qIdx,
+                          })
+                        }
+                      }
+                    }
+                  } else {
+                    linkedQuestionCount = await generateAndLinkCheckpointQuestions({
+                      quizId: createdQuiz.id,
+                      sectionContent: `${sec.heading}\n${sec.summary}\n${sec.rich_content || ''}`,
+                      difficulty: generated.difficulty,
+                      language: generated.language,
+                      trainingModuleId: ctx.moduleId,
+                      createdBy: profile?.id,
+                    })
+                  }
 
                   if (linkedQuestionCount > 0) {
                     items.push({
@@ -325,11 +375,11 @@ export function StepStructure({
                       content_data: {
                         quiz_id: createdQuiz.id,
                         is_checkpoint: true,
-                        passing_score: 80,
-                        topic: checkpoint.topic
+                        passing_score: checkpoint.passingScore || 80,
+                        topic: checkpoint.topic,
                       },
                       is_mandatory: true,
-                      order: items.length
+                      order: items.length,
                     })
                   } else {
                     await supabase.from('learning_quizzes').delete().eq('id', createdQuiz.id)

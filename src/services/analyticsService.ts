@@ -255,8 +255,8 @@ class AnalyticsService {
                 }
             }
 
-            const currentBuffer = [...this.buffer]
-            const eventsToSend = currentBuffer.map(e => ({
+            const batchToSend = this.buffer.slice(0, this.batchSize)
+            const eventsToSend = batchToSend.map(e => ({
                 ...e,
                 session_id: this.sessionId,
                 user_id: this.userId || e.user_id
@@ -267,6 +267,12 @@ class AnalyticsService {
                 .insert(eventsToSend)
 
             if (error) {
+                if (error.code === '57014') {
+                    console.warn('[Analytics] DB statement timeout on batch flush. Truncating batch to prevent buffer congestion.')
+                    this.buffer = this.buffer.slice(batchToSend.length)
+                    return
+                }
+
                 console.error('Failed to flush analytics events', error)
 
                 // Handle 401/403: session expired or unauthorized
@@ -282,11 +288,7 @@ class AnalyticsService {
             }
 
             // Success: remove only the events we just sent
-            if (this.buffer.length >= currentBuffer.length) {
-                this.buffer = this.buffer.slice(currentBuffer.length)
-            } else {
-                this.buffer = []
-            }
+            this.buffer = this.buffer.slice(batchToSend.length)
         } catch (e) {
             console.error('Analytics flush error', e)
         } finally {

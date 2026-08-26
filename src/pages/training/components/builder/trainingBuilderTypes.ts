@@ -1,4 +1,4 @@
-export type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical'
+export type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical' | 'roleplay'
 export type QuestionType = 'mcq' | 'true_false' | 'fill_blank'
 export type BuilderStep = 'setup' | 'structure' | 'content' | 'rules' | 'preview' | 'publish'
 export type RecentUpload = { url: string; name: string; type: 'image' | 'audio' | 'document' | 'video' }

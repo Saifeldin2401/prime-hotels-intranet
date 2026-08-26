@@ -9,9 +9,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useGenerateModuleOutline } from '@/hooks/useAIModuleOutline'
-import type { ModuleOutlineSection } from '@/lib/gemini'
+import { AVAILABLE_COURSE_AI_MODELS, COURSE_ARCHETYPES, type CourseArchetype, type ModuleOutlineSection } from '@/lib/gemini'
 import { cn } from '@/lib/utils'
-import { ArrowDown, ArrowUp, FileQuestion, Loader2, Sparkles, Trash2 } from 'lucide-react'
+import { ArrowDown, ArrowUp, Cpu, FileQuestion, Loader2, RefreshCw, ShieldCheck, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import type { ContentBlockForm, ContentType, TrainingSection } from './trainingBuilderTypes'
@@ -69,6 +69,10 @@ export function AIOutlineDialog({
 
   const [sourceContent, setSourceContent] = useState('')
   const [targetLanguage, setTargetLanguage] = useState('English')
+  const [courseArchetype, setCourseArchetype] = useState<CourseArchetype>('sop')
+  const [preferredModel, setPreferredModel] = useState('auto')
+  const [activeModelUsed, setActiveModelUsed] = useState('')
+  const [fallbackTriggered, setFallbackTriggered] = useState(false)
   const [draftTitle, setDraftTitle] = useState('')
   const [draftDescription, setDraftDescription] = useState('')
   const [draftSections, setDraftSections] = useState<DraftSection[]>([])
@@ -81,6 +85,8 @@ export function AIOutlineDialog({
     setDraftSections([])
     setDraftCheckpoints([])
     setHasResult(false)
+    setFallbackTriggered(false)
+    setActiveModelUsed('')
   }
 
   const handleOpenChange = (next: boolean) => {
@@ -102,8 +108,30 @@ export function AIOutlineDialog({
     }
 
     try {
-      const outline = await generateOutline.mutateAsync({ sourceContent, targetLanguage })
+      setFallbackTriggered(false)
+      const outline = await generateOutline.mutateAsync({
+        sourceContent,
+        targetLanguage,
+        archetype: courseArchetype,
+        preferredModel,
+        onFallbackModelEngaged: (failedModel, nextModel) => {
+          setFallbackTriggered(true)
+          toast({
+            title: t('builder.modelFailoverActive', 'AI Fallback Engaged'),
+            description: t('builder.modelFailoverDesc', {
+              failed: failedModel.split('/')[1] || failedModel,
+              next: nextModel.split('/')[1] || nextModel,
+              defaultValue: `Primary model was busy. Automatically switched to fallback model (${nextModel.split('/')[1] || nextModel}).`
+            })
+          })
+        }
+      })
       const timestamp = Date.now()
+
+      setActiveModelUsed(outline.meta?.modelUsed || (preferredModel === 'auto' ? 'Gemini 2.0 Flash' : preferredModel))
+      if (outline.meta?.fallbackOccurred) {
+        setFallbackTriggered(true)
+      }
 
       setDraftTitle(outline.title)
       setDraftDescription(outline.description)
@@ -255,11 +283,11 @@ export function AIOutlineDialog({
             />
           </div>
 
-          <div className={cn('flex items-end gap-3', isRTL ? 'flex-row-reverse' : '')}>
-            <div className="flex-1 space-y-2">
+          <div className={cn('grid grid-cols-1 sm:grid-cols-3 gap-3', isRTL ? 'flex-row-reverse' : '')}>
+            <div className="space-y-2">
               <Label>{t('builder.outlineLanguageLabel', 'Target language')}</Label>
               <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                <SelectTrigger>
+                <SelectTrigger className="text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -269,10 +297,61 @@ export function AIOutlineDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>{t('builder.courseArchetype', 'Archetype')}</Label>
+              <Select value={courseArchetype} onValueChange={(v: any) => setCourseArchetype(v)}>
+                <SelectTrigger className="text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {COURSE_ARCHETYPES.map((arch) => (
+                    <SelectItem key={arch.id} value={arch.id}>
+                      {isRTL ? arch.title_ar : arch.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="flex items-center gap-1.5">
+                  <Cpu className="w-3.5 h-3.5 text-purple-600" />
+                  <span>{t('builder.aiModelLabel', 'AI Engine')}</span>
+                </Label>
+                <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>{t('builder.failoverActive', 'Active')}</span>
+                </span>
+              </div>
+              <Select value={preferredModel} onValueChange={setPreferredModel}>
+                <SelectTrigger className="text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {AVAILABLE_COURSE_AI_MODELS.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>
+                      <div className="flex items-center justify-between w-full gap-2">
+                        <span>{m.name}</span>
+                        {m.badge && (
+                          <span className="text-[10px] px-1 rounded bg-purple-100 text-purple-800 font-bold">
+                            {m.badge}
+                          </span>
+                        )}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-1">
             <Button
               onClick={handleGenerate}
               disabled={generateOutline.isPending || !sourceContent.trim()}
-              className={cn('bg-purple-600 hover:bg-purple-700 text-white', isRTL ? 'flex-row-reverse' : '')}
+              className={cn('bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto', isRTL ? 'flex-row-reverse' : '')}
             >
               {generateOutline.isPending ? (
                 <Loader2 className={cn('w-4 h-4 animate-spin', isRTL ? 'ms-2' : 'me-2')} />
@@ -285,6 +364,22 @@ export function AIOutlineDialog({
 
           {hasResult && (
             <div className="space-y-4 border-t pt-4">
+              {/* Active Engine Badge */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs font-semibold flex items-center gap-1">
+                    <Cpu className="w-3 h-3" />
+                    <span>Engine: {activeModelUsed ? (activeModelUsed.split('/')[1] || activeModelUsed) : 'Gemini 2.0 Flash'}</span>
+                  </Badge>
+                  {fallbackTriggered && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-800 border-amber-300 text-xs font-semibold flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 text-amber-600 animate-pulse" />
+                      <span>{t('builder.failoverEngagedBadge', 'Failover Model Engaged')}</span>
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="space-y-2">
                   <Label>{t('builder.outlineModuleTitle', 'Suggested module title')}</Label>

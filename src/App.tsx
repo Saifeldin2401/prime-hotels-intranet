@@ -17,7 +17,9 @@ const shouldEnableVercelInsights = () => {
     host.endsWith('vercel.app') ||
     host === 'altus-advisory.com' ||
     host === 'www.altus-advisory.com' ||
-    host === 'connect.altusadvisory.com'
+    host === 'connect.altusadvisory.com' ||
+    host === 'phg-connect.com' ||
+    host === 'www.phg-connect.com'
   )
 }
 

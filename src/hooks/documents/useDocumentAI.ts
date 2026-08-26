@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { useCallback, useState } from 'react'
 import type { AISuggestion } from './types'
 import { calculateSimilarity, extractTagKeywords } from './utils'
@@ -18,10 +19,7 @@ export function useAISuggestTags() {
 
       if (error) throw error
 
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-        body: {
-          task: 'chat',
-          prompt: `Analyze this document and suggest relevant tags.
+      const prompt = `Analyze this document and suggest relevant tags.
 
 Title: ${doc.title}
 Description: ${doc.description || 'N/A'}
@@ -34,17 +32,20 @@ Suggest 5-8 relevant tags for categorizing this document. Consider:
 - Topic (Safety, Training, Compliance, etc.)
 - Hotel operations area (Front Desk, Housekeeping, F&B, etc.)
 
-Return as JSON array: [{"value": "tag-name", "confidence": "high|medium|low", "reason": "brief explanation"}]`,
-        }
-      })
+Return as JSON array: [{"value": "tag-name", "confidence": "high|medium|low", "reason": "brief explanation"}]`
 
-      if (aiError) throw aiError
+      const aiData = await multiProviderRouter.execute<AISuggestion[]>(prompt, {
+        task: 'fast',
+        jsonMode: true,
+      })
 
       let parsedSuggestions: AISuggestion[] = []
 
-      if (typeof aiData?.response === 'string') {
+      if (Array.isArray(aiData.data)) {
+        parsedSuggestions = aiData.data
+      } else if (typeof aiData.rawText === 'string') {
         try {
-          const jsonMatch = aiData.response.match(/\[[\s\S]*\]/)
+          const jsonMatch = aiData.rawText.match(/\[[\s\S]*\]/)
           if (jsonMatch) {
             parsedSuggestions = JSON.parse(jsonMatch[0])
           }
@@ -90,10 +91,7 @@ export function useAIClassifyFolder() {
 
       if (foldersError) throw foldersError
 
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-        body: {
-          task: 'chat',
-          prompt: `Classify this document into the most appropriate folder.
+      const prompt = `Classify this document into the most appropriate folder.
 
 Document:
 Title: ${doc.title}
@@ -105,17 +103,20 @@ Available Folders:
 ${folders?.map(f => `- ${f.name} (ID: ${f.id}): ${f.description || 'No description'}`).join('\n')}
 
 Suggest the best folder ID and explain why. Return as JSON:
-{"value": "folder-id", "confidence": "high|medium|low", "reason": "explanation"}`,
-        }
-      })
+{"value": "folder-id", "confidence": "high|medium|low", "reason": "explanation"}`
 
-      if (aiError) throw aiError
+      const aiData = await multiProviderRouter.execute<AISuggestion>(prompt, {
+        task: 'fast',
+        jsonMode: true,
+      })
 
       let result: AISuggestion | null = null
 
-      if (typeof aiData?.response === 'string') {
+      if (aiData.data && typeof aiData.data === 'object') {
+        result = aiData.data as AISuggestion
+      } else if (typeof aiData.rawText === 'string') {
         try {
-          const jsonMatch = aiData.response.match(/\{[\s\S]*\}/)
+          const jsonMatch = aiData.rawText.match(/\{[\s\S]*\}/)
           if (jsonMatch) {
             result = JSON.parse(jsonMatch[0])
           }
@@ -160,10 +161,7 @@ export function useAIDetectDuplicates() {
       ) || []
 
       if (potentialDuplicates.length > 0 && fileContent.length > 0) {
-        const { data: aiData } = await supabase.functions.invoke('process-ai-request', {
-          body: {
-            task: 'chat',
-            prompt: `Compare this new document with existing documents to find duplicates.
+        const prompt = `Compare this new document with existing documents to find duplicates.
 
 New Document:
 Name: ${file.name}
@@ -174,13 +172,19 @@ Existing Documents:
 ${potentialDuplicates.map(d => `ID: ${d.id}, Title: ${d.title}, Type: ${d.file_type}`).join('\n')}
 
 Return IDs of likely duplicates with confidence scores as JSON array:
-[{"id": "doc-id", "title": "doc title", "similarity": 85}]`,
-          }
+[{"id": "doc-id", "title": "doc title", "similarity": 85}]`
+
+        const aiData = await multiProviderRouter.execute<Array<{ id: string; title: string; similarity: number }>>(prompt, {
+          task: 'fast',
+          jsonMode: true,
         })
 
-        if (typeof aiData?.response === 'string') {
+        if (Array.isArray(aiData.data)) {
+          setDuplicates(aiData.data)
+          return aiData.data
+        } else if (typeof aiData.rawText === 'string') {
           try {
-            const jsonMatch = aiData.response.match(/\[[\s\S]*\]/)
+            const jsonMatch = aiData.rawText.match(/\[[\s\S]*\]/)
             if (jsonMatch) {
               const aiResults = JSON.parse(jsonMatch[0])
               setDuplicates(aiResults)
@@ -228,10 +232,7 @@ export function useAISummarizeDocument() {
 
       if (error) throw error
 
-      const { data: aiData, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-        body: {
-          task: 'chat',
-          prompt: `Summarize this hotel document concisely.
+      const prompt = `Summarize this hotel document concisely.
 
 Title: ${doc.title}
 Description: ${doc.description || 'N/A'}
@@ -242,13 +243,13 @@ Provide:
 2. Key points (3-5 bullet points)
 3. Action items (if any)
 
-Format as plain text.`,
-        }
+Format as plain text.`
+
+      const aiData = await multiProviderRouter.execute(prompt, {
+        task: 'fast',
       })
 
-      if (aiError) throw aiError
-
-      const result = typeof aiData?.response === 'string' ? aiData.response : null
+      const result = aiData.rawText || null
       setSummary(result)
 
       if (result) {

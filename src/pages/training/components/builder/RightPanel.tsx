@@ -19,6 +19,7 @@ import {
   HelpCircle,
   Layers,
   ListChecks,
+  MessageSquare,
   ShieldCheck,
   Sparkles,
   Target,
@@ -211,6 +212,7 @@ export function RightPanel({
                         sop_reference: <BookOpen className="w-3 h-3 text-emerald-600" />,
                         assignment: <FileCheck className="w-3 h-3 text-amber-600" />,
                         practical: <FileCheck className="w-3 h-3 text-amber-600" />,
+                        roleplay: <MessageSquare className="w-3 h-3 text-amber-600" />,
                       }
 
                       return (

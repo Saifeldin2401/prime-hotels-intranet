@@ -127,8 +127,8 @@ serve(async (req) => {
           method: "POST",
           headers: {
             Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://connect.altusadvisory.com",
-            "X-Title": "Altus Connect Optimizer",
+            "HTTP-Referer": "https://phg-connect.com",
+            "X-Title": "PRIME Connect Optimizer",
             "Content-Type": "application/json",
           },
           body: JSON.stringify({

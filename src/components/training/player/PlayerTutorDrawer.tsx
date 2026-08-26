@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import {
     Sparkles,
     Send,
@@ -117,13 +117,12 @@ INSTRUCTIONS:
 3. If the user asks in Arabic, answer in Arabic. If in English, answer in English.
 4. Keep the tone inspiring, practical, and clear for frontline hotel associates.`
 
-            const { data, error } = await supabase.functions.invoke('process-ai-request', {
-                body: { prompt }
+            const res = await multiProviderRouter.execute(prompt, {
+                task: 'reasoning',
+                temperature: 0.5,
             })
 
-            if (error) throw error
-
-            const replyText = data?.response || (isRTL ? 'عذراً، حدث خطأ في معالجة الإجابة. يرجى المحاولة مرة أخرى.' : 'Sorry, I encountered an issue generating a response. Please try again.')
+            const replyText = res.rawText || (isRTL ? 'عذراً، حدث خطأ في معالجة الإجابة. يرجى المحاولة مرة أخرى.' : 'Sorry, I encountered an issue generating a response. Please try again.')
 
             setMessages(prev => [
                 ...prev,

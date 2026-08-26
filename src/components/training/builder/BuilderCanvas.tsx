@@ -31,6 +31,7 @@ import {
   Layers,
   Link,
   Loader2,
+  MessageSquare,
   Plus,
   SlidersHorizontal,
   Sparkles,
@@ -40,7 +41,7 @@ import {
 import React, { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
-type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical'
+type ContentType = 'text' | 'image' | 'video' | 'document_link' | 'audio' | 'quiz' | 'interactive' | 'sop_reference' | 'assignment' | 'practical' | 'roleplay'
 
 export interface ContentBlockForm {
   id: string
@@ -100,6 +101,7 @@ const CONTENT_TYPES_CONFIG: Array<{ type: ContentType; label: string; icon: any;
   { type: 'text', label: 'Rich Text / SOP', icon: FileText, color: 'text-blue-600 bg-blue-50 border-blue-200', desc: 'Standard operating procedures, guidebooks, and written modules' },
   { type: 'video', label: 'Video Lesson', icon: Video, color: 'text-rose-600 bg-rose-50 border-rose-200', desc: 'Embed video walk-throughs, hospitality demos, and streams' },
   { type: 'quiz', label: 'Interactive Quiz', icon: FileQuestion, color: 'text-purple-600 bg-purple-50 border-purple-200', desc: 'Single & multiple-choice knowledge checkpoints with pass requirements' },
+  { type: 'roleplay', label: 'AI Guest Roleplay', icon: MessageSquare, color: 'text-amber-700 bg-amber-50 border-amber-300', desc: 'Interactive 5-star guest simulation with live Forbes & Saudi Karam rubric scoring' },
   { type: 'assignment', label: 'Practical Assignment', icon: FileCheck, color: 'text-amber-600 bg-amber-50 border-amber-200', desc: 'Open-ended written task, case study, or file submission with trainer grading' },
   { type: 'document_link', label: 'Document / Policy', icon: Link, color: 'text-amber-600 bg-amber-50 border-amber-200', desc: 'Attach PDF manuals, forms, and compliance documents' },
   { type: 'sop_reference', label: 'Knowledge Base SOP', icon: BookOpen, color: 'text-emerald-600 bg-emerald-50 border-emerald-200', desc: 'Link live hotel standard operating procedures from the intranet' }
@@ -200,6 +202,8 @@ export const BuilderCanvas = ({
         return <FileCheck className="w-4 h-4 text-amber-600" />
       case 'sop_reference':
         return <BookOpen className="w-4 h-4 text-emerald-600" />
+      case 'roleplay':
+        return <MessageSquare className="w-4 h-4 text-amber-600" />
       default:
         return <FileText className="w-4 h-4 text-slate-600" />
     }

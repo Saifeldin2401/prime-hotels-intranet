@@ -5,7 +5,7 @@
  * when a user describes a maintenance issue.
  */
 
-import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { useCallback, useRef, useState } from 'react'
 
 interface TriageSuggestion {
@@ -70,19 +70,22 @@ NOTES:
 
 Do not include any text outside the JSON.`
 
-            const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-                body: { prompt, model: 'meta-llama/Llama-3.3-70B-Instruct' }
+            const aiResult = await multiProviderRouter.execute<TriageSuggestion>(prompt, {
+                task: 'fast',
+                jsonMode: true,
             })
 
-            if (aiError) throw aiError
-
             // Parse AI response
-            let parsed = null
+            let parsed: TriageSuggestion | null = null
             try {
-                const rawText = (aiResult?.response ?? aiResult?.result ?? '')
-                const jsonMatch = rawText.match(/\{[\s\S]*\}/)
-                if (jsonMatch) {
-                    parsed = JSON.parse(jsonMatch[0])
+                if (aiResult.data && typeof aiResult.data === 'object') {
+                    parsed = aiResult.data as TriageSuggestion
+                } else {
+                    const rawText = aiResult.rawText || ''
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/)
+                    if (jsonMatch) {
+                        parsed = JSON.parse(jsonMatch[0])
+                    }
                 }
             } catch {
                 console.warn('Failed to parse AI triage response')

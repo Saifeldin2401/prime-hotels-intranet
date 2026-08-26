@@ -9,6 +9,7 @@
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
+import { HOTEL_ROLEPLAY_SCENARIOS } from '@/lib/ai/roleplayEngine'
 import {
   BookOpen,
   ExternalLink,
@@ -17,6 +18,8 @@ import {
   Headphones,
   Image as ImageIcon,
   Link,
+  MessageSquare,
+  Sparkles,
   Video
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
@@ -269,6 +272,43 @@ export function InlineBlockPreview({ block, isRTL, onRegenerateQuiz }: InlineBlo
             <span>{rubric}</span>
           </div>
         )}
+      </div>
+    )
+  }
+
+  // ------ AI Guest Roleplay Simulation ------
+  if (block.type === 'roleplay') {
+    const scenarioId = (block.content_data?.scenario_id as string) || HOTEL_ROLEPLAY_SCENARIOS[0].id
+    const scenario = HOTEL_ROLEPLAY_SCENARIOS.find(s => s.id === scenarioId) || HOTEL_ROLEPLAY_SCENARIOS[0]
+    const passingScore = Number(block.content_data?.passing_score ?? 80)
+    const maxTurns = Number(block.content_data?.max_turns ?? 5)
+
+    return (
+      <div className={cn(
+        'p-3.5 bg-amber-50/70 dark:bg-amber-950/20 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-2.5',
+        isRTL ? 'text-right' : 'text-left'
+      )}>
+        <div className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-amber-600 shrink-0" />
+            <span className="text-xs font-bold text-amber-950 dark:text-amber-200">
+              {block.title || scenario.title}
+            </span>
+          </div>
+          <span className="text-[10px] bg-amber-200/80 text-amber-900 px-2 py-0.5 rounded-full font-bold shrink-0">
+            Pass Threshold: {passingScore}%
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">
+          {scenario.scenarioContext}
+        </p>
+
+        <div className="pt-2 border-t border-amber-200/60 dark:border-amber-900/40 flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted-foreground">
+          <span>Guest: <strong className="text-foreground">{scenario.guestName}</strong> ({scenario.guestTemperament})</span>
+          <span>Max Turns: <strong className="text-foreground">{maxTurns}</strong></span>
+          <span className="text-amber-700 dark:text-amber-300 font-medium">Forbes 5-Star & Saudi Karam Rubrics</span>
+        </div>
       </div>
     )
   }

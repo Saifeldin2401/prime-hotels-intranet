@@ -97,12 +97,12 @@ export function StepPublish({
 
         <Card className="shadow-sm border-slate-200">
           <CardHeader>
-            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-right' : 'text-left')}>{t('builder.publishTitle')}</CardTitle>
+            <CardTitle className={cn("text-lg font-semibold", isRTL ? 'text-right' : 'text-left')}>{t('builder.publishTitle', 'Review & Publish Course')}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-3 gap-4">
               <div className="rounded-lg border bg-slate-50/70 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.summary')}</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-bold">{t('builder.summary', 'Course Summary')}</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-slate-500">Department:</span>
@@ -110,24 +110,24 @@ export function StepPublish({
                       {category ? category.replace('_', ' ') : 'Hotel Operations'}
                     </Badge>
                   </div>
-                  <div>{t('builder.summarySections', { count: sections.length })}</div>
-                  <div>{t('builder.summaryItems', { count: totalItems })}</div>
-                  <div>{t('builder.summaryDuration', { count: displayDuration || 0 })}</div>
+                  <div>{t('builder.summarySections', { count: sections.length, defaultValue: `${sections.length} sections` })}</div>
+                  <div>{t('builder.summaryItems', { count: totalItems, defaultValue: `${totalItems} content items` })}</div>
+                  <div>{t('builder.summaryDuration', { count: displayDuration || 0, defaultValue: `${displayDuration || 0} min duration` })}</div>
                   {overrideDuration !== null && Math.round(overrideDuration) !== Math.round(calculatedDuration) && (
-                    <div className="text-xs text-slate-500">{t('builder.calculatedDuration', { count: calculatedDuration })}</div>
+                    <div className="text-xs text-slate-500">{t('builder.calculatedDuration', { count: calculatedDuration, defaultValue: `Calculated ${calculatedDuration} min` })}</div>
                   )}
                 </div>
               </div>
               <div className="rounded-lg border bg-slate-50/70 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.rulesSummary')}</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-bold">{t('builder.rulesSummary', 'Rules Summary')}</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700">
-                  <div>{certificateEnabled ? t('builder.certEnabled') : t('builder.certDisabled')}</div>
-                  <div>{t('builder.passScoreSummary', { score: passingScore || 80 })}</div>
-                  <div>{t('builder.retakeSummary', { count: allowRetake ? Number(maxAttempts) : 0 })}</div>
+                  <div>{certificateEnabled ? t('builder.certEnabled', 'Certificate enabled') : t('builder.certDisabled', 'Certificate disabled')}</div>
+                  <div>{t('builder.passScoreSummary', { score: passingScore || 80, defaultValue: `Passing score: ${passingScore || 80}%` })}</div>
+                  <div>{t('builder.retakeSummary', { count: allowRetake ? Number(maxAttempts) : 0, defaultValue: `Retakes allowed: ${allowRetake ? Number(maxAttempts) : 0}` })}</div>
                 </div>
               </div>
               <div className="rounded-lg border bg-slate-50/70 p-4">
-                <div className="text-xs uppercase tracking-wide text-slate-400">{t('builder.publishChecklist')}</div>
+                <div className="text-xs uppercase tracking-wide text-slate-500 font-bold">{t('builder.publishChecklist', 'Pre-Flight Checklist')}</div>
                 <div className="mt-3 space-y-2 text-sm">
                   {validationChecklist.map((item) => (
                     <div key={item.key} className={cn("flex items-center justify-between gap-2", isRTL ? "flex-row-reverse" : "")}>

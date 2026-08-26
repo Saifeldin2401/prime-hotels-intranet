@@ -5,7 +5,7 @@
  * No DB changes needed - just suggestions displayed to user.
  */
 
-import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { useCallback, useState } from 'react'
 import { toast } from 'sonner'
 
@@ -31,13 +31,7 @@ export function useTagSuggestions() {
 
         setIsGenerating(true)
         try {
-            let aiResponseText = ''
-
-            // Prefer deployed AI gateway function.
-            const { data, error } = await supabase.functions.invoke('process-ai-request', {
-                body: {
-                    task: 'chat',
-                    prompt: `Analyze this knowledge base article and suggest relevant tags/categories.
+            const prompt = `Analyze this knowledge base article and suggest relevant tags/categories.
                     
 Article Title: ${title}
 ${description ? `Description: ${description}` : ''}
@@ -52,22 +46,19 @@ For each tag, provide:
 Format as JSON array:
 [{"tag": "tag-name", "confidence": "high", "reason": "brief explanation"}]
 
-Focus on: department, topic, task type, equipment, and compliance areas.`,
-                }
+Focus on: department, topic, task type, equipment, and compliance areas.`
+
+            const res = await multiProviderRouter.execute<TagSuggestion[]>(prompt, {
+                task: 'fast',
+                jsonMode: true,
             })
 
-            if (error) throw error
-
-            if (typeof data?.response === 'string' && data.response.trim().length > 0) {
-                aiResponseText = data.response
-            } else if (typeof data?.content === 'string' && data.content.trim().length > 0) {
-                // Backward-compatible fallback if another function shape is returned.
-                aiResponseText = data.content
-            }
-
+            let aiResponseText = res.rawText || ''
             let parsedSuggestions: TagSuggestion[] = []
 
-            if (aiResponseText) {
+            if (Array.isArray(res.data)) {
+                parsedSuggestions = res.data
+            } else if (aiResponseText) {
                 try {
                     // Try to extract JSON from the response
                     const jsonMatch = aiResponseText.match(/\[[\s\S]*\]/)

@@ -21,7 +21,8 @@ import type { MediaAsset } from '@/lib/types/media'
 import type { Document } from '@/lib/types'
 import type { LearningQuiz } from '@/types/learning'
 import { aiService } from '@/lib/gemini'
-import { AlertTriangle, BookOpen, CheckCircle2, FileText, Loader2, Search, Sparkles, Upload, X } from 'lucide-react'
+import { HOTEL_ROLEPLAY_SCENARIOS, type RoleplayScenario } from '@/lib/ai/roleplayEngine'
+import { AlertTriangle, BookOpen, CheckCircle2, FileText, Loader2, MessageSquare, Search, Sparkles, Upload, X } from 'lucide-react'
 import { lazy, Suspense, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { deriveTitleFromUrl } from './trainingBuilderUtils'
@@ -320,6 +321,136 @@ export function ContentBlockSlideOver({
 
                     <p className="text-[11px] text-emerald-700 dark:text-emerald-400">
                       {t('builder.sopEmbedHint', 'Select a published SOP to reference. Trainees will see the live content from the SOP.')}
+                    </p>
+                  </div>
+                )
+              })()}
+
+              {/* Type: Roleplay Simulation */}
+              {currentBlock.type === 'roleplay' && (() => {
+                const selectedScenarioId = (currentBlock.content_data?.scenario_id as string) || HOTEL_ROLEPLAY_SCENARIOS[0].id
+                const selectedScenario = HOTEL_ROLEPLAY_SCENARIOS.find(s => s.id === selectedScenarioId) || HOTEL_ROLEPLAY_SCENARIOS[0]
+                const passingScore = Number(currentBlock.content_data?.passing_score ?? 80)
+                const maxTurns = Number(currentBlock.content_data?.max_turns ?? 5)
+
+                return (
+                  <div className={cn("bg-amber-50/70 dark:bg-amber-950/30 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 space-y-3", isRTL ? 'text-right' : '')}>
+                    <div className="flex items-center justify-between">
+                      <Label className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                        <MessageSquare className="h-4 w-4 text-amber-600" />
+                        <span>{t('builder.roleplayConfig', 'AI Guest Roleplay Configuration')}</span>
+                      </Label>
+                      <Badge variant="outline" className="text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-200 border-amber-300">
+                        {selectedScenario.department.replace(/_/g, ' ')}
+                      </Badge>
+                    </div>
+
+                    {/* Scenario Selector */}
+                    <div className="space-y-1.5">
+                      <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        {t('builder.selectScenario', 'Hotel Dilemma Scenario')}
+                      </Label>
+                      <Select
+                        value={selectedScenarioId}
+                        onValueChange={(val) => {
+                          const scen = HOTEL_ROLEPLAY_SCENARIOS.find(s => s.id === val)
+                          setCurrentBlock({
+                            ...currentBlock,
+                            title: (!currentBlock.title || currentBlock.title === 'AI Roleplay' || currentBlock.title === 'Roleplay Simulation') ? (scen?.title || '') : currentBlock.title,
+                            content_data: {
+                              ...currentBlock.content_data,
+                              scenario_id: val,
+                              department: scen?.department,
+                              passing_score: passingScore,
+                              max_turns: maxTurns,
+                            }
+                          })
+                        }}
+                      >
+                        <SelectTrigger className="bg-white dark:bg-slate-950 border-amber-200 dark:border-amber-800 text-xs h-9">
+                          <SelectValue placeholder="Choose a hotel scenario..." />
+                        </SelectTrigger>
+                        <SelectContent className="max-h-60">
+                          {HOTEL_ROLEPLAY_SCENARIOS.map((scen) => (
+                            <SelectItem key={scen.id} value={scen.id}>
+                              <span className="font-medium">{scen.title}</span>
+                              <span className="text-[10px] text-muted-foreground ms-2">({scen.department.replace(/_/g, ' ')})</span>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Scenario Briefing Preview */}
+                    <div className="p-2.5 rounded-lg bg-white/80 dark:bg-slate-900/80 border border-amber-200/60 dark:border-amber-800/40 text-xs space-y-1">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="font-bold text-foreground">Guest: {selectedScenario.guestName}</span>
+                        <span className="text-muted-foreground">Temperament: <strong className="text-amber-700 dark:text-amber-300">{selectedScenario.guestTemperament}</strong></span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground line-clamp-2">
+                        {selectedScenario.scenarioContext}
+                      </p>
+                    </div>
+
+                    {/* Thresholds: Passing Score & Max Turns */}
+                    <div className="grid grid-cols-2 gap-2 pt-1">
+                      <div>
+                        <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Passing Score (%)</Label>
+                        <Select
+                          value={String(passingScore)}
+                          onValueChange={(val) => {
+                            setCurrentBlock({
+                              ...currentBlock,
+                              content_data: {
+                                ...currentBlock.content_data,
+                                scenario_id: selectedScenarioId,
+                                passing_score: Number(val),
+                              }
+                            })
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-slate-950 border-amber-200 dark:border-amber-800 text-xs h-8 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="70">70% (Standard)</SelectItem>
+                            <SelectItem value="75">75% (Proficient)</SelectItem>
+                            <SelectItem value="80">80% (Forbes 5-Star Benchmark)</SelectItem>
+                            <SelectItem value="85">85% (Luxury Mastery)</SelectItem>
+                            <SelectItem value="90">90% (Executive Excellence)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Max Dialogue Turns</Label>
+                        <Select
+                          value={String(maxTurns)}
+                          onValueChange={(val) => {
+                            setCurrentBlock({
+                              ...currentBlock,
+                              content_data: {
+                                ...currentBlock.content_data,
+                                scenario_id: selectedScenarioId,
+                                max_turns: Number(val),
+                              }
+                            })
+                          }}
+                        >
+                          <SelectTrigger className="bg-white dark:bg-slate-950 border-amber-200 dark:border-amber-800 text-xs h-8 mt-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3">3 Turns (Rapid De-escalation)</SelectItem>
+                            <SelectItem value="5">5 Turns (Standard Assessment)</SelectItem>
+                            <SelectItem value="8">8 Turns (Comprehensive Case)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800 dark:text-amber-300">
+                      Trainees will engage in a live roleplay in the Course Player and must score &ge; {passingScore}% on Forbes & Saudi Karam rubrics to complete this block.
                     </p>
                   </div>
                 )

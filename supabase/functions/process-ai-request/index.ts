@@ -21,24 +21,51 @@ interface ParsedAiRequest {
 }
 
 const LEGACY_MODEL_MAP: Record<string, string> = {
-  "Qwen/Qwen2.5-7B-Instruct": "meta-llama/llama-3.3-70b-instruct",
-  "Qwen/Qwen2.5-72B-Instruct": "meta-llama/llama-3.3-70b-instruct",
-  "Qwen/Qwen2.5-14B-Instruct": "qwen/qwen-2.5-coder-32b-instruct",
-  "Qwen/Qwen2.5-32B-Instruct": "qwen/qwen-2.5-coder-32b-instruct",
-  "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/llama-3.3-70b-instruct",
-  "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/llama-3.1-8b-instruct",
-  "default": "google/gemini-2.0-flash-001",
+  "Qwen/Qwen2.5-7B-Instruct": "nvidia/nemotron-3.5-lightning:free",
+  "Qwen/Qwen2.5-72B-Instruct": "nvidia/nemotron-3-super-120b-a12b:free",
+  "Qwen/Qwen2.5-14B-Instruct": "minimax/minimax-m3:free",
+  "Qwen/Qwen2.5-32B-Instruct": "minimax/minimax-m3:free",
+  "meta-llama/Llama-3.3-70B-Instruct": "nvidia/nemotron-3-super-120b-a12b:free",
+  "meta-llama/Llama-3.1-8B-Instruct": "nvidia/nemotron-3.5-lightning:free",
+  "google/gemini-2.0-flash-001": "openrouter/free",
+  "google/gemini-2.0-flash": "openrouter/free",
+  "default": "openrouter/free",
 };
 
+// Google Gemini native models (Primary Curriculum Engine)
+const DEFAULT_GEMINI_MODELS = [
+  "gemini-2.5-flash",
+  "gemini-3.1-flash-lite",
+  "gemini-3.5-flash-lite",
+  "gemini-3.6-flash",
+];
+
+// Groq free-tier models (ultra-fast LPU inference)
+const DEFAULT_GROQ_MODELS = [
+  "qwen/qwen3.6-27b",
+  "groq/compound-mini",
+  "allam-2-7b",
+  "openai/gpt-oss-20b",
+];
+
 const DEFAULT_OPENROUTER_MODELS = [
-  "google/gemini-2.0-flash-001",
-  "google/gemini-2.0-flash",
+  "nvidia/nemotron-3.5-lightning:free",
+  "dots-studio/dots-3-note-preview:free",
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "minimax/minimax-m3:free",
+  "minimax/minimax-m2.7:free",
+  "openrouter/free",
+  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
   "meta-llama/llama-3.3-70b-instruct",
-  "meta-llama/llama-3.1-8b-instruct",
   "qwen/qwen-2.5-72b-instruct",
-  "google/gemini-2.0-flash-exp:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "openrouter/auto",
+  "openai/gpt-4o-mini",
+];
+
+// Together AI models (OpenAI-compatible, free credits)
+const DEFAULT_TOGETHER_MODELS = [
+  "meta-llama/Llama-3.3-70B-Instruct-Turbo",
+  "Qwen/Qwen2.5-72B-Instruct-Turbo",
+  "meta-llama/Llama-3.1-8B-Instruct-Turbo",
 ];
 
 const DEFAULT_HF_MODELS = [
@@ -53,11 +80,11 @@ function resolveModelCandidates(requestedModel?: string): string[] {
   if (primary && LEGACY_MODEL_MAP[primary]) {
     primary = LEGACY_MODEL_MAP[primary];
   }
-  if (!primary) {
-    primary = "openrouter/auto";
+  if (!primary || primary === "auto" || primary === "openrouter/auto" || primary === "free") {
+    return [...DEFAULT_OPENROUTER_MODELS];
   }
 
-  const list = [primary, ...DEFAULT_OPENROUTER_MODELS];
+  const list = [primary, ...DEFAULT_OPENROUTER_MODELS.filter((m) => m !== primary)];
   return Array.from(new Set(list));
 }
 
@@ -179,6 +206,8 @@ serve(async (req) => {
 
     // Provider API Keys
     const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+    const GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
+    const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY") || "";
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY");
     const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
@@ -210,8 +239,8 @@ serve(async (req) => {
                     method: "POST",
                     headers: {
                       Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-                      "HTTP-Referer": "https://connect.altusadvisory.com",
-                      "X-Title": "Altus Connect Intranet",
+                      "HTTP-Referer": "https://phg-connect.com",
+                      "X-Title": "PRIME Connect Intranet",
                       "Content-Type": "application/json",
                     },
                     body: JSON.stringify({
@@ -224,7 +253,7 @@ serve(async (req) => {
                       max_tokens: effectiveMaxTokens,
                       stream: true,
                     }),
-                    signal: AbortSignal.timeout(12000),
+                    signal: AbortSignal.timeout(50000),
                   });
 
                   if (orRes.ok && orRes.body) {
@@ -274,7 +303,77 @@ serve(async (req) => {
               }
             }
 
-            // 2. Fallback: Google Gemini Streaming
+            // 2. Fallback: Groq Streaming (ultra-fast LPU inference)
+            if (!streamSuccess && GROQ_API_KEY) {
+              for (const groqModel of DEFAULT_GROQ_MODELS) {
+                try {
+                  const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${GROQ_API_KEY}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      model: groqModel,
+                      messages: [
+                        { role: "system", content: defaultSystemPrompt },
+                        { role: "user", content: prompt },
+                      ],
+                      temperature: effectiveTemperature,
+                      max_tokens: effectiveMaxTokens,
+                      stream: true,
+                    }),
+                    signal: AbortSignal.timeout(30000),
+                  });
+
+                  if (groqRes.ok && groqRes.body) {
+                    providerUsed = "groq";
+                    modelUsed = groqModel;
+                    const reader = groqRes.body.getReader();
+                    const decoder = new TextDecoder();
+                    let buffer = "";
+                    let hadTokens = false;
+
+                    while (true) {
+                      const { done, value } = await reader.read();
+                      if (done) break;
+                      buffer += decoder.decode(value, { stream: true });
+                      const lines = buffer.split("\n");
+                      buffer = lines.pop() || "";
+
+                      for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (trimmed === "data: [DONE]") continue;
+                        if (trimmed.startsWith("data:")) {
+                          try {
+                            const json = JSON.parse(trimmed.slice(5).trim());
+                            const textChunk = json?.choices?.[0]?.delta?.content;
+                            if (textChunk) {
+                              hadTokens = true;
+                              sendEvent({ chunk: textChunk, done: false });
+                            }
+                          } catch {
+                            // Skip non-JSON
+                          }
+                        }
+                      }
+                    }
+
+                    if (hadTokens) {
+                      streamSuccess = true;
+                      break;
+                    }
+                  } else {
+                    const errText = await groqRes.text().catch(() => "");
+                    streamDiagnostics.push(`Groq ${groqModel} (${groqRes.status}): ${errText}`);
+                  }
+                } catch (groqErr) {
+                  streamDiagnostics.push(`Groq ${groqModel} error: ${(groqErr as Error).message}`);
+                }
+              }
+            }
+
+            // 3. Fallback: Google Gemini Streaming
             if (!streamSuccess && GEMINI_API_KEY) {
               try {
                 const geminiModel = model && model.includes("gemini") ? model : "gemini-1.5-flash";
@@ -329,7 +428,50 @@ serve(async (req) => {
               }
             }
 
-            // 3. Fallback: Hugging Face Router
+            // 4. Fallback: Together AI Streaming
+            if (!streamSuccess && TOGETHER_API_KEY) {
+              for (const togetherModel of DEFAULT_TOGETHER_MODELS) {
+                try {
+                  const togetherRes = await fetch("https://api.together.xyz/v1/chat/completions", {
+                    method: "POST",
+                    headers: {
+                      Authorization: `Bearer ${TOGETHER_API_KEY}`,
+                      "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                      model: togetherModel,
+                      messages: [
+                        { role: "system", content: defaultSystemPrompt },
+                        { role: "user", content: prompt },
+                      ],
+                      temperature: effectiveTemperature,
+                      max_tokens: effectiveMaxTokens,
+                      stream: false,
+                    }),
+                    signal: AbortSignal.timeout(40000),
+                  });
+
+                  if (togetherRes.ok) {
+                    const data = await togetherRes.json();
+                    const content = data?.choices?.[0]?.message?.content || "";
+                    if (content) {
+                      providerUsed = "together";
+                      modelUsed = togetherModel;
+                      sendEvent({ chunk: content, done: false });
+                      streamSuccess = true;
+                      break;
+                    }
+                  } else {
+                    const errText = await togetherRes.text().catch(() => "");
+                    streamDiagnostics.push(`Together ${togetherModel} (${togetherRes.status}): ${errText}`);
+                  }
+                } catch (togetherErr) {
+                  streamDiagnostics.push(`Together ${togetherModel} error: ${(togetherErr as Error).message}`);
+                }
+              }
+            }
+
+            // 5. Fallback: Hugging Face Router
             if (!streamSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
               const tokensToTry = [HF_TOKEN, HF_MINIMAX_TOKEN].filter(Boolean) as string[];
               for (const token of tokensToTry) {
@@ -409,8 +551,8 @@ serve(async (req) => {
             method: "POST",
             headers: {
               Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-              "HTTP-Referer": "https://connect.altusadvisory.com",
-              "X-Title": "Altus Connect Intranet",
+              "HTTP-Referer": "https://phg-connect.com",
+              "X-Title": "PRIME Connect Intranet",
               "Content-Type": "application/json",
             },
             body: JSON.stringify({
@@ -423,7 +565,7 @@ serve(async (req) => {
               max_tokens: effectiveMaxTokens,
               ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(45000),
           });
 
           if (orRes.ok) {
@@ -445,7 +587,49 @@ serve(async (req) => {
       }
     }
 
-    // 2. Fallback: Google Gemini API
+    // 2. Fallback: Groq API (ultra-fast LPU inference)
+    if (!executionSuccess && GROQ_API_KEY) {
+      for (const groqModel of DEFAULT_GROQ_MODELS) {
+        try {
+          const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${GROQ_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: groqModel,
+              messages: [
+                { role: "system", content: defaultSystemPrompt },
+                { role: "user", content: prompt },
+              ],
+              temperature: effectiveTemperature,
+              max_tokens: effectiveMaxTokens,
+              ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+            }),
+            signal: AbortSignal.timeout(30000),
+          });
+
+          if (groqRes.ok) {
+            const data = await groqRes.json();
+            result = data?.choices?.[0]?.message?.content || "";
+            if (result) {
+              providerUsed = "groq";
+              modelUsed = groqModel;
+              executionSuccess = true;
+              break;
+            }
+          } else {
+            const errText = await groqRes.text().catch(() => "");
+            diagnosticErrors.push(`Groq ${groqModel} (${groqRes.status}): ${errText}`);
+          }
+        } catch (groqErr) {
+          diagnosticErrors.push(`Groq ${groqModel} exception: ${(groqErr as Error).message}`);
+        }
+      }
+    }
+
+    // 3. Fallback: Google Gemini API
     if (!executionSuccess && GEMINI_API_KEY) {
       try {
         const geminiModel = model && model.includes("gemini") ? model : "gemini-1.5-flash";
@@ -518,6 +702,93 @@ serve(async (req) => {
         }
       } catch (openaiErr) {
         diagnosticErrors.push(`OpenAI exception: ${(openaiErr as Error).message}`);
+      }
+    }
+
+    // 5. Fallback: Together AI API
+    if (!executionSuccess && TOGETHER_API_KEY) {
+      for (const togetherModel of DEFAULT_TOGETHER_MODELS) {
+        try {
+          const togetherRes = await fetch("https://api.together.xyz/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${TOGETHER_API_KEY}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: togetherModel,
+              messages: [
+                { role: "system", content: defaultSystemPrompt },
+                { role: "user", content: prompt },
+              ],
+              temperature: effectiveTemperature,
+              max_tokens: effectiveMaxTokens,
+              ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+            }),
+            signal: AbortSignal.timeout(40000),
+          });
+
+          if (togetherRes.ok) {
+            const data = await togetherRes.json();
+            result = data?.choices?.[0]?.message?.content || "";
+            if (result) {
+              providerUsed = "together";
+              modelUsed = togetherModel;
+              executionSuccess = true;
+              break;
+            }
+          } else {
+            const errText = await togetherRes.text().catch(() => "");
+            diagnosticErrors.push(`Together ${togetherModel} (${togetherRes.status}): ${errText}`);
+          }
+        } catch (togetherErr) {
+          diagnosticErrors.push(`Together ${togetherModel} exception: ${(togetherErr as Error).message}`);
+        }
+      }
+    }
+
+    // 6. Fallback: Hugging Face Router API
+    if (!executionSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
+      const tokensToTry = [HF_TOKEN, HF_MINIMAX_TOKEN].filter(Boolean) as string[];
+      for (const token of tokensToTry) {
+        if (executionSuccess) break;
+        for (const candidateModel of DEFAULT_HF_MODELS) {
+          try {
+            const hfRes = await fetch("https://router.huggingface.co/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                model: candidateModel,
+                messages: [
+                  { role: "system", content: defaultSystemPrompt },
+                  { role: "user", content: prompt },
+                ],
+                temperature: effectiveTemperature,
+                max_tokens: effectiveMaxTokens,
+                ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+              }),
+            });
+
+            if (hfRes.ok) {
+              const data = await hfRes.json();
+              result = data?.choices?.[0]?.message?.content || "";
+              if (result) {
+                providerUsed = "huggingface";
+                modelUsed = candidateModel;
+                executionSuccess = true;
+                break;
+              }
+            } else {
+              const hfErr = await hfRes.text();
+              diagnosticErrors.push(`HF ${candidateModel} (${hfRes.status}): ${hfErr}`);
+            }
+          } catch (hfErr) {
+            diagnosticErrors.push(`HF ${candidateModel} exception: ${(hfErr as Error).message}`);
+          }
+        }
       }
     }
 

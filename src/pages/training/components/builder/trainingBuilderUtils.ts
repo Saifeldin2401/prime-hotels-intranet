@@ -82,6 +82,8 @@ export const estimateBlockDurationMinutes = (block: ContentBlockForm) => {
     case 'video':
     case 'interactive':
       return 5
+    case 'roleplay':
+      return 8
     default:
       return 0
   }
@@ -162,6 +164,9 @@ export function getBlockValidation(block: ContentBlockForm, t: (key: string, opt
   }
   if ((block.type === 'assignment' || block.type === 'practical') && !block.content?.trim()) {
     return { ok: false, message: t('builder.missingAssignmentPrompt', { defaultValue: 'Please provide instructions/prompt for the assignment' }) }
+  }
+  if (block.type === 'roleplay' && !block.content?.trim() && !((block.content_data as Record<string, unknown>)?.scenario_id)) {
+    return { ok: false, message: t('builder.missingRoleplayScenario', { defaultValue: 'Please choose a roleplay scenario or provide custom guest briefing' }) }
   }
   return { ok: true, message: t('builder.readyToSave', { defaultValue: 'Ready to save' }) }
 }

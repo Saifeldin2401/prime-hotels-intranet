@@ -2,7 +2,16 @@ import { aiService } from '@/lib/gemini'
 import { supabase } from '@/lib/supabase'
 import type { Database } from '@/types/database.generated'
 
-type SupportedQuestionType = 'mcq' | 'mcq_multi' | 'true_false' | 'fill_blank' | 'scenario'
+type SupportedQuestionType =
+  | 'mcq'
+  | 'mcq_multi'
+  | 'true_false'
+  | 'fill_blank'
+  | 'scenario'
+  | 'ordering'
+  | 'matching'
+  | 'short_answer'
+  | 'long_answer'
 
 type QuizOptionRow = {
   id: string
@@ -72,7 +81,18 @@ export interface QuizIntegrityReport {
 
 const OPTION_BASED_TYPES = new Set<SupportedQuestionType>(['mcq', 'mcq_multi', 'true_false', 'scenario'])
 const SINGLE_CORRECT_TYPES = new Set<SupportedQuestionType>(['mcq', 'true_false', 'scenario'])
-const SUPPORTED_TYPES = new Set<SupportedQuestionType>(['mcq', 'mcq_multi', 'true_false', 'fill_blank', 'scenario'])
+const SEQUENCE_BASED_TYPES = new Set<SupportedQuestionType>(['ordering', 'matching'])
+const SUPPORTED_TYPES = new Set<SupportedQuestionType>([
+  'mcq',
+  'mcq_multi',
+  'true_false',
+  'fill_blank',
+  'scenario',
+  'ordering',
+  'matching',
+  'short_answer',
+  'long_answer',
+])
 
 function normalizeText(value?: string | null) {
   return (value || '').replace(/\s+/g, ' ').trim()
@@ -89,7 +109,12 @@ function normalizeQuestionType(value?: string | null): SupportedQuestionType | n
   }
   if (normalized === 'multiple_choice') return 'mcq'
   if (normalized === 'multiple_select') return 'mcq_multi'
-  if (normalized === 'boolean') return 'true_false'
+  if (normalized === 'boolean' || normalized === 'yes_no') return 'true_false'
+  if (normalized === 'order' || normalized === 'sequence' || normalized === 'ranking') return 'ordering'
+  if (normalized === 'match' || normalized === 'pairing') return 'matching'
+  if (normalized === 'fill_in_the_blank' || normalized === 'fill-in-the-blank' || normalized === 'fill_in_blank') return 'fill_blank'
+  if (normalized === 'short_answer_text') return 'short_answer'
+  if (normalized === 'long_answer_text' || normalized === 'essay') return 'long_answer'
   return null
 }
 
@@ -271,11 +296,35 @@ function validateQuestionLink(link: QuizQuestionLinkRow) {
     }
   }
 
+  if (SEQUENCE_BASED_TYPES.has(questionType)) {
+    if (options.length < 2) {
+      issues.push({
+        code: 'not_enough_sequence_items',
+        severity: 'error',
+        message: `${label} needs at least two steps or items to order/match.`,
+        questionId: question.id,
+        questionOrder: link.display_order,
+        fixable: true
+      })
+    }
+  }
+
   if (questionType === 'fill_blank' && !correctAnswer) {
     issues.push({
       code: 'missing_fill_blank_answer',
       severity: 'error',
       message: `${label} is missing the correct answer for its blank.`,
+      questionId: question.id,
+      questionOrder: link.display_order,
+      fixable: true
+    })
+  }
+
+  if (questionType === 'short_answer' && !correctAnswer) {
+    issues.push({
+      code: 'missing_short_answer',
+      severity: 'warning',
+      message: `${label} is missing a model answer key for auto-grading.`,
       questionId: question.id,
       questionOrder: link.display_order,
       fixable: true
@@ -547,6 +596,19 @@ function buildHeuristicRepair(question: QuizQuestionRow): RepairPayload | null {
       { text: 'False', is_correct: correctIsFalse }
     ]
     correctAnswer = correctIsFalse ? 'False' : 'True'
+  } else if (SEQUENCE_BASED_TYPES.has(questionType)) {
+    if (options.length < 2) {
+      return null
+    }
+    return {
+      question_id: questionId,
+      question_text: questionText,
+      question_type: questionType,
+      options: options.map(opt => ({ ...opt, is_correct: true })),
+      correct_answer: correctAnswer || options.map(o => o.text).join(' -> '),
+      explanation: normalizeText(question.explanation) || null,
+      hint: normalizeText(question.hint) || null
+    }
   } else if (OPTION_BASED_TYPES.has(questionType)) {
     if (options.length > 0 && options.every(option => !option.is_correct) && correctAnswer) {
       options = options.map(option => ({
@@ -587,7 +649,7 @@ function buildHeuristicRepair(question: QuizQuestionRow): RepairPayload | null {
     question_id: questionId,
     question_text: questionText,
     question_type: questionType,
-    options: OPTION_BASED_TYPES.has(questionType) ? options : undefined,
+    options: OPTION_BASED_TYPES.has(questionType) || SEQUENCE_BASED_TYPES.has(questionType) ? options : undefined,
     correct_answer: correctAnswer,
     explanation: normalizeText(question.explanation) || null,
     hint: normalizeText(question.hint) || null
@@ -613,9 +675,18 @@ function normalizeRepairPayload(payload: RepairPayload): RepairPayload | null {
       { text: 'False', is_correct: normalizedCorrect === 'False' }
     ]
     correctAnswer = normalizedCorrect
-  }
-
-  if (OPTION_BASED_TYPES.has(questionType)) {
+  } else if (SEQUENCE_BASED_TYPES.has(questionType)) {
+    if (options.length < 2) return null
+    return {
+      question_id: payload.question_id,
+      question_text: questionText,
+      question_type: questionType,
+      options: options.map(opt => ({ ...opt, is_correct: true })),
+      correct_answer: correctAnswer || options.map(o => o.text).join(' -> '),
+      explanation: normalizeText(payload.explanation) || null,
+      hint: normalizeText(payload.hint) || null
+    }
+  } else if (OPTION_BASED_TYPES.has(questionType)) {
     if (options.length < 2) return null
 
     if (SINGLE_CORRECT_TYPES.has(questionType)) {
@@ -628,14 +699,14 @@ function normalizeRepairPayload(payload: RepairPayload): RepairPayload | null {
     }
   } else {
     options = []
-    if (!correctAnswer) return null
+    if (!correctAnswer && questionType === 'fill_blank') return null
   }
 
   return {
     question_id: payload.question_id,
     question_text: questionText,
     question_type: questionType,
-    options: OPTION_BASED_TYPES.has(questionType) ? options : undefined,
+    options: OPTION_BASED_TYPES.has(questionType) || SEQUENCE_BASED_TYPES.has(questionType) ? options : undefined,
     correct_answer: correctAnswer,
     explanation: normalizeText(payload.explanation) || null,
     hint: normalizeText(payload.hint) || null

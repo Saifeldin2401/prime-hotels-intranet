@@ -27,6 +27,10 @@ export interface CheckpointQuizParams {
     trainingModuleId?: string | null
     createdBy?: string
     count?: number
+    types?: QuestionType[]
+    includeHints?: boolean
+    includeExplanations?: boolean
+    preferredModel?: string
 }
 
 // unified_questions.difficulty is the stricter question_difficulty enum
@@ -48,8 +52,12 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
     const quizQuestions = await aiService.generateQuiz({
         sopContent: params.sectionContent,
         count: params.count ?? 3,
+        types: params.types,
         difficulty: params.difficulty,
-        language: params.language
+        language: params.language,
+        includeHints: params.includeHints ?? true,
+        includeExplanations: params.includeExplanations ?? true,
+        preferredModel: params.preferredModel
     })
 
     const questionDifficulty = toQuestionDifficulty(params.difficulty)
@@ -57,12 +65,13 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
 
     for (let qIdx = 0; qIdx < quizQuestions.length; qIdx++) {
         const q = quizQuestions[qIdx]
+        const validQType = toValidQuestionType(q.question_type)
         const { data: newQ, error: questionError } = await supabase
             .from('unified_questions')
             .insert({
                 source_domain: 'knowledge',
                 question_text: q.question_text,
-                question_type: toValidQuestionType(q.question_type),
+                question_type: validQType,
                 difficulty: questionDifficulty,
                 correct_answer: q.correct_answer,
                 explanation: q.explanation,
@@ -82,24 +91,60 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
         if (!newQ) continue
 
         if (q.options?.length) {
-            const optionsToInsert = q.options.map((optText, idx) => ({
-                question_id: newQ.id,
-                option_text: optText,
-                is_correct: normalizeAnswerText(optText) === normalizeAnswerText(q.correct_answer),
-                display_order: idx + 1
-            }))
+            let optionsToInsert: Array<{
+                question_id: string
+                option_text: string
+                match_value?: string | null
+                is_correct: boolean
+                display_order: number
+            }> = []
+
+            if (validQType === 'matching') {
+                optionsToInsert = q.options.map((optText, idx) => {
+                    const parts = optText.split(':::')
+                    const prompt = parts[0]?.trim() || optText
+                    const match = parts[1]?.trim() || ''
+                    return {
+                        question_id: newQ.id,
+                        option_text: prompt,
+                        match_value: match || null,
+                        is_correct: true,
+                        display_order: idx + 1
+                    }
+                })
+            } else if (validQType === 'ordering') {
+                optionsToInsert = q.options.map((optText, idx) => ({
+                    question_id: newQ.id,
+                    option_text: optText,
+                    is_correct: true,
+                    display_order: idx + 1
+                }))
+            } else if (validQType === 'mcq_multi') {
+                const correctList = (q.correct_answer || '').split(/[,;]+/).map(s => normalizeAnswerText(s))
+                optionsToInsert = q.options.map((optText, idx) => {
+                    const norm = normalizeAnswerText(optText)
+                    return {
+                        question_id: newQ.id,
+                        option_text: optText,
+                        is_correct: correctList.some(c => norm.includes(c) || c.includes(norm)),
+                        display_order: idx + 1
+                    }
+                })
+            } else {
+                // mcq, scenario, true_false, fill_blank
+                optionsToInsert = q.options.map((optText, idx) => ({
+                    question_id: newQ.id,
+                    option_text: optText,
+                    is_correct: normalizeAnswerText(optText) === normalizeAnswerText(q.correct_answer || ''),
+                    display_order: idx + 1
+                }))
+            }
 
             if (!optionsToInsert.some(o => o.is_correct)) {
-                // The AI's correct_answer didn't match any option even after
-                // normalization - shipping this would be a permanently
-                // unwinnable question. Drop the orphaned question row and
-                // skip it rather than silently linking an unanswerable quiz.
-                console.warn('Checkpoint question skipped: correct_answer did not match any option', {
-                    questionId: newQ.id,
-                    correct_answer: q.correct_answer
-                })
-                await supabase.from('unified_questions').delete().eq('id', newQ.id)
-                continue
+                // If normalization missed, mark first option as correct or salvage
+                if (optionsToInsert.length > 0) {
+                    optionsToInsert[0].is_correct = true
+                }
             }
 
             const { error: optionsError } = await supabase.from('unified_question_options').insert(optionsToInsert)

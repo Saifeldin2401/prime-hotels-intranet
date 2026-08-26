@@ -5,7 +5,7 @@
  * role, department, and prior experience.
  */
 
-import { supabase } from '@/lib/supabase'
+import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { useCallback, useState } from 'react'
 
 interface OnboardingStep {
@@ -123,21 +123,15 @@ IMPORTANT:
 
 Return ONLY valid JSON.`
 
-            const { data: aiResult, error: aiError } = await supabase.functions.invoke('process-ai-request', {
-                body: {
-                    prompt,
-                    model: 'meta-llama/Llama-3.3-70B-Instruct',
-                    task: 'chat'
-                }
+            const aiResult = await multiProviderRouter.execute<OnboardingPath>(prompt, {
+                task: 'reasoning',
+                jsonMode: true,
             })
-
-            if (aiError) throw aiError
 
             // Parse AI response
             let parsed: OnboardingPath | null = null
             try {
-                // The server returns { response: "string content", success: true }
-                let rawContent = aiResult?.response || ''
+                let rawContent = aiResult.rawText || ''
 
                 // Clean up Markdown code blocks if present
                 // Use recursive sanitization to prevent bypass attempts with nested patterns
