@@ -57,6 +57,8 @@ const DEFAULT_OPENROUTER_MODELS = [
   "deepseek/deepseek-r1",
   "meta-llama/llama-3.3-70b-instruct",
   "qwen/qwen-2.5-72b-instruct",
+  "nvidia/nemotron-3.5-lightning:free",
+  "minimax/minimax-m3:free",
   "openrouter/auto",
 ];
 

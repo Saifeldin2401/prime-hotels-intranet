@@ -5,7 +5,7 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 
-// 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, OpenRouter Paid Tier, Groq LPU & HuggingFace)
+// 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, OpenRouter, Groq LPU, HuggingFace & Cloudflare)
 export const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
   'anthropic/claude-3.7-sonnet',
@@ -19,6 +19,8 @@ export const DEFAULT_FALLBACK_MODELS = [
   'allam-2-7b',
   'Qwen/Qwen2.5-72B-Instruct',
   'mistralai/Mistral-7B-Instruct-v0.3',
+  'nvidia/nemotron-3.5-lightning:free',
+  'minimax/minimax-m3:free',
   'groq/compound-mini',
 ]
 
@@ -42,12 +44,13 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
     badge: 'Recommended',
     isDefault: true,
   },
+  // --- PREMIER / PAID MODELS (OpenRouter Tier) ---
   {
     id: 'anthropic/claude-3.7-sonnet',
     name: 'Claude 3.7 Sonnet (OpenRouter)',
     provider: 'Anthropic via OpenRouter',
     description: 'Premier flagship model with hybrid reasoning, state-of-the-art SOP structuring, and luxury hospitality elegance',
-    badge: 'Premier Tier',
+    badge: 'Premier Flagship',
   },
   {
     id: 'anthropic/claude-3.5-sonnet',
@@ -85,53 +88,75 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
     badge: 'Deep Reasoning',
   },
   {
-    id: 'gemini-2.5-flash',
-    name: 'Google Gemini 2.5 Flash',
-    provider: 'Google AI Studio',
-    description: 'Flagship curriculum architect with deep pedagogical reasoning, 1M context, and luxury hospitality mastery',
-    badge: 'Flagship AI',
-  },
-  {
-    id: 'gemini-3.1-flash-lite',
-    name: 'Google Gemini 3.1 Flash-Lite',
-    provider: 'Google AI Studio',
-    description: 'High-throughput, ultra-fast generation optimized for rapid quiz, lesson, and metadata construction',
-    badge: 'High Speed',
-  },
-  {
     id: 'meta-llama/llama-3.3-70b-instruct',
     name: 'Meta Llama 3.3 70B Instruct (OpenRouter)',
     provider: 'Meta via OpenRouter',
     description: 'Enterprise open foundation model with high reasoning and full transparency',
     badge: '70B Foundation',
   },
+  // --- HIGH-PERFORMANCE FREE MODELS ---
+  {
+    id: 'gemini-2.5-flash',
+    name: 'Google Gemini 2.5 Flash',
+    provider: 'Google AI Studio',
+    description: 'Flagship curriculum architect with deep pedagogical reasoning, 1M context, and luxury hospitality mastery',
+    badge: 'Free • Flagship',
+  },
+  {
+    id: 'gemini-3.1-flash-lite',
+    name: 'Google Gemini 3.1 Flash-Lite',
+    provider: 'Google AI Studio',
+    description: 'High-throughput, ultra-fast generation optimized for rapid quiz, lesson, and metadata construction',
+    badge: 'Free • Fast',
+  },
   {
     id: 'qwen/qwen3.6-27b',
     name: 'Qwen 3.6 27B on Groq LPU',
     provider: 'Groq Ultra-Fast LPU',
     description: 'Blazing-fast LPU inference (500+ tok/s) with exceptional structured JSON precision',
-    badge: '500+ Tok/s',
+    badge: 'Free • 500+ Tok/s',
   },
   {
     id: 'allam-2-7b',
     name: 'ALLaM 2 7B (SDAIA Arabic AI)',
     provider: 'Groq / SDAIA',
     description: 'Saudi-specialized bilingual model for KSA hospitality regulations, Saudi Labor Law, and cultural nuances',
-    badge: 'KSA Arabic',
+    badge: 'Free • KSA Arabic',
   },
   {
     id: 'Qwen/Qwen2.5-72B-Instruct',
     name: 'Qwen 2.5 72B Instruct (HuggingFace)',
     provider: 'HuggingFace Inference',
     description: 'Massive open-weights foundation model with high reasoning performance and zero vendor lock-in',
-    badge: 'HuggingFace',
+    badge: 'Free • HuggingFace',
   },
   {
     id: 'mistralai/Mistral-7B-Instruct-v0.3',
     name: 'Mistral 7B Instruct v0.3 (HuggingFace)',
     provider: 'HuggingFace Inference',
     description: 'Lightweight, rapid open-source instruction model for instant summaries and lesson structuring',
-    badge: 'Open Source',
+    badge: 'Free • Open Source',
+  },
+  {
+    id: 'nvidia/nemotron-3.5-lightning:free',
+    name: 'NVIDIA Nemotron 3.5 Lightning (Free)',
+    provider: 'NVIDIA AI / OpenRouter',
+    description: 'Deep reasoning with high structural accuracy for standard operating procedures',
+    badge: 'Free • Reasoning',
+  },
+  {
+    id: 'minimax/minimax-m3:free',
+    name: 'MiniMax M3 Bilingual (Free)',
+    provider: 'MiniMax / OpenRouter',
+    description: 'Superior bilingual Arabic/English luxury hospitality nuances',
+    badge: 'Free • Bilingual',
+  },
+  {
+    id: 'groq/compound-mini',
+    name: 'Groq Compound Mini',
+    provider: 'Groq AI',
+    description: 'Optimized composite engine for rapid module & lesson drafting',
+    badge: 'Free • Fast',
   },
 ]
 
