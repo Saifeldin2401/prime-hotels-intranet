@@ -5,19 +5,21 @@ import { isProcessAiErrorResponse, type ProcessAiRequest, type ProcessAiResponse
 
 
 
-// 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, Groq LPU & OpenRouter for zero-downtime failover)
+// 🛡️ PRIMARY & MULTI-TIER FALLBACK MODELS (Cascades across Google Gemini, OpenRouter Paid Tier, Groq LPU & HuggingFace)
 export const DEFAULT_FALLBACK_MODELS = [
   'gemini-2.5-flash',
-  'gemini-3.1-flash-lite',
+  'anthropic/claude-3.7-sonnet',
+  'anthropic/claude-3.5-sonnet',
+  'openai/gpt-4o',
+  'openai/gpt-4o-mini',
+  'deepseek/deepseek-chat',
+  'deepseek/deepseek-r1',
+  'meta-llama/llama-3.3-70b-instruct',
   'qwen/qwen3.6-27b',
   'allam-2-7b',
-  'groq/compound-mini',
   'Qwen/Qwen2.5-72B-Instruct',
   'mistralai/Mistral-7B-Instruct-v0.3',
-  'nvidia/nemotron-3.5-lightning:free',
-  'nvidia/nemotron-3-super-120b-a12b:free',
-  'minimax/minimax-m3:free',
-  'openrouter/free',
+  'groq/compound-mini',
 ]
 
 const FALLBACK_MODELS = DEFAULT_FALLBACK_MODELS
@@ -34,11 +36,53 @@ export interface AIModelOption {
 export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
   {
     id: 'auto',
-    name: 'Auto Multi-Provider Failover (Gemini + Groq + OpenRouter + HuggingFace)',
+    name: 'Auto Multi-Provider Failover (Gemini + OpenRouter + Groq + HuggingFace)',
     provider: 'Autonomous 5-Tier Fallback Gateway',
-    description: 'Autonomous multi-tier cascade (Gemini 2.5 Flash → Groq LPU → OpenRouter → HuggingFace → Cloudflare) with zero-downtime failover (Recommended)',
+    description: 'Autonomous multi-tier cascade (Gemini 2.5 Flash → Claude 3.7 / GPT-4o on OpenRouter → Groq LPU → HuggingFace) with zero-downtime failover (Recommended)',
     badge: 'Recommended',
     isDefault: true,
+  },
+  {
+    id: 'anthropic/claude-3.7-sonnet',
+    name: 'Claude 3.7 Sonnet (OpenRouter)',
+    provider: 'Anthropic via OpenRouter',
+    description: 'Premier flagship model with hybrid reasoning, state-of-the-art SOP structuring, and luxury hospitality elegance',
+    badge: 'Premier Tier',
+  },
+  {
+    id: 'anthropic/claude-3.5-sonnet',
+    name: 'Claude 3.5 Sonnet (OpenRouter)',
+    provider: 'Anthropic via OpenRouter',
+    description: 'Gold standard for pedagogical instructional design, scenario generation, and Forbes 5-star rubric evaluation',
+    badge: 'Industry Standard',
+  },
+  {
+    id: 'openai/gpt-4o',
+    name: 'OpenAI GPT-4o (OpenRouter)',
+    provider: 'OpenAI via OpenRouter',
+    description: 'Omni flagship with flawless structured JSON extraction, rapid throughput, and high bilingual fluency',
+    badge: 'OpenAI Flagship',
+  },
+  {
+    id: 'openai/gpt-4o-mini',
+    name: 'OpenAI GPT-4o Mini (OpenRouter)',
+    provider: 'OpenAI via OpenRouter',
+    description: 'Ultra-fast, cost-effective workhorse for rapid quiz and checkpoint generation',
+    badge: 'Fast & Reliable',
+  },
+  {
+    id: 'deepseek/deepseek-chat',
+    name: 'DeepSeek V3 (OpenRouter)',
+    provider: 'DeepSeek via OpenRouter',
+    description: 'Massive MoE model offering top-tier reasoning and code quality at ultra-low inference costs',
+    badge: 'High Value',
+  },
+  {
+    id: 'deepseek/deepseek-r1',
+    name: 'DeepSeek R1 Reasoning (OpenRouter)',
+    provider: 'DeepSeek via OpenRouter',
+    description: 'Deep chain-of-thought mathematical and pedagogical logic for complex hospitality SOP workflows',
+    badge: 'Deep Reasoning',
   },
   {
     id: 'gemini-2.5-flash',
@@ -53,6 +97,13 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
     provider: 'Google AI Studio',
     description: 'High-throughput, ultra-fast generation optimized for rapid quiz, lesson, and metadata construction',
     badge: 'High Speed',
+  },
+  {
+    id: 'meta-llama/llama-3.3-70b-instruct',
+    name: 'Meta Llama 3.3 70B Instruct (OpenRouter)',
+    provider: 'Meta via OpenRouter',
+    description: 'Enterprise open foundation model with high reasoning and full transparency',
+    badge: '70B Foundation',
   },
   {
     id: 'qwen/qwen3.6-27b',
@@ -70,7 +121,7 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
   },
   {
     id: 'Qwen/Qwen2.5-72B-Instruct',
-    name: 'Qwen 2.5 72B Instruct (HuggingFace Serverless)',
+    name: 'Qwen 2.5 72B Instruct (HuggingFace)',
     provider: 'HuggingFace Inference',
     description: 'Massive open-weights foundation model with high reasoning performance and zero vendor lock-in',
     badge: 'HuggingFace',
@@ -81,27 +132,6 @@ export const AVAILABLE_COURSE_AI_MODELS: AIModelOption[] = [
     provider: 'HuggingFace Inference',
     description: 'Lightweight, rapid open-source instruction model for instant summaries and lesson structuring',
     badge: 'Open Source',
-  },
-  {
-    id: 'groq/compound-mini',
-    name: 'Groq Compound Mini',
-    provider: 'Groq AI',
-    description: 'Optimized composite engine for rapid module & lesson drafting',
-    badge: 'Fast & Free',
-  },
-  {
-    id: 'nvidia/nemotron-3.5-lightning:free',
-    name: 'NVIDIA Nemotron 3.5 Lightning (Free)',
-    provider: 'NVIDIA AI',
-    description: 'Deep reasoning with high structural accuracy for standard operating procedures',
-    badge: 'Reasoning',
-  },
-  {
-    id: 'minimax/minimax-m3:free',
-    name: 'MiniMax M3 Bilingual (Free)',
-    provider: 'MiniMax',
-    description: 'Superior bilingual Arabic/English luxury hospitality nuances',
-    badge: 'Bilingual',
   },
 ]
 

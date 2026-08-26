@@ -49,16 +49,15 @@ const DEFAULT_GROQ_MODELS = [
 ];
 
 const DEFAULT_OPENROUTER_MODELS = [
-  "nvidia/nemotron-3.5-lightning:free",
-  "dots-studio/dots-3-note-preview:free",
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "minimax/minimax-m3:free",
-  "minimax/minimax-m2.7:free",
-  "openrouter/free",
-  "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free",
+  "anthropic/claude-3.7-sonnet",
+  "anthropic/claude-3.5-sonnet",
+  "openai/gpt-4o",
+  "openai/gpt-4o-mini",
+  "deepseek/deepseek-chat",
+  "deepseek/deepseek-r1",
   "meta-llama/llama-3.3-70b-instruct",
   "qwen/qwen-2.5-72b-instruct",
-  "openai/gpt-4o-mini",
+  "openrouter/auto",
 ];
 
 // Together AI models (OpenAI-compatible, free credits)
