@@ -89,17 +89,55 @@ export class AudioSynthesisEngine {
       .replace(/\*\*|__/g, '')
       .replace(/>\s*\[!.*?\]/g, '')
       .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/\s+/g, ' ')
       .trim()
 
+    if (!cleanText) return null
+
     const utterance = new SpeechSynthesisUtterance(cleanText)
-    utterance.rate = rate
+    utterance.rate = Math.max(0.7, Math.min(1.5, rate))
     utterance.lang = language
 
-    // Attempt to pick a high-quality regional voice
-    const voices = window.speechSynthesis.getVoices()
-    const matchingVoice = voices.find((v) => v.lang.startsWith(language.slice(0, 2)))
-    if (matchingVoice) {
-      utterance.voice = matchingVoice
+    const pickBestVoice = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (!voices || voices.length === 0) return
+
+      const langPrefix = language.slice(0, 2).toLowerCase()
+      // 1. Priority to exact regional match (e.g. ar-SA or en-US)
+      const exactMatch = voices.find(
+        (v) => v.lang.toLowerCase() === language.toLowerCase() || v.lang.replace('_', '-').toLowerCase() === language.toLowerCase()
+      )
+      if (exactMatch) {
+        utterance.voice = exactMatch
+        return
+      }
+
+      // 2. Priority to named high-quality neural voices
+      const qualityMatch = voices.find((v) => {
+        const name = v.name.toLowerCase()
+        const isLang = v.lang.toLowerCase().startsWith(langPrefix)
+        return isLang && (name.includes('natural') || name.includes('online') || name.includes('premium') || name.includes('neural'))
+      })
+      if (qualityMatch) {
+        utterance.voice = qualityMatch
+        return
+      }
+
+      // 3. Fallback to any voice matching language prefix
+      const prefixMatch = voices.find((v) => v.lang.toLowerCase().startsWith(langPrefix))
+      if (prefixMatch) {
+        utterance.voice = prefixMatch
+      }
+    }
+
+    pickBestVoice()
+
+    // Handle asynchronous voice catalog populating on Chromium
+    if (!utterance.voice && 'onvoiceschanged' in window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = () => {
+        pickBestVoice()
+      }
     }
 
     if (onEnd) {
@@ -109,6 +147,24 @@ export class AudioSynthesisEngine {
 
     window.speechSynthesis.speak(utterance)
     return utterance
+  }
+
+  /**
+   * Pause speech playback
+   */
+  public pauseSpeech(): void {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.pause()
+    }
+  }
+
+  /**
+   * Resume speech playback
+   */
+  public resumeSpeech(): void {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.resume()
+    }
   }
 
   /**
@@ -122,3 +178,4 @@ export class AudioSynthesisEngine {
 }
 
 export const audioSynthesisEngine = AudioSynthesisEngine.getInstance()
+

@@ -37,12 +37,11 @@ import {
   useCanPublishToKnowledge,
   type PublishToKnowledgeInput,
 } from '@/hooks/usePublishDocumentToKnowledge';
-import type { Document } from '@/lib/types';
-import type { KnowledgeVisibility } from '@/types/knowledge';
-import { FileText, BookOpen, Eye, Shield, Users, Building, Globe, Check, Loader2 } from 'lucide-react';
+import { FileText, BookOpen, Eye, Shield, Users, Building, Globe, Check, Loader2, Sparkles, Wand2 } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { generateSmartDocumentMetadata, generateSmartMetadataHeuristic } from '@/lib/ai/smartMetadataService';
 
 interface DocumentPublishDialogProps {
   document: Document | null;
@@ -105,6 +104,7 @@ export function DocumentPublishDialog({
   const [autoPublish, setAutoPublish] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Track last document ID to detect changes
   const lastDocIdRef = useRef<string | undefined>(undefined);
@@ -115,18 +115,43 @@ export function DocumentPublishDialog({
       lastDocIdRef.current = document.id;
       // Use setTimeout to defer state updates to next tick
       const timeoutId = setTimeout(() => {
-        setTitle(document.title);
-        setDescription(document.description || '');
+        const smart = generateSmartMetadataHeuristic({
+          title: document.title,
+          description: document.description || '',
+        });
+        setTitle(smart.title);
+        setDescription(smart.description);
         setVisibility('property');
         setDepartmentId(document.department_id || '');
         setCategoryId('');
         setRequiresAcknowledgment(false);
         setAutoPublish(false);
-        setTags([]);
+        setTags(smart.tags || []);
       }, 0);
       return () => clearTimeout(timeoutId);
     }
   }, [document?.id]);
+
+  const handleSmartAutoFill = async () => {
+    if (!document) return;
+    setIsGenerating(true);
+    try {
+      const result = await generateSmartDocumentMetadata({
+        title,
+        description,
+      });
+      setTitle(result.title);
+      setDescription(result.description);
+      if (result.tags?.length) {
+        setTags(Array.from(new Set([...tags, ...result.tags])));
+      }
+      toast.success('Knowledge Base metadata organized with AI!');
+    } catch {
+      toast.error('Failed to auto-generate metadata');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleAddTag = () => {
     if (newTag.trim() && !tags.includes(newTag.trim())) {
@@ -209,12 +234,53 @@ export function DocumentPublishDialog({
               </div>
             </div>
 
+            {/* Smart AI Auto-Fill Action Header */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-hotel-navy/5 border border-purple-200 dark:border-purple-900/40">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-foreground">AI Knowledge Formatter</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Auto-refines title, summary & tags for Knowledge Base indexing
+                  </p>
+                </div>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleSmartAutoFill}
+                disabled={isGenerating}
+                className="text-xs font-bold gap-1.5 h-7 border-purple-300 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/50"
+              >
+                <Wand2 className={cn("w-3 h-3", isGenerating && "animate-spin")} />
+                {isGenerating ? 'Refining...' : 'AI Refine'}
+              </Button>
+            </div>
+
             {/* Title */}
             <div className="space-y-2">
-              <Label htmlFor="title">
-                {t('documents:publish.articleTitle', 'Article Title')}
-                <span className="text-destructive ms-1">*</span>
-              </Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="title">
+                  {t('documents:publish.articleTitle', 'Article Title')}
+                  <span className="text-destructive ms-1">*</span>
+                </Label>
+                {title && (title.includes('-') || title.includes('_')) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const smart = generateSmartMetadataHeuristic({ title })
+                      setTitle(smart.title)
+                    }}
+                    className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium"
+                  >
+                    <Wand2 className="w-3 h-3" />
+                    Clean filename format
+                  </button>
+                )}
+              </div>
               <Input
                 id="title"
                 value={title}

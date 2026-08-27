@@ -52,6 +52,28 @@ export type ModelProvider =
 
 export type ModelCostTier = 'free' | 'low_cost' | 'premium'
 
+/**
+ * Coarse modality classification used by the router to guarantee that an
+ * image model can never be dispatched to a text/chat endpoint and vice-versa.
+ * This is derived centrally from the registry — never from string matching.
+ */
+export type ModelModality = 'text' | 'image' | 'embedding'
+
+/** Wire protocol a model expects. Text = chat/completions, image = images endpoint. */
+export type ModelEndpointType = 'chat_completions' | 'image_generation' | 'embeddings' | 'native_svg'
+
+/**
+ * Platform-wide routing strategy. Controls how the registry scores candidates:
+ *  - free_first    : only escalate to paid when no free model can do the job
+ *  - balanced      : weigh quality / reliability / latency / cost evenly (default)
+ *  - quality_first : prefer the highest-quality model, free or paid
+ *  - premium       : always pick the best model regardless of cost
+ */
+export type RoutingMode = 'free_first' | 'balanced' | 'quality_first' | 'premium'
+
+export type LatencyTier = 'realtime' | 'fast' | 'standard' | 'slow'
+export type QualityTier = 'basic' | 'standard' | 'high' | 'flagship'
+
 export type AIModelCapability =
   | 'deep_reasoning'        // Complex logical planning, blueprint structuring, deep analysis
   | 'structured_json'       // Flawless schema adherence without json markdown hallucinations
@@ -61,6 +83,8 @@ export type AIModelCapability =
   | 'long_context'          // > 32k tokens context window for document ingestion
   | 'vector_svg'            // Ability to output crisp SVG graphics / structured diagrams
   | 'photorealistic_image'  // High-fidelity diffusion image generation
+  | 'luxury_photography'    // Premium 5-star photographic realism (image models)
+  | 'fast_generation'       // Low-latency image generation (few-step diffusion)
   | 'audio_speech'          // Text-to-speech synthesis
 
 export interface TaskCapabilityRequirement {
@@ -84,10 +108,45 @@ export interface ModelMetadata {
   speedScore: number        // 0 - 100 rating
   supportsJsonMode: boolean
   isDeprecated?: boolean
+  /**
+   * Modality of the model. When omitted it is inferred from `capabilities`
+   * (any of photorealistic_image / vector_svg => 'image'). Prefer setting it
+   * explicitly so the router never has to guess.
+   */
+  modality?: ModelModality
+  /** Endpoint/protocol this model must be called through. */
+  endpointType?: ModelEndpointType
   pricingPerMillionTokensUSD?: {
     prompt: number
     completion: number
   }
+  /** Flat cost per generated image (image models). 0 = genuinely free. */
+  pricingPerImageUSD?: number
+
+  // ── Operational metadata (all optional; sensible defaults are derived) ──
+  /** Master on/off switch. `false` => never selected by the router. Default true. */
+  enabled?: boolean
+  /** Admin hard override, wins over `enabled` and health checks. */
+  adminOverride?: 'force_enable' | 'force_disable' | null
+  /** Lower = tried earlier within the same tier. Default derived from scores. */
+  priority?: number
+  latencyTier?: LatencyTier
+  qualityTier?: QualityTier
+  /** 0-100 empirical success rate. Default 90. */
+  reliabilityScore?: number
+  /** May this model be used as an automatic fallback? Default true. */
+  fallbackEligible?: boolean
+  /** Per-agent-role suitability 0-100 overrides (sparse). */
+  taskSuitability?: Partial<Record<AgentRole, number>>
+  /** Last health-check result. */
+  lastHealthCheckAt?: string
+  lastHealthCheckOk?: boolean
+  /**
+   * `true` => the model id and/or its pricing have NOT been verified against
+   * the live provider. Such models are excluded from automatic routing until
+   * an admin verifies and enables them. Prevents "free by name only" bugs.
+   */
+  unverified?: boolean
 }
 
 // ============================================================================
@@ -153,6 +212,13 @@ export const DEFAULT_QA_THRESHOLDS: Record<CourseType, QAThresholdConfig> = {
     enforceComplianceHardStop: true,
   },
   cert_prep: {
+    minimumProductionReady: 95,
+    minimumAcceptable: 88,
+    minimumTargetedRevision: 75,
+    maxRevisionCycles: 3,
+    enforceComplianceHardStop: true,
+  },
+  exam_prep: {
     minimumProductionReady: 95,
     minimumAcceptable: 88,
     minimumTargetedRevision: 75,

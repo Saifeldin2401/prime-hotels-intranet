@@ -286,6 +286,12 @@ export async function getArticles(
         }
         if (filters.status) {
             query = query.eq('status', filters.status)
+            if (filters.status === 'PUBLISHED') {
+                query = query.eq('knowledge_base_status', 'indexed').eq('is_active_kb_version', true)
+            }
+        } else {
+            // Default Knowledge Base view should only display indexed, active KB versions
+            query = query.eq('status', 'PUBLISHED').eq('knowledge_base_status', 'indexed').eq('is_active_kb_version', true)
         }
         // Validate department_id is a real UUID, not 'undefined' string
         if (filters.department_id && filters.department_id !== 'undefined' && filters.department_id.length === 36) {
@@ -1152,3 +1158,100 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
             : []
     }
 }
+
+// ============================================================================
+// EXPLICIT PUBLICATION & LIFECYCLE CONTROLS
+// ============================================================================
+
+export interface PublishToKBParams {
+    documentId: string
+    userId: string
+    visibility?: string
+    categoryId?: string
+    departmentId?: string
+    supersedesId?: string
+}
+
+/**
+ * Explicitly publishes a document to the AI Knowledge Base via atomic RPC.
+ * Automatically supersedes any previous active version if applicable.
+ */
+export async function publishDocumentToKnowledgeBase(params: PublishToKBParams): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { data, error } = await supabase.rpc('publish_document_to_kb', {
+            p_document_id: params.documentId,
+            p_user_id: params.userId,
+            p_visibility: params.visibility || null,
+            p_category_id: params.categoryId || null,
+            p_department_id: params.departmentId || null,
+            p_supersedes_id: params.supersedesId || null,
+        })
+
+        if (error) {
+            console.error('publish_document_to_kb RPC error:', error.message)
+            return { success: false, error: error.message }
+        }
+
+        const result = data as { success: boolean; error?: string }
+        return result
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        return { success: false, error: message }
+    }
+}
+
+/**
+ * Explicitly removes a document from the AI Knowledge Base.
+ * Immediately revokes active indexing and vector/RAG retrieval.
+ */
+export async function removeDocumentFromKnowledgeBase(
+    documentId: string,
+    userId: string,
+    reason = 'Removed by administrator'
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { data, error } = await supabase.rpc('remove_document_from_kb', {
+            p_document_id: documentId,
+            p_user_id: userId,
+            p_reason: reason,
+        })
+
+        if (error) {
+            console.error('remove_document_from_kb RPC error:', error.message)
+            return { success: false, error: error.message }
+        }
+
+        const result = data as { success: boolean; error?: string }
+        return result
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        return { success: false, error: message }
+    }
+}
+
+/**
+ * Sets a document to Internal Only / Approved without AI Knowledge Base inclusion.
+ */
+export async function setDocumentInternal(
+    documentId: string,
+    userId: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        const { data, error } = await supabase.rpc('set_document_internal', {
+            p_document_id: documentId,
+            p_user_id: userId,
+        })
+
+        if (error) {
+            console.error('set_document_internal RPC error:', error.message)
+            return { success: false, error: error.message }
+        }
+
+        const result = data as { success: boolean; error?: string }
+        return result
+    } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        return { success: false, error: message }
+    }
+}
+

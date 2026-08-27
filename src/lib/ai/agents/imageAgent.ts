@@ -11,6 +11,9 @@
 import { supabase } from '@/lib/supabase'
 import type { CourseVisualAsset, LessonBlueprint, VisualOpportunity } from '@/types/aiCourseEngine'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
+import { routeImageModel } from './imageOrchestrator'
+import { logAIRequest } from '@/lib/ai/observability'
+import { imageDebugLogger, type ImageDebugSession } from '@/lib/ai/imageDebugLogger'
 import type { AgentExecutionResult, AgentRole, VisualAssetDecision } from './types'
 
 export interface ImageAgentInput {
@@ -25,29 +28,197 @@ export interface ImageAgentInput {
   costTierPreference?: 'free_first' | 'premium'
 }
 
-function generateEducationalSvgDataUri(title: string, concept: string, strategy: string): string {
+interface DynamicVectorParams {
+  title: string
+  concept?: string
+  prompt?: string
+  description?: string
+  learningOutcomes?: string[]
+  department?: string
+}
+
+function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
+  const { title, concept, prompt = '', description = '', learningOutcomes = [], department = 'Operations' } = params
+
   const cleanTitle = (title || 'Standard Operating Procedure').replace(/[<>&"]/g, '')
-  const cleanConcept = (concept || '5-Star Hospitality Operational Workflow & Procedural Compliance').replace(/[<>&"]/g, '')
+  const combinedContext = `${cleanTitle} ${prompt} ${description} ${learningOutcomes.join(' ')}`.toLowerCase()
 
-  // Tailor steps based on topic context
-  const isHygiene = /hygiene|ppe|clean|sanit|glove|mask/i.test(cleanTitle)
-  const isGuest = /guest|service|check|front|reception|concierge|greeting/i.test(cleanTitle)
-  const isRoom = /turndown|room|bed|linen|amenit|housekeep/i.test(cleanTitle)
+  // Clean concept subtitle: discard meta-justifications and generate clean operational summary
+  let cleanConcept = '5-Star Hospitality Operational Workflow • Standard Execution & Verification'
+  if (description && !description.toLowerCase().startsWith('a visual') && !description.toLowerCase().startsWith('why this')) {
+    const firstSentence = description.split(/[.!?]/)[0]?.trim()
+    if (firstSentence && firstSentence.length > 10 && firstSentence.length <= 110) {
+      cleanConcept = firstSentence.replace(/[<>&"]/g, '')
+    }
+  } else if (concept && !concept.toLowerCase().startsWith('a visual') && !concept.toLowerCase().startsWith('why this') && !concept.toLowerCase().startsWith('educational visual')) {
+    const firstSentence = concept.split(/[.!?]/)[0]?.trim()
+    if (firstSentence && firstSentence.length > 10 && firstSentence.length <= 110) {
+      cleanConcept = firstSentence.replace(/[<>&"]/g, '')
+    }
+  }
 
-  const s1Title = isHygiene ? 'Sanitization & PPE' : isGuest ? 'Warm Greeting' : isRoom ? 'Room Preparation' : 'Preparation'
-  const s1b1 = isHygiene ? '• Handwashing protocol' : isGuest ? '• Name recognition & smile' : isRoom ? '• Inspect linen & amenities' : '• Review SOP standard'
-  const s1b2 = isHygiene ? '• Put on approved PPE' : isGuest ? '• Maintain eye contact' : isRoom ? '• Knock & announce entry' : '• Verify safety & grooming'
-  const s1b3 = isHygiene ? '• Inspect clean zone' : isGuest ? '• Active listening stance' : isRoom ? '• Check room status' : '• Inspect tools & setup'
+  // Domain detection
+  const isVipArrival = /vip|arrival|check-in|suite orientation|concierge|escort|reception|greeting/i.test(combinedContext)
+  const isTurndown = /turndown|bedding|housekeeping|linen|duvet|slipper|pillow/i.test(combinedContext)
+  const isHaccp = /haccp|kitchen|food|culinary|sanit|temperature|cook|chef/i.test(combinedContext)
+  const isFire = /fire|evacuation|emergency|alarm|civil defense|warden|safety/i.test(combinedContext)
+  const isPrivacy = /privacy|confidential|pms|data|guest profile|security/i.test(combinedContext)
+  const isShift = /shift|handover|duty manager|cash float|briefing|logbook/i.test(combinedContext)
 
-  const s2Title = isHygiene ? 'Standard Practice' : isGuest ? 'Service Delivery' : isRoom ? 'Turndown Protocol' : 'Execution'
-  const s2b1 = isHygiene ? '• Follow contact times' : isGuest ? '• Anticipate guest needs' : isRoom ? '• Fold duvet at 45° angle' : '• Exact operational flow'
-  const s2b2 = isHygiene ? '• Avoid cross-contact' : isGuest ? '• Personalized service' : isRoom ? '• Position slippers & water' : '• Forbes 5-star standard'
-  const s2b3 = isHygiene ? '• Safe waste disposal' : isGuest ? '• Professional composure' : isRoom ? '• Set ambient lighting & AC' : '• Proactive guest care'
+  let s1Title = 'Preparation & Setup'
+  let s1b1 = '• Review guest profile in PMS'
+  let s1b2 = '• Verify equipment & grooming'
+  let s1b3 = '• Check workstation readiness'
+  let s1Footer = 'Phase 1: Setup & Safety'
+  let s1Sla = '< 30s SLA'
 
-  const s3Title = isHygiene ? 'Verification' : isGuest ? 'Warm Closure' : isRoom ? 'Final Inspection' : 'Verification'
-  const s3b1 = isHygiene ? '• Quality inspection' : isGuest ? '• Confirm satisfaction' : isRoom ? '• 360° visual quality scan' : '• Quality inspection check'
-  const s3b2 = isHygiene ? '• Hygiene log sign-off' : isGuest ? '• Polite farewell' : isRoom ? '• Restock minibar & card' : '• System logging & handoff'
-  const s3b3 = isHygiene ? '• 100% KSA compliance' : isGuest ? '• Log special requests' : isRoom ? '• Ensure spotless finish' : '• 100% Guest satisfaction'
+  let s2Title = 'Execution Protocol'
+  let s2b1 = '• Acknowledge within 30s'
+  let s2b2 = '• Execute 5-star sequence'
+  let s2b3 = '• Anticipate unstated needs'
+  let s2Footer = 'Phase 2: Service Delivery'
+  let s2Sla = '15 Min Protocol'
+
+  let s3Title = 'Verification & Sign-Off'
+  let s3b1 = '• Quality inspection checklist'
+  let s3b2 = '• Update PMS log & preferences'
+  let s3b3 = '• 100% Guest satisfaction'
+  let s3Footer = 'Phase 3: Quality Sign-Off'
+  let s3Sla = '100% Audit Sign'
+
+  if (isVipArrival) {
+    cleanConcept = 'Executive VIP Arrival Workflow, In-Suite Registration & Butler Handoff Sequence'
+    s1Title = 'Valet & Luggage Escort'
+    s1b1 = '• Warm greeting within 30s'
+    s1b2 = '• Escort directly to private suite'
+    s1b3 = '• Seamless luggage handover'
+    s1Footer = 'Phase 1: Arrival & Escort'
+    s1Sla = '< 30s Greeting'
+
+    s2Title = 'In-Suite Registration'
+    s2b1 = '• Offer welcome beverage & towel'
+    s2b2 = '• Digital iPad registration'
+    s2b3 = '• Confirm VIP preferences'
+    s2Footer = 'Phase 2: Check-In Ceremony'
+    s2Sla = '5 Min Ceremony'
+
+    s3Title = 'Room Orientation'
+    s3b1 = '• Ambient tech & lighting demo'
+    s3b2 = '• Butler contact introduction'
+    s3b3 = '• Log arrival notes in PMS'
+    s3Footer = 'Phase 3: Butler Handover'
+    s3Sla = 'PMS Verified'
+  } else if (isTurndown) {
+    cleanConcept = 'Forbes 5-Star Turndown Service, Bedding Geometry & Ambient Evening Atmosphere'
+    s1Title = 'Entry & Preparation'
+    s1b1 = '• Knock 3x & announce entry'
+    s1b2 = '• 360° visual room scan'
+    s1b3 = '• Remove day items & debris'
+    s1Footer = 'Phase 1: Room Entry'
+    s1Sla = 'Knock 3x'
+
+    s2Title = 'Forbes Bedding Standard'
+    s2b1 = '• 45° duvet turn with linen mat'
+    s2b2 = '• Slipper & bedside water setup'
+    s2b3 = '• Pillow menu card presentation'
+    s2Footer = 'Phase 2: Bedding Protocol'
+    s2Sla = '45° Geometry'
+
+    s3Title = 'Ambiance & Final Check'
+    s3b1 = '• Set low ambient lighting & AC'
+    s3b2 = '• Activate subtle aroma diffuser'
+    s3b3 = '• Final supervisory sign-off'
+    s3Footer = 'Phase 3: Atmosphere Sign-Off'
+    s3Sla = '100% Quality'
+  } else if (isHaccp) {
+    cleanConcept = 'HACCP Kitchen Food Safety, Sanitization Dilution & Critical Control Points'
+    s1Title = 'Sanitization & PPE'
+    s1b1 = '• 20s antibacterial handwash'
+    s1b2 = '• Put on approved apron & gloves'
+    s1b3 = '• Check sanitizer ppm dilution'
+    s1Footer = 'Phase 1: Personal Hygiene'
+    s1Sla = '20s Handwash'
+
+    s2Title = 'Temperature & Control'
+    s2b1 = '• Color-coded cutting boards'
+    s2b2 = '• Probe core temp (≥ 75°C hot)'
+    s2b3 = '• Prevent raw / cooked contact'
+    s2Footer = 'Phase 2: Critical Control (CCP)'
+    s2Sla = '≥ 75°C Probe'
+
+    s3Title = 'Balady Compliance'
+    s3b1 = '• Log temps in digital audit sheet'
+    s3b2 = '• FIFO labeling & allergen check'
+    s3b3 = '• Head Chef verification sign'
+    s3Footer = 'Phase 3: Compliance Sign-Off'
+    s3Sla = 'Balady Audit'
+  } else if (isFire) {
+    cleanConcept = 'Multi-Tier Fire Alarm Response, Guest Floor Sweeps & Civil Defense Evacuation'
+    s1Title = 'Immediate Alarm Verification'
+    s1b1 = '• Silence false alarms on panel'
+    s1b2 = '• Dispatch ERT to zone in 60s'
+    s1b3 = '• Notify Civil Defense & GM'
+    s1Footer = 'Phase 1: Incident Assessment'
+    s1Sla = '60s Response'
+
+    s2Title = 'Guest Floor Evacuation'
+    s2b1 = '• Floor wardens initiate sweep'
+    s2b2 = '• Direct guests to fire stairs'
+    s2b3 = '• Never use elevators'
+    s2Footer = 'Phase 2: Active Evacuation'
+    s2Sla = 'Systematic Sweep'
+
+    s3Title = 'Assembly & Handover'
+    s3b1 = '• Muster point roll-call count'
+    s3b2 = '• Triage & first-aid staging'
+    s3b3 = '• Official Civil Defense handover'
+    s3Footer = 'Phase 3: Safe Assembly'
+    s3Sla = '100% Roll-Call'
+  } else if (isPrivacy) {
+    cleanConcept = 'Guest Data Governance, PMS Credential Security & Strict Confidentiality Protocol'
+    s1Title = 'Access Authorization'
+    s1b1 = '• Role-based login credentials'
+    s1b2 = '• 60s idle screen lockout'
+    s1b3 = '• Secure keycard encryption'
+    s1Footer = 'Phase 1: Access Control'
+    s1Sla = '60s Lockout'
+
+    s2Title = 'Confidential Handling'
+    s2b1 = '• Zero verbal disclosure of VIPs'
+    s2b2 = '• Mask payment card numbers'
+    s2b3 = '• Shred printed rooming lists'
+    s2Footer = 'Phase 2: Data Protection'
+    s2Sla = 'Zero Disclosure'
+
+    s3Title = 'Audit & Governance'
+    s3b1 = '• Daily PMS access audit log'
+    s3b2 = '• Report suspicious inquiries'
+    s3b3 = '• Saudi Data Law compliance'
+    s3Footer = 'Phase 3: Security Review'
+    s3Sla = 'Daily Audit'
+  } else if (isShift) {
+    cleanConcept = 'Duty Manager & Front Desk Shift Handover, Float Audit & Queue Review'
+    s1Title = 'Pre-Handover Audit'
+    s1b1 = '• Physical cash float count'
+    s1b2 = '• Review pending work orders'
+    s1b3 = '• Check VIP arrivals for shift'
+    s1Footer = 'Phase 1: Float & Queue Review'
+    s1Sla = 'Float Balanced'
+
+    s2Title = 'Verbal Shift Briefing'
+    s2b1 = '• Discuss service escalations'
+    s2b2 = '• Review occupancy & group events'
+    s2b3 = '• Align supervisory priorities'
+    s2Footer = 'Phase 2: Operational Handover'
+    s2Sla = 'Priority Sync'
+
+    s3Title = 'Logbook Sign-Off'
+    s3b1 = '• Dual signature in digital log'
+    s3b2 = '• Master keys transfer audit'
+    s3b3 = '• Duty Manager confirmation'
+    s3Footer = 'Phase 3: Formal Sign-Off'
+    s3Sla = 'Dual Signature'
+  }
 
   const svg = `
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 450" width="100%" height="100%" style="background:#0f172a;border-radius:12px;font-family:system-ui,-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif">
@@ -83,7 +254,7 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
 
   <!-- Title & Context -->
   <text x="36" y="116" fill="#ffffff" font-size="18" font-weight="800">${cleanTitle.slice(0, 56)}</text>
-  <text x="36" y="138" fill="#94a3b8" font-size="12">${cleanConcept.slice(0, 90)}</text>
+  <text x="36" y="138" fill="#94a3b8" font-size="12">${cleanConcept}</text>
 
   <!-- Step Diagram Boxes -->
   <g transform="translate(36, 162)">
@@ -92,12 +263,14 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
     <rect x="0" y="0" width="224" height="5" fill="url(#goldGrad)" rx="2"/>
     <circle cx="28" cy="32" r="13" fill="#C39A45"/>
     <text x="28" y="37" fill="#0f172a" font-size="12" font-weight="800" text-anchor="middle">01</text>
-    <text x="50" y="37" fill="#f8fafc" font-size="13" font-weight="700">${s1Title}</text>
+    <text x="48" y="36" fill="#f8fafc" font-size="12" font-weight="700">${s1Title.slice(0, 18)}</text>
+    <rect x="148" y="22" width="66" height="18" fill="#0f172a" stroke="#C39A45" stroke-width="0.75" rx="9"/>
+    <text x="181" y="34" fill="#F5D061" font-size="8.5" font-weight="700" text-anchor="middle">${s1Sla}</text>
     <text x="18" y="75" fill="#cbd5e1" font-size="11.5">${s1b1}</text>
     <text x="18" y="105" fill="#cbd5e1" font-size="11.5">${s1b2}</text>
     <text x="18" y="135" fill="#cbd5e1" font-size="11.5">${s1b3}</text>
     <rect x="18" y="158" width="188" height="22" fill="#0f172a" rx="4"/>
-    <text x="112" y="173" fill="#C39A45" font-size="10" font-weight="600" text-anchor="middle">Phase 1: Setup & Safety</text>
+    <text x="112" y="173" fill="#C39A45" font-size="10" font-weight="600" text-anchor="middle">${s1Footer}</text>
 
     <!-- Arrow 1 -->
     <path d="M 232 98 L 244 98 L 244 93 L 252 98 L 244 103 L 244 98" fill="#C39A45"/>
@@ -107,12 +280,14 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
     <rect x="252" y="0" width="224" height="5" fill="url(#purpleGrad)" rx="2"/>
     <circle cx="280" cy="32" r="13" fill="#7c3aed"/>
     <text x="280" y="37" fill="#ffffff" font-size="12" font-weight="800" text-anchor="middle">02</text>
-    <text x="302" y="37" fill="#f8fafc" font-size="13" font-weight="700">${s2Title}</text>
+    <text x="300" y="36" fill="#f8fafc" font-size="12" font-weight="700">${s2Title.slice(0, 18)}</text>
+    <rect x="400" y="22" width="66" height="18" fill="#0f172a" stroke="#a855f7" stroke-width="0.75" rx="9"/>
+    <text x="433" y="34" fill="#c084fc" font-size="8.5" font-weight="700" text-anchor="middle">${s2Sla}</text>
     <text x="270" y="75" fill="#cbd5e1" font-size="11.5">${s2b1}</text>
     <text x="270" y="105" fill="#cbd5e1" font-size="11.5">${s2b2}</text>
     <text x="270" y="135" fill="#cbd5e1" font-size="11.5">${s2b3}</text>
     <rect x="270" y="158" width="188" height="22" fill="#0f172a" rx="4"/>
-    <text x="364" y="173" fill="#a855f7" font-size="10" font-weight="600" text-anchor="middle">Phase 2: Execution Protocol</text>
+    <text x="364" y="173" fill="#a855f7" font-size="10" font-weight="600" text-anchor="middle">${s2Footer}</text>
 
     <!-- Arrow 2 -->
     <path d="M 484 98 L 496 98 L 496 93 L 504 98 L 496 103 L 496 98" fill="#7c3aed"/>
@@ -122,12 +297,14 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
     <rect x="504" y="0" width="224" height="5" fill="url(#emeraldGrad)" rx="2"/>
     <circle cx="532" cy="32" r="13" fill="#059669"/>
     <text x="532" y="37" fill="#ffffff" font-size="12" font-weight="800" text-anchor="middle">03</text>
-    <text x="554" y="37" fill="#f8fafc" font-size="13" font-weight="700">${s3Title}</text>
+    <text x="552" y="36" fill="#f8fafc" font-size="12" font-weight="700">${s3Title.slice(0, 18)}</text>
+    <rect x="652" y="22" width="66" height="18" fill="#0f172a" stroke="#34d399" stroke-width="0.75" rx="9"/>
+    <text x="685" y="34" fill="#6ee7b7" font-size="8.5" font-weight="700" text-anchor="middle">${s3Sla}</text>
     <text x="522" y="75" fill="#cbd5e1" font-size="11.5">${s3b1}</text>
     <text x="522" y="105" fill="#cbd5e1" font-size="11.5">${s3b2}</text>
     <text x="522" y="135" fill="#cbd5e1" font-size="11.5">${s3b3}</text>
     <rect x="522" y="158" width="188" height="22" fill="#0f172a" rx="4"/>
-    <text x="616" y="173" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">Phase 3: Quality Sign-Off</text>
+    <text x="616" y="173" fill="#34d399" font-size="10" font-weight="600" text-anchor="middle">${s3Footer}</text>
   </g>
 
   <!-- Footer Brand -->
@@ -135,7 +312,6 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
   <text x="764" y="405" fill="#64748b" font-size="10.5" text-anchor="end">KSA REGULATORY & FORBES COMPLIANT</text>
 </svg>`
 
-  // Return universally supported base64 Data URI
   try {
     if (typeof window !== 'undefined' && typeof window.btoa === 'function') {
       const base64 = window.btoa(unescape(encodeURIComponent(svg.trim())))
@@ -144,6 +320,371 @@ function generateEducationalSvgDataUri(title: string, concept: string, strategy:
   } catch {}
 
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`
+}
+
+async function generateDirectRecraftApiImage(
+  prompt: string,
+  style = 'realistic_image',
+  aspectRatio = '16:9'
+): Promise<string | null> {
+  const recraftKey =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RECRAFT_API_KEY) ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
+    ''
+
+  if (!recraftKey) return null
+
+  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
+  const enhancedPrompt = `Ultra-realistic photograph of ${cleanPrompt}, 5-star luxury hotel standard, crisp lighting, high-end hospitality, Forbes verified, authentic real people`
+
+  try {
+    const size = aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '4:3' ? '1024x768' : '1024x576'
+    const res = await fetch('https://external.api.recraft.ai/v1/images/generations', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${recraftKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: enhancedPrompt,
+        style: style === 'vector_illustration' ? 'vector_illustration' : 'realistic_image',
+        size: size,
+      }),
+      signal: AbortSignal.timeout(25000),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      const url = data?.data?.[0]?.url || data?.image?.url
+      if (url) return url
+    }
+  } catch (err) {
+    console.warn('[RecraftAPI] Direct API notice:', err)
+  }
+
+  return null
+}
+
+function mapToOpenRouterImageModel(requestedModel?: string): string {
+  if (!requestedModel) return 'google/gemini-3-pro-image-preview'
+  const lower = requestedModel.toLowerCase()
+  if (lower.includes('banana-pro') || lower.includes('imagen-3') || lower === 'nano-banana-pro-preview' || lower === 'google-imagen-3') {
+    return 'google/gemini-3-pro-image-preview'
+  }
+  if (lower.includes('banana-2') || lower.includes('imagen-3-fast') || lower === 'gemini-3.1-flash-image' || lower === 'google-imagen-3-fast') {
+    return 'google/gemini-3.1-flash-image-preview'
+  }
+  if (lower.includes('gemini-2.5-flash-image')) {
+    return 'google/gemini-2.5-flash-image'
+  }
+  if (lower.includes('recraft-v4') || lower.includes('recraft-v4.1')) {
+    return 'recraft/recraft-v4'
+  }
+  if (lower.includes('recraft-v3') || lower.includes('recraft')) {
+    return 'recraft/recraft-v3'
+  }
+  if (lower.includes('flux.2-pro') || lower.includes('flux-2-pro') || lower.includes('flux.2')) {
+    return 'black-forest-labs/flux.2-pro'
+  }
+  if (lower.includes('seedream')) {
+    return 'bytedance-seed/seedream-4.5'
+  }
+  if (requestedModel.includes('/')) {
+    return requestedModel
+  }
+  return 'google/gemini-3-pro-image-preview'
+}
+
+async function generateOpenRouterImage(
+  prompt: string,
+  model = 'google/gemini-3-pro-image-preview',
+  style = 'realistic_image',
+  debug?: ImageDebugSession
+): Promise<string | null> {
+  const orKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENROUTER_API_KEY) || ''
+  if (!orKey) return null
+
+  const resolvedModel = mapToOpenRouterImageModel(model)
+  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
+  const enhancedPrompt = `Ultra-realistic 8k Forbes 5-star luxury hotel photograph of ${cleanPrompt}, authentic Saudi hospitality elegance, immaculate tailored associate uniforms, crisp realistic facial details, opulent marble lobby, soft architectural ambient lighting, shot on Hasselblad H6D-100c, crystal clear focus, masterwork, no cartoon, no 3d render, no illustration, no red face, no distorted anatomy`
+
+  void style
+  debug?.logStageAttempt({
+    stage: `OpenRouter Studio Flagship (${resolvedModel})`,
+    model: resolvedModel,
+    provider: 'openrouter',
+    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
+    payload: { model: resolvedModel, prompt: cleanPrompt.slice(0, 100) },
+  })
+
+  try {
+    // OpenRouter has no dedicated /images endpoint — image-capable chat models return
+    // an image in `message.images[]` when `modalities` includes "image".
+    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${orKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://phg-connect.com',
+        'X-Title': 'PRIME Connect Intranet',
+      },
+      body: JSON.stringify({
+        model: resolvedModel,
+        modalities: ['image', 'text'],
+        messages: [{ role: 'user', content: enhancedPrompt }],
+      }),
+      signal: AbortSignal.timeout(45000),
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      const message = data?.choices?.[0]?.message
+      const fromImages = message?.images?.[0]?.image_url?.url as string | undefined
+      const fromContent = typeof message?.content === 'string' && message.content.startsWith('data:image')
+        ? (message.content as string)
+        : undefined
+      const imgUrl = fromImages || fromContent
+      if (imgUrl) {
+        debug?.logStageSuccess(`OpenRouter Studio Flagship (${resolvedModel})`, resolvedModel, {
+          imageUrl: imgUrl,
+        })
+        return imgUrl
+      }
+    } else {
+      const errText = await res.text().catch(() => '')
+      debug?.logStageError({
+        stage: `OpenRouter Studio Flagship (${resolvedModel})`,
+        model: resolvedModel,
+        provider: 'openrouter',
+        statusCode: res.status,
+        error: errText,
+        actionableHint: 'OpenRouter returned error or insufficient balance.',
+      })
+    }
+  } catch (err) {
+    debug?.logStageError({
+      stage: `OpenRouter Studio Flagship (${resolvedModel})`,
+      model: resolvedModel,
+      provider: 'openrouter',
+      error: err,
+    })
+  }
+
+  return null
+}
+
+async function generateGoogleImagenImage(
+  prompt: string,
+  model = 'google/gemini-3-pro-image-preview',
+  aspectRatio = '16:9',
+  debug?: ImageDebugSession
+): Promise<string | null> {
+  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
+  const targetOrModel = mapToOpenRouterImageModel(model)
+
+  // 1. Primary High-Resolution Engine: OpenRouter Enterprise Endpoint for Google Models
+  // Directly provides Google Gemini 3 Pro (Nano Banana Pro) & Gemini 3.1 Flash (Nano Banana 2) with zero quota rate limits
+  const orImage = await generateOpenRouterImage(cleanPrompt, targetOrModel, 'realistic_image', debug)
+  if (orImage) return orImage
+
+  // 2. Direct Google AI Studio API fallback
+  const geminiKey =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_AI_API_KEY) ||
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_API_KEY) ||
+    ''
+
+  if (geminiKey) {
+    const rawGoogleModel = targetOrModel.replace('google/', '')
+    try {
+      debug?.logStageAttempt({
+        stage: `Google AI Studio Direct API (${rawGoogleModel})`,
+        model: rawGoogleModel,
+        provider: 'gemini',
+        endpoint: `generativelanguage.googleapis.com/v1beta/models/${rawGoogleModel}:generateContent`,
+      })
+
+      const enhancedPrompt = `Generate an ultra-realistic, award-winning, 8k Forbes 5-star luxury hotel photograph of ${cleanPrompt}. Authentic associates in pristine tailored uniforms, natural skin tones, perfect facial details, opulent architectural lighting, shot on Hasselblad H6D-100c, crystal clear focus, masterpiece, no cartoon, no 3d render, no illustration, no red face, no distorted anatomy.`
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${rawGoogleModel}:generateContent?key=${geminiKey}`
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            role: 'user',
+            parts: [{ text: enhancedPrompt }]
+          }],
+          generationConfig: {
+            responseModalities: ['TEXT', 'IMAGE'],
+          },
+        }),
+        signal: AbortSignal.timeout(25000),
+      })
+
+      if (res.ok) {
+        const json = await res.json()
+        const parts = json?.candidates?.[0]?.content?.parts || []
+        for (const p of parts) {
+          if (p.inlineData?.data) {
+            const mime = p.inlineData.mimeType || 'image/png'
+            const dataUri = `data:${mime};base64,${p.inlineData.data}`
+            debug?.logStageSuccess(`Google AI Studio Direct API (${rawGoogleModel})`, rawGoogleModel, {
+              imageUrl: dataUri,
+              mimeType: mime,
+              bytes: p.inlineData.data.length,
+            })
+            return dataUri
+          }
+        }
+      } else {
+        const errText = await res.text().catch(() => '')
+        debug?.logStageError({
+          stage: `Google AI Studio Direct API (${rawGoogleModel})`,
+          model: rawGoogleModel,
+          provider: 'gemini',
+          statusCode: res.status,
+          error: errText,
+          actionableHint: 'Google AI Studio returned quota or access error.',
+        })
+      }
+    } catch (err) {
+      debug?.logStageError({
+        stage: `Google AI Studio Direct API (${rawGoogleModel})`,
+        model: rawGoogleModel,
+        provider: 'gemini',
+        error: err,
+      })
+    }
+  }
+
+  // 3. Fallback to Cloudflare Workers AI / Direct photorealistic pipeline
+  debug?.logFallbackTrigger('Google Image Engine', 'Direct Cloudflare / FLUX Engine', 'Primary engines exhausted')
+  return generateDirectAiImage(cleanPrompt, 'photorealistic_luxury', aspectRatio, debug)
+}
+
+async function generateDirectCloudflareImage(
+  prompt: string,
+  model = '@cf/black-forest-labs/flux-1-schnell',
+  aspectRatio = '16:9',
+  debug?: ImageDebugSession
+): Promise<string | null> {
+  const accountId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_ACCOUNT_ID) || ''
+  const apiToken = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_API_TOKEN) || ''
+
+  if (!accountId || !apiToken) {
+    debug?.logStageError({
+      stage: 'Cloudflare Workers AI (Direct REST)',
+      model,
+      provider: 'cloudflare',
+      error: 'Missing VITE_CLOUDFLARE_ACCOUNT_ID or VITE_CLOUDFLARE_API_TOKEN in environment',
+      actionableHint: 'Configure Cloudflare credentials in .env to use zero-cost edge inference.',
+    })
+    return null
+  }
+
+  let width = 1024
+  let height = 576
+  if (aspectRatio === '1:1') {
+    width = 1024
+    height = 1024
+  } else if (aspectRatio === '4:3') {
+    width = 1024
+    height = 768
+  }
+
+  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
+  const enhancedPrompt = `Ultra-realistic real-life photograph of ${cleanPrompt}, Forbes 5-star luxury hotel hospitality, authentic real associates in immaculate uniforms, crisp realistic facial details, high-end marble lobby, professional architectural lighting, shot on Hasselblad H6D-100c, crystal clear focus, 8k resolution, photorealistic masterwork, no cartoon, no 3d render, no illustration, no red face, no distorted faces`
+
+  try {
+    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`
+    const isFlux = model.includes('flux')
+
+    debug?.logStageAttempt({
+      stage: 'Cloudflare Workers AI (Direct REST)',
+      model,
+      provider: 'cloudflare',
+      endpoint: `api.cloudflare.com/client/v4/accounts/***/ai/run/${model}`,
+    })
+
+    const res = await fetch(cfUrl, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(
+        isFlux
+          ? { prompt: enhancedPrompt, steps: 4 }
+          : {
+              prompt: enhancedPrompt,
+              negative_prompt: 'cartoon, 3d render, illustration, red face, distorted eyes, blurry, low quality, anime',
+              num_steps: 6,
+              guidance: 4.5,
+              width,
+              height,
+            }
+      ),
+      signal: AbortSignal.timeout(25000),
+    })
+
+    if (res.ok) {
+      const blob = await res.blob()
+      if (blob.size > 2000) {
+        const dataUri = await new Promise<string>((resolve) => {
+          const reader = new FileReader()
+          reader.onloadend = () => resolve(reader.result as string)
+          reader.onerror = () => resolve(null as any)
+          reader.readAsDataURL(blob)
+        })
+        debug?.logStageSuccess('Cloudflare Workers AI (Direct REST)', model, { imageUrl: dataUri, bytes: blob.size })
+        return dataUri
+      }
+    } else {
+      const errText = await res.text().catch(() => '')
+      debug?.logStageError({
+        stage: 'Cloudflare Workers AI (Direct REST)',
+        model,
+        provider: 'cloudflare',
+        statusCode: res.status,
+        error: errText,
+        actionableHint: 'Cloudflare Workers AI rejected credentials or rate limit hit.',
+      })
+    }
+  } catch (err) {
+    debug?.logStageError({
+      stage: 'Cloudflare Workers AI (Direct REST)',
+      model,
+      provider: 'cloudflare',
+      error: err,
+    })
+  }
+
+  return null
+}
+
+async function generateDirectAiImage(
+  prompt: string,
+  style?: string,
+  aspectRatio = '16:9',
+  debug?: ImageDebugSession
+): Promise<string | null> {
+  void style
+  // Direct Cloudflare Workers AI with credentials \u2014 the only client-side fallback engine.
+  // (Keyless public inference such as Pollinations was removed: unreliable, watermarked,
+  //  and it made "free" claims impossible to verify against real provider pricing/status.)
+  const cfImage = await generateDirectCloudflareImage(prompt, '@cf/black-forest-labs/flux-1-schnell', aspectRatio, debug)
+  if (cfImage) return cfImage
+
+  debug?.logStageError({
+    stage: 'Direct Client-Side Image Engine',
+    model: '@cf/black-forest-labs/flux-1-schnell',
+    provider: 'cloudflare',
+    error: 'Cloudflare Workers AI unavailable and no keyless fallback is configured.',
+    actionableHint: 'All configured image providers failed. Check Cloudflare / Google / OpenRouter keys and quotas.',
+  })
+
+  return null
 }
 
 export class ImageAgent extends BaseAIAgent<ImageAgentInput, CourseVisualAsset | null> {
@@ -180,7 +721,7 @@ Respond ONLY with JSON:
 {
   "shouldGenerate": true,
   "justification": "Why this visual directly reinforces the operational benchmark",
-  "strategy": "vector_svg_diagram",
+  "strategy": "photorealistic_luxury",
   "recommendedProvider": "recraft",
   "prompt": "Highly detailed visual generation prompt adhering to 5-star hotel luxury standards",
   "negativePrompt": "blurry, cartoon, low quality, distorted hands",
@@ -191,6 +732,7 @@ Respond ONLY with JSON:
 
     const decisionResult = await this.executePrompt<VisualAssetDecision>(decisionPrompt, {
       ...options,
+      preferredModel: undefined,
       jsonMode: true,
       temperature: 0.3,
     })
@@ -198,7 +740,7 @@ Respond ONLY with JSON:
     const decision = decisionResult.data || {
       shouldGenerate: true,
       justification: 'Educational visual guide',
-      strategy: 'vector_svg_diagram',
+      strategy: 'photorealistic_luxury',
       recommendedProvider: 'recraft',
       prompt: `5-star luxury hotel standard operational visual for ${lesson.title}`,
       negativePrompt: 'blurry, low quality',
@@ -221,21 +763,67 @@ Respond ONLY with JSON:
       }
     }
 
-    const chosenModel = input.imageModel || (decision.strategy === 'vector_svg_diagram' ? 'recraft-vector' : 'recraft-v3')
-    const chosenProvider = input.imageModel?.includes('recraft') ? 'recraft' : input.imageModel?.includes('flux') ? 'replicate' : 'cloudflare'
-    const chosenStyle = input.preferredStyle || (decision.strategy === 'vector_svg_diagram' ? 'technical_diagram' : 'educational_illustration')
+    const chosenStyle = input.preferredStyle || 'photorealistic_luxury'
     const chosenAspectRatio = input.preferredAspectRatio || decision.aspectRatio || '16:9'
+    const visualPrompt = decision.prompt || `${lesson.title} in a 5-star luxury hotel setting`
 
-    // 2. If Recraft Vector / Recraft v3 is selected, synthesize high-resolution vector visual directly
-    if (chosenModel.includes('recraft') || chosenProvider === 'recraft') {
-      const vectorSvg = generateEducationalSvgDataUri(
-        lesson.title,
-        decision.justification || decision.educationalObjective || lesson.title,
-        decision.strategy
-      )
+    // Start structured debug logging session
+    const debug = imageDebugLogger.startSession(lesson.title, {
+      title: lesson.title,
+      prompt: visualPrompt,
+      negativePrompt: decision.negativePrompt,
+      style: chosenStyle,
+      aspectRatio: chosenAspectRatio,
+      requestedModel: input.imageModel,
+      assetId: lesson.id,
+    })
+
+    debug.logStrategyEvaluation(decision)
+
+    // ── Central image routing: registry-driven, free-first, with explanation ──
+    const route = routeImageModel(
+      { strategy: decision.strategy, prompt: visualPrompt, style: chosenStyle, aspectRatio: chosenAspectRatio },
+      {
+        requestedModel: input.imageModel,
+        allowPremium: input.costTierPreference === 'premium',
+      },
+    )
+    const chosenModel = route.modelId
+    debug.logRoutingDecision(route)
+
+    // SVG schematic engine ONLY when explicitly requested (zero cost, deterministic)
+    const wantsVectorSvg =
+      chosenModel === 'recraft-vector' ||
+      input.imageModel === 'recraft-vector' ||
+      chosenStyle === 'process_schematic_svg' ||
+      input.preferredStyle === 'vector_schematic'
+
+    if (wantsVectorSvg) {
+      debug.logStageAttempt({
+        stage: 'Recraft Vector Engine (Deterministic SVG)',
+        model: 'recraft-vector',
+        provider: 'recraft',
+        endpoint: 'Client-Side SVG Synthesis Algorithm',
+        payload: { title: lesson.title, style: chosenStyle, outcomes: lesson.learningOutcomes },
+      })
+
+      const vectorSvg = generateEducationalSvgDataUri({
+        title: lesson.title,
+        concept: decision.justification || decision.educationalObjective || lesson.title,
+        prompt: decision.prompt,
+        description: lesson.description,
+        learningOutcomes: lesson.learningOutcomes,
+        department: courseTitle.split('•')[1]?.trim() || 'Operations',
+      })
+
+      debug.logStageSuccess('Recraft Vector Engine (Deterministic SVG)', 'recraft-vector', {
+        imageUrl: vectorSvg,
+        bytes: vectorSvg.length,
+      })
 
       const recraftAsset: CourseVisualAsset = {
-        id: `img-${Date.now()}`,
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        draft: true,
         course_id: courseId,
         module_id: moduleId,
         lesson_id: lesson.id,
@@ -250,17 +838,23 @@ Respond ONLY with JSON:
         visual_style: chosenStyle,
         placement: 'procedure',
         provider: 'recraft',
-        model: chosenModel,
+        model: 'recraft-vector',
         status: 'completed',
         order_index: 0,
       }
+
+      debug.endSession(true, {
+        modelUsed: 'recraft-vector',
+        providerUsed: 'recraft',
+        imageUrl: vectorSvg,
+      })
 
       return {
         agentRole: this.role,
         success: true,
         data: recraftAsset,
         rawOutput: `Synthesized vector diagram via Recraft Vector Engine (${chosenModel})`,
-        modelUsed: chosenModel,
+        modelUsed: 'recraft-vector',
         providerUsed: 'recraft',
         costTier: 'free',
         estimatedCostUSD: 0,
@@ -268,104 +862,233 @@ Respond ONLY with JSON:
       }
     }
 
-    // 3. For Cloudflare / FLUX models, invoke Cloudflare Workers AI Edge Function
-    try {
-      const { data: imgData, error: imgError } = await supabase.functions.invoke<{
-        success: boolean
-        image_url?: string
-        asset?: CourseVisualAsset
-        error?: string
-      }>('generate-course-image', {
-        body: {
-          prompt: decision.prompt,
-          negative_prompt: decision.negativePrompt,
-          visual_style: chosenStyle,
-          aspect_ratio: chosenAspectRatio,
-          course_id: courseId,
-          module_id: moduleId,
-          lesson_id: lesson.id,
-          title: lesson.title,
-          alt_text: `Educational visual for ${lesson.title}`,
-          educational_purpose: decision.educationalObjective,
-          visual_concept: decision.justification,
-          model: chosenModel,
-          provider: chosenProvider,
-          cost_tier: input.costTierPreference || 'free_only',
-        },
-      })
+    // 2.5 Google image model (Imagen / Nano Banana)
+    if (route.endpointProvider === 'google') {
+      const imagenUrl = await generateGoogleImagenImage(visualPrompt, chosenModel, chosenAspectRatio, debug)
 
-      if (imgError || !imgData?.success || !imgData?.image_url) {
-        throw new Error(imgError?.message || imgData?.error || 'Remote image generation not available')
-      }
-
-      const asset: CourseVisualAsset = imgData.asset || {
-        id: `img-${Date.now()}`,
+      const asset: CourseVisualAsset = {
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        draft: true,
         course_id: courseId,
         module_id: moduleId,
         lesson_id: lesson.id,
-        image_url: imgData.image_url,
+        image_url: imagenUrl || '',
         storage_bucket: 'course-assets',
         title: lesson.title,
-        alt_text: `Educational visual for ${lesson.title}`,
-        educational_purpose: decision.educationalObjective,
-        visual_concept: decision.justification,
-        prompt: decision.prompt,
+        alt_text: `Google Imagen 3 luxury hospitality visual for ${lesson.title}`,
+        educational_purpose: decision.educationalObjective || lesson.title,
+        visual_concept: decision.justification || '5-Star Luxury Hotel Visual',
+        prompt: visualPrompt,
         aspect_ratio: chosenAspectRatio,
         visual_style: chosenStyle,
         placement: 'procedure',
-        provider: chosenProvider,
+        provider: 'gemini',
         model: chosenModel,
         status: 'completed',
         order_index: 0,
       }
 
+      debug.endSession(Boolean(imagenUrl), {
+        modelUsed: chosenModel,
+        providerUsed: 'gemini',
+        imageUrl: imagenUrl || undefined,
+      })
+
       return {
         agentRole: this.role,
         success: true,
         data: asset,
-        rawOutput: `Generated visual via ${asset.provider} (${asset.model})`,
-        modelUsed: asset.model,
-        providerUsed: asset.provider as any,
-        costTier: input.costTierPreference === 'premium' ? 'premium' : 'free',
-        estimatedCostUSD: input.costTierPreference === 'premium' ? 0.04 : 0,
-        latencyMs: decisionResult.latencyMs + 1000,
+        rawOutput: `Generated 5-star visual via Google Imagen 3 / Nano Banana (${chosenModel})`,
+        modelUsed: chosenModel,
+        providerUsed: 'gemini',
+        costTier: 'free',
+        estimatedCostUSD: 0,
+        latencyMs: decisionResult.latencyMs + 1800,
       }
-    } catch (err: unknown) {
-      // 4. Resilient Vector Generator fallback (Zero failure rate)
-      const fallbackSvg = generateEducationalSvgDataUri(
-        lesson.title,
-        decision.justification || decision.educationalObjective || lesson.title,
-        decision.strategy
-      )
+    }
 
-      const fallbackAsset: CourseVisualAsset = {
-        id: `img-${Date.now()}`,
+    // 3. Generate REAL AI Image via Edge Function (OpenRouter / Cloudflare / FLUX)
+    const imgAttemptStart = Date.now()
+    try {
+      let generatedImageUrl: string | null = null
+      const targetProvider: 'google' | 'openrouter' | 'cloudflare' =
+        route.endpointProvider === 'openrouter' ? 'openrouter' : 'cloudflare'
+
+      debug.logStageAttempt({
+        stage: 'Edge Function generate-course-image',
+        model: chosenModel,
+        provider: targetProvider,
+        endpoint: 'functions/v1/generate-course-image',
+        payload: { model: chosenModel, provider: targetProvider, prompt: visualPrompt, aspectRatio: chosenAspectRatio },
+      })
+
+      try {
+        const { data: imgData, error: invokeErr } = await supabase.functions.invoke<{
+          success: boolean
+          image_url?: string
+          asset?: CourseVisualAsset
+          error?: string
+        }>('generate-course-image', {
+          body: {
+            prompt: visualPrompt,
+            negative_prompt: decision.negativePrompt,
+            visual_style: chosenStyle,
+            aspect_ratio: chosenAspectRatio,
+            course_id: courseId,
+            module_id: moduleId,
+            lesson_id: lesson.id,
+            title: lesson.title,
+            alt_text: `5-star visual for ${lesson.title}`,
+            educational_purpose: decision.educationalObjective,
+            visual_concept: decision.justification,
+            model: chosenModel,
+            provider: targetProvider,
+            cost_tier: input.costTierPreference || 'free_only',
+          },
+        })
+
+        if (invokeErr || !imgData?.success) {
+          debug.logStageError({
+            stage: 'Edge Function generate-course-image',
+            model: chosenModel,
+            provider: targetProvider,
+            statusCode: invokeErr ? 500 : 200,
+            error: invokeErr || imgData?.error || 'Edge function failed to generate image',
+            rawResponse: imgData,
+            actionableHint: 'Edge function failed. Falling back to direct client-side FLUX / Cloudflare pipeline.',
+          })
+        } else if (imgData?.success && imgData.image_url) {
+          debug.logStageSuccess('Edge Function generate-course-image', chosenModel, {
+            imageUrl: imgData.image_url,
+          })
+          generatedImageUrl = imgData.image_url
+        }
+      } catch (callErr) {
+        debug.logStageError({
+          stage: 'Edge Function generate-course-image',
+          model: chosenModel,
+          provider: targetProvider,
+          error: callErr,
+          actionableHint: 'Supabase functions invocation exception. Cascading to direct engines.',
+        })
+      }
+
+      // If edge function is unavailable or returned null, use Direct OpenRouter Image Engine
+      if (!generatedImageUrl) {
+        debug.logFallbackTrigger('Edge Function generate-course-image', 'OpenRouter Studio Flagship Engine', 'Edge invocation failed')
+        generatedImageUrl = await generateOpenRouterImage(visualPrompt, chosenModel, chosenStyle, debug)
+      }
+
+      // If OpenRouter is unavailable, use Direct Cloudflare / FLUX Engine
+      if (!generatedImageUrl) {
+        debug.logFallbackTrigger('OpenRouter Studio Flagship', 'Direct Cloudflare / FLUX Engine', 'OpenRouter attempt failed')
+        generatedImageUrl = await generateDirectAiImage(visualPrompt, chosenStyle, chosenAspectRatio, debug)
+      }
+
+      if (!generatedImageUrl) {
+        throw new Error(`Image generation pipeline failed for model ${chosenModel}`)
+      }
+
+      logAIRequest({
+        pipelineRunId: options.pipelineRunId,
+        courseId,
+        lessonId: lesson.id,
+        agentRole: 'image_ai',
+        taskType: `image:${route.category}`,
+        provider: targetProvider,
+        modelUsed: chosenModel,
+        startedAt: imgAttemptStart,
+        durationMs: Date.now() - imgAttemptStart,
+        promptChars: visualPrompt.length,
+        completionChars: 0,
+        success: true,
+        metadata: { route: route.reasons, fallbacks: route.fallbacks, isFree: route.isFree },
+      })
+
+      const asset: CourseVisualAsset = {
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        draft: true,
         course_id: courseId,
         module_id: moduleId,
         lesson_id: lesson.id,
-        image_url: fallbackSvg,
+        image_url: generatedImageUrl,
         storage_bucket: 'course-assets',
         title: lesson.title,
-        alt_text: `Educational visual for ${lesson.title}`,
+        alt_text: `5-Star luxury hospitality visual for ${lesson.title}`,
         educational_purpose: decision.educationalObjective || lesson.title,
-        visual_concept: decision.justification || 'Standard Operating Procedure Workflow',
-        prompt: decision.prompt || lesson.title,
+        visual_concept: decision.justification || '5-Star Luxury Hotel Visual',
+        prompt: visualPrompt,
         aspect_ratio: chosenAspectRatio,
         visual_style: chosenStyle,
         placement: 'procedure',
-        provider: 'recraft',
-        model: 'recraft-vector',
+        provider: targetProvider,
+        model: chosenModel,
         status: 'completed',
         order_index: 0,
       }
 
+      debug.endSession(true, {
+        modelUsed: chosenModel,
+        providerUsed: targetProvider,
+        imageUrl: generatedImageUrl,
+      })
+
       return {
         agentRole: this.role,
         success: true,
+        data: asset,
+        rawOutput: `Generated 5-star visual via ${chosenModel}`,
+        modelUsed: chosenModel,
+        providerUsed: asset.provider as AgentExecutionResult['providerUsed'],
+        costTier: 'free',
+        estimatedCostUSD: 0,
+        latencyMs: decisionResult.latencyMs + 1500,
+      }
+    } catch (err: unknown) {
+      debug.logFallbackTrigger('Primary Pipeline', 'OpenRouter Studio Flagship Engine', err instanceof Error ? err.message : 'Exception encountered')
+      let directUrl = await generateOpenRouterImage(visualPrompt, chosenModel, chosenStyle, debug)
+      if (!directUrl) {
+        directUrl = await generateDirectAiImage(visualPrompt, chosenStyle, chosenAspectRatio, debug)
+      }
+      
+      const fallbackModel = directUrl ? chosenModel : '@cf/black-forest-labs/flux-1-schnell'
+      const fallbackAsset: CourseVisualAsset = {
+        id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        draft: true,
+        course_id: courseId,
+        module_id: moduleId,
+        lesson_id: lesson.id,
+        image_url: directUrl || '',
+        storage_bucket: 'course-assets',
+        title: lesson.title,
+        alt_text: `5-Star luxury hospitality visual for ${lesson.title}`,
+        educational_purpose: decision.educationalObjective || lesson.title,
+        visual_concept: decision.justification || '5-Star Luxury Hotel Visual',
+        prompt: visualPrompt,
+        aspect_ratio: chosenAspectRatio,
+        visual_style: chosenStyle,
+        placement: 'procedure',
+        provider: 'cloudflare',
+        model: fallbackModel,
+        status: directUrl ? 'completed' : 'failed',
+        order_index: 0,
+      }
+
+      debug.endSession(Boolean(directUrl), {
+        modelUsed: fallbackModel,
+        providerUsed: 'cloudflare',
+        imageUrl: directUrl || undefined,
+      })
+
+      return {
+        agentRole: this.role,
+        success: Boolean(directUrl),
         data: fallbackAsset,
-        rawOutput: `Synthesized vector diagram via Recraft Vector Engine (recraft-vector)`,
-        modelUsed: 'recraft-vector',
-        providerUsed: 'recraft',
+        rawOutput: directUrl
+          ? `Generated visual via direct Cloudflare / OpenRouter fallback`
+          : `Image generation failed: all configured providers exhausted`,
+        modelUsed: fallbackModel,
+        providerUsed: 'cloudflare',
         costTier: 'free',
         estimatedCostUSD: 0,
         latencyMs: decisionResult.latencyMs,
@@ -375,3 +1098,5 @@ Respond ONLY with JSON:
 }
 
 export const imageAgent = new ImageAgent()
+
+

@@ -157,5 +157,6 @@
     "compliance_center": "Compliance Center",
     "email_writer": "Email Writer",
     "inbound_emails": "Inbound Emails",
-    "manual_certificates": "Manual Certificates"
+    "manual_certificates": "Manual Certificates",
+    "ai_course_generator": "AI Course Engine Settings"
 }

@@ -14,4 +14,6 @@ export * from './agents'
 export * from './complianceShield'
 export * from './roleplayEngine'
 export * from './audio/audioSynthesisEngine'
+export * from './personalProfileContext'
+
 

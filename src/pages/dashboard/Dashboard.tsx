@@ -28,6 +28,8 @@ import {
   PriorityTimelineWidget,
   QuickNavGrid,
   QuickTipsWidget,
+  RoleAwareHeroCockpit,
+  RoleAwareInsights,
   TasksWidget,
   TodaysBirthdaysWidget,
   TrainingProgress,
@@ -173,10 +175,10 @@ export function Dashboard() {
         </div>
       </Box>
 
-      {/* 2. Hero System Status Banner */}
+      {/* 2. Role-Adaptive Hero Operations Cockpit */}
       {visibleWidgets.heroBanner && (
         <Box>
-          <DashboardHeroBanner />
+          <RoleAwareHeroCockpit />
         </Box>
       )}
 
@@ -223,6 +225,11 @@ export function Dashboard() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           
+          {/* Role-Adaptive KPI Insight Cards */}
+          <Box>
+            <RoleAwareInsights focusMode={focusMode} />
+          </Box>
+
           {/* Charts Row: Tasks, Requests, Training Progress */}
           <Grid container spacing={3}>
             <Grid size={{ xs: 12, lg: 4 }}>

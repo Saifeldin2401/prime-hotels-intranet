@@ -8,6 +8,32 @@ import type {
 } from './types'
 
 /**
+ * Sanitize unescaped newlines and tabs inside JSON string values
+ */
+function sanitizeJsonStringLiterals(input: string): string {
+  let inString = false
+  let escaped = false
+  let result = ''
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i]
+    if (ch === '"' && !escaped) {
+      inString = !inString
+      result += ch
+    } else if (inString && (ch === '\n' || ch === '\r')) {
+      result += '\\n'
+    } else if (inString && ch === '\t') {
+      result += '\\t'
+    } else {
+      result += ch
+    }
+    escaped = ch === '\\' && !escaped
+  }
+
+  return result
+}
+
+/**
  * Robust JSON extraction from LLM text responses
  */
 export function extractJsonFromText<T = unknown>(rawText: string): T | null {
@@ -17,9 +43,12 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
   const trimmed = rawText.trim()
   try {
     return JSON.parse(trimmed) as T
-  } catch {
-    // Continue to extraction
-  }
+  } catch {}
+
+  // 1b. Direct parse with string sanitization
+  try {
+    return JSON.parse(sanitizeJsonStringLiterals(trimmed)) as T
+  } catch {}
 
   // 2. Strip markdown code blocks
   let clean = rawText
@@ -28,9 +57,11 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
 
   try {
     return JSON.parse(clean) as T
-  } catch {
-    // Continue to boundary matching
-  }
+  } catch {}
+
+  try {
+    return JSON.parse(sanitizeJsonStringLiterals(clean)) as T
+  } catch {}
 
   // 3. Locate JSON start
   const jsonStart = clean.search(/[[{]/)
@@ -40,18 +71,18 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
   const isArray = clean.startsWith('[')
 
   // 4. Try stripping trailing commas and balancing
-  let candidate = clean
-  // Remove trailing commas before closing braces/brackets
-  candidate = candidate.replace(/,\s*([}\]])/g, '$1')
+  let candidate = clean.replace(/,\s*([}\]])/g, '$1')
 
   const lastClose = isArray ? candidate.lastIndexOf(']') : candidate.lastIndexOf('}')
   if (lastClose !== -1) {
     const bounded = candidate.slice(0, lastClose + 1)
     try {
       return JSON.parse(bounded) as T
-    } catch {
-      // Continue to partial extraction
-    }
+    } catch {}
+
+    try {
+      return JSON.parse(sanitizeJsonStringLiterals(bounded)) as T
+    } catch {}
   }
 
   // 5. Array-specific recovery: extract all complete JSON objects within the array
@@ -61,14 +92,12 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
       const recoveredObjects: unknown[] = []
       for (const objStr of objectMatches) {
         try {
-          const sanitizedObj = objStr.replace(/,\s*}/g, '}')
+          const sanitizedObj = sanitizeJsonStringLiterals(objStr.replace(/,\s*}/g, '}'))
           const parsedObj = JSON.parse(sanitizedObj)
           if (parsedObj && typeof parsedObj === 'object') {
             recoveredObjects.push(parsedObj)
           }
-        } catch {
-          // Skip malformed individual object
-        }
+        } catch {}
       }
 
       if (recoveredObjects.length > 0) {
@@ -81,7 +110,7 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
   const objMatch = clean.match(/\{[\s\S]*\}/)
   if (objMatch) {
     try {
-      const sanitized = objMatch[0].replace(/,\s*}/g, '}')
+      const sanitized = sanitizeJsonStringLiterals(objMatch[0].replace(/,\s*}/g, '}'))
       return JSON.parse(sanitized) as T
     } catch (err) {
       console.warn('[extractJsonFromText] Failed all recovery attempts:', err)
@@ -352,3 +381,4 @@ Respond ONLY with a valid JSON object matching this exact schema:
 
 export const altusAI = new AltusAIClient()
 export const primeAI = altusAI
+export const aiClient = altusAI

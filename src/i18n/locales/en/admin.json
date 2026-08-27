@@ -617,5 +617,111 @@
     "webhook_url": "Target Webhook URL",
     "auth_type": "Authentication Strategy",
     "health": "Health Status"
+  },
+  "ai_course_generator": {
+    "title": "AI Course Generator — Platform Settings",
+    "description": "Routing strategy, verified model catalog, gateway connectivity, spending caps, and QA thresholds for the multi-agent course engine.",
+    "tabs": {
+      "strategy": "Strategy & Presets",
+      "gateways": "AI Gateways & Health",
+      "models": "Model Catalog & Overrides",
+      "roles": "Agent Role Mapping",
+      "limits": "Spend Caps & QA Safeguards",
+      "diagnostics": "Live Engine Diagnostics"
+    },
+    "presets": {
+      "title": "One-Click Quick Presets",
+      "desc": "Instantly switch the entire platform routing profile with zero manual configuration.",
+      "free_first_title": "100% Free & Unlimited",
+      "free_first_desc": "Cloudflare Workers AI + Google Gemini Free Tier + Recraft Vector SVG ($0.00 spend).",
+      "balanced_title": "Balanced Enterprise (Recommended)",
+      "balanced_desc": "Gemini 2.5 Flash + OpenRouter Llama 3.3 + Auto Image Routing with $5.00 daily safeguard.",
+      "luxury_title": "Ultra 5-Star Luxury",
+      "luxury_desc": "Claude 3.7 Sonnet + Google Imagen 3 (Nano Banana Pro) with 95% QA threshold.",
+      "saudi_title": "Saudi-First Bilingual",
+      "saudi_desc": "ALLaM 2 Arabic + Qwen 2.5 + Balady HACCP and Saudi Civil Defense strict compliance."
+    },
+    "routing_mode": {
+      "title": "Routing Strategy",
+      "desc": "How the central registry scores and selects candidate models for every agent task.",
+      "free_first": "Free-First (Cost Minimization)",
+      "balanced": "Balanced (Quality & Speed)",
+      "quality_first": "Quality-First (High Performance)",
+      "premium": "Ultra Premium (Uncapped)"
+    },
+    "toggles": {
+      "free_only": "Free-Only Strict Mode",
+      "free_only_hint": "Disable all paid models and commercial gateways platform-wide.",
+      "allow_premium_images": "Allow Premium Image Generation",
+      "allow_premium_images_hint": "Permit high-resolution Google Imagen 3 / Nano Banana Pro when tasks demand 5-star visuals.",
+      "auto_healing": "Autonomous Fallback & Self-Healing",
+      "auto_healing_hint": "Automatically cascade to secondary and tertiary providers if primary times out or rate limits."
+    },
+    "gateways": {
+      "title": "Active AI Provider Gateways",
+      "desc": "Manage external provider endpoints and verify live network connectivity.",
+      "ping": "Test Gateway Ping",
+      "testing": "Pinging...",
+      "online": "Online & Healthy",
+      "degraded": "Degraded Latency",
+      "offline": "Offline / Unreachable",
+      "free_tier": "Free Tier Available",
+      "paid_account": "Commercial Account Active"
+    },
+    "models": {
+      "title": "Model Catalog & Overrides",
+      "desc": "Manage verified AI models with zero typing. Search, filter by modality or provider, and set routing priorities.",
+      "search_placeholder": "Search models by name or provider...",
+      "all": "All Models",
+      "text": "Text LLMs",
+      "image": "Image Engines",
+      "free": "Free Tier ($0.00)",
+      "premium": "Paid Models",
+      "auto": "Auto-Route",
+      "force_enabled": "Force Priority",
+      "disabled": "Excluded",
+      "enable_all_free": "Enable All Free Tier",
+      "enable_all_verified": "Allow All Verified",
+      "disable_paid": "Disable All Paid Models",
+      "restore_defaults": "Reset to Default Registry"
+    },
+    "roles": {
+      "title": "Agent Role Preferred Models",
+      "desc": "Assign specific AI models to specialized workflow agents.",
+      "planner": "Curriculum Blueprint Planner",
+      "writer": "5-Star Content & SOP Writer",
+      "quiz": "Interactive Quiz & Bloom's Engine",
+      "image": "Visual Image & Schematic Studio",
+      "audio": "Audio Briefings Narrator",
+      "roleplay": "Roleplay & Scenario Simulator",
+      "compliance": "KSA Compliance & Standards Auditor"
+    },
+    "limits": {
+      "title": "Spend Caps & Operational Thresholds",
+      "desc": "Set safeguards on token usage, budget caps, concurrency, and QA acceptance.",
+      "daily_cap": "Daily Platform Spend Cap (USD)",
+      "course_cap": "Per-Course Generation Cap (USD)",
+      "concurrency": "Max Parallel Generation Streams",
+      "retries": "Max Retry Escalations",
+      "daily_quota": "Per-User Daily Course Quota",
+      "qa_ready": "Production-Ready QA Score Minimum (%)",
+      "qa_min": "Acceptable Minimum QA Score (%)"
+    },
+    "diagnostics": {
+      "title": "Live Engine Diagnostics & Simulator",
+      "desc": "Run an end-to-end simulated workflow across text, visual, and compliance pipelines.",
+      "run": "Run AI Pipeline Diagnostic",
+      "running": "Running Diagnostics...",
+      "passed": "All Diagnostic Tests Passed (100% Operational)",
+      "failed": "Diagnostic Found Issues"
+    },
+    "actions": {
+      "save": "Save & Apply Settings",
+      "saving": "Applying Changes...",
+      "reset": "Reset to Defaults",
+      "export": "Export Config",
+      "copied": "Configuration copied to clipboard",
+      "saved_success": "Platform settings updated and applied across all active AI agents."
+    }
   }
 }

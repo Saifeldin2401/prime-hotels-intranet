@@ -1,5 +1,7 @@
 import type { AppRole, DocumentStatus, DocumentVisibility } from '../constants'
 
+export type KnowledgeBaseStatus = 'excluded' | 'pending_index' | 'indexed' | 'removed' | 'superseded'
+
 export interface Document {
   id: string
   title: string
@@ -42,6 +44,14 @@ export interface Document {
   departments?: { id: string; name: string } | null
   properties?: { id: string; name: string } | null
   profiles?: { id: string; full_name: string | null } | null
+  // AI Knowledge Base Lifecycle & Verification fields
+  knowledge_base_status?: KnowledgeBaseStatus | null
+  is_active_kb_version?: boolean | null
+  supersedes_document_id?: string | null
+  reviewed_by?: string | null
+  reviewed_at?: string | null
+  published_by?: string | null
+  published_at?: string | null
   // AI Auto-tagging fields
   ai_tags?: string[] | null
   ai_category?: string | null

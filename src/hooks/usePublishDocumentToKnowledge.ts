@@ -65,62 +65,32 @@ export function usePublishDocumentToKnowledge() {
           throw new Error('Document not found');
         }
 
-        // 2. Check if document is already published as knowledge base
-        if (document.content_type !== 'document') {
-          throw new Error('Document is already published to knowledge base');
+        // 2. Publish document to Knowledge Base via atomic RPC
+        const rpcResult = await supabase.rpc('publish_document_to_kb', {
+          p_document_id: document.id,
+          p_user_id: user.id,
+          p_visibility: input.visibility || null,
+          p_category_id: input.categoryId || null,
+          p_department_id: input.departmentId || null,
+          p_supersedes_id: document.supersedes_document_id || null,
+        });
+
+        if (rpcResult.error) {
+          throw new Error(`Failed to publish document to knowledge base: ${rpcResult.error.message}`);
         }
 
-        // 3. Determine if user can auto-publish based on role
-        const canAutoPublish = ['regional_admin', 'regional_hr', 'corporate_admin'].includes(primaryRole || '');
-        const finalStatus: Database['public']['Enums']['document_status'] = input.autoPublish && canAutoPublish ? 'PUBLISHED' : 'DRAFT';
-
-        // 4. Create knowledge base article from document
-        const articleData: Database['public']['Tables']['documents']['Insert'] = {
-          title: input.title || document.title,
-          description: input.description || document.description,
-          content: input.content || `<p>Document reference: <a href="${document.file_url}" target="_blank">${document.title}</a></p>`,
-          content_type: 'document',
-          file_url: document.file_url,
-          visibility: input.visibility,
-          property_id: input.propertyId || currentProperty?.id || null,
-          department_id: input.departmentId || null,
-          category_id: input.categoryId || null,
-          requires_acknowledgment: input.requiresAcknowledgment || false,
-          status: finalStatus,
-          created_by: user.id,
-          current_version: 1,
-          published_at: finalStatus === 'PUBLISHED' ? new Date().toISOString() : null,
-          last_published_by: finalStatus === 'PUBLISHED' ? user.id : null,
-        };
-
-        // 5. Insert the knowledge base article
-        const { data: article, error: insertError } = await supabase
+        // 3. Update title/description/content if changed during publish dialog
+        await supabase
           .from('documents')
-          .insert(articleData)
-          .select()
-          .single();
+          .update({
+            title: input.title || document.title,
+            description: input.description || document.description,
+            requires_acknowledgment: input.requiresAcknowledgment || false,
+            content: input.content || document.content,
+          })
+          .eq('id', document.id);
 
-        if (insertError) {
-          throw new Error(`Failed to create knowledge base article: ${insertError.message}`);
-        }
-
-        // 6. Create initial version record
-        const { error: versionError } = await supabase
-          .from('document_versions')
-          .insert({
-            document_id: article.id,
-            version_number: 1,
-            file_url: articleData.file_url ?? '',
-            change_summary: `Published from document library (source: ${document.id})`,
-            created_by: user.id,
-          });
-
-        if (versionError) {
-          console.warn('Failed to create version record:', versionError);
-          // Don't fail the whole operation for version creation
-        }
-
-        // 7. Handle tags if provided
+        // 4. Handle tags if provided
         if (input.tags && input.tags.length > 0) {
           try {
             const { data: existingTags } = await supabase
@@ -144,29 +114,28 @@ export function usePublishDocumentToKnowledge() {
             if (tagIds.length > 0) {
               await supabase
                 .from('document_tag_assignments')
-                .insert(tagIds.map((tagId) => ({ document_id: article.id, tag_id: tagId })));
+                .insert(tagIds.map((tagId) => ({ document_id: document.id, tag_id: tagId })));
             }
           } catch (err) {
             console.warn('Failed to add tags:', err);
           }
         }
 
-        // 8. Log audit event
+        // 5. Log audit event
         await logAuditEvent({
-          event_type: 'document.published_to_knowledge',
+          event_type: 'document.published_to_kb',
           entity_type: 'document',
           entity_id: document.id,
-          description: `Document "${document.title}" published to knowledge base as "${articleData.title}"`,
+          description: `Document "${document.title}" explicitly approved and published to AI Knowledge Base`,
           metadata: {
-            source_document_id: document.id,
-            knowledge_article_id: article.id,
-            status: finalStatus,
-            auto_publish: input.autoPublish,
-            has_role_privilege: canAutoPublish,
+            document_id: document.id,
+            knowledge_base_status: 'indexed',
+            is_active_kb_version: true,
+            published_by: user.id,
           },
         });
 
-        const publishedArticle = await getArticleById(article.id);
+        const publishedArticle = await getArticleById(document.id);
 
         return {
           article: publishedArticle,

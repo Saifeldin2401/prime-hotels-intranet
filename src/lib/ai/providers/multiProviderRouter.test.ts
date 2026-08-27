@@ -25,7 +25,7 @@ describe('MultiProviderRouter', () => {
   it('should return correct candidate chain based on task type', () => {
     const fastCandidates = multiProviderRouter.getCandidateChain('fast')
     expect(fastCandidates.length).toBeGreaterThan(2)
-    expect(fastCandidates[0].model).toBe('gemini-3.1-flash-lite')
+    expect(fastCandidates[0].model).toBe('gemini-2.5-flash-lite')
 
     const complianceCandidates = multiProviderRouter.getCandidateChain('compliance')
     expect(complianceCandidates[0].model).toBe('allam-2-7b')
@@ -38,6 +38,31 @@ describe('MultiProviderRouter', () => {
     const customCandidates = multiProviderRouter.getCandidateChain('general', 'allam-2-7b')
     expect(customCandidates[0].model).toBe('allam-2-7b')
     expect(customCandidates[0].provider).toBe('groq')
+  })
+
+  it('MUST NOT prepend an image model to a text cascade (regression #1)', () => {
+    const chain = multiProviderRouter.getCandidateChain('reasoning', 'recraft-vector')
+    expect(chain.every((c) => c.model !== 'recraft-vector')).toBe(true)
+    // falls back to the default reasoning cascade
+    expect(chain[0].model).toBe('gemini-2.5-flash')
+  })
+
+  it('MUST skip an image model that reaches the cascade and never call the API with it', async () => {
+    vi.mocked(supabase.functions.invoke).mockResolvedValue({
+      data: { success: true, response: 'ok text' },
+      error: null,
+    } as any)
+
+    // recraft-vector is an image model; the router must ignore it and still succeed
+    const res = await multiProviderRouter.execute('write a checklist', {
+      task: 'reasoning',
+      preferredModel: 'recraft-vector',
+    })
+    expect(res.modelUsed).not.toBe('recraft-vector')
+    const callModels = vi.mocked(supabase.functions.invoke).mock.calls.map(
+      (c: any) => c[1]?.body?.model,
+    )
+    expect(callModels).not.toContain('recraft-vector')
   })
 
   it('should successfully execute with primary provider when healthy', async () => {

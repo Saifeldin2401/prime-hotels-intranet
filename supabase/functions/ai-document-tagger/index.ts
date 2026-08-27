@@ -143,7 +143,7 @@ Deno.serve(async (req: Request) => {
 
     const docType = getDocumentType(sourceExtension);
 
-    const aiResult = generateDocumentTags(
+    const aiResult = await extractSemanticDocumentTags(
       sourceTitle,
       sourceDescription,
       sourceContent,
@@ -183,121 +183,206 @@ function getDocumentType(fileExtension: string): string {
   return "document";
 }
 
-function generateDocumentTags(
+async function extractSemanticDocumentTags(
+  title: string,
+  description: string,
+  content: string,
+  docType: string,
+): Promise<AITagResult> {
+  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
+  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
+  const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN") || "";
+
+  const excerpt = `${title}\n${description}\n${(content || '').replace(/<[^>]*>/g, ' ')}`.slice(0, 3000).trim();
+
+  const systemPrompt = `You are the master knowledge taxonomy engine for ALTUS 5-Star Luxury Hotels.
+Analyze the provided hotel document and return structured JSON ONLY:
+{
+  "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"],
+  "category": "Operations|Guest Services|HR & Training|Finance|Safety & Compliance|Food & Beverage|Sales & Marketing|Technology|Management|Events",
+  "summary": "Concise 2-sentence executive summary of the document's operational purpose and key standards."
+}`;
+
+  const userPrompt = `Document Type: ${docType}
+Title: ${title}
+Description: ${description}
+Content Excerpt:
+${excerpt}`;
+
+  // 1. Primary: OpenRouter
+  if (OPENROUTER_API_KEY) {
+    const candidateModels = [
+      "openrouter/auto",
+      "meta-llama/llama-3.3-70b-instruct:free",
+      "google/gemini-2.0-flash-exp:free",
+      "deepseek/deepseek-chat",
+    ];
+
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://phg-connect.com",
+            "X-Title": "PRIME Connect Document Tagger",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "system", content: systemPrompt },
+              { role: "user", content: userPrompt },
+            ],
+            max_tokens: 500,
+            temperature: 0.2,
+            response_format: { type: "json_object" },
+          }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const rawContent = data.choices?.[0]?.message?.content || "";
+          const match = rawContent.match(/\{[\s\S]*\}/);
+          if (match) {
+            const parsed = JSON.parse(match[0]) as AITagResult;
+            if (Array.isArray(parsed.tags) && parsed.category && parsed.summary) {
+              const tags = [...new Set([...parsed.tags, docType])].slice(0, 10);
+              return { tags, category: parsed.category, summary: parsed.summary };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(`OpenRouter tagging model ${model} failed, cascading:`, err);
+      }
+    }
+  }
+
+  // 2. Secondary: Direct Google Gemini
+  if (GEMINI_API_KEY) {
+    try {
+      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+      const response = await fetch(geminiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
+          generationConfig: {
+            temperature: 0.2,
+            maxOutputTokens: 500,
+            responseMimeType: "application/json",
+          },
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        const match = text.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]) as AITagResult;
+          if (Array.isArray(parsed.tags) && parsed.category && parsed.summary) {
+            const tags = [...new Set([...parsed.tags, docType])].slice(0, 10);
+            return { tags, category: parsed.category, summary: parsed.summary };
+          }
+        }
+      }
+    } catch (gErr) {
+      console.warn("Direct Gemini tagging failed, cascading:", gErr);
+    }
+  }
+
+  // 3. Tertiary: Hugging Face
+  if (HF_TOKEN) {
+    try {
+      const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${HF_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "meta-llama/Llama-3.3-70B-Instruct",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          max_tokens: 500,
+          temperature: 0.2,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        const rawContent = data.choices?.[0]?.message?.content || "";
+        const match = rawContent.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]) as AITagResult;
+          if (Array.isArray(parsed.tags) && parsed.category && parsed.summary) {
+            const tags = [...new Set([...parsed.tags, docType])].slice(0, 10);
+            return { tags, category: parsed.category, summary: parsed.summary };
+          }
+        }
+      }
+    } catch (hfErr) {
+      console.warn("HF tagging failed, using heuristic fallback:", hfErr);
+    }
+  }
+
+  // Heuristic Rule-Based Fallback
+  return fallbackHeuristicTags(title, description, content, docType);
+}
+
+function fallbackHeuristicTags(
   title: string,
   description: string,
   content: string,
   docType: string,
 ): AITagResult {
-  // Extract keywords from title and description
   const text = `${title} ${description} ${content}`.toLowerCase();
 
-  // Define tag categories based on hospitality industry
   const tagCategories: Record<string, string[]> = {
     Operations: [
-      "operations",
-      "housekeeping",
-      "maintenance",
-      "front desk",
-      "reception",
-      "check-in",
-      "check-out",
-      "room service",
-      "laundry",
+      "operations", "housekeeping", "maintenance", "front desk", "reception",
+      "check-in", "check-out", "room service", "laundry", "shift", "handover",
     ],
     "Guest Services": [
-      "guest",
-      "customer",
-      "service",
-      "hospitality",
-      "concierge",
-      "amenities",
-      "complaint",
-      "review",
-      "feedback",
+      "guest", "customer", "service", "hospitality", "concierge", "amenities",
+      "complaint", "review", "feedback", "vip", "butler",
     ],
     "HR & Training": [
-      "hr",
-      "training",
-      "employee",
-      "staff",
-      "onboarding",
-      "policy",
-      "procedure",
-      "manual",
-      "handbook",
+      "hr", "training", "employee", "staff", "onboarding", "policy", "procedure",
+      "manual", "handbook", "learning", "development",
     ],
     Finance: [
-      "finance",
-      "accounting",
-      "billing",
-      "invoice",
-      "budget",
-      "payment",
-      "revenue",
-      "cost",
+      "finance", "accounting", "billing", "invoice", "budget", "payment",
+      "revenue", "cost", "audit", "p&l",
     ],
     "Safety & Compliance": [
-      "safety",
-      "security",
-      "compliance",
-      "regulation",
-      "emergency",
-      "fire",
-      "health",
-      "sop",
+      "safety", "security", "compliance", "regulation", "emergency", "fire",
+      "health", "sop", "civil defense", "haccp", "balady",
     ],
     "Food & Beverage": [
-      "food",
-      "beverage",
-      "restaurant",
-      "menu",
-      "kitchen",
-      "cooking",
-      "dining",
-      "bar",
+      "food", "beverage", "restaurant", "menu", "kitchen", "cooking",
+      "dining", "bar", "banquet", "culinary",
     ],
     "Sales & Marketing": [
-      "sales",
-      "marketing",
-      "promotion",
-      "booking",
-      "reservation",
-      "rate",
-      "pricing",
-      "advertising",
+      "sales", "marketing", "promotion", "booking", "reservation", "rate",
+      "pricing", "advertising", "corporate", "revenue management",
     ],
     Technology: [
-      "technology",
-      "system",
-      "software",
-      "app",
-      "digital",
-      "it",
-      "computer",
-      "network",
+      "technology", "system", "software", "app", "digital", "it",
+      "computer", "network", "pms", "pos", "opera",
     ],
     Management: [
-      "management",
-      "manager",
-      "leadership",
-      "supervisor",
-      "director",
-      "executive",
-      "gm",
+      "management", "manager", "leadership", "supervisor", "director",
+      "executive", "gm", "duty manager", "coaching",
     ],
     Events: [
-      "event",
-      "conference",
-      "banquet",
-      "meeting",
-      "wedding",
-      "party",
-      "group",
+      "event", "conference", "banquet", "meeting", "wedding", "party", "group",
     ],
   };
 
-  // Extract matching tags
   const extractedTags: string[] = [];
   let aiCategory = "General";
 
@@ -310,13 +395,11 @@ function generateDocumentTags(
     }
   }
 
-  // Add document type as tag
   extractedTags.push(docType);
 
-  // Generate summary
-  const summary = generateSummary(title, description);
+  const fullText = `${title}. ${description}`.trim();
+  const summary = fullText.length > 200 ? fullText.substring(0, 200) + "..." : fullText || "Standard operating hotel documentation.";
 
-  // Remove duplicates and limit to top 10 tags
   const uniqueTags = [...new Set(extractedTags)].slice(0, 10);
 
   return {
@@ -324,15 +407,4 @@ function generateDocumentTags(
     category: aiCategory,
     summary,
   };
-}
-
-function generateSummary(title: string, description: string): string {
-  // Simple summary generation based on content length
-  const fullText = `${title}. ${description}`.trim();
-
-  if (fullText.length > 200) {
-    return fullText.substring(0, 200) + "...";
-  }
-
-  return fullText || "No summary available";
 }

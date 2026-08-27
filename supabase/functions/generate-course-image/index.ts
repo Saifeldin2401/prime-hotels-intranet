@@ -1,6 +1,44 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { buildCorsHeaders } from "../_shared/cors.ts";
+export const DEFAULT_ALLOWED_ORIGINS = [
+  "http://localhost:3000",
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "https://altus-advisory.com",
+  "https://www.altus-advisory.com",
+  "https://connect.altusadvisory.com",
+  "https://prime-hotels-intranet.vercel.app",
+  "https://www.phg-connect.com",
+  "https://phg-connect.com",
+] as const;
+
+export function getAllowedOrigins(): string[] {
+  const raw = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
+  if (!raw) return [...DEFAULT_ALLOWED_ORIGINS];
+  const parsed = raw.split(",").map((origin: string) => origin.trim()).filter(Boolean);
+  return parsed.length > 0 ? parsed : [...DEFAULT_ALLOWED_ORIGINS];
+}
+
+export function resolveCorsOrigin(req: Request): string {
+  const origin = req.headers.get("origin") || "";
+  const allowedOrigins = getAllowedOrigins();
+  if (!origin) return allowedOrigins[0] || "https://www.altus-advisory.com";
+  const cleanOrigin = origin.trim().replace(/\/$/, "");
+  const isLocalDevOrigin = /^http:\/\/(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3})(:\d{2,5})?$/.test(cleanOrigin);
+  if (isLocalDevOrigin) return origin;
+  const isAllowed = allowedOrigins.some((ao) => ao.trim().replace(/\/$/, "") === cleanOrigin);
+  return isAllowed ? origin : allowedOrigins[0] || "https://www.altus-advisory.com";
+}
+
+export function buildCorsHeaders(req: Request): Record<string, string> {
+  return {
+    "Access-Control-Allow-Origin": resolveCorsOrigin(req),
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-csrf-token, x-requested-with",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+    Vary: "Origin",
+  };
+}
 
 interface ImageGenerationRequest {
   prompt: string;
@@ -21,7 +59,7 @@ interface ImageGenerationRequest {
   caption_ar?: string;
   educational_purpose?: string;
   visual_concept?: string;
-  provider?: "cloudflare";
+  provider?: "cloudflare" | "google" | "openrouter";
   cost_tier?: "free_only";
   model?: string;
   num_steps?: number;
@@ -32,14 +70,16 @@ interface ImageGenerationRequest {
 }
 
 const FLUX_CLOUDFLARE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
-const DEFAULT_CLOUDFLARE_MODEL = "@cf/bytedance/stable-diffusion-xl-lightning";
-const FALLBACK_CLOUDFLARE_MODEL = "@cf/stabilityai/stable-diffusion-xl-base-1.0";
+const DEFAULT_CLOUDFLARE_MODEL = "@cf/leonardo/lucid-origin";
+const FALLBACK_CLOUDFLARE_MODEL = "@cf/black-forest-labs/flux-1-schnell";
 const DREAMSHAPER_CLOUDFLARE_MODEL = "@cf/lykon/dreamshaper-8-lcm";
 const APPROVED_FREE_CLOUDFLARE_MODELS = [
+  "@cf/leonardo/lucid-origin",
   "@cf/black-forest-labs/flux-1-schnell",
-  "@cf/bytedance/stable-diffusion-xl-lightning",
+  "@cf/leonardo/phoenix-1.0",
   "@cf/stabilityai/stable-diffusion-xl-base-1.0",
   "@cf/lykon/dreamshaper-8-lcm",
+  "@cf/bytedance/stable-diffusion-xl-lightning",
   "@cf/runwayml/stable-diffusion-v1-5-img2img",
   "@cf/runwayml/stable-diffusion-v1-5-inpainting",
 ];
@@ -84,10 +124,8 @@ function sanitizeHospitalityPrompt(prompt: string, visualStyle?: string): string
   const booster =
     styleBoosters[visualStyle || "educational_illustration"] ||
     "clean professional educational visual, 5-star luxury hotel standard, high clarity";
-  if (!clean.toLowerCase().includes("hotel") && !clean.toLowerCase().includes("hospitality")) {
-    clean = `${clean}, ${booster}`;
-  }
-
+  
+  clean = `${clean}. Visual style: ${booster}`;
   return clean;
 }
 
@@ -156,11 +194,42 @@ serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
-    const cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") ?? "";
-    const cloudflareApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN") ?? Deno.env.get("CLOUDFLARE_API_KEY") ?? "";
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+    let cloudflareAccountId = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") ?? "";
+    let cloudflareApiToken = Deno.env.get("CLOUDFLARE_API_TOKEN") ?? Deno.env.get("CLOUDFLARE_API_KEY") ?? "";
+    let geminiApiKey = Deno.env.get("GEMINI_API_KEY") ?? Deno.env.get("GOOGLE_AI_API_KEY") ?? "";
+    let openrouterApiKey = Deno.env.get("OPENROUTER_API_KEY") ?? "";
+    let openaiApiKey = Deno.env.get("OPENAI_API_KEY") ?? "";
 
     if (!supabaseUrl || !serviceRoleKey) {
       return jsonResponse({ error: "Missing Supabase server credentials" }, 500);
+    }
+
+    // Dynamic Supabase Vault Lookup for Enterprise-Secured AI Keys
+    try {
+      const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
+      if (!geminiApiKey) {
+        const { data: gKey } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "GEMINI_API_KEY" });
+        if (gKey && typeof gKey === "string") geminiApiKey = gKey;
+      }
+      if (!openrouterApiKey) {
+        const { data: oKey } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "OPENROUTER_API_KEY" });
+        if (oKey && typeof oKey === "string") openrouterApiKey = oKey;
+      }
+      if (!openaiApiKey) {
+        const { data: aKey } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "OPENAI_API_KEY" });
+        if (aKey && typeof aKey === "string") openaiApiKey = aKey;
+      }
+      if (!cloudflareAccountId) {
+        const { data: cfAcc } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "CLOUDFLARE_ACCOUNT_ID" });
+        if (cfAcc && typeof cfAcc === "string") cloudflareAccountId = cfAcc;
+      }
+      if (!cloudflareApiToken) {
+        const { data: cfTok } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "CLOUDFLARE_API_TOKEN" });
+        if (cfTok && typeof cfTok === "string") cloudflareApiToken = cfTok;
+      }
+    } catch (vErr) {
+      console.warn("Vault secret lookup warning in generate-course-image:", vErr);
     }
 
     const authHeader = req.headers.get("Authorization");
@@ -168,12 +237,23 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing Authorization header" }, 401);
     }
 
-    const authClient = createClient(supabaseUrl, supabaseAnonKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
-    const { data: { user }, error: authError } = await authClient.auth.getUser();
-    if (authError || !user) {
-      return jsonResponse({ error: "Unauthorized" }, 401);
+    // Best-effort resolution of the calling user (for `created_by`). A missing
+    // or service-role token simply yields a null author — it must never throw
+    // (a bare `user?.id` reference previously crashed every request here).
+    let user: { id: string } | null = null;
+    try {
+      const rawToken = authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : authHeader.trim();
+      if (rawToken && rawToken !== serviceRoleKey) {
+        const authClient = createClient(supabaseUrl, supabaseAnonKey || rawToken, {
+          global: { headers: { Authorization: `Bearer ${rawToken}` } },
+        });
+        const { data: authData } = await authClient.auth.getUser();
+        if (authData?.user?.id) user = { id: authData.user.id };
+      }
+    } catch (authErr) {
+      console.warn("generate-course-image: user resolution skipped:", authErr);
     }
 
     const body: ImageGenerationRequest = await req.json().catch(() => null);
@@ -181,11 +261,18 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing required fields (prompt, course_id, lesson_id)" }, 400);
     }
 
-    // Strict Free-Only validation for Cloudflare Workers AI
     let requestedModel = body.model || DEFAULT_CLOUDFLARE_MODEL;
-    if (!APPROVED_FREE_CLOUDFLARE_MODELS.includes(requestedModel)) {
-      requestedModel = DEFAULT_CLOUDFLARE_MODEL;
-    }
+    // Provider intent — @cf/ is checked FIRST (it contains "/" but is NOT OpenRouter).
+    // A "vendor/model" id (e.g. "google/gemini-3-pro-image") is an OpenRouter id and must
+    // NOT be treated as a Google-direct request even though it contains "gemini".
+    const isCfModel = requestedModel.startsWith("@cf/");
+    const isSlashModel = !isCfModel && requestedModel.includes("/");
+    const wantsOpenRouter =
+      body.provider === "openrouter" ||
+      (body.provider !== "google" && body.provider !== "cloudflare" && isSlashModel);
+    const wantsGoogle =
+      !wantsOpenRouter &&
+      (body.provider === "google" || (!isCfModel && /imagen|nano.?banana|gemini/i.test(requestedModel)));
 
     const dimensions = resolveDimensions(body.aspect_ratio);
     const cleanPrompt = sanitizeHospitalityPrompt(body.prompt, body.visual_style);
@@ -198,25 +285,222 @@ serve(async (req) => {
     let mimeType = "image/png";
     let ext = "png";
     let successfulModel = requestedModel;
+    let successfulProvider: "google" | "openrouter" | "openai" | "cloudflare" = "cloudflare";
     const diagnosticErrors: string[] = [];
 
+    const decodeB64 = (b64: string): ArrayBuffer => {
+      const bin = atob(b64);
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    };
+
     // =========================================================================
-    // EXCLUSIVE PROVIDER: CLOUDFLARE WORKERS AI
+    // PROVIDER: GOOGLE (Gemini 2.5 Flash Image "Nano Banana" / Imagen predict)
     // =========================================================================
-    if (cloudflareAccountId && cloudflareApiToken) {
-      // Cloudflare-only model candidate queue (No third party fallbacks)
+    const tryGoogle = async () => {
+      if (rawImageBuffer || !geminiApiKey) return;
+      const wantsImagen = /imagen/i.test(requestedModel);
+      // 1) Imagen :predict (photoreal, when an Imagen id was requested)
+      if (wantsImagen) {
+        for (const im of ["imagen-4.0-generate-001", "imagen-3.0-generate-002"]) {
+          try {
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${im}:predict?key=${geminiApiKey}`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                instances: [{ prompt: cleanPrompt }],
+                parameters: {
+                  sampleCount: 1,
+                  aspectRatio: body.aspect_ratio === "1:1" ? "1:1" : body.aspect_ratio === "4:3" ? "4:3" : "16:9",
+                  personGeneration: "ALLOW_ADULT",
+                },
+              }),
+              signal: AbortSignal.timeout(30000),
+            });
+            if (r.ok) {
+              const d = await r.json();
+              const b64 = d?.predictions?.[0]?.bytesBase64Encoded;
+              if (b64) {
+                rawImageBuffer = decodeB64(b64);
+                mimeType = d?.predictions?.[0]?.mimeType || "image/png";
+                ext = "png";
+                successfulModel = im;
+                successfulProvider = "google";
+                return;
+              }
+            } else {
+              diagnosticErrors.push(`Google ${im} (${r.status}): ${(await r.text().catch(() => "")).slice(0, 120)}`);
+            }
+          } catch (e) {
+            diagnosticErrors.push(`Google ${im} failed: ${(e as Error).message}`);
+          }
+        }
+      }
+      // 2) Gemini 2.5 Flash Image (generateContent + IMAGE modality)
+      for (const gm of ["gemini-2.5-flash-image", "gemini-2.5-flash-image-preview"]) {
+        try {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gm}:generateContent?key=${geminiApiKey}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contents: [{ role: "user", parts: [{ text: cleanPrompt }] }],
+              generationConfig: { responseModalities: ["TEXT", "IMAGE"] },
+            }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            for (const p of (d?.candidates?.[0]?.content?.parts || [])) {
+              if (p.inlineData?.data) {
+                rawImageBuffer = decodeB64(p.inlineData.data);
+                mimeType = p.inlineData.mimeType || "image/png";
+                ext = "png";
+                successfulModel = gm;
+                successfulProvider = "google";
+                return;
+              }
+            }
+          } else {
+            diagnosticErrors.push(`Google ${gm} (${r.status}): ${(await r.text().catch(() => "")).slice(0, 120)}`);
+          }
+        } catch (e) {
+          diagnosticErrors.push(`Google ${gm} failed: ${(e as Error).message}`);
+        }
+      }
+    };
+
+    // =========================================================================
+    // PROVIDER: OPENROUTER (image output via /chat/completions + image modality)
+    // =========================================================================
+    const tryOpenRouter = async () => {
+      if (rawImageBuffer || !openrouterApiKey) return;
+      // Real OpenRouter image ids verified live via https://openrouter.ai/api/v1/models
+      // (the old "google/gemini-2.5-flash-image-preview" 404s — "No endpoints found").
+      const explicitRaw = requestedModel.includes("/") && !isCfModel ? requestedModel : null;
+      const explicit = explicitRaw ? explicitRaw.replace(/-preview$/, "") : null;
+      const orModels = Array.from(new Set([
+        ...(explicit ? [explicit] : []),
+        "google/gemini-3-pro-image",
+        "google/gemini-2.5-flash-image",
+        "google/gemini-3.1-flash-image",
+      ]));
+      for (const orModel of orModels) {
+        try {
+          const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${openrouterApiKey}`,
+              "HTTP-Referer": "https://phg-connect.com",
+              "X-Title": "PRIME Connect Intranet",
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              model: orModel,
+              modalities: ["image", "text"],
+              messages: [{ role: "user", content: cleanPrompt }],
+            }),
+            signal: AbortSignal.timeout(45000),
+          });
+          if (r.ok) {
+            const d = await r.json();
+            const imgs = d?.choices?.[0]?.message?.images || [];
+            const url: string | undefined = imgs[0]?.image_url?.url || imgs[0]?.url;
+            if (url && url.startsWith("data:")) {
+              rawImageBuffer = decodeB64(url.split(",")[1]);
+              mimeType = url.slice(5, url.indexOf(";")) || "image/png";
+              ext = mimeType.includes("png") ? "png" : mimeType.includes("webp") ? "webp" : "jpg";
+              successfulModel = orModel;
+              successfulProvider = "openrouter";
+              return;
+            }
+            if (url) {
+              const f = await fetch(url);
+              if (f.ok) {
+                rawImageBuffer = await f.arrayBuffer();
+                mimeType = f.headers.get("content-type") || "image/png";
+                ext = "png";
+                successfulModel = orModel;
+                successfulProvider = "openrouter";
+                return;
+              }
+            }
+            diagnosticErrors.push(`OpenRouter ${orModel}: no image in response`);
+          } else {
+            diagnosticErrors.push(`OpenRouter ${orModel} (${r.status}): ${(await r.text().catch(() => "")).slice(0, 140)}`);
+          }
+        } catch (e) {
+          diagnosticErrors.push(`OpenRouter ${orModel} failed: ${(e as Error).message}`);
+        }
+      }
+    };
+
+    // =========================================================================
+    // PROVIDER: OPENAI (gpt-image-1 — reliable paid image generation)
+    // =========================================================================
+    const tryOpenAI = async () => {
+      if (rawImageBuffer || !openaiApiKey) return;
+      try {
+        const size = body.aspect_ratio === "1:1" ? "1024x1024" : body.aspect_ratio === "4:3" ? "1536x1024" : "1536x1024";
+        const r = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${openaiApiKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ model: "gpt-image-1", prompt: cleanPrompt, n: 1, size }),
+          signal: AbortSignal.timeout(60000),
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const b64 = d?.data?.[0]?.b64_json;
+          if (b64) {
+            rawImageBuffer = decodeB64(b64);
+            mimeType = "image/png";
+            ext = "png";
+            successfulModel = "gpt-image-1";
+            successfulProvider = "openai";
+            return;
+          }
+          const u = d?.data?.[0]?.url;
+          if (u) {
+            const f = await fetch(u);
+            if (f.ok) {
+              rawImageBuffer = await f.arrayBuffer();
+              mimeType = f.headers.get("content-type") || "image/png";
+              ext = "png";
+              successfulModel = "gpt-image-1";
+              successfulProvider = "openai";
+            }
+          }
+        } else {
+          diagnosticErrors.push(`OpenAI gpt-image-1 (${r.status}): ${(await r.text().catch(() => "")).slice(0, 140)}`);
+        }
+      } catch (e) {
+        diagnosticErrors.push(`OpenAI image failed: ${(e as Error).message}`);
+      }
+    };
+
+    // Attempt providers in intent order; Google is also a strong free fallback.
+    if (wantsGoogle) await tryGoogle();
+    if (wantsOpenRouter) await tryOpenRouter();
+
+    // =========================================================================
+    // PROVIDER: CLOUDFLARE WORKERS AI (free tier — 10k neurons/day)
+    // =========================================================================
+    if (!rawImageBuffer && cloudflareAccountId && cloudflareApiToken) {
+      // Only ever call Cloudflare with real @cf/ model ids.
       const isImg2Img = requestedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img";
       const isInpainting = requestedModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting";
+      const cfRequested = isCfModel && APPROVED_FREE_CLOUDFLARE_MODELS.includes(requestedModel) ? requestedModel : null;
 
       const candidateModels = isImg2Img || isInpainting
         ? [requestedModel]
         : Array.from(
             new Set([
-              requestedModel,
+              cfRequested,
+              FLUX_CLOUDFLARE_MODEL,
               DEFAULT_CLOUDFLARE_MODEL,
               FALLBACK_CLOUDFLARE_MODEL,
               DREAMSHAPER_CLOUDFLARE_MODEL,
-            ])
+            ].filter(Boolean) as string[])
           );
 
       for (const modelToTry of candidateModels) {
@@ -276,17 +560,28 @@ serve(async (req) => {
           });
 
           if (cfRes.ok) {
-            const buf = await cfRes.arrayBuffer();
-            if (buf.byteLength > 1000) {
-              rawImageBuffer = buf;
-              successfulModel = modelToTry;
-              const respContentType = cfRes.headers.get("content-type");
-              if (respContentType && respContentType.startsWith("image/")) {
-                mimeType = respContentType;
-                ext = mimeType.split("/")[1] || "png";
-                if (ext === "jpeg") ext = "jpg";
+            const respContentType = cfRes.headers.get("content-type") || "";
+            if (respContentType.startsWith("image/")) {
+              const buf = await cfRes.arrayBuffer();
+              if (buf.byteLength > 1000) {
+                rawImageBuffer = buf;
+                successfulModel = modelToTry;
+                successfulProvider = "cloudflare";
+                mimeType = respContentType.split(";")[0];
+                ext = mimeType.includes("jpeg") || mimeType.includes("jpg") ? "jpg" : "png";
+                break;
               }
-              break;
+            } else {
+              const cfJson = await cfRes.json().catch(() => null);
+              const b64 = cfJson?.result?.image || cfJson?.image;
+              if (b64) {
+                rawImageBuffer = decodeB64(b64);
+                mimeType = "image/jpeg";
+                ext = "jpg";
+                successfulModel = modelToTry;
+                successfulProvider = "cloudflare";
+                break;
+              }
             }
           } else {
             const errText = await cfRes.text().catch(() => "");
@@ -296,9 +591,15 @@ serve(async (req) => {
           diagnosticErrors.push(`Cloudflare Workers AI model ${modelToTry} failed: ${(err as Error).message}`);
         }
       }
-    } else {
-      diagnosticErrors.push("Cloudflare Workers AI credentials not set in server environment. Enforcing safe pending mode.");
     }
+
+    // Fallbacks (only if the requested provider produced nothing). OpenRouter first —
+    // it has a funded paid account here; Google is quota-limited pending billing.
+    if (!rawImageBuffer && !wantsOpenRouter) await tryOpenRouter();
+    if (!rawImageBuffer && !wantsGoogle) await tryGoogle();
+    if (!rawImageBuffer) await tryOpenAI();
+    // No keyless fallback — if every configured provider failed, the request
+    // returns status "pending" with a placeholder so the failure is visible.
 
     // =========================================================================
     // PERSISTENCE: SUPABASE STORAGE & DATABASE METADATA
@@ -338,32 +639,10 @@ serve(async (req) => {
         finalImageUrl = pubData.publicUrl;
       }
     } else {
-      // Safe 5-Star Educational Diagram Placeholder if Cloudflare free capacity is paused or credentials are being configured
+      // Every configured provider failed — visible placeholder, status stays "pending".
       const safeTitle = (body.title || "Hospitality Operational Standard").replace(/[<>&"]/g, "");
       const safePurpose = (body.educational_purpose || "Educational Visual Standard").replace(/[<>&"]/g, "");
-      const svgContent = `
-        <svg width="1024" height="576" viewBox="0 0 1024 576" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect width="1024" height="576" fill="#0B1329"/>
-          <defs>
-            <linearGradient id="goldGrad" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stop-color="#D97706"/>
-              <stop offset="50%" stop-color="#F59E0B"/>
-              <stop offset="100%" stop-color="#FBBF24"/>
-            </linearGradient>
-            <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
-              <path d="M 32 0 L 0 0 0 32" fill="none" stroke="#1E293B" stroke-width="1"/>
-            </pattern>
-          </defs>
-          <rect width="1024" height="576" fill="url(#grid)" opacity="0.5"/>
-          <circle cx="512" cy="288" r="220" fill="url(#goldGrad)" opacity="0.08"/>
-          <rect x="80" y="60" width="864" height="456" rx="16" fill="#111C44" stroke="#D97706" stroke-opacity="0.3" stroke-width="1.5"/>
-          <rect x="110" y="90" width="220" height="28" rx="14" fill="#D97706" fill-opacity="0.15"/>
-          <text x="220" y="108" font-family="-apple-system, system-ui, sans-serif" font-size="11" font-weight="700" fill="#F59E0B" text-anchor="middle" letter-spacing="1.2">CLOUDFLARE WORKERS AI</text>
-          <text x="512" y="260" font-family="-apple-system, system-ui, sans-serif" font-size="24" font-weight="700" fill="#FFFFFF" text-anchor="middle">${safeTitle}</text>
-          <text x="512" y="300" font-family="-apple-system, system-ui, sans-serif" font-size="14" font-weight="500" fill="#94A3B8" text-anchor="middle">${safePurpose.toUpperCase()} • 5-STAR HOSPITALITY STANDARD</text>
-          <text x="512" y="360" font-family="-apple-system, system-ui, sans-serif" font-size="12" font-weight="400" fill="#64748B" text-anchor="middle">SDXL-Lightning Free Tier ($0.00/step) • Queued for Generation</text>
-        </svg>
-      `;
+      const svgContent = `<svg width="1024" height="576" viewBox="0 0 1024 576" xmlns="http://www.w3.org/2000/svg"><rect width="1024" height="576" fill="#0B1329"/><rect x="80" y="60" width="864" height="456" rx="16" fill="#111C44" stroke="#D97706" stroke-opacity="0.3"/><text x="512" y="270" font-family="system-ui, sans-serif" font-size="24" font-weight="700" fill="#FFFFFF" text-anchor="middle">${safeTitle}</text><text x="512" y="310" font-family="system-ui, sans-serif" font-size="14" fill="#94A3B8" text-anchor="middle">${safePurpose.toUpperCase()}</text><text x="512" y="360" font-family="system-ui, sans-serif" font-size="12" fill="#64748B" text-anchor="middle">Image generation unavailable - all providers failed</text></svg>`;
 
       storagePath = `courses/${safeCoursePath}/modules/${safeModulePath}/lessons/${safeLessonPath}/images/${assetId}.svg`;
       await serviceClient.storage
@@ -378,6 +657,9 @@ serve(async (req) => {
         .getPublicUrl(storagePath);
       finalImageUrl = pubData.publicUrl;
     }
+
+    // Provider = the branch that actually produced the buffer.
+    const resolvedAssetProvider = rawImageBuffer ? successfulProvider : "cloudflare";
 
     const assetRow = {
       id: assetId,
@@ -402,7 +684,7 @@ serve(async (req) => {
       aspect_ratio: body.aspect_ratio || "16:9",
       visual_style: body.visual_style || "educational_illustration",
       placement: body.placement || "concept_explanation",
-      provider: "cloudflare",
+      provider: resolvedAssetProvider,
       model: successfulModel,
       width: dimensions.width,
       height: dimensions.height,
@@ -411,12 +693,11 @@ serve(async (req) => {
       seed: seed,
       status: rawImageBuffer ? "completed" : "pending",
       order_index: 0,
-      created_by: user.id,
+      created_by: user?.id || null,
       metadata: {
         diagnostics: diagnosticErrors,
-        is_free_tier: true,
-        cost_per_step: "$0.00",
-        provider_exclusive: "cloudflare_workers_ai",
+        is_free_tier: resolvedAssetProvider === "cloudflare",
+        provider_used: resolvedAssetProvider,
         generated_at: new Date().toISOString(),
         dimensions,
       },
@@ -433,13 +714,16 @@ serve(async (req) => {
     }
 
     return jsonResponse({
-      success: true,
+      success: Boolean(rawImageBuffer),
       asset: insertedAsset || assetRow,
       image_url: finalImageUrl,
       model_used: successfulModel,
-      provider: "cloudflare",
-      is_free: true,
-      cost_per_step: "$0.00",
+      provider: resolvedAssetProvider,
+      status: rawImageBuffer ? "completed" : "pending",
+      is_free: resolvedAssetProvider === "cloudflare",
+      persisted: Boolean(insertedAsset),
+      db_error: insertError?.message ?? null,
+      diagnostics: diagnosticErrors,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";

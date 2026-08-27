@@ -1453,7 +1453,7 @@ export function AICourseEngineStudioModal({
                         />
 
                         {/* Attached Visual Asset / Recraft SVG Preview */}
-                        {Boolean((activeLesson.visualAssets && activeLesson.visualAssets.length > 0) || (activeLesson as any).visualAsset) && (() => {
+                        {Boolean((activeLesson.visualAssets && activeLesson.visualAssets.length > 0) || (activeLesson as any).visualAsset) ? (() => {
                           const asset: any = (activeLesson.visualAssets && activeLesson.visualAssets[0]) || (activeLesson as any).visualAsset
                           const imageUrl = asset?.image_url || asset?.publicUrl
                           const modelDisplay = (asset?.model || asset?.imageModel || 'Recraft Vector').split('/').pop()
@@ -1528,7 +1528,51 @@ export function AICourseEngineStudioModal({
                               <p className="text-[11px] text-muted-foreground italic">{asset.caption || asset.visual_concept || asset.prompt}</p>
                             </div>
                           )
-                        })()}
+                        })() : (
+                          <div className="mb-6 p-3 rounded-xl border border-dashed bg-muted/10 flex items-center justify-between">
+                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <ImageIcon className="w-3.5 h-3.5 text-muted-foreground" />
+                              No visual guide attached to this lesson
+                            </span>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const isGoogle = imageModel.includes('imagen') || imageModel.includes('banana')
+                                const isOpenRouter = imageModel.includes('/')
+                                const provider = isGoogle ? 'gemini' : isOpenRouter ? 'openrouter' : 'cloudflare'
+
+                                const draftAsset: CourseVisualAsset = {
+                                  id: `lesson-visual-${Date.now()}`,
+                                  course_id: generatedBlueprint?.id || 'course-draft',
+                                  module_id: 'mod-draft',
+                                  lesson_id: activeLesson.id,
+                                  title: activeLesson.title,
+                                  alt_text: activeLesson.learningOutcomes?.[0] || activeLesson.title,
+                                  caption: activeLesson.learningOutcomes?.[0] || activeLesson.title,
+                                  prompt: `${activeLesson.title}: 5-star luxury hotel operational standard`,
+                                  visual_style: preferredVisualStyle,
+                                  aspect_ratio: preferredAspectRatio,
+                                  model: imageModel || 'google-imagen-3',
+                                  provider: provider as any,
+                                  educational_purpose: 'concept_illustration',
+                                  visual_concept: activeLesson.title,
+                                  placement: 'procedure',
+                                  status: 'pending',
+                                  order_index: 0,
+                                  image_url: '',
+                                  draft: true,
+                                }
+                                setSelectedAssetForEditor(draftAsset)
+                                setVisualEditorOpen(true)
+                              }}
+                              className="h-6 text-[10px] font-semibold gap-1 text-purple-600 dark:text-purple-300 border-purple-300 dark:border-purple-800"
+                            >
+                              <Sparkles className="w-3 h-3 text-purple-500" />
+                              Generate Visual Guide
+                            </Button>
+                          </div>
+                        )}
 
                         {/* Rendered HTML or Raw Source */}
                         {viewRawHtml ? (
@@ -1686,7 +1730,12 @@ export function AICourseEngineStudioModal({
       {selectedAssetForEditor && (
         <VisualAssetEditorModal
           open={visualEditorOpen}
-          onOpenChange={setVisualEditorOpen}
+          onOpenChange={(isOpen) => {
+            setVisualEditorOpen(isOpen)
+            if (!isOpen && !selectedAssetForEditor?.image_url) {
+              setSelectedAssetForEditor(null)
+            }
+          }}
           asset={selectedAssetForEditor}
           onAssetUpdated={(updatedAsset) => {
             setSelectedAssetForEditor(updatedAsset)
@@ -1695,9 +1744,41 @@ export function AICourseEngineStudioModal({
                 ...generatedBlueprint,
                 modules: generatedBlueprint.modules.map((mod) => ({
                   ...mod,
-                  lessons: mod.lessons.map((les) =>
-                    les.visualAsset?.id === updatedAsset.id ? { ...les, visualAsset: updatedAsset } : les
-                  ),
+                  lessons: mod.lessons.map((les) => {
+                    const isTarget =
+                      les.id === updatedAsset.lesson_id ||
+                      (les as any).visualAsset?.id === updatedAsset.id ||
+                      les.visualAssets?.some((v) => v.id === updatedAsset.id)
+                    if (!isTarget) return les
+                    return {
+                      ...les,
+                      visualAsset: updatedAsset,
+                      visualAssets: [updatedAsset],
+                    }
+                  }),
+                })),
+              })
+            }
+          }}
+          onAssetDeleted={(deletedId) => {
+            setSelectedAssetForEditor(null)
+            setVisualEditorOpen(false)
+            if (generatedBlueprint) {
+              setGeneratedBlueprint({
+                ...generatedBlueprint,
+                modules: generatedBlueprint.modules.map((mod) => ({
+                  ...mod,
+                  lessons: mod.lessons.map((les) => {
+                    const isTarget =
+                      (les as any).visualAsset?.id === deletedId ||
+                      les.visualAssets?.some((v) => v.id === deletedId)
+                    if (!isTarget) return les
+                    return {
+                      ...les,
+                      visualAsset: undefined,
+                      visualAssets: [],
+                    }
+                  }),
                 })),
               })
             }

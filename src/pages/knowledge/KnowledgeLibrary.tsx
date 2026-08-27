@@ -518,13 +518,34 @@ export default function KnowledgeLibrary() {
                 onClose={() => setIsAiStudioOpen(false)}
                 defaultContentType={(activeType as any) || 'sop'}
                 onApplyArticle={(article) => {
+                    let formattedContent = article.content_html
+                    if (article.visual_asset?.image_url && !formattedContent.includes(article.visual_asset.image_url)) {
+                        const imgUrl = article.visual_asset.image_url
+                        let svgOrImg = `<img src="${imgUrl}" alt="${article.title}" class="max-h-80 w-full object-contain rounded-lg my-4" />`
+                        if (imgUrl.startsWith('<svg') || imgUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
+                            svgOrImg = imgUrl
+                        } else if (imgUrl.startsWith('data:image/svg+xml')) {
+                            try {
+                                const commaIdx = imgUrl.indexOf(',')
+                                if (commaIdx !== -1) {
+                                    const header = imgUrl.slice(0, commaIdx)
+                                    const body = imgUrl.slice(commaIdx + 1)
+                                    const decoded = header.includes('base64') ? decodeURIComponent(escape(atob(body))) : decodeURIComponent(body)
+                                    svgOrImg = decoded
+                                }
+                            } catch {}
+                        }
+
+                        formattedContent = `<div class="ai-schematic-card my-6 p-4 rounded-xl border bg-slate-950 text-center text-slate-300">\n${svgOrImg}\n<p class="text-xs text-slate-400 mt-2 italic">${article.visual_asset.caption || 'Operational SOP Vector Schematic'}</p>\n</div>\n\n${formattedContent}`
+                    }
+
                     navigate('/knowledge/create', {
                         state: {
                             prefillArticle: {
                                 title: article.title,
                                 description: article.description,
                                 summary: article.summary,
-                                content: article.content_html,
+                                content: formattedContent,
                                 content_type: article.content_type,
                                 checklist_items: article.checklist_items || [],
                                 faq_items: article.faq_items || [],

@@ -7,6 +7,9 @@
 
 import type { KnowledgeContentType, KnowledgeVisibility } from '@/types/knowledge'
 import type { ModelProvider, ModelCostTier } from '../types'
+import type { CourseVisualAsset } from '@/types/aiCourseEngine'
+
+export type KnowledgeDepthLevel = 'concise' | 'standard' | 'forbes_5star' | 'regulatory_compliance'
 
 export interface KnowledgeArticleGenerationConfig {
   title: string
@@ -15,12 +18,23 @@ export interface KnowledgeArticleGenerationConfig {
   propertyId?: string
   targetAudience?: string
   visibilityScope?: KnowledgeVisibility
+  depthLevel?: KnowledgeDepthLevel
   sourceDocumentText?: string
+  sourceFileName?: string
   keyRequirements?: string[]
   languagePreference?: 'en' | 'ar' | 'bilingual'
   preferredModel?: string
+  enableVectorSchematic?: boolean
+  imageModel?: string
+  visualStyle?: string
+  aspectRatio?: '16:9' | '4:3' | '1:1'
+  customVisualPrompt?: string
   includeChecklist?: boolean
   includeFaq?: boolean
+  includeCriticalControlPoints?: boolean
+  includeLastFramework?: boolean
+  includeEmergencyProtocols?: boolean
+  enableComplianceShield?: boolean
 }
 
 export interface GeneratedChecklistItem {
@@ -29,14 +43,18 @@ export interface GeneratedChecklistItem {
   text_ar: string
   category?: string
   required: boolean
+  standardBenchmark?: string
+  responsibleRole?: string
 }
 
 export interface GeneratedFAQItem {
   id: string
+  category?: string
   question: string
   question_ar: string
   answer: string
   answer_ar: string
+  escalationPoint?: string
 }
 
 export interface GeneratedKnowledgeArticle {
@@ -54,8 +72,13 @@ export interface GeneratedKnowledgeArticle {
   suggested_tags: string[]
   checklist_items?: GeneratedChecklistItem[]
   faq_items?: GeneratedFAQItem[]
+  critical_control_points?: string[]
+  forbes_benchmarks?: string[]
+  contingency_protocols?: string[]
+  visual_asset?: CourseVisualAsset
   compliance_score: number
   compliance_notes: string[]
+  models_used: string[]
   model_used: string
   provider_used: ModelProvider
   cost_tier: ModelCostTier
@@ -64,12 +87,13 @@ export interface GeneratedKnowledgeArticle {
 
 export interface KnowledgePipelineProgressEvent {
   pipelineRunId: string
-  phase: 'discovery' | 'synthesis' | 'translation' | 'qa_compliance' | 'completed'
+  phase: 'discovery' | 'synthesis' | 'visuals' | 'translation' | 'qa_compliance' | 'completed'
   agentName: string
   agentNameAr: string
   progressPercentage: number
   detail: string
   detailAr: string
+  modelUsed?: string
   timestamp: string
 }
 

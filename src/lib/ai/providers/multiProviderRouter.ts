@@ -11,6 +11,7 @@
 
 import { supabase } from '@/lib/supabase'
 import { huggingFaceProvider } from './huggingFaceProvider'
+import { isImageModel, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 
 export type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 'general'
 
@@ -58,7 +59,18 @@ export class MultiProviderRouter {
    * Determine prioritized provider candidate chain based on task type
    */
   public getCandidateChain(task: AITaskCategory = 'general', preferredModel?: string): ProviderCandidate[] {
-    if (preferredModel && preferredModel !== 'auto') {
+    // Central registry decides modality — an image model is NEVER prepended to
+    // a text cascade. This is the structural guarantee against the
+    // "openrouter (recraft-vector) failed: Empty response" class of bug.
+    const preferredIsImage = Boolean(preferredModel && preferredModel !== 'auto' && isImageModel(preferredModel))
+    if (preferredIsImage) {
+      console.warn(
+        `[MultiProviderRouter] Ignoring image model "${preferredModel}" for text task "${task}" — ` +
+          `image models are handled by the image pipeline.`,
+      )
+    }
+
+    if (preferredModel && preferredModel !== 'auto' && !preferredIsImage) {
       return [
         { tier: 1, provider: this.inferProvider(preferredModel), model: preferredModel, supportsJson: true },
         ...this.getDefaultCascade(task).filter(c => c.model !== preferredModel),
@@ -69,11 +81,10 @@ export class MultiProviderRouter {
   }
 
   private inferProvider(modelId: string): 'gemini' | 'groq' | 'openrouter' | 'huggingface' | 'cloudflare' {
-    if (modelId.startsWith('gemini')) return 'gemini'
-    if (modelId.startsWith('groq') || modelId === 'allam-2-7b') return 'groq'
-    if (modelId.startsWith('huggingface') || modelId.startsWith('Qwen/')) return 'huggingface'
-    if (modelId.startsWith('@cf/')) return 'cloudflare'
-    return 'openrouter'
+    const p = resolveProvider(modelId)
+    // The text router has no dedicated 'recraft' path; recraft ids are image
+    // models and are filtered out before this point.
+    return p === 'recraft' ? 'openrouter' : p
   }
 
   private getDefaultCascade(task: AITaskCategory): ProviderCandidate[] {
@@ -86,7 +97,7 @@ export class MultiProviderRouter {
           { tier: 2, provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-r1', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'openai/gpt-4o', supportsJson: true },
-          { tier: 3, provider: 'groq', model: 'qwen/qwen3.6-27b', supportsJson: true },
+          { tier: 3, provider: 'groq', model: 'llama-3.3-70b-versatile', supportsJson: true },
           { tier: 4, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
           { tier: 5, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
@@ -96,15 +107,14 @@ export class MultiProviderRouter {
           { tier: 1, provider: 'groq', model: 'allam-2-7b', supportsJson: true },
           { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet', supportsJson: true },
-          { tier: 2, provider: 'openrouter', model: 'qwen/qwen-2.5-72b-instruct', supportsJson: true },
           { tier: 3, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
           { tier: 4, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
         ]
 
       case 'fast':
         return [
-          { tier: 1, provider: 'gemini', model: 'gemini-3.1-flash-lite', supportsJson: true },
-          { tier: 1, provider: 'groq', model: 'qwen/qwen3.6-27b', supportsJson: true },
+          { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash-lite', supportsJson: true },
+          { tier: 1, provider: 'groq', model: 'llama-3.1-8b-instant', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'deepseek/deepseek-chat', supportsJson: true },
           { tier: 3, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
@@ -117,7 +127,7 @@ export class MultiProviderRouter {
           { tier: 1, provider: 'gemini', model: 'gemini-2.5-flash', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'anthropic/claude-3.5-sonnet', supportsJson: true },
           { tier: 2, provider: 'openrouter', model: 'openai/gpt-4o-mini', supportsJson: true },
-          { tier: 3, provider: 'groq', model: 'qwen/qwen3.6-27b', supportsJson: true },
+          { tier: 3, provider: 'groq', model: 'llama-3.3-70b-versatile', supportsJson: true },
           { tier: 4, provider: 'huggingface', model: 'Qwen/Qwen2.5-72B-Instruct', supportsJson: false },
           { tier: 5, provider: 'cloudflare', model: '@cf/meta/llama-3.1-8b-instruct', supportsJson: true },
         ]
@@ -140,6 +150,12 @@ export class MultiProviderRouter {
     for (let i = 0; i < candidates.length; i++) {
       const candidate = candidates[i]
       const candidateStartTime = Date.now()
+
+      // Defense-in-depth: never dispatch an image model to a chat endpoint.
+      if (isImageModel(candidate.model)) {
+        console.warn(`[MultiProviderRouter] Skipping image model "${candidate.model}" in text cascade.`)
+        continue
+      }
 
       try {
         let resultText = ''
@@ -168,6 +184,7 @@ export class MultiProviderRouter {
           }>('process-ai-request', {
             body: {
               model: candidate.model,
+              provider: candidate.provider,
               prompt,
               systemPrompt: options.systemPrompt,
               task: options.task || 'chat',
@@ -217,12 +234,32 @@ export class MultiProviderRouter {
         lastError = err instanceof Error ? err : new Error(String(err))
         const nextCandidate = candidates[i + 1]
 
-        console.warn(
-          `[MultiProviderRouter] ${candidate.provider} (${candidate.model}) failed: ${lastError.message}.` +
-            (nextCandidate
-              ? ` Cascading to Tier ${nextCandidate.tier} ${nextCandidate.provider} (${nextCandidate.model})...`
-              : ' No more fallback candidates.')
+        console.error(
+          `%c[MultiProviderRouter] ❌ ${candidate.provider} (${candidate.model}) Failed:%c`,
+          'color: #ef4444; font-weight: bold;',
+          '',
+          {
+            error: lastError.message,
+            provider: candidate.provider,
+            model: candidate.model,
+            tier: candidate.tier,
+            latencyMs: Date.now() - candidateStartTime,
+          }
         )
+
+        if (nextCandidate) {
+          console.warn(
+            `%c[MultiProviderRouter] 🔄 Cascading to Tier ${nextCandidate.tier} ${nextCandidate.provider} (${nextCandidate.model})...%c`,
+            'color: #f59e0b; font-weight: bold; background: rgba(245, 158, 11, 0.1); padding: 2px 4px; border-radius: 4px;',
+            ''
+          )
+        } else {
+          console.error(
+            `%c[MultiProviderRouter] 🛑 Exhausted all ${candidates.length} candidates in cascade chain.%c`,
+            'color: #ef4444; font-weight: bold;',
+            ''
+          )
+        }
 
         if (options.onFailover && nextCandidate) {
           options.onFailover(

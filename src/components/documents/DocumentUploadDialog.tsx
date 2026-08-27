@@ -31,6 +31,8 @@ import { documentSchema } from '@/lib/validationSchemas'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
 import { useTranslation } from "react-i18next"
+import { Sparkles, Wand2 } from 'lucide-react'
+import { generateSmartDocumentMetadata, generateSmartMetadataHeuristic } from '@/lib/ai/smartMetadataService'
 
 interface DocumentUploadDialogProps {
   open: boolean
@@ -72,6 +74,44 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
   const [selectedDepartment, setSelectedDepartment] = useState<string>('')
   const [requiresAcknowledgment, setRequiresAcknowledgment] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const [isGenerating, setIsGenerating] = useState(false)
+
+  const handleFileChange = (selectedFile: File | null) => {
+    setFile(selectedFile)
+    if (selectedFile) {
+      const smart = generateSmartMetadataHeuristic({
+        fileName: selectedFile.name,
+      })
+      if (!title || title.trim() === '') {
+        setTitle(smart.title)
+      }
+      if (!description || description.trim() === '') {
+        setDescription(smart.description)
+      }
+    }
+  }
+
+  const handleSmartAutoFill = async () => {
+    if (!title && !file?.name) return
+    setIsGenerating(true)
+    try {
+      const result = await generateSmartDocumentMetadata({
+        title: title || file?.name,
+        description,
+        fileName: file?.name,
+      })
+      setTitle(result.title)
+      setDescription(result.description)
+      toast({
+        title: 'Metadata Organized',
+        description: 'Cleaned title and generated professional executive summary.',
+      })
+    } catch (err) {
+      console.error('Auto-fill error:', err)
+    } finally {
+      setIsGenerating(false)
+    }
+  }
 
   const propertyOptions = useMemo(() => {
     return availableProperties || []
@@ -119,13 +159,15 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
       // resolveDocumentUrl, which already accept a bare path.
       const fileUrl = filePath
 
-      // Create document record
+      // Create document record - starts strictly as Draft / Internal (Excluded from AI Knowledge Base)
       const documentData: {
         title: string
         description: string | null
         file_url: string
         visibility: DocumentVisibility
         status: DocumentStatus
+        knowledge_base_status: string
+        is_active_kb_version: boolean
         requires_acknowledgment: boolean
         created_by: string
         current_version: number
@@ -141,6 +183,8 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
         file_url: fileUrl,
         visibility,
         status: 'DRAFT' as DocumentStatus,
+        knowledge_base_status: 'excluded',
+        is_active_kb_version: false,
         requires_acknowledgment: requiresAcknowledgment,
         created_by: profile.id,
         current_version: 1,
@@ -259,12 +303,38 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Smart AI Auto-Fill Bar */}
+          <div className="flex items-center justify-between p-3 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-hotel-navy/5 border border-purple-200 dark:border-purple-900/40">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                <Sparkles className="w-3.5 h-3.5" />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-foreground">Smart Auto-Organize</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Auto-formats titles and generates executive descriptions on file drop
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleSmartAutoFill}
+              disabled={isGenerating || (!title && !file)}
+              className="text-xs font-bold gap-1.5 h-7 border-purple-300 text-purple-700 dark:text-purple-300 hover:bg-purple-50 dark:hover:bg-purple-950/50"
+            >
+              <Wand2 className="w-3 h-3" />
+              {isGenerating ? 'Polishing...' : 'AI Auto-Fill'}
+            </Button>
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="file">File</Label>
             <Input
               id="file"
               type="file"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => handleFileChange(e.target.files?.[0] || null)}
               required
               disabled={uploading}
             />
@@ -276,11 +346,27 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="title">{t('common:title')}</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="title">{t('common:title')}</Label>
+              {title && (title.includes('-') || title.includes('_')) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const smart = generateSmartMetadataHeuristic({ title })
+                    setTitle(smart.title)
+                  }}
+                  className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium"
+                >
+                  <Wand2 className="w-3 h-3" />
+                  Clean filename
+                </button>
+              )}
+            </div>
             <Input
               id="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              placeholder="e.g. Lost and Found & Guest Valuables Policy"
               required
               disabled={uploading}
             />
@@ -292,6 +378,7 @@ export function DocumentUploadDialog({ open, onOpenChange }: DocumentUploadDialo
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter document summary or use AI Auto-Fill..."
               disabled={uploading}
               rows={3}
             />

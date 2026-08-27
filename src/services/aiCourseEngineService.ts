@@ -4,6 +4,7 @@
  */
 
 import { aiCourseOrchestrator } from '@/lib/ai/agents/orchestrator'
+import { imageAgent } from '@/lib/ai/agents/imageAgent'
 import {
   analyzeLessonVisualOpportunities,
   auditCourseQuality,
@@ -16,6 +17,9 @@ import {
   validateQuizQuestions,
 } from '@/lib/ai/courseEngine'
 import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
+import { isPersistedAssetId, resolveProvider } from '@/lib/ai/agents/modelRegistry'
+import { getPipelineTelemetry } from '@/lib/ai/observability'
+import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { supabase } from '@/lib/supabase'
 import {
   generateAndLinkCheckpointQuestions,
@@ -45,7 +49,8 @@ export const aiCourseEngineService = {
    */
   async executeCoursePipeline(
     rawConfig: FullCourseGenerationConfig,
-    onProgress?: (stage: number, stageName: string, detail: string) => void
+    onProgress?: (stage: number, stageName: string, detail: string) => void,
+    opts?: { signal?: AbortSignal }
   ): Promise<{
     blueprint: CourseBlueprint
     qaReport: CourseQAQualityReport
@@ -54,6 +59,10 @@ export const aiCourseEngineService = {
   }> {
     const startTime = Date.now()
     const config = harmonizeCourseConfig(rawConfig)
+
+    // Load admin platform config (routing mode, disabled models, free-only, …)
+    // and apply it to the model registry before any agent runs.
+    await aiPlatformConfigService.load().catch(() => undefined)
 
     // Map stage numbers from orchestrator progress events to the 6 studio UI cards
     const phaseToStageMap: Record<string, { stage: number; name: string }> = {
@@ -69,6 +78,7 @@ export const aiCourseEngineService = {
 
     const orchestrated = await aiCourseOrchestrator.orchestrate(config, {
       preferredModel: config?.aiControls?.preferredModel,
+      signal: opts?.signal,
       skipAudio: config.audioConfig?.enableAudio !== true,
       skipImages: config.imageConfig?.enableAIImages === false,
       onProgress: (event) => {
@@ -84,6 +94,10 @@ export const aiCourseEngineService = {
 
     const durationMs = Date.now() - startTime
 
+    // Real telemetry from this run (models actually used, cost, fallbacks).
+    const telemetry = getPipelineTelemetry(orchestrated.pipelineRunId)
+    const modelsUsed = telemetry ? Object.keys(telemetry.byModel) : [config?.aiControls?.preferredModel || 'auto']
+
     // Record generation job in database
     let jobId: string | undefined
     try {
@@ -95,8 +109,21 @@ export const aiCourseEngineService = {
           config: config as any,
           blueprint: blueprint as any,
           qa_report: qaReport as any,
-          models_used: [config?.aiControls?.preferredModel || 'auto', 'recraft/recraft-vector:free', 'cloudflare/@cf/bytedance/stable-diffusion-xl-lightning:free'],
+          models_used: modelsUsed,
           duration_ms: durationMs,
+          ...(telemetry
+            ? {
+                metadata: {
+                  ai_requests: telemetry.requests,
+                  ai_failures: telemetry.failures,
+                  ai_fallbacks: telemetry.totalFallbacks,
+                  free_requests: telemetry.freeRequests,
+                  paid_requests: telemetry.paidRequests,
+                  estimated_cost_usd: Number(telemetry.estimatedCostUSD.toFixed(4)),
+                  routing_mode: aiPlatformConfigService.activeRoutingMode,
+                },
+              }
+            : {}),
         })
         .select('id')
         .single()
@@ -127,8 +154,16 @@ export const aiCourseEngineService = {
     model?: string
     visualStyle?: string
   }): Promise<CourseVisualAsset | null> {
+    const selectedModel = params.model || DEFAULT_CLOUDFLARE_IMAGE_MODEL
     try {
-      const selectedModel = params.model || DEFAULT_CLOUDFLARE_IMAGE_MODEL
+      const resolvedProvider = resolveProvider(selectedModel)
+      const inferredProvider =
+        resolvedProvider === 'gemini'
+          ? 'google'
+          : resolvedProvider === 'openrouter' || resolvedProvider === 'recraft'
+            ? 'openrouter'
+            : 'cloudflare'
+
       const { data, error } = await supabase.functions.invoke<{
         success: boolean
         asset: CourseVisualAsset
@@ -151,7 +186,7 @@ export const aiCourseEngineService = {
           caption_ar: params.opportunity.caption_ar,
           educational_purpose: params.opportunity.purpose,
           visual_concept: params.opportunity.visualConcept,
-          provider: params.provider || (selectedModel.includes('recraft') ? 'recraft' : 'cloudflare'),
+          provider: params.provider || inferredProvider,
           cost_tier: 'free_only',
           model: selectedModel,
           num_steps: params.opportunity.numSteps || (selectedModel === DEFAULT_CLOUDFLARE_IMAGE_MODEL ? 6 : 20),
@@ -171,16 +206,70 @@ export const aiCourseEngineService = {
             // Non-JSON response
           }
         }
-        console.warn('Edge Function generate-course-image notice:', errDetail)
+        console.warn('%c[CourseEngine] ⚠️ generate-course-image failed, initiating multi-tier imageAgent fallback...%c', 'color: #f59e0b; font-weight: bold;', '', {
+          errorDetail: errDetail,
+          model: selectedModel,
+          provider: inferredProvider,
+        })
         cloudflareProvider.recordUsage(false)
+
+        try {
+          const agentFallback = await imageAgent.process({
+            lesson: {
+              id: params.lessonId,
+              title: params.opportunity.title,
+              description: params.opportunity.optimizedPrompt || params.opportunity.visualConcept || params.opportunity.title,
+              learningOutcomes: [params.opportunity.educationalObjective || params.opportunity.title],
+            } as any,
+            courseTitle: params.opportunity.title,
+            moduleTitle: params.opportunity.title,
+            imageModel: selectedModel,
+            preferredStyle: params.visualStyle,
+            preferredAspectRatio: params.opportunity.aspectRatio,
+          })
+
+          if (agentFallback.success && agentFallback.data) {
+            console.info('%c[CourseEngine] ✅ imageAgent fallback succeeded!%c', 'color: #10b981; font-weight: bold;', '', agentFallback.data)
+            return agentFallback.data
+          }
+        } catch (agentErr) {
+          console.error('%c[CourseEngine] ❌ imageAgent fallback also failed:%c', 'color: #ef4444;', '', agentErr)
+        }
+
         return null
       }
 
       cloudflareProvider.recordUsage(true, selectedModel === DEFAULT_CLOUDFLARE_IMAGE_MODEL ? 6 : 20)
       return data.asset
     } catch (err) {
-      console.warn('generateLessonVisualAsset execution notice:', err)
+      console.warn('%c[CourseEngine] ⚠️ generateLessonVisualAsset Exception, attempting imageAgent fallback...%c', 'color: #f59e0b; font-weight: bold;', '', {
+        error: err,
+        model: params.model,
+      })
       cloudflareProvider.recordUsage(false)
+
+      try {
+        const agentFallback = await imageAgent.process({
+          lesson: {
+            id: params.lessonId,
+            title: params.opportunity.title,
+            description: params.opportunity.optimizedPrompt || params.opportunity.visualConcept || params.opportunity.title,
+            learningOutcomes: [params.opportunity.educationalObjective || params.opportunity.title],
+          } as any,
+          courseTitle: params.opportunity.title,
+          moduleTitle: params.opportunity.title,
+          imageModel: selectedModel,
+          preferredStyle: params.visualStyle,
+          preferredAspectRatio: params.opportunity.aspectRatio,
+        })
+
+        if (agentFallback.success && agentFallback.data) {
+          return agentFallback.data
+        }
+      } catch (fallbackErr) {
+        console.error('%c[CourseEngine] ❌ Fallback exception:%c', 'color: #ef4444;', '', fallbackErr)
+      }
+
       return null
     }
   },
@@ -566,6 +655,18 @@ export const aiCourseEngineService = {
     assetId: string,
     updates: Partial<CourseVisualAsset>
   ): Promise<CourseVisualAsset> {
+    // Draft assets live only in client state — never issue a DB UPDATE with a
+    // non-UUID id (that caused the 404/"Not found" save failures). The caller
+    // merges the returned object back into local state.
+    if (!isPersistedAssetId(assetId)) {
+      return {
+        ...(updates as CourseVisualAsset),
+        id: assetId,
+        draft: true,
+        updated_at: new Date().toISOString(),
+      }
+    }
+
     const { data, error } = await supabase
       .from('course_visual_assets')
       .update({
@@ -593,6 +694,9 @@ export const aiCourseEngineService = {
    * Deletes a visual asset from database.
    */
   async deleteVisualAsset(assetId: string): Promise<void> {
+    // Draft assets have no DB row — deletion is a client-state operation only.
+    if (!isPersistedAssetId(assetId)) return
+
     const { error } = await supabase
       .from('course_visual_assets')
       .delete()

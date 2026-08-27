@@ -14,6 +14,8 @@
  */
 
 import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
+import { getPipelineTelemetry } from '@/lib/ai/observability'
+import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import type {
   CourseBlueprint,
   CourseQAQualityReport,
@@ -47,7 +49,18 @@ export interface OrchestratorOptions {
   skipImages?: boolean
   skipAudio?: boolean
   maxConcurrency?: number
+  /** Abort the pipeline between phases / lesson batches when this fires. */
+  signal?: AbortSignal
   onProgress?: PipelineEventListener
+}
+
+export class CourseGenerationCancelledError extends Error {
+  readonly phase: string
+  constructor(phase: string) {
+    super(`Course generation cancelled during "${phase}"`)
+    this.name = 'CourseGenerationCancelledError'
+    this.phase = phase
+  }
 }
 
 export interface OrchestratedCourseOutput {
@@ -117,6 +130,21 @@ export class AICourseOrchestrator {
 
     const onProgress = options.onProgress
     let totalEstimatedCostUSD = 0
+
+    const checkCancelled = (phase: string) => {
+      if (options.signal?.aborted) {
+        emit({
+          phase: 'final_scoring',
+          status: 'failed',
+          progressPercentage: 100,
+          title: 'Generation cancelled by user',
+          titleAr: 'تم إلغاء التوليد من قبل المستخدم',
+          detail: `Stopped during ${phase}.`,
+          detailAr: `تم الإيقاف أثناء ${phase}.`,
+        })
+        throw new CourseGenerationCancelledError(phase)
+      }
+    }
 
     const emit = (event: Partial<PipelineProgressEvent>) => {
       if (onProgress) {
@@ -197,6 +225,8 @@ export class AICourseOrchestrator {
       modelUsed: researchResult?.modelUsed,
     })
 
+    checkCancelled("curriculum architecture")
+
     // ========================================================================
     // PHASE 2: CURRICULUM ARCHITECTURE & MODULE DECOMPOSITION
     // ========================================================================
@@ -234,6 +264,8 @@ export class AICourseOrchestrator {
       detailAr: `تم إنشاء ${blueprint.modules.length} وحدات بإجمالي ${blueprint.modules.reduce((s, m) => s + m.lessons.length, 0)} درس`,
       modelUsed: curriculumResult.modelUsed,
     })
+
+    checkCancelled("content synthesis")
 
     // ========================================================================
     // PHASE 3: CONTENT ENGINE (Lessons, SOPs, Dialogue Scripts & Drills)
@@ -350,6 +382,8 @@ export class AICourseOrchestrator {
       3 // Process 3 lessons concurrently
     )
 
+    checkCancelled("assessment generation")
+
     // ========================================================================
     // PHASE 4: ASSESSMENT ENGINE (Psychometric Quizzes & Knowledge Checks)
     // ========================================================================
@@ -408,16 +442,22 @@ export class AICourseOrchestrator {
       3 // Generate 3 module quizzes concurrently
     )
 
+    checkCancelled("multimedia generation")
+
     // ========================================================================
     // PHASE 5: MULTIMEDIA ENGINE (Visuals & Audio Shift Briefings)
     // ========================================================================
     if (!options.skipImages && config.imageConfig?.enableAIImages !== false) {
+      const platformCfg = aiPlatformConfigService.getCached()
       const userMaxImages = typeof config.imageConfig?.maxImagesPerCourse === 'number'
         ? config.imageConfig.maxImagesPerCourse
         : 6
       const userImageModel = config.imageConfig?.imageModel || 'recraft-vector'
       const userStyle = config.imageConfig?.preferredStyle || 'technical_diagram'
       const userAspectRatio = config.imageConfig?.preferredAspectRatio || '16:9'
+      // Spend-cap enforcement: once this course's estimated AI spend exceeds the
+      // per-course cap, force free-only for the rest of the run.
+      const runCost = () => getPipelineTelemetry(pipelineRunId)?.estimatedCostUSD ?? 0
 
       const allLessons = blueprint.modules.flatMap((m) => m.lessons.map((l) => ({ mod: m, les: l })))
       const maxVisuals = Math.min(userMaxImages, allLessons.length)
@@ -440,15 +480,21 @@ export class AICourseOrchestrator {
         targetLessons,
         async ({ mod, les }) => {
           try {
+            const overCap = runCost() >= platformCfg.perCourseUsdCap
+            const premiumAllowed =
+              !platformCfg.freeOnlyMode &&
+              platformCfg.allowPremiumImages &&
+              config.imageConfig?.costTier !== 'free_only' &&
+              !overCap
             const imgRes = await imageAgent.process(
               {
                 lesson: les,
                 courseTitle: blueprint.title,
                 moduleTitle: mod.title,
-                imageModel: userImageModel,
+                imageModel: overCap || platformCfg.freeOnlyMode ? 'auto' : userImageModel,
                 preferredStyle: userStyle,
                 preferredAspectRatio: userAspectRatio,
-                costTierPreference: config.imageConfig?.costTier === 'free_only' ? 'free_first' : 'premium',
+                costTierPreference: premiumAllowed ? 'premium' : 'free_first',
               },
               { pipelineRunId, phase: 'multimedia_generation', silent: true }
             )
@@ -496,6 +542,8 @@ export class AICourseOrchestrator {
       )
       blueprint.visualAssets = visualAssets
     }
+
+    checkCancelled("quality assurance")
 
     // ========================================================================
     // PHASE 4: QUALITY ASSURANCE AUDITING

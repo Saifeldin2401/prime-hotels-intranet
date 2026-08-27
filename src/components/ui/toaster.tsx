@@ -29,11 +29,11 @@ export function Toaster() {
             position={position}
             dir={isRTL ? 'rtl' : 'ltr'}
             style={{ zIndex: 99999 }}
-            expand={false}
+            expand={true}
             richColors
             closeButton
             duration={4000}
-            gap={12}
+            gap={10}
             visibleToasts={3}
             toastOptions={{
                 classNames: {

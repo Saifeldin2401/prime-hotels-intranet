@@ -403,7 +403,13 @@ export interface CourseVisualAsset {
   steps?: number
   guidance?: number
   seed?: number
-  status: 'pending' | 'generating' | 'completed' | 'failed' | 'disabled'
+  status: 'pending' | 'generating' | 'completed' | 'failed' | 'disabled' | 'draft'
+  /**
+   * True while the asset lives only in client/in-memory state and has NOT been
+   * persisted to `course_visual_assets`. Draft assets have a non-UUID `id`
+   * (e.g. `img-1699…`) and must never be targeted by DB UPDATE/DELETE calls.
+   */
+  draft?: boolean
   order_index: number
   created_at?: string
   updated_at?: string

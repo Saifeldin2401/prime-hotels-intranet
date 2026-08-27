@@ -2,7 +2,9 @@ import { DocumentAnalyticsCard } from '@/components/documents/DocumentAnalyticsC
 import { DocumentComments } from '@/components/documents/DocumentComments'
 import { DocumentConfidentialityBadge } from '@/components/documents/DocumentConfidentialityBadge'
 import { DocumentExpiryBanner } from '@/components/documents/DocumentExpiryBanner'
+import { DocumentKnowledgeLifecycleCard } from '@/components/documents/DocumentKnowledgeLifecycleCard'
 import { DocumentMetadataForm, type DocumentMetadata } from '@/components/documents/DocumentMetadataForm'
+import { generateSmartMetadataHeuristic, generateSmartDocumentMetadata } from '@/lib/ai/smartMetadataService'
 import { DocumentVersionComparison } from '@/components/documents/DocumentVersionComparison'
 import { DocumentVersionUpload } from '@/components/documents/DocumentVersionUpload'
 import { DocumentViewer } from '@/components/documents/DocumentViewer'
@@ -29,6 +31,7 @@ import {
     useUpdateDocument
 } from '@/hooks/useDocuments'
 import { usePermissions } from '@/hooks/usePermissions'
+import { useProfiles } from '@/hooks/useUsers'
 import { openUrlInNewTab, resolveDocumentUrl, resolveDocumentVersionUrl } from '@/lib/secureFileAccess'
 import { cn, formatFileSize } from '@/lib/utils'
 import { format } from 'date-fns'
@@ -55,7 +58,7 @@ import {
     Tag,
     User
 } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams } from 'react-router-dom'
 // import { AIDocumentAssistant } from '@/components/documents/AIDocumentAssistant'
@@ -98,6 +101,22 @@ export default function DocumentDetail() {
   const recordDownload = useRecordDocumentDownload()
   const addComment = useAddDocumentComment()
   const updateDocument = useUpdateDocument()
+  const { data: dbProfiles = [] } = useProfiles({ limit: 200 })
+
+  const ownersList = useMemo(() => {
+    if (dbProfiles && dbProfiles.length > 0) {
+      return dbProfiles.map((p) => ({
+        id: p.id,
+        name: `${p.full_name || p.email}${p.job_title ? ` — ${p.job_title}` : ''}${p.id === profile?.id ? ' (You)' : ''}`,
+        avatar: p.avatar_url,
+      }))
+    }
+    const list: Array<{ id: string; name: string; avatar?: string }> = []
+    if (profile?.id) {
+      list.push({ id: profile.id, name: `${profile.full_name || profile.email || 'You'} (Current User)` })
+    }
+    return list
+  }, [dbProfiles, profile])
 
   // Record view on mount
   useEffect(() => {
@@ -188,27 +207,69 @@ export default function DocumentDetail() {
     })
 
     setEditMetadataOpen(false)
-    toast({
-      title: 'Updated',
-      description: 'Document metadata has been updated.',
-    })
-  }, [document?.id, updateDocument, toast])
+  }, [document?.id, updateDocument])
 
   useEffect(() => {
     if (!document || !editMetadataOpen) return
 
-    setMetadataDraft({
+    // Immediately run smart heuristic formatting on open
+    const smart = generateSmartMetadataHeuristic({
       title: document.title,
       description: document.description || '',
-      documentNumber: document.document_number || undefined,
-      expiryDate: document.expires_at ? new Date(document.expires_at) : undefined,
-      confidentiality: document.confidentiality_level || 'internal',
-      ownerId: document.owner_id || '',
-      folderId: document.folder_id || null,
-      tags: document.tags?.map((tag) => tag.name) || [],
-      customFields: [],
     })
-  }, [document, editMetadataOpen])
+
+    // Find matching folder if available
+    let matchedFolderId = document.folder_id || null
+    if (!matchedFolderId && smart.suggestedDepartment && folders.length > 0) {
+      const found = folders.find(
+        (f) =>
+          f.name.toLowerCase().includes(smart.suggestedDepartment!.toLowerCase()) ||
+          smart.suggestedDepartment!.toLowerCase().includes(f.name.toLowerCase())
+      )
+      if (found) {
+        matchedFolderId = found.id
+      }
+    }
+
+    const needsTitleClean = document.title.includes('-') || document.title.includes('_') || document.title.endsWith('.pdf')
+    const isGenericDesc = !document.description || document.description.toLowerCase().includes('create a structured') || document.description.length < 15
+
+    const initialDraft: DocumentMetadata = {
+      title: needsTitleClean ? smart.title : document.title,
+      description: isGenericDesc ? smart.description : document.description,
+      documentNumber: document.document_number || smart.documentNumber,
+      expiryDate: document.expires_at ? new Date(document.expires_at) : smart.expiryDate,
+      confidentiality: document.confidentiality_level || smart.confidentiality,
+      ownerId: document.owner_id || '',
+      folderId: matchedFolderId,
+      tags: document.tags && document.tags.length > 0 ? document.tags.map((tag) => tag.name) : smart.tags,
+      customFields: [],
+    }
+
+    setMetadataDraft(initialDraft)
+
+    // Background free AI model deep refinement (zero interference)
+    generateSmartDocumentMetadata({
+      title: initialDraft.title,
+      description: initialDraft.description,
+    }).then((aiResult) => {
+      if (aiResult) {
+        setMetadataDraft((prev) => {
+          if (!prev) return null
+          return {
+            ...prev,
+            title: aiResult.title || prev.title,
+            description: isGenericDesc ? (aiResult.description || prev.description) : prev.description,
+            documentNumber: aiResult.documentNumber || prev.documentNumber,
+            confidentiality: aiResult.confidentiality || prev.confidentiality,
+            tags: aiResult.tags?.length ? aiResult.tags : prev.tags,
+          }
+        })
+      }
+    }).catch((err) => {
+      console.warn('Background AI polish fallback:', err)
+    })
+  }, [document, editMetadataOpen, folders])
 
   const copyShareLink = useCallback(() => {
     const link = `${window.location.origin}/documents/${id}`
@@ -293,6 +354,9 @@ export default function DocumentDetail() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Left Column - Main Content */}
         <div className="lg:col-span-2 space-y-6">
+          {/* AI Knowledge Base Lifecycle & Publication Governance Card */}
+          <DocumentKnowledgeLifecycleCard document={document as any} />
+
           {/* Document Header Card */}
           <Card>
             <CardHeader>
@@ -604,6 +668,30 @@ export default function DocumentDetail() {
                 <Badge variant="outline">{t(`visibility.${document.visibility}`)}</Badge>
               </div>
 
+              {document.document_number && (
+                <div>
+                  <h4 className="text-sm font-medium mb-1">Document Code</h4>
+                  <Badge variant="secondary" className="font-mono text-xs">
+                    {document.document_number}
+                  </Badge>
+                </div>
+              )}
+
+              <div>
+                <h4 className="text-sm font-medium mb-1">Lead Responsible / Owner</h4>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <User className="w-3.5 h-3.5 text-foreground" />
+                  <span className="font-medium text-foreground">
+                    {(document as any).owner?.full_name || (document as any).author?.full_name || 'Unassigned'}
+                  </span>
+                  {((document as any).owner?.job_title || (document as any).author?.job_title) && (
+                    <span className="text-xs text-muted-foreground">
+                      ({(document as any).owner?.job_title || (document as any).author?.job_title})
+                    </span>
+                  )}
+                </div>
+              </div>
+
               {document.requires_acknowledgment && (
                 <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-start gap-2">
@@ -623,15 +711,25 @@ export default function DocumentDetail() {
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">File Size</span>
-                  <span>{formatFileSize(document.file_size || 0)}</span>
+                  <span className="font-medium">
+                    {document.file_size && document.file_size > 0 
+                      ? formatFileSize(document.file_size) 
+                      : (document.content ? `${Math.max(1, Math.round(document.content.length / 1024))} KB (Text SOP)` : 'System Document')}
+                  </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Version</span>
-                  <span>v{document.current_version}</span>
+                  <span className="font-medium">v{document.current_version || versions.length || 1}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Downloads</span>
-                  <span>{document.download_count || 0}</span>
+                  <span className="text-muted-foreground">Engagement</span>
+                  <span className="font-medium">{document.download_count || 0} downloads · {document.view_count || 0} views</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Audit / Expiry</span>
+                  <span className="font-medium">
+                    {document.expires_at ? format(new Date(document.expires_at), 'PP') : 'Annual Review (Pending)'}
+                  </span>
                 </div>
                 {document.estimated_read_time && (
                   <div className="flex justify-between">
@@ -722,6 +820,7 @@ export default function DocumentDetail() {
                 metadata={metadataDraft}
                 onChange={setMetadataDraft}
                 folders={folders}
+                owners={ownersList}
               />
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setEditMetadataOpen(false)}>

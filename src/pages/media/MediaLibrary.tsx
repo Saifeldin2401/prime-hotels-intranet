@@ -64,11 +64,14 @@ import {
   Trash2,
   Upload,
   Video,
+  Wand2,
+  Sparkles,
   X,
 } from 'lucide-react';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { toast } from 'sonner';
+import { AIMediaGeneratorModal } from '@/components/media/AIMediaGeneratorModal';
 
 // Media type configuration for UI - Only videos and images
 const MEDIA_TYPE_CONFIG: Record<'video' | 'image', { icon: React.ElementType; color: string; bg: string }> = {
@@ -466,9 +469,207 @@ function DeleteConfirmDialog({
   );
 }
 
+// Folder taxonomy item interface
+interface MediaFolderItem {
+  id: string;
+  name: string;
+  name_ar: string;
+  icon: React.ElementType;
+  color?: string;
+  parentId?: string;
+  subfolders?: MediaFolderItem[];
+  filterFn?: (asset: MediaAsset) => boolean;
+}
+
+// Built-in 5-Star Hotel Folder Hierarchy
+const FOLDER_TAXONOMY: MediaFolderItem[] = [
+  {
+    id: 'all',
+    name: 'All Media Assets',
+    name_ar: 'جميع أصول الوسائط',
+    icon: FolderOpen,
+    color: 'text-primary',
+  },
+  {
+    id: 'ai_studio',
+    name: 'AI Studio & Synthesized Media',
+    name_ar: 'استوديو الذكاء الاصطناعي',
+    icon: Wand2,
+    color: 'text-purple-500',
+    subfolders: [
+      {
+        id: 'ai_course_visuals',
+        parentId: 'ai_studio',
+        name: 'Course Engine Visuals',
+        name_ar: 'مرئيات محرك الدورات',
+        icon: Sparkles,
+        color: 'text-purple-400',
+        filterFn: (a) =>
+          Boolean((a.metadata as any)?.course_id) ||
+          a.tags?.some((t) => t.toLowerCase().includes('course visual')),
+      },
+      {
+        id: 'ai_sop_schematics',
+        parentId: 'ai_studio',
+        name: 'SOP Diagrams & Schematics',
+        name_ar: 'مخططات وإجراءات SOP',
+        icon: LayoutList,
+        color: 'text-emerald-500',
+        filterFn: (a) =>
+          a.mime_type === 'image/svg+xml' ||
+          (a.metadata as any)?.model === 'recraft-vector' ||
+          a.tags?.some((t) => t.toLowerCase().includes('vector') || t.toLowerCase().includes('schematic') || t.toLowerCase().includes('diagram')),
+      },
+      {
+        id: 'ai_photography',
+        parentId: 'ai_studio',
+        name: 'Photorealistic Hospitality',
+        name_ar: 'التصوير الفندقي الفاخر',
+        icon: ImageIcon,
+        color: 'text-amber-500',
+        filterFn: (a) =>
+          a.tags?.some((t) => t.toLowerCase().includes('photorealistic') || t.toLowerCase().includes('5-star')) ||
+          String((a.metadata as any)?.model || '').includes('imagen') ||
+          String((a.metadata as any)?.model || '').includes('flux'),
+      },
+      {
+        id: 'ai_knowledge',
+        parentId: 'ai_studio',
+        name: 'Knowledge Base Visuals',
+        name_ar: 'مرئيات قاعدة المعرفة',
+        icon: FileText,
+        color: 'text-blue-500',
+        filterFn: (a) =>
+          a.category === 'knowledgebase' &&
+          (a.tags?.some((t) => t.toLowerCase().includes('ai')) || (a.metadata as any)?.is_ai_generated),
+      },
+    ],
+  },
+  {
+    id: 'hotel_ops',
+    name: 'Hotel Operations & SOPs',
+    name_ar: 'عمليات الفندق والإجراءات',
+    icon: HardDrive,
+    color: 'text-amber-600',
+    subfolders: [
+      {
+        id: 'ops_front_office',
+        parentId: 'hotel_ops',
+        name: 'Front Office & Concierge',
+        name_ar: 'الاستقبال والاستعلامات',
+        icon: FolderOpen,
+        color: 'text-amber-500',
+        filterFn: (a) =>
+          a.title.toLowerCase().includes('front') ||
+          a.title.toLowerCase().includes('reception') ||
+          a.title.toLowerCase().includes('concierge') ||
+          a.tags?.some((t) => t.toLowerCase().includes('front desk') || t.toLowerCase().includes('reception')),
+      },
+      {
+        id: 'ops_housekeeping',
+        parentId: 'hotel_ops',
+        name: 'Housekeeping & Turndown',
+        name_ar: 'التدبير الفندقي وترتيب الغرف',
+        icon: FolderOpen,
+        color: 'text-emerald-500',
+        filterFn: (a) =>
+          a.title.toLowerCase().includes('turndown') ||
+          a.title.toLowerCase().includes('housekeeping') ||
+          a.tags?.some((t) => t.toLowerCase().includes('housekeeping') || t.toLowerCase().includes('turndown')),
+      },
+      {
+        id: 'ops_fnb_haccp',
+        parentId: 'hotel_ops',
+        name: 'F&B & HACCP Hygiene',
+        name_ar: 'الأغذية وسلامة الغذاء HACCP',
+        icon: FolderOpen,
+        color: 'text-rose-500',
+        filterFn: (a) =>
+          a.category === 'compliance' ||
+          a.title.toLowerCase().includes('haccp') ||
+          a.title.toLowerCase().includes('culinary') ||
+          a.tags?.some((t) => t.toLowerCase().includes('haccp') || t.toLowerCase().includes('food safety')),
+      },
+      {
+        id: 'ops_facilities',
+        parentId: 'hotel_ops',
+        name: 'Facilities & Engineering',
+        name_ar: 'المرافق والسلامة الهندسية',
+        icon: FolderOpen,
+        color: 'text-blue-500',
+        filterFn: (a) =>
+          a.title.toLowerCase().includes('engineering') ||
+          a.title.toLowerCase().includes('facilities') ||
+          a.tags?.some((t) => t.toLowerCase().includes('engineering') || t.toLowerCase().includes('safety')),
+      },
+    ],
+  },
+  {
+    id: 'training_learning',
+    name: 'Training & Onboarding',
+    name_ar: 'التدريب والتأهيل',
+    icon: FileVideo,
+    color: 'text-emerald-600',
+    subfolders: [
+      {
+        id: 'train_onboarding',
+        parentId: 'training_learning',
+        name: 'New Hire Onboarding',
+        name_ar: 'تأهيل الموظفين الجدد',
+        icon: FolderOpen,
+        color: 'text-emerald-500',
+        filterFn: (a) => a.category === 'onboarding' || a.tags?.some((t) => t.toLowerCase().includes('onboarding')),
+      },
+      {
+        id: 'train_compliance',
+        parentId: 'training_learning',
+        name: 'Compliance & Safety',
+        name_ar: 'الامتثال والمعايير',
+        icon: FolderOpen,
+        color: 'text-amber-500',
+        filterFn: (a) => a.category === 'compliance' || a.tags?.some((t) => t.toLowerCase().includes('compliance')),
+      },
+    ],
+  },
+  {
+    id: 'brand_marketing',
+    name: 'Brand & Property Assets',
+    name_ar: 'الهوية والأصول الفندقية',
+    icon: ImageIcon,
+    color: 'text-blue-600',
+    subfolders: [
+      {
+        id: 'brand_suites',
+        parentId: 'brand_marketing',
+        name: 'Suites & Amenities',
+        name_ar: 'الأجنحة والمرافق الفاخرة',
+        icon: FolderOpen,
+        color: 'text-blue-500',
+        filterFn: (a) =>
+          a.title.toLowerCase().includes('suite') ||
+          a.title.toLowerCase().includes('amenities') ||
+          a.tags?.some((t) => t.toLowerCase().includes('suite') || t.toLowerCase().includes('vip')),
+      },
+      {
+        id: 'brand_dining',
+        parentId: 'brand_marketing',
+        name: 'Dining & Events',
+        name_ar: 'المطاعم والفعاليات',
+        icon: FolderOpen,
+        color: 'text-purple-500',
+        filterFn: (a) =>
+          a.category === 'marketing' ||
+          a.title.toLowerCase().includes('dining') ||
+          a.tags?.some((t) => t.toLowerCase().includes('event') || t.toLowerCase().includes('banquet')),
+      },
+    ],
+  },
+];
+
 // Main Component
 export default function MediaLibrary() {
-  const { t } = useTranslation('media');
+  const { t, i18n } = useTranslation('media');
+  const isRTL = i18n.dir() === 'rtl';
   const { user } = useAuth();
   const { data: properties } = useProperties();
   const primaryProperty = properties?.[0];
@@ -492,32 +693,111 @@ export default function MediaLibrary() {
   const [editingAsset, setEditingAsset] = useState<MediaAsset | null>(null);
   const [deletingAsset, setDeletingAsset] = useState<MediaAsset | null>(null);
   const [activeTab, setActiveTab] = useState('all');
+  const [activeFolderId, setActiveFolderId] = useState('all');
+  const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({
+    ai_studio: true,
+    hotel_ops: true,
+    training_learning: true,
+    brand_marketing: true,
+  });
+  const [aiModalOpen, setAiModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Stats - only videos and images
-  const stats = useMemo(() => {
-    return {
-      total: assets.filter(a => a.media_type === 'video' || a.media_type === 'image').length,
-      totalSize: assets
-        .filter(a => a.media_type === 'video' || a.media_type === 'image')
-        .reduce((sum, a) => sum + a.file_size_bytes, 0),
-      byType: {
-        video: assets.filter(a => a.media_type === 'video').length,
-        image: assets.filter(a => a.media_type === 'image').length,
-      },
-    };
-  }, [assets]);
+  // Toggle folder expansion
+  const toggleFolder = (folderId: string) => {
+    setExpandedFolders((prev) => ({ ...prev, [folderId]: !prev[folderId] }));
+  };
 
-  // Filtered assets
+  // Helper to count assets in a folder
+  const getFolderAssetCount = useCallback(
+    (folder: MediaFolderItem): number => {
+      if (folder.id === 'all') return assets.length;
+
+      if (folder.subfolders && folder.subfolders.length > 0) {
+        return assets.filter((a) =>
+          folder.subfolders!.some((sub) => (sub.filterFn ? sub.filterFn(a) : false))
+        ).length;
+      }
+
+      if (folder.filterFn) {
+        return assets.filter(folder.filterFn).length;
+      }
+
+      return 0;
+    },
+    [assets]
+  );
+
+  // Active folder object and breadcrumbs
+  const { activeFolder, activeParentFolder } = useMemo(() => {
+    if (activeFolderId === 'all') {
+      return { activeFolder: FOLDER_TAXONOMY[0], activeParentFolder: null };
+    }
+
+    for (const parent of FOLDER_TAXONOMY) {
+      if (parent.id === activeFolderId) {
+        return { activeFolder: parent, activeParentFolder: null };
+      }
+      if (parent.subfolders) {
+        const sub = parent.subfolders.find((s) => s.id === activeFolderId);
+        if (sub) {
+          return { activeFolder: sub, activeParentFolder: parent };
+        }
+      }
+    }
+
+    return { activeFolder: FOLDER_TAXONOMY[0], activeParentFolder: null };
+  }, [activeFolderId]);
+
+  // Filtered assets by folder, tab, and search
   const filteredAssets = useMemo(() => {
     let result = assets;
 
-    // Tab filter
-    if (activeTab !== 'all') {
+    // 1. Folder filter
+    if (activeFolderId !== 'all') {
+      if (activeFolder?.subfolders && activeFolder.subfolders.length > 0) {
+        result = result.filter((a) =>
+          activeFolder.subfolders!.some((sub) => (sub.filterFn ? sub.filterFn(a) : false))
+        );
+      } else if (activeFolder?.filterFn) {
+        result = result.filter(activeFolder.filterFn);
+      }
+    }
+
+    // 2. Tab filter
+    if (activeTab === 'ai') {
+      result = result.filter(
+        (a) =>
+          a.tags?.some((tag) => tag.toLowerCase().includes('ai') || tag.toLowerCase().includes('synthetic')) ||
+          (a.metadata as any)?.is_ai_generated ||
+          (a.metadata as any)?.model
+      );
+    } else if (activeTab !== 'all') {
       result = result.filter((a) => a.media_type === activeTab);
     }
 
     return result;
-  }, [assets, activeTab]);
+  }, [assets, activeFolderId, activeFolder, activeTab]);
+
+  // Stats - only videos and images
+  const stats = useMemo(() => {
+    return {
+      total: assets.filter((a) => a.media_type === 'video' || a.media_type === 'image').length,
+      totalSize: assets
+        .filter((a) => a.media_type === 'video' || a.media_type === 'image')
+        .reduce((sum, a) => sum + a.file_size_bytes, 0),
+      byType: {
+        video: assets.filter((a) => a.media_type === 'video').length,
+        image: assets.filter((a) => a.media_type === 'image').length,
+      },
+      aiCount: assets.filter(
+        (a) =>
+          a.tags?.some((tag) => tag.toLowerCase().includes('ai') || tag.toLowerCase().includes('synthetic')) ||
+          (a.metadata as any)?.is_ai_generated ||
+          (a.metadata as any)?.model
+      ).length,
+    };
+  }, [assets]);
 
   // Handlers
   const handleFileSelect = useCallback(
@@ -528,12 +808,14 @@ export default function MediaLibrary() {
       for (const file of files) {
         await uploadFile(file, {
           title: file.name.replace(/\.[^/.]+$/, ''),
-          category: activeTab !== 'all' && activeTab !== 'collections' ? (activeTab as MediaCategory) : 'general',
+          category:
+            activeTab !== 'all' && activeTab !== 'collections' && activeTab !== 'ai'
+              ? (activeTab as MediaCategory)
+              : 'general',
           property_id: primaryProperty?.id,
         });
       }
 
-      // Reset input
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -577,6 +859,14 @@ export default function MediaLibrary() {
             </div>
 
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setAiModalOpen(true)}
+                className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2 shadow-sm"
+              >
+                <Wand2 className="w-4 h-4" />
+                {t('actions.generate_ai', 'Generate with AI')}
+              </Button>
+
               <input
                 ref={fileInputRef}
                 type="file"
@@ -585,7 +875,7 @@ export default function MediaLibrary() {
                 accept="video/*,image/*"
                 onChange={handleFileSelect}
               />
-              <Button onClick={() => fileInputRef.current?.click()} disabled={uploading}>
+              <Button variant="outline" onClick={() => fileInputRef.current?.click()} disabled={uploading}>
                 {uploading ? (
                   <RefreshCw className="w-4 h-4 me-2 animate-spin" />
                 ) : (
@@ -596,7 +886,7 @@ export default function MediaLibrary() {
             </div>
           </div>
 
-          {/* Stats */}
+          {/* Stats Bar */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
@@ -606,6 +896,17 @@ export default function MediaLibrary() {
                 <div>
                   <p className="text-2xl font-bold">{stats.total}</p>
                   <p className="text-xs text-muted-foreground">{t('stats.totalAssets')}</p>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4 flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/40 flex items-center justify-center">
+                  <Wand2 className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{stats.aiCount}</p>
+                  <p className="text-xs text-muted-foreground">{t('folders.aiStudio', 'AI Synthesized')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -631,121 +932,284 @@ export default function MediaLibrary() {
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-emerald-500" />
-                </div>
-                <div>
-                  <p className="text-2xl font-bold">{formatFileSize(stats.totalSize)}</p>
-                  <p className="text-xs text-muted-foreground">{t('stats.totalStorage')}</p>
-                </div>
-              </CardContent>
-            </Card>
           </div>
         </div>
       </div>
 
-      {/* Content */}
+      {/* Main Content Area with Sub-Folder Navigation */}
       <div className="container mx-auto px-4 py-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <TabsList>
-              <TabsTrigger value="all">{t('tabs.all')}</TabsTrigger>
-              <TabsTrigger value="video">{t('tabs.video')}</TabsTrigger>
-              <TabsTrigger value="image">{t('tabs.image')}</TabsTrigger>
-            </TabsList>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Folder Hierarchy Tree */}
+          <div className="lg:col-span-3 bg-card border rounded-2xl p-4 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b pb-3">
+              <h3 className="font-bold text-sm flex items-center gap-2">
+                <FolderOpen className="w-4 h-4 text-primary" />
+                {t('folders.title', 'Folders & Collections')}
+              </h3>
+              <Badge variant="secondary" className="text-[10px]">
+                {assets.length}
+              </Badge>
+            </div>
 
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  placeholder={t('search.placeholder')}
-                  value={filters.searchQuery || ''}
-                  onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
-                  className="ps-9 w-[200px]"
-                />
-              </div>
+            <div className="space-y-1">
+              {FOLDER_TAXONOMY.map((folder) => {
+                const FolderIcon = folder.icon;
+                const isSelected = activeFolderId === folder.id;
+                const isParentSelected = activeParentFolder?.id === folder.id;
+                const hasSubfolders = folder.subfolders && folder.subfolders.length > 0;
+                const isExpanded = expandedFolders[folder.id] ?? false;
+                const count = getFolderAssetCount(folder);
 
-              <div className="flex items-center border rounded-md">
-                <Button
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => setViewMode('grid')}
-                  aria-label={t('accessibility.grid_view', 'Switch to grid view')}
-                >
-                  <Grid3X3 className="w-4 h-4" />
-                </Button>
-                <Button
-                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                  size="icon"
-                  className="h-9 w-9"
-                  onClick={() => setViewMode('list')}
-                  aria-label={t('accessibility.list_view', 'Switch to list view')}
-                >
-                  <LayoutList className="w-4 h-4" />
-                </Button>
-              </div>
+                return (
+                  <div key={folder.id} className="space-y-0.5">
+                    <div
+                      onClick={() => setActiveFolderId(folder.id)}
+                      className={cn(
+                        'group flex items-center justify-between px-3 py-2 rounded-xl text-xs font-semibold cursor-pointer transition-all',
+                        isSelected
+                          ? 'bg-primary text-primary-foreground shadow-sm'
+                          : isParentSelected
+                          ? 'bg-accent/80 text-foreground font-bold'
+                          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
+                      )}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {hasSubfolders ? (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFolder(folder.id);
+                            }}
+                            className="p-0.5 hover:bg-black/10 dark:hover:bg-white/10 rounded"
+                          >
+                            <ChevronDown
+                              className={cn(
+                                'w-3.5 h-3.5 transition-transform',
+                                !isExpanded && (isRTL ? 'rotate-90' : '-rotate-90')
+                              )}
+                            />
+                          </button>
+                        ) : (
+                          <div className="w-3.5" />
+                        )}
+                        <FolderIcon className={cn('w-4 h-4 shrink-0', isSelected ? 'text-inherit' : folder.color)} />
+                        <span className="truncate">{isRTL ? folder.name_ar : folder.name}</span>
+                      </div>
+                      <span
+                        className={cn(
+                          'text-[10px] px-1.5 py-0.5 rounded-full',
+                          isSelected
+                            ? 'bg-primary-foreground/20 text-primary-foreground font-bold'
+                            : 'bg-muted text-muted-foreground'
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </div>
+
+                    {/* Subfolders list */}
+                    {hasSubfolders && isExpanded && (
+                      <div className="ps-6 pe-1 py-0.5 space-y-0.5 border-s-2 border-border/40 ms-4">
+                        {folder.subfolders!.map((sub) => {
+                          const SubIcon = sub.icon;
+                          const isSubSelected = activeFolderId === sub.id;
+                          const subCount = getFolderAssetCount(sub);
+
+                          return (
+                            <div
+                              key={sub.id}
+                              onClick={() => setActiveFolderId(sub.id)}
+                              className={cn(
+                                'flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-all',
+                                isSubSelected
+                                  ? 'bg-purple-600 text-white font-bold shadow-sm'
+                                  : 'text-muted-foreground hover:bg-accent/40 hover:text-foreground'
+                              )}
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <SubIcon className={cn('w-3.5 h-3.5 shrink-0', isSubSelected ? 'text-white' : sub.color)} />
+                                <span className="truncate">{isRTL ? sub.name_ar : sub.name}</span>
+                              </div>
+                              <span
+                                className={cn(
+                                  'text-[9px] px-1.5 py-0.2 rounded-full',
+                                  isSubSelected
+                                    ? 'bg-white/20 text-white font-bold'
+                                    : 'bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {subCount}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          <TabsContent value={activeTab} className="mt-0">
-            {loading ? (
-              <div className="flex items-center justify-center py-20">
-                <RefreshCw className="w-8 h-8 animate-spin text-primary" />
-              </div>
-            ) : filteredAssets.length === 0 ? (
-              <div className="text-center py-20">
-                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                  <FolderOpen className="w-8 h-8 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-medium">{t('empty.title')}</h3>
-                <p className="text-muted-foreground mt-1">
-                  {filters.searchQuery
-                    ? t('empty.searchDescription')
-                    : t('empty.description')}
-                </p>
-                {!filters.searchQuery && (
-                  <Button className="mt-4" onClick={() => fileInputRef.current?.click()}>
-                    <Upload className="w-4 h-4 me-2" />
-                    {t('actions.upload')}
-                  </Button>
+          {/* Right Assets Gallery */}
+          <div className="lg:col-span-9 space-y-4">
+            {/* Breadcrumb Navigation & Controls */}
+            <div className="bg-card border rounded-2xl p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2 text-xs flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setActiveFolderId('all')}
+                  className={cn(
+                    'flex items-center gap-1 hover:underline',
+                    activeFolderId === 'all' ? 'font-bold text-foreground' : 'text-muted-foreground'
+                  )}
+                >
+                  <FolderOpen className="w-3.5 h-3.5" />
+                  <span>{t('folders.allFolders', 'All Assets')}</span>
+                </button>
+
+                {activeParentFolder && (
+                  <>
+                    <span className="text-muted-foreground">/</span>
+                    <button
+                      type="button"
+                      onClick={() => setActiveFolderId(activeParentFolder.id)}
+                      className="text-muted-foreground hover:underline"
+                    >
+                      {isRTL ? activeParentFolder.name_ar : activeParentFolder.name}
+                    </button>
+                  </>
                 )}
+
+                {activeFolder && activeFolder.id !== 'all' && (
+                  <>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="font-bold text-primary">
+                      {isRTL ? activeFolder.name_ar : activeFolder.name}
+                    </span>
+                  </>
+                )}
+
+                <Badge variant="outline" className="ms-2 text-[10px]">
+                  {filteredAssets.length} assets
+                </Badge>
               </div>
-            ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {filteredAssets.map((asset) => (
-                  <MediaCard
-                    key={asset.id}
-                    asset={asset}
-                    isSelected={selectedAsset?.id === asset.id}
-                    onSelect={setSelectedAsset}
-                    onEdit={setEditingAsset}
-                    onDelete={setDeletingAsset}
-                    onCopyUrl={() => {}}
-                    viewMode={viewMode}
+
+              {/* View Switcher & Search */}
+              <div className="flex items-center gap-2">
+                <div className="relative">
+                  <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={t('search.placeholder')}
+                    value={filters.searchQuery || ''}
+                    onChange={(e) => setFilters({ ...filters, searchQuery: e.target.value })}
+                    className="ps-8 w-[180px] h-9 text-xs"
                   />
-                ))}
+                </div>
+
+                <div className="flex items-center border rounded-md">
+                  <Button
+                    variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setViewMode('grid')}
+                    aria-label={t('accessibility.grid_view', 'Switch to grid view')}
+                  >
+                    <Grid3X3 className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={() => setViewMode('list')}
+                    aria-label={t('accessibility.list_view', 'Switch to list view')}
+                  >
+                    <LayoutList className="w-4 h-4" />
+                  </Button>
+                </div>
               </div>
-            ) : (
-              <div className="space-y-2">
-                {filteredAssets.map((asset) => (
-                  <MediaCard
-                    key={asset.id}
-                    asset={asset}
-                    isSelected={selectedAsset?.id === asset.id}
-                    onSelect={setSelectedAsset}
-                    onEdit={setEditingAsset}
-                    onDelete={setDeletingAsset}
-                    onCopyUrl={() => {}}
-                    viewMode={viewMode}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+            </div>
+
+            {/* Tabs for quick media type switching */}
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="mb-4">
+                <TabsTrigger value="all">{t('tabs.all')}</TabsTrigger>
+                <TabsTrigger value="image">{t('tabs.image')}</TabsTrigger>
+                <TabsTrigger value="video">{t('tabs.video')}</TabsTrigger>
+                <TabsTrigger value="ai" className="gap-1 text-purple-600 dark:text-purple-400">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  {t('tabs.ai_visuals', 'AI Visuals')}
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value={activeTab} className="mt-0">
+                {loading ? (
+                  <div className="flex items-center justify-center py-24">
+                    <RefreshCw className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : filteredAssets.length === 0 ? (
+                  <div className="text-center py-20 bg-card border rounded-2xl">
+                    <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                      <FolderOpen className="w-8 h-8 text-muted-foreground" />
+                    </div>
+                    <h3 className="text-lg font-medium">{t('empty.title')}</h3>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      {filters.searchQuery
+                        ? t('empty.searchDescription')
+                        : t('empty.description')}
+                    </p>
+                    {!filters.searchQuery && (
+                      <div className="flex items-center justify-center gap-2 mt-4">
+                        <Button
+                          onClick={() => setAiModalOpen(true)}
+                          className="bg-purple-600 hover:bg-purple-700 text-white font-bold gap-2 text-xs"
+                        >
+                          <Wand2 className="w-4 h-4" />
+                          {t('actions.generate_ai', 'Generate with AI')}
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="text-xs">
+                          <Upload className="w-4 h-4 me-2" />
+                          {t('actions.upload')}
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                ) : viewMode === 'grid' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {filteredAssets.map((asset) => (
+                      <MediaCard
+                        key={asset.id}
+                        asset={asset}
+                        isSelected={selectedAsset?.id === asset.id}
+                        onSelect={setSelectedAsset}
+                        onEdit={setEditingAsset}
+                        onDelete={setDeletingAsset}
+                        onCopyUrl={() => {}}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {filteredAssets.map((asset) => (
+                      <MediaCard
+                        key={asset.id}
+                        asset={asset}
+                        isSelected={selectedAsset?.id === asset.id}
+                        onSelect={setSelectedAsset}
+                        onEdit={setEditingAsset}
+                        onDelete={setDeletingAsset}
+                        onCopyUrl={() => {}}
+                        viewMode={viewMode}
+                      />
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       </div>
 
       {/* Dialogs */}
@@ -762,6 +1226,15 @@ export default function MediaLibrary() {
         onClose={() => setDeletingAsset(null)}
         onConfirm={handleDeleteConfirm}
       />
+
+      <AIMediaGeneratorModal
+        open={aiModalOpen}
+        onOpenChange={setAiModalOpen}
+        onAssetSaved={() => fetchAssets()}
+        onUploadFile={uploadFile}
+      />
     </div>
   );
 }
+
+

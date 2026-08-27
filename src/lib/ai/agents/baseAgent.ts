@@ -7,6 +7,7 @@
 
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { extractJsonFromText } from '@/lib/ai/client'
+import { classifyError, logAIRequest } from '@/lib/ai/observability'
 import { modelRegistry } from './modelRegistry'
 import type {
   AgentExecutionResult,
@@ -90,6 +91,7 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       const modelMeta = modelRegistry.getModelMetadata(modelId)
       const provider = (modelMeta?.provider || 'openrouter') as ModelProvider
       const costTier = (modelMeta?.costTier || 'free') as ModelCostTier
+      const attemptStart = Date.now()
 
       try {
         const response = await multiProviderRouter.execute<T>(prompt, {
@@ -128,6 +130,22 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
 
         const latencyMs = Date.now() - startTime
 
+        logAIRequest({
+          pipelineRunId,
+          agentRole: this.role,
+          taskType: this.mapRoleToTaskCategory(this.role),
+          provider: response.providerUsed,
+          modelUsed: response.modelUsed,
+          startedAt: attemptStart,
+          durationMs: Date.now() - attemptStart,
+          promptChars: prompt.length + (systemPrompt?.length ?? 0),
+          completionChars: (response.rawText || '').length,
+          success: true,
+          retryCount: i,
+          fallbackCount: response.failoverCount ?? 0,
+          metadata: { requestedModel: modelId },
+        })
+
         if (!options.silent) {
           this.emitEvent(options.onProgress, {
             pipelineRunId,
@@ -160,6 +178,22 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       } catch (err: unknown) {
         failoverCount++
         lastError = err instanceof Error ? err : new Error(String(err))
+        logAIRequest({
+          pipelineRunId,
+          agentRole: this.role,
+          taskType: this.mapRoleToTaskCategory(this.role),
+          provider,
+          modelUsed: modelId,
+          startedAt: attemptStart,
+          durationMs: Date.now() - attemptStart,
+          promptChars: prompt.length + (systemPrompt?.length ?? 0),
+          completionChars: 0,
+          success: false,
+          retryCount: i,
+          fallbackCount: failoverCount,
+          errorMessage: lastError.message,
+          errorType: classifyError(lastError.message),
+        })
         console.warn(`[${this.name}] Candidate model ${modelId} failed: ${lastError.message}`)
       }
     }

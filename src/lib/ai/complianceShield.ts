@@ -28,6 +28,7 @@ export interface ComplianceRule {
   requiredPatterns: string[]
   remediationTemplate: string
   remediationTemplateAr: string
+  remediationCategory?: string
 }
 
 export interface ComplianceFinding {
@@ -38,13 +39,17 @@ export interface ComplianceFinding {
   title: string
   titleAr: string
   severity: ComplianceSeverity
-  sectionIndex: number
-  sectionTitle: string
+  sectionIndex?: number
+  sectionTitle?: string
   itemIndex?: number
   matchedSnippet?: string
   recommendation: string
   recommendationAr: string
-  canAutoFix: boolean
+  canAutoFix?: boolean
+  description?: string
+  descriptionAr?: string
+  remediationCategory?: string
+  targetSectionId?: string
 }
 
 export interface ComplianceAuditReport {
@@ -217,17 +222,40 @@ export class ComplianceShieldEngine {
       }
     }
 
-    const overallScore = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 100
-    const isPassing = findings.every((f) => f.severity !== 'CRITICAL') && overallScore >= 80
+    const score = totalChecks > 0 ? Math.round((passedChecks / totalChecks) * 100) : 100
+    const criticalCount = findings.filter((f) => f.severity === 'CRITICAL').length
+    const warningCount = findings.filter((f) => f.severity === 'WARNING').length
+    const recommendationCount = findings.filter((f) => f.severity === 'RECOMMENDATION').length
+
+    let status: 'EXCELLENT' | 'GOOD' | 'NEEDS_REVISION' | 'NON_COMPLIANT' = 'EXCELLENT'
+    if (criticalCount > 0 || score < 60) {
+      status = 'NON_COMPLIANT'
+    } else if (score < 80) {
+      status = 'NEEDS_REVISION'
+    } else if (score < 95) {
+      status = 'GOOD'
+    } else {
+      status = 'EXCELLENT'
+    }
+
+    const isPassing = criticalCount === 0 && score >= 80
 
     return {
-      overallScore,
+      score,
+      overallScore: score,
+      status,
       isPassing,
+      totalRulesChecked: totalChecks,
       totalChecks,
+      passedCount: passedChecks,
       passedChecks,
+      criticalCount,
+      warningCount,
+      recommendationCount,
       findings,
+      auditTimestamp: new Date().toISOString(),
       timestamp: new Date().toISOString(),
-    }
+    } as ComplianceAuditReport
   }
 
   /**
@@ -264,6 +292,9 @@ Return the updated lesson content formatted in markdown with explicit Saudi comp
             type: 'text',
             title: language === 'ar' ? `معايير الامتثال: ${finding.titleAr}` : `KSA Compliance: ${finding.title}`,
             content: response.rawText,
+            content_url: '',
+            content_data: {},
+            is_mandatory: true,
             order: section.items.length,
           },
         ],

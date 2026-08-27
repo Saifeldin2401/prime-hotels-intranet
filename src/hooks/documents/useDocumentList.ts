@@ -39,17 +39,24 @@ export function useDocuments(filters?: DocumentFilters) {
           is_deleted,
           deleted_at,
           expires_at,
+          document_number,
           confidentiality_level,
+          owner_id,
           created_by,
           created_at,
           updated_at,
+          knowledge_base_status,
+          is_active_kb_version,
+          published_at,
+          published_by,
           ai_tags,
           ai_category,
           ai_summary,
           ai_processed_at,
           folder:document_folders(id, name),
           tag_assignments:document_tag_assignments(tag:document_tags(id, name, color)),
-          author:profiles!documents_created_by_fkey(id, full_name, avatar_url)
+          author:profiles!documents_created_by_fkey(id, full_name, avatar_url, job_title),
+          owner:profiles!documents_owner_id_fkey(id, full_name, avatar_url, job_title)
         `)
         .order(filters?.sort_by || 'created_at', {
           ascending: filters?.sort_order === 'asc'
@@ -200,6 +207,7 @@ export function useDocument(documentId: string) {
           id,
           title,
           description,
+          document_number,
           content_type,
           status,
           visibility,
@@ -221,14 +229,21 @@ export function useDocument(documentId: string) {
           deleted_at,
           expires_at,
           confidentiality_level,
+          owner_id,
           created_by,
           created_at,
           updated_at,
+          knowledge_base_status,
+          is_active_kb_version,
+          published_at,
+          published_by,
+          last_reviewed_by,
           folder:document_folders(id, name, parent_id),
           tag_assignments:document_tag_assignments(tag_id, tag:document_tags(id, name, color)),
           departments(id, name),
           properties(id, name),
-          author:profiles!documents_created_by_fkey(id, full_name)
+          author:profiles!documents_created_by_fkey(id, full_name, avatar_url, job_title),
+          owner:profiles!documents_owner_id_fkey(id, full_name, avatar_url, job_title)
         `)
         .eq('id', documentId)
         .eq('is_deleted', false)
@@ -248,6 +263,9 @@ export function useDocument(documentId: string) {
         }
         if (Array.isArray(hydrated.author) && hydrated.author.length > 0) {
           hydrated.author = hydrated.author[0]
+        }
+        if (Array.isArray(hydrated.owner) && hydrated.owner.length > 0) {
+          hydrated.owner = hydrated.owner[0]
         }
       }
       return hydrated as unknown as Document

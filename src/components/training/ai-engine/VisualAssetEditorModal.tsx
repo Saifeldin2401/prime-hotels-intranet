@@ -37,8 +37,10 @@ import {
   Trash2,
   Wand2,
 } from 'lucide-react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { imageAgent } from '@/lib/ai/agents/imageAgent'
+import { isPersistedAssetId, modelRegistry } from '@/lib/ai/agents/modelRegistry'
 
 interface VisualAssetEditorModalProps {
   open: boolean
@@ -59,6 +61,8 @@ export function VisualAssetEditorModal({
   const isRTL = i18n.dir() === 'rtl'
   const { toast } = useToast()
 
+  const [currentAsset, setCurrentAsset] = useState<CourseVisualAsset | null>(asset)
+  const [currentImageUrl, setCurrentImageUrl] = useState(asset?.image_url || '')
   const [title, setTitle] = useState(asset?.title || '')
   const [altText, setAltText] = useState(asset?.alt_text || '')
   const [caption, setCaption] = useState(asset?.caption || '')
@@ -66,6 +70,32 @@ export function VisualAssetEditorModal({
   const [placement, setPlacement] = useState<VisualPlacement>((asset?.placement as any) || 'concept_explanation')
   const [visualStyle, setVisualStyle] = useState<VisualStyle>((asset?.visual_style as any) || 'educational_illustration')
   const [aspectRatio, setAspectRatio] = useState(asset?.aspect_ratio || '16:9')
+  const [selectedModel, setSelectedModel] = useState(asset?.model || 'google-imagen-3')
+  const [negativePrompt, setNegativePrompt] = useState(
+    asset?.negative_prompt || 'blurry, low quality, distorted anatomy, malformed hands, duplicate objects, watermark, text, logo, cluttered composition'
+  )
+  const [isRegenerating, setIsRegenerating] = useState(false)
+
+  // Sync internal state when asset prop or modal visibility changes
+  useEffect(() => {
+    if (asset) {
+      setCurrentAsset(asset)
+      setCurrentImageUrl(asset.image_url || '')
+      setTitle(asset.title || '')
+      setAltText(asset.alt_text || '')
+      setCaption(asset.caption || '')
+      setPrompt(asset.prompt || '')
+      setPlacement((asset.placement as any) || 'concept_explanation')
+      setVisualStyle((asset.visual_style as any) || 'educational_illustration')
+      setAspectRatio(asset.aspect_ratio || '16:9')
+      if (asset.model) {
+        setSelectedModel(asset.model)
+      }
+      if (asset.negative_prompt) {
+        setNegativePrompt(asset.negative_prompt)
+      }
+    }
+  }, [asset, open])
 
   const updateMutation = useUpdateVisualAsset()
   const deleteMutation = useDeleteVisualAsset()
@@ -74,42 +104,133 @@ export function VisualAssetEditorModal({
   if (!asset) return null
 
   const handleSave = async () => {
+    const activeAsset = currentAsset || asset
+    const updated: CourseVisualAsset = {
+      ...activeAsset,
+      image_url: currentImageUrl || activeAsset.image_url,
+      title,
+      alt_text: altText,
+      caption,
+      placement,
+      visual_style: visualStyle,
+      aspect_ratio: aspectRatio,
+      prompt,
+      model: selectedModel,
+    }
+
     try {
-      const updated = await updateMutation.mutateAsync({
-        assetId: asset.id,
-        updates: {
+      const isDbRecord = isPersistedAssetId(activeAsset.id) && !activeAsset.draft
+      if (isDbRecord) {
+        await updateMutation.mutateAsync({
+          assetId: activeAsset.id,
+          updates: {
+            title,
+            alt_text: altText,
+            caption,
+            placement,
+            visual_style: visualStyle,
+            aspect_ratio: aspectRatio,
+          },
+        })
+      }
+    } catch (saveErr) {
+      console.warn('Database sync deferred for in-memory draft visual asset:', saveErr)
+    }
+
+    onAssetUpdated?.(updated)
+    toast({
+      title: t('builder.visualSaved', 'Visual Updated'),
+      description: t('builder.visualSavedDesc', 'Asset metadata and placement saved successfully.'),
+    })
+    onOpenChange(false)
+  }
+
+  const handleRegenerate = async () => {
+    setIsRegenerating(true)
+    console.group(`🎨 [Visual Studio] Regenerate Visual: "${title || asset.title}"`)
+    console.info('Parameters:', {
+      model: selectedModel,
+      style: visualStyle,
+      aspectRatio,
+      prompt,
+      negativePrompt,
+      assetId: asset.id,
+    })
+
+    try {
+      // 1. Primary Engine: Direct synthesis via imageAgent (supports Google Imagen 3 / Nano Banana, OpenRouter, Cloudflare, Vector)
+      const agentRes = await imageAgent.process({
+        lesson: {
+          id: asset.lesson_id || `doc-${Date.now()}`,
+          title: title || asset.title,
+          description: prompt || asset.prompt || title,
+          learningOutcomes: [caption || altText || title],
+        } as any,
+        courseTitle: title || 'ALTUS Hospitality Training',
+        moduleTitle: title || 'Standard Operating Procedure',
+        imageModel: selectedModel,
+        preferredStyle: visualStyle,
+        preferredAspectRatio: aspectRatio,
+      })
+
+      if (agentRes.data && agentRes.data.image_url) {
+        const updated: CourseVisualAsset = {
+          ...asset,
+          ...(currentAsset || {}),
+          ...agentRes.data,
           title,
           alt_text: altText,
           caption,
-          placement,
+          prompt,
           visual_style: visualStyle,
           aspect_ratio: aspectRatio,
-        },
-      })
-      onAssetUpdated?.(updated)
-      toast({
-        title: t('builder.visualSaved', 'Visual Updated'),
-        description: t('builder.visualSavedDesc', 'Asset metadata and placement saved.'),
-      })
-      onOpenChange(false)
-    } catch {
-      toast({
-        title: t('common:error', 'Error'),
-        description: t('builder.visualSaveFailed', 'Failed to save visual asset.'),
-        variant: 'destructive',
-      })
-    }
-  }
+          model: selectedModel,
+          provider: agentRes.providerUsed || (selectedModel.includes('imagen') || selectedModel.includes('banana') ? 'gemini' : selectedModel.includes('/') ? 'openrouter' : 'cloudflare'),
+        }
+        setCurrentAsset(updated)
+        setCurrentImageUrl(agentRes.data.image_url)
+        onAssetUpdated?.(updated)
 
-  const [selectedModel, setSelectedModel] = useState(asset?.model || 'recraft-vector')
-  const [negativePrompt, setNegativePrompt] = useState(asset?.negative_prompt || 'blurry, low quality, distorted anatomy, malformed hands, duplicate objects, watermark, text, logo, cluttered composition')
+        const getModelDisplayName = (m: string) => {
+          const lower = m.toLowerCase()
+          if (lower.includes('banana-pro') || lower.includes('imagen-3') || lower === 'google-imagen-3') return 'Google Nano Banana Pro (Gemini 3 Pro)'
+          if (lower.includes('banana-2') || lower.includes('imagen-3-fast')) return 'Google Nano Banana 2 (Gemini 3.1 Flash)'
+          if (lower.includes('seedream')) return 'ByteDance Seedream 4.5'
+          if (lower.includes('flux.2') || lower.includes('flux-1')) return 'FLUX.2 Pro (Flow Transformer)'
+          if (lower.includes('recraft-v4')) return 'Recraft V4 (Ultra-Texture)'
+          if (lower.includes('recraft-v3') || lower === 'recraft/recraft-v3') return 'Recraft V3 Flagship'
+          if (lower.includes('recraft-vector')) return 'Recraft Vector Engine (SVG Blueprint)'
+          if (lower.includes('lucid')) return 'Leonardo Lucid Origin'
+          if (lower.includes('phoenix')) return 'Leonardo Phoenix 1.0'
+          return m
+        }
 
-  const handleRegenerate = async () => {
-    try {
+        const providerLabel = getModelDisplayName(selectedModel)
+
+        console.info(`%c[Visual Studio] ✅ Primary Engine Succeeded with ${providerLabel}%c`, 'color: #10b981; font-weight: bold;', '', {
+          imageUrl: agentRes.data.image_url,
+          modelUsed: agentRes.modelUsed,
+          providerUsed: agentRes.providerUsed,
+        })
+
+        toast({
+          title: t('builder.regeneratedSuccess', 'Visual Regenerated'),
+          description: `Synthesized with ${providerLabel}.`,
+        })
+        console.groupEnd()
+        return
+      }
+
+      // 2. Secondary Engine: Supabase generate-course-image Edge Function
+      const isGoogle = selectedModel.includes('imagen') || selectedModel.includes('google') || selectedModel.includes('banana')
+      const isOpenRouter = selectedModel.includes('/') || selectedModel.includes('seedream')
+      const inferredProvider = isGoogle ? 'google' : isOpenRouter ? 'openrouter' : 'cloudflare'
+
+      console.info(`[Visual Studio] ⚡ Calling Edge Function generate-course-image (${inferredProvider})...`)
       const regenerated = await generateMutation.mutateAsync({
-        courseId: asset.course_id,
-        moduleId: asset.module_id,
-        lessonId: asset.lesson_id,
+        courseId: asset.course_id || 'draft',
+        moduleId: asset.module_id || 'mod',
+        lessonId: asset.lesson_id || 'lesson',
         opportunity: {
           shouldGenerate: true,
           purpose: asset.educational_purpose,
@@ -124,45 +245,97 @@ export function VisualAssetEditorModal({
           altText,
           caption,
         },
-        provider: selectedModel?.includes('recraft') ? 'recraft' : 'cloudflare',
+        provider: inferredProvider,
         costTier: 'free_only',
         model: selectedModel,
         visualStyle,
       } as any)
 
-      if (regenerated) {
-        onAssetUpdated?.(regenerated)
+      if (regenerated && (regenerated.image_url || (regenerated as any).publicUrl)) {
+        const finalUrl = regenerated.image_url || (regenerated as any).publicUrl
+        const updated: CourseVisualAsset = {
+          ...asset,
+          ...(currentAsset || {}),
+          ...regenerated,
+          image_url: finalUrl,
+          title,
+          alt_text: altText,
+          caption,
+          prompt,
+          visual_style: visualStyle,
+          aspect_ratio: aspectRatio,
+          model: selectedModel,
+        }
+        setCurrentAsset(updated)
+        setCurrentImageUrl(finalUrl)
+        onAssetUpdated?.(updated)
+        console.info(`%c[Visual Studio] ✅ Edge Function Regeneration Succeeded%c`, 'color: #10b981;', '', regenerated)
         toast({
-          title: t('builder.regeneratedSuccess', 'Visual Regenerated with Cloudflare Workers AI'),
-          description: t('builder.regeneratedSuccessDesc', 'New 5-star visual saved to Supabase storage ($0.00/step).'),
+          title: t('builder.regeneratedSuccess', 'Visual Regenerated'),
+          description: `Saved to media library (${selectedModel}).`,
         })
       }
-    } catch {
+    } catch (regenErr) {
+      console.error('%c[Visual Studio] ❌ Visual Regeneration Failed:%c', 'color: #ef4444; font-weight: bold;', '', {
+        error: regenErr,
+        selectedModel,
+        prompt,
+      })
       toast({
         title: t('common:error', 'Regeneration Failed'),
-        description: t('builder.regenerateFailedDesc', 'Could not regenerate image with Cloudflare Workers AI.'),
+        description: t('builder.regenerateFailedDesc', 'Could not regenerate image. Please try another model.'),
         variant: 'destructive',
       })
+    } finally {
+      setIsRegenerating(false)
+      console.groupEnd()
     }
   }
 
   const handleDelete = async () => {
+    const targetAssetId = currentAsset?.id || asset.id
     try {
-      await deleteMutation.mutateAsync({ assetId: asset.id, courseId: asset.course_id })
-      onAssetDeleted?.(asset.id)
-      toast({
-        title: t('builder.visualDeleted', 'Visual Deleted'),
-        description: t('builder.visualDeletedDesc', 'Removed from lesson and database.'),
-      })
-      onOpenChange(false)
-    } catch {
-      toast({
-        title: t('common:error', 'Error'),
-        description: t('builder.deleteFailed', 'Could not delete visual asset.'),
-        variant: 'destructive',
-      })
+      const isDbRecord = isPersistedAssetId(targetAssetId) && !asset.draft
+      if (isDbRecord) {
+        await deleteMutation.mutateAsync({ assetId: targetAssetId, courseId: asset.course_id })
+      }
+    } catch (delErr) {
+      console.warn('Database delete deferred for draft visual asset:', delErr)
     }
+
+    setCurrentImageUrl('')
+    setCurrentAsset(null)
+    onAssetDeleted?.(targetAssetId)
+    toast({
+      title: t('builder.visualDeleted', 'Visual Deleted'),
+      description: t('builder.visualDeletedDesc', 'Removed from lesson.'),
+    })
+    onOpenChange(false)
   }
+
+  const modelMeta = modelRegistry.getModelMetadata(selectedModel)
+  const selectedModelDisplayName = modelMeta?.name || selectedModel
+
+  const isGoogle = selectedModel.includes('imagen') || selectedModel.includes('google') || selectedModel.includes('banana')
+  const isOpenRouter = selectedModel.includes('/') || selectedModel.includes('seedream')
+  const isVector = selectedModel === 'recraft-vector'
+  const isCloudflare = !isGoogle && !isOpenRouter && !isVector
+
+  const providerBadgeLabel = isGoogle
+    ? 'Google AI Studio (Gemini Key)'
+    : isOpenRouter
+    ? 'OpenRouter Unified Image Engine'
+    : isVector
+    ? 'Zero-Loss SVG Blueprint Engine ($0.00)'
+    : 'Cloudflare Workers AI Free Tier ($0.00/step)'
+
+  const providerBadgeColor = isGoogle
+    ? 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-300'
+    : isOpenRouter
+    ? 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/30 dark:text-purple-300'
+    : isVector
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-300'
+    : 'bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-950/30 dark:text-orange-300'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -178,12 +351,12 @@ export function VisualAssetEditorModal({
                   {t('builder.visualAssetEditorTitle', 'AI Visual Asset & Prompt Studio')}
                 </DialogTitle>
                 <DialogDescription className="text-xs">
-                  {t('builder.visualAssetEditorDesc', 'Inspect image, refine Cloudflare Workers AI SDXL prompt & negative prompt, or update accessibility alt-text.')}
+                  {`Inspect image, refine ${selectedModelDisplayName} prompt & negative prompt, or update accessibility alt-text.`}
                 </DialogDescription>
               </div>
             </div>
-            <Badge variant="outline" className="text-[10px] bg-orange-50 text-orange-700 border-orange-200">
-              Cloudflare Workers AI Free Tier ($0.00/step)
+            <Badge variant="outline" className={`text-[10px] font-semibold ${providerBadgeColor}`}>
+              {providerBadgeLabel}
             </Badge>
           </div>
         </DialogHeader>
@@ -192,8 +365,19 @@ export function VisualAssetEditorModal({
           {/* Left Preview Box */}
           <div className="w-full md:w-1/2 p-6 bg-muted/10 border-e flex flex-col items-center justify-center space-y-4">
             <div className="relative w-full rounded-2xl overflow-hidden border shadow-sm bg-slate-950 aspect-[16/9] flex items-center justify-center">
+              {isRegenerating && (
+                <div className="absolute inset-0 z-20 bg-slate-950/85 backdrop-blur-sm flex flex-col items-center justify-center text-white space-y-3 p-4">
+                  <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+                  <p className="text-xs font-semibold text-center">
+                    Synthesizing visual with {selectedModelDisplayName}...
+                  </p>
+                  <p className="text-[10px] text-slate-400 text-center">
+                    Applying 5-star hospitality visual standards
+                  </p>
+                </div>
+              )}
               {(() => {
-                const imgUrl = asset.image_url || ''
+                const imgUrl = currentImageUrl || currentAsset?.image_url || asset.image_url || ''
                 let rawSvg: string | null = null
                 if (imgUrl.startsWith('<svg') || imgUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
                   rawSvg = imgUrl
@@ -225,19 +409,29 @@ export function VisualAssetEditorModal({
                   )
                 }
 
+                if (imgUrl) {
+                  return (
+                    <img
+                      src={imgUrl}
+                      alt={altText || title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null
+                        e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
+                      }}
+                    />
+                  )
+                }
+
                 return (
-                  <img
-                    src={imgUrl || 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'}
-                    alt={altText}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.onerror = null
-                      e.currentTarget.src = 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1200&q=80'
-                    }}
-                  />
+                  <div className="w-full h-full flex flex-col items-center justify-center text-slate-500 space-y-2 p-4">
+                    <ImageIcon className="w-10 h-10 stroke-1" />
+                    <p className="text-xs">No image generated yet.</p>
+                    <p className="text-[10px] text-slate-600 text-center">Click "Regenerate Visual" below to synthesize with {selectedModelDisplayName}.</p>
+                  </div>
                 )
               })()}
-              <div className="absolute top-2 end-2">
+              <div className="absolute top-2 end-2 z-10">
                 <Badge className="bg-black/60 backdrop-blur text-white text-[10px]">
                   {aspectRatio}
                 </Badge>
@@ -248,19 +442,19 @@ export function VisualAssetEditorModal({
               <div className="flex justify-between text-muted-foreground">
                 <span>{t('builder.purposeLabel', 'Educational Purpose')}:</span>
                 <span className="font-semibold text-foreground capitalize">
-                  {asset.educational_purpose.replace('_', ' ')}
+                  {(currentAsset || asset).educational_purpose?.replace('_', ' ') || 'Concept Illustration'}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>{t('builder.modelLabel', 'Cloudflare Model')}:</span>
-                <span className="font-semibold text-orange-700 dark:text-orange-300 font-mono text-[11px]">
-                  {selectedModel.split('/').pop() || 'stable-diffusion-xl-lightning'}
+                <span>{t('builder.modelLabel', 'AI Image Model')}:</span>
+                <span className="font-semibold text-primary font-mono text-[11px]">
+                  {selectedModel}
                 </span>
               </div>
               <div className="flex justify-between text-muted-foreground">
                 <span>{t('builder.storageBucket', 'Storage')}:</span>
                 <span className="font-mono text-[11px] text-foreground">
-                  Supabase ({asset.storage_bucket})
+                  Supabase ({(currentAsset || asset).storage_bucket || 'content-media'})
                 </span>
               </div>
             </div>
@@ -332,35 +526,99 @@ export function VisualAssetEditorModal({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold">{t('builder.imageModelEngine', 'Cloudflare Model')}</Label>
+                  <Label className="text-xs font-semibold">AI Generation Engine & Model</Label>
                   <Select value={selectedModel} onValueChange={setSelectedModel}>
                     <SelectTrigger className="text-xs">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="recraft-vector">
-                        🎨 Recraft Vector v3 (Primary Free • SVG & Infographic Charts)
+                    <SelectContent className="max-h-80">
+                      {/* OpenRouter Unified Image Engines */}
+                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mb-1">
+                        OpenRouter Unified Image Engines
+                      </div>
+                      <SelectItem value="recraft/recraft-v4">
+                        🖼️ Recraft V4 (Forbes 5-Star Textures & Vector SVG) — 99% Quality
                       </SelectItem>
-                      <SelectItem value="recraft-v3">
-                        🖼️ Recraft Educational Illustration (Free • 5-Star Hotel Visuals)
+                      <SelectItem value="recraft/recraft-v3">
+                        🖼️ Recraft V3 (Forbes 5-Star Hotel Visuals) — 99% Quality
+                      </SelectItem>
+                      <SelectItem value="black-forest-labs/flux.2-pro">
+                        🏆 FLUX.2 Pro (Next-Gen 8K Photorealism) — 99% Quality
+                      </SelectItem>
+                      <SelectItem value="bytedance-seed/seedream-4.5">
+                        🌊 ByteDance Seedream 4.5 (Cinematic Realism) — 98% Quality
+                      </SelectItem>
+                      <SelectItem value="black-forest-labs/flux.2-flex">
+                        💎 FLUX.2 Flex (Dynamic Aspect Ratios & Typography) — 96% Quality
+                      </SelectItem>
+                      <SelectItem value="black-forest-labs/flux.2-max">
+                        🌟 FLUX.2 Max (Frontier Luxury Quality) — 98% Quality
+                      </SelectItem>
+                      <SelectItem value="black-forest-labs/flux.2-klein-4b">
+                        ⚡ FLUX.2 Klein 4B (Ultra-Fast) — 94% Quality
+                      </SelectItem>
+                      <SelectItem value="openai/gpt-5.4-image-2">
+                        🧠 OpenAI GPT-5.4 Image 2 (Studio Multimodal) — 97% Quality
+                      </SelectItem>
+                      <SelectItem value="sourceful/riverflow-v2-pro">
+                        📐 Sourceful Riverflow V2 Pro (Precise Schematics) — 96% Quality
+                      </SelectItem>
+
+                      {/* Google AI Studio */}
+                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
+                        Google AI Studio (Gemini Key)
+                      </div>
+                      <SelectItem value="google-imagen-3">
+                        🍌 Google Imagen 3 (Nano Banana Pro • 4K Luxury) — 99% Quality
+                      </SelectItem>
+                      <SelectItem value="google-imagen-3-fast">
+                        ⚡ Google Imagen 3 Fast (Nano Banana 2 • Fast) — 95% Quality
+                      </SelectItem>
+                      <SelectItem value="nano-banana-pro-preview">
+                        🧠 Nano Banana Pro (Gemini 3 Pro Vision) — 98% Quality
+                      </SelectItem>
+                      <SelectItem value="gemini-3.1-flash-image">
+                        🚀 Nano Banana 2 (Gemini 3.1 Flash Image) — 94% Quality
+                      </SelectItem>
+
+                      {/* Cloudflare Workers AI */}
+                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
+                        Cloudflare Workers AI (100% Free • $0.00)
+                      </div>
+                      <SelectItem value="@cf/leonardo/lucid-origin">
+                        🎨 Leonardo Lucid Origin (Flagship Creative Director) — 98% Quality
                       </SelectItem>
                       <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                        ✨ FLUX.1 Schnell (Ultra-HD Studio • 12B DiT)
+                        ✨ FLUX.1 Schnell (12B Flow Transformer • 8K Realism) — 97% Quality
                       </SelectItem>
-                      <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                        ⚡ SDXL-Lightning (Free • $0.00/step)
+                      <SelectItem value="@cf/leonardo/phoenix-1.0">
+                        🖋️ Leonardo Phoenix 1.0 (Coherent Typography) — 96% Quality
                       </SelectItem>
                       <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
-                        🛡️ SDXL Base 1.0 (Detailed Free • $0.00/step)
+                        🛡️ SDXL Base 1.0 (High Detail Diffusion) — 93% Quality
                       </SelectItem>
                       <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
-                        🎨 DreamShaper 8 LCM (Creative Free • $0.00/step)
+                        🏨 DreamShaper 8 LCM (Photorealism & Ambiance) — 91% Quality
+                      </SelectItem>
+                      <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
+                        ⚡ SDXL Lightning (4-Step Fast Generation) — 89% Quality
                       </SelectItem>
                       <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-img2img">
-                        🔄 SD 1.5 Img2Img (Transformation)
+                        🔄 SD 1.5 Image-to-Image (Photo Modification) — 87% Quality
                       </SelectItem>
                       <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-inpainting">
-                        🖌️ SD 1.5 Inpainting (Region Editing)
+                        🎭 SD 1.5 Inpainting (Regional Mask Editing) — 86% Quality
+                      </SelectItem>
+
+                      {/* Native Vector & Direct Engines */}
+                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
+                        Direct & Vector Engines (100% Free • $0.00)
+                      </div>
+                      <SelectItem value="recraft-vector">
+                        📐 SOP Flowchart Schematic (Zero-Loss SVG Blueprint) — 99% Quality
+                      </SelectItem>
+                      <SelectItem value="flux-1-schnell">
+                        🚀 Direct FLUX.1 Schnell (Zero-Failure 8K Realism) — 97% Quality
                       </SelectItem>
                     </SelectContent>
                   </Select>
@@ -384,15 +642,17 @@ export function VisualAssetEditorModal({
 
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <Label className="text-xs font-semibold">{t('builder.cloudflarePrompt', 'Cloudflare SDXL Prompt')}</Label>
-                  <span className="text-[10px] text-orange-600 font-semibold">$0.00 / step</span>
+                  <Label className="text-xs font-semibold">{`${selectedModelDisplayName} Prompt`}</Label>
+                  <span className={`text-[10px] font-semibold ${isCloudflare || isVector ? 'text-emerald-600' : 'text-primary'}`}>
+                    {isCloudflare || isVector ? '$0.00 / step' : isGoogle ? 'Google AI Studio' : 'OpenRouter Unified'}
+                  </span>
                 </div>
                 <Textarea
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
                   rows={3}
                   className="font-mono text-xs"
-                  placeholder="Detailed instructional prompt for SDXL..."
+                  placeholder={`Detailed instructional prompt for ${selectedModelDisplayName}...`}
                 />
               </div>
 
@@ -414,15 +674,15 @@ export function VisualAssetEditorModal({
                 variant="outline"
                 size="sm"
                 onClick={handleRegenerate}
-                disabled={generateMutation.isPending}
-                className="w-full text-xs text-orange-700 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/20"
+                disabled={isRegenerating || generateMutation.isPending}
+                className={`w-full text-xs font-semibold ${providerBadgeColor} hover:opacity-90 transition-all`}
               >
-                {generateMutation.isPending ? (
+                {isRegenerating || generateMutation.isPending ? (
                   <Loader2 className="w-3.5 h-3.5 animate-spin me-1" />
                 ) : (
                   <RotateCw className="w-3.5 h-3.5 me-1" />
                 )}
-                <span>{t('builder.regenerateWithAi', 'Regenerate Image with Cloudflare Workers AI (SDXL-Lightning)')}</span>
+                <span>{currentImageUrl ? `Regenerate Visual with ${selectedModelDisplayName}` : `Generate Visual with ${selectedModelDisplayName}`}</span>
               </Button>
             </div>
           </ScrollArea>

@@ -1,80 +1,127 @@
 {
   "title": "مكتبة الوسائط",
-    "subtitle": "إدارة وتنظيم أصول الوسائط لإعادة الاستخدام عبر المنصة",
-    "actions": {
-      "upload": "رفع ملفات",
-      "uploading": "جاري الرفع...",
-      "edit": "تعديل",
-      "delete": "حذف",
-      "copyUrl": "نسخ الرابط",
-      "open": "فتح",
-      "save": "حفظ التغييرات",
-      "cancel": "إلغاء",
-      "addTag": "إضافة"
-    },
-    "tabs": {
-      "all": "كل الأصول",
-      "video": "الفيديوهات",
-      "image": "الصور"
-    },
-    "stats": {
-      "totalAssets": "إجمالي الأصول",
-      "videos": "الفيديوهات",
-      "images": "الصور",
-      "totalStorage": "إجمالي التخزين"
-    },
-    "mediaTypes": {
-      "video": "فيديو",
-      "image": "صورة"
-    },
-    "categories": {
-      "training": "تدريب",
-      "knowledgebase": "قاعدة المعرفة",
-      "announcement": "إعلانات",
-      "general": "عام",
-      "compliance": "الامتثال",
-      "onboarding": "التأهيل",
-      "marketing": "تسويق",
-      "other": "أخرى"
-    },
-    "editDialog": {
-      "title": "تعديل أصل الوسائط",
-      "description": "تحديث التفاصيل لملف الوسائط هذا.",
-      "fields": {
-        "title": "العنوان",
-        "titlePlaceholder": "أدخل عنواناً وصفياً",
-        "description": "الوصف",
-        "descriptionPlaceholder": "وصف اختياري",
-        "category": "الفئة",
-        "tags": "الوسوم",
-        "tagsPlaceholder": "أضف وسم واضغط Enter"
-      }
-    },
-    "deleteDialog": {
-      "title": "حذف أصل الوسائط",
-      "description": "هل أنت متأكد من حذف <strong>{{title}}</strong>؟ لا يمكن التراجع عن هذا الإجراء.",
-      "warning": "تحذير: هذا الأصل مستخدم في {{count}} مكان/أماكن.",
-      "confirm": "حذف"
-    },
-    "empty": {
-      "title": "لم يتم العثور على أصول وسائط",
-      "description": "ارفع ملفات للبدء في مكتبة الوسائط الخاصة بك",
-      "searchDescription": "حاول ضبط عوامل تصفية البحث"
-    },
-    "search": {
-      "placeholder": "البحث في الوسائط..."
-    },
-    "viewMode": {
-      "grid": "عرض شبكي",
-      "list": "عرض قائمة"
-    },
-    "card": {
-      "uses": "{{count}} استخدامات"
-    },
-    "notifications": {
-      "urlCopied": "تم نسخ الرابط إلى الحافظة",
-      "deleteSuccess": "تم حذف أصل الوسائط بنجاح",
-      "updateSuccess": "تم تحديث أصل الوسائط بنجاح",
-      "uploadSuccess": "تم رفع الملف بنجاح"
+  "subtitle": "إدارة وتنظيم أصول الوسائط لإعادة الاستخدام عبر المنصة",
+  "actions": {
+    "upload": "رفع ملفات",
+    "uploading": "جاري الرفع...",
+    "edit": "تعديل",
+    "delete": "حذف",
+    "copyUrl": "نسخ الرابط",
+    "open": "فتح",
+    "save": "حفظ التغييرات",
+    "cancel": "إلغاء",
+    "addTag": "إضافة",
+    "generate_ai": "إنشاء بالذكاء الاصطناعي"
+  },
+  "tabs": {
+    "all": "كل الأصول",
+    "video": "الفيديوهات",
+    "image": "الصور",
+    "ai_visuals": "مرئيات الذكاء الاصطناعي"
+  },
+  "folders": {
+    "title": "المجلدات والمجموعات",
+    "newFolder": "مجلد جديد",
+    "allFolders": "جميع الأصول",
+    "aiStudio": "استوديو الذكاء الاصطناعي",
+    "aiCourseVisuals": "مرئيات محرك الدورات",
+    "aiSopSchematics": "مخططات وإجراءات SOP",
+    "aiPhotography": "التصوير الفندقي الفاخر",
+    "aiKnowledge": "مرئيات قاعدة المعرفة",
+    "hotelOps": "عمليات الفندق والإجراءات",
+    "frontOffice": "الاستقبال والاستعلامات",
+    "housekeeping": "التدبير الفندقي وترتيب الغرف",
+    "fnbHaccp": "الأغذية وسلامة الغذاء HACCP",
+    "facilities": "المرافق والسلامة الهندسية",
+    "training": "التدريب والتأهيل",
+    "onboarding": "تأهيل الموظفين الجدد",
+    "compliance": "الامتثال والمعايير",
+    "brandMarketing": "الهوية والأصول الفندقية",
+    "suitesAmenities": "الأجنحة والمرافق الفاخرة",
+    "marketingEvents": "المطاعم والفعاليات",
+    "customFolders": "مجلدات مخصصة",
+    "createFolderTitle": "إنشاء مجلد جديد",
+    "folderName": "اسم المجلد",
+    "folderDescription": "الوصف (اختياري)",
+    "folderCreated": "تم إنشاء المجلد بنجاح",
+    "moveToFolder": "نقل إلى مجلد",
+    "itemCount": "{{count}} عنصر"
+  },
+  "ai_generator": {
+    "title": "مولد أصول الوسائط بالذكاء الاصطناعي",
+    "description": "توليد صور فندقية فاخرة ومخططات تشغيلية وصور تعليمية وحفظها في مكتبة الوسائط مباشرة.",
+    "assetTitle": "عنوان الأصل",
+    "prompt": "وصف المشهد المرئي",
+    "promptRequired": "يرجى إدخال وصف المشهد المرئي المطلوب.",
+    "category": "الفئة",
+    "visualStyle": "النمط المرئي",
+    "model": "محرك الذكاء الاصطناعي",
+    "aspectRatio": "نسبة الأبعاد",
+    "quickPresets": "نماذج فندقية فاخرة سريعة",
+    "generatedSuccess": "تم توليد الصورة بالذكاء الاصطناعي بنجاح!",
+    "failed": "فشل توليد المشهد. يرجى تجربة نموذج آخر أو تعديل الوصف.",
+    "saveToLibrary": "حفظ في مكتبة الوسائط",
+    "savedToLibrary": "تم حفظ الأصل في مكتبة الوسائط بنجاح!",
+    "saveFailed": "تعذر حفظ الأصل في مكتبة الوسائط."
+  },
+  "stats": {
+    "totalAssets": "إجمالي الأصول",
+    "videos": "الفيديوهات",
+    "images": "الصور",
+    "totalStorage": "إجمالي التخزين"
+  },
+  "mediaTypes": {
+    "video": "فيديو",
+    "image": "صورة"
+  },
+  "categories": {
+    "training": "تدريب",
+    "knowledgebase": "قاعدة المعرفة",
+    "announcement": "إعلانات",
+    "general": "عام",
+    "compliance": "الامتثال",
+    "onboarding": "التأهيل",
+    "marketing": "تسويق",
+    "other": "أخرى"
+  },
+  "editDialog": {
+    "title": "تعديل أصل الوسائط",
+    "description": "تحديث التفاصيل لملف الوسائط هذا.",
+    "fields": {
+      "title": "العنوان",
+      "titlePlaceholder": "أدخل عنواناً وصفياً",
+      "description": "الوصف",
+      "descriptionPlaceholder": "وصف اختياري",
+      "category": "الفئة",
+      "tags": "الوسوم",
+      "tagsPlaceholder": "أضف وسم واضغط Enter"
     }
+  },
+  "deleteDialog": {
+    "title": "حذف أصل الوسائط",
+    "description": "هل أنت متأكد من حذف <strong>{{title}}</strong>؟ لا يمكن التراجع عن هذا الإجراء.",
+    "warning": "تحذير: هذا الأصل مستخدم في {{count}} مكان/أماكن.",
+    "confirm": "حذف"
+  },
+  "empty": {
+    "title": "لم يتم العثور على أصول وسائط",
+    "description": "ارفع ملفات أو قم بتوليد مرئيات بالذكاء الاصطناعي للبدء في مكتبة الوسائط",
+    "searchDescription": "حاول ضبط عوامل تصفية البحث"
+  },
+  "search": {
+    "placeholder": "البحث في الوسائط..."
+  },
+  "viewMode": {
+    "grid": "عرض شبكي",
+    "list": "عرض قائمة"
+  },
+  "card": {
+    "uses": "{{count}} استخدامات"
+  },
+  "notifications": {
+    "urlCopied": "تم نسخ الرابط إلى الحافظة",
+    "deleteSuccess": "تم حذف أصل الوسائط بنجاح",
+    "updateSuccess": "تم تحديث أصل الوسائط بنجاح",
+    "uploadSuccess": "تم رفع الملف بنجاح"
+  }
 }

@@ -37,6 +37,7 @@ import {
     useUpdateDocument
 } from '@/hooks/useDocuments'
 import { supabase } from '@/lib/supabase'
+import { setDocumentInternal, removeDocumentFromKnowledgeBase } from '@/services/knowledgeService'
 import { useQueryClient } from '@tanstack/react-query'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent } from 'react'
@@ -64,6 +65,7 @@ import {
     Clock,
     Cloud,
     Eye,
+    EyeOff,
     FileText,
     Filter,
     FolderOpen,
@@ -71,6 +73,7 @@ import {
     Heart,
     List,
     Loader2,
+    Lock,
     MoreVertical,
     Pencil,
     Plus,
@@ -499,6 +502,34 @@ export default function DocumentLibrary() {
     setPublishDialogOpen(true)
   }, [])
 
+  const handleKeepInternal = useCallback(async (doc: Document, e: MouseEvent) => {
+    e.stopPropagation()
+    if (!user) return
+    try {
+      const res = await setDocumentInternal(doc.id, user.id)
+      if (!res.success) throw new Error(res.error)
+      toast.success(t('lifecycle.internal_success_title', 'Marked as Internal Only'))
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Action failed')
+    }
+  }, [user, queryClient, t])
+
+  const handleRemoveFromKB = useCallback(async (doc: Document, e: MouseEvent) => {
+    e.stopPropagation()
+    if (!user) return
+    try {
+      const res = await removeDocumentFromKnowledgeBase(doc.id, user.id, 'Removed via document library')
+      if (!res.success) throw new Error(res.error)
+      toast.success(t('lifecycle.removed_success_title', 'Removed from Knowledge Base'))
+      queryClient.invalidateQueries({ queryKey: ['documents'] })
+      queryClient.invalidateQueries({ queryKey: ['knowledge-articles'] })
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Action failed')
+    }
+  }, [user, queryClient, t])
+
   const handleKeyboardActivate = useCallback((event: KeyboardEvent<HTMLElement>, action: () => void) => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
@@ -579,9 +610,23 @@ export default function DocumentLibrary() {
 
           {/* Meta info */}
           <div className="space-y-2 text-xs text-gray-500 text-center">
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-1.5 flex-wrap">
               <DocumentConfidentialityBadge level={doc.confidentiality_level} size="sm" />
               <StatusBadge status={doc.status} />
+              {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
+                <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
+                  <Sparkles className="w-3 h-3" />
+                  AI KB Active
+                </Badge>
+              ) : doc.knowledge_base_status === 'superseded' ? (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-slate-500">
+                  Superseded
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-muted-foreground border-border">
+                  Internal
+                </Badge>
+              )}
             </div>
             <p>{formatFileSize(doc.file_size || 0)}</p>
             <p>{formatRelativeTime(doc.created_at)}</p>
@@ -646,11 +691,22 @@ export default function DocumentLibrary() {
                   <Sparkles className="w-4 h-4 me-2" />
                   AI Assistant
                 </DropdownMenuItem>
-                {doc.content_type === 'document' && (
-                  <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
-                    <BookOpen className="w-4 h-4 me-2" />
-                    Publish to Knowledge Base
+                {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
+                  <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-amber-600">
+                    <EyeOff className="w-4 h-4 me-2" />
+                    Remove from Knowledge Base
                   </DropdownMenuItem>
+                ) : (
+                  <>
+                    <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
+                      <BookOpen className="w-4 h-4 me-2" />
+                      Publish to Knowledge Base
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={(e) => handleKeepInternal(doc, e)}>
+                      <Lock className="w-4 h-4 me-2" />
+                      Keep Internal Only
+                    </DropdownMenuItem>
+                  </>
                 )}
                 <DropdownMenuSeparator />
                 <DropdownMenuItem 
@@ -744,6 +800,20 @@ export default function DocumentLibrary() {
 
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={doc.status} />
+          {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
+            <Badge className="bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] px-1.5 py-0.5 gap-1 font-bold">
+              <Sparkles className="w-3 h-3" />
+              AI KB Active
+            </Badge>
+          ) : doc.knowledge_base_status === 'superseded' ? (
+            <Badge variant="secondary" className="text-[10px] px-1.5 py-0.5 text-slate-500">
+              Superseded
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 text-muted-foreground border-border">
+              Internal
+            </Badge>
+          )}
 
           {doc.tags && doc.tags.length > 0 && (
             <div className="hidden md:flex items-center gap-1">
@@ -802,11 +872,22 @@ export default function DocumentLibrary() {
                 <Sparkles className="w-4 h-4 me-2" />
                 AI Assistant
               </DropdownMenuItem>
-              {doc.content_type === 'document' && (
-                <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
-                  <BookOpen className="w-4 h-4 me-2" />
-                  Publish to Knowledge Base
+              {doc.knowledge_base_status === 'indexed' && doc.is_active_kb_version ? (
+                <DropdownMenuItem onClick={(e) => handleRemoveFromKB(doc, e)} className="text-amber-600">
+                  <EyeOff className="w-4 h-4 me-2" />
+                  Remove from Knowledge Base
                 </DropdownMenuItem>
+              ) : (
+                <>
+                  <DropdownMenuItem onClick={(e) => handleOpenPublishDialog(doc, e)}>
+                    <BookOpen className="w-4 h-4 me-2" />
+                    Publish to Knowledge Base
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={(e) => handleKeepInternal(doc, e)}>
+                    <Lock className="w-4 h-4 me-2" />
+                    Keep Internal Only
+                  </DropdownMenuItem>
+                </>
               )}
               <DropdownMenuSeparator />
               <DropdownMenuItem 

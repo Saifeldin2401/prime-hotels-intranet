@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { complianceShield, KSA_COMPLIANCE_RULES } from './complianceShield'
+import { complianceShield, KSA_COMPLIANCE_RULES, type ComplianceFinding } from './complianceShield'
 import type { TrainingSection } from '@/pages/training/components/builder/trainingBuilderTypes'
 
 vi.mock('./providers/multiProviderRouter', () => ({
@@ -21,7 +21,7 @@ describe('ComplianceShieldEngine', () => {
   })
 
   it('should flag Balady food safety temperature danger zone omission in kitchen training', () => {
-    const kitchenSections: TrainingSection[] = [
+    const kitchenSections = [
       {
         id: 'sec-1',
         title: 'Buffet Setup & Food Presentation',
@@ -39,7 +39,7 @@ describe('ComplianceShieldEngine', () => {
       },
     ]
 
-    const report = complianceShield.auditModule(kitchenSections)
+    const report = complianceShield.auditModule(kitchenSections as unknown as TrainingSection[])
     expect(report.score).toBeLessThan(100)
     expect(report.findings.length).toBeGreaterThan(0)
     const baladyFinding = report.findings.find((f) => f.authority === 'BALADY_FOOD_SAFETY')
@@ -47,7 +47,7 @@ describe('ComplianceShieldEngine', () => {
   })
 
   it('should pass audit with 100 score when compliant terms and bilingual SOPs are present', () => {
-    const compliantSections: TrainingSection[] = [
+    const compliantSections = [
       {
         id: 'sec-2',
         title: 'Front Office VIP Arrival & Reception Check-in',
@@ -66,13 +66,13 @@ describe('ComplianceShieldEngine', () => {
       },
     ]
 
-    const report = complianceShield.auditModule(compliantSections)
+    const report = complianceShield.auditModule(compliantSections as unknown as TrainingSection[])
     expect(report.status).toBe('EXCELLENT')
     expect(report.criticalCount).toBe(0)
   })
 
   it('should auto-remediate non-compliant section by appending compliance standard', async () => {
-    const section: TrainingSection = {
+    const section = {
       id: 'sec-3',
       title: 'Kitchen Hygiene & Food Prep',
       order: 0,
@@ -102,7 +102,11 @@ describe('ComplianceShieldEngine', () => {
       canAutoFix: true,
     }
 
-    const remediated = await complianceShield.autoRemediateSection(section, finding, 'en')
+    const remediated = await complianceShield.autoRemediateSection(
+      section as unknown as TrainingSection,
+      finding as unknown as ComplianceFinding,
+      'en',
+    )
     expect(remediated.items.length).toBeGreaterThan(1)
     expect(remediated.items[1].title).toContain('KSA Compliance')
   })

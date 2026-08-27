@@ -621,10 +621,9 @@ async function callHuggingFaceOnce(model: string, prompt: string, maxTokens?: nu
 }
 
 /**
- * Hugging Face's shared inference pool occasionally returns a transient
- * error (cold start, brief rate limit) that clears up within a second or
- * two. One automatic retry here means a single blip doesn't surface as a
- * failed generation to the user.
+ * Supabase Edge AI Gateway Caller (`process-ai-request`).
+ * Cascades across Gemini, Groq, OpenRouter, and Hugging Face server-side.
+ * Includes automatic retry on transient gateway interruptions.
  */
 export async function callHuggingFace(model: string, prompt: string, maxTokens?: number) {
   try {
@@ -644,6 +643,10 @@ export async function callHuggingFace(model: string, prompt: string, maxTokens?:
     }
   }
 }
+
+/** Canonical alias for `callHuggingFace` reflecting its real proxy architecture */
+export const invokeEdgeAiGateway = callHuggingFace
+
 
 
 

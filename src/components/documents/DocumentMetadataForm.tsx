@@ -18,6 +18,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import type { DocumentFolder } from "@/hooks/useDocuments";
+import { useAuth } from "@/hooks/useAuth";
+import { useProfiles } from "@/hooks/useUsers";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
@@ -28,11 +30,15 @@ import {
     Plus,
     RefreshCw,
     Shield,
+    Sparkles,
     Trash2,
     User,
+    Wand2,
 } from "lucide-react";
 import * as React from "react";
 import { useTranslation } from "react-i18next";
+import { generateSmartDocumentMetadata, generateSmartMetadataHeuristic } from "@/lib/ai/smartMetadataService";
+import { toast } from "sonner";
 
 export type ConfidentialityLevel = "public" | "internal" | "confidential" | "restricted";
 
@@ -80,29 +86,29 @@ const CONFIDENTIALITY_LEVELS: Array<{
 }> = [
     {
       value: "public",
-      label: "Public",
-      description: "Accessible to everyone including guests",
+      label: "Public / Company-Wide",
+      description: "All hotel properties & group-wide employees (Group policies, brand rules)",
       color: "text-gray-700",
       bgColor: "bg-gray-100",
     },
     {
       value: "internal",
-      label: "Internal",
-      description: "Accessible to all staff and management",
+      label: "Internal / Property-Level",
+      description: "Assigned hotel property & department team members only",
       color: "text-blue-700",
       bgColor: "bg-blue-100",
     },
     {
       value: "confidential",
-      label: "Confidential",
-      description: "Accessible to management level only",
+      label: "Confidential / Management",
+      description: "Department Heads (HODs), GMs & Supervisors only",
       color: "text-orange-700",
       bgColor: "bg-orange-100",
     },
     {
       value: "restricted",
-      label: "Restricted",
-      description: "Accessible to authorized personnel only",
+      label: "Restricted / Executive",
+      description: "Executive Leadership, HR Directors & Legal only",
       color: "text-red-700",
       bgColor: "bg-red-100",
     },
@@ -140,12 +146,32 @@ export function DocumentMetadataForm({
   className,
 }: DocumentMetadataFormProps) {
   const { t } = useTranslation();
+  const { user, profile } = useAuth();
+  const { data: dbProfiles = [] } = useProfiles({ limit: 200 });
+
+  const effectiveOwners = React.useMemo(() => {
+    if (owners && owners.length > 0) return owners;
+    if (dbProfiles && dbProfiles.length > 0) {
+      return dbProfiles.map((p) => ({
+        id: p.id,
+        name: `${p.full_name || p.email}${p.job_title ? ` — ${p.job_title}` : ''}${p.id === profile?.id ? ' (You)' : ''}`,
+        avatar: p.avatar_url,
+      }));
+    }
+    const fallbackName = profile?.full_name || profile?.email || user?.email || "Current User";
+    const fallbackId = profile?.id || user?.id || "current-user";
+    return [{ id: fallbackId, name: `${fallbackName} (You)` }];
+  }, [owners, dbProfiles, profile, user]);
+
   const [customFields, setCustomFields] = React.useState<CustomField[]>(
     metadata.customFields || []
   );
   const [newFieldName, setNewFieldName] = React.useState("");
   const [newFieldType, setNewFieldType] = React.useState<CustomField["type"]>("text");
   const [showAddField, setShowAddField] = React.useState(false);
+
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const hasAutoOrganizedRef = React.useRef(false);
 
   const flatFolders = flattenFolders(folders);
 
@@ -156,9 +182,143 @@ export function DocumentMetadataForm({
     onChange({ ...metadata, [key]: value });
   };
 
+  // Automatic Zero-Interference Organization on form load
+  React.useEffect(() => {
+    if (readOnly) return;
+    const title = metadata.title || '';
+    const desc = metadata.description || '';
+    const docNum = metadata.documentNumber || '';
+    const ownerId = metadata.ownerId || '';
+
+    const needsTitleClean = title.includes('-') || title.includes('_') || title.endsWith('.pdf') || title.endsWith('.docx');
+    const isGenericDesc = !desc || desc.length < 15 || desc.toLowerCase().includes('create a structured outline');
+    const needsDocNumber = !docNum || docNum.trim() === '';
+    const needsOwner = !ownerId || ownerId.trim() === '';
+
+    if ((needsTitleClean || isGenericDesc || needsDocNumber || needsOwner) && !hasAutoOrganizedRef.current) {
+      hasAutoOrganizedRef.current = true;
+      // Step 1: Immediate zero-latency heuristic auto-organization
+      const heuristic = generateSmartMetadataHeuristic({
+        title,
+        description: desc,
+      });
+
+      let matchedFolderId = metadata.folderId;
+      if (heuristic.suggestedDepartment && folders.length > 0) {
+        const found = flatFolders.find(
+          (f) =>
+            f.name.toLowerCase().includes(heuristic.suggestedDepartment!.toLowerCase()) ||
+            heuristic.suggestedDepartment!.toLowerCase().includes(f.name.toLowerCase())
+        );
+        if (found) {
+          matchedFolderId = found.id;
+        }
+      }
+
+      const initialOrganized: DocumentMetadata = {
+        ...metadata,
+        title: needsTitleClean ? heuristic.title : metadata.title,
+        description: isGenericDesc ? heuristic.description : metadata.description,
+        documentNumber: needsDocNumber ? heuristic.documentNumber : metadata.documentNumber,
+        confidentiality: metadata.confidentiality || heuristic.confidentiality,
+        expiryDate: metadata.expiryDate || heuristic.expiryDate,
+        ownerId: needsOwner ? (profile?.id || user?.id || effectiveOwners[0]?.id || '') : metadata.ownerId,
+        folderId: matchedFolderId,
+        tags: metadata.tags && metadata.tags.length > 0 ? metadata.tags : heuristic.tags,
+      };
+      onChange(initialOrganized);
+
+      // Step 2: Background AI refinement via free model
+      generateSmartDocumentMetadata({
+        title: initialOrganized.title,
+        description: initialOrganized.description,
+      }).then((aiResult) => {
+        if (aiResult) {
+          onChange({
+            ...initialOrganized,
+            title: aiResult.title || initialOrganized.title,
+            description: aiResult.description || initialOrganized.description,
+            documentNumber: aiResult.documentNumber || initialOrganized.documentNumber,
+            confidentiality: aiResult.confidentiality || initialOrganized.confidentiality,
+            tags: aiResult.tags?.length ? aiResult.tags : initialOrganized.tags,
+          });
+        }
+      }).catch((err) => {
+        console.warn('Background free AI model refinement:', err);
+      });
+    }
+  }, [metadata, readOnly, flatFolders, folders.length, onChange]);
+
   const handleAutoGenerate = () => {
     const newNumber = generateDocumentNumber(documentNumberPrefix);
     updateMetadata("documentNumber", newNumber);
+  };
+
+  const handleSmartAutoFill = async () => {
+    setIsGenerating(true);
+    try {
+      const result = await generateSmartDocumentMetadata({
+        title: metadata.title,
+        description: metadata.description,
+      });
+
+      // Find matching folder if suggested department exists
+      let matchedFolderId = metadata.folderId;
+      if (result.suggestedDepartment && folders.length > 0) {
+        const found = flatFolders.find(
+          (f) =>
+            f.name.toLowerCase().includes(result.suggestedDepartment!.toLowerCase()) ||
+            result.suggestedDepartment!.toLowerCase().includes(f.name.toLowerCase())
+        );
+        if (found) {
+          matchedFolderId = found.id;
+        }
+      }
+
+      onChange({
+        ...metadata,
+        title: result.title,
+        description: result.description,
+        documentNumber: result.documentNumber,
+        confidentiality: result.confidentiality,
+        expiryDate: metadata.expiryDate || result.expiryDate,
+        folderId: matchedFolderId,
+        tags: result.tags,
+      });
+
+      toast.success("Document metadata organized & auto-formatted!");
+    } catch (err) {
+      console.error("Smart auto-fill error:", err);
+      toast.error("Failed to auto-generate metadata");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleQuickCleanTitle = () => {
+    const raw = (metadata.title || "").trim();
+    if (!raw) return;
+    let clean = raw
+      .replace(/[-_]+/g, " ")
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    clean = clean
+      .split(" ")
+      .map((word) => {
+        const lower = word.toLowerCase();
+        if (["and", "&", "or", "of", "in", "on", "at", "to", "for", "the", "a", "an"].includes(lower)) {
+          return lower === "&" ? "&" : lower;
+        }
+        if (["sop", "vip", "hr", "it", "haccp", "f&b", "pos", "pms", "ota", "cctv"].includes(lower)) {
+          return lower.toUpperCase();
+        }
+        return word.charAt(0).toUpperCase() + word.slice(1);
+      })
+      .join(" ");
+
+    updateMetadata("title", clean);
   };
 
   const addCustomField = () => {
@@ -192,29 +352,107 @@ export function DocumentMetadataForm({
 
   return (
     <div className={cn("space-y-6", className)}>
+      {/* Smart AI Auto-Fill Action Header */}
+      {!readOnly && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-gradient-to-r from-purple-500/10 via-indigo-500/10 to-hotel-navy/5 border border-purple-200 dark:border-purple-900/40">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-foreground">AI Smart Auto-Organize</p>
+              <p className="text-[11px] text-muted-foreground">
+                Clean titles, generate executive summaries, codes, & folders automatically
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={handleSmartAutoFill}
+            disabled={isGenerating}
+            className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs shadow-sm gap-1.5 h-8"
+          >
+            <Wand2 className={cn("w-3.5 h-3.5", isGenerating && "animate-spin")} />
+            {isGenerating ? "Organizing..." : "Magic Auto-Fill"}
+          </Button>
+        </div>
+      )}
+
       {/* Title */}
       <div className="space-y-2">
-        <Label htmlFor="title" className="flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          Document Title *
-        </Label>
-        <Input
-          id="title"
-          value={metadata.title}
-          onChange={(e) => updateMetadata("title", e.target.value)}
-          placeholder="Enter document title"
-          disabled={readOnly}
-        />
+        <div className="flex items-center justify-between">
+          <Label htmlFor="title" className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Document Title *
+          </Label>
+          {!readOnly && metadata.title && (metadata.title.includes("-") || metadata.title.includes("_")) && (
+            <button
+              type="button"
+              onClick={handleQuickCleanTitle}
+              className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium"
+            >
+              <Wand2 className="w-3 h-3" />
+              Clean filename format
+            </button>
+          )}
+        </div>
+        <div className="relative">
+          <Input
+            id="title"
+            value={metadata.title}
+            onChange={(e) => updateMetadata("title", e.target.value)}
+            placeholder="e.g. Lost and Found & Guest Valuables Policy"
+            disabled={readOnly}
+            className="pe-8"
+          />
+          {metadata.title && (
+            <button
+              type="button"
+              onClick={() => updateMetadata("title", "")}
+              className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground text-xs"
+              title="Clear title"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Description */}
       <div className="space-y-2">
-        <Label htmlFor="description">{t('common:description')}</Label>
+        <div className="flex items-center justify-between">
+          <Label htmlFor="description">{t('common:description')}</Label>
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={async () => {
+                setIsGenerating(true);
+                try {
+                  const res = await generateSmartDocumentMetadata({
+                    title: metadata.title,
+                  });
+                  updateMetadata("description", res.description);
+                  toast.success("Description generated!");
+                } catch {
+                  toast.error("Failed to generate description");
+                } finally {
+                  setIsGenerating(false);
+                }
+              }}
+              disabled={isGenerating || !metadata.title}
+              className="text-[11px] text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 font-medium disabled:opacity-50"
+            >
+              <Sparkles className="w-3 h-3" />
+              AI Generate Description
+            </button>
+          )}
+        </div>
         <Textarea
           id="description"
           value={metadata.description || ""}
           onChange={(e) => updateMetadata("description", e.target.value)}
-          placeholder="Enter document description (optional)"
+          placeholder="Enter operational document description or click AI Generate above..."
           rows={3}
           disabled={readOnly}
         />
@@ -241,9 +479,9 @@ export function DocumentMetadataForm({
             id="documentNumber"
             value={metadata.documentNumber || ""}
             onChange={(e) => updateMetadata("documentNumber", e.target.value)}
-            placeholder={autoGenerateNumber ? "Will be auto-generated" : "Enter document number"}
+            placeholder={autoGenerateNumber ? "Will be auto-generated" : "e.g. SOP-HK-2026-0042"}
             disabled={readOnly || autoGenerateNumber}
-            className="flex-1"
+            className="flex-1 font-mono text-xs"
           />
           <Button
             type="button"
@@ -251,14 +489,14 @@ export function DocumentMetadataForm({
             size="icon"
             onClick={handleAutoGenerate}
             disabled={readOnly || autoGenerateNumber}
-            title="Generate new number"
+            title="Generate standard number"
             aria-label={t('accessibility.generate_document_number', 'Generate document number')}
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          A unique identifier for this document. Leave blank to auto-generate.
+          A unique identifier for this document. Leave blank to auto-generate standard hotel code.
         </p>
       </div>
 
@@ -326,7 +564,7 @@ export function DocumentMetadataForm({
               <SelectValue placeholder="Select owner" />
             </SelectTrigger>
             <SelectContent>
-              {owners.map((owner) => (
+              {effectiveOwners.map((owner) => (
                 <SelectItem key={owner.id} value={owner.id}>
                   {owner.name}
                 </SelectItem>

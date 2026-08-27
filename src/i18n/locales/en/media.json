@@ -10,12 +10,59 @@
     "open": "Open",
     "save": "Save Changes",
     "cancel": "Cancel",
-    "addTag": "Add"
+    "addTag": "Add",
+    "generate_ai": "Generate with AI"
   },
   "tabs": {
     "all": "All Assets",
     "video": "Videos",
-    "image": "Images"
+    "image": "Images",
+    "ai_visuals": "AI Visuals"
+  },
+  "folders": {
+    "title": "Folders & Collections",
+    "newFolder": "New Folder",
+    "allFolders": "All Assets",
+    "aiStudio": "AI Studio & Visuals",
+    "aiCourseVisuals": "Course Engine Visuals",
+    "aiSopSchematics": "SOP Diagrams & Schematics",
+    "aiPhotography": "Photorealistic Hospitality",
+    "aiKnowledge": "Knowledge Base Visuals",
+    "hotelOps": "Hotel Operations & SOP",
+    "frontOffice": "Front Office & Concierge",
+    "housekeeping": "Housekeeping & Turndown",
+    "fnbHaccp": "F&B & HACCP Hygiene",
+    "facilities": "Facilities & Engineering",
+    "training": "Training & Onboarding",
+    "onboarding": "New Hire Onboarding",
+    "compliance": "Compliance & Safety",
+    "brandMarketing": "Brand & Property Assets",
+    "suitesAmenities": "Suites & Amenities",
+    "marketingEvents": "Dining & Events",
+    "customFolders": "Custom Folders",
+    "createFolderTitle": "Create New Folder",
+    "folderName": "Folder Name",
+    "folderDescription": "Description (Optional)",
+    "folderCreated": "Folder created successfully",
+    "moveToFolder": "Move to Folder",
+    "itemCount": "{{count}} items"
+  },
+  "ai_generator": {
+    "title": "AI Media Asset Generator",
+    "description": "Synthesize 5-star hotel visuals, SOP schematics, and hospitality photography for your media library.",
+    "assetTitle": "Asset Title",
+    "prompt": "Visual Prompt",
+    "promptRequired": "Please enter a visual description prompt.",
+    "category": "Category",
+    "visualStyle": "Visual Style",
+    "model": "AI Engine",
+    "aspectRatio": "Aspect Ratio",
+    "quickPresets": "Quick 5-Star Presets",
+    "generatedSuccess": "AI visual generated successfully!",
+    "failed": "Visual generation failed. Please try another model or refine your prompt.",
+    "saveToLibrary": "Save to Media Library",
+    "savedToLibrary": "Asset saved to Media Library!",
+    "saveFailed": "Could not save asset to Media Library."
   },
   "stats": {
     "totalAssets": "Total Assets",
@@ -58,7 +105,7 @@
   },
   "empty": {
     "title": "No media assets found",
-    "description": "Upload files to get started with your media library",
+    "description": "Upload files or generate visuals with AI to get started with your media library",
     "searchDescription": "Try adjusting your search filters"
   },
   "search": {
@@ -78,3 +125,4 @@
     "uploadSuccess": "File uploaded successfully"
   }
 }
+

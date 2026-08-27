@@ -12,6 +12,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { supabase } from '@/lib/supabase'
 import { altusAI } from '@/lib/ai'
+import { searchHotelKnowledge, extractSearchKeywords, type ArticleSource } from '@/lib/ai/rag'
 import { cn } from '@/lib/utils'
 import { AnimatePresence, motion } from 'framer-motion'
 import {
@@ -38,36 +39,10 @@ interface Message {
     timestamp: Date
 }
 
-interface ArticleSource {
-    id: string
-    title: string
-    content_type: string
-    relevance: number
-}
-
 interface KnowledgeAIAssistantProps {
     isOpen: boolean
     onClose: () => void
 }
-
-const FALLBACK_MODELS = [
-    'openrouter/auto',
-    'google/gemini-2.0-flash-exp:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
-    'meta-llama/llama-3.3-70b-instruct',
-    'qwen/qwen-2.5-72b-instruct'
-]
-
-const STOPWORDS = new Set(['the', 'and', 'for', 'with', 'this', 'that', 'from', 'sops', 'sop', 'ksa'])
-
-function extractKeywords(query: string): string[] {
-    const keywords = query.toLowerCase()
-        .replace(/[?.,!]/g, '')
-        .split(/\s+/)
-        .filter(w => w.length > 2 && !STOPWORDS.has(w))
-    return keywords.length > 0 ? keywords : [query]
-}
-
 // Picks the paragraph(s) most relevant to the search keywords instead of the
 // document's first N characters, so the AI sees the matching section rather
 // than whatever happens to be the preamble.
@@ -137,50 +112,7 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
     }, [isOpen])
 
     const searchKnowledgeBase = async (query: string): Promise<ArticleSource[]> => {
-        try {
-            const searchTerms = extractKeywords(query)
-            const tsQuery = searchTerms.join(' OR ')
-
-            // Ranked full-text search over title/tags/description/body via
-            // documents.search_vector (RLS-respecting RPC), instead of ilike
-            // substring matching that missed anything only mentioned in the body.
-            const { data: ranked, error: rankError } = await supabase.rpc('search_knowledge_articles', {
-                p_query: tsQuery,
-                p_status: 'PUBLISHED',
-                p_limit: 5,
-                p_offset: 0
-            })
-
-            if (rankError) throw rankError
-
-            const rankedRows = ranked || []
-            if (rankedRows.length === 0) return []
-
-            const { data: docs, error: docsError } = await supabase
-                .from('documents')
-                .select('id, title, content_type')
-                .in('id', rankedRows.map(r => r.id))
-
-            if (docsError) throw docsError
-
-            const byId = new Map((docs || []).map(d => [d.id, d]))
-
-            return rankedRows
-                .map(row => {
-                    const doc = byId.get(row.id)
-                    if (!doc) return null
-                    return {
-                        id: doc.id,
-                        title: doc.title,
-                        content_type: doc.content_type || 'document',
-                        relevance: row.rank
-                    }
-                })
-                .filter((s): s is ArticleSource => !!s)
-        } catch (error) {
-            console.error('Knowledge base search failed:', error)
-            return []
-        }
+        return searchHotelKnowledge(query, { limit: 5 })
     }
 
     const getArticleContext = async (articleIds: string[], keywords: string[]): Promise<string> => {
@@ -228,43 +160,26 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
 
         try {
             const sources = await searchKnowledgeBase(question)
-
-            if (sources.length === 0) {
-                let noResultsMsg = "I couldn't find any relevant articles in our knowledge base for your question. Try rephrasing your question or using different keywords."
-                if (i18n.language === 'ar') {
-                    noResultsMsg = "لم أتمكن من العثور على أي مقالات ذات صلة في قاعدة المعرفة الخاصة بنا لسؤالك. حاول إعادة صياغة سؤالك أو استخدام كلمات رئيسية مختلفة."
-                }
-
-                setMessages(prev => [...prev, {
-                    id: (Date.now() + 1).toString(),
-                    role: 'assistant',
-                    content: noResultsMsg,
-                    timestamp: new Date()
-                }])
-                return
-            }
-
-            const context = await getArticleContext(sources.map(s => s.id), extractKeywords(question))
+            const context = sources.length > 0 
+                ? await getArticleContext(sources.map(s => s.id), extractSearchKeywords(question))
+                : ''
+            
             const targetLanguage = i18n.language === 'ar' ? 'Arabic' : 'English'
 
-            const prompt = `You are a helpful multilingual Knowledge Base Assistant for a hotel chain.
+            const prompt = `You are the AI Knowledge Pro Assistant for PRIME Hotels & Resorts across Saudi Arabia (KSA).
             
-Your task is to answer the user's question based ONLY on the provided knowledge base content below.
+Your task is to answer the hotel staff's question or search query concisely, professionally, and accurately.
 
-CRITICAL RULES:
-1. TARGET LANGUAGE: You MUST respond in ${targetLanguage}. Even if the context documents are in a different language, translate your answer to ${targetLanguage}.
-2. ADHERENCE: Answer ONLY based on the provided context. Do not use external knowledge or make up information.
-3. HONESTY: If the context doesn't contain the answer, politely state that you couldn't find information on that specific topic in our records.
-4. FORMATTING: Use bullet points for steps and professional business tone.
-5. CITATION: Mention the article titles you are using.
+CRITICAL INSTRUCTIONS:
+1. TARGET LANGUAGE: Respond strictly in ${targetLanguage}.
+2. GROUNDING & CITATIONS: 
+   ${context ? `- Ground your answer in the verified Knowledge Base articles provided below. Mention the article titles you referenced.\n\nVERIFIED KNOWLEDGE BASE CONTENT:\n${context}` : `- Provide 5-star luxury hospitality operational guidance (Forbes 5-Star / Saudi Dyafa standards). Note politely if a dedicated company SOP is not yet published under this exact keyword.`}
+3. FORMATTING: Use clear, elegant bullet points for operational steps and key responsibilities.
+4. TONE: Professional, executive, and operationally precise.
 
-KNOWLEDGE BASE CONTENT:
-${context}
-
-USER QUESTION: ${question}
+STAFF INQUIRY: ${question}
 
 ASSISTANT RESPONSE:`
-
 
             const aiResponse = await callAI(prompt)
 
@@ -273,10 +188,10 @@ ASSISTANT RESPONSE:`
                     id: (Date.now() + 1).toString(),
                     role: 'assistant',
                     content: aiResponse.trim(),
-                    sources: sources,
+                    sources: sources.length > 0 ? sources : undefined,
                     timestamp: new Date()
                 }])
-            } else {
+            } else if (sources.length > 0) {
                 let fallbackMsg = `I found ${sources.length} relevant article(s) that may help answer your question. Please review them below:`
                 if (i18n.language === 'ar') {
                     fallbackMsg = `وجدت ${sources.length} مقال(ات) ذات صلة قد تساعد في الإجابة على سؤالك. يرجى مراجعتها أدناه:`
@@ -287,6 +202,18 @@ ASSISTANT RESPONSE:`
                     role: 'assistant',
                     content: fallbackMsg,
                     sources: sources,
+                    timestamp: new Date()
+                }])
+            } else {
+                let noResultsMsg = "I couldn't find any specific articles in our knowledge base for your query. Try searching for specific topics like 'Lost and Found', 'Serving Guests', 'Inventory', or 'Housekeeping'."
+                if (i18n.language === 'ar') {
+                    noResultsMsg = "لم أتمكن من العثور على مقالات مخصصة لهذا الاستعلام. يمكنك البحث عن مواضيع مثل 'المفقودات والمقتنيات الثمينة'، 'خدمة النزلاء'، أو 'إجراءات التدبير المنزلي'."
+                }
+
+                setMessages(prev => [...prev, {
+                    id: (Date.now() + 1).toString(),
+                    role: 'assistant',
+                    content: noResultsMsg,
                     timestamp: new Date()
                 }])
             }

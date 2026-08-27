@@ -158,5 +158,6 @@
     "compliance_center": "مركز الامتثال",
     "email_writer": "كاتب البريد الإلكتروني",
     "inbound_emails": "البريد الوارد",
-    "manual_certificates": "الشهادات اليدوية"
+    "manual_certificates": "الشهادات اليدوية",
+    "ai_course_generator": "إعدادات محرك الدورات بالذكاء الاصطناعي"
 }

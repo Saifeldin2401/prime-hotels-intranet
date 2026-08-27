@@ -1752,70 +1752,70 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 size="sm"
                                 onClick={() => generateWithAI('outline')}
                                 disabled={isGenerating}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                                className="h-7 text-xs bg-amber-50/80 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-900 dark:text-amber-200 border-amber-300 dark:border-amber-800 font-semibold transition-colors shadow-2xs"
                             >
-                                {isGenerating ? <Loader2 className="h-3 w-3 animate-spin me-1" /> : <Wand2 className="h-3 w-3 text-hotel-gold me-1" />}
-                                {t('editor.outline', 'Outline')}
+                                {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin me-1.5 text-amber-600" /> : <Wand2 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400 me-1.5" />}
+                                <span>{t('editor.outline', 'Outline')}</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateWithAI('expand')}
                                 disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                                className="h-7 text-xs bg-blue-50/80 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/50 text-blue-900 dark:text-blue-200 border-blue-300 dark:border-blue-800 font-semibold transition-colors shadow-2xs"
                             >
-                                <RefreshCw className="h-3 w-3 text-hotel-navy dark:text-hotel-gold me-1" />
-                                {t('editor.expand', 'Deep Expand')}
+                                <RefreshCw className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 me-1.5" />
+                                <span>{t('editor.expand', 'Deep Expand')}</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateWithAI('improve')}
                                 disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                                className="h-7 text-xs bg-emerald-50/80 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-900 dark:text-emerald-200 border-emerald-300 dark:border-emerald-800 font-semibold transition-colors shadow-2xs"
                             >
-                                <Sparkles className="h-3 w-3 text-amber-500 me-1" />
-                                {t('editor.improve', 'Polish')}
+                                <Sparkles className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 me-1.5" />
+                                <span>{t('editor.improve', 'Polish')}</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateWithAI('checklist')}
                                 disabled={isGenerating}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-orange-600 border-orange-200 hover:bg-orange-50 dark:hover:bg-orange-950/40"
+                                className="h-7 text-xs bg-orange-50/80 hover:bg-orange-100 dark:bg-orange-950/40 dark:hover:bg-orange-900/50 text-orange-900 dark:text-orange-200 border-orange-300 dark:border-orange-800 font-semibold transition-colors shadow-2xs"
                             >
-                                <CheckSquare className="h-3 w-3 text-orange-500 me-1" />
-                                AI Checklist
+                                <CheckSquare className="h-3.5 w-3.5 text-orange-600 dark:text-orange-400 me-1.5" />
+                                <span>AI Checklist</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateWithAI('faqs')}
                                 disabled={isGenerating}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-yellow-600 border-yellow-200 hover:bg-yellow-50 dark:hover:bg-yellow-950/40"
+                                className="h-7 text-xs bg-yellow-50/80 hover:bg-yellow-100 dark:bg-yellow-950/40 dark:hover:bg-yellow-900/50 text-yellow-900 dark:text-yellow-200 border-yellow-300 dark:border-yellow-700 font-semibold transition-colors shadow-2xs"
                             >
-                                <HelpCircle className="h-3 w-3 text-yellow-500 me-1" />
-                                AI FAQs
+                                <HelpCircle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400 me-1.5" />
+                                <span>AI FAQs</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => generateWithAI('summarize')}
                                 disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium hover:bg-hotel-gold/10"
+                                className="h-7 text-xs bg-sky-50/80 hover:bg-sky-100 dark:bg-sky-950/40 dark:hover:bg-sky-900/50 text-sky-900 dark:text-sky-200 border-sky-300 dark:border-sky-800 font-semibold transition-colors shadow-2xs"
                             >
-                                <FileText className="h-3 w-3 text-blue-500 me-1" />
-                                Summarize
+                                <FileText className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400 me-1.5" />
+                                <span>Summarize</span>
                             </Button>
                             <Button
                                 variant="outline"
                                 size="sm"
                                 onClick={() => beautifyArticle()}
                                 disabled={isGenerating || !formData.content}
-                                className="h-7 text-xs bg-white dark:bg-slate-950 font-medium text-purple-600 border-purple-200 hover:bg-purple-50"
+                                className="h-7 text-xs bg-purple-50/80 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-900 dark:text-purple-200 border-purple-300 dark:border-purple-800 font-semibold transition-colors shadow-2xs"
                             >
-                                <Palette className="h-3 w-3 text-purple-500 me-1" />
-                                Beautify
+                                <Palette className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400 me-1.5" />
+                                <span>Beautify</span>
                             </Button>
                         </div>
                     </div>
@@ -2319,12 +2319,33 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 defaultContentType={formData.content_type}
                 defaultDepartment={departments?.find(d => d.id === formData.department_id)?.name || 'Front Office'}
                 onApplyArticle={(article) => {
+                    let formattedContent = article.content_html
+                    if (article.visual_asset?.image_url && !formattedContent.includes(article.visual_asset.image_url)) {
+                        const imgUrl = article.visual_asset.image_url
+                        let svgOrImg = `<img src="${imgUrl}" alt="${article.title}" class="max-h-80 w-full object-contain rounded-lg my-4" />`
+                        if (imgUrl.startsWith('<svg') || imgUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
+                            svgOrImg = imgUrl
+                        } else if (imgUrl.startsWith('data:image/svg+xml')) {
+                            try {
+                                const commaIdx = imgUrl.indexOf(',')
+                                if (commaIdx !== -1) {
+                                    const header = imgUrl.slice(0, commaIdx)
+                                    const body = imgUrl.slice(commaIdx + 1)
+                                    const decoded = header.includes('base64') ? decodeURIComponent(escape(atob(body))) : decodeURIComponent(body)
+                                    svgOrImg = decoded
+                                }
+                            } catch {}
+                        }
+
+                        formattedContent = `<div class="ai-schematic-card my-6 p-4 rounded-xl border bg-slate-950 text-center text-slate-300">\n${svgOrImg}\n<p class="text-xs text-slate-400 mt-2 italic">${article.visual_asset.caption || 'Operational SOP Vector Schematic'}</p>\n</div>\n\n${formattedContent}`
+                    }
+
                     setFormData((prev) => ({
                         ...prev,
                         title: article.title,
                         description: article.description,
                         summary: article.summary,
-                        content: article.content_html,
+                        content: formattedContent,
                         content_type: article.content_type,
                         checklist_items: (article.checklist_items as ChecklistItem[]) || prev.checklist_items,
                         faq_items: (article.faq_items as FAQItem[]) || prev.faq_items,

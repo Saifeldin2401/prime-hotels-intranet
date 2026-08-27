@@ -94,9 +94,17 @@ interface AnalyticsTooltipProps {
 
 const CustomTooltip = ({ active, payload, label }: AnalyticsTooltipProps) => {
   if (active && payload && payload.length) {
+    let formattedLabel = String(label ?? '');
+    if (label) {
+      const parsedDate = new Date(label);
+      if (!isNaN(parsedDate.getTime())) {
+        formattedLabel = format(parsedDate, "MMM d, yyyy");
+      }
+    }
+
     return (
       <div className="bg-white dark:bg-slate-900 p-3 rounded-lg border shadow-lg">
-        <p className="text-sm font-medium mb-2">{format(new Date(label), "MMM d, yyyy")}</p>
+        <p className="text-sm font-medium mb-2">{formattedLabel}</p>
         {payload.map((entry, index: number) => (
           <div key={`${entry?.name ?? 'series'}-${entry?.dataKey ?? index}`} className="flex items-center gap-2 text-sm">
             <div
@@ -287,7 +295,11 @@ export function DocumentAnalyticsCard({
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis
                     dataKey="date"
-                    tickFormatter={(value) => format(new Date(value), "MMM d")}
+                    tickFormatter={(value) => {
+                      if (!value) return '';
+                      const d = new Date(value);
+                      return !isNaN(d.getTime()) ? format(d, "MMM d") : String(value);
+                    }}
                     tick={{ fontSize: 11 }}
                     stroke="#9ca3af"
                   />
@@ -339,7 +351,11 @@ export function DocumentAnalyticsCard({
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium truncate">{user.name}</p>
                     <p className="text-xs text-muted-foreground">
-                      Last viewed {format(new Date(user.lastViewed), "MMM d")}
+                      Last viewed {(() => {
+                        if (!user.lastViewed) return 'recently';
+                        const d = new Date(user.lastViewed);
+                        return !isNaN(d.getTime()) ? format(d, "MMM d") : 'recently';
+                      })()}
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
