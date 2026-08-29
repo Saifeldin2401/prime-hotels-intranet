@@ -397,66 +397,89 @@ export default function AICourseGeneratorSettings() {
     })
   }
 
-  // Live Gateway Ping Test Action
+  // Live Gateway Ping Test Action — pins the request to exactly this provider
+  // (pinProvider mode in the edge gateway) so the result reflects THAT provider,
+  // not whichever one the cascade eventually satisfied.
   const handlePingProvider = async (providerId: ModelProvider) => {
-    setPingStates((prev) => ({
-      ...prev,
-      [providerId]: { testing: true },
-    }))
-
+    setPingStates((prev) => ({ ...prev, [providerId]: { testing: true } }))
     const start = performance.now()
+
+    if (providerId === 'recraft') {
+      await new Promise((res) => setTimeout(res, 60))
+      setPingStates((prev) => ({
+        ...prev,
+        [providerId]: { testing: false, status: 'online', latencyMs: Math.round(performance.now() - start), message: 'Deterministic SVG engine — no network call' },
+      }))
+      return
+    }
+
+    const pinnedModel: Record<string, string> = {
+      gemini: 'gemini-2.5-flash',
+      groq: 'openai/gpt-oss-20b',
+      openrouter: 'google/gemini-2.5-flash-lite',
+      cloudflare: '@cf/meta/llama-3.1-8b-instruct',
+      huggingface: 'Qwen/Qwen2.5-72B-Instruct',
+    }
+
     try {
-      if (providerId === 'recraft') {
-        await new Promise((res) => setTimeout(res, 80))
-        const latency = Math.round(performance.now() - start)
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean
+        pinnedProvider?: string
+        meta?: { providerUsed?: string; modelUsed?: string }
+        error?: string
+      }>('process-ai-request', {
+        body: {
+          pinProvider: true,
+          provider: providerId,
+          model: pinnedModel[providerId],
+          prompt: 'Reply with the single word: OK',
+          max_tokens: 64,
+          temperature: 0,
+        },
+      })
+
+      const latency = Math.round(performance.now() - start)
+      if (error) {
         setPingStates((prev) => ({
           ...prev,
-          [providerId]: { testing: false, status: 'online', latencyMs: latency, message: 'Deterministic SVG Engine Ready' },
+          [providerId]: { testing: false, status: 'error', latencyMs: latency, message: error.message.slice(0, 140) },
         }))
         return
       }
 
-      // Real round-trip via the edge gateway, pinned to this provider.
-      const res = await multiProviderRouter.execute('Reply with the single word: OK', {
-        maxTokens: 5,
-        temperature: 0,
-        preferredModel:
-          providerId === 'gemini' ? 'gemini-2.5-flash-lite'
-          : providerId === 'groq' ? 'openai/gpt-oss-20b'
-          : providerId === 'cloudflare' ? '@cf/meta/llama-3.1-8b-instruct'
-          : undefined,
-      })
-
-      const latency = Math.round(performance.now() - start)
-      const isOk = Boolean(res && res.rawText)
-      const servedByThisProvider = res?.providerUsed === providerId
-      setPingStates((prev) => ({
-        ...prev,
-        [providerId]: {
-          testing: false,
-          status: !isOk ? 'error' : servedByThisProvider ? (latency < 2500 ? 'online' : 'degraded') : 'degraded',
-          latencyMs: latency,
-          message: !isOk
-            ? 'No response from gateway'
-            : servedByThisProvider
-              ? `${res.modelUsed} responded in ${latency}ms`
-              : `Fell back to ${res.providerUsed} (${res.modelUsed}) — ${providerId} itself did not answer`,
-        },
-      }))
+      if (data?.success) {
+        setPingStates((prev) => ({
+          ...prev,
+          [providerId]: {
+            testing: false,
+            status: latency < 4000 ? 'online' : 'degraded',
+            latencyMs: latency,
+            message: `${data.meta?.modelUsed || pinnedModel[providerId]} responded in ${latency}ms`,
+          },
+        }))
+      } else {
+        setPingStates((prev) => ({
+          ...prev,
+          [providerId]: {
+            testing: false,
+            status: 'error',
+            latencyMs: latency,
+            message: data?.error ? `${providerId} unreachable — ${data.error}` : `${providerId} did not respond`,
+          },
+        }))
+      }
     } catch (err) {
-      const latency = Math.round(performance.now() - start)
       setPingStates((prev) => ({
         ...prev,
         [providerId]: {
           testing: false,
           status: 'error',
-          latencyMs: latency,
+          latencyMs: Math.round(performance.now() - start),
           message: (err instanceof Error ? err.message : 'Gateway unreachable').slice(0, 140),
         },
       }))
     }
   }
-
   // Live end-to-end diagnostic — every step is a real network round-trip.
   const handleRunDiagnostics = async () => {
     setDiagnosticRunning(true)

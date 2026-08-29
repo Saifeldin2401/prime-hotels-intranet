@@ -72,6 +72,7 @@ interface ParsedAiRequest {
   maxOutputTokens?: number;
   stream?: boolean;
   jsonMode?: boolean;
+  pinProvider?: boolean;
 }
 
 // OpenRouter retired the entire ":free" tier for mainstream models (all 404 →
@@ -180,6 +181,7 @@ function parseAiRequest(input: unknown): ParsedAiRequest {
     maxOutputTokens: typeof body.maxOutputTokens === "number" ? body.maxOutputTokens : undefined,
     stream: Boolean(body.stream),
     jsonMode: Boolean(body.jsonMode),
+    pinProvider: Boolean(body.pinProvider),
   };
 }
 
@@ -275,7 +277,7 @@ serve(async (req) => {
     }
     void authUserId;
 
-    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode } =
+    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider } =
       parseAiRequest(await req.json());
 
     const effectiveTemperature = normalizeTemperature(temperature);
@@ -371,6 +373,92 @@ serve(async (req) => {
       }
       return out;
     };
+
+    // DIAGNOSTIC: pin to exactly one provider, no cross-provider fall-through.
+    // Used by the admin "Test Ping" so it can tell whether THAT provider is
+    // actually reachable, not just whether the gateway found some answer.
+    if (pinProvider && preferredProvider) {
+      const p = preferredProvider;
+      const sys = defaultSystemPrompt;
+      const attempt = async (): Promise<{ ok: boolean; model: string; detail: string }> => {
+        try {
+          if (p === "gemini") {
+            const gm = model && model.includes("gemini") ? model : DEFAULT_GEMINI_MODELS[0];
+            if (!GEMINI_API_KEY) return { ok: false, model: gm, detail: "no GEMINI_API_KEY configured" };
+            const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gm}:generateContent?key=${GEMINI_API_KEY}`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }], generationConfig: { maxOutputTokens: effectiveMaxTokens } }),
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!r.ok) return { ok: false, model: gm, detail: `${r.status} ${(await r.text().catch(() => "")).slice(0, 120)}` };
+            const d = await r.json();
+            return { ok: Boolean(d?.candidates?.[0]?.content?.parts?.[0]?.text), model: gm, detail: "ok" };
+          }
+          if (p === "groq") {
+            const gm = model || DEFAULT_GROQ_MODELS[0];
+            if (!GROQ_API_KEY) return { ok: false, model: gm, detail: "no GROQ_API_KEY configured" };
+            const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+              method: "POST", headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ model: gm, messages: [{ role: "user", content: prompt }], max_tokens: Math.max(effectiveMaxTokens, 64) }),
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!r.ok) return { ok: false, model: gm, detail: `${r.status} ${(await r.text().catch(() => "")).slice(0, 120)}` };
+            const d = await r.json();
+            return { ok: Boolean(d?.choices?.[0]?.message?.content), model: gm, detail: "ok" };
+          }
+          if (p === "openrouter") {
+            const om = (model && model.includes("/")) ? model : DEFAULT_OPENROUTER_MODELS[0];
+            if (!OPENROUTER_API_KEY) return { ok: false, model: om, detail: "no OPENROUTER_API_KEY configured" };
+            const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+              body: JSON.stringify({ model: om, messages: [{ role: "user", content: prompt }], max_tokens: Math.max(effectiveMaxTokens, 32) }),
+              signal: AbortSignal.timeout(25000),
+            });
+            if (!r.ok) return { ok: false, model: om, detail: `${r.status} ${(await r.text().catch(() => "")).slice(0, 140)}` };
+            const d = await r.json();
+            return { ok: Boolean(d?.choices?.[0]?.message?.content), model: om, detail: "ok" };
+          }
+          if (p === "cloudflare") {
+            const cm = (model && model.startsWith("@cf/")) ? model : CF_TEXT_MODEL;
+            if (!CF_ACCOUNT_ID || !CF_API_TOKEN) return { ok: false, model: cm, detail: "no CLOUDFLARE_ACCOUNT_ID / CLOUDFLARE_API_TOKEN configured" };
+            const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${cm}`, {
+              method: "POST", headers: { Authorization: `Bearer ${CF_API_TOKEN}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ messages: [{ role: "user", content: prompt }], max_tokens: Math.min(effectiveMaxTokens, 256) }),
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!r.ok) return { ok: false, model: cm, detail: `${r.status} ${(await r.text().catch(() => "")).slice(0, 120)}` };
+            const d = await r.json();
+            return { ok: Boolean(d?.result?.response || d?.response), model: cm, detail: "ok" };
+          }
+          if (p === "huggingface") {
+            if (!HF_TOKEN && !HF_MINIMAX_TOKEN) return { ok: false, model: DEFAULT_HF_MODELS[0], detail: "no HUGGINGFACE_TOKEN configured" };
+            const hm = DEFAULT_HF_MODELS[0];
+            const r = await fetch("https://router.huggingface.co/v1/chat/completions", {
+              method: "POST", headers: { Authorization: `Bearer ${HF_TOKEN || HF_MINIMAX_TOKEN}`, "Content-Type": "application/json" },
+              body: JSON.stringify({ model: hm, messages: [{ role: "user", content: prompt }], max_tokens: 32 }),
+              signal: AbortSignal.timeout(20000),
+            });
+            if (!r.ok) return { ok: false, model: hm, detail: `${r.status} ${(await r.text().catch(() => "")).slice(0, 120)}` };
+            const d = await r.json();
+            return { ok: Boolean(d?.choices?.[0]?.message?.content), model: hm, detail: "ok" };
+          }
+          return { ok: false, model: model || p, detail: `no diagnostic path for provider "${p}"` };
+        } catch (e) {
+          return { ok: false, model: model || p, detail: (e as Error).message.slice(0, 160) };
+        }
+      };
+      void sys;
+      if (!providerEnabled(p) && p !== "openrouter") {
+        return jsonResponse({ success: false, pinnedProvider: p, error: `provider "${p}" is disabled in ai_platform_config` }, 200);
+      }
+      const outcome = await attempt();
+      return jsonResponse({
+        success: outcome.ok,
+        pinnedProvider: p,
+        meta: { providerUsed: outcome.ok ? p : "none", modelUsed: outcome.model },
+        error: outcome.ok ? undefined : outcome.detail,
+      }, 200);
+    }
 
     // TASK: IMAGE GENERATION
     if (

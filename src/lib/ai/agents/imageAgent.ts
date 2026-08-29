@@ -322,47 +322,18 @@ function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.trim())}`
 }
 
+// SECURITY (audit Phase 1): client-side provider calls removed. Image generation
+// goes exclusively through the `generate-course-image` edge function, which holds
+// the provider keys server-side. These stubs keep the call sites working — when
+// the edge function cannot produce an image the pipeline falls back to the
+// deterministic SVG generator.
 async function generateDirectRecraftApiImage(
   prompt: string,
   style = 'realistic_image',
-  aspectRatio = '16:9'
+  aspectRatio = '16:9',
 ): Promise<string | null> {
-  const recraftKey =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_RECRAFT_API_KEY) ||
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
-    ''
-
-  if (!recraftKey) return null
-
-  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
-  const enhancedPrompt = `Ultra-realistic photograph of ${cleanPrompt}, 5-star luxury hotel standard, crisp lighting, high-end hospitality, Forbes verified, authentic real people`
-
-  try {
-    const size = aspectRatio === '1:1' ? '1024x1024' : aspectRatio === '4:3' ? '1024x768' : '1024x576'
-    const res = await fetch('https://external.api.recraft.ai/v1/images/generations', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${recraftKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        prompt: enhancedPrompt,
-        style: style === 'vector_illustration' ? 'vector_illustration' : 'realistic_image',
-        size: size,
-      }),
-      signal: AbortSignal.timeout(25000),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      const url = data?.data?.[0]?.url || data?.image?.url
-      if (url) return url
-    }
-  } catch (err) {
-    console.warn('[RecraftAPI] Direct API notice:', err)
-  }
-
-  return null
+  void prompt; void style; void aspectRatio;
+  return null;
 }
 
 // Maps any requested image model to a REAL OpenRouter image id that has a live endpoint.
@@ -389,296 +360,64 @@ function mapToOpenRouterImageModel(requestedModel?: string): string {
   return FLAGSHIP
 }
 
+// SECURITY (audit Phase 1): client-side provider calls removed. Image generation
+// goes exclusively through the `generate-course-image` edge function, which holds
+// the provider keys server-side. These stubs keep the call sites working — when
+// the edge function cannot produce an image the pipeline falls back to the
+// deterministic SVG generator.
 async function generateOpenRouterImage(
   prompt: string,
   model = 'google/gemini-3-pro-image',
   style = 'realistic_image',
-  debug?: ImageDebugSession
+  debug?: ImageDebugSession,
 ): Promise<string | null> {
-  const orKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENROUTER_API_KEY) || ''
-  if (!orKey) return null
-
-  const resolvedModel = mapToOpenRouterImageModel(model)
-  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
-  const enhancedPrompt = `Ultra-realistic 8k Forbes 5-star luxury hotel photograph of ${cleanPrompt}, authentic Saudi hospitality elegance, immaculate tailored associate uniforms, crisp realistic facial details, opulent marble lobby, soft architectural ambient lighting, shot on Hasselblad H6D-100c, crystal clear focus, masterwork, no cartoon, no 3d render, no illustration, no red face, no distorted anatomy`
-
-  void style
-  debug?.logStageAttempt({
-    stage: `OpenRouter Studio Flagship (${resolvedModel})`,
-    model: resolvedModel,
-    provider: 'openrouter',
-    endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-    payload: { model: resolvedModel, prompt: cleanPrompt.slice(0, 100) },
-  })
-
-  try {
-    // OpenRouter has no dedicated /images endpoint — image-capable chat models return
-    // an image in `message.images[]` when `modalities` includes "image".
-    const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${orKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://phg-connect.com',
-        'X-Title': 'PRIME Connect Intranet',
-      },
-      body: JSON.stringify({
-        model: resolvedModel,
-        modalities: ['image', 'text'],
-        messages: [{ role: 'user', content: enhancedPrompt }],
-      }),
-      signal: AbortSignal.timeout(45000),
-    })
-
-    if (res.ok) {
-      const data = await res.json()
-      const message = data?.choices?.[0]?.message
-      const fromImages = message?.images?.[0]?.image_url?.url as string | undefined
-      const fromContent = typeof message?.content === 'string' && message.content.startsWith('data:image')
-        ? (message.content as string)
-        : undefined
-      const imgUrl = fromImages || fromContent
-      if (imgUrl) {
-        debug?.logStageSuccess(`OpenRouter Studio Flagship (${resolvedModel})`, resolvedModel, {
-          imageUrl: imgUrl,
-        })
-        return imgUrl
-      }
-    } else {
-      const errText = await res.text().catch(() => '')
-      debug?.logStageError({
-        stage: `OpenRouter Studio Flagship (${resolvedModel})`,
-        model: resolvedModel,
-        provider: 'openrouter',
-        statusCode: res.status,
-        error: errText,
-        actionableHint: 'OpenRouter returned error or insufficient balance.',
-      })
-    }
-  } catch (err) {
-    debug?.logStageError({
-      stage: `OpenRouter Studio Flagship (${resolvedModel})`,
-      model: resolvedModel,
-      provider: 'openrouter',
-      error: err,
-    })
-  }
-
-  return null
+  void prompt; void style; void model; void debug;
+  return null;
 }
 
+// SECURITY (audit Phase 1): client-side provider calls removed. Image generation
+// goes exclusively through the `generate-course-image` edge function, which holds
+// the provider keys server-side. These stubs keep the call sites working — when
+// the edge function cannot produce an image the pipeline falls back to the
+// deterministic SVG generator.
 async function generateGoogleImagenImage(
   prompt: string,
   model = 'google/gemini-3-pro-image',
   aspectRatio = '16:9',
-  debug?: ImageDebugSession
+  debug?: ImageDebugSession,
 ): Promise<string | null> {
-  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
-  const targetOrModel = mapToOpenRouterImageModel(model)
-
-  // 1. Primary High-Resolution Engine: OpenRouter Enterprise Endpoint for Google Models
-  // Directly provides Google Gemini 3 Pro (Nano Banana Pro) & Gemini 3.1 Flash (Nano Banana 2) with zero quota rate limits
-  const orImage = await generateOpenRouterImage(cleanPrompt, targetOrModel, 'realistic_image', debug)
-  if (orImage) return orImage
-
-  // 2. Direct Google AI Studio API fallback
-  const geminiKey =
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_AI_API_KEY) ||
-    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_API_KEY) ||
-    ''
-
-  if (geminiKey) {
-    const rawGoogleModel = targetOrModel.replace('google/', '')
-    try {
-      debug?.logStageAttempt({
-        stage: `Google AI Studio Direct API (${rawGoogleModel})`,
-        model: rawGoogleModel,
-        provider: 'gemini',
-        endpoint: `generativelanguage.googleapis.com/v1beta/models/${rawGoogleModel}:generateContent`,
-      })
-
-      const enhancedPrompt = `Generate an ultra-realistic, award-winning, 8k Forbes 5-star luxury hotel photograph of ${cleanPrompt}. Authentic associates in pristine tailored uniforms, natural skin tones, perfect facial details, opulent architectural lighting, shot on Hasselblad H6D-100c, crystal clear focus, masterpiece, no cartoon, no 3d render, no illustration, no red face, no distorted anatomy.`
-
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${rawGoogleModel}:generateContent?key=${geminiKey}`
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{
-            role: 'user',
-            parts: [{ text: enhancedPrompt }]
-          }],
-          generationConfig: {
-            responseModalities: ['TEXT', 'IMAGE'],
-          },
-        }),
-        signal: AbortSignal.timeout(25000),
-      })
-
-      if (res.ok) {
-        const json = await res.json()
-        const parts = json?.candidates?.[0]?.content?.parts || []
-        for (const p of parts) {
-          if (p.inlineData?.data) {
-            const mime = p.inlineData.mimeType || 'image/png'
-            const dataUri = `data:${mime};base64,${p.inlineData.data}`
-            debug?.logStageSuccess(`Google AI Studio Direct API (${rawGoogleModel})`, rawGoogleModel, {
-              imageUrl: dataUri,
-              mimeType: mime,
-              bytes: p.inlineData.data.length,
-            })
-            return dataUri
-          }
-        }
-      } else {
-        const errText = await res.text().catch(() => '')
-        debug?.logStageError({
-          stage: `Google AI Studio Direct API (${rawGoogleModel})`,
-          model: rawGoogleModel,
-          provider: 'gemini',
-          statusCode: res.status,
-          error: errText,
-          actionableHint: 'Google AI Studio returned quota or access error.',
-        })
-      }
-    } catch (err) {
-      debug?.logStageError({
-        stage: `Google AI Studio Direct API (${rawGoogleModel})`,
-        model: rawGoogleModel,
-        provider: 'gemini',
-        error: err,
-      })
-    }
-  }
-
-  // 3. Fallback to Cloudflare Workers AI / Direct photorealistic pipeline
-  debug?.logFallbackTrigger('Google Image Engine', 'Direct Cloudflare / FLUX Engine', 'Primary engines exhausted')
-  return generateDirectAiImage(cleanPrompt, 'photorealistic_luxury', aspectRatio, debug)
+  void prompt; void model; void aspectRatio; void debug;
+  return null;
 }
 
+// SECURITY (audit Phase 1): client-side provider calls removed. Image generation
+// goes exclusively through the `generate-course-image` edge function, which holds
+// the provider keys server-side. These stubs keep the call sites working — when
+// the edge function cannot produce an image the pipeline falls back to the
+// deterministic SVG generator.
 async function generateDirectCloudflareImage(
   prompt: string,
   model = '@cf/black-forest-labs/flux-1-schnell',
   aspectRatio = '16:9',
-  debug?: ImageDebugSession
+  debug?: ImageDebugSession,
 ): Promise<string | null> {
-  const accountId = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_ACCOUNT_ID) || ''
-  const apiToken = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_API_TOKEN) || ''
-
-  if (!accountId || !apiToken) {
-    debug?.logStageError({
-      stage: 'Cloudflare Workers AI (Direct REST)',
-      model,
-      provider: 'cloudflare',
-      error: 'Missing VITE_CLOUDFLARE_ACCOUNT_ID or VITE_CLOUDFLARE_API_TOKEN in environment',
-      actionableHint: 'Configure Cloudflare credentials in .env to use zero-cost edge inference.',
-    })
-    return null
-  }
-
-  let width = 1024
-  let height = 576
-  if (aspectRatio === '1:1') {
-    width = 1024
-    height = 1024
-  } else if (aspectRatio === '4:3') {
-    width = 1024
-    height = 768
-  }
-
-  const cleanPrompt = prompt.replace(/[^\x20-\x7E\u0600-\u06FF,.-]/g, ' ').trim()
-  const enhancedPrompt = `Ultra-realistic real-life photograph of ${cleanPrompt}, Forbes 5-star luxury hotel hospitality, authentic real associates in immaculate uniforms, crisp realistic facial details, high-end marble lobby, professional architectural lighting, shot on Hasselblad H6D-100c, crystal clear focus, 8k resolution, photorealistic masterwork, no cartoon, no 3d render, no illustration, no red face, no distorted faces`
-
-  try {
-    const cfUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`
-    const isFlux = model.includes('flux')
-
-    debug?.logStageAttempt({
-      stage: 'Cloudflare Workers AI (Direct REST)',
-      model,
-      provider: 'cloudflare',
-      endpoint: `api.cloudflare.com/client/v4/accounts/***/ai/run/${model}`,
-    })
-
-    const res = await fetch(cfUrl, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(
-        isFlux
-          ? { prompt: enhancedPrompt, steps: 4 }
-          : {
-              prompt: enhancedPrompt,
-              negative_prompt: 'cartoon, 3d render, illustration, red face, distorted eyes, blurry, low quality, anime',
-              num_steps: 6,
-              guidance: 4.5,
-              width,
-              height,
-            }
-      ),
-      signal: AbortSignal.timeout(25000),
-    })
-
-    if (res.ok) {
-      const blob = await res.blob()
-      if (blob.size > 2000) {
-        const dataUri = await new Promise<string>((resolve) => {
-          const reader = new FileReader()
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.onerror = () => resolve(null as any)
-          reader.readAsDataURL(blob)
-        })
-        debug?.logStageSuccess('Cloudflare Workers AI (Direct REST)', model, { imageUrl: dataUri, bytes: blob.size })
-        return dataUri
-      }
-    } else {
-      const errText = await res.text().catch(() => '')
-      debug?.logStageError({
-        stage: 'Cloudflare Workers AI (Direct REST)',
-        model,
-        provider: 'cloudflare',
-        statusCode: res.status,
-        error: errText,
-        actionableHint: 'Cloudflare Workers AI rejected credentials or rate limit hit.',
-      })
-    }
-  } catch (err) {
-    debug?.logStageError({
-      stage: 'Cloudflare Workers AI (Direct REST)',
-      model,
-      provider: 'cloudflare',
-      error: err,
-    })
-  }
-
-  return null
+  void prompt; void model; void aspectRatio; void debug;
+  return null;
 }
 
+// SECURITY (audit Phase 1): client-side provider calls removed. Image generation
+// goes exclusively through the `generate-course-image` edge function, which holds
+// the provider keys server-side. These stubs keep the call sites working — when
+// the edge function cannot produce an image the pipeline falls back to the
+// deterministic SVG generator.
 async function generateDirectAiImage(
   prompt: string,
   style?: string,
   aspectRatio = '16:9',
-  debug?: ImageDebugSession
+  debug?: ImageDebugSession,
 ): Promise<string | null> {
-  void style
-  // Direct Cloudflare Workers AI with credentials \u2014 the only client-side fallback engine.
-  // (Keyless public inference such as Pollinations was removed: unreliable, watermarked,
-  //  and it made "free" claims impossible to verify against real provider pricing/status.)
-  const cfImage = await generateDirectCloudflareImage(prompt, '@cf/black-forest-labs/flux-1-schnell', aspectRatio, debug)
-  if (cfImage) return cfImage
-
-  debug?.logStageError({
-    stage: 'Direct Client-Side Image Engine',
-    model: '@cf/black-forest-labs/flux-1-schnell',
-    provider: 'cloudflare',
-    error: 'Cloudflare Workers AI unavailable and no keyless fallback is configured.',
-    actionableHint: 'All configured image providers failed. Check Cloudflare / Google / OpenRouter keys and quotas.',
-  })
-
-  return null
+  void prompt; void style; void aspectRatio; void debug;
+  return null;
 }
 
 export class ImageAgent extends BaseAIAgent<ImageAgentInput, CourseVisualAsset | null> {

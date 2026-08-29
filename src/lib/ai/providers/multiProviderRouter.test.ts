@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { multiProviderRouter } from './multiProviderRouter'
-import { huggingFaceProvider } from './huggingFaceProvider'
 import { supabase } from '@/lib/supabase'
 
 vi.mock('@/lib/supabase', () => ({
@@ -8,12 +7,6 @@ vi.mock('@/lib/supabase', () => ({
     functions: {
       invoke: vi.fn(),
     },
-  },
-}))
-
-vi.mock('./huggingFaceProvider', () => ({
-  huggingFaceProvider: {
-    generateText: vi.fn(),
   },
 }))
 
@@ -108,19 +101,20 @@ describe('MultiProviderRouter', () => {
     expect(failoverHook).toHaveBeenCalledTimes(1)
   })
 
-  it('should cascade to HuggingFace if earlier edge providers fail', async () => {
-    // First two fail
-    vi.mocked(supabase.functions.invoke).mockRejectedValue(new Error('Gateway 504 Timeout'))
-
-    // Hugging Face mock returns
-    vi.mocked(huggingFaceProvider.generateText).mockResolvedValueOnce({
-      text: 'Response from HuggingFace Qwen 2.5 72B',
-      modelUsed: 'huggingface/Qwen/Qwen2.5-72B-Instruct',
-      latencyMs: 340,
-    })
+  it('every provider (incl. HuggingFace) is served through the edge gateway — no client-side keys', async () => {
+    // First attempt fails, gateway then serves a later candidate and reports the real provider via meta.
+    vi.mocked(supabase.functions.invoke)
+      .mockResolvedValueOnce({ data: null, error: { message: 'Gateway 504 Timeout' } } as any)
+      .mockResolvedValueOnce({
+        data: { success: true, response: 'Response from HuggingFace Qwen 2.5 72B', meta: { providerUsed: 'huggingface', modelUsed: 'Qwen/Qwen2.5-72B-Instruct' } },
+        error: null,
+      } as any)
 
     const response = await multiProviderRouter.execute('Emergency SOP drill', { task: 'compliance' })
     expect(response.providerUsed).toBe('huggingface')
     expect(response.rawText).toContain('Response from HuggingFace')
+    // never a direct provider fetch from the browser
+    const calls = vi.mocked(supabase.functions.invoke).mock.calls
+    expect(calls.every((c: any) => c[0] === 'process-ai-request')).toBe(true)
   })
 })
