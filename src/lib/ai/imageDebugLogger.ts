@@ -53,19 +53,11 @@ export class ImageDebugSession {
       ''
     )
 
-    // Check environment credentials status
-    const hasGemini = Boolean(
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GEMINI_API_KEY) ||
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_AI_API_KEY) ||
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_GOOGLE_API_KEY)
-    )
-    const hasCloudflare = Boolean(
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_ACCOUNT_ID) &&
-      (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CLOUDFLARE_API_TOKEN)
-    )
-    const hasOpenRouter = Boolean(
-      typeof import.meta !== 'undefined' && import.meta.env?.VITE_OPENROUTER_API_KEY
-    )
+    // Provider credentials live server-side in the edge functions (audit Phase 1).
+    // The browser has no visibility into them, so these are always "server-managed".
+    const hasGemini = 'server-managed'
+    const hasCloudflare = 'server-managed'
+    const hasOpenRouter = 'server-managed'
 
     console.log('%c📋 1. Request Parameters & Credential Health:%c', 'color: #a855f7; font-weight: bold;', '')
     console.table({

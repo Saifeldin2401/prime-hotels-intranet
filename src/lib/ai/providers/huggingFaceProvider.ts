@@ -27,7 +27,10 @@ export class HuggingFaceProvider {
   private defaultModel = 'Qwen/Qwen2.5-72B-Instruct'
 
   private constructor() {
-    this.apiKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_HUGGINGFACE_API_KEY) || ''
+    // SECURITY (audit Phase 1): no client-side provider key. The HuggingFace tier
+    // is served by the `process-ai-request` edge function, which holds the token
+    // server-side. This class is kept only so the router import stays valid.
+    this.apiKey = ''
   }
 
   public static getInstance(): HuggingFaceProvider {

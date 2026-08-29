@@ -10,7 +10,6 @@
  */
 
 import { supabase } from '@/lib/supabase'
-import { huggingFaceProvider } from './huggingFaceProvider'
 import { isImageModel, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 
 export type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 'general'
@@ -162,19 +161,12 @@ export class MultiProviderRouter {
 
       try {
         let resultText = ''
+        let actualProvider: ProviderCandidate['provider'] = candidate.provider
+        let actualModel = candidate.model
 
-        if (candidate.provider === 'huggingface') {
-          // Direct HuggingFace Inference API execution
-          const hfRes = await huggingFaceProvider.generateText(prompt, {
-            model: candidate.model,
-            systemPrompt: options.systemPrompt,
-            temperature: options.temperature,
-            maxTokens: options.maxTokens,
-            timeoutMs: options.timeoutMs || 20000,
-          })
-          resultText = hfRes.text
-        } else {
-          // Supabase Edge Function AI Gateway for Gemini / Groq / OpenRouter / Cloudflare
+        {
+          // Every provider (incl. HuggingFace) is served by the edge gateway, which
+          // holds the keys server-side. No provider key ever reaches the browser.
           const { data, error } = await supabase.functions.invoke<{
             success: boolean
             response?: string
@@ -207,6 +199,8 @@ export class MultiProviderRouter {
           }
 
           resultText = (data?.response || data?.result || '') as string
+          if (data?.meta?.providerUsed) actualProvider = data.meta.providerUsed as ProviderCandidate['provider']
+          if (data?.meta?.modelUsed) actualModel = data.meta.modelUsed
         }
 
         if (!resultText || resultText.trim().length === 0) {
@@ -226,8 +220,8 @@ export class MultiProviderRouter {
         return {
           data: parsedData,
           rawText: resultText,
-          providerUsed: candidate.provider,
-          modelUsed: candidate.model,
+          providerUsed: actualProvider,
+          modelUsed: actualModel,
           latencyMs: Date.now() - candidateStartTime,
           failoverCount,
           tier: candidate.tier,
