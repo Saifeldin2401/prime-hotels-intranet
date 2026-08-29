@@ -74,42 +74,55 @@ interface ParsedAiRequest {
   jsonMode?: boolean;
 }
 
+// OpenRouter retired the entire ":free" tier for mainstream models (all 404 →
+// "use the paid slug"). Legacy ids now map to real, cheap paid slugs.
 const LEGACY_MODEL_MAP: Record<string, string> = {
-  "Qwen/Qwen2.5-7B-Instruct": "qwen/qwen-2.5-72b-instruct:free",
-  "Qwen/Qwen2.5-72B-Instruct": "qwen/qwen-2.5-72b-instruct:free",
-  "Qwen/Qwen2.5-14B-Instruct": "qwen/qwen-2.5-72b-instruct:free",
-  "Qwen/Qwen2.5-32B-Instruct": "qwen/qwen-2.5-72b-instruct:free",
-  "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/llama-3.3-70b-instruct:free",
-  "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/llama-3.3-70b-instruct:free",
-  "google/gemini-2.0-flash-001": "google/gemini-2.0-flash-exp:free",
-  "google/gemini-2.0-flash": "google/gemini-2.0-flash-exp:free",
+  "Qwen/Qwen2.5-7B-Instruct": "qwen/qwen-2.5-72b-instruct",
+  "Qwen/Qwen2.5-72B-Instruct": "qwen/qwen-2.5-72b-instruct",
+  "Qwen/Qwen2.5-14B-Instruct": "qwen/qwen-2.5-72b-instruct",
+  "Qwen/Qwen2.5-32B-Instruct": "qwen/qwen-2.5-72b-instruct",
+  "meta-llama/Llama-3.3-70B-Instruct": "meta-llama/llama-3.3-70b-instruct",
+  "meta-llama/Llama-3.1-8B-Instruct": "meta-llama/llama-3.3-70b-instruct",
+  "google/gemini-2.0-flash-001": "google/gemini-2.5-flash-lite",
+  "google/gemini-2.0-flash": "google/gemini-2.5-flash-lite",
+  "anthropic/claude-3.5-sonnet": "anthropic/claude-haiku-4.5",
+  "anthropic/claude-3.7-sonnet": "anthropic/claude-opus-4.5",
   "default": "openrouter/auto",
 };
 
+// Verified live via the Google AI Studio ListModels API. gemini-2.0-flash is retired.
 const DEFAULT_GEMINI_MODELS = [
+  "gemini-flash-latest",
   "gemini-2.5-flash",
-  "gemini-2.0-flash",
   "gemini-2.5-flash-lite",
-  "gemini-1.5-flash",
+  "gemini-3-flash-preview",
 ];
 
+const CF_TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+
+// Probed live 2026-08-29 against the configured GROQ_API_KEY: the Llama / Qwen /
+// Gemma / Kimi ids all return 404 "model does not exist or you do not have access".
+// Only these chat models resolve on this account (gpt-oss + compound + allam).
 const DEFAULT_GROQ_MODELS = [
-  "llama-3.3-70b-versatile",
-  "llama-3.1-8b-instant",
-  "allam-2-7b",
+  "openai/gpt-oss-120b",
   "openai/gpt-oss-20b",
+  "allam-2-7b",
 ];
 
+// All real, live OpenRouter slugs (verified via openrouter.ai/api/v1/models),
+// cheapest-first. No ":free" — that tier is dead for mainstream models.
 const DEFAULT_OPENROUTER_MODELS = [
-  "deepseek/deepseek-chat-v3-0324:free",
-  "meta-llama/llama-3.3-70b-instruct:free",
-  "qwen/qwen-2.5-72b-instruct:free",
-  "deepseek/deepseek-r1:free",
+  "google/gemini-2.5-flash-lite",
   "openai/gpt-4o-mini",
+  "deepseek/deepseek-chat-v3-0324",
   "deepseek/deepseek-chat",
-  "anthropic/claude-3.5-sonnet",
-  "anthropic/claude-3.7-sonnet",
+  "meta-llama/llama-3.3-70b-instruct",
+  "qwen/qwen-2.5-72b-instruct",
+  "deepseek/deepseek-r1",
+  "anthropic/claude-haiku-4.5",
+  "google/gemini-2.5-flash",
   "openai/gpt-4o",
+  "anthropic/claude-opus-4.5",
   "openrouter/auto",
 ];
 
@@ -281,9 +294,20 @@ serve(async (req) => {
     let GROQ_API_KEY = Deno.env.get("GROQ_API_KEY") || "";
     const TOGETHER_API_KEY = Deno.env.get("TOGETHER_API_KEY") || "";
     let GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || Deno.env.get("GOOGLE_API_KEY") || "";
-    const OPENAI_API_KEY = Deno.env.get("OPENAI_API_KEY");
     const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
     const HF_MINIMAX_TOKEN = Deno.env.get("HUGGINGFACE_MINIMAX_TOKEN");
+    let CF_ACCOUNT_ID = Deno.env.get("CLOUDFLARE_ACCOUNT_ID") || "";
+    let CF_API_TOKEN = Deno.env.get("CLOUDFLARE_API_TOKEN") || Deno.env.get("CLOUDFLARE_API_KEY") || "";
+
+    // Admin control surface (ai_platform_config singleton) — governs which
+    // providers/models this function may use and in what cost order.
+    const ALL_PROVIDERS = ["gemini", "groq", "openrouter", "huggingface", "cloudflare", "recraft"];
+    let policy = {
+      freeOnly: false,
+      routingMode: "free_first" as string,
+      enabledProviders: ALL_PROVIDERS as string[],
+      disabledModelIds: [] as string[],
+    };
 
     if (serviceRoleKey) {
       try {
@@ -296,10 +320,57 @@ serve(async (req) => {
           const { data: oKey } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "OPENROUTER_API_KEY" });
           if (oKey && typeof oKey === "string") OPENROUTER_API_KEY = oKey;
         }
+        if (!GROQ_API_KEY) {
+          const { data: grKey } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "GROQ_API_KEY" });
+          if (grKey && typeof grKey === "string") GROQ_API_KEY = grKey;
+        }
+        if (!CF_ACCOUNT_ID) {
+          const { data: cfa } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "CLOUDFLARE_ACCOUNT_ID" });
+          if (cfa && typeof cfa === "string") CF_ACCOUNT_ID = cfa;
+        }
+        if (!CF_API_TOKEN) {
+          const { data: cft } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "CLOUDFLARE_API_TOKEN" });
+          if (cft && typeof cft === "string") CF_API_TOKEN = cft;
+        }
+        try {
+          const { data: cfgRow } = await supabaseAdmin
+            .from("ai_platform_config")
+            .select("free_only_mode,enabled_providers,routing_mode,disabled_model_ids")
+            .eq("id", true)
+            .maybeSingle();
+          if (cfgRow) {
+            policy = {
+              freeOnly: Boolean(cfgRow.free_only_mode),
+              routingMode: cfgRow.routing_mode || "free_first",
+              enabledProviders: Array.isArray(cfgRow.enabled_providers) && cfgRow.enabled_providers.length
+                ? cfgRow.enabled_providers
+                : ALL_PROVIDERS,
+              disabledModelIds: Array.isArray(cfgRow.disabled_model_ids) ? cfgRow.disabled_model_ids : [],
+            };
+          }
+        } catch (cfgErr) {
+          console.warn("ai_platform_config lookup skipped:", cfgErr);
+        }
       } catch (vaultErr) {
         console.warn("Vault secret lookup warning in process-ai-request:", vaultErr);
       }
     }
+
+    const providerEnabled = (p: string) => policy.enabledProviders.includes(p);
+    const modelAllowed = (m: string) => !policy.disabledModelIds.includes(m);
+    // ":free" models only under free-only. "openrouter/auto" can pick paid models, so it is NOT free.
+    const isFreeOrModel = (m: string) => m.includes(":free");
+    // quality_first / premium → try the flagship paid models before the free ones.
+    const orderedOpenRouter = (list: string[]) => {
+      let out = list.filter(modelAllowed);
+      if (policy.freeOnly) out = out.filter(isFreeOrModel);
+      if (policy.routingMode === "quality_first" || policy.routingMode === "premium") {
+        const paid = out.filter((m) => !isFreeOrModel(m));
+        const free = out.filter(isFreeOrModel);
+        out = [...paid, ...free];
+      }
+      return out;
+    };
 
     // TASK: IMAGE GENERATION
     if (
@@ -314,8 +385,47 @@ serve(async (req) => {
     ) {
       const cleanPrompt = prompt.replace(/[^\x20-\x7E؀-ۿ,.-]/g, " ").trim();
 
-      if (GEMINI_API_KEY) {
-        for (const gm of ["imagen-4.0-generate-001", "imagen-3.0-generate-002"]) {
+      // 1. OpenRouter image models (funded paid account). Real ids verified live via
+      //    https://openrouter.ai/api/v1/models — image output comes back in message.images[].
+      //    Skipped when the admin forces free-only or disables the openrouter provider.
+      if (OPENROUTER_API_KEY && !policy.freeOnly && providerEnabled("openrouter")) {
+        const requestedOr = model && model.includes("/") && !model.startsWith("@cf/")
+          ? model.replace(/-preview$/, "")
+          : null;
+        const orImageModels = Array.from(new Set([
+          ...(requestedOr ? [requestedOr] : []),
+          "google/gemini-3-pro-image",
+          "google/gemini-2.5-flash-image",
+          "google/gemini-3.1-flash-image",
+        ]));
+        for (const orModel of orImageModels) {
+          try {
+            const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+                "HTTP-Referer": "https://phg-connect.com",
+                "X-Title": "PRIME Connect Intranet",
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ model: orModel, modalities: ["image", "text"], messages: [{ role: "user", content: cleanPrompt }] }),
+              signal: AbortSignal.timeout(45000),
+            });
+            if (r.ok) {
+              const d = await r.json();
+              const imgs = d?.choices?.[0]?.message?.images || [];
+              const url: string | undefined = imgs[0]?.image_url?.url || imgs[0]?.url;
+              if (url) {
+                return jsonResponse({ success: true, image_url: url, provider: "openrouter", model: orModel });
+              }
+            }
+          } catch { /* next model */ }
+        }
+      }
+
+      if (GEMINI_API_KEY && providerEnabled("gemini")) {
+        // Imagen :predict is paid — skipped under free-only (the free gemini-flash-image below still runs).
+        for (const gm of (policy.freeOnly ? [] : ["imagen-4.0-generate-001", "imagen-3.0-generate-002"])) {
           try {
             const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${gm}:predict?key=${GEMINI_API_KEY}`, {
               method: "POST",
@@ -351,25 +461,12 @@ serve(async (req) => {
         } catch { /* fall through */ }
       }
 
-      if (OPENAI_API_KEY) {
-        try {
-          const r = await fetch("https://api.openai.com/v1/images/generations", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ model: "gpt-image-1", prompt: cleanPrompt, n: 1, size: "1536x1024" }),
-            signal: AbortSignal.timeout(60000),
-          });
-          if (r.ok) {
-            const d = await r.json();
-            const b64 = d?.data?.[0]?.b64_json;
-            if (b64) return jsonResponse({ success: true, image_url: `data:image/png;base64,${b64}`, provider: "openai", model: "gpt-image-1" });
-          }
-        } catch { /* fall through */ }
-      }
+      // (Direct OpenAI image gen removed — redundant with OpenRouter, and gpt-image-1
+      //  needs org verification. Image gen for this function is OpenRouter + Gemini.)
 
       return jsonResponse({
         success: false,
-        error: "Image generation unavailable: no configured provider produced an image (check GEMINI / OPENAI keys and quotas).",
+        error: "Image generation unavailable: no configured provider produced an image (check OPENROUTER / GEMINI keys and quotas).",
       }, 502);
     }
 
@@ -383,7 +480,7 @@ serve(async (req) => {
       }
     }
 
-    const openRouterCandidates = resolveModelCandidates(model);
+    const openRouterCandidates = orderedOpenRouter(resolveModelCandidates(model));
     let providerUsed = "none";
     let modelUsed = openRouterCandidates[0] || "openrouter/auto";
 
@@ -397,7 +494,7 @@ serve(async (req) => {
           try {
             let streamSuccess = false;
             const streamDiagnostics: string[] = [];
-            if (!streamSuccess && OPENROUTER_API_KEY) {
+            if (!streamSuccess && OPENROUTER_API_KEY && providerEnabled("openrouter")) {
               for (const candModel of openRouterCandidates) {
                 try {
                   const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -440,7 +537,7 @@ serve(async (req) => {
                 }
               }
             }
-            if (!streamSuccess && GROQ_API_KEY) {
+            if (!streamSuccess && GROQ_API_KEY && providerEnabled("groq")) {
               for (const groqModel of DEFAULT_GROQ_MODELS) {
                 try {
                   const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -483,9 +580,9 @@ serve(async (req) => {
                 }
               }
             }
-            if (!streamSuccess && GEMINI_API_KEY) {
+            if (!streamSuccess && GEMINI_API_KEY && providerEnabled("gemini")) {
               try {
-                const geminiModel = model && model.includes("gemini") ? model : "gemini-2.0-flash";
+                const geminiModel = model && model.includes("gemini") ? model : DEFAULT_GEMINI_MODELS[0];
                 const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${GEMINI_API_KEY}`;
                 const geminiRes = await fetch(url, {
                   method: "POST",
@@ -521,7 +618,38 @@ serve(async (req) => {
                 console.warn("Gemini streaming failed:", geminiErr);
               }
             }
-            if (!streamSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
+            if (!streamSuccess && CF_ACCOUNT_ID && CF_API_TOKEN && providerEnabled("cloudflare")) {
+              try {
+                const cfRes = await fetch(
+                  `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_TEXT_MODEL}`,
+                  {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${CF_API_TOKEN}`, "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }],
+                      max_tokens: Math.min(effectiveMaxTokens, 4096),
+                      temperature: effectiveTemperature,
+                    }),
+                    signal: AbortSignal.timeout(30000),
+                  },
+                );
+                if (cfRes.ok) {
+                  const data = await cfRes.json();
+                  const content = data?.result?.response || data?.response || "";
+                  if (content) {
+                    providerUsed = "cloudflare";
+                    modelUsed = CF_TEXT_MODEL;
+                    sendEvent({ chunk: content, done: false });
+                    streamSuccess = true;
+                  }
+                } else {
+                  streamDiagnostics.push(`Cloudflare ${CF_TEXT_MODEL} (${cfRes.status})`);
+                }
+              } catch (cfErr) {
+                streamDiagnostics.push(`Cloudflare error: ${(cfErr as Error).message}`);
+              }
+            }
+            if (!streamSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN) && providerEnabled("huggingface")) {
               const tokensToTry = [HF_TOKEN, HF_MINIMAX_TOKEN].filter(Boolean) as string[];
               for (const token of tokensToTry) {
                 if (streamSuccess) break;
@@ -607,7 +735,7 @@ serve(async (req) => {
       }
     }
 
-    if (!executionSuccess && OPENROUTER_API_KEY) {
+    if (!executionSuccess && OPENROUTER_API_KEY && providerEnabled("openrouter")) {
       for (const candModel of openRouterCandidates) {
         try {
           const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -629,7 +757,7 @@ serve(async (req) => {
       }
     }
 
-    if (!executionSuccess && GROQ_API_KEY) {
+    if (!executionSuccess && GROQ_API_KEY && providerEnabled("groq")) {
       for (const groqModel of DEFAULT_GROQ_MODELS) {
         try {
           const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
@@ -651,48 +779,66 @@ serve(async (req) => {
       }
     }
 
-    if (!executionSuccess && GEMINI_API_KEY) {
-      try {
-        const geminiModel = model && model.includes("gemini") ? model : "gemini-2.0-flash";
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
-        const geminiRes = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${defaultSystemPrompt}\n\n${prompt}` }] }], generationConfig: { temperature: effectiveTemperature, maxOutputTokens: effectiveMaxTokens, ...(jsonMode ? { responseMimeType: "application/json" } : {}) } }),
-        });
-        if (geminiRes.ok) {
-          const data = await geminiRes.json();
-          result = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (result) { providerUsed = "gemini"; modelUsed = geminiModel; executionSuccess = true; }
-        } else {
-          diagnosticErrors.push(`Gemini (${geminiRes.status}): ${await geminiRes.text()}`);
+    if (!executionSuccess && GEMINI_API_KEY && providerEnabled("gemini")) {
+      const geminiCandidates = model && model.includes("gemini")
+        ? [model, ...DEFAULT_GEMINI_MODELS.filter((m) => m !== model)]
+        : DEFAULT_GEMINI_MODELS;
+      for (const geminiModel of geminiCandidates) {
+        try {
+          const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${GEMINI_API_KEY}`;
+          const geminiRes = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${defaultSystemPrompt}\n\n${prompt}` }] }], generationConfig: { temperature: effectiveTemperature, maxOutputTokens: effectiveMaxTokens, ...(jsonMode ? { responseMimeType: "application/json" } : {}) } }),
+            signal: AbortSignal.timeout(40000),
+          });
+          if (geminiRes.ok) {
+            const data = await geminiRes.json();
+            result = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+            if (result) { providerUsed = "gemini"; modelUsed = geminiModel; executionSuccess = true; break; }
+          } else {
+            diagnosticErrors.push(`Gemini ${geminiModel} (${geminiRes.status}): ${(await geminiRes.text().catch(() => "")).slice(0, 120)}`);
+          }
+        } catch (geminiErr) {
+          diagnosticErrors.push(`Gemini ${geminiModel} exception: ${(geminiErr as Error).message}`);
         }
-      } catch (geminiErr) {
-        diagnosticErrors.push(`Gemini exception: ${(geminiErr as Error).message}`);
       }
     }
 
-    if (!executionSuccess && OPENAI_API_KEY) {
+    // Cloudflare Workers AI — genuinely free text tier (10k neurons/day). The
+    // last free fallback, so it always runs when reached (subject to provider gate).
+    if (!executionSuccess && CF_ACCOUNT_ID && CF_API_TOKEN && providerEnabled("cloudflare")) {
       try {
-        const openaiModel = model || "gpt-4o-mini";
-        const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${OPENAI_API_KEY}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ model: openaiModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jsonMode ? { response_format: { type: "json_object" } } : {}) }),
-        });
-        if (openaiRes.ok) {
-          const data = await openaiRes.json();
-          result = data?.choices?.[0]?.message?.content || "";
-          if (result) { providerUsed = "openai"; modelUsed = openaiModel; executionSuccess = true; }
+        const cfRes = await fetch(
+          `https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${CF_TEXT_MODEL}`,
+          {
+            method: "POST",
+            headers: { Authorization: `Bearer ${CF_API_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }],
+              max_tokens: Math.min(effectiveMaxTokens, 4096),
+              temperature: effectiveTemperature,
+            }),
+            signal: AbortSignal.timeout(30000),
+          },
+        );
+        if (cfRes.ok) {
+          const data = await cfRes.json();
+          result = data?.result?.response || data?.response || "";
+          if (result) { providerUsed = "cloudflare"; modelUsed = CF_TEXT_MODEL; executionSuccess = true; }
         } else {
-          diagnosticErrors.push(`OpenAI (${openaiRes.status}): ${await openaiRes.text()}`);
+          diagnosticErrors.push(`Cloudflare ${CF_TEXT_MODEL} (${cfRes.status}): ${(await cfRes.text().catch(() => "")).slice(0, 140)}`);
         }
-      } catch (openaiErr) {
-        diagnosticErrors.push(`OpenAI exception: ${(openaiErr as Error).message}`);
+      } catch (cfErr) {
+        diagnosticErrors.push(`Cloudflare exception: ${(cfErr as Error).message}`);
       }
     }
 
-    if (!executionSuccess && TOGETHER_API_KEY) {
+    // Direct OpenAI (api.openai.com) removed as a text fallback — OpenRouter already
+    // proxies openai/gpt-4o and openai/gpt-4o-mini, so a separate key just adds a
+    // failure surface (a revoked key 401s on every cascade fall-through).
+
+    if (!executionSuccess && TOGETHER_API_KEY && !policy.freeOnly) {
       for (const togetherModel of DEFAULT_TOGETHER_MODELS) {
         try {
           const togetherRes = await fetch("https://api.together.xyz/v1/chat/completions", {
@@ -714,7 +860,7 @@ serve(async (req) => {
       }
     }
 
-    if (!executionSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
+    if (!executionSuccess && (HF_TOKEN || HF_MINIMAX_TOKEN) && providerEnabled("huggingface")) {
       const tokensToTry = [HF_TOKEN, HF_MINIMAX_TOKEN].filter(Boolean) as string[];
       for (const token of tokensToTry) {
         if (executionSuccess) break;

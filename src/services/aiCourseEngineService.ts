@@ -64,6 +64,29 @@ export const aiCourseEngineService = {
     // and apply it to the model registry before any agent runs.
     await aiPlatformConfigService.load().catch(() => undefined)
 
+    // Per-user daily generation cap (admin "Spend & QA Caps" tab).
+    const platformCfg = aiPlatformConfigService.getCached()
+    let generatingUserId: string | null = null
+    try {
+      const { data: authData } = await supabase.auth.getUser()
+      generatingUserId = authData?.user?.id ?? null
+      if (generatingUserId && platformCfg.perUserDailyGenerations > 0) {
+        const usedToday = await aiPlatformConfigService.getUserGenerationCountToday(generatingUserId)
+        if (usedToday >= platformCfg.perUserDailyGenerations) {
+          throw new Error(
+            `Daily course generation limit reached (${usedToday}/${platformCfg.perUserDailyGenerations}). ` +
+            `Try again after 00:00 UTC or ask an admin to raise the cap in AI Course Generator settings.`,
+          )
+        }
+      }
+    } catch (gateErr) {
+      // A real cap-exceeded error must propagate; auth/query hiccups must not block generation.
+      if (gateErr instanceof Error && gateErr.message.startsWith('Daily course generation limit reached')) {
+        throw gateErr
+      }
+      console.warn('[aiCourseEngine] per-user daily cap check skipped:', gateErr)
+    }
+
     // Map stage numbers from orchestrator progress events to the 6 studio UI cards
     const phaseToStageMap: Record<string, { stage: number; name: string }> = {
       discovery_and_research: { stage: 1, name: 'Pedagogical Blueprint Planning' },
@@ -79,6 +102,7 @@ export const aiCourseEngineService = {
     const orchestrated = await aiCourseOrchestrator.orchestrate(config, {
       preferredModel: config?.aiControls?.preferredModel,
       signal: opts?.signal,
+      maxConcurrency: platformCfg.maxConcurrency,
       skipAudio: config.audioConfig?.enableAudio !== true,
       skipImages: config.imageConfig?.enableAIImages === false,
       onProgress: (event) => {
@@ -111,6 +135,7 @@ export const aiCourseEngineService = {
           qa_report: qaReport as any,
           models_used: modelsUsed,
           duration_ms: durationMs,
+          created_by: generatingUserId,
           ...(telemetry
             ? {
                 metadata: {

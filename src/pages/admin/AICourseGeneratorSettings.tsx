@@ -25,7 +25,7 @@ import type { ModelProvider, RoutingMode } from '@/lib/ai/agents/types'
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { supabase } from '@/lib/supabase'
 import type { AIPlatformConfig } from '@/services/aiPlatformConfigService'
-import { DEFAULT_AI_PLATFORM_CONFIG } from '@/services/aiPlatformConfigService'
+import { aiPlatformConfigService, DEFAULT_AI_PLATFORM_CONFIG } from '@/services/aiPlatformConfigService'
 import { useQuery } from '@tanstack/react-query'
 import {
   Activity,
@@ -200,12 +200,15 @@ export default function AICourseGeneratorSettings() {
     const ok = rows.reduce((s, r) => s + Number(r.successes || 0), 0)
     const cost = rows.reduce((s, r) => s + Number(r.total_cost_usd || 0), 0)
     const fb = rows.reduce((s, r) => s + Number(r.total_fallbacks || 0), 0)
+    const latWeighted = rows.reduce((s, r) => s + Number(r.avg_latency_ms || 0) * Number(r.requests || 0), 0)
     return {
-      req: req || 148,
-      ok: ok || 147,
-      cost: cost || 0.12,
-      fb: fb || 6,
-      successRate: req ? Math.round((ok / req) * 100) : 99,
+      req,
+      ok,
+      cost,
+      fb,
+      successRate: req ? Math.round((ok / req) * 100) : null,
+      avgLatencyMs: req ? Math.round(latWeighted / req) : null,
+      hasData: rows.length > 0,
     }
   }, [analytics.data])
 
@@ -341,6 +344,23 @@ export default function AICourseGeneratorSettings() {
     })
   }
 
+  // Agent Roles tab → each selector owns a fixed slot in the priority list.
+  // The registry filters out empty slots; earlier slots get a bigger routing boost.
+  const setTextPrioritySlot = (slot: number, modelId: string) => {
+    if (!draft) return
+    const next = [...draft.textModelPriority]
+    while (next.length <= slot) next.push('')
+    next[slot] = modelId
+    setDraft({ ...draft, textModelPriority: next })
+  }
+  const setImagePrioritySlot = (slot: number, modelId: string) => {
+    if (!draft) return
+    const next = [...draft.imageModelPriority]
+    while (next.length <= slot) next.push('')
+    next[slot] = modelId
+    setDraft({ ...draft, imageModelPriority: next })
+  }
+
   // Bulk model actions
   const handleEnableAllFree = () => {
     if (!draft) return
@@ -396,109 +416,150 @@ export default function AICourseGeneratorSettings() {
         return
       }
 
-      // Execute a micro ping via multiProviderRouter
-      const res = await multiProviderRouter.execute('ping', {
+      // Real round-trip via the edge gateway, pinned to this provider.
+      const res = await multiProviderRouter.execute('Reply with the single word: OK', {
         maxTokens: 5,
         temperature: 0,
-        preferredModel: providerId === 'gemini' ? 'gemini-2.5-flash-lite' : providerId === 'groq' ? 'llama-3.1-8b-instant' : undefined,
+        preferredModel:
+          providerId === 'gemini' ? 'gemini-2.5-flash-lite'
+          : providerId === 'groq' ? 'openai/gpt-oss-20b'
+          : providerId === 'cloudflare' ? '@cf/meta/llama-3.1-8b-instruct'
+          : undefined,
       })
 
       const latency = Math.round(performance.now() - start)
-      const isOk = res && res.rawText
+      const isOk = Boolean(res && res.rawText)
+      const servedByThisProvider = res?.providerUsed === providerId
       setPingStates((prev) => ({
         ...prev,
         [providerId]: {
           testing: false,
-          status: latency < 1500 ? 'online' : 'degraded',
+          status: !isOk ? 'error' : servedByThisProvider ? (latency < 2500 ? 'online' : 'degraded') : 'degraded',
           latencyMs: latency,
-          message: `${res.modelUsed || providerId} responded successfully.`,
+          message: !isOk
+            ? 'No response from gateway'
+            : servedByThisProvider
+              ? `${res.modelUsed} responded in ${latency}ms`
+              : `Fell back to ${res.providerUsed} (${res.modelUsed}) — ${providerId} itself did not answer`,
         },
       }))
-    } catch {
+    } catch (err) {
       const latency = Math.round(performance.now() - start)
       setPingStates((prev) => ({
         ...prev,
         [providerId]: {
           testing: false,
-          status: 'online', // Keep green if fallback handled gracefully
-          latencyMs: Math.max(120, latency),
-          message: 'Gateway responding through multi-tier fallback.',
+          status: 'error',
+          latencyMs: latency,
+          message: (err instanceof Error ? err.message : 'Gateway unreachable').slice(0, 140),
         },
       }))
     }
   }
 
-  // Live Pipeline Diagnostic Simulation
+  // Live end-to-end diagnostic — every step is a real network round-trip.
   const handleRunDiagnostics = async () => {
     setDiagnosticRunning(true)
     type DiagStep = { name: string; status: 'pending' | 'running' | 'success' | 'error'; latencyMs?: number; details?: string }
-    const initialSteps: DiagStep[] = [
-      { name: '1. Multi-Provider Router & Edge Gateway Connectivity', status: 'running' },
-      { name: '2. Primary Text LLM Reasoning & Latency Benchmark', status: 'pending' },
-      { name: '3. Structured JSON Schema & Curriculum Engine', status: 'pending' },
-      { name: '4. Visual Image & Vector Schematic Generation Engine', status: 'pending' },
-      { name: '5. Saudi Hospitality & KSA Regulatory Compliance Shield', status: 'pending' },
+    const steps: DiagStep[] = [
+      { name: '1. Multi-provider text gateway', status: 'running' },
+      { name: '2. Structured JSON generation', status: 'pending' },
+      { name: '3. Image / visual generation engine', status: 'pending' },
+      { name: '4. Platform config, spend & telemetry', status: 'pending' },
     ]
-    setDiagnosticResults(initialSteps)
-
-    // Step 1: Gateways
-    await new Promise((r) => setTimeout(r, 450))
-    initialSteps[0] = {
-      name: '1. Multi-Provider Router & Edge Gateway Connectivity',
-      status: 'success',
-      latencyMs: 140,
-      details: 'Google AI Studio, Groq LPU, and Cloudflare Workers AI verified online.',
+    setDiagnosticResults([...steps])
+    const mark = (i: number, patch: Partial<DiagStep>) => {
+      steps[i] = { ...steps[i], ...patch }
+      setDiagnosticResults([...steps])
     }
-    initialSteps[1] = { ...initialSteps[1], status: 'running' }
-    setDiagnosticResults([...initialSteps])
 
-    // Step 2: Text LLM
-    await new Promise((r) => setTimeout(r, 600))
-    initialSteps[1] = {
-      name: '2. Primary Text LLM Reasoning & Latency Benchmark',
-      status: 'success',
-      latencyMs: 380,
-      details: 'Gemini 2.5 Flash / Llama 3.3 70B responded in 380ms with 100% token fidelity.',
+    // Step 1 — text round-trip through process-ai-request
+    let t0 = performance.now()
+    try {
+      const r = await multiProviderRouter.execute('Reply with exactly: OK', { maxTokens: 10, temperature: 0 })
+      const ok = Boolean(r?.rawText)
+      mark(0, {
+        status: ok ? 'success' : 'error',
+        latencyMs: Math.round(performance.now() - t0),
+        details: ok ? `Served by ${r.providerUsed} · ${r.modelUsed}` : 'Gateway returned no text',
+      })
+    } catch (e) {
+      mark(0, { status: 'error', latencyMs: Math.round(performance.now() - t0), details: (e as Error).message.slice(0, 160) })
     }
-    initialSteps[2] = { ...initialSteps[2], status: 'running' }
-    setDiagnosticResults([...initialSteps])
+    mark(1, { status: 'running' })
 
-    // Step 3: Structured JSON
-    await new Promise((r) => setTimeout(r, 500))
-    initialSteps[2] = {
-      name: '3. Structured JSON Schema & Curriculum Engine',
-      status: 'success',
-      latencyMs: 290,
-      details: 'Strict JSON schema parsed 4 modules, 12 lessons, and Bloom taxonomy checkpoints.',
+    // Step 2 — JSON-mode round-trip, must parse
+    t0 = performance.now()
+    try {
+      const r = await multiProviderRouter.execute(
+        'Return ONLY a JSON array of exactly two hotel amenities as strings. No prose.',
+        { maxTokens: 120, jsonMode: true, temperature: 0 },
+      )
+      let parsed: unknown = null
+      try { parsed = JSON.parse((r.rawText || '').replace(/```json|```/g, '').trim()) } catch { parsed = null }
+      const ok = Array.isArray(parsed)
+      mark(1, {
+        status: ok ? 'success' : 'error',
+        latencyMs: Math.round(performance.now() - t0),
+        details: ok ? `Valid JSON via ${r.modelUsed}` : 'Response was not parseable JSON',
+      })
+    } catch (e) {
+      mark(1, { status: 'error', latencyMs: Math.round(performance.now() - t0), details: (e as Error).message.slice(0, 160) })
     }
-    initialSteps[3] = { ...initialSteps[3], status: 'running' }
-    setDiagnosticResults([...initialSteps])
+    mark(2, { status: 'running' })
 
-    // Step 4: Visuals
-    await new Promise((r) => setTimeout(r, 700))
-    initialSteps[3] = {
-      name: '4. Visual Image & Vector Schematic Generation Engine',
-      status: 'success',
-      latencyMs: 510,
-      details: 'Google Imagen 3 (Nano Banana Pro) & Recraft Vector pipeline operational.',
+    // Step 3 — real image generation via the edge function
+    t0 = performance.now()
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-course-image', {
+        body: {
+          prompt: 'diagnostic probe: minimalist luxury hotel concierge bell icon',
+          course_id: 'diagnostic',
+          module_id: 'diag',
+          lesson_id: 'diag',
+          title: 'Diagnostic Probe',
+          alt_text: 'diagnostic probe',
+          aspect_ratio: '1:1',
+        },
+      })
+      const ok = !error && Boolean((data as { success?: boolean })?.success)
+      const d = data as { provider?: string; model_used?: string; error?: string; diagnostics?: string[] }
+      mark(2, {
+        status: ok ? 'success' : 'error',
+        latencyMs: Math.round(performance.now() - t0),
+        details: ok
+          ? `${d.provider} · ${d.model_used}`
+          : (error?.message || d?.error || d?.diagnostics?.[0] || 'No image produced').slice(0, 160),
+      })
+    } catch (e) {
+      mark(2, { status: 'error', latencyMs: Math.round(performance.now() - t0), details: (e as Error).message.slice(0, 160) })
     }
-    initialSteps[4] = { ...initialSteps[4], status: 'running' }
-    setDiagnosticResults([...initialSteps])
+    mark(3, { status: 'running' })
 
-    // Step 5: Compliance Shield
-    await new Promise((r) => setTimeout(r, 400))
-    initialSteps[4] = {
-      name: '5. Saudi Hospitality & KSA Regulatory Compliance Shield',
-      status: 'success',
-      latencyMs: 110,
-      details: 'Ministry of Tourism 5-Star & Balady Food Safety rules audited (100% Pass).',
+    // Step 4 — config load + daily spend + telemetry visibility
+    t0 = performance.now()
+    try {
+      const cfg = await aiPlatformConfigService.load(true)
+      const spend = await aiPlatformConfigService.getDailySpendUSD(true)
+      mark(3, {
+        status: 'success',
+        latencyMs: Math.round(performance.now() - t0),
+        details: `Routing: ${cfg.routingMode}${cfg.freeOnlyMode ? ' · free-only' : ''} · Spend today $${spend.toFixed(2)}/$${cfg.premiumDailyUsdCap.toFixed(2)} cap · ${summary.hasData ? `${summary.req} logged calls` : 'no telemetry yet'}`,
+      })
+    } catch (e) {
+      mark(3, { status: 'error', latencyMs: Math.round(performance.now() - t0), details: (e as Error).message.slice(0, 160) })
     }
-    setDiagnosticResults([...initialSteps])
+
     setDiagnosticRunning(false)
-
+    const failed = steps.filter((s) => s.status === 'error').length
     toast({
-      title: t('ai_course_generator.diagnostics.passed', 'All Diagnostic Tests Passed'),
-      description: 'End-to-end multi-agent pipeline is 100% operational.',
+      variant: failed ? 'destructive' : 'default',
+      title: failed
+        ? t('ai_course_generator.diagnostics.failed', `${failed} diagnostic check(s) failed`)
+        : t('ai_course_generator.diagnostics.passed', 'All diagnostics passed'),
+      description: failed
+        ? 'See the step details above for the failing layer.'
+        : 'Text, JSON, image, and config layers are all responding.',
     })
   }
 
@@ -559,37 +620,37 @@ export default function AICourseGeneratorSettings() {
         </div>
       </div>
 
-      {/* Top Real-time Telemetry Dashboard */}
+      {/* Top Real-time Telemetry Dashboard — from ai_generation_analytics (last 200 days) */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
         <StatCard
           icon={<Activity className="h-4 w-4 text-purple-600" />}
           label={t('ai_course_generator.telemetry.requests', 'Total Requests')}
-          value={String(summary.req)}
-          subtext="200 session events"
+          value={summary.hasData ? String(summary.req) : '—'}
+          subtext={summary.hasData ? 'logged AI calls' : 'no usage logged yet'}
         />
         <StatCard
           icon={<ShieldCheck className="h-4 w-4 text-emerald-600" />}
           label={t('ai_course_generator.telemetry.success_rate', 'Success Rate')}
-          value={`${summary.successRate}%`}
-          subtext="Zero downtime"
+          value={summary.successRate === null ? '—' : `${summary.successRate}%`}
+          subtext={summary.hasData ? `${summary.ok}/${summary.req} succeeded` : '—'}
         />
         <StatCard
           icon={<DollarSign className="h-4 w-4 text-blue-600" />}
           label={t('ai_course_generator.telemetry.est_spend', 'Total Spend (USD)')}
-          value={`$${summary.cost.toFixed(2)}`}
-          subtext="Free-first active"
+          value={summary.hasData ? `$${summary.cost.toFixed(2)}` : '—'}
+          subtext={summary.hasData ? 'estimated, all-time' : '—'}
         />
         <StatCard
           icon={<RefreshCw className="h-4 w-4 text-amber-600" />}
           label={t('ai_course_generator.telemetry.fallbacks', 'Auto Fallbacks')}
-          value={String(summary.fb)}
-          subtext="Self-healing handled"
+          value={summary.hasData ? String(summary.fb) : '—'}
+          subtext={summary.hasData ? 'model cascade events' : '—'}
         />
         <StatCard
           icon={<Zap className="h-4 w-4 text-orange-600" />}
           label={t('ai_course_generator.telemetry.avg_latency', 'Avg Latency')}
-          value="420 ms"
-          subtext="High-speed LPU edge"
+          value={summary.avgLatencyMs === null ? '—' : `${summary.avgLatencyMs} ms`}
+          subtext={summary.hasData ? 'request-weighted' : '—'}
         />
       </div>
 
@@ -817,15 +878,25 @@ export default function AICourseGeneratorSettings() {
 
                     <div className="flex items-center justify-between pt-2 border-t text-xs">
                       <div className="flex items-center gap-1.5">
-                        {ping?.status === 'online' ? (
+                        {ping?.testing ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            <Loader2 className="w-2.5 h-2.5 animate-spin me-1" />
+                            Pinging...
+                          </Badge>
+                        ) : ping?.status === 'online' ? (
                           <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200 text-[10px]">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 me-1 animate-pulse" />
                             {ping.latencyMs} ms
                           </Badge>
-                        ) : ping?.testing ? (
-                          <Badge variant="outline" className="text-[10px]">
-                            <Loader2 className="w-2.5 h-2.5 animate-spin me-1" />
-                            Pinging...
+                        ) : ping?.status === 'degraded' ? (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 me-1" />
+                            degraded
+                          </Badge>
+                        ) : ping?.status === 'error' ? (
+                          <Badge variant="outline" className="bg-rose-50 text-rose-700 border-rose-200 text-[10px]">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 me-1" />
+                            offline
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">
@@ -1081,61 +1152,64 @@ export default function AICourseGeneratorSettings() {
             </p>
           </div>
 
+          <p className="text-[11px] text-muted-foreground -mt-2 mb-1">
+            A model picked here is prepended to every agent&apos;s routing cascade and gets a large
+            scoring bonus, so it wins unless it is disabled or fails. Earlier rows outrank later rows.
+            Leave a row on its default to let the registry choose.
+          </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <RoleModelSelector
               icon={<Compass className="w-4 h-4 text-purple-600" />}
-              roleName={t('ai_course_generator.roles.planner', 'Curriculum Blueprint Planner')}
-              roleDescription="Generates modular curriculum taxonomy, learning outcomes, and lesson outlines."
+              roleName={t('ai_course_generator.roles.planner', 'Primary Text Model (Planner)')}
+              roleDescription="Top of the text cascade — curriculum blueprint, learning outcomes, lesson outlines."
               models={models.filter((m) => !isImageModel(m.id))}
               selectedModel={draft.textModelPriority[0] || 'gemini-2.5-flash'}
-              onSelect={(modelId) => set('textModelPriority', [modelId, ...draft.textModelPriority.filter((id) => id !== modelId)])}
+              onSelect={(modelId) => setTextPrioritySlot(0, modelId)}
             />
 
             <RoleModelSelector
               icon={<BookOpen className="w-4 h-4 text-blue-600" />}
-              roleName={t('ai_course_generator.roles.writer', '5-Star Content & SOP Writer')}
-              roleDescription="Synthesizes bilingual training prose, luxury procedures, and operational standards."
+              roleName={t('ai_course_generator.roles.writer', 'Secondary Text Model (Writer)')}
+              roleDescription="Second in the text cascade — bilingual prose, luxury procedures, operational standards."
               models={models.filter((m) => !isImageModel(m.id))}
-              selectedModel={draft.textModelPriority[1] || 'llama-3.3-70b-versatile'}
-              onSelect={(modelId) =>
-                set('textModelPriority', [draft.textModelPriority[0] || 'gemini-2.5-flash', modelId, ...draft.textModelPriority.filter((id) => id !== modelId)])
-              }
+              selectedModel={draft.textModelPriority[1] || 'openai/gpt-oss-120b'}
+              onSelect={(modelId) => setTextPrioritySlot(1, modelId)}
             />
 
             <RoleModelSelector
               icon={<FileCheck className="w-4 h-4 text-emerald-600" />}
-              roleName={t('ai_course_generator.roles.quiz', "Interactive Quiz & Bloom's Engine")}
-              roleDescription="Generates verified MCQs, scenario assessments, ordering items, and distractors."
+              roleName={t('ai_course_generator.roles.quiz', 'JSON / Assessment Model')}
+              roleDescription="Third in the cascade — verified MCQs, scenario assessments, ordering items, distractors."
               models={models.filter((m) => !isImageModel(m.id) && m.supportsJsonMode)}
-              selectedModel="gemini-2.5-flash"
-              onSelect={() => {}}
+              selectedModel={draft.textModelPriority[2] || 'gemini-2.5-flash'}
+              onSelect={(modelId) => setTextPrioritySlot(2, modelId)}
             />
 
             <RoleModelSelector
               icon={<ImageIcon className="w-4 h-4 text-orange-600" />}
-              roleName={t('ai_course_generator.roles.image', 'Visual Image & Schematic Studio')}
-              roleDescription="Synthesizes luxury hotel photography, concept guides, and vector schematics."
+              roleName={t('ai_course_generator.roles.image', 'Primary Image Model')}
+              roleDescription="Top of the image cascade — luxury hotel photography, concept guides, vector schematics."
               models={models.filter((m) => isImageModel(m.id))}
               selectedModel={draft.imageModelPriority[0] || 'google-imagen-3'}
-              onSelect={(modelId) => set('imageModelPriority', [modelId, ...draft.imageModelPriority.filter((id) => id !== modelId)])}
+              onSelect={(modelId) => setImagePrioritySlot(0, modelId)}
             />
 
             <RoleModelSelector
               icon={<Mic className="w-4 h-4 text-rose-600" />}
-              roleName={t('ai_course_generator.roles.audio', 'Audio Briefings Narrator')}
-              roleDescription="Synthesizes executive audio voiceovers and bilingual lesson briefings."
+              roleName={t('ai_course_generator.roles.audio', 'Fourth Text Model (Narrator)')}
+              roleDescription="Fourth in the cascade — audio narration scripts and bilingual lesson briefings."
               models={models.filter((m) => !isImageModel(m.id))}
-              selectedModel="gemini-2.5-flash"
-              onSelect={() => {}}
+              selectedModel={draft.textModelPriority[3] || 'gemini-2.5-flash'}
+              onSelect={(modelId) => setTextPrioritySlot(3, modelId)}
             />
 
             <RoleModelSelector
               icon={<ShieldCheck className="w-4 h-4 text-teal-600" />}
-              roleName={t('ai_course_generator.roles.compliance', 'KSA Compliance & Standards Auditor')}
-              roleDescription="Audits curriculum against Saudi Ministry of Tourism 5-star & Balady HACCP safety rules."
+              roleName={t('ai_course_generator.roles.compliance', 'Fifth Text Model (Compliance)')}
+              roleDescription="Fifth in the cascade — audits against Saudi Ministry of Tourism & Balady HACCP rules."
               models={models.filter((m) => !isImageModel(m.id))}
-              selectedModel="allam-2-7b"
-              onSelect={() => {}}
+              selectedModel={draft.textModelPriority[4] || 'allam-2-7b'}
+              onSelect={(modelId) => setTextPrioritySlot(4, modelId)}
             />
           </div>
         </TabsContent>
@@ -1358,6 +1432,8 @@ export default function AICourseGeneratorSettings() {
                       className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 text-xs transition-all ${
                         res.status === 'success'
                           ? 'bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-800'
+                          : res.status === 'error'
+                          ? 'bg-rose-50/40 border-rose-200 dark:bg-rose-950/20 dark:border-rose-800'
                           : res.status === 'running'
                           ? 'bg-blue-50/40 border-blue-200 dark:bg-blue-950/20 animate-pulse'
                           : 'bg-card'
@@ -1366,6 +1442,8 @@ export default function AICourseGeneratorSettings() {
                       <div className="flex items-center gap-3">
                         {res.status === 'success' ? (
                           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                        ) : res.status === 'error' ? (
+                          <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
                         ) : res.status === 'running' ? (
                           <Loader2 className="w-4 h-4 text-blue-600 animate-spin shrink-0" />
                         ) : (

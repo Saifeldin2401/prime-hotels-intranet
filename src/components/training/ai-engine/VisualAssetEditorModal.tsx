@@ -532,93 +532,53 @@ export function VisualAssetEditorModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
-                      {/* OpenRouter Unified Image Engines */}
-                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mb-1">
-                        OpenRouter Unified Image Engines
-                      </div>
-                      <SelectItem value="recraft/recraft-v4">
-                        🖼️ Recraft V4 (Forbes 5-Star Textures & Vector SVG) — 99% Quality
-                      </SelectItem>
-                      <SelectItem value="recraft/recraft-v3">
-                        🖼️ Recraft V3 (Forbes 5-Star Hotel Visuals) — 99% Quality
-                      </SelectItem>
-                      <SelectItem value="black-forest-labs/flux.2-pro">
-                        🏆 FLUX.2 Pro (Next-Gen 8K Photorealism) — 99% Quality
-                      </SelectItem>
-                      <SelectItem value="bytedance-seed/seedream-4.5">
-                        🌊 ByteDance Seedream 4.5 (Cinematic Realism) — 98% Quality
-                      </SelectItem>
-                      <SelectItem value="black-forest-labs/flux.2-flex">
-                        💎 FLUX.2 Flex (Dynamic Aspect Ratios & Typography) — 96% Quality
-                      </SelectItem>
-                      <SelectItem value="black-forest-labs/flux.2-max">
-                        🌟 FLUX.2 Max (Frontier Luxury Quality) — 98% Quality
-                      </SelectItem>
-                      <SelectItem value="black-forest-labs/flux.2-klein-4b">
-                        ⚡ FLUX.2 Klein 4B (Ultra-Fast) — 94% Quality
-                      </SelectItem>
-                      <SelectItem value="openai/gpt-5.4-image-2">
-                        🧠 OpenAI GPT-5.4 Image 2 (Studio Multimodal) — 97% Quality
-                      </SelectItem>
-                      <SelectItem value="sourceful/riverflow-v2-pro">
-                        📐 Sourceful Riverflow V2 Pro (Precise Schematics) — 96% Quality
+                      <SelectItem value="auto">
+                        🤖 Automatic — best available free engine (Recommended)
                       </SelectItem>
 
-                      {/* Google AI Studio */}
+                      {/* Cloudflare Workers AI — free */}
                       <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                        Google AI Studio (Gemini Key)
-                      </div>
-                      <SelectItem value="google-imagen-3">
-                        🍌 Google Imagen 3 (Nano Banana Pro • 4K Luxury) — 99% Quality
-                      </SelectItem>
-                      <SelectItem value="google-imagen-3-fast">
-                        ⚡ Google Imagen 3 Fast (Nano Banana 2 • Fast) — 95% Quality
-                      </SelectItem>
-                      <SelectItem value="nano-banana-pro-preview">
-                        🧠 Nano Banana Pro (Gemini 3 Pro Vision) — 98% Quality
-                      </SelectItem>
-                      <SelectItem value="gemini-3.1-flash-image">
-                        🚀 Nano Banana 2 (Gemini 3.1 Flash Image) — 94% Quality
-                      </SelectItem>
-
-                      {/* Cloudflare Workers AI */}
-                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                        Cloudflare Workers AI (100% Free • $0.00)
+                        Cloudflare Workers AI (Free)
                       </div>
                       <SelectItem value="@cf/leonardo/lucid-origin">
-                        🎨 Leonardo Lucid Origin (Flagship Creative Director) — 98% Quality
-                      </SelectItem>
-                      <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                        ✨ FLUX.1 Schnell (12B Flow Transformer • 8K Realism) — 97% Quality
+                        🎨 Leonardo Lucid Origin (flagship photorealism)
                       </SelectItem>
                       <SelectItem value="@cf/leonardo/phoenix-1.0">
-                        🖋️ Leonardo Phoenix 1.0 (Coherent Typography) — 96% Quality
+                        🖋️ Leonardo Phoenix 1.0 (coherent typography)
+                      </SelectItem>
+                      <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
+                        ✨ FLUX.1 Schnell (best text &amp; diagrams)
                       </SelectItem>
                       <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
-                        🛡️ SDXL Base 1.0 (High Detail Diffusion) — 93% Quality
+                        🛡️ SDXL Base 1.0 (high detail)
                       </SelectItem>
                       <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
-                        🏨 DreamShaper 8 LCM (Photorealism & Ambiance) — 91% Quality
+                        🏨 DreamShaper 8 LCM (photorealism &amp; ambiance)
                       </SelectItem>
                       <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                        ⚡ SDXL Lightning (4-Step Fast Generation) — 89% Quality
-                      </SelectItem>
-                      <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-img2img">
-                        🔄 SD 1.5 Image-to-Image (Photo Modification) — 87% Quality
-                      </SelectItem>
-                      <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-inpainting">
-                        🎭 SD 1.5 Inpainting (Regional Mask Editing) — 86% Quality
+                        ⚡ SDXL Lightning (fastest, 4-step)
                       </SelectItem>
 
-                      {/* Native Vector & Direct Engines */}
+                      {/* Deterministic SVG — always available */}
                       <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                        Direct & Vector Engines (100% Free • $0.00)
+                        Vector (Free • instant)
                       </div>
                       <SelectItem value="recraft-vector">
-                        📐 SOP Flowchart Schematic (Zero-Loss SVG Blueprint) — 99% Quality
+                        📐 Vector Schematic (SVG diagrams &amp; flowcharts)
                       </SelectItem>
-                      <SelectItem value="flux-1-schnell">
-                        🚀 Direct FLUX.1 Schnell (Zero-Failure 8K Realism) — 97% Quality
+
+                      {/* OpenRouter — paid, needs credits */}
+                      <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
+                        OpenRouter (Paid • needs credits)
+                      </div>
+                      <SelectItem value="google/gemini-3-pro-image">
+                        💎 Gemini 3 Pro Image (highest quality)
+                      </SelectItem>
+                      <SelectItem value="google/gemini-2.5-flash-image">
+                        💎 Gemini 2.5 Flash Image (fast)
+                      </SelectItem>
+                      <SelectItem value="google/gemini-3.1-flash-image">
+                        💎 Gemini 3.1 Flash Image
                       </SelectItem>
                     </SelectContent>
                   </Select>

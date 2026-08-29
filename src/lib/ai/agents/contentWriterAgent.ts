@@ -49,6 +49,21 @@ Do NOT output markdown fences or conversational wrappers. Output HTML only.`
     if (researchContext) extraContext += `\nINDUSTRY BENCHMARKS:\n${researchContext}`
     if (groundedSopsContext) extraContext += `\nGROUNDED HOTEL PROCEDURES:\n${groundedSopsContext}`
 
+    // Honour the author's depth / difficulty / strategy choices.
+    const depth = config?.overallDepth || 'comprehensive'
+    const depthDirective =
+      depth === 'quick'
+        ? 'Keep this lesson SHORT — 2-3 tight paragraphs plus the required sections. No filler.'
+        : depth === 'standard'
+          ? 'Standard length — clear and practical, roughly 4-6 paragraphs across the sections.'
+          : depth === 'expert'
+            ? 'Deep and exhaustive — cover edge cases, exceptions, escalation paths and rationale.'
+            : 'Comprehensive — thorough coverage with concrete examples and timing benchmarks.'
+    const difficulty = config?.difficulty || 'intermediate'
+    const strategy = config?.instructionalStrategy || 'explain_example_practice'
+    const settingsDirective = `AUTHOR SETTINGS (follow these — do not substitute your own): depth "${depth}" (${depthDirective}); difficulty "${difficulty}"; teaching style "${strategy}". Output ONLY the sections implied by the mandatory components list — do not invent extra sections.`
+    const maxTokensForDepth = depth === 'quick' ? 2200 : depth === 'expert' ? 6000 : 4000
+
     const dialogueSectionAr = hasDialogue
       ? `
   <h3>3. نصوص المحادثة والحوار مع النزلاء (Verbatim Dialogue Scripts)</h3>
@@ -120,6 +135,7 @@ Do NOT output markdown fences or conversational wrappers. Output HTML only.`
 - القالب: ${lesson.templateType}
 - المخرجات التعليمية المستهدفة: ${(lesson.learningOutcomes || []).join(' | ') || 'إتقان المعايير الفندقية والتميز في الخدمة'}
 - المكونات الإلزامية: [${components}]
+${settingsDirective}
 ${extraContext}
 
 الهيكل الإلزامي لكود HTML:
@@ -149,6 +165,7 @@ Write an exhaustive, publication-grade training lesson in clean semantic HTML fo
 - Lesson Template: ${lesson.templateType}
 - Target Outcomes: ${(lesson.learningOutcomes || []).join(' | ') || '5-Star Operational Mastery & Procedural Compliance'}
 - Mandatory Components: [${components}]
+${settingsDirective}
 ${extraContext}
 
 Structured HTML Requirements:
@@ -175,7 +192,7 @@ Output clean HTML only, no markdown codeblocks.`
       ...options,
       jsonMode: false,
       temperature: 0.4,
-      maxTokens: 3500,
+      maxTokens: maxTokensForDepth,
     })
 
     const cleanHtml = (result.rawOutput || '')

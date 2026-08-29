@@ -111,14 +111,14 @@ CRITICAL TRANSLATION RULES:
 3. Monolingual Output: Return ONLY the translated text in ${targetLangName}. Do NOT include intro/outro conversational remarks, explanations, or quotes.`;
 };
 
-// Fallback chain for OpenRouter models
+// Fallback chain — real, live OpenRouter slugs verified via openrouter.ai/api/v1/models.
 const OPENROUTER_MODELS = [
-  "anthropic/claude-3.5-sonnet",
+  "google/gemini-2.5-flash-lite",
   "openai/gpt-4o-mini",
   "deepseek/deepseek-chat",
   "meta-llama/llama-3.3-70b-instruct",
-  "nvidia/nemotron-3.5-lightning:free",
-  "minimax/minimax-m3:free",
+  "qwen/qwen-2.5-72b-instruct",
+  "anthropic/claude-haiku-4.5",
   "openrouter/auto",
 ];
 

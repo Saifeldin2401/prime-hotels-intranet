@@ -184,7 +184,7 @@ export function AIArticleStudioModal({
 
   // AI Visuals & Photography Controls
   const [enableVectorSchematic, setEnableVectorSchematic] = useState(true)
-  const [imageModel, setImageModel] = useState('flux-1-schnell')
+  const [imageModel, setImageModel] = useState('auto')
   const [visualStyle, setVisualStyle] = useState('luxury_photography')
   const [aspectRatio, setAspectRatio] = useState<'16:9' | '4:3' | '1:1'>('16:9')
   const [customVisualPrompt, setCustomVisualPrompt] = useState('')
@@ -278,6 +278,7 @@ export function AIArticleStudioModal({
         course_id: 'kb-article',
         module_id: 'kb-module',
         lesson_id: 'kb-lesson',
+        storage_bucket: 'course-assets',
         title: generatedResult.title || title || 'Knowledge Base Article Visual',
         alt_text: generatedResult.summary || generatedResult.title || 'Operational SOP Diagram',
         caption: generatedResult.summary || '5-Star Operational Standard',
@@ -363,16 +364,15 @@ export function AIArticleStudioModal({
                 </div>
                 <div>
                   <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                    <span>AI Knowledge & SOP Studio</span>
-                    <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
-                      Multi-Agent Orchestrated
-                    </Badge>
+                    <span>AI Document Creator</span>
                     <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                      Forbes 5-Star & KSA Compliant
+                      Forbes 5-Star &amp; KSA Compliant
                     </Badge>
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground">
-                    Synthesize publication-grade 5-star hotel Standard Operating Procedures (SOPs), Corporate Policies, Checklists, and Recraft Vector Schematics with automatic KSA regulatory audit.
+                    {studioMode === 'fast'
+                      ? 'Pick a template or describe what you need — the AI writes a complete SOP, policy, checklist or FAQ in English and Arabic. Edit it afterwards.'
+                      : 'Full control over source material, scope, depth, visuals and compliance checks.'}
                   </DialogDescription>
                 </div>
               </div>
@@ -575,9 +575,9 @@ export function AIArticleStudioModal({
                             <ImageIcon className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className="text-xs font-bold text-foreground">Generate 5-Star AI Photography / Artwork</p>
+                            <p className="text-xs font-bold text-foreground">Add an illustration</p>
                             <p className="text-[11px] text-muted-foreground">
-                              Synthesizes an award-winning 1024px luxury hotel operational visual (FLUX.1 / Recraft AI) embedded directly into the article.
+                              The AI creates a matching luxury-hotel image and embeds it in the document.
                             </p>
                           </div>
                         </div>
@@ -802,103 +802,29 @@ export function AIArticleStudioModal({
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="max-h-80">
-                                  {/* OpenRouter Unified Image Engines */}
-                                  <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mb-1">
-                                    OpenRouter Unified Image Engines
-                                  </div>
-                                  <SelectItem value="recraft/recraft-v3">
-                                    🖼️ Recraft V3 (Forbes 5-Star Hotel Visuals) — 99% Quality
-                                  </SelectItem>
-                                  <SelectItem value="black-forest-labs/flux.2-pro">
-                                    🏆 FLUX.2 Pro (Next-Gen 8K Photorealism) — 99% Quality
-                                  </SelectItem>
-                                  <SelectItem value="recraft/recraft-v4.1-vector">
-                                    📐 Recraft V4.1 Vector (Zero-Loss SVG Blueprint) — 99% Quality
-                                  </SelectItem>
-                                  <SelectItem value="bytedance-seed/seedream-5-0-pro">
-                                    🌊 ByteDance Seedream 5.0 Pro — 98% Quality
-                                  </SelectItem>
-                                  <SelectItem value="x-ai/grok-imagine-image-2.0">
-                                    🚀 xAI Grok Imagine 2.0 (High Contrast) — 97% Quality
-                                  </SelectItem>
-                                  <SelectItem value="openai/gpt-image-2">
-                                    🧠 OpenAI GPT Image 2 (Next-Gen Realism) — 97% Quality
-                                  </SelectItem>
-                                  <SelectItem value="black-forest-labs/flux.2-flex">
-                                    💎 FLUX.2 Flex (Dynamic Aspect Ratios) — 96% Quality
-                                  </SelectItem>
-                                  <SelectItem value="krea/krea-2-large">
-                                    🎨 Krea 2 Large (Interior Architectural Design) — 96% Quality
-                                  </SelectItem>
-                                  <SelectItem value="bytedance-seed/seedream-4.5">
-                                    ⚡ ByteDance Seedream 4.5 (Balanced Speed) — 95% Quality
-                                  </SelectItem>
-                                  <SelectItem value="black-forest-labs/flux.2-klein-4b">
-                                    ⚡ FLUX.2 Klein 4B (Real-Time Ultra-Fast) — 94% Quality
-                                  </SelectItem>
-                                  <SelectItem value="microsoft/mai-image-2.5-pro">
-                                    🏢 Microsoft MAI-Image 2.5 Pro (Enterprise Charts) — 94% Quality
-                                  </SelectItem>
-                                  <SelectItem value="qwen/qwen-image-3-pro">
-                                    🌐 Qwen Image 3 Pro (Multilingual Vision) — 93% Quality
-                                  </SelectItem>
+                                  <SelectItem value="auto">🤖 Automatic — best free engine (Recommended)</SelectItem>
 
-                                  {/* Google AI Studio */}
                                   <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                                    Google AI Studio (Gemini Key)
+                                    Cloudflare Workers AI (Free)
                                   </div>
-                                  <SelectItem value="google-imagen-3">
-                                    🍌 Google Imagen 3 (Nano Banana Pro • 4K Luxury) — 99% Quality
-                                  </SelectItem>
-                                  <SelectItem value="google-imagen-3-fast">
-                                    ⚡ Google Imagen 3 Fast (Nano Banana 2 • Fast) — 95% Quality
-                                  </SelectItem>
-                                  <SelectItem value="nano-banana-pro-preview">
-                                    🧠 Nano Banana Pro (Gemini 3 Pro Vision) — 98% Quality
-                                  </SelectItem>
-                                  <SelectItem value="gemini-3.1-flash-image">
-                                    🚀 Nano Banana 2 (Gemini 3.1 Flash Image) — 94% Quality
-                                  </SelectItem>
+                                  <SelectItem value="@cf/leonardo/lucid-origin">🎨 Leonardo Lucid Origin (flagship photorealism)</SelectItem>
+                                  <SelectItem value="@cf/leonardo/phoenix-1.0">🖋️ Leonardo Phoenix 1.0 (typography)</SelectItem>
+                                  <SelectItem value="@cf/black-forest-labs/flux-1-schnell">✨ FLUX.1 Schnell (text &amp; diagrams)</SelectItem>
+                                  <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">🛡️ SDXL Base 1.0 (high detail)</SelectItem>
+                                  <SelectItem value="@cf/lykon/dreamshaper-8-lcm">🏨 DreamShaper 8 LCM (photo &amp; ambiance)</SelectItem>
+                                  <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">⚡ SDXL Lightning (fastest)</SelectItem>
 
-                                  {/* Cloudflare Workers AI */}
                                   <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                                    Cloudflare Workers AI (100% Free • $0.00)
+                                    Vector (Free • instant)
                                   </div>
-                                  <SelectItem value="@cf/leonardo/lucid-origin">
-                                    🎨 Leonardo Lucid Origin (Flagship Creative Director) — 98% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                                    ✨ FLUX.1 Schnell (12B Flow Transformer • 8K Realism) — 97% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/leonardo/phoenix-1.0">
-                                    🖋️ Leonardo Phoenix 1.0 (Coherent Typography) — 96% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
-                                    🛡️ SDXL Base 1.0 (High Detail Diffusion) — 93% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
-                                    🏨 DreamShaper 8 LCM (Photorealism & Ambiance) — 91% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                                    ⚡ SDXL Lightning (4-Step Fast Generation) — 89% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-img2img">
-                                    🔄 SD 1.5 Image-to-Image (Photo Modification) — 87% Quality
-                                  </SelectItem>
-                                  <SelectItem value="@cf/runwayml/stable-diffusion-v1-5-inpainting">
-                                    🎭 SD 1.5 Inpainting (Regional Mask Editing) — 86% Quality
-                                  </SelectItem>
+                                  <SelectItem value="recraft-vector">📐 Vector Schematic (SVG diagrams &amp; flowcharts)</SelectItem>
 
-                                  {/* Native Vector & Direct Engines */}
                                   <div className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-wider bg-muted/40 rounded-sm mt-2 mb-1">
-                                    Direct & Vector Engines (100% Free • $0.00)
+                                    OpenRouter (Paid • needs credits)
                                   </div>
-                                  <SelectItem value="recraft-vector">
-                                    📐 SOP Flowchart Schematic (Zero-Loss SVG Blueprint) — 99% Quality
-                                  </SelectItem>
-                                  <SelectItem value="flux-1-schnell">
-                                    🚀 Direct FLUX.1 Schnell (Zero-Failure 8K Realism) — 97% Quality
-                                  </SelectItem>
+                                  <SelectItem value="google/gemini-3-pro-image">💎 Gemini 3 Pro Image (highest quality)</SelectItem>
+                                  <SelectItem value="google/gemini-2.5-flash-image">💎 Gemini 2.5 Flash Image (fast)</SelectItem>
+                                  <SelectItem value="google/gemini-3.1-flash-image">💎 Gemini 3.1 Flash Image</SelectItem>
                                 </SelectContent>
                               </Select>
                             </div>
@@ -956,7 +882,8 @@ export function AIArticleStudioModal({
                             <SelectContent>
                               <SelectItem value="auto">✨ Auto Route Gateway (Optimal Latency & Cost)</SelectItem>
                               <SelectItem value="google/gemini-2.5-flash">⚡ Google Gemini 2.5 Flash</SelectItem>
-                              <SelectItem value="anthropic/claude-3.7-sonnet">🧠 Anthropic Claude 3.7 Sonnet</SelectItem>
+                              <SelectItem value="anthropic/claude-opus-4.5">🧠 Anthropic Claude Opus 4.5</SelectItem>
+                              <SelectItem value="anthropic/claude-haiku-4.5">🪶 Anthropic Claude Haiku 4.5</SelectItem>
                               <SelectItem value="deepseek/deepseek-chat">🚀 DeepSeek V3</SelectItem>
                             </SelectContent>
                           </Select>
@@ -991,7 +918,7 @@ export function AIArticleStudioModal({
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2">
                     <h3 className="text-base font-bold text-foreground">
-                      {progressEvent?.agentName || 'Multi-Agent Knowledge Orchestrator'}
+                      {progressEvent?.agentName || 'Writing your document'}
                     </h3>
                     {progressEvent?.modelUsed && (
                       <Badge variant="secondary" className="text-[10px] font-mono bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">
@@ -1001,7 +928,7 @@ export function AIArticleStudioModal({
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {progressEvent?.detail || 'Coordinating research, drafting, translation, vector visuals, and KSA compliance audit...'}
+                    {progressEvent?.detail || 'Researching standards, drafting in English and Arabic, adding visuals, and checking compliance…'}
                   </p>
                 </div>
 
@@ -1367,12 +1294,15 @@ export function AIArticleStudioModal({
                   {isGenerating ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      Synthesizing Article...
+                      Writing your document…
                     </>
                   ) : (
                     <>
                       <Wand2 className="w-4 h-4" />
-                      Generate with Multi-Agent Studio
+                      {contentType === 'policy' ? 'Create policy'
+                        : contentType === 'checklist' ? 'Create checklist'
+                        : contentType === 'faq' ? 'Create FAQ'
+                        : 'Create document'}
                     </>
                   )}
                 </Button>

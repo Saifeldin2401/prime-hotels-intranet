@@ -115,6 +115,7 @@ import { StudioStageAISettings } from './studio/StudioStageAISettings'
 import { StudioStagePreflightReview } from './studio/StudioStagePreflightReview'
 import { StudioLiveGenerationProgress, type GenerationErrorState } from './studio/StudioLiveGenerationProgress'
 import { StudioInteractiveOutline } from './studio/StudioInteractiveOutline'
+import { StudioQuickStart, type QuickThoroughness, type QuickSourceKind } from './studio/StudioQuickStart'
 
 // Supporting Secondary Dialogs
 import { GenerationHistoryDialog } from './GenerationHistoryDialog'
@@ -179,6 +180,16 @@ export function AICourseEngineStudioModal({
   const [currentStep, setCurrentStep] = useState<'configure' | 'generating' | 'preview'>('configure')
   const [currentStage, setCurrentStage] = useState<StudioStageId>('basics')
   const [summaryPanelOpen, setSummaryPanelOpen] = useState(true)
+
+  // Quick mode = one simple screen for non-technical staff; Advanced = the 7-stage wizard.
+  const QUICK_SUPPORTED_MODES: CourseGenerationMode[] = ['full_course', 'topic_based', 'document_based']
+  const [studioMode, setStudioMode] = useState<'quick' | 'advanced'>(
+    initialMode && !QUICK_SUPPORTED_MODES.includes(initialMode) ? 'advanced' : 'quick'
+  )
+  const [quickSourceKind, setQuickSourceKind] = useState<QuickSourceKind>(initialDocumentId ? 'knowledge_base' : 'topic')
+  const [quickThoroughness, setQuickThoroughness] = useState<QuickThoroughness>('standard')
+  const [quickUploadName, setQuickUploadName] = useState('')
+  const [quickLaunch, setQuickLaunch] = useState(false)
 
   // Secondary Dialogs
   const [historyOpen, setHistoryOpen] = useState(false)
@@ -692,7 +703,7 @@ export function AICourseEngineStudioModal({
         canSkip: true,
         onRetry: () => handleStartGeneration(),
         onFallback: () => {
-          setPreferredModel('gemini-1.5-flash')
+          setPreferredModel('gemini-2.5-flash')
           handleStartGeneration()
         },
         onSkip: () => setCurrentStep('configure'),
@@ -704,6 +715,71 @@ export function AICourseEngineStudioModal({
         variant: 'destructive',
       })
     }
+  }
+
+  // Quick mode: translate the 4 simple answers into a full config via the smart
+  // presets, then launch once the state has committed (quickLaunch effect below).
+  const handleQuickGenerate = () => {
+    const usingDoc =
+      (quickSourceKind === 'knowledge_base' || quickSourceKind === 'library') ? Boolean(selectedDocumentId)
+      : quickSourceKind === 'upload' ? Boolean(quickUploadName)
+      : false
+    const mode: CourseGenerationMode = usingDoc ? 'document_based' : 'full_course'
+    handleApplyPreset(getSmartModePreset(mode), false)
+
+    // "How thorough" overrides — batched with the preset setters above.
+    if (quickThoroughness === 'quick') {
+      setCourseType('microlearning')
+      setOverallDepth('quick')
+      setModuleCount(2)
+      setLessonsPerModule(2)
+      setLessonDuration(5)
+      setQuizQuestionCount(3)
+    } else if (quickThoroughness === 'deep') {
+      setOverallDepth('expert')
+      setModuleCount(5)
+      setLessonsPerModule(4)
+      setLessonDuration(20)
+      setQuizQuestionCount(6)
+    } else {
+      setOverallDepth('comprehensive')
+      setModuleCount(4)
+      setLessonsPerModule(3)
+      setLessonDuration(15)
+      setQuizQuestionCount(5)
+    }
+
+    setGenerationMode(mode)
+    if (enableAIImages) setImageModel('auto') // real free model, not a stale/fake id
+    setEnableAutoRevision(true)
+    setEnableComplianceAudit(true)
+    setPreferredModel('auto')
+    setQuickLaunch(true)
+  }
+
+  useEffect(() => {
+    if (!quickLaunch) return
+    setQuickLaunch(false)
+    void handleStartGeneration()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quickLaunch])
+
+  // Quick mode: read an uploaded document to plain text and use it as source material.
+  const handleQuickFileUpload = (file: File) => {
+    setQuickUploadName(`${file.name} (${(file.size / 1024).toFixed(0)} KB)`)
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      const text = (e.target?.result as string) || ''
+      setRawSourceContent(text.slice(0, 20000))
+      if (!courseTopic.trim()) {
+        setCourseTopic(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '))
+      }
+    }
+    reader.readAsText(file)
+  }
+  const handleQuickClearUpload = () => {
+    setQuickUploadName('')
+    setRawSourceContent('')
   }
 
   // Handle Save Blueprint to Database
@@ -916,6 +992,34 @@ export function AICourseEngineStudioModal({
     .flatMap((m) => m.lessons)
     .find((l) => l.id === activePreviewLessonId)
 
+  // Two SEPARATE lists for the Quick-mode picker: the Knowledge Base (published
+  // instructional articles only — no generic "document" / video / visual rows)
+  // and the Document / Media Library (uploaded reference files).
+  const KB_ARTICLE_TYPES = new Set(['sop', 'policy', 'guide', 'checklist', 'reference', 'faq', 'how_to', 'quick_reference'])
+  const quickKnowledgeBaseOptions = useMemo(() => {
+    if (!Array.isArray(sopsData)) return []
+    return sopsData
+      .filter((a: any) => a?.id && a?.title && KB_ARTICLE_TYPES.has(String(a.content_type || 'sop').toLowerCase()))
+      .map((a: any) => ({
+        id: a.id,
+        title: a.title,
+        kind: String(a.content_type || 'sop').replace(/_/g, ' ').toUpperCase(),
+        preview: (a.summary || a.description || a.content || '').toString().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400),
+      }))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sopsData])
+  const quickLibraryOptions = useMemo(() => {
+    if (!Array.isArray(libraryDocuments)) return []
+    return libraryDocuments
+      .filter((d: any) => d?.id && d?.title)
+      .map((d: any) => ({
+        id: d.id,
+        title: d.title,
+        kind: String(d.file_type || d.content_type || 'file').replace(/^\./, '').toUpperCase(),
+        preview: (d.ai_summary || d.description || d.content || '').toString().replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 400),
+      }))
+  }, [libraryDocuments])
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -930,59 +1034,87 @@ export function AICourseEngineStudioModal({
                 <div>
                   <div className="flex items-center gap-2">
                     <DialogTitle className="text-base font-bold">
-                      {t('builder.lcmsStudioTitle', 'AI Course Authoring Studio')}
+                      {t('builder.lcmsStudioTitle', 'AI Course Creator')}
                     </DialogTitle>
-                    <Badge variant="outline" className="text-[10px] font-semibold bg-purple-50 text-purple-700 border-purple-200">
-                      Studio v3.0
-                    </Badge>
                   </div>
                   <DialogDescription className="text-xs">
-                    {t('builder.lcmsStudioDesc', 'AI-powered course authoring with 8-stage pedagogical workflow, Cloudflare FLUX images, and Forbes 5-star checks.')}
+                    {studioMode === 'quick'
+                      ? t('builder.lcmsStudioDescQuick', 'Describe what you want to train staff on and the AI builds the full course — lessons, quizzes and images. You can edit it all afterwards.')
+                      : t('builder.lcmsStudioDesc', 'Full control over structure, teaching style, depth, assessments and visuals.')}
                   </DialogDescription>
                 </div>
               </div>
 
-              {/* Presets, History & Panel Toggle */}
+              {/* Mode toggle, Presets, History & Panel Toggle */}
               <div className="flex items-center gap-2">
-                <Select
-                  onValueChange={(presetId) => {
-                    const found = presetsQuery.data?.find((p) => p.id === presetId)
-                    if (found) handleApplyPreset(found.preset_config)
-                  }}
-                >
-                  <SelectTrigger className="text-xs h-8 w-40">
-                    <SelectValue placeholder={t('builder.selectPreset', 'Load Preset...')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {presetsQuery.data?.map((p) => (
-                      <SelectItem key={p.id} value={p.id}>
-                        {p.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {currentStep === 'configure' && (
+                  <div className="flex bg-muted p-0.5 rounded-lg border text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setStudioMode('quick')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1',
+                        studioMode === 'quick' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Zap className="w-3 h-3 text-amber-500" /> {t('builder.modeQuick', 'Quick')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStudioMode('advanced')}
+                      className={cn(
+                        'px-2.5 py-1 rounded-md font-semibold transition-all flex items-center gap-1',
+                        studioMode === 'advanced' ? 'bg-background shadow-xs text-foreground' : 'text-muted-foreground hover:text-foreground'
+                      )}
+                    >
+                      <Layers className="w-3 h-3 text-purple-600" /> {t('builder.modeAdvanced', 'Advanced')}
+                    </button>
+                  </div>
+                )}
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setDocIngestionModalOpen(true)}
-                  className="h-8 text-xs font-semibold gap-1.5 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30"
-                  title="Multimodal Document-to-Course Ingestion"
-                >
-                  <UploadCloud className="w-3.5 h-3.5 text-purple-600" />
-                  <span className="hidden md:inline">{t('docIngestion.title', 'Doc Ingestion')}</span>
-                </Button>
+                {studioMode === 'advanced' && (
+                  <>
+                    <Select
+                      onValueChange={(presetId) => {
+                        const found = presetsQuery.data?.find((p) => p.id === presetId)
+                        if (found) handleApplyPreset(found.preset_config)
+                      }}
+                    >
+                      <SelectTrigger className="text-xs h-8 w-40">
+                        <SelectValue placeholder={t('builder.selectPreset', 'Load Preset...')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {presetsQuery.data?.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setComplianceDialogOpen(true)}
-                  className="h-8 text-xs font-semibold gap-1.5 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30"
-                  title="KSA Regulatory & Brand Standard Compliance Shield"
-                >
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-                  <span className="hidden md:inline">{t('complianceShield.title', 'KSA Shield')}</span>
-                </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setDocIngestionModalOpen(true)}
+                      className="h-8 text-xs font-semibold gap-1.5 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800 bg-purple-50/50 dark:bg-purple-950/30"
+                      title="Multimodal Document-to-Course Ingestion"
+                    >
+                      <UploadCloud className="w-3.5 h-3.5 text-purple-600" />
+                      <span className="hidden md:inline">{t('docIngestion.title', 'Doc Ingestion')}</span>
+                    </Button>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setComplianceDialogOpen(true)}
+                      className="h-8 text-xs font-semibold gap-1.5 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/30"
+                      title="KSA Regulatory & Brand Standard Compliance Shield"
+                    >
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                      <span className="hidden md:inline">{t('complianceShield.title', 'KSA Shield')}</span>
+                    </Button>
+                  </>
+                )}
 
                 <Button
                   variant="outline"
@@ -994,7 +1126,7 @@ export function AICourseEngineStudioModal({
                   <span className="hidden sm:inline">{t('builder.history', 'History')}</span>
                 </Button>
 
-                {currentStep === 'configure' && (
+                {currentStep === 'configure' && studioMode === 'advanced' && (
                   <Button
                     variant="ghost"
                     size="sm"
@@ -1010,9 +1142,41 @@ export function AICourseEngineStudioModal({
           </DialogHeader>
 
           {/* Body Section by Step */}
-          {currentStep === 'configure' && (
+          {currentStep === 'configure' && studioMode === 'quick' && (
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              <StudioQuickStart
+                sourceKind={quickSourceKind}
+                onChangeSourceKind={setQuickSourceKind}
+                courseTopic={courseTopic}
+                onChangeTopic={setCourseTopic}
+                selectedDocumentId={selectedDocumentId}
+                onSelectDocumentId={setSelectedDocumentId}
+                knowledgeBaseOptions={quickKnowledgeBaseOptions}
+                libraryOptions={quickLibraryOptions}
+                isLoadingDocuments={isLoadingSOPs}
+                uploadedFileName={quickUploadName}
+                onUploadFile={handleQuickFileUpload}
+                onClearUpload={handleQuickClearUpload}
+                department={targetDepartment}
+                onChangeDepartment={setTargetDepartment}
+                audience={targetAudience}
+                onChangeAudience={(v) => setTargetAudience(v as TargetAudience)}
+                thoroughness={quickThoroughness}
+                onChangeThoroughness={setQuickThoroughness}
+                withImages={enableAIImages}
+                onChangeWithImages={setEnableAIImages}
+                language={targetLanguage}
+                onChangeLanguage={setTargetLanguage}
+                onGenerate={handleQuickGenerate}
+                isGenerating={executePipeline.isPending}
+                onSwitchToAdvanced={() => setStudioMode('advanced')}
+              />
+            </div>
+          )}
+
+          {currentStep === 'configure' && studioMode === 'advanced' && (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              {/* Top 8-Stage Stepper Header */}
+              {/* Top Stage Stepper Header */}
               <StudioWorkflowStepper
                 currentStage={currentStage}
                 onSelectStage={(stage) => setCurrentStage(stage)}
@@ -1302,7 +1466,7 @@ export function AICourseEngineStudioModal({
                       className="h-9 px-6 text-xs font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md"
                     >
                       <Rocket className="w-3.5 h-3.5 me-1.5" />
-                      {t('builder.generateCourseCTA', 'Launch Generation')}
+                      {t('builder.generateCourseCTA', 'Create course')}
                     </Button>
                   )}
                 </div>

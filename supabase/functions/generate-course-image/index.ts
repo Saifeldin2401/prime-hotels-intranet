@@ -205,6 +205,9 @@ serve(async (req) => {
       return jsonResponse({ error: "Missing Supabase server credentials" }, 500);
     }
 
+    // Admin control surface (ai_platform_config) — governs which image providers run.
+    let imgPolicy = { freeOnly: false, enabledProviders: ["gemini", "openrouter", "cloudflare"] as string[] };
+
     // Dynamic Supabase Vault Lookup for Enterprise-Secured AI Keys
     try {
       const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
@@ -228,9 +231,30 @@ serve(async (req) => {
         const { data: cfTok } = await supabaseAdmin.rpc("get_vault_secret", { secret_name: "CLOUDFLARE_API_TOKEN" });
         if (cfTok && typeof cfTok === "string") cloudflareApiToken = cfTok;
       }
+      try {
+        const { data: cfgRow } = await supabaseAdmin
+          .from("ai_platform_config")
+          .select("free_only_mode,enabled_providers")
+          .eq("id", true)
+          .maybeSingle();
+        if (cfgRow) {
+          imgPolicy = {
+            freeOnly: Boolean(cfgRow.free_only_mode),
+            enabledProviders: Array.isArray(cfgRow.enabled_providers) && cfgRow.enabled_providers.length
+              ? cfgRow.enabled_providers
+              : imgPolicy.enabledProviders,
+          };
+        }
+      } catch (cfgErr) {
+        console.warn("ai_platform_config lookup skipped:", cfgErr);
+      }
     } catch (vErr) {
       console.warn("Vault secret lookup warning in generate-course-image:", vErr);
     }
+
+    // free-only forces Cloudflare ($0); paid engines (OpenRouter / OpenAI / Imagen) are gated off.
+    const imgProviderEnabled = (p: string) => imgPolicy.enabledProviders.includes(p);
+    const allowPaidImages = !imgPolicy.freeOnly;
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -299,8 +323,9 @@ serve(async (req) => {
     // PROVIDER: GOOGLE (Gemini 2.5 Flash Image "Nano Banana" / Imagen predict)
     // =========================================================================
     const tryGoogle = async () => {
-      if (rawImageBuffer || !geminiApiKey) return;
-      const wantsImagen = /imagen/i.test(requestedModel);
+      if (rawImageBuffer || !geminiApiKey || !imgProviderEnabled("gemini")) return;
+      // Imagen :predict is paid — only when an Imagen id is requested AND paid images are allowed.
+      const wantsImagen = allowPaidImages && /imagen/i.test(requestedModel);
       // 1) Imagen :predict (photoreal, when an Imagen id was requested)
       if (wantsImagen) {
         for (const im of ["imagen-4.0-generate-001", "imagen-3.0-generate-002"]) {
@@ -374,7 +399,7 @@ serve(async (req) => {
     // PROVIDER: OPENROUTER (image output via /chat/completions + image modality)
     // =========================================================================
     const tryOpenRouter = async () => {
-      if (rawImageBuffer || !openrouterApiKey) return;
+      if (rawImageBuffer || !openrouterApiKey || !imgProviderEnabled("openrouter") || !allowPaidImages) return;
       // Real OpenRouter image ids verified live via https://openrouter.ai/api/v1/models
       // (the old "google/gemini-2.5-flash-image-preview" 404s — "No endpoints found").
       const explicitRaw = requestedModel.includes("/") && !isCfModel ? requestedModel : null;
@@ -439,7 +464,7 @@ serve(async (req) => {
     // PROVIDER: OPENAI (gpt-image-1 — reliable paid image generation)
     // =========================================================================
     const tryOpenAI = async () => {
-      if (rawImageBuffer || !openaiApiKey) return;
+      if (rawImageBuffer || !openaiApiKey || !allowPaidImages) return;
       try {
         const size = body.aspect_ratio === "1:1" ? "1024x1024" : body.aspect_ratio === "4:3" ? "1536x1024" : "1536x1024";
         const r = await fetch("https://api.openai.com/v1/images/generations", {
@@ -485,7 +510,7 @@ serve(async (req) => {
     // =========================================================================
     // PROVIDER: CLOUDFLARE WORKERS AI (free tier — 10k neurons/day)
     // =========================================================================
-    if (!rawImageBuffer && cloudflareAccountId && cloudflareApiToken) {
+    if (!rawImageBuffer && cloudflareAccountId && cloudflareApiToken && imgProviderEnabled("cloudflare")) {
       // Only ever call Cloudflare with real @cf/ model ids.
       const isImg2Img = requestedModel === "@cf/runwayml/stable-diffusion-v1-5-img2img";
       const isInpainting = requestedModel === "@cf/runwayml/stable-diffusion-v1-5-inpainting";

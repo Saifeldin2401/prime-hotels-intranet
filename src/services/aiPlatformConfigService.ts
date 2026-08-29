@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase'
 import {
   getRoutingMode,
   setModelOverrides,
+  setModelPriorities,
   setRoutingMode,
 } from '@/lib/ai/agents/modelRegistry'
 import type { ModelProvider, RoutingMode } from '@/lib/ai/agents/types'
@@ -113,14 +114,29 @@ export function applyPlatformConfig(cfg: AIPlatformConfig): void {
     disabledProviders,
     freeOnly: cfg.freeOnlyMode,
   })
+  setModelPriorities({
+    textModelPriority: cfg.textModelPriority,
+    imageModelPriority: cfg.imageModelPriority,
+  })
 }
 
 let cached: AIPlatformConfig | null = null
+let dailySpend: { value: number; at: number } | null = null
+
+function startOfUtcDayISO(): string {
+  const now = new Date()
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString()
+}
 
 export const aiPlatformConfigService = {
   /** Fetch config, apply it to the registry, and cache it. */
   async load(force = false): Promise<AIPlatformConfig> {
-    if (cached && !force) return cached
+    if (cached && !force) {
+      // Re-apply even on a cache hit — a prior run's daily-spend lockout or an
+      // ad-hoc override must not leak into the next generation.
+      applyPlatformConfig(cached)
+      return cached
+    }
     try {
       const { data, error } = await db.from('ai_platform_config')
         .select('*')
@@ -138,6 +154,39 @@ export const aiPlatformConfigService = {
 
   getCached(): AIPlatformConfig {
     return cached ?? { ...DEFAULT_AI_PLATFORM_CONFIG }
+  },
+
+  /** Platform-wide AI spend (USD) since 00:00 UTC today. Cached ~45s. */
+  async getDailySpendUSD(force = false): Promise<number> {
+    if (!force && dailySpend && Date.now() - dailySpend.at < 45_000) return dailySpend.value
+    try {
+      // SECURITY DEFINER RPC — RLS on ai_usage_log only exposes a user's own rows.
+      const { data, error } = await (supabase as unknown as {
+        rpc: (fn: string) => Promise<{ data: number | null; error: unknown }>
+      }).rpc('get_ai_daily_spend_usd')
+      if (error) throw error
+      const total = Number(data) || 0
+      dailySpend = { value: total, at: Date.now() }
+      return total
+    } catch (err) {
+      console.warn('[aiPlatformConfig] daily spend query failed:', err)
+      return dailySpend?.value ?? 0
+    }
+  },
+
+  /** How many course generations this user has run since 00:00 UTC today. */
+  async getUserGenerationCountToday(userId: string): Promise<number> {
+    try {
+      const { count, error } = await db.from('course_generation_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .gte('created_at', startOfUtcDayISO())
+      if (error) throw error
+      return count ?? 0
+    } catch (err) {
+      console.warn('[aiPlatformConfig] user generation count failed:', err)
+      return 0
+    }
   },
 
   /** Admin update. RLS enforces that only super_admin / corporate_admin can write. */

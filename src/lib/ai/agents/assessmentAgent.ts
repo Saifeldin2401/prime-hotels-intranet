@@ -206,6 +206,38 @@ Content:\n${sanitizedContext}`
       questions = fallbackQuestions.slice(0, count)
     }
 
+    // Respect the requested question count exactly — trim over-delivery, and if
+    // the model came up short, top up from the deterministic fallback bank so
+    // the admin's chosen count is never silently reduced.
+    if (questions.length > count) {
+      questions = questions.slice(0, count)
+    } else if (questions.length < count) {
+      const topUp: GeneratedUnifiedQuestion[] = [
+        {
+          question_text: `Which action best upholds the 5-star standard described in "${input.title}"?`,
+          question_text_ar: `أي إجراء يحافظ على معيار الـ5 نجوم الموضح في "${input.title}"؟`,
+          question_type: 'mcq',
+          difficulty: input.difficulty || 'medium',
+          bloom_level: 'apply',
+          points: 10,
+          options: [
+            { text: 'Follow the documented SOP precisely, then confirm guest satisfaction', text_ar: 'اتباع الإجراء الموثّق بدقّة ثم التأكد من رضا الضيف', is_correct: true, feedback: 'Correct: procedure first, then verification.' },
+            { text: 'Improvise a faster shortcut to save time', text_ar: 'ارتجال اختصار أسرع لتوفير الوقت', is_correct: false, feedback: 'Incorrect: shortcuts break consistency.' },
+            { text: 'Wait for a supervisor before doing anything', text_ar: 'الانتظار حتى حضور المشرف قبل أي تصرف', is_correct: false, feedback: 'Incorrect: frontline staff act within their SOP authority.' },
+            { text: 'Skip documentation during busy periods', text_ar: 'تجاهل التوثيق في أوقات الازدحام', is_correct: false, feedback: 'Incorrect: documentation is always required.' },
+          ],
+          correct_answer: 'Follow the documented SOP precisely, then confirm guest satisfaction',
+          explanation: 'Standard operating procedure adherence with a satisfaction check is the core 5-star delivery loop.',
+          hint: 'Procedure first, then confirm the outcome.',
+        },
+      ]
+      let i = 0
+      while (questions.length < count) {
+        questions.push({ ...topUp[i % topUp.length], question_text: `${topUp[i % topUp.length].question_text} (${questions.length + 1})` })
+        i++
+      }
+    }
+
     return {
       ...result,
       data: questions,

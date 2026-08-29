@@ -34,6 +34,18 @@ function sanitizeJsonStringLiterals(input: string): string {
 }
 
 /**
+ * Repair the most common structural mistakes LLMs make in otherwise-valid JSON:
+ * a missing comma between two array / object elements that sit on separate lines
+ * (`"a"\n"b"` → `"a",\n"b"`, `}\n{` → `},\n{`). Run this AFTER string-literal
+ * sanitisation so real newlines only appear between tokens, never inside strings.
+ */
+function repairJsonStructure(input: string): string {
+  return input
+    .replace(/(["}\]0-9])(\s*\r?\n\s*)(["{[\-0-9])/g, '$1,$2$3')
+    .replace(/}(\s*)\{/g, '},$1{')
+}
+
+/**
  * Robust JSON extraction from LLM text responses
  */
 export function extractJsonFromText<T = unknown>(rawText: string): T | null {
@@ -48,6 +60,11 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
   // 1b. Direct parse with string sanitization
   try {
     return JSON.parse(sanitizeJsonStringLiterals(trimmed)) as T
+  } catch {}
+
+  // 1c. Sanitize + repair missing commas between elements
+  try {
+    return JSON.parse(repairJsonStructure(sanitizeJsonStringLiterals(trimmed))) as T
   } catch {}
 
   // 2. Strip markdown code blocks
@@ -83,6 +100,10 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
     try {
       return JSON.parse(sanitizeJsonStringLiterals(bounded)) as T
     } catch {}
+
+    try {
+      return JSON.parse(repairJsonStructure(sanitizeJsonStringLiterals(bounded))) as T
+    } catch {}
   }
 
   // 5. Array-specific recovery: extract all complete JSON objects within the array
@@ -109,9 +130,12 @@ export function extractJsonFromText<T = unknown>(rawText: string): T | null {
   // 6. Object-specific recovery
   const objMatch = clean.match(/\{[\s\S]*\}/)
   if (objMatch) {
+    const base = sanitizeJsonStringLiterals(objMatch[0].replace(/,\s*}/g, '}'))
     try {
-      const sanitized = sanitizeJsonStringLiterals(objMatch[0].replace(/,\s*}/g, '}'))
-      return JSON.parse(sanitized) as T
+      return JSON.parse(base) as T
+    } catch {}
+    try {
+      return JSON.parse(repairJsonStructure(base)) as T
     } catch (err) {
       console.warn('[extractJsonFromText] Failed all recovery attempts:', err)
     }
