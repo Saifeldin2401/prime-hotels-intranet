@@ -189,9 +189,8 @@ async function extractSemanticDocumentTags(
   content: string,
   docType: string,
 ): Promise<AITagResult> {
-  const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
-  const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
-  const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN") || "";
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 
   const excerpt = `${title}\n${description}\n${(content || '').replace(/<[^>]*>/g, ' ')}`.slice(0, 3000).trim();
 
@@ -209,41 +208,35 @@ Description: ${description}
 Content Excerpt:
 ${excerpt}`;
 
-  // 1. Primary: OpenRouter
-  if (OPENROUTER_API_KEY) {
-    const candidateModels = [
-      "google/gemini-2.5-flash-lite",
-      "openai/gpt-4o-mini",
-      "meta-llama/llama-3.3-70b-instruct",
-      "deepseek/deepseek-chat",
-      "openrouter/auto",
-    ];
+  // Primary: central AI gateway (process-ai-request). Routing across providers,
+  // ai_platform_config adherence (free-only mode, disabled providers/models),
+  // shared usage/cost logging and retry/fallback all live there now — this
+  // function no longer calls OpenRouter / Gemini / HF directly.
+  if (supabaseUrl && serviceRoleKey) {
+    try {
+      const response = await fetch(`${supabaseUrl}/functions/v1/process-ai-request`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
+        body: JSON.stringify({
+          prompt: userPrompt,
+          systemPrompt,
+          task: "summarization",
+          jsonMode: true,
+          temperature: 0.2,
+          max_tokens: 500,
+        }),
+      });
 
-    for (const model of candidateModels) {
-      try {
-        const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://phg-connect.com",
-            "X-Title": "PRIME Connect Document Tagger",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "system", content: systemPrompt },
-              { role: "user", content: userPrompt },
-            ],
-            max_tokens: 500,
-            temperature: 0.2,
-            response_format: { type: "json_object" },
-          }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          const rawContent = data.choices?.[0]?.message?.content || "";
+      if (response.ok) {
+        const data = await response.json().catch(() => null);
+        if (data && data.success !== false) {
+          const rawContent =
+            (typeof data.response === "string" && data.response) ||
+            (typeof data.result === "string" && data.result) ||
+            "";
           const match = rawContent.match(/\{[\s\S]*\}/);
           if (match) {
             const parsed = JSON.parse(match[0]) as AITagResult;
@@ -252,81 +245,14 @@ ${excerpt}`;
               return { tags, category: parsed.category, summary: parsed.summary };
             }
           }
+        } else {
+          console.warn("process-ai-request tagging returned no result:", data?.error);
         }
-      } catch (err) {
-        console.warn(`OpenRouter tagging model ${model} failed, cascading:`, err);
+      } else {
+        console.warn(`process-ai-request tagging failed with status ${response.status}`);
       }
-    }
-  }
-
-  // 2. Secondary: Direct Google Gemini
-  if (GEMINI_API_KEY) {
-    try {
-      const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-      const response = await fetch(geminiUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: `${systemPrompt}\n\n${userPrompt}` }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 500,
-            responseMimeType: "application/json",
-          },
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        const match = text.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]) as AITagResult;
-          if (Array.isArray(parsed.tags) && parsed.category && parsed.summary) {
-            const tags = [...new Set([...parsed.tags, docType])].slice(0, 10);
-            return { tags, category: parsed.category, summary: parsed.summary };
-          }
-        }
-      }
-    } catch (gErr) {
-      console.warn("Direct Gemini tagging failed, cascading:", gErr);
-    }
-  }
-
-  // 3. Tertiary: Hugging Face
-  if (HF_TOKEN) {
-    try {
-      const response = await fetch("https://router.huggingface.co/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "meta-llama/Llama-3.3-70B-Instruct",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          max_tokens: 500,
-          temperature: 0.2,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const rawContent = data.choices?.[0]?.message?.content || "";
-        const match = rawContent.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]) as AITagResult;
-          if (Array.isArray(parsed.tags) && parsed.category && parsed.summary) {
-            const tags = [...new Set([...parsed.tags, docType])].slice(0, 10);
-            return { tags, category: parsed.category, summary: parsed.summary };
-          }
-        }
-      }
-    } catch (hfErr) {
-      console.warn("HF tagging failed, using heuristic fallback:", hfErr);
+    } catch (err) {
+      console.warn("process-ai-request tagging threw, using heuristic fallback:", err);
     }
   }
 

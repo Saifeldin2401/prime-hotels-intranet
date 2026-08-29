@@ -1,13 +1,71 @@
 // deno-lint-ignore-file no-explicit-any
+/**
+ * Auto-Analyze Document Feedback
+ *
+ * Analyzes free-text feedback left on Knowledge Base documents and stores an AI
+ * sentiment / theme / actionable-item summary. When feedback is negative it also
+ * spins up a follow-up task for the owning department.
+ *
+ * AI calls are routed through the central `process-ai-request` gateway so that
+ * provider selection, `ai_platform_config` (free_only_mode / enabled_providers /
+ * disabled_model_ids), retries, fallback and usage logging are all handled in one
+ * place. This function keeps ownership of its own structured-JSON parsing,
+ * validation and fallback behaviour.
+ */
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 
-const OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
-const HF_TOKEN = Deno.env.get("HUGGINGFACE_TOKEN");
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
 const SUPABASE_SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY");
+
+/**
+ * Calls the central AI gateway (`process-ai-request`) as a server-to-server
+ * request and returns the raw model text, or null on any failure.
+ */
+async function callAiGateway(
+  prompt: string,
+  systemPrompt: string,
+): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/functions/v1/process-ai-request`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        },
+        body: JSON.stringify({
+          prompt,
+          systemPrompt,
+          task: "triage",
+          jsonMode: true,
+          max_tokens: 500,
+          temperature: 0.1,
+        }),
+      },
+    );
+
+    if (!res.ok) {
+      console.warn(`process-ai-request returned HTTP ${res.status}`);
+      return null;
+    }
+
+    const data = await res.json();
+    if (!data?.success) {
+      console.warn("process-ai-request reported failure:", data?.error);
+      return null;
+    }
+
+    const content = data.response ?? data.result ?? "";
+    return typeof content === "string" && content.trim() ? content : null;
+  } catch (err) {
+    console.warn("process-ai-request call failed:", err);
+    return null;
+  }
+}
 
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
@@ -120,8 +178,11 @@ Deno.serve(async (req) => {
       );
     }
 
+    const systemPrompt =
+      "You are an AI assistant for a hotel intranet system analyzing Knowledge Base document feedback. Return valid JSON only.";
+
     const prompt = `You are an AI assistant for a hotel intranet system. Analyze the following feedback left by an employee on a Knowledge Base document (SOP/Policy).
-    
+
     DOCUMENT TITLE: ${scopedFeedback.documents?.title || "Unknown"}
     HELPFUL: ${scopedFeedback.helpful ? "Yes" : "No"}
     FEEDBACK TEXT: "${scopedFeedback.feedback_text}"
@@ -140,91 +201,16 @@ Deno.serve(async (req) => {
 
     let analysis: any = null;
 
-    // 1. Primary: OpenRouter
-    if (OPENROUTER_API_KEY) {
-      const orModels = [
-        "google/gemini-2.5-flash-lite",
-        "openai/gpt-4o-mini",
-        "meta-llama/llama-3.3-70b-instruct",
-        "deepseek/deepseek-r1",
-        "openrouter/auto"
-      ];
-
-      for (const model of orModels) {
-        try {
-          const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-              "HTTP-Referer": "https://phg-connect.com",
-              "X-Title": "PRIME Connect Feedback Analysis",
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              model,
-              messages: [{ role: "user", content: prompt }],
-              max_tokens: 500,
-              temperature: 0.1,
-              response_format: { type: "json_object" },
-            }),
-          });
-
-          if (response.ok) {
-            const aiResult = await response.json();
-            const content = aiResult.choices?.[0]?.message?.content || "";
-            const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
-            const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              analysis = JSON.parse(jsonMatch[0]);
-              break;
-            }
-          }
-        } catch (err) {
-          console.warn(`OpenRouter feedback model ${model} failed:`, err);
+    const content = await callAiGateway(prompt, systemPrompt);
+    if (content) {
+      try {
+        const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
+        const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          analysis = JSON.parse(jsonMatch[0]);
         }
-      }
-    }
-
-    // 2. Fallback: Hugging Face
-    if (!analysis && HF_TOKEN) {
-      const candidateModels = [
-        "meta-llama/Llama-3.3-70B-Instruct",
-        "Qwen/Qwen2.5-Coder-32B-Instruct",
-        "meta-llama/Llama-3.1-8B-Instruct",
-      ];
-
-      for (const model of candidateModels) {
-        try {
-          const response = await fetch(
-            "https://router.huggingface.co/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${HF_TOKEN}`,
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify({
-                model,
-                messages: [{ role: "user", content: prompt }],
-                max_tokens: 500,
-                temperature: 0.1,
-              }),
-            },
-          );
-
-          if (response.ok) {
-            const aiResult = await response.json();
-            const content = aiResult.choices?.[0]?.message?.content || "";
-            const cleanJson = content.replace(/```json\n?|\n?```/g, "").trim();
-            const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
-            if (jsonMatch) {
-              analysis = JSON.parse(jsonMatch[0]);
-              break;
-            }
-          }
-        } catch (err) {
-          console.warn(`Feedback analysis model ${model} failed:`, err);
-        }
+      } catch (err) {
+        console.warn("Failed to parse feedback analysis JSON:", err);
       }
     }
 

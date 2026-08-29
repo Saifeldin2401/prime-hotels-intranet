@@ -63,10 +63,10 @@ const normalizeLangInput = (value: unknown): SupportedLanguage | "auto" | undefi
 };
 
 const detectLanguage = (value: string): SupportedLanguage => {
-  const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
-  const devanagariPattern = /[\u0900-\u097F]/;
-  const bengaliPattern = /[\u0980-\u09FF]/;
-  const cyrillicPattern = /[\u0400-\u04FF]/;
+  const arabicPattern = /[؀-ۿݐ-ݿࢠ-ࣿﭐ-﷿ﹰ-﻿]/;
+  const devanagariPattern = /[ऀ-ॿ]/;
+  const bengaliPattern = /[ঀ-৿]/;
+  const cyrillicPattern = /[Ѐ-ӿ]/;
 
   if (arabicPattern.test(value)) return "ar";
   if (devanagariPattern.test(value)) return "hi";
@@ -90,7 +90,7 @@ const sanitizeTranslation = (value: string, targetLang: string): string => {
   if (targetLang === "ar" || targetLang === "ur") {
     // Remove stray CJK characters
     sanitized = sanitized.replace(
-      /[\u3400-\u4DBF\u4E00-\u9FFF\uF900-\uFAFF\u3040-\u30FF\u31F0-\u31FF]/g,
+      /[㐀-䶿一-鿿豈-﫿぀-ヿㇰ-ㇿ]/g,
       ""
     );
   }
@@ -111,105 +111,56 @@ CRITICAL TRANSLATION RULES:
 3. Monolingual Output: Return ONLY the translated text in ${targetLangName}. Do NOT include intro/outro conversational remarks, explanations, or quotes.`;
 };
 
-// Fallback chain — real, live OpenRouter slugs verified via openrouter.ai/api/v1/models.
-const OPENROUTER_MODELS = [
-  "google/gemini-2.5-flash-lite",
-  "openai/gpt-4o-mini",
-  "deepseek/deepseek-chat",
-  "meta-llama/llama-3.3-70b-instruct",
-  "qwen/qwen-2.5-72b-instruct",
-  "anthropic/claude-haiku-4.5",
-  "openrouter/auto",
-];
-
-async function translateWithOpenRouter(
-  apiKey: string,
-  text: string,
-  targetLangName: string,
-  targetLangCode: string
-): Promise<{ text: string; model: string } | null> {
-  const systemPrompt = buildSystemPrompt(targetLangName, targetLangCode);
-
-  for (const model of OPENROUTER_MODELS) {
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "https://phg-connect.com",
-          "X-Title": "PRIME Connect Translation Engine",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: text },
-          ],
-          temperature: 0.2,
-          max_tokens: 4096,
-        }),
-      });
-
-      if (!response.ok) {
-        console.warn(`OpenRouter model ${model} failed with status ${response.status}`);
-        continue;
-      }
-
-      const data = await response.json();
-      const translated = data?.choices?.[0]?.message?.content;
-      if (translated && typeof translated === "string" && translated.trim().length > 0) {
-        return {
-          text: sanitizeTranslation(translated, targetLangCode),
-          model,
-        };
-      }
-    } catch (err) {
-      console.warn(`OpenRouter model ${model} threw error:`, err);
-    }
-  }
-
-  return null;
-}
-
-async function translateWithGeminiDirect(
-  apiKey: string,
+/**
+ * Route the translation through the central AI gateway (process-ai-request) so
+ * that ai_platform_config (free-only mode, enabled providers, disabled models),
+ * shared usage/cost logging and retry/fallback all apply. This function no
+ * longer talks to OpenRouter / Gemini directly.
+ */
+async function translateViaGateway(
+  supabaseUrl: string,
+  serviceRoleKey: string,
   text: string,
   targetLangName: string,
   targetLangCode: string
 ): Promise<{ text: string; model: string } | null> {
   try {
-    const systemPrompt = buildSystemPrompt(targetLangName, targetLangCode);
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-
-    const response = await fetch(url, {
+    const response = await fetch(`${supabaseUrl}/functions/v1/process-ai-request`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        contents: [{ parts: [{ text }] }],
-        generationConfig: {
-          temperature: 0.2,
-          maxOutputTokens: 4096,
-        },
+        prompt: text,
+        systemPrompt: buildSystemPrompt(targetLangName, targetLangCode),
+        task: "translation",
+        temperature: 0.2,
+        max_tokens: 4096,
+        jsonMode: false,
       }),
     });
 
     if (!response.ok) {
-      console.warn(`Direct Gemini translation failed with status ${response.status}`);
+      console.warn(`process-ai-request translation failed with status ${response.status}`);
       return null;
     }
 
-    const data = await response.json();
-    const candidate = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (candidate && typeof candidate === "string" && candidate.trim().length > 0) {
+    const data = await response.json().catch(() => null);
+    if (!data || data.success === false) {
+      console.warn("process-ai-request translation returned no result:", data?.error);
+      return null;
+    }
+
+    const translated = data.response ?? data.result;
+    if (translated && typeof translated === "string" && translated.trim().length > 0) {
       return {
-        text: sanitizeTranslation(candidate, targetLangCode),
-        model: "gemini-2.5-flash",
+        text: sanitizeTranslation(translated, targetLangCode),
+        model: data?.meta?.modelUsed || "gateway",
       };
     }
   } catch (err) {
-    console.warn("Direct Gemini translation threw error:", err);
+    console.warn("process-ai-request translation threw error:", err);
   }
 
   return null;
@@ -223,8 +174,9 @@ serve(async (req) => {
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") || "";
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
-    const supabaseClient = createClient(supabaseUrl, supabaseKey);
+    const serviceRoleKey =
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY") || "";
+    const supabaseClient = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json().catch(() => ({}));
     let {
@@ -275,22 +227,6 @@ serve(async (req) => {
     }
 
     const targetName = LANGUAGE_NAMES[target_lang] || target_lang;
-    let OPENROUTER_API_KEY = Deno.env.get("OPENROUTER_API_KEY") || "";
-    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY") || Deno.env.get("GOOGLE_AI_API_KEY") || "";
-
-    // Dynamic Vault fallback for OpenRouter key
-    if (!OPENROUTER_API_KEY) {
-      try {
-        const { data: vKey } = await supabaseClient.rpc("get_vault_secret", {
-          secret_name: "OPENROUTER_API_KEY",
-        });
-        if (vKey && typeof vKey === "string") {
-          OPENROUTER_API_KEY = vKey;
-        }
-      } catch (vaultErr) {
-        console.warn("Vault secret lookup warning in ai-translation:", vaultErr);
-      }
-    }
 
     const results = new Array<string>(texts.length).fill("");
     const toTranslate: Array<{
@@ -367,31 +303,17 @@ serve(async (req) => {
 
     let modelUsed = "cache";
 
-    // 3. Translate remaining items concurrently with AI Engine
+    // 3. Translate remaining items concurrently via the central AI gateway
     if (toTranslate.length > 0) {
       await Promise.all(
         toTranslate.map(async (item) => {
-          let translationResult: { text: string; model: string } | null = null;
-
-          // Try OpenRouter first
-          if (OPENROUTER_API_KEY) {
-            translationResult = await translateWithOpenRouter(
-              OPENROUTER_API_KEY,
-              item.text,
-              targetName,
-              target_lang
-            );
-          }
-
-          // Try Direct Gemini fallback
-          if (!translationResult && GEMINI_API_KEY) {
-            translationResult = await translateWithGeminiDirect(
-              GEMINI_API_KEY,
-              item.text,
-              targetName,
-              target_lang
-            );
-          }
+          const translationResult = await translateViaGateway(
+            supabaseUrl,
+            serviceRoleKey,
+            item.text,
+            targetName,
+            target_lang
+          );
 
           if (translationResult) {
             results[item.index] = translationResult.text;
@@ -412,7 +334,7 @@ serve(async (req) => {
               )
               .then(() => {});
           } else {
-            // If all AI fails, preserve original text as safe fallback
+            // If the gateway fails, preserve original text as safe fallback
             results[item.index] = item.text;
             console.warn(`Translation failed for segment ${item.index}, returning source.`);
           }
