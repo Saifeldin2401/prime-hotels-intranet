@@ -22,6 +22,7 @@ export type AIErrorType =
   | 'invalid_model'
   | 'provider_error'
   | 'parse_error'
+  | 'quota_exhausted'
   | 'unknown'
 
 export interface AIRequestLog {
@@ -54,6 +55,7 @@ export function estimateTokens(text: string | undefined | null): number {
 /** Classify a raw error message into a stable bucket for dashboards. */
 export function classifyError(message: string | undefined): AIErrorType {
   const m = (message || '').toLowerCase()
+  if (/402|depleted|used up your (daily|monthly)|out of credits|insufficient_quota/.test(m)) return 'quota_exhausted'
   if (/429|rate.?limit|quota|resource.?exhausted/.test(m)) return 'rate_limit'
   if (/timeout|timed out|deadline|abort/.test(m)) return 'timeout'
   if (/empty response|no content|returned nothing/.test(m)) return 'empty_response'

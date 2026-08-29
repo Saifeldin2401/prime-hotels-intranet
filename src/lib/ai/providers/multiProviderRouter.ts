@@ -14,8 +14,23 @@ import { isImageModel, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 
 export type AITaskCategory = 'fast' | 'reasoning' | 'compliance' | 'roleplay' | 'general'
 
+/**
+ * Gateway capability class. When supplied, the edge gateway consults its
+ * DB-backed router (get_ai_routing_plan) to pick the best currently-available
+ * model for this capability under the active policy — the client-side cascade
+ * below becomes a fallback rather than the primary route.
+ */
+export type AICapabilityClass =
+  | 'structured_json'
+  | 'reasoning'
+  | 'fast'
+  | 'compliance'
+  | 'long_form'
+  | 'image'
+
 export interface MultiProviderRequestOptions {
   task?: AITaskCategory
+  capability?: AICapabilityClass
   preferredModel?: string
   temperature?: number
   maxTokens?: number
@@ -183,6 +198,7 @@ export class MultiProviderRouter {
               prompt,
               systemPrompt: options.systemPrompt,
               task: options.task || 'chat',
+              capability: options.capability,
               temperature: options.temperature ?? 0.7,
               max_tokens: options.maxTokens ?? 2048,
               jsonMode: options.jsonMode ?? false,

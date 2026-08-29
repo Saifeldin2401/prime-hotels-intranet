@@ -73,6 +73,7 @@ interface ParsedAiRequest {
   stream?: boolean;
   jsonMode?: boolean;
   pinProvider?: boolean;
+  capability?: string;
 }
 
 // OpenRouter retired the entire ":free" tier for mainstream models (all 404 →
@@ -182,6 +183,7 @@ function parseAiRequest(input: unknown): ParsedAiRequest {
     stream: Boolean(body.stream),
     jsonMode: Boolean(body.jsonMode),
     pinProvider: Boolean(body.pinProvider),
+    capability: typeof body.capability === "string" ? body.capability : undefined,
   };
 }
 
@@ -277,7 +279,7 @@ serve(async (req) => {
     }
     void authUserId;
 
-    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider } =
+    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider, capability } =
       parseAiRequest(await req.json());
 
     const effectiveTemperature = normalizeTemperature(temperature);
@@ -569,6 +571,23 @@ serve(async (req) => {
     }
 
     const openRouterCandidates = orderedOpenRouter(resolveModelCandidates(model));
+    // DB-backed capability router (audit Phase 2). When the caller names a
+    // capability class we ask the DB for the ranked, policy- and health-aware
+    // model list; falls back to the hardcoded provider loops if unavailable.
+    type PlanModel = { id: string; provider: string; provider_model_id: string; supports_json_object?: boolean };
+    let routingPlan: PlanModel[] = [];
+    if (capability && serviceRoleKey) {
+      try {
+        const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey);
+        const { data: planData } = await supabaseAdmin.rpc("get_ai_routing_plan", {
+          p_capability: capability, p_free_only: policy.freeOnly, p_allow_premium: !policy.freeOnly, p_limit: 10,
+        });
+        const arr = (planData as { models?: PlanModel[] } | null)?.models;
+        if (Array.isArray(arr)) routingPlan = arr.filter((m) => modelAllowed(m.id) && providerEnabled(m.provider));
+      } catch (planErr) {
+        console.warn("routing-plan lookup failed, using legacy cascade:", planErr);
+      }
+    }
     let providerUsed = "none";
     let modelUsed = openRouterCandidates[0] || "openrouter/auto";
 
@@ -782,6 +801,62 @@ serve(async (req) => {
     let executionSuccess = false;
     const diagnosticErrors: string[] = [];
 
+    // Unified capability cascade: one ordered list, dispatch each model to the
+    // right provider API. Single authoritative route when a capability was given;
+    // the per-provider blocks below remain as a safety net.
+    const dispatchOne = async (pm: PlanModel): Promise<boolean> => {
+      const jm = jsonMode && pm.supports_json_object !== false;
+      try {
+        if (pm.provider === "groq" && GROQ_API_KEY) {
+          const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+            method: "POST", headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jm ? { response_format: { type: "json_object" } } : {}) }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "groq"; modelUsed = pm.id; return true; } }
+          else diagnosticErrors.push(`plan groq ${pm.id} (${r.status})`);
+        } else if (pm.provider === "openrouter" && OPENROUTER_API_KEY) {
+          const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+            method: "POST", headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
+            body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jm ? { response_format: { type: "json_object" } } : {}) }),
+            signal: AbortSignal.timeout(45000),
+          });
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "openrouter"; modelUsed = pm.id; return true; } }
+          else diagnosticErrors.push(`plan openrouter ${pm.id} (${r.status}): ${(await r.text().catch(() => "")).slice(0, 120)}`);
+        } else if (pm.provider === "gemini" && GEMINI_API_KEY) {
+          const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${pm.provider_model_id}:generateContent?key=${GEMINI_API_KEY}`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${defaultSystemPrompt}\n\n${prompt}` }] }], generationConfig: { temperature: effectiveTemperature, maxOutputTokens: effectiveMaxTokens, ...(jm ? { responseMimeType: "application/json" } : {}) } }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (r.ok) { const d = await r.json(); const c = d?.candidates?.[0]?.content?.parts?.[0]?.text || ""; if (c) { result = c; providerUsed = "gemini"; modelUsed = pm.id; return true; } }
+          else diagnosticErrors.push(`plan gemini ${pm.id} (${r.status})`);
+        } else if (pm.provider === "cloudflare" && CF_ACCOUNT_ID && CF_API_TOKEN) {
+          const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${pm.provider_model_id}`, {
+            method: "POST", headers: { Authorization: `Bearer ${CF_API_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], max_tokens: Math.min(effectiveMaxTokens, 4096), temperature: effectiveTemperature }),
+            signal: AbortSignal.timeout(30000),
+          });
+          if (r.ok) { const d = await r.json(); const c = d?.result?.response || d?.response || ""; if (c) { result = c; providerUsed = "cloudflare"; modelUsed = pm.id; return true; } }
+          else diagnosticErrors.push(`plan cloudflare ${pm.id} (${r.status})`);
+        } else if (pm.provider === "huggingface" && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
+          const r = await fetch("https://router.huggingface.co/v1/chat/completions", {
+            method: "POST", headers: { Authorization: `Bearer ${HF_TOKEN || HF_MINIMAX_TOKEN}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens }),
+          });
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "huggingface"; modelUsed = pm.id; return true; } }
+          else diagnosticErrors.push(`plan hf ${pm.id} (${r.status})`);
+        }
+      } catch (e) {
+        diagnosticErrors.push(`plan ${pm.provider} ${pm.id} exception: ${(e as Error).message}`);
+      }
+      return false;
+    };
+    for (const pm of routingPlan) {
+      if (executionSuccess) break;
+      executionSuccess = await dispatchOne(pm);
+    }
+
     if (!executionSuccess && preferredProvider === "gemini" && GEMINI_API_KEY && model?.includes("gemini")) {
       try {
         const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
@@ -971,6 +1046,35 @@ serve(async (req) => {
           }
         }
       }
+    }
+
+    // Post provider-health transitions back to the registry (audit Phase 3) so
+    // get_ai_routing_plan stops planning a provider that just auth-failed / ran
+    // out of quota / got rate-limited. Fire-and-forget; never blocks the response.
+    if (serviceRoleKey) {
+      try {
+        const healthAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey);
+        const seen = new Set<string>();
+        for (const line of diagnosticErrors) {
+          const m = line.match(/^(?:plan )?(groq|openrouter|gemini|cloudflare|hf|HF|Cloudflare|Gemini|Groq|OpenRouter)\b[^(]*\((\d{3})\)/);
+          if (!m) continue;
+          const prov = m[1].toLowerCase().replace(/^hf$/, "huggingface");
+          const code = Number(m[2]);
+          if (seen.has(prov)) continue;
+          let status: string | null = null;
+          let cooldown: number | null = null;
+          if (code === 401 || code === 403) { status = "auth_failed"; cooldown = 86400; }
+          else if (code === 402) { status = "quota_exhausted"; cooldown = 21600; }
+          else if (code === 429) { status = "rate_limited"; cooldown = 900; }
+          if (status) {
+            seen.add(prov);
+            void healthAdmin.rpc("set_ai_provider_health", { p_provider: prov, p_status: status, p_cooldown_seconds: cooldown }).then(() => {});
+          }
+        }
+        if (executionSuccess && providerUsed && providerUsed !== "none") {
+          void healthAdmin.rpc("set_ai_provider_health", { p_provider: providerUsed, p_status: "healthy", p_cooldown_seconds: null }).then(() => {});
+        }
+      } catch (hErr) { console.warn("provider-health post skipped:", hErr); }
     }
 
     if (!executionSuccess || !result) {

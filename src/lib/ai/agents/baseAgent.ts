@@ -8,6 +8,8 @@
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { extractJsonFromText } from '@/lib/ai/client'
 import { classifyError, logAIRequest } from '@/lib/ai/observability'
+import { validateBySchema, type SchemaName } from '@/lib/ai/schemaValidator'
+import { recordSuccess, recordFailure, type RecordableErrorType, type AIProvider } from '@/lib/ai/providerHealth'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { modelRegistry } from './modelRegistry'
 import type {
@@ -29,6 +31,13 @@ export interface AgentExecutionOptions {
   temperature?: number
   maxTokens?: number
   jsonMode?: boolean
+  /**
+   * When set, the parsed JSON is structurally validated against this schema
+   * (see schemaValidator). A shape mismatch is treated as a model failure so
+   * the cascade falls through to the next model instead of returning
+   * well-formed-but-wrong-shape data to the caller.
+   */
+  schema?: SchemaName
   requiresArabic?: boolean
   timeoutMs?: number
   silent?: boolean
@@ -102,6 +111,7 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       try {
         const response = await multiProviderRouter.execute<T>(prompt, {
           task: this.mapRoleToTaskCategory(this.role),
+          capability: this.mapRoleToCapability(this.role, options),
           preferredModel: modelId,
           systemPrompt,
           temperature: options.temperature ?? 0.5,
@@ -141,6 +151,17 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
         if (options.jsonMode && (finalData === null || finalData === undefined || typeof finalData !== 'object')) {
           throw new Error('Unparseable JSON: model returned truncated or malformed output in JSON mode')
         }
+
+        // Structural schema check — a well-formed-but-wrong-shape response is a
+        // model failure, not a success. Cascade to the next model.
+        if (options.schema) {
+          const check = validateBySchema(options.schema, finalData)
+          if (!check.valid) {
+            throw new Error(`Schema "${options.schema}" validation failed: ${check.errors.slice(0, 3).join('; ')}`)
+          }
+        }
+
+        recordSuccess(response.providerUsed as AIProvider)
 
         const latencyMs = Date.now() - startTime
 
@@ -193,6 +214,7 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
         failoverCount++
         lastError = err instanceof Error ? err : new Error(String(err))
         const errType = classifyError(lastError.message)
+        recordFailure(provider as AIProvider, errType as RecordableErrorType, { errorMessage: lastError.message })
         logAIRequest({
           pipelineRunId,
           agentRole: this.role,
@@ -248,6 +270,36 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       } catch {
         // Suppress listener callback errors
       }
+    }
+  }
+
+  /**
+   * Map an agent role (+ request options) to a gateway capability class so the
+   * edge gateway can consult its DB-backed router for the best available model.
+   * JSON-mode requests are always 'structured_json' regardless of role.
+   */
+  private mapRoleToCapability(
+    role: AgentRole,
+    options: AgentExecutionOptions
+  ): 'structured_json' | 'reasoning' | 'fast' | 'compliance' | 'long_form' {
+    if (options.jsonMode || options.schema) return 'structured_json'
+    switch (role) {
+      case 'research':
+      case 'curriculum':
+      case 'qa_critic':
+      case 'assessments':
+        return 'reasoning'
+      case 'compliance':
+      case 'translator':
+        return 'compliance'
+      case 'revision':
+      case 'knowledge':
+        return 'fast'
+      case 'scenarios':
+      case 'activities':
+        return 'long_form'
+      default:
+        return 'reasoning'
     }
   }
 
