@@ -50,10 +50,11 @@ Return ONLY valid JSON.`;
   // 1. Primary: OpenRouter
   if (OPENROUTER_API_KEY) {
     const orModels = [
-      "openrouter/auto",
-      "meta-llama/llama-3.3-70b-instruct:free",
-      "deepseek/deepseek-r1:free",
-      "google/gemini-2.0-flash-exp:free"
+      "google/gemini-2.5-flash-lite",
+      "openai/gpt-4o-mini",
+      "meta-llama/llama-3.3-70b-instruct",
+      "deepseek/deepseek-r1",
+      "openrouter/auto"
     ];
 
     for (const model of orModels) {

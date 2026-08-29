@@ -442,26 +442,33 @@ export function AIMediaGeneratorModal({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="max-h-80">
-                      <SelectItem value="google-imagen-3">
-                        🍌 Google Imagen 3 (Nano Banana Pro • 4K Luxury)
-                      </SelectItem>
-                      <SelectItem value="recraft/recraft-v4">
-                        🖼️ Recraft V4 (Forbes 5-Star Textures & SVG)
-                      </SelectItem>
-                      <SelectItem value="black-forest-labs/flux.2-pro">
-                        🏆 FLUX.2 Pro (Next-Gen 8K Photorealism)
-                      </SelectItem>
+                      <SelectItem value="auto">🤖 Automatic (Recommended)</SelectItem>
                       <SelectItem value="@cf/leonardo/lucid-origin">
-                        🎨 Leonardo Lucid Origin (Creative Director)
+                        🎨 Leonardo Lucid Origin (Free • flagship)
+                      </SelectItem>
+                      <SelectItem value="@cf/leonardo/phoenix-1.0">
+                        🖋️ Leonardo Phoenix 1.0 (Free • typography)
                       </SelectItem>
                       <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                        ✨ FLUX.1 Schnell (Fast Realism)
+                        ✨ FLUX.1 Schnell (Free • text &amp; diagrams)
+                      </SelectItem>
+                      <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
+                        🛡️ SDXL Base 1.0 (Free • high detail)
+                      </SelectItem>
+                      <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
+                        🏨 DreamShaper 8 LCM (Free • photo)
                       </SelectItem>
                       <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                        ⚡ SDXL Lightning (Zero-Cost Fast)
+                        ⚡ SDXL Lightning (Free • fastest)
                       </SelectItem>
                       <SelectItem value="recraft-vector">
-                        📐 Recraft Vector Engine (Zero-Loss SVG)
+                        📐 Vector Schematic (Free • instant SVG)
+                      </SelectItem>
+                      <SelectItem value="google/gemini-3-pro-image">
+                        💎 Gemini 3 Pro Image (Paid • highest quality)
+                      </SelectItem>
+                      <SelectItem value="google/gemini-2.5-flash-image">
+                        💎 Gemini 2.5 Flash Image (Paid • fast)
                       </SelectItem>
                     </SelectContent>
                   </Select>

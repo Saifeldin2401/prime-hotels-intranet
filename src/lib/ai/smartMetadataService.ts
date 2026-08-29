@@ -169,7 +169,7 @@ Requirements:
 Respond ONLY in valid JSON matching this schema.`;
 
     const res = await aiClient.executeStructured(prompt, SmartMetadataSchema, {
-      model: 'gemini-2.0-flash', // Free Tier High-Speed Model
+      model: 'gemini-2.5-flash', // Free Tier High-Speed Model
       task: 'summary',
       temperature: 0.2,
       maxTokens: 500,

@@ -261,23 +261,38 @@ export function StudioStageVisuals({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="recraft-vector">
-                    🎨 Recraft Vector v3 (Primary Free • SVG & Infographic Charts)
+                  <SelectItem value="auto">
+                    🤖 Automatic — pick the best available free engine (Recommended)
                   </SelectItem>
-                  <SelectItem value="recraft-v3">
-                    🖼️ Recraft Educational Illustration (Free • 5-Star Hotel Visuals)
+                  {/* Free — Cloudflare Workers AI */}
+                  <SelectItem value="@cf/leonardo/lucid-origin">
+                    🖼️ Leonardo Lucid Origin (Free • flagship photorealism)
                   </SelectItem>
-                  <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
-                    ⚡ Cloudflare SDXL-Lightning (Free • $0.00/step • Fast 1024px)
+                  <SelectItem value="@cf/leonardo/phoenix-1.0">
+                    🖼️ Leonardo Phoenix 1.0 (Free • strong prompt adherence)
                   </SelectItem>
                   <SelectItem value="@cf/black-forest-labs/flux-1-schnell">
-                    ✨ FLUX.1 Schnell (Ultra-HD Studio • 12B DiT • Best Text & Diagrams)
+                    ✨ FLUX.1 Schnell (Free • best text & diagrams)
+                  </SelectItem>
+                  <SelectItem value="@cf/bytedance/stable-diffusion-xl-lightning">
+                    ⚡ SDXL-Lightning (Free • fastest)
                   </SelectItem>
                   <SelectItem value="@cf/stabilityai/stable-diffusion-xl-base-1.0">
-                    🛡️ SDXL Base 1.0 (Detailed Free • $0.00/step)
+                    🛡️ SDXL Base 1.0 (Free • detailed)
                   </SelectItem>
                   <SelectItem value="@cf/lykon/dreamshaper-8-lcm">
-                    🎨 DreamShaper 8 LCM (Creative/Photo Free • $0.00/step)
+                    🎨 DreamShaper 8 LCM (Free • creative/photo)
+                  </SelectItem>
+                  {/* Deterministic SVG — always available, zero cost */}
+                  <SelectItem value="recraft-vector">
+                    📐 Vector Schematic (Free • instant SVG diagrams & flowcharts)
+                  </SelectItem>
+                  {/* Paid — OpenRouter (needs credits) */}
+                  <SelectItem value="google/gemini-3-pro-image">
+                    💎 Gemini 3 Pro Image (Paid • OpenRouter • highest quality)
+                  </SelectItem>
+                  <SelectItem value="google/gemini-2.5-flash-image">
+                    💎 Gemini 2.5 Flash Image (Paid • OpenRouter • fast)
                   </SelectItem>
                 </SelectContent>
               </Select>

@@ -8,6 +8,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from '../baseAgent'
 import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedChecklistItem, KnowledgeArticleGenerationConfig } from './types'
+import { buildArticleDirectives } from './articleDirectives'
 
 export interface QuickRefWriterOutput {
   code: string
@@ -39,13 +40,16 @@ You synthesize ultra-clear, rapid-reference cheat sheets and emergency decision 
     const dept = input.department || 'Hotel Operations'
     const deptPrefix = dept.slice(0, 3).toUpperCase()
     const code = `REF-${deptPrefix}-${Math.floor(100 + Math.random() * 900)}`
+    const { depthDirective, langDirective, sourceContext, maxTokens } = buildArticleDirectives(input)
 
     const prompt = `Draft an actionable 5-star Quick Reference Guide / Pocket Cheat Sheet for:
 Title: "${input.title}"
 Department: ${dept}
 Target Audience: ${input.targetAudience || 'Frontline Staff & Shift Supervisors'}
 Code: ${code}
-
+${depthDirective}
+${langDirective}
+${sourceContext}
 Structure of "contentHtml":
 - <h3>⚡ Fast-Action Summary (30-Second Rule)</h3>
 - <h3>📋 Immediate Action Steps (Ordered Priority Sequence)</h3>
@@ -88,7 +92,7 @@ Output JSON ONLY:
       ...options,
       jsonMode: true,
       temperature: 0.3,
-      maxTokens: 3500,
+      maxTokens,
     })
   }
 }

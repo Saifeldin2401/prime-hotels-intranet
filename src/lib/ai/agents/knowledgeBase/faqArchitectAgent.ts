@@ -8,6 +8,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from '../baseAgent'
 import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedFAQItem, KnowledgeArticleGenerationConfig } from './types'
+import { buildArticleDirectives } from './articleDirectives'
 
 export interface FAQWriterOutput {
   code: string
@@ -37,12 +38,15 @@ You formulate clear, concise, and helpful FAQ databases answering common employe
   ): Promise<AgentExecutionResult<FAQWriterOutput>> {
     const dept = input.department || 'All Departments'
     const code = `FAQ-${dept.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`
+    const { depthDirective, langDirective, sourceContext, maxTokens } = buildArticleDirectives(input)
 
-    const prompt = `Generate a comprehensive bilingual FAQ database for:
+    const prompt = `Generate an FAQ database for:
 Topic: "${input.title}"
 Department: ${dept}
 Target Audience: ${input.targetAudience || 'Hotel Staff'}
-
+${depthDirective}
+${langDirective}
+${sourceContext}
 Requirements:
 1. "faqItems" must contain 6-10 realistic operational questions with detailed, helpful 5-star answers.
 2. "contentHtml" should render an accordion-style overview of the questions with quick answers.
@@ -74,7 +78,7 @@ Output JSON ONLY:
       ...options,
       jsonMode: true,
       temperature: 0.3,
-      maxTokens: 3500,
+      maxTokens,
     })
   }
 }

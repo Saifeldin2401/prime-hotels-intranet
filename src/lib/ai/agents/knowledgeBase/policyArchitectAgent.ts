@@ -8,6 +8,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from '../baseAgent'
 import type { AgentExecutionResult, AgentRole } from '../types'
 import type { KnowledgeArticleGenerationConfig } from './types'
+import { buildArticleDirectives } from './articleDirectives'
 
 export interface PolicyWriterOutput {
   policyCode: string
@@ -40,13 +41,16 @@ You draft authoritative, fair, and legally compliant hotel policies.`
     const dept = input.department || 'Human Resources & Corporate Governance'
     const deptPrefix = dept.slice(0, 3).toUpperCase()
     const policyCode = `POL-${deptPrefix}-${Math.floor(100 + Math.random() * 900)}`
+    const { depthDirective, langDirective, sourceContext, maxTokens } = buildArticleDirectives(input)
 
     const prompt = `Draft a formal corporate/hotel policy document for:
 Policy Title: "${input.title}"
 Department: ${dept}
 Target Audience: ${input.targetAudience || 'All Hotel Employees'}
 Policy Code: ${policyCode}
-
+${depthDirective}
+${langDirective}
+${sourceContext}
 Structure of "contentHtml":
 - <h3>1. Policy Statement & Organizational Objective</h3>
 - <h3>2. Scope & Applicability</h3>
@@ -78,7 +82,7 @@ Output JSON ONLY:
       ...options,
       jsonMode: true,
       temperature: 0.3,
-      maxTokens: 4000,
+      maxTokens,
     })
   }
 }

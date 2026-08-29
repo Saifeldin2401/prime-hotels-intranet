@@ -75,8 +75,8 @@ describe('registry verification gate', () => {
   it('excludes unverified / fictional models from automatic routing', () => {
     const ids = getEnabledModels().map((m) => m.id)
     expect(ids).toContain('gemini-2.5-flash')
-    expect(ids).not.toContain('gemini-3.1-flash-lite') // marked unverified
-    expect(ids).not.toContain('black-forest-labs/flux.2-pro')
+    expect(ids).not.toContain('flux-1-schnell') // registry entry marked unverified
+    expect(ids).not.toContain('black-forest-labs/flux.2-pro') // not in the registry at all
   })
 
   it('admin overrides can force-disable an otherwise-enabled model', () => {

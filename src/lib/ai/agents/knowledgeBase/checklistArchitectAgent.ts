@@ -8,6 +8,7 @@
 import { BaseAIAgent, type AgentExecutionOptions } from '../baseAgent'
 import type { AgentExecutionResult, AgentRole } from '../types'
 import type { GeneratedChecklistItem, KnowledgeArticleGenerationConfig } from './types'
+import { buildArticleDirectives } from './articleDirectives'
 
 export interface ChecklistWriterOutput {
   code: string
@@ -37,12 +38,15 @@ You formulate rigorous, step-by-step checklists that frontline teams and supervi
   ): Promise<AgentExecutionResult<ChecklistWriterOutput>> {
     const dept = input.department || 'Operations'
     const code = `CHK-${dept.slice(0, 3).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`
+    const { depthDirective, langDirective, sourceContext, maxTokens } = buildArticleDirectives(input)
 
     const prompt = `Create an operational inspection checklist for:
 Title: "${input.title}"
 Department: ${dept}
 Target Role: ${input.targetAudience || 'Shift Supervisor & Duty Manager'}
-
+${depthDirective}
+${langDirective}
+${sourceContext}
 Requirements:
 1. "checklistItems" must contain 8-12 comprehensive inspection items categorized into phases (Pre-Shift, Active Inspection, Closing/Verification).
 2. "contentHtml" should render a formatted printable visual guide explaining the inspection criteria for each phase.
@@ -74,7 +78,7 @@ Output JSON ONLY:
       ...options,
       jsonMode: true,
       temperature: 0.3,
-      maxTokens: 3500,
+      maxTokens,
     })
   }
 }

@@ -15,6 +15,7 @@
 
 import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
 import { getPipelineTelemetry } from '@/lib/ai/observability'
+import { isDailySpendLockedOut, setDailySpendLockout } from './modelRegistry'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import type {
   CourseBlueprint,
@@ -131,6 +132,31 @@ export class AICourseOrchestrator {
     const onProgress = options.onProgress
     let totalEstimatedCostUSD = 0
 
+    // Admin "Spend & QA Caps" tab — concurrency + daily USD ceiling.
+    const platformCfg = aiPlatformConfigService.getCached()
+    const concurrency = Math.max(1, Math.min(10, options.maxConcurrency ?? platformCfg.maxConcurrency ?? 3))
+
+    const enforceDailySpendCap = async (checkpoint: string) => {
+      if (!(platformCfg.premiumDailyUsdCap > 0)) {
+        setDailySpendLockout(false)
+        return
+      }
+      const spent = await aiPlatformConfigService.getDailySpendUSD().catch(() => 0)
+      const locked = spent >= platformCfg.premiumDailyUsdCap
+      setDailySpendLockout(locked)
+      if (locked) {
+        emit({
+          phase: 'multimedia_generation',
+          status: 'running',
+          progressPercentage: 74,
+          title: 'Daily spend cap reached — free models only',
+          titleAr: 'تم بلوغ سقف الإنفاق اليومي — النماذج المجانية فقط',
+          detail: `Platform AI spend today ($${spent.toFixed(2)}) ≥ cap ($${platformCfg.premiumDailyUsdCap.toFixed(2)}). Forcing free tier for ${checkpoint}.`,
+          detailAr: `تجاوز الإنفاق اليومي الحد المسموح. سيتم استخدام النماذج المجانية فقط.`,
+        })
+      }
+    }
+
     const checkCancelled = (phase: string) => {
       if (options.signal?.aborted) {
         emit({
@@ -165,6 +191,9 @@ export class AICourseOrchestrator {
         })
       }
     }
+
+    // Enforce the platform daily spend ceiling before any paid model can run.
+    await enforceDailySpendCap('the full pipeline')
 
     // ========================================================================
     // PHASE 1: DISCOVERY, RESEARCH & KNOWLEDGE RETRIEVAL (Parallel)
@@ -379,7 +408,7 @@ export class AICourseOrchestrator {
           modelUsed: contentRes.modelUsed,
         })
       },
-      3 // Process 3 lessons concurrently
+      concurrency // admin "Max Parallel Generation Streams"
     )
 
     checkCancelled("assessment generation")
@@ -439,7 +468,7 @@ export class AICourseOrchestrator {
           console.warn('[Orchestrator] Assessment agent error for module:', mod.id, e)
         }
       },
-      3 // Generate 3 module quizzes concurrently
+      concurrency // admin "Max Parallel Generation Streams"
     )
 
     checkCancelled("multimedia generation")
@@ -447,8 +476,9 @@ export class AICourseOrchestrator {
     // ========================================================================
     // PHASE 5: MULTIMEDIA ENGINE (Visuals & Audio Shift Briefings)
     // ========================================================================
+    // Re-check the daily spend ceiling now that text/assessment phases have accrued cost.
+    await enforceDailySpendCap('image generation')
     if (!options.skipImages && config.imageConfig?.enableAIImages !== false) {
-      const platformCfg = aiPlatformConfigService.getCached()
       const userMaxImages = typeof config.imageConfig?.maxImagesPerCourse === 'number'
         ? config.imageConfig.maxImagesPerCourse
         : 6
@@ -481,17 +511,18 @@ export class AICourseOrchestrator {
         async ({ mod, les }) => {
           try {
             const overCap = runCost() >= platformCfg.perCourseUsdCap
+            const forceFree = overCap || platformCfg.freeOnlyMode || isDailySpendLockedOut()
             const premiumAllowed =
               !platformCfg.freeOnlyMode &&
               platformCfg.allowPremiumImages &&
               config.imageConfig?.costTier !== 'free_only' &&
-              !overCap
+              !forceFree
             const imgRes = await imageAgent.process(
               {
                 lesson: les,
                 courseTitle: blueprint.title,
                 moduleTitle: mod.title,
-                imageModel: overCap || platformCfg.freeOnlyMode ? 'auto' : userImageModel,
+                imageModel: forceFree ? 'auto' : userImageModel,
                 preferredStyle: userStyle,
                 preferredAspectRatio: userAspectRatio,
                 costTierPreference: premiumAllowed ? 'premium' : 'free_first',
@@ -538,7 +569,7 @@ export class AICourseOrchestrator {
             }
           }
         },
-        3 // Synthesize 3 visuals concurrently
+        concurrency // admin "Max Parallel Generation Streams"
       )
       blueprint.visualAssets = visualAssets
     }

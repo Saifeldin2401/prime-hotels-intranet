@@ -43,28 +43,50 @@ Always output valid JSON conforming to the requested schema.`
     const generatedSopCode = `SOP-${deptPrefix}-${Math.floor(100 + Math.random() * 900)}`
 
     const sourceContext = input.sourceDocumentText
-      ? `\nSOURCE REFERENCE MATERIAL:\n"""\n${input.sourceDocumentText.slice(0, 3000)}\n"""`
+      ? `\nSOURCE REFERENCE MATERIAL (base the document on this — do not contradict or ignore it):\n"""\n${input.sourceDocumentText.slice(0, 3000)}\n"""`
       : ''
 
-    const prompt = `Draft a comprehensive 5-star luxury hotel Standard Operating Procedure (SOP) for:
+    // Honour the exact options the author chose in the studio.
+    const depth = input.depthLevel || 'forbes_5star'
+    const depthDirective =
+      depth === 'concise'
+        ? 'Keep it concise: short sentences, scannable bullet lists, minimal preamble.'
+        : depth === 'standard'
+          ? 'Standard operational detail — clear and practical without exhaustive edge cases.'
+          : depth === 'regulatory_compliance'
+            ? 'Maximum rigour: cite specific Saudi MoT / Balady / Civil Defense clauses, exact tolerances, logging requirements.'
+            : 'Comprehensive Forbes 5-star depth with verbatim scripts, timing benchmarks and edge cases.'
+    const lang = input.languagePreference || 'bilingual'
+    const langDirective =
+      lang === 'en' ? 'Write "contentHtml" in English only; set "contentHtmlAr" to an empty string.'
+      : lang === 'ar' ? 'Write "contentHtmlAr" in Arabic only; set "contentHtml" to an empty string.'
+      : 'Provide BOTH "contentHtml" (English) and "contentHtmlAr" (full Arabic translation).'
+
+    const sections: string[] = ['<h3>1. Purpose & Strategic Importance</h3>', '<h3>2. Scope & Responsible Roles</h3>']
+    let n = 3
+    sections.push(`<h3>${n++}. Mandatory Equipment & System Prerequisites (PMS/POS)</h3>`)
+    sections.push(`<h3>${n++}. Step-by-Step Execution Sequence (numbered steps with time benchmarks)</h3>`)
+    sections.push(`<h3>${n++}. Verbatim Professional Dialogue Scripts</h3>`)
+    if (input.includeChecklist !== false) sections.push(`<h3>${n++}. Supervisory Quality Inspection Checklist</h3>`)
+    if (input.includeLastFramework !== false) sections.push(`<h3>${n++}. Service Recovery & Escalation (LAST Framework)</h3>`)
+    if (input.includeEmergencyProtocols !== false) sections.push(`<h3>${n++}. Emergency & Contingency Protocols</h3>`)
+    if (input.includeCriticalControlPoints !== false) sections.push(`<h3>${n++}. Critical Control Points</h3>`)
+    sections.push(`<h3>${n++}. Compliance & Regulatory Directives (Ministry of Tourism / Balady / Civil Defense)</h3>`)
+
+    const prompt = `Draft a 5-star luxury hotel Standard Operating Procedure (SOP) for:
 Title: "${input.title}"
 Department: ${dept}
 Target Audience: ${input.targetAudience || 'Frontline Staff & Supervisors'}
 SOP Code: ${generatedSopCode}
+Depth requested: ${depth} — ${depthDirective}
+Language: ${langDirective}
 ${sourceContext}
 
-Requirements:
-1. "contentHtml" must be structured HTML containing:
-   - <h3>1. Purpose & Strategic Importance</h3>
-   - <h3>2. Scope & Responsible Roles</h3>
-   - <h3>3. Mandatory Equipment & System Prerequisites (PMS/POS)</h3>
-   - <h3>4. Step-by-Step Execution Sequence (with numbered steps and time benchmarks)</h3>
-   - <h3>5. Verbatim Professional Dialogue Scripts (English & Arabic greeting/phrasing)</h3>
-   - <h3>6. Supervisory Quality Inspection Checklist</h3>
-   - <h3>7. Service Recovery & Problem Escalation (LAST Framework)</h3>
-   - <h3>8. Compliance & Regulatory Directives (Ministry of Tourism / Balady / Civil Defense)</h3>
-2. "contentHtmlAr" must be the complete professional Arabic translation of the HTML SOP.
-3. "checklistItems" must contain 4-6 key checkpoints supervisors inspect.
+Requirements (follow EXACTLY — do not add or drop sections the author did not request):
+1. "contentHtml" must be structured HTML containing these sections in order:
+   ${sections.join('\n   ')}
+2. Apply the language rule above for "contentHtmlAr".
+3. "checklistItems" must contain ${input.includeChecklist === false ? '0 items (author disabled the checklist — return an empty array)' : '4-6 key checkpoints supervisors inspect'}.
 
 Output JSON ONLY:
 {
@@ -108,7 +130,7 @@ Output JSON ONLY:
       ...options,
       jsonMode: true,
       temperature: 0.3,
-      maxTokens: 4000,
+      maxTokens: 7000,
     })
   }
 }

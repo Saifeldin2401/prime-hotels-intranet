@@ -8,6 +8,7 @@
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
 import { extractJsonFromText } from '@/lib/ai/client'
 import { classifyError, logAIRequest } from '@/lib/ai/observability'
+import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { modelRegistry } from './modelRegistry'
 import type {
   AgentExecutionResult,
@@ -86,6 +87,10 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
     let lastError: Error | null = null
     let failoverCount = 0
 
+    // Admin "Spend & QA Caps" tab → per-candidate transient-error retries.
+    const maxRetries = Math.max(0, Math.min(5, aiPlatformConfigService.getCached().maxRetries ?? 2))
+    const TRANSIENT: ReadonlySet<string> = new Set(['rate_limit', 'timeout', 'provider_error', 'empty_response'])
+
     for (let i = 0; i < cascade.length; i++) {
       const modelId = cascade[i]
       const modelMeta = modelRegistry.getModelMetadata(modelId)
@@ -93,6 +98,7 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       const costTier = (modelMeta?.costTier || 'free') as ModelCostTier
       const attemptStart = Date.now()
 
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         const response = await multiProviderRouter.execute<T>(prompt, {
           task: this.mapRoleToTaskCategory(this.role),
@@ -126,6 +132,14 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
           if (parsed !== null) {
             finalData = parsed
           }
+        }
+
+        // In JSON mode, a response that still isn't an object means the model
+        // returned truncated / malformed JSON. Treat it as a failure so the
+        // cascade retries on the next model instead of handing a raw string
+        // back to the caller (which then crashes on `.modules`, `.questions`, …).
+        if (options.jsonMode && (finalData === null || finalData === undefined || typeof finalData !== 'object')) {
+          throw new Error('Unparseable JSON: model returned truncated or malformed output in JSON mode')
         }
 
         const latencyMs = Date.now() - startTime
@@ -178,6 +192,7 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       } catch (err: unknown) {
         failoverCount++
         lastError = err instanceof Error ? err : new Error(String(err))
+        const errType = classifyError(lastError.message)
         logAIRequest({
           pipelineRunId,
           agentRole: this.role,
@@ -189,13 +204,23 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
           promptChars: prompt.length + (systemPrompt?.length ?? 0),
           completionChars: 0,
           success: false,
-          retryCount: i,
+          retryCount: attempt,
           fallbackCount: failoverCount,
           errorMessage: lastError.message,
-          errorType: classifyError(lastError.message),
+          errorType: errType,
         })
+
+        // Retry the SAME model only for transient errors, then cascade.
+        if (attempt < maxRetries && TRANSIENT.has(errType)) {
+          const backoffMs = 400 * Math.pow(2, attempt)
+          console.warn(`[${this.name}] ${modelId} ${errType} — retry ${attempt + 1}/${maxRetries} in ${backoffMs}ms`)
+          await new Promise((r) => setTimeout(r, backoffMs))
+          continue
+        }
         console.warn(`[${this.name}] Candidate model ${modelId} failed: ${lastError.message}`)
+        break
       }
+      } // end retry loop
     }
 
     this.emitEvent(options.onProgress, {

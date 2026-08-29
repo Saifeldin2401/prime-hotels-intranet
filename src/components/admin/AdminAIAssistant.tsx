@@ -19,11 +19,11 @@ interface Message {
 }
 
 const FALLBACK_MODELS = [
-    'openrouter/auto',
-    'google/gemini-2.0-flash-exp:free',
-    'meta-llama/llama-3.3-70b-instruct:free',
+    'google/gemini-2.5-flash-lite',
+    'openai/gpt-4o-mini',
     'meta-llama/llama-3.3-70b-instruct',
-    'qwen/qwen-2.5-72b-instruct'
+    'qwen/qwen-2.5-72b-instruct',
+    'openrouter/auto'
 ]
 
 const SYSTEM_PROMPT = `You are the Altus Advisory Configuration Assistant, an AI built to guide Corporate Administrators and HR Managers in modifying system variables.

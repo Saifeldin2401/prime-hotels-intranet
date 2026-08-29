@@ -6,6 +6,7 @@
  */
 
 import type { CourseBlueprint, CourseType } from '@/types/aiCourseEngine'
+import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import { BaseAIAgent, type AgentExecutionOptions } from './baseAgent'
 import {
   DEFAULT_QA_THRESHOLDS,
@@ -38,7 +39,15 @@ Always output structured JSON.`
     options: AgentExecutionOptions = {}
   ): Promise<AgentExecutionResult<ComprehensiveQAReport>> {
     const courseType = input.courseType || input.blueprint.courseType || 'professional'
-    const thresholds = DEFAULT_QA_THRESHOLDS[courseType] || DEFAULT_QA_THRESHOLDS.professional
+    const baseThresholds = DEFAULT_QA_THRESHOLDS[courseType] || DEFAULT_QA_THRESHOLDS.professional
+    // Admin "Spend & QA Caps" tab overrides the pass/acceptable bars. The stricter
+    // of (admin bar, course-type bar) wins so compliance courses can't be loosened.
+    const cfg = aiPlatformConfigService.getCached()
+    const thresholds = {
+      ...baseThresholds,
+      minimumProductionReady: Math.max(baseThresholds.minimumProductionReady, cfg.qaMinProductionReady || 0),
+      minimumAcceptable: Math.max(baseThresholds.minimumAcceptable, cfg.qaMinAcceptable || 0),
+    }
 
     const modulesSummary = (input.blueprint.modules || [])
       .map(

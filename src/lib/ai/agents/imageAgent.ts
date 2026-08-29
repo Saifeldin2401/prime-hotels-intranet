@@ -365,39 +365,33 @@ async function generateDirectRecraftApiImage(
   return null
 }
 
+// Maps any requested image model to a REAL OpenRouter image id that has a live endpoint.
+// Verified against https://openrouter.ai/api/v1/models (output_modalities includes "image"):
+// only the google/gemini-*-image family + openai/gpt-5-image* currently route.
 function mapToOpenRouterImageModel(requestedModel?: string): string {
-  if (!requestedModel) return 'google/gemini-3-pro-image-preview'
+  const FLAGSHIP = 'google/gemini-3-pro-image'
+  const FAST = 'google/gemini-3.1-flash-image'
+  const CHEAP = 'google/gemini-2.5-flash-image'
+  if (!requestedModel) return FLAGSHIP
   const lower = requestedModel.toLowerCase()
-  if (lower.includes('banana-pro') || lower.includes('imagen-3') || lower === 'nano-banana-pro-preview' || lower === 'google-imagen-3') {
-    return 'google/gemini-3-pro-image-preview'
+  // Already a real OpenRouter image id — pass through (strip any dead "-preview" suffix).
+  if (/^google\/gemini-[\d.]+(-pro|-flash|-flash-lite)?-image$/.test(lower.replace(/-preview$/, ''))) {
+    return lower.replace(/-preview$/, '')
   }
-  if (lower.includes('banana-2') || lower.includes('imagen-3-fast') || lower === 'gemini-3.1-flash-image' || lower === 'google-imagen-3-fast') {
-    return 'google/gemini-3.1-flash-image-preview'
+  if (lower.startsWith('openai/gpt-5') && lower.includes('image')) return requestedModel
+  if (lower.includes('banana-2') || lower.includes('3.1-flash') || lower.includes('imagen-3-fast') || lower === 'google-imagen-3-fast') {
+    return FAST
   }
-  if (lower.includes('gemini-2.5-flash-image')) {
-    return 'google/gemini-2.5-flash-image'
+  if (lower.includes('gemini-2.5-flash-image') || lower.includes('nano-banana') && !lower.includes('pro')) {
+    return CHEAP
   }
-  if (lower.includes('recraft-v4') || lower.includes('recraft-v4.1')) {
-    return 'recraft/recraft-v4'
-  }
-  if (lower.includes('recraft-v3') || lower.includes('recraft')) {
-    return 'recraft/recraft-v3'
-  }
-  if (lower.includes('flux.2-pro') || lower.includes('flux-2-pro') || lower.includes('flux.2')) {
-    return 'black-forest-labs/flux.2-pro'
-  }
-  if (lower.includes('seedream')) {
-    return 'bytedance-seed/seedream-4.5'
-  }
-  if (requestedModel.includes('/')) {
-    return requestedModel
-  }
-  return 'google/gemini-3-pro-image-preview'
+  // banana-pro / imagen / recraft / flux / seedream / anything else → flagship Gemini 3 Pro Image.
+  return FLAGSHIP
 }
 
 async function generateOpenRouterImage(
   prompt: string,
-  model = 'google/gemini-3-pro-image-preview',
+  model = 'google/gemini-3-pro-image',
   style = 'realistic_image',
   debug?: ImageDebugSession
 ): Promise<string | null> {
@@ -475,7 +469,7 @@ async function generateOpenRouterImage(
 
 async function generateGoogleImagenImage(
   prompt: string,
-  model = 'google/gemini-3-pro-image-preview',
+  model = 'google/gemini-3-pro-image',
   aspectRatio = '16:9',
   debug?: ImageDebugSession
 ): Promise<string | null> {
@@ -730,12 +724,31 @@ Respond ONLY with JSON:
   "placement": "inline_procedure"
 } `
 
-    const decisionResult = await this.executePrompt<VisualAssetDecision>(decisionPrompt, {
-      ...options,
-      preferredModel: undefined,
-      jsonMode: true,
-      temperature: 0.3,
-    })
+    // The "should we make a visual + what prompt" call is low-stakes: if the
+    // model returns unparseable JSON (which now throws in baseAgent) or fails
+    // outright, fall back to sensible defaults rather than skipping the image.
+    let decisionResult: AgentExecutionResult<VisualAssetDecision>
+    try {
+      decisionResult = await this.executePrompt<VisualAssetDecision>(decisionPrompt, {
+        ...options,
+        preferredModel: undefined,
+        jsonMode: true,
+        temperature: 0.3,
+      })
+    } catch (decisionErr) {
+      console.warn('[ImageAgent] Visual decision call failed, using defaults:', decisionErr)
+      decisionResult = {
+        agentRole: this.role,
+        success: false,
+        data: null as unknown as VisualAssetDecision,
+        rawOutput: '',
+        modelUsed: 'fallback-defaults',
+        providerUsed: 'none' as AgentExecutionResult['providerUsed'],
+        costTier: 'free',
+        estimatedCostUSD: 0,
+        latencyMs: 0,
+      }
+    }
 
     const decision = decisionResult.data || {
       shouldGenerate: true,

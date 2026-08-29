@@ -48,8 +48,8 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
     supportsJsonMode: true,
   },
   {
-    id: 'gemini-2.0-flash',
-    name: 'Gemini 2.0 Flash',
+    id: 'gemini-flash-latest',
+    name: 'Gemini Flash (latest alias — Google AI Studio)',
     provider: 'gemini',
     costTier: 'free',
     capabilities: ['deep_reasoning', 'structured_json', 'long_context', 'arabic_native', 'high_speed'],
@@ -60,29 +60,17 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
   },
   {
     id: 'gemini-3.1-flash-lite',
-    name: 'Gemini 3.1 Flash-Lite (unverified / future)',
+    name: 'Gemini 3.1 Flash-Lite (Google AI Studio)',
     provider: 'gemini',
     costTier: 'free',
     capabilities: ['structured_json', 'high_speed', 'long_context'],
-    contextWindowTokens: 524288,
+    contextWindowTokens: 1048576,
     qualityScore: 88,
     speedScore: 98,
     supportsJsonMode: true,
-    unverified: true,
   },
 
   // ── 2. GROQ LPU CLOUD (Zero-Latency Inference & Native Arabic) ──
-  {
-    id: 'qwen/qwen3.6-27b',
-    name: 'Qwen 3.6 27B (Groq LPU)',
-    provider: 'groq',
-    costTier: 'free',
-    capabilities: ['high_speed', 'structured_json', 'deep_reasoning', 'arabic_native'],
-    contextWindowTokens: 32768,
-    qualityScore: 92,
-    speedScore: 99,
-    supportsJsonMode: true,
-  },
   {
     id: 'allam-2-7b',
     name: 'ALLaM-2 7B Arabic Sovereign (Groq)',
@@ -106,25 +94,14 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
     supportsJsonMode: true,
   },
   {
-    id: 'llama-3.3-70b-versatile',
-    name: 'Llama 3.3 70B Versatile (Groq LPU)',
+    id: 'openai/gpt-oss-120b',
+    name: 'GPT-OSS 120B (Groq LPU • Flagship)',
     provider: 'groq',
     costTier: 'free',
-    capabilities: ['deep_reasoning', 'structured_json', 'creative_narrative', 'arabic_native'],
-    contextWindowTokens: 128000,
-    qualityScore: 92,
-    speedScore: 97,
-    supportsJsonMode: true,
-  },
-  {
-    id: 'llama-3.1-8b-instant',
-    name: 'Llama 3.1 8B Instant (Groq LPU)',
-    provider: 'groq',
-    costTier: 'free',
-    capabilities: ['high_speed', 'structured_json'],
-    contextWindowTokens: 128000,
-    qualityScore: 80,
-    speedScore: 99,
+    capabilities: ['deep_reasoning', 'structured_json', 'creative_narrative', 'high_speed'],
+    contextWindowTokens: 131072,
+    qualityScore: 93,
+    speedScore: 96,
     supportsJsonMode: true,
   },
   {
@@ -135,8 +112,19 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
     capabilities: ['deep_reasoning', 'structured_json', 'high_speed'],
     contextWindowTokens: 131072,
     qualityScore: 86,
-    speedScore: 96,
+    speedScore: 98,
     supportsJsonMode: true,
+  },
+  {
+    id: 'groq/compound',
+    name: 'Groq Compound (Agentic • web search + code)',
+    provider: 'groq',
+    costTier: 'free',
+    capabilities: ['deep_reasoning', 'high_speed'],
+    contextWindowTokens: 131072,
+    qualityScore: 90,
+    speedScore: 90,
+    supportsJsonMode: false,
   },
 
   // ── 3. HUGGING FACE SERVERLESS (Open Foundations) ──
@@ -334,161 +322,45 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
     supportsJsonMode: false,
   },
 
-  // ── 6. OPENROUTER UNIFIED IMAGE GENERATION (Ranked SOTA Image Engines) ──
+  // ── 6. OPENROUTER IMAGE GENERATION ──
+  // Only ids with live endpoints on https://openrouter.ai/api/v1/models (output_modalities
+  // includes "image"). All are paid (per-image), so costTier: 'low_cost' + real pricing.
+  // Reached via POST /chat/completions with modalities:["image","text"]; the image comes
+  // back on message.images[0].image_url.url.
   {
-    id: 'recraft/recraft-v4',
-    name: 'Recraft V4 (Forbes 5-Star Textures, Vector SVG & Photorealism)',
+    id: 'google/gemini-3-pro-image',
+    name: 'Gemini 3 Pro Image (OpenRouter • Flagship Photorealism & Text Rendering)',
     provider: 'openrouter',
-    costTier: 'free',
+    costTier: 'low_cost',
     modality: 'image',
     capabilities: ['photorealistic_image', 'luxury_photography', 'vector_svg'],
     contextWindowTokens: 0,
-    qualityScore: 99,
-    speedScore: 92,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'recraft/recraft-v3',
-    name: 'Recraft V3 (Forbes 5-Star Hotel Visuals & High Texture Realism)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'luxury_photography', 'vector_svg'],
-    contextWindowTokens: 0,
-    qualityScore: 99,
-    speedScore: 90,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'black-forest-labs/flux.2-pro',
-    name: 'FLUX.2 Pro (Next-Gen 8K Photorealism & Precision Architecture)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'luxury_photography'],
-    contextWindowTokens: 0,
-    qualityScore: 99,
+    qualityScore: 98,
     speedScore: 88,
     supportsJsonMode: false,
   },
   {
-    id: 'bytedance-seed/seedream-4.5',
-    name: 'ByteDance Seedream 4.5 (High Precision Cinematic Realism)',
+    id: 'google/gemini-2.5-flash-image',
+    name: 'Gemini 2.5 Flash Image / Nano Banana (OpenRouter • Cheapest Reliable)',
     provider: 'openrouter',
-    costTier: 'free',
+    costTier: 'low_cost',
     modality: 'image',
     capabilities: ['photorealistic_image', 'luxury_photography'],
     contextWindowTokens: 0,
-    qualityScore: 98,
-    speedScore: 92,
+    qualityScore: 92,
+    speedScore: 95,
     supportsJsonMode: false,
   },
   {
-    id: 'black-forest-labs/flux.2-flex',
-    name: 'FLUX.2 Flex (Flexible Aspect Ratios & Typography)',
+    id: 'google/gemini-3.1-flash-image',
+    name: 'Gemini 3.1 Flash Image (OpenRouter • Fast Multimodal Synthesis)',
     provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image'],
-    contextWindowTokens: 0,
-    qualityScore: 96,
-    speedScore: 92,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'black-forest-labs/flux.2-max',
-    name: 'FLUX.2 Max (High-Resolution Frontier Composition)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'luxury_photography'],
-    contextWindowTokens: 0,
-    qualityScore: 98,
-    speedScore: 87,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'openai/gpt-5.4-image-2',
-    name: 'OpenAI GPT-5.4 Image 2 (Multimodal Studio Reasoning & Realism)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'luxury_photography'],
-    contextWindowTokens: 0,
-    qualityScore: 97,
-    speedScore: 91,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'sourceful/riverflow-v2-pro',
-    name: 'Sourceful Riverflow V2 Pro (Precise Text & Hospitality Schematics)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'vector_svg'],
-    contextWindowTokens: 0,
-    qualityScore: 96,
-    speedScore: 93,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'krea/krea-2-large',
-    name: 'Krea 2 Large (Artistic & Interior Architectural Design)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image', 'luxury_photography'],
-    contextWindowTokens: 0,
-    qualityScore: 96,
-    speedScore: 90,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'bytedance-seed/seedream-4.5',
-    name: 'ByteDance Seedream 4.5 (Balanced Quality & Latency)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image'],
-    contextWindowTokens: 0,
-    qualityScore: 95,
-    speedScore: 96,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'black-forest-labs/flux.2-klein-4b',
-    name: 'FLUX.2 Klein 4B (Real-Time Ultra-Fast Inference)',
-    provider: 'openrouter',
-    costTier: 'free',
+    costTier: 'low_cost',
     modality: 'image',
     capabilities: ['photorealistic_image', 'fast_generation'],
     contextWindowTokens: 0,
     qualityScore: 94,
-    speedScore: 99,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'microsoft/mai-image-2.5-pro',
-    name: 'Microsoft MAI-Image 2.5 Pro (Enterprise Schematics & Charts)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['vector_svg', 'photorealistic_image'],
-    contextWindowTokens: 0,
-    qualityScore: 94,
-    speedScore: 93,
-    supportsJsonMode: false,
-  },
-  {
-    id: 'qwen/qwen-image-3-pro',
-    name: 'Qwen Image 3 Pro (Multilingual Vision & Detail)',
-    provider: 'openrouter',
-    costTier: 'free',
-    modality: 'image',
-    capabilities: ['photorealistic_image'],
-    contextWindowTokens: 0,
-    qualityScore: 93,
-    speedScore: 94,
+    speedScore: 97,
     supportsJsonMode: false,
   },
 
@@ -521,8 +393,8 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
 
   // ── 6. OPENROUTER ENTERPRISE (Premium Escalation Tier) ──
   {
-    id: 'anthropic/claude-3.7-sonnet',
-    name: 'Claude 3.7 Sonnet (Hybrid Reasoning)',
+    id: 'anthropic/claude-opus-4.5',
+    name: 'Claude Opus 4.5 (Flagship Reasoning)',
     provider: 'openrouter',
     costTier: 'premium',
     capabilities: ['deep_reasoning', 'structured_json', 'creative_narrative', 'arabic_native', 'long_context'],
@@ -532,14 +404,14 @@ export const MODEL_REGISTRY: ModelMetadata[] = [
     supportsJsonMode: true,
   },
   {
-    id: 'anthropic/claude-3.5-sonnet',
-    name: 'Claude 3.5 Sonnet',
+    id: 'anthropic/claude-haiku-4.5',
+    name: 'Claude Haiku 4.5 (Fast, Low-Cost)',
     provider: 'openrouter',
-    costTier: 'premium',
+    costTier: 'low_cost',
     capabilities: ['deep_reasoning', 'structured_json', 'creative_narrative', 'arabic_native', 'long_context'],
     contextWindowTokens: 200000,
-    qualityScore: 98,
-    speedScore: 87,
+    qualityScore: 95,
+    speedScore: 92,
     supportsJsonMode: true,
   },
   {
@@ -601,12 +473,16 @@ const VERIFIED_MODEL_IDS = new Set<string>([
   // Gemini (Google AI Studio)
   'gemini-2.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.0-flash',
-  // Groq LPU
+  'gemini-flash-latest',
+  'gemini-2.5-pro',
+  'gemini-3.1-flash-lite',
+  // Groq LPU — probed live 2026-08-29: only gpt-oss / compound / allam resolve on
+  // this account; the Llama/Qwen/Gemma ids all 404 "model does not exist".
   'allam-2-7b',
-  'llama-3.3-70b-versatile',
-  'llama-3.1-8b-instant',
+  'openai/gpt-oss-120b',
   'openai/gpt-oss-20b',
+  'groq/compound',
+  'groq/compound-mini',
   // OpenRouter open-weight
   'meta-llama/llama-3.3-70b-instruct',
   // Hugging Face serverless
@@ -629,11 +505,15 @@ const VERIFIED_MODEL_IDS = new Set<string>([
   'nano-banana-pro-preview',
   'gemini-3.1-flash-image',
   'gemini-2.5-flash-image',
+  // OpenRouter image models — live endpoints verified via openrouter.ai/api/v1/models
+  'google/gemini-3-pro-image',
+  'google/gemini-2.5-flash-image',
+  'google/gemini-3.1-flash-image',
   // Local deterministic SVG schematic engine (zero cost, always available)
   'recraft-vector',
   // OpenRouter text (paid account available)
-  'anthropic/claude-3.7-sonnet',
-  'anthropic/claude-3.5-sonnet',
+  'anthropic/claude-opus-4.5',
+  'anthropic/claude-haiku-4.5',
   'openai/gpt-4o',
   'openai/gpt-4o-mini',
   'deepseek/deepseek-r1',
@@ -656,6 +536,10 @@ const IMAGE_PRICING_USD: Record<string, number> = {
   'gemini-3.1-flash-image': 0.02,
   'gemini-2.5-flash-image': 0.03,
   'recraft-vector': 0,
+  // OpenRouter image models (per-image, approximate — OpenRouter bills per output image)
+  'google/gemini-3-pro-image': 0.03,
+  'google/gemini-2.5-flash-image': 0.003,
+  'google/gemini-3.1-flash-image': 0.008,
 }
 
 // Admin overrides applied at runtime from ai_platform_config.
@@ -663,6 +547,11 @@ let ADMIN_DISABLED_IDS = new Set<string>()
 let ADMIN_FORCE_ENABLED_IDS = new Set<string>()
 let ADMIN_DISABLED_PROVIDERS = new Set<ModelProvider>()
 let ADMIN_FREE_ONLY = false
+let ADMIN_TEXT_PRIORITY: string[] = []
+let ADMIN_IMAGE_PRIORITY: string[] = []
+// Set by the orchestrator when the platform's daily USD spend cap is hit —
+// behaves like a temporary free-only lockout for the rest of the day.
+let DAILY_SPEND_LOCKOUT = false
 
 export function setModelOverrides(opts: {
   disabledModelIds?: string[]
@@ -683,6 +572,35 @@ export function getModelOverrides() {
     disabledProviders: [...ADMIN_DISABLED_PROVIDERS],
     freeOnly: ADMIN_FREE_ONLY,
   }
+}
+
+/**
+ * Admin "Agent Roles" tab: ordered preference lists. A model that appears here
+ * gets a large routing-score bonus (earlier = bigger) and is prepended to every
+ * agent cascade, so the admin's chosen models win unless disabled/unverified.
+ */
+export function setModelPriorities(opts: { textModelPriority?: string[]; imageModelPriority?: string[] }): void {
+  if (opts.textModelPriority) ADMIN_TEXT_PRIORITY = opts.textModelPriority.filter(Boolean)
+  if (opts.imageModelPriority) ADMIN_IMAGE_PRIORITY = opts.imageModelPriority.filter(Boolean)
+}
+
+export function getModelPriorities() {
+  return { textModelPriority: [...ADMIN_TEXT_PRIORITY], imageModelPriority: [...ADMIN_IMAGE_PRIORITY] }
+}
+
+/** Position-weighted score bonus for an admin-prioritised model (0 if not listed). */
+export function priorityBonus(modelId: string, modality: ModelModality): number {
+  const list = modality === 'image' ? ADMIN_IMAGE_PRIORITY : ADMIN_TEXT_PRIORITY
+  const idx = list.indexOf(modelId)
+  return idx === -1 ? 0 : Math.max(60, 500 - idx * 60)
+}
+
+export function setDailySpendLockout(active: boolean): void {
+  DAILY_SPEND_LOCKOUT = active
+}
+
+export function isDailySpendLockedOut(): boolean {
+  return DAILY_SPEND_LOCKOUT
 }
 
 function deriveLatencyTier(speedScore: number): LatencyTier {
@@ -725,7 +643,7 @@ export function normalizeModelMeta(m: ModelMetadata): Required<
   else if (ADMIN_DISABLED_PROVIDERS.has(m.provider)) enabled = false
   else if (m.adminOverride === 'force_enable' || ADMIN_FORCE_ENABLED_IDS.has(m.id)) enabled = true
   else enabled = (m.enabled ?? true) && !unverified && !m.isDeprecated
-  if (enabled && ADMIN_FREE_ONLY && !isFreeTier) enabled = false
+  if (enabled && (ADMIN_FREE_ONLY || DAILY_SPEND_LOCKOUT) && !isFreeTier) enabled = false
 
   return {
     ...m,
@@ -930,6 +848,13 @@ export class AIModelRegistry {
     // Ensure all models in this cascade are strictly text models.
     sanitized = sanitized.filter((id) => isTextModel(id))
 
+    // Admin "Agent Roles" tab: enabled text models the admin pinned go to the
+    // front of every cascade (in the admin's chosen order).
+    const adminTextPriority = ADMIN_TEXT_PRIORITY.filter((id) => enabledIds.has(id) && isTextModel(id))
+    if (adminTextPriority.length > 0) {
+      sanitized = Array.from(new Set([...adminTextPriority, ...sanitized]))
+    }
+
     if (userPreferredModel && userPreferredModel !== 'auto') {
       if (isTextModel(userPreferredModel)) {
         return [userPreferredModel, ...sanitized.filter((m) => m !== userPreferredModel)]
@@ -949,31 +874,36 @@ export class AIModelRegistry {
     }
     const combinedReq: TaskCapabilityRequirement = { ...baseReq, ...customReq }
 
-    // Task-specific tailored cascade chains
+    // Task-specific tailored cascade chains.
+    // NOTE: agents that request `jsonMode` lead with models that have a real
+    // JSON-object mode (Groq gpt-oss, gpt-4o-mini). `gemini-2.5-flash` resolves
+    // to Gemini-direct → on 429 the edge fn silently drops to gemini-*-lite,
+    // which frequently emits malformed JSON for large bilingual schemas.
     switch (role) {
       case 'research':
         return [
-          'gemini-2.5-flash',
-          'qwen/qwen3.6-27b',
-          'deepseek/deepseek-chat',
+          'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
-          'anthropic/claude-3.5-sonnet',
+          'gemini-2.5-flash',
+          'deepseek/deepseek-chat',
+          'anthropic/claude-haiku-4.5',
         ]
 
       case 'curriculum':
         return [
+          'openai/gpt-oss-120b',
+          'openai/gpt-4o-mini',
           'gemini-2.5-flash',
           'meta-llama/llama-3.3-70b-instruct',
-          'deepseek/deepseek-r1',
-          'anthropic/claude-3.7-sonnet',
-          'anthropic/claude-3.5-sonnet',
+          'anthropic/claude-opus-4.5',
+          'anthropic/claude-haiku-4.5',
         ]
 
       case 'knowledge':
         return [
-          'gemini-2.5-flash',
-          'qwen/qwen3.6-27b',
+          'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
+          'gemini-2.5-flash',
           'deepseek/deepseek-chat',
         ]
 
@@ -982,7 +912,7 @@ export class AIModelRegistry {
           'gemini-2.5-flash',
           'meta-llama/llama-3.3-70b-instruct',
           'openai/gpt-4o',
-          'anthropic/claude-3.5-sonnet',
+          'anthropic/claude-haiku-4.5',
           'openai/gpt-4o-mini',
         ]
 
@@ -991,17 +921,17 @@ export class AIModelRegistry {
         return [
           'gemini-2.5-flash',
           'meta-llama/llama-3.3-70b-instruct',
-          'anthropic/claude-3.7-sonnet',
-          'anthropic/claude-3.5-sonnet',
-          'qwen/qwen3.6-27b',
+          'anthropic/claude-opus-4.5',
+          'anthropic/claude-haiku-4.5',
+          'openai/gpt-oss-120b',
         ]
 
       case 'assessments':
         return [
-          'gemini-2.5-flash',
-          'qwen/qwen3.6-27b',
+          'openai/gpt-oss-120b',
           'openai/gpt-4o-mini',
-          'anthropic/claude-3.5-sonnet',
+          'gemini-2.5-flash',
+          'anthropic/claude-haiku-4.5',
           'deepseek/deepseek-chat',
         ]
 
@@ -1009,30 +939,30 @@ export class AIModelRegistry {
         return [
           'deepseek/deepseek-r1',
           'gemini-2.5-flash',
-          'anthropic/claude-3.7-sonnet',
+          'anthropic/claude-opus-4.5',
           'meta-llama/llama-3.3-70b-instruct',
-          'anthropic/claude-3.5-sonnet',
+          'anthropic/claude-haiku-4.5',
         ]
 
       case 'revision':
         return [
           'gemini-2.5-flash',
           'openai/gpt-4o-mini',
-          'qwen/qwen3.6-27b',
-          'anthropic/claude-3.5-sonnet',
+          'openai/gpt-oss-120b',
+          'anthropic/claude-haiku-4.5',
         ]
 
       case 'compliance':
         return [
           'allam-2-7b',
           'gemini-2.5-flash',
-          'qwen/qwen3.6-27b',
-          'anthropic/claude-3.5-sonnet',
+          'openai/gpt-oss-120b',
+          'anthropic/claude-haiku-4.5',
         ]
 
       case 'translator':
         return [
-          'anthropic/claude-3.5-sonnet',
+          'anthropic/claude-haiku-4.5',
           'gemini-2.5-flash',
           'openai/gpt-4o-mini',
           'deepseek/deepseek-chat',
@@ -1044,9 +974,8 @@ export class AIModelRegistry {
         // Fast, high-reliability text models with JSON support are used.
         return [
           'gemini-2.5-flash',
-          'llama-3.3-70b-versatile',
           'openai/gpt-oss-20b',
-          'qwen/qwen3.6-27b',
+          'openai/gpt-oss-120b',
           'deepseek/deepseek-chat',
         ]
       }
@@ -1294,6 +1223,13 @@ export function scoreModelForMode(
   }
 
   score += Math.max(0, (100 - (model.priority ?? 100)) / 20)
+
+  const adminBonus = priorityBonus(model.id, model.modality ?? 'text')
+  if (adminBonus > 0) {
+    score += adminBonus
+    reasons.push('admin-prioritised model (Agent Roles tab)')
+  }
+
   return { score: Math.round(score * 10) / 10, reasons }
 }
 
@@ -1357,7 +1293,9 @@ export function resolveImageModelChain(req: ImageRequirement): ModelDecision {
 
   const candidates = getEnabledModels()
     .filter((m) => m.modality === 'image' && m.capabilities.includes(neededCap))
-    .filter((m) => (wantsFree ? isFreeModel(m) : true))
+    // Free-first drops paid models — UNLESS the admin explicitly pinned one in
+    // the "Agent Roles" tab, in which case their choice is honoured.
+    .filter((m) => (wantsFree ? isFreeModel(m) || ADMIN_IMAGE_PRIORITY.includes(m.id) : true))
 
   const scored = candidates
     .map((m) => {
