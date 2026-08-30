@@ -20,6 +20,8 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useToast } from '@/components/ui/use-toast'
 import { useAIPlatformConfig, useUpdateAIPlatformConfig } from '@/hooks/useAIPlatformConfig'
+import { useAIAgentPolicies, useUpdateAIAgentPolicy } from '@/hooks/useAIAgentPolicies'
+import type { AIAgentPolicy } from '@/services/aiAgentPolicyService'
 import { getAllModels, isImageModel } from '@/lib/ai/agents/modelRegistry'
 import type { ModelProvider, RoutingMode } from '@/lib/ai/agents/types'
 import { multiProviderRouter } from '@/lib/ai/providers/multiProviderRouter'
@@ -32,9 +34,11 @@ import {
   AlertTriangle,
   Award,
   BookOpen,
+  Ban,
   Bot,
   Check,
   CheckCircle2,
+  Clock,
   Compass,
   Cpu,
   DollarSign,
@@ -153,8 +157,14 @@ export default function AICourseGeneratorSettings() {
 
   const { data: config, isLoading } = useAIPlatformConfig()
   const updateMutation = useUpdateAIPlatformConfig()
+  const { data: agentPolicies } = useAIAgentPolicies()
+  const updateAgentPolicy = useUpdateAIAgentPolicy()
   const [draft, setDraft] = useState<AIPlatformConfig | null>(null)
   const [activeTab, setActiveTab] = useState('strategy')
+
+  // Model verification pipeline (Gap C)
+  const [verifying, setVerifying] = useState(false)
+  const [verifyResult, setVerifyResult] = useState<string | null>(null)
 
   // Model catalog search & filter states
   const [modelSearch, setModelSearch] = useState('')
@@ -233,6 +243,62 @@ export default function AICourseGeneratorSettings() {
   })
 
   const registryData = registryQuery.data
+
+  // Full catalog + recent probes (includes unverified / disabled / deprecated).
+  const verificationQuery = useQuery({
+    queryKey: ['ai-model-verification-status'],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_ai_model_verification_status' as never)
+      if (error || !data) return { models: [], recent_probes: [] }
+      return data as unknown as {
+        models: Array<{
+          id: string
+          provider: string
+          display_name: string
+          modality: string
+          availability: string
+          enabled: boolean
+          supports_json_object: boolean
+          image_generation: boolean
+          verified_at: string | null
+          last_probe_ok: boolean | null
+          last_probe_at: string | null
+          capability_checked_at: string | null
+        }>
+        recent_probes: Array<{
+          id: string
+          model_id: string
+          probed_at: string
+          ok: boolean
+          latency_ms: number | null
+          http_status: number | null
+          detail: string | null
+          probe_type: string
+        }>
+      }
+    },
+  })
+
+  const verificationData = verificationQuery.data
+
+  const verificationModelById = useMemo(() => {
+    const map: Record<string, NonNullable<typeof verificationData>['models'][number]> = {}
+    for (const m of verificationData?.models ?? []) map[m.id] = m
+    return map
+  }, [verificationData])
+
+  const verificationSummary = useMemo(() => {
+    const rows = verificationData?.models ?? []
+    return {
+      total: rows.length,
+      verified: rows.filter((m) => m.availability === 'verified').length,
+      unverified: rows.filter((m) => m.availability === 'unverified').length,
+      deprecated: rows.filter((m) => m.availability === 'deprecated').length,
+      probedOk: rows.filter((m) => m.last_probe_ok === true).length,
+      probedFail: rows.filter((m) => m.last_probe_ok === false).length,
+    }
+  }, [verificationData])
 
   const dbProviders = useMemo(() => {
     const map: Record<string, NonNullable<typeof registryData>['providers'][number]> = {}
@@ -646,6 +712,45 @@ export default function AICourseGeneratorSettings() {
     })
   }
 
+  // Model verification pipeline — invokes the ai-model-verifier edge function
+  // (discover -> API probe -> capability probe). Never auto-enables a model.
+  const handleRunVerification = async (provider?: string) => {
+    setVerifying(true)
+    setVerifyResult(null)
+    try {
+      const { data, error } = await supabase.functions.invoke<{
+        success: boolean
+        discovered?: string[]
+        probed?: number
+        verified?: number
+        deprecated?: number
+        failed?: number
+        capability_checked?: number
+        notes?: string[]
+        error?: string
+      }>('ai-model-verifier', {
+        body: { mode: 'all', provider: provider ?? null, onlyUnverified: true },
+      })
+      if (error || !data?.success) {
+        const msg = error?.message || data?.error || 'Verification run failed'
+        setVerifyResult(msg.slice(0, 200))
+        toast({ variant: 'destructive', title: t('common.error', 'Verification failed'), description: msg.slice(0, 160) })
+      } else {
+        const line = `Discovered ${data.discovered?.length ?? 0} · probed ${data.probed ?? 0} · verified ${data.verified ?? 0} · deprecated ${data.deprecated ?? 0} · failed ${data.failed ?? 0} · capability ${data.capability_checked ?? 0}`
+        setVerifyResult(line + (data.notes?.length ? ` — ${data.notes.join('; ')}` : ''))
+        toast({ title: t('ai_course_generator.verification.done', 'Verification complete'), description: line })
+      }
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Verification run failed'
+      setVerifyResult(msg.slice(0, 200))
+      toast({ variant: 'destructive', title: t('common.error', 'Verification failed'), description: msg.slice(0, 160) })
+    } finally {
+      setVerifying(false)
+      verificationQuery.refetch()
+      registryQuery.refetch()
+    }
+  }
+
   // Save changes
   const save = async () => {
     try {
@@ -739,7 +844,7 @@ export default function AICourseGeneratorSettings() {
 
       {/* Main Control Surface Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full space-y-6">
-        <TabsList className="grid grid-cols-2 md:grid-cols-6 w-full h-11 p-1 bg-muted/60">
+        <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 w-full h-auto md:h-11 p-1 bg-muted/60">
           <TabsTrigger value="strategy" className="text-xs font-semibold gap-1.5">
             <Wand2 className="w-3.5 h-3.5 text-purple-500" />
             <span>{t('ai_course_generator.tabs.strategy', 'Strategy & Presets')}</span>
@@ -755,6 +860,10 @@ export default function AICourseGeneratorSettings() {
           <TabsTrigger value="roles" className="text-xs font-semibold gap-1.5">
             <Bot className="w-3.5 h-3.5 text-orange-500" />
             <span>{t('ai_course_generator.tabs.roles', 'Agent Roles')}</span>
+          </TabsTrigger>
+          <TabsTrigger value="policies" className="text-xs font-semibold gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 text-teal-500" />
+            <span>{t('ai_course_generator.tabs.policies', 'Agent Policies')}</span>
           </TabsTrigger>
           <TabsTrigger value="limits" className="text-xs font-semibold gap-1.5">
             <Sliders className="w-3.5 h-3.5 text-amber-500" />
@@ -1226,6 +1335,23 @@ export default function AICourseGeneratorSettings() {
                           not in DB registry
                         </Badge>
                       )}
+                      {(() => {
+                        const v = verificationModelById[m.id]
+                        if (!v || !v.last_probe_at) return null
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={`text-[9px] font-semibold ${
+                              v.last_probe_ok
+                                ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300'
+                                : 'text-rose-700 border-rose-200 bg-rose-50 dark:bg-rose-950 dark:text-rose-300'
+                            }`}
+                            title={`Last probe ${new Date(v.last_probe_at).toLocaleString()}`}
+                          >
+                            {v.last_probe_ok ? 'probe ✓' : 'probe ✗'} · {new Date(v.last_probe_at).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+                          </Badge>
+                        )
+                      })()}
                     </div>
 
                     {/* Interactive 3-State Priority Switcher (Zero Typing!) */}
@@ -1272,6 +1398,102 @@ export default function AICourseGeneratorSettings() {
               )
             })}
           </div>
+
+          {/* ---------------- Model Verification Pipeline (Gap C) ------------- */}
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <CardTitle className="text-sm font-bold flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-teal-600" />
+                    {t('ai_course_generator.verification.title', 'Model Verification Pipeline')}
+                  </CardTitle>
+                  <CardDescription className="text-xs">
+                    {t(
+                      'ai_course_generator.verification.desc',
+                      'Discover provider catalogs, probe each model with a real call, and mark it verified or deprecated. Never auto-enables a model.'
+                    )}
+                  </CardDescription>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handleRunVerification()}
+                  disabled={verifying}
+                  className="h-9 text-xs font-bold bg-teal-600 hover:bg-teal-700 text-white shadow-sm gap-1.5 shrink-0"
+                >
+                  {verifying ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
+                  <span>
+                    {verifying
+                      ? t('ai_course_generator.verification.running', 'Running verification...')
+                      : t('ai_course_generator.verification.run', 'Run verification')}
+                  </span>
+                </Button>
+              </div>
+            </CardHeader>
+
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5">
+                {[
+                  { label: t('ai_course_generator.verification.verified', 'Verified'), value: verificationSummary.verified, tone: 'text-emerald-600' },
+                  { label: t('ai_course_generator.verification.unverified', 'Unverified'), value: verificationSummary.unverified, tone: 'text-amber-600' },
+                  { label: t('ai_course_generator.verification.deprecated', 'Deprecated'), value: verificationSummary.deprecated, tone: 'text-rose-600' },
+                  { label: t('ai_course_generator.verification.probe_ok', 'Last probe OK'), value: verificationSummary.probedOk, tone: 'text-emerald-600' },
+                  { label: t('ai_course_generator.verification.probe_fail', 'Last probe failed'), value: verificationSummary.probedFail, tone: 'text-rose-600' },
+                ].map((s) => (
+                  <div key={s.label} className="rounded-xl border bg-card p-3">
+                    <div className={`text-lg font-extrabold ${s.tone}`}>{s.value}</div>
+                    <div className="text-[10px] text-muted-foreground">{s.label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {verifyResult && (
+                <div className="rounded-lg border bg-muted/20 p-2.5 text-[11px] text-muted-foreground font-mono">
+                  {verifyResult}
+                </div>
+              )}
+
+              <div>
+                <div className="text-[11px] font-semibold text-muted-foreground mb-1.5">
+                  {t('ai_course_generator.verification.recent', 'Recent probes')}
+                </div>
+                <ScrollArea className="h-64 rounded-xl border">
+                  <div className="divide-y">
+                    {(verificationQuery.data?.recent_probes ?? []).length === 0 ? (
+                      <div className="p-4 text-[11px] text-muted-foreground text-center">
+                        {t('ai_course_generator.verification.no_probes', 'No probes recorded yet. Run verification to populate this log.')}
+                      </div>
+                    ) : (
+                      (verificationQuery.data?.recent_probes ?? []).map((p) => (
+                        <div key={p.id} className="flex items-start justify-between gap-3 p-2.5 text-[11px]">
+                          <div className="flex items-start gap-2 min-w-0">
+                            {p.ok ? (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            ) : (
+                              <AlertTriangle className="w-3.5 h-3.5 text-rose-600 shrink-0 mt-0.5" />
+                            )}
+                            <div className="min-w-0">
+                              <div className="font-mono font-semibold truncate text-foreground">{p.model_id}</div>
+                              {p.detail && <div className="text-muted-foreground truncate">{p.detail}</div>}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-muted-foreground">
+                            <Badge variant="outline" className="text-[9px] capitalize">{p.probe_type}</Badge>
+                            {p.http_status != null && (
+                              <Badge variant="outline" className="text-[9px] font-mono">{p.http_status}</Badge>
+                            )}
+                            <span className="tabular-nums">
+                              {new Date(p.probed_at).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </ScrollArea>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ==================================================================== */}
@@ -1346,6 +1568,57 @@ export default function AICourseGeneratorSettings() {
               selectedModel={draft.textModelPriority[4] || 'allam-2-7b'}
               onSelect={(modelId) => setTextPrioritySlot(4, modelId)}
             />
+          </div>
+        </TabsContent>
+
+        {/* ==================================================================== */}
+        {/* TAB: PER-AGENT POLICY OVERRIDES (Gap D)                              */}
+        {/* ==================================================================== */}
+        <TabsContent value="policies" className="space-y-4 mt-0">
+          <div>
+            <h3 className="text-sm font-bold text-foreground">
+              {t('ai_course_generator.policies.title', 'Per-Agent Policy Overrides')}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {t(
+                'ai_course_generator.policies.desc',
+                'Scope routing to a single agent role: disable it entirely, override its routing mode, force or exclude specific models, or tune retries and temperature. Blank = inherit the global policy.'
+              )}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {(agentPolicies ?? []).map((pol) => (
+              <AgentPolicyCard
+                key={pol.agentRole}
+                policy={pol}
+                textModels={models.filter((m) => !isImageModel(m.id))}
+                saving={updateAgentPolicy.isPending}
+                onSave={(role, patch) =>
+                  updateAgentPolicy.mutate(
+                    { role, patch },
+                    {
+                      onSuccess: () =>
+                        toast({
+                          title: t('common.saved', 'Saved'),
+                          description: t('ai_course_generator.policies.saved', `Policy for "${role}" updated.`),
+                        }),
+                      onError: (e) =>
+                        toast({
+                          variant: 'destructive',
+                          title: t('common.error', 'Save failed'),
+                          description: e instanceof Error ? e.message : 'Only corporate_admin can modify agent policies.',
+                        }),
+                    },
+                  )
+                }
+              />
+            ))}
+            {(agentPolicies ?? []).length === 0 && (
+              <div className="col-span-full text-center py-12 rounded-xl border border-dashed bg-muted/10 text-xs text-muted-foreground">
+                {t('ai_course_generator.policies.loading', 'Loading agent policies...')}
+              </div>
+            )}
           </div>
         </TabsContent>
 
@@ -1751,6 +2024,228 @@ function RoleModelSelector({
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+const INHERIT = '__inherit__'
+
+const ROLE_LABELS: Record<string, string> = {
+  research: 'Research',
+  curriculum: 'Curriculum Architect',
+  knowledge: 'Knowledge (RAG)',
+  content_writer: 'Content Writer',
+  activities: 'Activities',
+  scenarios: 'Scenarios',
+  assessments: 'Assessments',
+  image_ai: 'Image AI',
+  video_ai: 'Video AI',
+  audio_ai: 'Audio AI',
+  qa_critic: 'QA Critic',
+  revision: 'Revision',
+  compliance: 'Compliance',
+  translator: 'Translator',
+}
+
+function AgentPolicyCard({
+  policy,
+  textModels,
+  saving,
+  onSave,
+}: {
+  policy: AIAgentPolicy
+  textModels: ReturnType<typeof getAllModels>
+  saving: boolean
+  onSave: (role: string, patch: Partial<AIAgentPolicy>) => void
+}) {
+  const [draft, setDraft] = useState<AIAgentPolicy>(policy)
+  useEffect(() => { setDraft(policy) }, [policy])
+
+  const dirty = JSON.stringify(draft) !== JSON.stringify(policy)
+  const patch = <K extends keyof AIAgentPolicy>(k: K, v: AIAgentPolicy[K]) =>
+    setDraft((d) => ({ ...d, [k]: v }))
+
+  const toggleExcluded = (id: string) => {
+    if (!id || id === INHERIT) return
+    setDraft((d) => ({
+      ...d,
+      disabledModelIds: d.disabledModelIds.includes(id)
+        ? d.disabledModelIds.filter((x) => x !== id)
+        : [...d.disabledModelIds, id],
+    }))
+  }
+
+  const retryOptions: Array<number | null> = [null, 0, 1, 2, 3, 4, 5]
+  const tempOptions: Array<number | null> = [null, 0, 0.2, 0.5, 0.7, 1]
+
+  return (
+    <Card className={`transition-all ${draft.enabled ? '' : 'opacity-70 border-dashed'}`}>
+      <CardHeader className="p-4 pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-muted/60">
+              {draft.enabled ? <Bot className="w-4 h-4 text-teal-600" /> : <Ban className="w-4 h-4 text-rose-500" />}
+            </div>
+            <div>
+              <CardTitle className="text-xs font-bold text-foreground">
+                {ROLE_LABELS[policy.agentRole] ?? policy.agentRole}
+              </CardTitle>
+              <p className="text-[10px] font-mono text-muted-foreground">{policy.agentRole}</p>
+            </div>
+          </div>
+          <Switch checked={draft.enabled} onCheckedChange={(v) => patch('enabled', v)} />
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-4 pt-0 space-y-3">
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground font-semibold">Routing mode</Label>
+            <Select
+              value={draft.routingModeOverride ?? INHERIT}
+              onValueChange={(v) => patch('routingModeOverride', v === INHERIT ? null : (v as RoutingMode))}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={INHERIT} className="text-xs">Inherit global</SelectItem>
+                <SelectItem value="free_first" className="text-xs">Free-first</SelectItem>
+                <SelectItem value="balanced" className="text-xs">Balanced</SelectItem>
+                <SelectItem value="quality_first" className="text-xs">Quality-first</SelectItem>
+                <SelectItem value="premium" className="text-xs">Premium</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground font-semibold">Capability class</Label>
+            <Select
+              value={draft.capabilityOverride ?? INHERIT}
+              onValueChange={(v) => patch('capabilityOverride', v === INHERIT ? null : (v as AIAgentPolicy['capabilityOverride']))}
+            >
+              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value={INHERIT} className="text-xs">Inherit (role default)</SelectItem>
+                <SelectItem value="structured_json" className="text-xs">structured_json</SelectItem>
+                <SelectItem value="reasoning" className="text-xs">reasoning</SelectItem>
+                <SelectItem value="fast" className="text-xs">fast</SelectItem>
+                <SelectItem value="compliance" className="text-xs">compliance</SelectItem>
+                <SelectItem value="long_form" className="text-xs">long_form</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-semibold">Force model (prepended to cascade)</Label>
+          <Select
+            value={draft.forceModelId ?? INHERIT}
+            onValueChange={(v) => patch('forceModelId', v === INHERIT ? null : v)}
+          >
+            <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+            <SelectContent className="max-h-64">
+              <SelectItem value={INHERIT} className="text-xs">No forced model</SelectItem>
+              {textModels.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  <span className="font-semibold">{m.name}</span>
+                  <span className="text-[10px] text-muted-foreground font-mono ms-1">({m.provider})</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-[10px] text-muted-foreground font-semibold">Exclude models</Label>
+          <Select value={INHERIT} onValueChange={toggleExcluded}>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Add a model to exclude..." />
+            </SelectTrigger>
+            <SelectContent className="max-h-64">
+              <SelectItem value={INHERIT} className="text-xs" disabled>Add a model to exclude...</SelectItem>
+              {textModels.map((m) => (
+                <SelectItem key={m.id} value={m.id} className="text-xs">
+                  {draft.disabledModelIds.includes(m.id) ? '✓ ' : ''}{m.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {draft.disabledModelIds.length > 0 && (
+            <div className="flex flex-wrap gap-1 pt-1">
+              {draft.disabledModelIds.map((id) => (
+                <Badge
+                  key={id}
+                  variant="outline"
+                  className="text-[9px] font-mono bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950 dark:text-rose-300 cursor-pointer"
+                  onClick={() => toggleExcluded(id)}
+                >
+                  {id} <X className="w-2.5 h-2.5 ms-1" />
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground font-semibold">Max retries</Label>
+            <div className="flex flex-wrap gap-1">
+              {retryOptions.map((o) => (
+                <Button
+                  key={String(o)}
+                  variant={draft.maxRetriesOverride === o ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-6 text-[10px] font-semibold px-1.5"
+                  onClick={() => patch('maxRetriesOverride', o)}
+                >
+                  {o === null ? 'Inherit' : o}
+                </Button>
+              ))}
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label className="text-[10px] text-muted-foreground font-semibold">Temperature</Label>
+            <div className="flex flex-wrap gap-1">
+              {tempOptions.map((o) => (
+                <Button
+                  key={String(o)}
+                  variant={draft.temperatureOverride === o ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-6 text-[10px] font-semibold px-1.5"
+                  onClick={() => patch('temperatureOverride', o)}
+                >
+                  {o === null ? 'Inherit' : o.toFixed(1)}
+                </Button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between pt-2 border-t">
+          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+            <Clock className="w-3 h-3" />
+            {dirty ? 'Unsaved changes' : 'Saved'}
+          </span>
+          <Button
+            size="sm"
+            disabled={!dirty || saving}
+            onClick={() =>
+              onSave(policy.agentRole, {
+                enabled: draft.enabled,
+                routingModeOverride: draft.routingModeOverride,
+                forceModelId: draft.forceModelId,
+                disabledModelIds: draft.disabledModelIds,
+                maxRetriesOverride: draft.maxRetriesOverride,
+                temperatureOverride: draft.temperatureOverride,
+                capabilityOverride: draft.capabilityOverride,
+              })
+            }
+            className="h-7 text-[10px] font-bold gap-1"
+          >
+            {saving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            Save
+          </Button>
         </div>
       </CardContent>
     </Card>

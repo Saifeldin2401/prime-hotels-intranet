@@ -74,6 +74,7 @@ interface ParsedAiRequest {
   jsonMode?: boolean;
   pinProvider?: boolean;
   capability?: string;
+  agentRole?: string;
 }
 
 // OpenRouter retired the entire ":free" tier for mainstream models (all 404 →
@@ -184,6 +185,9 @@ function parseAiRequest(input: unknown): ParsedAiRequest {
     jsonMode: Boolean(body.jsonMode),
     pinProvider: Boolean(body.pinProvider),
     capability: typeof body.capability === "string" ? body.capability : undefined,
+    agentRole: typeof body.agentRole === "string" && body.agentRole.trim().length > 0
+      ? body.agentRole.trim()
+      : undefined,
   };
 }
 
@@ -279,7 +283,7 @@ serve(async (req) => {
     }
     void authUserId;
 
-    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider, capability } =
+    const { model, prompt, systemPrompt, task, preferredProvider, temperature, max_tokens, maxOutputTokens, stream, jsonMode, pinProvider, capability, agentRole } =
       parseAiRequest(await req.json());
 
     const effectiveTemperature = normalizeTemperature(temperature);
@@ -581,6 +585,7 @@ serve(async (req) => {
         const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey);
         const { data: planData } = await supabaseAdmin.rpc("get_ai_routing_plan", {
           p_capability: capability, p_free_only: policy.freeOnly, p_allow_premium: !policy.freeOnly, p_limit: 10,
+          p_agent_role: agentRole ?? null,
         });
         const arr = (planData as { models?: PlanModel[] } | null)?.models;
         if (Array.isArray(arr)) routingPlan = arr.filter((m) => modelAllowed(m.id) && providerEnabled(m.provider));

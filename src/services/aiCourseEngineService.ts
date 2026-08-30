@@ -20,6 +20,7 @@ import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
 import { isPersistedAssetId, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 import { getPipelineTelemetry } from '@/lib/ai/observability'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
+import { aiAgentPolicyService } from '@/services/aiAgentPolicyService'
 import { supabase } from '@/lib/supabase'
 import {
   generateAndLinkCheckpointQuestions,
@@ -63,6 +64,8 @@ export const aiCourseEngineService = {
     // Load admin platform config (routing mode, disabled models, free-only, …)
     // and apply it to the model registry before any agent runs.
     await aiPlatformConfigService.load().catch(() => undefined)
+    // Per-agent policy overrides (Agent Policies tab) — cached for baseAgent.
+    await aiAgentPolicyService.load().catch(() => undefined)
 
     // Per-user daily generation cap (admin "Spend & QA Caps" tab).
     const platformCfg = aiPlatformConfigService.getCached()
