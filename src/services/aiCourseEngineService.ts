@@ -3,7 +3,7 @@
  * Orchestrates multi-stage generation, AI image generation, Supabase persistence, presets, and QA audits.
  */
 
-import { aiCourseOrchestrator } from '@/lib/ai/agents/orchestrator'
+import { aiCourseOrchestrator, CourseGenerationCancelledError } from '@/lib/ai/agents/orchestrator'
 import { imageAgent } from '@/lib/ai/agents/imageAgent'
 import {
   analyzeLessonVisualOpportunities,
@@ -17,14 +17,17 @@ import {
   validateQuizQuestions,
 } from '@/lib/ai/courseEngine'
 import { harmonizeCourseConfig } from '@/lib/ai/courseHarmonizer'
+import {
+  blueprintToBlockDrafts,
+  buildQuizQuestionLinkRow,
+  buildUnifiedOptionRows,
+  buildUnifiedQuestionRow,
+} from '@/lib/ai/blueprintToBlocks'
 import { isPersistedAssetId, resolveProvider } from '@/lib/ai/agents/modelRegistry'
 import { getPipelineTelemetry } from '@/lib/ai/observability'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
+import { aiAgentPolicyService } from '@/services/aiAgentPolicyService'
 import { supabase } from '@/lib/supabase'
-import {
-  generateAndLinkCheckpointQuestions,
-  toValidQuestionType,
-} from '@/services/checkpointQuizGenerator'
 import {
   cloudflareProvider,
   DEFAULT_CLOUDFLARE_IMAGE_MODEL,
@@ -33,6 +36,7 @@ import type {
   CloudflareImageModel,
   CloudflareUsageStats,
   CourseBlueprint,
+  CourseGenerationCheckpoint,
   CourseGenerationJob,
   CourseGenerationPreset,
   CourseQAQualityReport,
@@ -40,6 +44,7 @@ import type {
   FullCourseGenerationConfig,
   GeneratedUnifiedQuestion,
   LessonBlueprint,
+  QuizBlueprint,
   VisualOpportunity,
 } from '@/types/aiCourseEngine'
 
@@ -50,12 +55,13 @@ export const aiCourseEngineService = {
   async executeCoursePipeline(
     rawConfig: FullCourseGenerationConfig,
     onProgress?: (stage: number, stageName: string, detail: string) => void,
-    opts?: { signal?: AbortSignal }
+    opts?: { signal?: AbortSignal; resumeJobId?: string }
   ): Promise<{
     blueprint: CourseBlueprint
     qaReport: CourseQAQualityReport
     jobId?: string
     durationMs: number
+    resumedFromCheckpoint: boolean
   }> {
     const startTime = Date.now()
     const config = harmonizeCourseConfig(rawConfig)
@@ -63,6 +69,8 @@ export const aiCourseEngineService = {
     // Load admin platform config (routing mode, disabled models, free-only, …)
     // and apply it to the model registry before any agent runs.
     await aiPlatformConfigService.load().catch(() => undefined)
+    // Per-agent policy overrides (Agent Policies tab) — cached for baseAgent.
+    await aiAgentPolicyService.load().catch(() => undefined)
 
     // Per-user daily generation cap (admin "Spend & QA Caps" tab).
     const platformCfg = aiPlatformConfigService.getCached()
@@ -99,17 +107,114 @@ export const aiCourseEngineService = {
       final_scoring: { stage: 6, name: 'Final Packaging & Delivery' },
     }
 
-    const orchestrated = await aiCourseOrchestrator.orchestrate(config, {
-      preferredModel: config?.aiControls?.preferredModel,
-      signal: opts?.signal,
-      maxConcurrency: platformCfg.maxConcurrency,
-      skipAudio: config.audioConfig?.enableAudio !== true,
-      skipImages: config.imageConfig?.enableAIImages === false,
-      onProgress: (event) => {
-        const stageInfo = phaseToStageMap[event.phase] || { stage: 3, name: event.title }
-        onProgress?.(stageInfo.stage, stageInfo.name, `${event.title}: ${event.detail}`)
-      },
-    })
+    // ------------------------------------------------------------------
+    // Job row lifecycle + resume-from-checkpoint.
+    // The row is now created BEFORE the pipeline runs (status 'running') so
+    // checkpoints can be persisted into metadata.checkpoint mid-flight. A
+    // resumed run reuses the existing row and loads its checkpoint.
+    // ------------------------------------------------------------------
+    let jobId: string | undefined
+    let priorMetadata: Record<string, unknown> = {}
+    let resumeCheckpoint: CourseGenerationCheckpoint | null = null
+
+    if (opts?.resumeJobId) {
+      try {
+        const { data: existing } = await supabase
+          .from('course_generation_jobs')
+          .select('id, metadata')
+          .eq('id', opts.resumeJobId)
+          .maybeSingle()
+        if (existing?.id) {
+          jobId = existing.id
+          priorMetadata = ((existing.metadata as Record<string, unknown>) || {})
+          const cp = priorMetadata.checkpoint
+          if (cp && typeof cp === 'object' && (cp as { version?: number }).version === 1) {
+            resumeCheckpoint = cp as CourseGenerationCheckpoint
+          }
+          await supabase
+            .from('course_generation_jobs')
+            .update({ status: 'running', updated_at: new Date().toISOString() })
+            .eq('id', jobId)
+        }
+      } catch (resumeErr) {
+        console.warn('[aiCourseEngine] resume checkpoint load failed — full run:', resumeErr)
+      }
+    }
+
+    if (!jobId) {
+      try {
+        const { data: created } = await supabase
+          .from('course_generation_jobs')
+          .insert({
+            mode: config.generationMode,
+            status: 'running',
+            config: config as any,
+            created_by: generatingUserId,
+          })
+          .select('id')
+          .single()
+        jobId = created?.id
+      } catch (createErr) {
+        console.warn('[aiCourseEngine] could not pre-create job row:', createErr)
+      }
+    }
+
+    const persistCheckpoint = (checkpoint: CourseGenerationCheckpoint) => {
+      if (!jobId) return
+      void supabase
+        .from('course_generation_jobs')
+        .update({
+          status: 'running',
+          metadata: { ...priorMetadata, checkpoint } as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId)
+        .then(() => {})
+    }
+
+    let orchestrated: Awaited<ReturnType<typeof aiCourseOrchestrator.orchestrate>>
+    try {
+      orchestrated = await aiCourseOrchestrator.orchestrate(config, {
+        preferredModel: config?.aiControls?.preferredModel,
+        signal: opts?.signal,
+        maxConcurrency: platformCfg.maxConcurrency,
+        skipAudio: config.audioConfig?.enableAudio !== true,
+        skipImages: config.imageConfig?.enableAIImages === false,
+        resumeJobId: opts?.resumeJobId,
+        resumeCheckpoint,
+        onCheckpoint: persistCheckpoint,
+        onProgress: (event) => {
+          const stageInfo = phaseToStageMap[event.phase] || { stage: 3, name: event.title }
+          onProgress?.(stageInfo.stage, stageInfo.name, `${event.title}: ${event.detail}`)
+        },
+      })
+    } catch (pipelineErr) {
+      // Mark the row so the history UI can offer "Resume". A cancellation (or any
+      // error with a checkpoint already on the row) => 'interrupted'; otherwise
+      // 'failed'. The checkpoint written mid-flight stays in metadata.
+      if (jobId) {
+        const cancelled = pipelineErr instanceof CourseGenerationCancelledError
+        try {
+          const { data: row } = await supabase
+            .from('course_generation_jobs')
+            .select('metadata')
+            .eq('id', jobId)
+            .maybeSingle()
+          const hasCheckpoint = Boolean((row?.metadata as { checkpoint?: unknown } | null)?.checkpoint)
+          await supabase
+            .from('course_generation_jobs')
+            .update({
+              status: cancelled || hasCheckpoint ? 'interrupted' : 'failed',
+              error_message: (pipelineErr as Error)?.message?.slice(0, 500) ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', jobId)
+        } catch (markErr) {
+          console.warn('[aiCourseEngine] could not mark interrupted job:', markErr)
+        }
+      }
+      throw pipelineErr
+    }
 
     const blueprint = orchestrated.blueprint
     const qaReport = orchestrated.legacyQaReport
@@ -122,38 +227,48 @@ export const aiCourseEngineService = {
     const telemetry = getPipelineTelemetry(orchestrated.pipelineRunId)
     const modelsUsed = telemetry ? Object.keys(telemetry.byModel) : [config?.aiControls?.preferredModel || 'auto']
 
-    // Record generation job in database
-    let jobId: string | undefined
-    try {
-      const { data: jobData } = await supabase
-        .from('course_generation_jobs')
-        .insert({
-          mode: config.generationMode,
-          status: 'completed',
-          config: config as any,
-          blueprint: blueprint as any,
-          qa_report: qaReport as any,
-          models_used: modelsUsed,
-          duration_ms: durationMs,
-          created_by: generatingUserId,
-          ...(telemetry
-            ? {
-                metadata: {
-                  ai_requests: telemetry.requests,
-                  ai_failures: telemetry.failures,
-                  ai_fallbacks: telemetry.totalFallbacks,
-                  free_requests: telemetry.freeRequests,
-                  paid_requests: telemetry.paidRequests,
-                  estimated_cost_usd: Number(telemetry.estimatedCostUSD.toFixed(4)),
-                  routing_mode: aiPlatformConfigService.activeRoutingMode,
-                },
-              }
-            : {}),
-        })
-        .select('id')
-        .single()
+    // Finalise the job row (pre-created above as status 'running'). The
+    // completed checkpoint (phase 'done') is left in metadata for provenance.
+    const finalMetadata: Record<string, unknown> = {
+      ...priorMetadata,
+      ...(telemetry
+        ? {
+            ai_requests: telemetry.requests,
+            ai_failures: telemetry.failures,
+            ai_fallbacks: telemetry.totalFallbacks,
+            free_requests: telemetry.freeRequests,
+            paid_requests: telemetry.paidRequests,
+            estimated_cost_usd: Number(telemetry.estimatedCostUSD.toFixed(4)),
+            routing_mode: aiPlatformConfigService.activeRoutingMode,
+          }
+        : {}),
+      resumed_from_checkpoint: orchestrated.resumedFromCheckpoint,
+    }
 
-      jobId = jobData?.id
+    const jobPayload = {
+      mode: config.generationMode,
+      status: 'completed' as const,
+      config: config as any,
+      blueprint: blueprint as any,
+      qa_report: qaReport as any,
+      models_used: modelsUsed,
+      duration_ms: durationMs,
+      created_by: generatingUserId,
+      metadata: finalMetadata as any,
+      updated_at: new Date().toISOString(),
+    }
+
+    try {
+      if (jobId) {
+        await supabase.from('course_generation_jobs').update(jobPayload).eq('id', jobId)
+      } else {
+        const { data: jobData } = await supabase
+          .from('course_generation_jobs')
+          .insert(jobPayload)
+          .select('id')
+          .single()
+        jobId = jobData?.id
+      }
     } catch (jobErr) {
       console.warn('Could not record course_generation_jobs record:', jobErr)
     }
@@ -163,6 +278,7 @@ export const aiCourseEngineService = {
       qaReport,
       jobId,
       durationMs,
+      resumedFromCheckpoint: orchestrated.resumedFromCheckpoint,
     }
   },
 
@@ -422,234 +538,182 @@ export const aiCourseEngineService = {
       }
     }
 
-    // 4. Insert Content Blocks, Visual Assets & Checkpoints into unified documents table
-    let blockOrder = 0
-    for (const mod of blueprint.modules) {
-      for (const lesson of mod.lessons) {
-        blockOrder++
-        const { data: blockData, error: blockErr } = await supabase
-          .from('documents')
-          .insert({
-            training_module_id: moduleId,
-            content_type: 'training_block',
-            block_type: 'text',
-            title: lesson.title || 'Lesson block',
-            content: lesson.renderedHtml || `<p>${lesson.description}</p>`,
-            block_order: blockOrder,
-            is_mandatory: true,
-            duration_seconds: (lesson.durationMinutes || 15) * 60,
-            ai_generated: true,
-            content_data: {
-              templateType: lesson.templateType,
-              learningOutcomes: lesson.learningOutcomes,
-              moduleTitle: mod.title,
-              module_id: mod.id,
-              lesson_id: lesson.id,
-            },
-          })
+    // 4. Emit faithful content blocks from the blueprint.
+    //
+    // A single source-of-truth mapping (src/lib/ai/blueprintToBlocks.ts) turns
+    // the rich blueprint (per-component lesson structure, Arabic content,
+    // learning outcomes, visual assets, lesson/module/final quizzes, course
+    // objectives & takeaways) into ordered Training Builder blocks. Both this
+    // save path and the builder's hydration read the same `documents` rows.
+    const drafts = blueprintToBlockDrafts(blueprint, {
+      defaultLessonDurationMinutes:
+        typeof config.granularity?.lessonDuration === 'number' ? config.granularity.lessonDuration : 15,
+    })
+
+    /**
+     * Create a real `learning_quizzes` row plus linked `unified_questions` /
+     * `unified_question_options` / `unified_quiz_questions`. Returns the quiz id
+     * and how many questions were actually linked (0 => caller must NOT attach a
+     * mandatory quiz block, or module completion is permanently blocked).
+     */
+    const persistQuiz = async (
+      quiz: QuizBlueprint,
+      meta: { title: string; description: string; passingScore: number; timeLimitMinutes: number; maxAttempts: number },
+    ): Promise<{ id: string; linked: number } | null> => {
+      const { data: createdQuiz, error: quizError } = await supabase
+        .from('learning_quizzes')
+        .insert({
+          title: meta.title,
+          description: meta.description,
+          training_module_id: moduleId,
+          passing_score_percentage: meta.passingScore,
+          time_limit_minutes: meta.timeLimitMinutes,
+          max_attempts: meta.maxAttempts,
+          status: 'published',
+          created_by: currentUserId,
+        })
+        .select('id')
+        .single()
+
+      if (quizError || !createdQuiz) {
+        console.warn('Could not create learning_quizzes row:', quizError)
+        return null
+      }
+
+      let linked = 0
+      for (let qIdx = 0; qIdx < quiz.questions.length; qIdx++) {
+        const q = quiz.questions[qIdx]
+        const { data: newQ, error: qErr } = await supabase
+          .from('unified_questions')
+          .insert(buildUnifiedQuestionRow(q, { trainingModuleId: moduleId, createdBy: currentUserId }))
           .select('id')
           .single()
 
-        if (blockErr) {
-          console.warn(`Could not insert content block for lesson ${lesson.title}:`, blockErr)
+        if (qErr || !newQ) {
+          console.warn('unified_questions insert failed:', qErr)
+          continue
         }
 
-        // Persist visual assets to course_visual_assets table
-        if (lesson.visualAssets && lesson.visualAssets.length > 0) {
-          for (const asset of lesson.visualAssets) {
-            try {
-              await supabase.from('course_visual_assets').insert({
-                course_id: moduleId,
-                module_id: mod.id,
-                lesson_id: lesson.id,
-                content_block_id: blockData?.id || null,
-                image_url: asset.image_url,
-                storage_path: asset.storage_path,
-                storage_bucket: asset.storage_bucket || 'content-media',
-                title: asset.title,
-                title_ar: asset.title_ar,
-                alt_text: asset.alt_text,
-                alt_text_ar: asset.alt_text_ar,
-                caption: asset.caption,
-                caption_ar: asset.caption_ar,
-                educational_purpose: asset.educational_purpose,
-                visual_concept: asset.visual_concept,
-                prompt: asset.prompt,
-                negative_prompt: asset.negative_prompt,
-                aspect_ratio: asset.aspect_ratio || '16:9',
-                visual_style: asset.visual_style || 'educational_illustration',
-                placement: asset.placement || 'concept_explanation',
-                provider: asset.provider || 'cloudflare',
-                model: asset.model || DEFAULT_CLOUDFLARE_IMAGE_MODEL,
-                status: 'completed',
-                order_index: asset.order_index || 0,
-                created_by: currentUserId,
-              })
-            } catch (assetErr) {
-              console.warn('Could not persist course visual asset:', assetErr)
-            }
+        const optionRows = buildUnifiedOptionRows(q, newQ.id)
+        if (optionRows.length > 0) {
+          const { error: optErr } = await supabase.from('unified_question_options').insert(optionRows)
+          if (optErr) {
+            console.warn('unified_question_options insert failed:', optErr)
+            continue
           }
         }
-      }
 
-      // Persist Module Checkpoint Quiz if present
-      if (mod.moduleQuiz && mod.moduleQuiz.questions && mod.moduleQuiz.questions.length > 0) {
-        try {
-          const { data: createdQuiz, error: quizError } = await supabase
-            .from('learning_quizzes')
-            .insert({
-              title: mod.moduleQuiz.title || `${mod.title} Knowledge Check`,
-              description: `Verification assessment for ${mod.title}`,
-              training_module_id: moduleId,
-              passing_score_percentage: mod.moduleQuiz.passingScore || 80,
-              time_limit_minutes: 10,
-              max_attempts: 3,
-              status: 'published',
-              created_by: currentUserId,
-            })
-            .select()
-            .single()
-
-          if (!quizError && createdQuiz) {
-            blockOrder++
-            await supabase.from('documents').insert({
-              training_module_id: moduleId,
-              content_type: 'training_block',
-              block_type: 'quiz',
-              title: createdQuiz.title,
-              content: '',
-              block_order: blockOrder,
-              is_mandatory: true,
-              ai_generated: true,
-              content_data: {
-                quiz_id: createdQuiz.id,
-                is_checkpoint: true,
-                passing_score: mod.moduleQuiz.passingScore || 80,
-                topic: mod.title,
-              },
-            })
-
-            for (let qIdx = 0; qIdx < mod.moduleQuiz.questions.length; qIdx++) {
-              const q = mod.moduleQuiz.questions[qIdx]
-              const validQType = toValidQuestionType(q.question_type)
-              const { data: newQ } = await supabase
-                .from('unified_questions')
-                .insert({
-                  source_domain: 'knowledge',
-                  question_text: q.question_text,
-                  question_type: validQType,
-                  difficulty: q.difficulty === 'hard' ? 'hard' : q.difficulty === 'easy' ? 'easy' : 'medium',
-                  correct_answer: q.correct_answer || q.options?.find((o) => o.is_correct)?.text || '',
-                  explanation: q.explanation || '',
-                  hint: q.hint || '',
-                  training_module_id: moduleId,
-                  ai_generated: true,
-                  status: 'published',
-                  created_by: currentUserId,
-                })
-                .select()
-                .single()
-
-              if (newQ && q.options?.length) {
-                const optionsToInsert = q.options.map((opt, oIdx) => ({
-                  question_id: newQ.id,
-                  option_text: opt.text,
-                  match_value: opt.match_value || null,
-                  is_correct: !!opt.is_correct,
-                  display_order: oIdx,
-                }))
-                await supabase.from('unified_question_options').insert(optionsToInsert)
-                await supabase.from('unified_quiz_questions').insert({
-                  quiz_id: createdQuiz.id,
-                  question_id: newQ.id,
-                  order_index: qIdx,
-                })
-              }
-            }
-          }
-        } catch (quizErr) {
-          console.warn('Could not persist module quiz:', quizErr)
+        const { error: linkErr } = await supabase
+          .from('unified_quiz_questions')
+          .insert(buildQuizQuestionLinkRow(createdQuiz.id, newQ.id, qIdx))
+        if (linkErr) {
+          console.warn('unified_quiz_questions link failed:', linkErr)
+          continue
         }
+        linked++
       }
+
+      return { id: createdQuiz.id, linked }
     }
 
-    // Persist Final Comprehensive Exam if present
-    if (blueprint.finalAssessment && blueprint.finalAssessment.questions && blueprint.finalAssessment.questions.length > 0) {
-      try {
-        const { data: finalQuiz, error: finalQuizError } = await supabase
-          .from('learning_quizzes')
-          .insert({
-            title: blueprint.finalAssessment.title || `${blueprint.title} Final Comprehensive Exam`,
-            description: `Certification exam for ${blueprint.title}`,
-            training_module_id: moduleId,
-            passing_score_percentage: blueprint.finalAssessment.passingScore || 85,
-            time_limit_minutes: 30,
-            max_attempts: 2,
-            status: 'published',
+    let blockOrder = 0
+    for (const draft of drafts) {
+      let quizId: string | null = null
+
+      if (draft.quiz) {
+        const cd = draft.contentData as Record<string, unknown>
+        const res = await persistQuiz(draft.quiz, {
+          title: draft.title,
+          description: cd.is_final_assessment
+            ? `Certification exam for ${blueprint.title}`
+            : `Verification assessment for ${(cd.topic as string) || draft.title}`,
+          passingScore: (cd.passing_score as number) || (cd.is_final_assessment ? 85 : 80),
+          timeLimitMinutes: cd.is_final_assessment ? 30 : 10,
+          maxAttempts: cd.is_final_assessment ? 2 : 3,
+        })
+        // A mandatory quiz block whose quiz has no linked questions would
+        // permanently block module completion — skip the block entirely.
+        if (!res || res.linked === 0) {
+          console.warn(`Skipping quiz block "${draft.title}" — no questions could be linked`)
+          continue
+        }
+        quizId = res.id
+      }
+
+      blockOrder++
+
+      const contentData: Record<string, unknown> = {
+        ...draft.contentData,
+        section_id: draft.section.id,
+        section_title: draft.section.title,
+        section_description: draft.section.description || '',
+        section_order: draft.section.order,
+      }
+      if (draft.contentAr && draft.contentAr.trim()) {
+        const existing = (contentData.translations && typeof contentData.translations === 'object'
+          ? contentData.translations
+          : {}) as Record<string, unknown>
+        contentData.translations = { ...existing, ar: draft.contentAr }
+      }
+      if (quizId) contentData.quiz_id = quizId
+
+      const { data: blockData, error: blockErr } = await supabase
+        .from('documents')
+        .insert({
+          training_module_id: moduleId,
+          content_type: 'training_block',
+          block_type: draft.blockType,
+          title: draft.title || 'Lesson block',
+          content: draft.content || '',
+          content_ar: draft.contentAr && draft.contentAr.trim() ? draft.contentAr : null,
+          content_url: draft.contentUrl || null,
+          block_order: blockOrder,
+          is_mandatory: draft.isMandatory,
+          duration_seconds: draft.durationSeconds ?? null,
+          ai_generated: true,
+          content_data: contentData,
+        })
+        .select('id')
+        .single()
+
+      if (blockErr) {
+        console.warn(`Could not insert content block "${draft.title}":`, blockErr)
+        continue
+      }
+
+      if (draft.visualAsset && blockData?.id) {
+        const asset = draft.visualAsset
+        try {
+          await supabase.from('course_visual_assets').insert({
+            course_id: moduleId,
+            module_id: String(draft.contentData.module_id ?? asset.module_id ?? ''),
+            lesson_id: String(draft.contentData.lesson_id ?? asset.lesson_id ?? ''),
+            content_block_id: blockData.id,
+            image_url: asset.image_url,
+            storage_path: asset.storage_path,
+            storage_bucket: asset.storage_bucket || 'content-media',
+            title: asset.title,
+            title_ar: asset.title_ar,
+            alt_text: asset.alt_text,
+            alt_text_ar: asset.alt_text_ar,
+            caption: asset.caption,
+            caption_ar: asset.caption_ar,
+            educational_purpose: asset.educational_purpose,
+            visual_concept: asset.visual_concept,
+            prompt: asset.prompt,
+            negative_prompt: asset.negative_prompt,
+            aspect_ratio: asset.aspect_ratio || '16:9',
+            visual_style: asset.visual_style || 'educational_illustration',
+            placement: asset.placement || 'concept_explanation',
+            provider: asset.provider || 'cloudflare',
+            model: asset.model || DEFAULT_CLOUDFLARE_IMAGE_MODEL,
+            status: 'completed',
+            order_index: asset.order_index || 0,
             created_by: currentUserId,
           })
-          .select()
-          .single()
-
-        if (!finalQuizError && finalQuiz) {
-          blockOrder++
-          await supabase.from('documents').insert({
-            training_module_id: moduleId,
-            content_type: 'training_block',
-            block_type: 'quiz',
-            title: finalQuiz.title,
-            content: '',
-            block_order: blockOrder,
-            is_mandatory: true,
-            ai_generated: true,
-            content_data: {
-              quiz_id: finalQuiz.id,
-              is_final_assessment: true,
-              passing_score: blueprint.finalAssessment.passingScore || 85,
-              topic: blueprint.title,
-            },
-          })
-
-          for (let qIdx = 0; qIdx < blueprint.finalAssessment.questions.length; qIdx++) {
-            const q = blueprint.finalAssessment.questions[qIdx]
-            const validQType = toValidQuestionType(q.question_type)
-            const { data: newQ } = await supabase
-              .from('unified_questions')
-              .insert({
-                source_domain: 'knowledge',
-                question_text: q.question_text,
-                question_type: validQType,
-                difficulty: q.difficulty === 'hard' ? 'hard' : q.difficulty === 'easy' ? 'easy' : 'medium',
-                correct_answer: q.correct_answer || q.options?.find((o) => o.is_correct)?.text || '',
-                explanation: q.explanation || '',
-                hint: q.hint || '',
-                training_module_id: moduleId,
-                ai_generated: true,
-                status: 'published',
-                created_by: currentUserId,
-              })
-              .select()
-              .single()
-
-            if (newQ && q.options?.length) {
-              const optionsToInsert = q.options.map((opt, oIdx) => ({
-                question_id: newQ.id,
-                option_text: opt.text,
-                match_value: opt.match_value || null,
-                is_correct: !!opt.is_correct,
-                display_order: oIdx,
-              }))
-              await supabase.from('unified_question_options').insert(optionsToInsert)
-              await supabase.from('unified_quiz_questions').insert({
-                quiz_id: finalQuiz.id,
-                question_id: newQ.id,
-                order_index: qIdx,
-              })
-            }
-          }
+        } catch (assetErr) {
+          console.warn('Could not persist course visual asset:', assetErr)
         }
-      } catch (finalErr) {
-        console.warn('Could not persist final assessment:', finalErr)
       }
     }
 

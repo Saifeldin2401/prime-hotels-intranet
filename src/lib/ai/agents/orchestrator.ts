@@ -19,6 +19,7 @@ import { isDailySpendLockedOut, setDailySpendLockout } from './modelRegistry'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
 import type {
   CourseBlueprint,
+  CourseGenerationCheckpoint,
   CourseQAQualityReport,
   CourseVisualAsset,
   FullCourseGenerationConfig,
@@ -53,6 +54,23 @@ export interface OrchestratorOptions {
   /** Abort the pipeline between phases / lesson batches when this fires. */
   signal?: AbortSignal
   onProgress?: PipelineEventListener
+  /**
+   * Id of the `course_generation_jobs` row being resumed. Purely informational
+   * for the orchestrator (it does not touch the DB) — the caller loads the
+   * checkpoint and passes it as `resumeCheckpoint`.
+   */
+  resumeJobId?: string
+  /**
+   * A previously persisted checkpoint. When present and structurally valid the
+   * orchestrator skips every phase/module already captured in it and re-runs
+   * only what is missing. A corrupt or absent checkpoint => full run.
+   */
+  resumeCheckpoint?: CourseGenerationCheckpoint | null
+  /**
+   * Invoked after each phase / module with the up-to-date checkpoint so the
+   * caller can persist it. Fire-and-forget; failures here never abort the run.
+   */
+  onCheckpoint?: (checkpoint: CourseGenerationCheckpoint) => void | Promise<void>
 }
 
 export class CourseGenerationCancelledError extends Error {
@@ -78,6 +96,8 @@ export interface OrchestratedCourseOutput {
   totalDurationMs: number
   totalEstimatedCostUSD: number
   revisionCyclesRun: number
+  /** True when a valid `resumeCheckpoint` let the run skip completed work. */
+  resumedFromCheckpoint: boolean
 }
 
 export class AICourseOrchestrator {
@@ -131,6 +151,77 @@ export class AICourseOrchestrator {
 
     const onProgress = options.onProgress
     let totalEstimatedCostUSD = 0
+
+    // ========================================================================
+    // RESUME-FROM-CHECKPOINT
+    // A corrupt / structurally-invalid checkpoint is ignored => full run.
+    // ========================================================================
+    const CHECKPOINT_PHASE_ORDER: CourseGenerationCheckpoint['phase'][] = [
+      'discovery_and_research',
+      'curriculum_architecture',
+      'content_synthesis',
+      'assessment_generation',
+      'multimedia_generation',
+      'quality_assurance',
+      'done',
+    ]
+    const parseCheckpoint = (raw: unknown): CourseGenerationCheckpoint | null => {
+      try {
+        if (!raw || typeof raw !== 'object') return null
+        const cp = raw as Partial<CourseGenerationCheckpoint>
+        if (cp.version !== 1) return null
+        if (!cp.phase || !CHECKPOINT_PHASE_ORDER.includes(cp.phase)) return null
+        // A checkpoint past curriculum is only usable with a partial blueprint.
+        if (
+          CHECKPOINT_PHASE_ORDER.indexOf(cp.phase) >
+            CHECKPOINT_PHASE_ORDER.indexOf('curriculum_architecture') &&
+          (!cp.partialBlueprint || !Array.isArray(cp.partialBlueprint.modules))
+        ) {
+          return null
+        }
+        return cp as CourseGenerationCheckpoint
+      } catch {
+        return null
+      }
+    }
+    const resume = parseCheckpoint(options.resumeCheckpoint)
+    const resumedFromCheckpoint = Boolean(resume)
+    const phaseReached = (phase: CourseGenerationCheckpoint['phase']) =>
+      resume
+        ? CHECKPOINT_PHASE_ORDER.indexOf(resume.phase) >= CHECKPOINT_PHASE_ORDER.indexOf(phase)
+        : false
+    if (resume) {
+      totalEstimatedCostUSD = Number(resume.totalEstimatedCostUSD) || 0
+    }
+    const completedLessonIds = new Set<string>(resume?.completedLessonIds ?? [])
+    const completedQuizModuleIds = new Set<string>(resume?.completedQuizModuleIds ?? [])
+
+    let checkpointResearchOutput: unknown = resume?.researchOutput
+    let checkpointKnowledgeOutput: unknown = resume?.knowledgeOutput
+    const emitCheckpoint = (
+      phase: CourseGenerationCheckpoint['phase'],
+      partialBlueprint?: CourseBlueprint,
+    ) => {
+      if (!options.onCheckpoint) return
+      const cp: CourseGenerationCheckpoint = {
+        version: 1,
+        phase,
+        updatedAt: new Date().toISOString(),
+        researchOutput: checkpointResearchOutput,
+        knowledgeOutput: checkpointKnowledgeOutput,
+        partialBlueprint,
+        completedLessonIds: [...completedLessonIds],
+        completedQuizModuleIds: [...completedQuizModuleIds],
+        totalEstimatedCostUSD,
+      }
+      try {
+        void Promise.resolve(options.onCheckpoint(cp)).catch((err) =>
+          console.warn('[Orchestrator] checkpoint persist failed:', err),
+        )
+      } catch (err) {
+        console.warn('[Orchestrator] checkpoint persist threw:', err)
+      }
+    }
 
     // Admin "Spend & QA Caps" tab — concurrency + daily USD ceiling.
     const platformCfg = aiPlatformConfigService.getCached()
@@ -209,7 +300,13 @@ export class AICourseOrchestrator {
       detailAr: 'بدء البحث عن المعايير الفندقية واسترجاع وثائق الإجراءات التشغيلية...',
     })
 
-    const [researchResult, knowledgeResult] = await Promise.all([
+    const resumeResearchPhase = phaseReached('curriculum_architecture')
+    const [researchResult, knowledgeResult] = resumeResearchPhase
+      ? [
+          { data: checkpointResearchOutput as ResearchFindings | undefined, estimatedCostUSD: 0 } as any,
+          { data: checkpointKnowledgeOutput as GroundedKnowledgeResult | undefined, estimatedCostUSD: 0 } as any,
+        ]
+      : await Promise.all([
       researchAgent
         .process(
           {
@@ -254,6 +351,12 @@ export class AICourseOrchestrator {
       modelUsed: researchResult?.modelUsed,
     })
 
+    if (!resumeResearchPhase) {
+      checkpointResearchOutput = researchResult?.data
+      checkpointKnowledgeOutput = knowledgeResult?.data
+      emitCheckpoint('discovery_and_research')
+    }
+
     checkCancelled("curriculum architecture")
 
     // ========================================================================
@@ -270,7 +373,10 @@ export class AICourseOrchestrator {
       detailAr: 'بناء هيكل الوحدات والدروس التعليمية...',
     })
 
-    const curriculumResult = await curriculumAgent.process(
+    const resumeCurriculumPhase = phaseReached('content_synthesis')
+    const curriculumResult = resumeCurriculumPhase
+      ? ({ data: resume!.partialBlueprint as CourseBlueprint, estimatedCostUSD: 0, modelUsed: undefined } as any)
+      : await curriculumAgent.process(
       {
         config,
         researchFindings: researchResult?.data as ResearchFindings,
@@ -294,13 +400,17 @@ export class AICourseOrchestrator {
       modelUsed: curriculumResult.modelUsed,
     })
 
+    if (!resumeCurriculumPhase) {
+      emitCheckpoint('curriculum_architecture', blueprint)
+    }
+
     checkCancelled("content synthesis")
 
     // ========================================================================
     // PHASE 3: CONTENT ENGINE (Lessons, SOPs, Dialogue Scripts & Drills)
     // ========================================================================
     const totalLessonCount = blueprint.modules.reduce((acc, m) => acc + m.lessons.length, 0)
-    let completedLessonCount = 0
+    let completedLessonCount = Math.min(completedLessonIds.size, totalLessonCount)
 
     emit({
       phase: 'content_synthesis',
@@ -350,6 +460,8 @@ export class AICourseOrchestrator {
     const lessonTasks: LessonTask[] = []
     for (const mod of blueprint.modules) {
       for (const les of mod.lessons) {
+        // Skip lessons already synthesised in a prior (interrupted) run.
+        if (completedLessonIds.has(les.id) && les.renderedHtml) continue
         lessonTasks.push({ mod, les })
       }
     }
@@ -394,7 +506,10 @@ export class AICourseOrchestrator {
           allActivities[les.id] = actRes.data
         }
 
+        completedLessonIds.add(les.id)
         completedLessonCount++
+        // Persist progress after every lesson so a crash resumes near where it died.
+        emitCheckpoint('content_synthesis', blueprint)
 
         emit({
           phase: 'content_synthesis',
@@ -411,13 +526,15 @@ export class AICourseOrchestrator {
       concurrency // admin "Max Parallel Generation Streams"
     )
 
+    emitCheckpoint('assessment_generation', blueprint)
+
     checkCancelled("assessment generation")
 
     // ========================================================================
     // PHASE 4: ASSESSMENT ENGINE (Psychometric Quizzes & Knowledge Checks)
     // ========================================================================
     const totalQuizCount = blueprint.modules.length
-    let completedQuizCount = 0
+    let completedQuizCount = Math.min(completedQuizModuleIds.size, totalQuizCount)
 
     emit({
       phase: 'assessment_generation',
@@ -431,7 +548,7 @@ export class AICourseOrchestrator {
     })
 
     await pMap(
-      blueprint.modules,
+      blueprint.modules.filter((mod) => !completedQuizModuleIds.has(mod.id)),
       async (mod) => {
         try {
           const modCombinedContent = (mod.lessons || []).map((l) => l.renderedHtml || l.description || '').join('\n')
@@ -451,7 +568,9 @@ export class AICourseOrchestrator {
           if (quizRes.data && quizRes.data.length > 0) {
             mod.quizzes = quizRes.data as any
           }
+          completedQuizModuleIds.add(mod.id)
           completedQuizCount++
+          emitCheckpoint('assessment_generation', blueprint)
 
           emit({
             phase: 'assessment_generation',
@@ -471,10 +590,14 @@ export class AICourseOrchestrator {
       concurrency // admin "Max Parallel Generation Streams"
     )
 
+    emitCheckpoint('multimedia_generation', blueprint)
+
     checkCancelled("multimedia generation")
 
     // ========================================================================
     // PHASE 5: MULTIMEDIA ENGINE (Visuals & Audio Shift Briefings)
+    // NOTE: multimedia + QA + revision always re-run on resume — visual assets
+    // are not individually checkpointed and QA must score the final blueprint.
     // ========================================================================
     // Re-check the daily spend ceiling now that text/assessment phases have accrued cost.
     await enforceDailySpendCap('image generation')
@@ -692,6 +815,8 @@ export class AICourseOrchestrator {
       auditedBy: qaReport.evaluatedByModel,
     }
 
+    emitCheckpoint('done', blueprint)
+
     return {
       pipelineRunId,
       blueprint,
@@ -706,6 +831,7 @@ export class AICourseOrchestrator {
       totalDurationMs,
       totalEstimatedCostUSD,
       revisionCyclesRun,
+      resumedFromCheckpoint,
     }
   }
 }

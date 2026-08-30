@@ -563,11 +563,48 @@ export interface FullCourseGenerationConfig {
   remixAction?: 'improve' | 'expand' | 'shorten' | 'advanced' | 'beginner' | 'new_audience' | 'translate'
 }
 
+/**
+ * Persisted after every pipeline phase / module so an interrupted course
+ * generation can be resumed via `resumeJobId` instead of restarting from zero.
+ * Lives in `course_generation_jobs.metadata.checkpoint`.
+ */
+export interface CourseGenerationCheckpoint {
+  version: 1
+  /** Furthest phase whose output is already captured in this checkpoint. */
+  phase:
+    | 'discovery_and_research'
+    | 'curriculum_architecture'
+    | 'content_synthesis'
+    | 'assessment_generation'
+    | 'multimedia_generation'
+    | 'quality_assurance'
+    | 'done'
+  updatedAt: string
+  /** Raw research agent output (skips the Research + Knowledge phase on resume). */
+  researchOutput?: unknown
+  knowledgeOutput?: unknown
+  /** Blueprint with every completed lesson's renderedHtml / quizzes filled in. */
+  partialBlueprint?: CourseBlueprint
+  /** Lesson ids whose content synthesis already succeeded. */
+  completedLessonIds?: string[]
+  /** Module ids whose assessment pool already succeeded. */
+  completedQuizModuleIds?: string[]
+  /** Accrued estimated spend so the resumed run keeps a truthful running total. */
+  totalEstimatedCostUSD?: number
+}
+
+export type CourseGenerationJobStatus =
+  | 'pending'
+  | 'running'
+  | 'interrupted'
+  | 'completed'
+  | 'failed'
+
 export interface CourseGenerationJob {
   id: string
   mode: CourseGenerationMode
   course_id?: string | null
-  status: 'pending' | 'running' | 'completed' | 'failed'
+  status: CourseGenerationJobStatus
   config: FullCourseGenerationConfig
   blueprint?: CourseBlueprint | null
   qa_report?: CourseQAQualityReport | null
@@ -578,6 +615,7 @@ export interface CourseGenerationJob {
   created_by?: string | null
   created_at: string
   updated_at: string
+  metadata?: (Record<string, unknown> & { checkpoint?: CourseGenerationCheckpoint }) | null
 }
 
 export interface CourseGenerationPreset {

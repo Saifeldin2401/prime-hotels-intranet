@@ -87,6 +87,22 @@ import { FlashcardDeckWidget } from '@/components/training/player/widgets/Flashc
 import { ScenarioBranchSimulator } from '@/components/training/player/widgets/ScenarioBranchSimulator'
 import { PracticalAssignmentBlockRenderer } from '@/components/training/player/PracticalAssignmentBlockRenderer'
 import { RoleplaySimulationBlockRenderer } from '@/components/training/player/RoleplaySimulationBlockRenderer'
+import { BlockCallout } from '@/components/training/player/BlockCallout'
+import { BlockVisualAssets } from '@/components/training/player/BlockVisualAssets'
+import {
+    getBlockComponentTag,
+    getBlockLearningOutcomes,
+    getCourseBlueprintOutcomes,
+    getEffectiveBlockTranslation,
+    getAssignmentPrompt,
+    groupVisualAssetsByBlock,
+    groupVisualAssetsByLesson,
+    isBlockContentEmpty,
+    partitionVisualAssetsByPlacement,
+    resolveBlockRenderer,
+    selectBlockVisualAssets,
+} from '@/lib/training/playerContent'
+import type { CourseVisualAsset } from '@/types/aiCourseEngine'
 import { assignmentSubmissionService, type TrainingAssignmentSubmission } from '@/services/assignmentSubmissionService'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -802,7 +818,7 @@ export default function TrainingPlayer() {
             // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: blocks, error: blocksError } = await supabase
                 .from('documents')
-                .select('id, training_module_id, created_at, title, block_type, content, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
+                .select('id, training_module_id, created_at, title, block_type, content, content_ar, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
                 .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .eq('is_deleted', false)
@@ -866,10 +882,27 @@ export default function TrainingPlayer() {
                 quizzes?.forEach(quiz => { referencedTitles[quiz.id] = quiz.title })
             }
 
+            // AI Course Generator attaches inline illustrations to lessons via
+            // course_visual_assets (course_id = module id). Read defensively so a
+            // missing table / RLS denial never breaks the player.
+            let visualAssets: CourseVisualAsset[] = []
+            try {
+                const { data: assets } = await supabase
+                    .from('course_visual_assets')
+                    .select('*')
+                    .eq('course_id', id)
+                    .in('status', ['completed', 'draft'])
+                    .order('order_index', { ascending: true })
+                visualAssets = (assets || []) as CourseVisualAsset[]
+            } catch (_assetError) {
+                visualAssets = []
+            }
+
             return {
                 module,
                 blocks: mappedBlocks,
-                referencedTitles
+                referencedTitles,
+                visualAssets
             }
         },
         enabled: !!id && isValidModuleId,
@@ -891,7 +924,64 @@ export default function TrainingPlayer() {
         resetModuleInteractionState()
     }, [moduleData?.module.id, resetModuleInteractionState])
 
+    // Seed the runtime translation cache with any translations persisted on the
+    // block itself (documents.content_ar, or content_data.translations keyed by
+    // language). AI-generated courses ship bilingual content this way, so the
+    // language toggle shows it instantly with no on-demand AI translation call.
+    useEffect(() => {
+        const blocks = moduleData?.blocks
+        if (!blocks || blocks.length === 0) return
+        const seed: Record<string, Partial<Record<TranslationTargetLanguage, string>>> = {}
+        for (const block of blocks) {
+            const entry: Partial<Record<TranslationTargetLanguage, string>> = {}
+            const persistedAr = (block as { content_ar?: string | null }).content_ar
+            if (typeof persistedAr === 'string' && persistedAr.trim()) {
+                entry.ar = persistedAr
+            }
+            const translations = (block.content_data as Record<string, unknown> | null)?.translations
+            if (translations && typeof translations === 'object' && !Array.isArray(translations)) {
+                for (const [lang, value] of Object.entries(translations as Record<string, unknown>)) {
+                    if (typeof value === 'string' && value.trim()) {
+                        entry[lang as TranslationTargetLanguage] = value
+                    }
+                }
+            }
+            if (Object.keys(entry).length > 0) seed[block.id] = entry
+        }
+        if (Object.keys(seed).length > 0) {
+            setBlockTranslations(prev => {
+                const next = { ...prev }
+                for (const [blockId, langs] of Object.entries(seed)) {
+                    next[blockId] = { ...langs, ...next[blockId] }
+                }
+                return next
+            })
+        }
+    }, [moduleData?.blocks])
+
     const totalBlocks = moduleData?.blocks.length || 1
+
+    const visualAssetsByBlock = useMemo(
+        () => groupVisualAssetsByBlock(moduleData?.visualAssets || []),
+        [moduleData?.visualAssets]
+    )
+    const visualAssetsByLesson = useMemo(
+        () => groupVisualAssetsByLesson(moduleData?.visualAssets || []),
+        [moduleData?.visualAssets]
+    )
+    const courseOutcomes = useMemo(
+        () => getCourseBlueprintOutcomes((moduleData?.module as { blueprint?: unknown } | undefined)?.blueprint),
+        [moduleData?.module]
+    )
+    const componentTagsPresent = useMemo(() => {
+        const tags = new Set<string>()
+        for (const block of moduleData?.blocks || []) {
+            const tag = getBlockComponentTag(block)
+            if (tag) tags.add(tag)
+        }
+        return tags
+    }, [moduleData?.blocks])
+
     const quizBlockIds = useMemo(
         () => (moduleData?.blocks || [])
             .filter(block => block.type === 'quiz')
@@ -1672,7 +1762,53 @@ export default function TrainingPlayer() {
             animate: { opacity: 1, x: 0 },
             exit: { opacity: 0, x: isRTL ? 20 : -20 }
         }
-        const translatedBlockContent = getTranslatedBlockContent(block)
+        // On-the-fly translation wins, else fall back to any AR/i18n markup the
+        // course generator persisted on content_data.
+        const translatedBlockContent = getEffectiveBlockTranslation(
+            block,
+            translationTarget,
+            getTranslatedBlockContent(block)
+        )
+
+        const rendererKind = resolveBlockRenderer(block)
+        const componentTag = getBlockComponentTag(block)
+        const blockAssets = selectBlockVisualAssets(block, visualAssetsByBlock, visualAssetsByLesson)
+        const { leading: leadingAssets, trailing: trailingAssets } = partitionVisualAssetsByPlacement(blockAssets)
+
+        // Distinctive callout for tagged leading/trailing lesson components
+        // (module objectives, wrap-up summary, checkpoint list).
+        if (componentTag) {
+            return (
+                <m.div
+                    key={block.id}
+                    variants={variants}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
+                    transition={{ duration: 0.4, ease: 'easeOut' }}
+                    className="space-y-6"
+                >
+                    {leadingAssets.length > 0 && <BlockVisualAssets assets={leadingAssets} isRTL={isRTL} />}
+                    <BlockCallout
+                        tag={componentTag}
+                        title={block.title}
+                        items={getBlockLearningOutcomes(block)}
+                        bodyHtml={block.content}
+                        translatedBodyHtml={translatedBlockContent}
+                        showBilingual={showBilingual}
+                        translationDir={translationDir}
+                        isRTL={isRTL}
+                    />
+                    {trailingAssets.length > 0 && <BlockVisualAssets assets={trailingAssets} isRTL={isRTL} />}
+                </m.div>
+            )
+        }
+
+        // A block that would otherwise render a blank screen (unknown block_type,
+        // or an AI lesson whose component generation failed).
+        const showFallback =
+            rendererKind === 'unknown' ||
+            (rendererKind === 'text' && isBlockContentEmpty(block) && blockAssets.length === 0)
 
         return (
             <m.div
@@ -1684,7 +1820,21 @@ export default function TrainingPlayer() {
                 transition={{ duration: 0.4, ease: "easeOut" }}
                 className="space-y-6"
             >
-                {block.type === 'text' && (
+                {leadingAssets.length > 0 && <BlockVisualAssets assets={leadingAssets} isRTL={isRTL} />}
+
+                {showFallback && (
+                    <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center dark:border-slate-700 dark:bg-slate-900/40">
+                        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-slate-300" />
+                        <p className="text-sm font-medium text-hotel-navy dark:text-slate-200">
+                            {t('blockContentUnavailable', 'This section is being prepared')}
+                        </p>
+                        <p className="mt-1 text-xs text-slate-400">
+                            {t('blockContentUnavailableHint', 'Content for this step is not available yet. You can continue to the next step.')}
+                        </p>
+                    </div>
+                )}
+
+                {block.type === 'text' && !showFallback && (
                     <RichTextBlockContent
                         originalHtml={block.content}
                         translatedHtml={translatedBlockContent}
@@ -2110,6 +2260,9 @@ export default function TrainingPlayer() {
                         block={block}
                         moduleId={moduleData.module.id}
                         assignmentId={assignmentId}
+                        translatedPrompt={getAssignmentPrompt(block, translationTarget).translated}
+                        showBilingual={showBilingual}
+                        translationDir={translationDir}
                         initialSubmission={assignmentSubmissions[block.id]}
                         onSubmissionUpdated={(updatedSub) => {
                             setAssignmentSubmissions(prev => ({
@@ -2141,6 +2294,8 @@ export default function TrainingPlayer() {
                         isRTL={isRTL}
                     />
                 )}
+
+                {trailingAssets.length > 0 && <BlockVisualAssets assets={trailingAssets} isRTL={isRTL} />}
 
             </m.div>
         )
@@ -2750,6 +2905,26 @@ export default function TrainingPlayer() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Module-level objectives (module start) / takeaways (module end),
+                            unless the course already ships a tagged component block for it. */}
+                        {activeBlockIndex === 0 && !componentTagsPresent.has('objectives') && courseOutcomes.terminalObjectives.length > 0 && (
+                            <BlockCallout
+                                tag="objectives"
+                                items={courseOutcomes.terminalObjectives}
+                                isRTL={isRTL}
+                                className="mb-6"
+                            />
+                        )}
+                        {isLastBlock && !componentTagsPresent.has('summary') && courseOutcomes.summaryTakeaways.length > 0 && (
+                            <BlockCallout
+                                tag="summary"
+                                items={courseOutcomes.summaryTakeaways}
+                                isRTL={isRTL}
+                                className="mb-6"
+                            />
+                        )}
+
                         <AnimatePresence mode="wait">
                             <m.div
                                 key={activeBlock?.id || 'no-content'}

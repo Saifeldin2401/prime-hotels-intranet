@@ -23,6 +23,7 @@ import {
   Cpu,
   Download,
   History,
+  PlayCircle,
   RotateCcw,
   Sparkles,
   Zap,
@@ -32,14 +33,31 @@ import { useTranslation } from 'react-i18next'
 interface GenerationHistoryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  /** Restore a finished blueprint back into the studio preview. */
   onRestoreBlueprint?: (job: CourseGenerationJob) => void
+  /** Alias of onRestoreBlueprint used by the studio modal. */
+  onSelectJob?: (job: CourseGenerationJob) => void
+  /** Resume an interrupted job from its last persisted checkpoint. */
+  onResumeJob?: (job: CourseGenerationJob) => void
+}
+
+/** A job is resumable when it stopped mid-flight and left a checkpoint behind. */
+function isResumable(job: CourseGenerationJob): boolean {
+  return (
+    (job.status === 'interrupted' || job.status === 'failed' || job.status === 'running') &&
+    Boolean(job.metadata?.checkpoint) &&
+    job.metadata?.checkpoint?.phase !== 'done'
+  )
 }
 
 export function GenerationHistoryDialog({
   open,
   onOpenChange,
   onRestoreBlueprint,
+  onSelectJob,
+  onResumeJob,
 }: GenerationHistoryDialogProps) {
+  const restoreHandler = onRestoreBlueprint ?? onSelectJob
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
   const { data: history, isLoading } = useCourseGenerationHistory()
@@ -124,6 +142,19 @@ export function GenerationHistoryDialog({
                               QA {job.blueprint.qualityScore}%
                             </Badge>
                           )}
+                          {(job.status === 'interrupted' || job.status === 'failed') && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] font-semibold uppercase border-amber-400 text-amber-700 dark:text-amber-300"
+                            >
+                              {job.status === 'interrupted'
+                                ? t('builder.jobInterrupted', 'Interrupted')
+                                : t('builder.jobFailed', 'Failed')}
+                              {job.metadata?.checkpoint?.phase
+                                ? ` · ${String(job.metadata.checkpoint.phase).replace(/_/g, ' ')}`
+                                : ''}
+                            </Badge>
+                          )}
                         </div>
 
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
@@ -158,12 +189,30 @@ export function GenerationHistoryDialog({
                           </Button>
                         )}
 
-                        {onRestoreBlueprint && job.blueprint && (
+                        {onResumeJob && isResumable(job) && (
+                          <Button
+                            size="sm"
+                            className="text-xs h-8 bg-amber-600 hover:bg-amber-700 text-white"
+                            onClick={() => {
+                              onResumeJob(job)
+                              onOpenChange(false)
+                            }}
+                            title={t(
+                              'builder.resumeFromCheckpointHint',
+                              'Continue this interrupted generation from its last checkpoint'
+                            )}
+                          >
+                            <PlayCircle className="w-3.5 h-3.5 me-1" />
+                            <span>{t('builder.resume', 'Resume')}</span>
+                          </Button>
+                        )}
+
+                        {restoreHandler && job.blueprint && (
                           <Button
                             size="sm"
                             className="text-xs h-8 bg-purple-600 hover:bg-purple-700 text-white"
                             onClick={() => {
-                              onRestoreBlueprint(job)
+                              restoreHandler(job)
                               onOpenChange(false)
                             }}
                           >

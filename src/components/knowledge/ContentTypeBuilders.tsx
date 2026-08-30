@@ -19,6 +19,7 @@ import {
     Eye,
     EyeOff,
     FolderOpen,
+    GripVertical,
     HelpCircle,
     Loader2,
     Play,
@@ -28,7 +29,7 @@ import {
     Upload,
     Video
 } from 'lucide-react'
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
@@ -1322,6 +1323,129 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
                     </div>
                 )}
             </CardContent>
+        </Card>
+    )
+}
+
+// ============================================================================
+// STRING LIST BUILDER
+// ============================================================================
+// Generic editable/reorderable list of short text entries, used for the
+// structured operational sections the AI KB pipeline produces:
+// Critical Control Points, Forbes benchmarks and contingency protocols.
+
+interface StringListBuilderProps {
+    items: string[]
+    onChange: (items: string[]) => void
+    title: string
+    description?: string
+    icon?: ReactNode
+    placeholder?: string
+    addLabel?: string
+    accentClassName?: string
+}
+
+export function StringListBuilder({
+    items,
+    onChange,
+    title,
+    description,
+    icon,
+    placeholder = 'Add an entry...',
+    addLabel = 'Add entry',
+    accentClassName = 'text-hotel-gold',
+}: StringListBuilderProps) {
+    const list = Array.isArray(items) ? items : []
+
+    const addItem = () => onChange([...list, ''])
+    const updateItem = (index: number, value: string) =>
+        onChange(list.map((entry, idx) => (idx === index ? value : entry)))
+    const removeItem = (index: number) => onChange(list.filter((_, idx) => idx !== index))
+    const moveItem = (index: number, direction: 'up' | 'down') => {
+        const target = direction === 'up' ? index - 1 : index + 1
+        if (target < 0 || target >= list.length) return
+        const next = [...list]
+        ;[next[index], next[target]] = [next[target], next[index]]
+        onChange(next)
+    }
+
+    return (
+        <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+            <CardHeader className="pb-3">
+                <div className="flex items-center justify-between gap-2">
+                    <CardTitle className="text-sm font-bold flex items-center gap-2">
+                        <span className={accentClassName}>{icon}</span>
+                        <span>{title}</span>
+                        {list.length > 0 && (
+                            <Badge variant="secondary" className="text-[10px] px-1.5">
+                                {list.length}
+                            </Badge>
+                        )}
+                    </CardTitle>
+                    <Button type="button" variant="outline" size="sm" onClick={addItem} className="h-7 text-xs gap-1">
+                        <Plus className="h-3.5 w-3.5" />
+                        {addLabel}
+                    </Button>
+                </div>
+                {description && (
+                    <p className="text-[11px] text-muted-foreground pt-1">{description}</p>
+                )}
+            </CardHeader>
+            {list.length > 0 && (
+                <CardContent className="space-y-2">
+                    {list.map((entry, index) => (
+                        <div key={index} className="flex items-start gap-1.5">
+                            <div className="flex flex-col pt-2 text-slate-300 dark:text-slate-600">
+                                <GripVertical className="h-3.5 w-3.5" />
+                            </div>
+                            <span className="pt-2 text-[11px] font-mono text-muted-foreground w-5 text-right shrink-0">
+                                {index + 1}
+                            </span>
+                            <Textarea
+                                value={entry}
+                                onChange={(e) => updateItem(index, e.target.value)}
+                                placeholder={placeholder}
+                                rows={2}
+                                className="text-xs bg-white dark:bg-slate-950 flex-1 min-h-[38px]"
+                            />
+                            <div className="flex flex-col gap-0.5">
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    onClick={() => moveItem(index, 'up')}
+                                    disabled={index === 0}
+                                    aria-label="Move up"
+                                >
+                                    <ChevronUp className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6"
+                                    onClick={() => moveItem(index, 'down')}
+                                    disabled={index === list.length - 1}
+                                    aria-label="Move down"
+                                >
+                                    <ChevronDown className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                    type="button"
+                                    size="icon"
+                                    variant="ghost"
+                                    className="h-6 w-6 text-red-500 hover:text-red-600"
+                                    onClick={() => removeItem(index)}
+                                    aria-label="Remove entry"
+                                >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                            </div>
+                        </div>
+                    ))}
+                </CardContent>
+            )}
         </Card>
     )
 }

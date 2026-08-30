@@ -32,6 +32,10 @@ interface PracticalAssignmentBlockRendererProps {
   initialSubmission?: TrainingAssignmentSubmission | null
   onSubmissionUpdated?: (submission: TrainingAssignmentSubmission) => void
   isRTL?: boolean
+  /** Localised instructions/prompt to show alongside the original when translating. */
+  translatedPrompt?: string
+  showBilingual?: boolean
+  translationDir?: 'ltr' | 'rtl'
 }
 
 export function PracticalAssignmentBlockRenderer({
@@ -40,7 +44,10 @@ export function PracticalAssignmentBlockRenderer({
   assignmentId,
   initialSubmission,
   onSubmissionUpdated,
-  isRTL = false
+  isRTL = false,
+  translatedPrompt,
+  showBilingual = false,
+  translationDir = 'ltr'
 }: PracticalAssignmentBlockRendererProps) {
   const { t } = useTranslation('training')
   const { toast } = useToast()
@@ -224,7 +231,20 @@ export function PracticalAssignmentBlockRenderer({
               <h4 className="font-semibold text-hotel-navy mb-2 flex items-center gap-2">
                 <span>{t('instructionsAndPrompt', 'Assignment Prompt & Instructions')}</span>
               </h4>
-              <div>{instructions}</div>
+              {(!translatedPrompt || showBilingual) && <div>{instructions}</div>}
+              {translatedPrompt && translatedPrompt !== instructions && (
+                <div
+                  dir={translationDir}
+                  className={cn(showBilingual && 'mt-3 border-t border-slate-200 pt-3 text-slate-600')}
+                >
+                  {showBilingual && (
+                    <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 mb-1">
+                      {t('translated', 'Translated')}
+                    </div>
+                  )}
+                  <div>{translatedPrompt}</div>
+                </div>
+              )}
             </div>
           )}
 
