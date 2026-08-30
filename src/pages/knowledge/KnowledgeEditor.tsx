@@ -15,6 +15,7 @@ import {
     FAQBuilder,
     ImageGalleryRenderer,
     RelatedArticlesEditor,
+    StringListBuilder,
     VideoContentBuilder,
     VideoPlayer,
     VisualContentBuilder
@@ -56,6 +57,14 @@ import { aiService } from '@/lib/gemini'
 import { renderMermaidDiagrams, transformMermaidCodeBlocks } from '@/lib/mermaid'
 import { createBulkNotifications } from '@/services/notificationService'
 import { sanitizeHtml } from '@/lib/sanitize'
+import {
+    type KnowledgeArticleMeta,
+    type KnowledgeVisualAssetRef,
+    generatedArticleToFormPatch,
+    readKnowledgeMeta,
+    toStringList,
+    writeKnowledgeMeta,
+} from '@/pages/knowledge/knowledgeArticleFidelity'
 import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
 import { triggerService } from '@/services/triggerService'
@@ -80,10 +89,13 @@ import {
     Eye,
     FileText,
     FolderOpen,
+    Gauge,
     Globe,
     HelpCircle,
     Image as ImageIcon,
+    Languages,
     Layers,
+    LifeBuoy,
     Link as LinkIcon,
     List,
     Loader2,
@@ -91,8 +103,10 @@ import {
     RefreshCw,
     Save,
     Send,
+    ShieldAlert,
     ShieldCheck,
     Sparkles,
+    Star,
     Tag,
     Upload,
     Video as VideoIcon,
@@ -110,6 +124,14 @@ interface ArticleFormData {
     description: string
     summary: string              // TL;DR summary for quick reading
     content: string
+    // Arabic / bilingual fields (persisted to dedicated documents columns)
+    title_ar: string
+    description_ar: string
+    summary_ar: string
+    content_ar: string
+    // SOP metadata
+    sop_code: string
+    estimated_read_time: number | null
     file_url: string
     storage_path: string
     content_type: string
@@ -130,6 +152,22 @@ interface ArticleFormData {
     ai_tags: string[]
     ai_category: string
     ai_processed_at: string
+    // Structured operational sections from the AI KB pipeline
+    critical_control_points: string[]
+    forbes_benchmarks: string[]
+    contingency_protocols: string[]
+    // Visual asset reference (also inlined into content HTML)
+    visual_asset: KnowledgeVisualAssetRef | null
+    // AI compliance scorecard (round-tripped, read-only-ish)
+    ai_compliance_score: number | null
+    ai_compliance_notes: string[]
+    ai_compliance_checked_at: string
+    // AI generation provenance
+    ai_models_used: string[]
+    ai_model_used: string
+    ai_provider_used: string
+    ai_cost_tier: string
+    ai_total_duration_ms: number | null
     // Index signature for useFormPersistence compatibility
     [key: string]: unknown
 }
@@ -139,6 +177,12 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     description: '',
     summary: '',
     content: '',
+    title_ar: '',
+    description_ar: '',
+    summary_ar: '',
+    content_ar: '',
+    sop_code: '',
+    estimated_read_time: null,
     file_url: '',
     storage_path: '',
     content_type: 'document',
@@ -157,6 +201,18 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     ai_tags: [],
     ai_category: '',
     ai_processed_at: '',
+    critical_control_points: [],
+    forbes_benchmarks: [],
+    contingency_protocols: [],
+    visual_asset: null,
+    ai_compliance_score: null,
+    ai_compliance_notes: [],
+    ai_compliance_checked_at: '',
+    ai_models_used: [],
+    ai_model_used: '',
+    ai_provider_used: '',
+    ai_cost_tier: '',
+    ai_total_duration_ms: null,
 })
 
 const hasDraftableArticleContent = (formData: ArticleFormData) => {
@@ -174,6 +230,15 @@ const hasDraftableArticleContent = (formData: ArticleFormData) => {
         formData.description.trim() ||
         formData.summary.trim() ||
         richTextContent ||
+        formData.title_ar.trim() ||
+        formData.description_ar.trim() ||
+        formData.summary_ar.trim() ||
+        formData.content_ar.trim() ||
+        formData.sop_code.trim() ||
+        formData.critical_control_points.length > 0 ||
+        formData.forbes_benchmarks.length > 0 ||
+        formData.contingency_protocols.length > 0 ||
+        formData.visual_asset ||
         formData.file_url.trim() ||
         formData.storage_path.trim() ||
         formData.video_url.trim() ||
@@ -277,6 +342,9 @@ export default function KnowledgeEditor() {
     const [isAiStudioOpen, setIsAiStudioOpen] = useState(false)
     const allowUnsafeNavigationRef = useRef(false)
     const restoredDraftRef = useRef(false)
+    // Raw `content_data` jsonb from the loaded document, so unrelated keys
+    // (e.g. training block payloads) survive a save round-trip.
+    const loadedContentDataRef = useRef<Json | null>(null)
 
     const [formData, setFormData] = useState<ArticleFormData>(() => createEmptyArticleFormData())
 
@@ -290,10 +358,20 @@ export default function KnowledgeEditor() {
                 description: prefill.description || prev.description,
                 summary: prefill.summary || prev.summary,
                 content: prefill.content || prev.content,
+                title_ar: prefill.title_ar || prev.title_ar,
+                description_ar: prefill.description_ar || prev.description_ar,
+                summary_ar: prefill.summary_ar || prev.summary_ar,
+                content_ar: prefill.content_ar || prev.content_ar,
+                sop_code: prefill.sop_code || prev.sop_code,
+                estimated_read_time: prefill.estimated_read_time ?? prev.estimated_read_time,
                 content_type: prefill.content_type || prev.content_type,
                 checklist_items: prefill.checklist_items || prev.checklist_items,
                 faq_items: prefill.faq_items || prev.faq_items,
                 ai_tags: prefill.ai_tags || prev.ai_tags,
+                critical_control_points: prefill.critical_control_points || prev.critical_control_points,
+                forbes_benchmarks: prefill.forbes_benchmarks || prev.forbes_benchmarks,
+                contingency_protocols: prefill.contingency_protocols || prev.contingency_protocols,
+                visual_asset: prefill.visual_asset ?? prev.visual_asset,
             }))
         }
     }, [location.state, id])
@@ -302,7 +380,7 @@ export default function KnowledgeEditor() {
         key: `knowledge_editor_${id || 'new'}`,
         enabled: !isEditing,
         debounceMs: 500,
-        version: 2,
+        version: 3,
         validate: (draft) => typeof draft === 'object' && draft !== null,
         transformAfterLoad: (draft) => ({
             ...createEmptyArticleFormData(),
@@ -318,6 +396,12 @@ export default function KnowledgeEditor() {
             images: Array.isArray(draft.images) ? draft.images : [],
             ai_tags: Array.isArray(draft.ai_tags) ? draft.ai_tags : [],
             specific_department_ids: Array.isArray(draft.specific_department_ids) ? draft.specific_department_ids : [],
+            critical_control_points: Array.isArray(draft.critical_control_points) ? draft.critical_control_points : [],
+            forbes_benchmarks: Array.isArray(draft.forbes_benchmarks) ? draft.forbes_benchmarks : [],
+            contingency_protocols: Array.isArray(draft.contingency_protocols) ? draft.contingency_protocols : [],
+            ai_compliance_notes: Array.isArray(draft.ai_compliance_notes) ? draft.ai_compliance_notes : [],
+            ai_models_used: Array.isArray(draft.ai_models_used) ? draft.ai_models_used : [],
+            visual_asset: (draft.visual_asset && typeof draft.visual_asset === 'object') ? draft.visual_asset : null,
         }),
     })
     const { loadDraft, saveDraft, clearDraft, markSaved, hasDraft, hasUnsavedChanges } = formPersistence
@@ -538,6 +622,9 @@ export default function KnowledgeEditor() {
     ]
 
     const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit')
+    // Which language the core content fields (title/description/summary/body) edit.
+    const [editLang, setEditLang] = useState<'en' | 'ar'>('en')
+    const [showComplianceNotes, setShowComplianceNotes] = useState(false)
     const previewRef = useRef<HTMLDivElement>(null)
     const [isSaving, setIsSaving] = useState(false)
     const isSavingInFlightRef = useRef(false)
@@ -844,12 +931,12 @@ export default function KnowledgeEditor() {
     }, [beautifyOptions, ensureBeautifyFeatures, toHtmlContent, toPlainText])
 
     const previewHtml = useMemo(() => {
-        const raw = formData.content || ''
+        const raw = (editLang === 'en' ? formData.content : formData.content_ar) || ''
         if (!raw.trim()) return `<p class="text-gray-400">${t('editor.empty_preview')}</p>`
         const isHtml = raw.trim().startsWith('<')
         const html = isHtml ? raw : (marked.parse(raw, { async: false }) as string)
         return transformMermaidCodeBlocks(html)
-    }, [formData.content, t])
+    }, [editLang, formData.content, formData.content_ar, t])
 
     useEffect(() => {
         if (activeTab !== 'preview') return
@@ -890,11 +977,20 @@ export default function KnowledgeEditor() {
                                 .filter((deptId): deptId is string => typeof deptId === 'string')
                             : []
 
+                        loadedContentDataRef.current = (data.content_data ?? null) as Json | null
+                        const meta = readKnowledgeMeta(data.content_data as Json | null)
+
                         setFormData({
                             title: data.title || '',
                             description: data.description || '',
                             summary: data.summary || '',
                             content: data.content || '',
+                            title_ar: data.title_ar || '',
+                            description_ar: data.description_ar || '',
+                            summary_ar: data.summary_ar || '',
+                            content_ar: data.content_ar || '',
+                            sop_code: data.sop_code || '',
+                            estimated_read_time: typeof data.estimated_read_time === 'number' ? data.estimated_read_time : null,
                             file_url: data.file_url || '',
                             storage_path: '',
                             content_type: data.content_type || 'document',
@@ -915,6 +1011,19 @@ export default function KnowledgeEditor() {
                             ai_tags: data.ai_tags || [],
                             ai_category: data.ai_category || '',
                             ai_processed_at: data.ai_processed_at || '',
+                            // Structured operational sections + compliance (from content_data)
+                            critical_control_points: meta.critical_control_points,
+                            forbes_benchmarks: meta.forbes_benchmarks,
+                            contingency_protocols: meta.contingency_protocols,
+                            visual_asset: meta.visual_asset,
+                            ai_compliance_score: meta.ai_compliance_score,
+                            ai_compliance_notes: meta.ai_compliance_notes,
+                            ai_compliance_checked_at: meta.ai_compliance_checked_at || '',
+                            ai_models_used: meta.ai_models_used,
+                            ai_model_used: meta.ai_model_used || '',
+                            ai_provider_used: meta.ai_provider_used || '',
+                            ai_cost_tier: meta.ai_cost_tier || '',
+                            ai_total_duration_ms: meta.ai_total_duration_ms,
                         })
                     }
                 })
@@ -1298,16 +1407,40 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 ? null
                 : (isUuid(rawPropertyId) ? rawPropertyId : null)
 
-            const estimatedReadTime = calculateEstimatedReadTime(formData.content)
+            const estimatedReadTime = formData.estimated_read_time ?? calculateEstimatedReadTime(formData.content)
             let savedArticleId: string | null = null
             let savedArticleData = null
             let redirectToArticleId: string | null = null
+
+            // Persist structured operational sections + compliance scorecard + visual
+            // asset reference through the existing `content_data` jsonb column
+            // (namespaced), preserving any unrelated keys already stored there.
+            const knowledgeMeta: KnowledgeArticleMeta = {
+                critical_control_points: toStringList(formData.critical_control_points),
+                forbes_benchmarks: toStringList(formData.forbes_benchmarks),
+                contingency_protocols: toStringList(formData.contingency_protocols),
+                visual_asset: formData.visual_asset,
+                ai_compliance_score: formData.ai_compliance_score,
+                ai_compliance_notes: toStringList(formData.ai_compliance_notes),
+                ai_compliance_checked_at: formData.ai_compliance_checked_at || null,
+                ai_models_used: toStringList(formData.ai_models_used),
+                ai_model_used: formData.ai_model_used || null,
+                ai_provider_used: formData.ai_provider_used || null,
+                ai_cost_tier: formData.ai_cost_tier || null,
+                ai_total_duration_ms: formData.ai_total_duration_ms,
+            }
+            const nextContentData = writeKnowledgeMeta(loadedContentDataRef.current, knowledgeMeta)
 
             const articleData: Database['public']['Tables']['documents']['Update'] = {
                 title: formData.title,
                 description: finalDescription || null,
                 summary: finalSummary || null,
                 content: formData.content || null,
+                title_ar: formData.title_ar.trim() || null,
+                description_ar: formData.description_ar.trim() || null,
+                summary_ar: formData.summary_ar.trim() || null,
+                content_ar: formData.content_ar.trim() || null,
+                sop_code: formData.sop_code.trim() || null,
                 file_url: formData.file_url || null,
                 content_type: formData.content_type,
                 visibility: formData.visibility,
@@ -1323,7 +1456,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 checklist_items: (formData.checklist_items || []) as unknown as Json,
                 faq_items: (formData.faq_items || []) as unknown as Json,
                 video_url: formData.video_url || null,
-                images: (formData.images || []) as unknown as Json
+                images: (formData.images || []) as unknown as Json,
+                content_data: nextContentData as Json,
             }
 
             if (isEditing && id) {
@@ -1607,14 +1741,48 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     {/* Article Hero Card: Title & Content Type Selector */}
                     <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                         <CardContent className="pt-6 pb-5 space-y-4">
+                            {/* Language toggle for core content fields */}
+                            <div className="flex items-center justify-between gap-2">
+                                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                                    <Languages className="h-3.5 w-3.5" />
+                                    {t('editor.editing_language', 'Editing language')}
+                                </div>
+                                <div className="flex bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs">
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditLang('en')}
+                                        className={`px-3 py-1 rounded-md font-semibold transition-all ${editLang === 'en' ? 'bg-white dark:bg-slate-950 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
+                                    >
+                                        English
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setEditLang('ar')}
+                                        className={`px-3 py-1 rounded-md font-semibold transition-all ${editLang === 'ar' ? 'bg-white dark:bg-slate-950 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}
+                                    >
+                                        العربية
+                                    </button>
+                                </div>
+                            </div>
+
                             {/* Large Title Input */}
                             <div>
-                                <Input
-                                    value={formData.title}
-                                    onChange={e => updateField('title', e.target.value)}
-                                    placeholder={t('editor.title_placeholder', 'Article Title (e.g. Forbes 5-Star VIP Arrival Protocol)...')}
-                                    className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
-                                />
+                                {editLang === 'en' ? (
+                                    <Input
+                                        value={formData.title}
+                                        onChange={e => updateField('title', e.target.value)}
+                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. Forbes 5-Star VIP Arrival Protocol)...')}
+                                        className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                                    />
+                                ) : (
+                                    <Input
+                                        value={formData.title_ar}
+                                        onChange={e => updateField('title_ar', e.target.value)}
+                                        dir="rtl"
+                                        placeholder={t('editor.title_placeholder_ar', 'عنوان المستند بالعربية...')}
+                                        className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                                    />
+                                )}
                                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-2" />
                             </div>
 
@@ -1647,12 +1815,22 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                             {/* Subtitle / Tagline */}
                             <div className="pt-1">
-                                <Input
-                                    value={formData.description}
-                                    onChange={e => updateField('description', e.target.value)}
-                                    placeholder={t('editor.description_placeholder', 'Add a short subtitle or operational purpose (10-15 words)...')}
-                                    className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
-                                />
+                                {editLang === 'en' ? (
+                                    <Input
+                                        value={formData.description}
+                                        onChange={e => updateField('description', e.target.value)}
+                                        placeholder={t('editor.description_placeholder', 'Add a short subtitle or operational purpose (10-15 words)...')}
+                                        className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
+                                    />
+                                ) : (
+                                    <Input
+                                        value={formData.description_ar}
+                                        onChange={e => updateField('description_ar', e.target.value)}
+                                        dir="rtl"
+                                        placeholder={t('editor.description_placeholder_ar', 'أضف عنوانًا فرعيًا موجزًا بالعربية...')}
+                                        className="text-xs text-slate-600 dark:text-slate-300 border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-400"
+                                    />
+                                )}
                             </div>
 
                             {/* Duplicate Detection Warning */}
@@ -1858,12 +2036,19 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         <CardContent className="pt-4">
                             {activeTab === 'edit' ? (
                                 <div className="space-y-6">
+                                    {editLang === 'ar' && (
+                                        <div className="flex items-center gap-1.5 text-[11px] font-semibold text-hotel-navy dark:text-hotel-gold">
+                                            <Languages className="h-3.5 w-3.5" />
+                                            {t('editor.editing_arabic_body', 'Editing the Arabic body (المحتوى العربي)')}
+                                        </div>
+                                    )}
                                     <RichTextEditor
-                                        value={formData.content}
-                                        onChange={v => updateField('content', v)}
+                                        key={`rte-${editLang}`}
+                                        value={editLang === 'en' ? formData.content : formData.content_ar}
+                                        onChange={v => updateField(editLang === 'en' ? 'content' : 'content_ar', v)}
                                         placeholder={t('editor.write_placeholder', 'Start typing the hotel operational procedure or policy standard here...')}
                                         minHeight={320}
-                                        direction={aiLanguage === 'Arabic' ? 'rtl' : 'ltr'}
+                                        direction={editLang === 'ar' ? 'rtl' : 'ltr'}
                                     />
 
                                     {/* Interactive Execution Checklist Builder */}
@@ -1885,6 +2070,48 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                             onAIGenerate={() => generateWithAI('faqs')}
                                             isGenerating={isGenerating}
                                             title={formData.title}
+                                        />
+                                    </div>
+
+                                    {/* Critical Control Points */}
+                                    <div className="pt-2">
+                                        <StringListBuilder
+                                            items={formData.critical_control_points}
+                                            onChange={items => updateField('critical_control_points', items)}
+                                            title={t('editor.critical_control_points', 'Critical Control Points (CCPs)')}
+                                            description={t('editor.ccp_desc', 'Non-negotiable checkpoints where a failure has a serious operational, safety or compliance impact.')}
+                                            icon={<ShieldAlert className="h-4 w-4" />}
+                                            accentClassName="text-red-500"
+                                            placeholder={t('editor.ccp_placeholder', 'e.g. Verify guest identity before issuing a room key')}
+                                            addLabel={t('editor.add_ccp', 'Add CCP')}
+                                        />
+                                    </div>
+
+                                    {/* Forbes 5-Star Benchmarks */}
+                                    <div className="pt-2">
+                                        <StringListBuilder
+                                            items={formData.forbes_benchmarks}
+                                            onChange={items => updateField('forbes_benchmarks', items)}
+                                            title={t('editor.forbes_benchmarks', 'Forbes 5-Star Benchmarks')}
+                                            description={t('editor.forbes_desc', 'Measurable luxury-service standards this procedure must meet.')}
+                                            icon={<Star className="h-4 w-4" />}
+                                            accentClassName="text-amber-500"
+                                            placeholder={t('editor.forbes_placeholder', 'e.g. Guest greeted by name within 15 seconds of approach')}
+                                            addLabel={t('editor.add_benchmark', 'Add benchmark')}
+                                        />
+                                    </div>
+
+                                    {/* Contingency Protocols */}
+                                    <div className="pt-2">
+                                        <StringListBuilder
+                                            items={formData.contingency_protocols}
+                                            onChange={items => updateField('contingency_protocols', items)}
+                                            title={t('editor.contingency_protocols', 'Contingency & Fallback Protocols')}
+                                            description={t('editor.contingency_desc', 'What to do when systems are offline or the standard path is blocked.')}
+                                            icon={<LifeBuoy className="h-4 w-4" />}
+                                            accentClassName="text-blue-500"
+                                            placeholder={t('editor.contingency_placeholder', 'e.g. If PMS is offline, use the manual arrival log and reconcile later')}
+                                            addLabel={t('editor.add_protocol', 'Add protocol')}
                                         />
                                     </div>
 
@@ -1915,6 +2142,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         <InlineErrorBoundary>
                                             <div
                                                 className="prose max-w-none text-slate-800 dark:text-slate-100"
+                                                dir={editLang === 'ar' ? 'rtl' : 'ltr'}
                                                 dangerouslySetInnerHTML={{ __html: sanitizeHtml(previewHtml) }}
                                             />
                                         </InlineErrorBoundary>
@@ -2142,20 +2370,151 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Textarea
-                                value={formData.summary}
-                                onChange={e => updateField('summary', e.target.value)}
-                                placeholder={t('editor.summary_placeholder', '2-3 sentence overview of what this document covers and who must follow it...')}
-                                rows={3}
-                                maxLength={300}
-                                className="text-xs bg-white dark:bg-slate-950"
-                            />
-                            <p className="text-[10px] text-muted-foreground text-right">
-                                {formData.summary.length}/300
-                            </p>
+                        <CardContent className="space-y-3">
+                            <div className="space-y-1">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    {t('editor.summary_en', 'English')}
+                                </Label>
+                                <Textarea
+                                    value={formData.summary}
+                                    onChange={e => updateField('summary', e.target.value)}
+                                    placeholder={t('editor.summary_placeholder', '2-3 sentence overview of what this document covers and who must follow it...')}
+                                    rows={3}
+                                    maxLength={300}
+                                    className="text-xs bg-white dark:bg-slate-950"
+                                />
+                                <p className="text-[10px] text-muted-foreground text-right">
+                                    {formData.summary.length}/300
+                                </p>
+                            </div>
+                            <div className="space-y-1 pt-1 border-t border-dashed">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                                    {t('editor.summary_ar', 'العربية')}
+                                </Label>
+                                <Textarea
+                                    value={formData.summary_ar}
+                                    onChange={e => updateField('summary_ar', e.target.value)}
+                                    dir="rtl"
+                                    placeholder={t('editor.summary_placeholder_ar', 'ملخص من 2-3 جمل لما يغطيه هذا المستند ومن يجب أن يتبعه...')}
+                                    rows={3}
+                                    maxLength={300}
+                                    className="text-xs bg-white dark:bg-slate-950"
+                                />
+                                <p className="text-[10px] text-muted-foreground text-right">
+                                    {formData.summary_ar.length}/300
+                                </p>
+                            </div>
                         </CardContent>
                     </Card>
+
+                    {/* 3b. SOP Code & Read Time */}
+                    <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                        <CardHeader className="pb-3">
+                            <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                <Tag className="h-4 w-4 text-hotel-gold" />
+                                <span>{t('editor.sop_metadata', 'SOP Code & Read Time')}</span>
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                                    {t('editor.sop_code', 'SOP / Document Code')}
+                                </Label>
+                                <Input
+                                    value={formData.sop_code}
+                                    onChange={e => updateField('sop_code', e.target.value)}
+                                    placeholder="e.g. FO-SOP-014"
+                                    className="text-xs h-8 bg-white dark:bg-slate-950 font-mono"
+                                />
+                            </div>
+                            <div>
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
+                                    {t('editor.estimated_read_time', 'Estimated Read Time (minutes)')}
+                                </Label>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        value={formData.estimated_read_time ?? ''}
+                                        onChange={e => updateField('estimated_read_time', e.target.value === '' ? null : Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                        placeholder={String(calculateEstimatedReadTime(formData.content) || 1)}
+                                        className="text-xs h-8 bg-white dark:bg-slate-950 w-24"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-8 text-[11px] text-hotel-navy dark:text-hotel-gold px-2"
+                                        onClick={() => updateField('estimated_read_time', calculateEstimatedReadTime(formData.content))}
+                                    >
+                                        <RefreshCw className="w-3 h-3 me-1" />
+                                        {t('editor.auto_calc', 'Auto')}
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* 3c. AI Compliance Check */}
+                    {formData.ai_compliance_score != null && (
+                        <Card className="shadow-sm border-emerald-200 dark:border-emerald-900/50">
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                                    <Gauge className="h-4 w-4 text-emerald-600" />
+                                    <span>{t('editor.ai_compliance_check', 'AI Compliance Check')}</span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-2">
+                                <div className="flex items-center gap-2">
+                                    <Badge className="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1">
+                                        <ShieldCheck className="w-3.5 h-3.5 me-1" />
+                                        {formData.ai_compliance_score}/100
+                                    </Badge>
+                                    {formData.ai_compliance_checked_at && (
+                                        <span className="text-[10px] text-muted-foreground">
+                                            {t('editor.checked_on', 'Checked')} {new Date(formData.ai_compliance_checked_at).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                                {formData.ai_compliance_notes.length > 0 && (
+                                    <div>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="sm"
+                                            onClick={() => setShowComplianceNotes(v => !v)}
+                                            className="h-6 px-1.5 text-[11px] text-muted-foreground"
+                                        >
+                                            <ChevronDown className={`w-3.5 h-3.5 me-1 transition-transform ${showComplianceNotes ? 'rotate-180' : ''}`} />
+                                            {showComplianceNotes
+                                                ? t('editor.hide_notes', 'Hide notes')
+                                                : t('editor.show_notes', `Show ${formData.ai_compliance_notes.length} compliance notes`)}
+                                        </Button>
+                                        {showComplianceNotes && (
+                                            <ul className="mt-1.5 space-y-1 ps-1">
+                                                {formData.ai_compliance_notes.map((note, idx) => (
+                                                    <li key={idx} className="text-[11px] text-slate-600 dark:text-slate-300 flex gap-1.5">
+                                                        <span className="text-emerald-500 shrink-0">•</span>
+                                                        <span>{note}</span>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        )}
+                                    </div>
+                                )}
+                                {(formData.ai_model_used || formData.ai_provider_used) && (
+                                    <p className="text-[10px] text-muted-foreground pt-1 border-t border-dashed">
+                                        {t('editor.ai_generated_by', 'AI-generated via')}{' '}
+                                        {[formData.ai_provider_used, formData.ai_model_used].filter(Boolean).join(' / ')}
+                                        {formData.ai_cost_tier ? ` (${formData.ai_cost_tier})` : ''}
+                                    </p>
+                                )}
+                                <p className="text-[10px] text-muted-foreground italic">
+                                    {t('editor.ai_compliance_disclaimer', 'This score reflects the AI review at generation time — it is not re-computed on manual edits.')}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    )}
 
                     {/* 4. PDF Attachment & Media Library */}
                     <Card className="shadow-sm border-slate-200 dark:border-slate-800">
@@ -2319,37 +2678,35 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 defaultContentType={formData.content_type}
                 defaultDepartment={departments?.find(d => d.id === formData.department_id)?.name || 'Front Office'}
                 onApplyArticle={(article) => {
-                    let formattedContent = article.content_html
-                    if (article.visual_asset?.image_url && !formattedContent.includes(article.visual_asset.image_url)) {
-                        const imgUrl = article.visual_asset.image_url
-                        let svgOrImg = `<img src="${imgUrl}" alt="${article.title}" class="max-h-80 w-full object-contain rounded-lg my-4" />`
-                        if (imgUrl.startsWith('<svg') || imgUrl.includes('xmlns="http://www.w3.org/2000/svg"')) {
-                            svgOrImg = imgUrl
-                        } else if (imgUrl.startsWith('data:image/svg+xml')) {
-                            try {
-                                const commaIdx = imgUrl.indexOf(',')
-                                if (commaIdx !== -1) {
-                                    const header = imgUrl.slice(0, commaIdx)
-                                    const body = imgUrl.slice(commaIdx + 1)
-                                    const decoded = header.includes('base64') ? decodeURIComponent(escape(atob(body))) : decodeURIComponent(body)
-                                    svgOrImg = decoded
-                                }
-                            } catch {}
-                        }
-
-                        formattedContent = `<div class="ai-schematic-card my-6 p-4 rounded-xl border bg-slate-950 text-center text-slate-300">\n${svgOrImg}\n<p class="text-xs text-slate-400 mt-2 italic">${article.visual_asset.caption || 'Operational SOP Vector Schematic'}</p>\n</div>\n\n${formattedContent}`
-                    }
-
+                    const patch = generatedArticleToFormPatch(article)
                     setFormData((prev) => ({
                         ...prev,
-                        title: article.title,
-                        description: article.description,
-                        summary: article.summary,
-                        content: formattedContent,
-                        content_type: article.content_type,
-                        checklist_items: (article.checklist_items as ChecklistItem[]) || prev.checklist_items,
-                        faq_items: (article.faq_items as FAQItem[]) || prev.faq_items,
-                        ai_tags: article.suggested_tags || prev.ai_tags,
+                        title: patch.title || prev.title,
+                        description: patch.description || prev.description,
+                        summary: patch.summary || prev.summary,
+                        content: patch.content || prev.content,
+                        title_ar: patch.title_ar || prev.title_ar,
+                        description_ar: patch.description_ar || prev.description_ar,
+                        summary_ar: patch.summary_ar || prev.summary_ar,
+                        content_ar: patch.content_ar || prev.content_ar,
+                        sop_code: patch.sop_code || prev.sop_code,
+                        estimated_read_time: patch.estimated_read_time ?? prev.estimated_read_time,
+                        content_type: patch.content_type || prev.content_type,
+                        checklist_items: patch.checklist_items.length ? patch.checklist_items : prev.checklist_items,
+                        faq_items: patch.faq_items.length ? patch.faq_items : prev.faq_items,
+                        ai_tags: patch.ai_tags.length ? patch.ai_tags : prev.ai_tags,
+                        critical_control_points: patch.meta.critical_control_points.length ? patch.meta.critical_control_points : prev.critical_control_points,
+                        forbes_benchmarks: patch.meta.forbes_benchmarks.length ? patch.meta.forbes_benchmarks : prev.forbes_benchmarks,
+                        contingency_protocols: patch.meta.contingency_protocols.length ? patch.meta.contingency_protocols : prev.contingency_protocols,
+                        visual_asset: patch.meta.visual_asset ?? prev.visual_asset,
+                        ai_compliance_score: patch.meta.ai_compliance_score ?? prev.ai_compliance_score,
+                        ai_compliance_notes: patch.meta.ai_compliance_notes.length ? patch.meta.ai_compliance_notes : prev.ai_compliance_notes,
+                        ai_compliance_checked_at: patch.meta.ai_compliance_checked_at || prev.ai_compliance_checked_at,
+                        ai_models_used: patch.meta.ai_models_used.length ? patch.meta.ai_models_used : prev.ai_models_used,
+                        ai_model_used: patch.meta.ai_model_used || prev.ai_model_used,
+                        ai_provider_used: patch.meta.ai_provider_used || prev.ai_provider_used,
+                        ai_cost_tier: patch.meta.ai_cost_tier || prev.ai_cost_tier,
+                        ai_total_duration_ms: patch.meta.ai_total_duration_ms ?? prev.ai_total_duration_ms,
                     }))
                     toast.success(`Generated 5-star ${article.content_type.toUpperCase()} applied to editor!`)
                 }}
