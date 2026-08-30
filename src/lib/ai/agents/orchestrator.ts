@@ -24,6 +24,7 @@ import type {
   CourseVisualAsset,
   FullCourseGenerationConfig,
   GeneratedUnifiedQuestion,
+  QuizBlueprint,
 } from '@/types/aiCourseEngine'
 import { researchAgent, type ResearchFindings } from './researchAgent'
 import { curriculumAgent } from './curriculumAgent'
@@ -537,6 +538,22 @@ export class AICourseOrchestrator {
     // ========================================================================
     const totalQuizCount = blueprint.modules.length
     let completedQuizCount = Math.min(completedQuizModuleIds.size, totalQuizCount)
+    // Where the author wants assessments. `per_module` / `checkpoints` / `mid_course`
+    // -> a moduleQuiz on each module. `final_assessment` / `standalone` -> one
+    // comprehensive blueprint.finalAssessment pooled from every module.
+    const quizPlacement = config.quizConfig?.placement || 'per_module'
+    const wantsFinalOnly = quizPlacement === 'final_assessment' || quizPlacement === 'standalone'
+    const targetQuestionCount = config.quizConfig?.questionCount || 3
+    const wrapQuiz = (title: string, questions: GeneratedUnifiedQuestion[]): QuizBlueprint => ({
+      id: crypto.randomUUID(),
+      title,
+      placement: quizPlacement,
+      questionCount: questions.length,
+      passingScore: config.quizConfig?.passingScore || 80,
+      questions,
+    })
+    const assessmentPool: GeneratedUnifiedQuestion[] = []
+    let modulesWithNoQuestions = 0
 
     emit({
       phase: 'assessment_generation',
@@ -567,8 +584,18 @@ export class AICourseOrchestrator {
             },
             { pipelineRunId, phase: 'assessment_generation', preferredModel: options.preferredModel, silent: true }
           )
-          if (quizRes.data && quizRes.data.length > 0) {
-            mod.quizzes = quizRes.data as any
+          const questions = Array.isArray(quizRes.data) ? (quizRes.data as GeneratedUnifiedQuestion[]) : []
+          if (questions.length > 0) {
+            // The save path (blueprintToBlocks / saveBlueprintToDatabase) reads
+            // `mod.moduleQuiz` (a QuizBlueprint) and `blueprint.finalAssessment` —
+            // NOT `mod.quizzes`. Write the real shape so the questions actually
+            // become learning_quizzes + unified_questions rows.
+            if (!wantsFinalOnly) {
+              mod.moduleQuiz = wrapQuiz(mod.moduleQuiz?.title || `${mod.title} — Knowledge Check`, questions)
+            }
+            assessmentPool.push(...questions)
+          } else {
+            modulesWithNoQuestions++
           }
           completedQuizModuleIds.add(mod.id)
           completedQuizCount++
@@ -586,11 +613,38 @@ export class AICourseOrchestrator {
             modelUsed: quizRes.modelUsed,
           })
         } catch (e) {
+          modulesWithNoQuestions++
           console.warn('[Orchestrator] Assessment agent error for module:', mod.id, e)
         }
       },
       concurrency // admin "Max Parallel Generation Streams"
     )
+
+    // Build the comprehensive final exam when the author asked for one (or a
+    // final-only placement), pooling from every module's questions.
+    if (
+      (wantsFinalOnly || quizPlacement === 'mid_course') &&
+      assessmentPool.length > 0
+    ) {
+      const finalCount = Math.max(targetQuestionCount, Math.min(assessmentPool.length, targetQuestionCount * 2))
+      blueprint.finalAssessment = wrapQuiz(
+        `${blueprint.title} — Final Comprehensive Assessment`,
+        assessmentPool.slice(0, finalCount),
+      )
+    }
+
+    if (modulesWithNoQuestions > 0) {
+      emit({
+        phase: 'assessment_generation',
+        agentRole: 'assessments',
+        status: 'running',
+        progressPercentage: 74,
+        title: 'Assessment coverage warning',
+        titleAr: 'تنبيه بشأن تغطية التقييم',
+        detail: `${modulesWithNoQuestions}/${totalQuizCount} module(s) produced no questions (provider failure or empty output). Those modules will have no knowledge check.`,
+        detailAr: `${modulesWithNoQuestions} من ${totalQuizCount} وحدة لم تُنتج أسئلة — لن تحتوي على اختبار.`,
+      })
+    }
 
     emitCheckpoint('multimedia_generation', blueprint)
 
