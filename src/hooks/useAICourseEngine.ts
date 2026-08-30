@@ -24,21 +24,27 @@ export function useExecuteCoursePipeline() {
       qaReport: CourseQAQualityReport
       jobId?: string
       durationMs: number
+      resumedFromCheckpoint: boolean
     },
     Error,
-    FullCourseGenerationConfig
+    { config: FullCourseGenerationConfig; resumeJobId?: string }
   >({
-    mutationFn: async (config) => {
+    mutationFn: async ({ config, resumeJobId }) => {
       setCurrentStage(1)
-      setStageName('Initializing')
-      setStageDetail('Configuring pedagogical pipeline parameters...')
+      setStageName(resumeJobId ? 'Resuming' : 'Initializing')
+      setStageDetail(
+        resumeJobId
+          ? 'Loading the last checkpoint and skipping completed work...'
+          : 'Configuring pedagogical pipeline parameters...'
+      )
       return await aiCourseEngineService.executeCoursePipeline(
         config,
         (stage, name, detail) => {
           setCurrentStage(stage)
           setStageName(name)
           setStageDetail(detail)
-        }
+        },
+        resumeJobId ? { resumeJobId } : undefined
       )
     },
   })

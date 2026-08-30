@@ -102,6 +102,79 @@ const DEFAULT_GEMINI_MODELS = [
 
 const CF_TEXT_MODEL = "@cf/meta/llama-3.1-8b-instruct";
 
+// ── Real cost accounting ────────────────────────────────────────────────────
+// Fallback price table (USD per 1,000,000 tokens, input / output) for the models
+// actually in rotation. Used when public.ai_models has no price row for the id.
+// Prices are widely-published provider list prices (Jan 2026). groq gpt-oss /
+// compound / allam resolve on a free Groq account => $0. Cloudflare Workers AI
+// text + HF serverless router are effectively free tier here.
+const FALLBACK_MODEL_PRICING: Record<string, { pin: number; pout: number }> = {
+  "openai/gpt-oss-120b": { pin: 0, pout: 0 },
+  "openai/gpt-oss-20b": { pin: 0, pout: 0 },
+  "openai/gpt-oss-safeguard-20b": { pin: 0, pout: 0 },
+  "allam-2-7b": { pin: 0, pout: 0 },
+  "groq/compound": { pin: 0, pout: 0 },
+  "groq/compound-mini": { pin: 0, pout: 0 },
+  "gemini-2.5-flash": { pin: 0.3, pout: 2.5 },
+  "gemini-flash-latest": { pin: 0.3, pout: 2.5 },
+  "gemini-2.5-flash-lite": { pin: 0.1, pout: 0.4 },
+  "gemini-3.1-flash-lite": { pin: 0.1, pout: 0.4 },
+  "@cf/meta/llama-3.1-8b-instruct": { pin: 0, pout: 0 },
+  "mistralai/Mistral-7B-Instruct-v0.3": { pin: 0, pout: 0 },
+  "Qwen/Qwen2.5-72B-Instruct": { pin: 0, pout: 0 },
+  "google/gemini-2.5-flash-lite": { pin: 0.1, pout: 0.4 },
+  "google/gemini-2.5-flash": { pin: 0.3, pout: 2.5 },
+  "openai/gpt-4o-mini": { pin: 0.15, pout: 0.6 },
+  "openai/gpt-4o": { pin: 2.5, pout: 10.0 },
+  "anthropic/claude-haiku-4.5": { pin: 1.0, pout: 5.0 },
+  "anthropic/claude-opus-4.5": { pin: 5.0, pout: 25.0 },
+  "deepseek/deepseek-chat": { pin: 0.28, pout: 0.88 },
+  "deepseek/deepseek-chat-v3-0324": { pin: 0.28, pout: 0.88 },
+  "deepseek/deepseek-r1": { pin: 0.55, pout: 2.19 },
+  "meta-llama/llama-3.3-70b-instruct": { pin: 0.12, pout: 0.3 },
+  "meta-llama/Llama-3.3-70B-Instruct-Turbo": { pin: 0.88, pout: 0.88 },
+  "Qwen/Qwen2.5-72B-Instruct-Turbo": { pin: 1.2, pout: 1.2 },
+  "meta-llama/Llama-3.1-8B-Instruct-Turbo": { pin: 0.18, pout: 0.18 },
+  "qwen/qwen-2.5-72b-instruct": { pin: 0.12, pout: 0.39 },
+};
+
+interface ProviderUsage {
+  prompt: number;
+  completion: number;
+  total: number;
+}
+
+/**
+ * Pull the provider's *reported* token usage out of a raw JSON response body.
+ * OpenAI-compatible (groq / openrouter / together / hf router / cloudflare):
+ *   data.usage.{prompt_tokens,completion_tokens,total_tokens}
+ * Gemini: data.usageMetadata.{promptTokenCount,candidatesTokenCount,totalTokenCount}
+ * Returns null when nothing usable is present.
+ */
+function extractProviderUsage(provider: string, data: unknown): ProviderUsage | null {
+  try {
+    const d = data as Record<string, any>;
+    if (provider === "gemini") {
+      const u = d?.usageMetadata;
+      if (u && (u.promptTokenCount != null || u.totalTokenCount != null)) {
+        const p = Number(u.promptTokenCount) || 0;
+        const c = Number(u.candidatesTokenCount) || 0;
+        return { prompt: p, completion: c, total: Number(u.totalTokenCount) || p + c };
+      }
+      return null;
+    }
+    const u = d?.usage || d?.result?.usage;
+    if (u && (u.prompt_tokens != null || u.total_tokens != null)) {
+      const p = Number(u.prompt_tokens) || 0;
+      const c = Number(u.completion_tokens) || 0;
+      return { prompt: p, completion: c, total: Number(u.total_tokens) || p + c };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 // Probed live 2026-08-29 against the configured GROQ_API_KEY: the Llama / Qwen /
 // Gemma / Kimi ids all return 404 "model does not exist or you do not have access".
 // Only these chat models resolve on this account (gpt-oss + compound + allam).
@@ -313,6 +386,11 @@ serve(async (req) => {
       disabledModelIds: [] as string[],
     };
 
+    // Per-request cache of the ai_models price table (input/output $ per 1M tokens),
+    // keyed by BOTH the model id and its provider_model_id so either the routing
+    // plan's `pm.id` or a legacy provider model string resolves.
+    const modelPricing: Record<string, { pin: number; pout: number; src: string }> = {};
+
     if (serviceRoleKey) {
       try {
         const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRoleKey);
@@ -354,6 +432,21 @@ serve(async (req) => {
           }
         } catch (cfgErr) {
           console.warn("ai_platform_config lookup skipped:", cfgErr);
+        }
+        try {
+          const { data: priceRows } = await supabaseAdmin
+            .from("ai_models")
+            .select("id,provider_model_id,price_input_per_mtok,price_output_per_mtok");
+          for (const row of (priceRows as Array<Record<string, any>> | null) ?? []) {
+            const pin = row.price_input_per_mtok;
+            const pout = row.price_output_per_mtok;
+            if (pin == null && pout == null) continue;
+            const entry = { pin: Number(pin) || 0, pout: Number(pout) || 0, src: "ai_models" };
+            if (row.id) modelPricing[row.id] = entry;
+            if (row.provider_model_id) modelPricing[row.provider_model_id] = entry;
+          }
+        } catch (priceErr) {
+          console.warn("ai_models pricing lookup skipped:", priceErr);
         }
       } catch (vaultErr) {
         console.warn("Vault secret lookup warning in process-ai-request:", vaultErr);
@@ -591,6 +684,20 @@ serve(async (req) => {
     let providerUsed = "none";
     let modelUsed = openRouterCandidates[0] || "openrouter/auto";
 
+    // Real provider-reported token usage for the call that ultimately succeeds.
+    let providerUsage: ProviderUsage | null = null;
+    const recordUsage = (provider: string, data: unknown) => {
+      const u = extractProviderUsage(provider, data);
+      if (u) providerUsage = u;
+    };
+    // model id -> {input,output $/1M tokens, source}. DB table first, then the
+    // hardcoded fallback table, else null (=> heuristic cost downstream).
+    const resolvePricing = (id: string): { pin: number; pout: number; src: string } | null => {
+      if (modelPricing[id]) return modelPricing[id];
+      const fb = FALLBACK_MODEL_PRICING[id];
+      return fb ? { pin: fb.pin, pout: fb.pout, src: "gateway_fallback_table" } : null;
+    };
+
     if (stream) {
       const encoder = new TextEncoder();
       const readableStream = new ReadableStream({
@@ -600,6 +707,7 @@ serve(async (req) => {
           };
           try {
             let streamSuccess = false;
+            let streamedText = "";
             const streamDiagnostics: string[] = [];
             if (!streamSuccess && OPENROUTER_API_KEY && providerEnabled("openrouter")) {
               for (const candModel of openRouterCandidates) {
@@ -607,7 +715,7 @@ serve(async (req) => {
                   const orRes = await fetch("https://openrouter.ai/api/v1/chat/completions", {
                     method: "POST",
                     headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "HTTP-Referer": "https://phg-connect.com", "X-Title": "PRIME Connect Intranet", "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: candModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, stream: true }),
+                    body: JSON.stringify({ model: candModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, stream: true, stream_options: { include_usage: true } }),
                     signal: AbortSignal.timeout(50000),
                   });
                   if (orRes.ok && orRes.body) {
@@ -630,7 +738,8 @@ serve(async (req) => {
                           try {
                             const json = JSON.parse(trimmed.slice(5).trim());
                             const textChunk = json?.choices?.[0]?.delta?.content;
-                            if (textChunk) { hadTokens = true; sendEvent({ chunk: textChunk, done: false }); }
+                            if (textChunk) { hadTokens = true; streamedText += textChunk; sendEvent({ chunk: textChunk, done: false }); }
+                            if (json?.usage) recordUsage("openrouter", json);
                           } catch { /* skip */ }
                         }
                       }
@@ -650,7 +759,7 @@ serve(async (req) => {
                   const groqRes = await fetch("https://api.groq.com/openai/v1/chat/completions", {
                     method: "POST",
                     headers: { Authorization: `Bearer ${GROQ_API_KEY}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ model: groqModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, stream: true }),
+                    body: JSON.stringify({ model: groqModel, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, stream: true, stream_options: { include_usage: true } }),
                     signal: AbortSignal.timeout(30000),
                   });
                   if (groqRes.ok && groqRes.body) {
@@ -673,7 +782,8 @@ serve(async (req) => {
                           try {
                             const json = JSON.parse(trimmed.slice(5).trim());
                             const textChunk = json?.choices?.[0]?.delta?.content;
-                            if (textChunk) { hadTokens = true; sendEvent({ chunk: textChunk, done: false }); }
+                            if (textChunk) { hadTokens = true; streamedText += textChunk; sendEvent({ chunk: textChunk, done: false }); }
+                            if (json?.usage) recordUsage("groq", json);
                           } catch { /* skip */ }
                         }
                       }
@@ -714,7 +824,8 @@ serve(async (req) => {
                         try {
                           const json = JSON.parse(trimmed.slice(5).trim());
                           const textChunk = json?.candidates?.[0]?.content?.parts?.[0]?.text;
-                          if (textChunk) sendEvent({ chunk: textChunk, done: false });
+                          if (textChunk) { streamedText += textChunk; sendEvent({ chunk: textChunk, done: false }); }
+                          if (json?.usageMetadata) recordUsage("gemini", json);
                         } catch { /* ignore */ }
                       }
                     }
@@ -746,6 +857,8 @@ serve(async (req) => {
                   if (content) {
                     providerUsed = "cloudflare";
                     modelUsed = CF_TEXT_MODEL;
+                    streamedText += content;
+                    recordUsage("cloudflare", data);
                     sendEvent({ chunk: content, done: false });
                     streamSuccess = true;
                   }
@@ -770,7 +883,7 @@ serve(async (req) => {
                     if (hfRes.ok) {
                       const data = await hfRes.json();
                       const content = data?.choices?.[0]?.message?.content || "";
-                      if (content) { providerUsed = "huggingface"; modelUsed = candidateModel; sendEvent({ chunk: content, done: false }); streamSuccess = true; break; }
+                      if (content) { providerUsed = "huggingface"; modelUsed = candidateModel; streamedText += content; recordUsage("huggingface", data); sendEvent({ chunk: content, done: false }); streamSuccess = true; break; }
                     }
                   } catch (hfErr) {
                     console.warn(`HF error on ${candidateModel}:`, hfErr);
@@ -782,6 +895,51 @@ serve(async (req) => {
               sendEvent({ error: `All AI models failed. ${streamDiagnostics.join(" | ")}`, done: true });
             } else {
               sendEvent({ done: true, meta: { provider: providerUsed, model: modelUsed } });
+              // Meter the streamed call. Real usage from stream_options / usageMetadata
+              // when the provider emitted it, else the len/4 heuristic on accrued text.
+              try {
+                const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") || "", serviceRoleKey || Deno.env.get("SUPABASE_ANON_KEY") || "");
+                const real: ProviderUsage | null = providerUsage && (providerUsage as ProviderUsage).total > 0 ? (providerUsage as ProviderUsage) : null;
+                const estPromptTokens = Math.max(1, Math.ceil(prompt.length / 4));
+                const estCompletionTokens = Math.max(0, Math.ceil(streamedText.length / 4));
+                const promptTokens = real ? (real.prompt || estPromptTokens) : estPromptTokens;
+                const completionTokens = real ? (real.completion || estCompletionTokens) : estCompletionTokens;
+                const totalTokens = real ? real.total : promptTokens + completionTokens;
+                const pricing = resolvePricing(modelUsed);
+                const isFreeTier = providerUsed === "gemini" || providerUsed === "groq" || providerUsed === "cloudflare" || modelUsed.includes(":free");
+                let estimatedCost: number;
+                let pricingSource: string;
+                if (pricing) {
+                  estimatedCost = (promptTokens / 1_000_000) * pricing.pin + (completionTokens / 1_000_000) * pricing.pout;
+                  pricingSource = pricing.src;
+                } else if (isFreeTier) {
+                  estimatedCost = 0; pricingSource = "free_tier_heuristic";
+                } else {
+                  estimatedCost = ((promptTokens + completionTokens) / 1_000_000) * 1.5; pricingSource = "flat_1.5_per_mtok";
+                }
+                void supabaseAdmin.from("ai_usage_log").insert({
+                  agent_role: currentTask,
+                  task_type: currentTask,
+                  model_used: modelUsed,
+                  provider: providerUsed,
+                  cost_tier: estimatedCost > 0 ? "paid" : "free",
+                  prompt_tokens: promptTokens,
+                  completion_tokens: completionTokens,
+                  total_tokens: totalTokens,
+                  estimated_cost_usd: Number(estimatedCost.toFixed(6)),
+                  latency_ms: Date.now() - requestStart,
+                  started_at: new Date(requestStart).toISOString(),
+                  success: true,
+                  metadata: {
+                    is_free_tier: isFreeTier,
+                    model_candidate: model,
+                    preferred_provider: preferredProvider ?? null,
+                    token_source: real ? "provider" : "estimated",
+                    pricing_source: pricingSource,
+                    streamed: true,
+                  },
+                }).then(() => {});
+              } catch { /* non-blocking */ }
             }
           } catch (streamErr) {
             console.error("Stream controller error:", streamErr);
@@ -813,7 +971,7 @@ serve(async (req) => {
             body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jm ? { response_format: { type: "json_object" } } : {}) }),
             signal: AbortSignal.timeout(30000),
           });
-          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "groq"; modelUsed = pm.id; return true; } }
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "groq"; modelUsed = pm.id; recordUsage("groq", d); return true; } }
           else diagnosticErrors.push(`plan groq ${pm.id} (${r.status})`);
         } else if (pm.provider === "openrouter" && OPENROUTER_API_KEY) {
           const r = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -821,7 +979,7 @@ serve(async (req) => {
             body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens, ...(jm ? { response_format: { type: "json_object" } } : {}) }),
             signal: AbortSignal.timeout(45000),
           });
-          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "openrouter"; modelUsed = pm.id; return true; } }
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "openrouter"; modelUsed = pm.id; recordUsage("openrouter", d); return true; } }
           else diagnosticErrors.push(`plan openrouter ${pm.id} (${r.status}): ${(await r.text().catch(() => "")).slice(0, 120)}`);
         } else if (pm.provider === "gemini" && GEMINI_API_KEY) {
           const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${pm.provider_model_id}:generateContent?key=${GEMINI_API_KEY}`, {
@@ -829,7 +987,7 @@ serve(async (req) => {
             body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: `${defaultSystemPrompt}\n\n${prompt}` }] }], generationConfig: { temperature: effectiveTemperature, maxOutputTokens: effectiveMaxTokens, ...(jm ? { responseMimeType: "application/json" } : {}) } }),
             signal: AbortSignal.timeout(30000),
           });
-          if (r.ok) { const d = await r.json(); const c = d?.candidates?.[0]?.content?.parts?.[0]?.text || ""; if (c) { result = c; providerUsed = "gemini"; modelUsed = pm.id; return true; } }
+          if (r.ok) { const d = await r.json(); const c = d?.candidates?.[0]?.content?.parts?.[0]?.text || ""; if (c) { result = c; providerUsed = "gemini"; modelUsed = pm.id; recordUsage("gemini", d); return true; } }
           else diagnosticErrors.push(`plan gemini ${pm.id} (${r.status})`);
         } else if (pm.provider === "cloudflare" && CF_ACCOUNT_ID && CF_API_TOKEN) {
           const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${CF_ACCOUNT_ID}/ai/run/${pm.provider_model_id}`, {
@@ -837,14 +995,14 @@ serve(async (req) => {
             body: JSON.stringify({ messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], max_tokens: Math.min(effectiveMaxTokens, 4096), temperature: effectiveTemperature }),
             signal: AbortSignal.timeout(30000),
           });
-          if (r.ok) { const d = await r.json(); const c = d?.result?.response || d?.response || ""; if (c) { result = c; providerUsed = "cloudflare"; modelUsed = pm.id; return true; } }
+          if (r.ok) { const d = await r.json(); const c = d?.result?.response || d?.response || ""; if (c) { result = c; providerUsed = "cloudflare"; modelUsed = pm.id; recordUsage("cloudflare", d); return true; } }
           else diagnosticErrors.push(`plan cloudflare ${pm.id} (${r.status})`);
         } else if (pm.provider === "huggingface" && (HF_TOKEN || HF_MINIMAX_TOKEN)) {
           const r = await fetch("https://router.huggingface.co/v1/chat/completions", {
             method: "POST", headers: { Authorization: `Bearer ${HF_TOKEN || HF_MINIMAX_TOKEN}`, "Content-Type": "application/json" },
             body: JSON.stringify({ model: pm.provider_model_id, messages: [{ role: "system", content: defaultSystemPrompt }, { role: "user", content: prompt }], temperature: effectiveTemperature, max_tokens: effectiveMaxTokens }),
           });
-          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "huggingface"; modelUsed = pm.id; return true; } }
+          if (r.ok) { const d = await r.json(); const c = d?.choices?.[0]?.message?.content || ""; if (c) { result = c; providerUsed = "huggingface"; modelUsed = pm.id; recordUsage("huggingface", d); return true; } }
           else diagnosticErrors.push(`plan hf ${pm.id} (${r.status})`);
         }
       } catch (e) {
@@ -869,7 +1027,7 @@ serve(async (req) => {
         if (gRes.ok) {
           const data = await gRes.json();
           result = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          if (result) { providerUsed = "gemini"; modelUsed = model; executionSuccess = true; }
+          if (result) { providerUsed = "gemini"; modelUsed = model; executionSuccess = true; recordUsage("gemini", data); }
         } else {
           diagnosticErrors.push(`Preferred Gemini ${model} (${gRes.status}): ${(await gRes.text().catch(() => "")).slice(0, 160)}`);
         }
@@ -889,7 +1047,7 @@ serve(async (req) => {
         if (grRes.ok) {
           const data = await grRes.json();
           result = data?.choices?.[0]?.message?.content || "";
-          if (result) { providerUsed = "groq"; modelUsed = model; executionSuccess = true; }
+          if (result) { providerUsed = "groq"; modelUsed = model; executionSuccess = true; recordUsage("groq", data); }
         } else {
           diagnosticErrors.push(`Preferred Groq ${model} (${grRes.status}): ${(await grRes.text().catch(() => "")).slice(0, 160)}`);
         }
@@ -910,7 +1068,7 @@ serve(async (req) => {
           if (orRes.ok) {
             const data = await orRes.json();
             result = data?.choices?.[0]?.message?.content || "";
-            if (result) { providerUsed = "openrouter"; modelUsed = candModel; executionSuccess = true; break; }
+            if (result) { providerUsed = "openrouter"; modelUsed = candModel; executionSuccess = true; recordUsage("openrouter", data); break; }
           } else {
             diagnosticErrors.push(`OpenRouter ${candModel} (${orRes.status}): ${await orRes.text().catch(() => "")}`);
           }
@@ -932,7 +1090,7 @@ serve(async (req) => {
           if (groqRes.ok) {
             const data = await groqRes.json();
             result = data?.choices?.[0]?.message?.content || "";
-            if (result) { providerUsed = "groq"; modelUsed = groqModel; executionSuccess = true; break; }
+            if (result) { providerUsed = "groq"; modelUsed = groqModel; executionSuccess = true; recordUsage("groq", data); break; }
           } else {
             diagnosticErrors.push(`Groq ${groqModel} (${groqRes.status})`);
           }
@@ -958,7 +1116,7 @@ serve(async (req) => {
           if (geminiRes.ok) {
             const data = await geminiRes.json();
             result = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
-            if (result) { providerUsed = "gemini"; modelUsed = geminiModel; executionSuccess = true; break; }
+            if (result) { providerUsed = "gemini"; modelUsed = geminiModel; executionSuccess = true; recordUsage("gemini", data); break; }
           } else {
             diagnosticErrors.push(`Gemini ${geminiModel} (${geminiRes.status}): ${(await geminiRes.text().catch(() => "")).slice(0, 120)}`);
           }
@@ -988,7 +1146,7 @@ serve(async (req) => {
         if (cfRes.ok) {
           const data = await cfRes.json();
           result = data?.result?.response || data?.response || "";
-          if (result) { providerUsed = "cloudflare"; modelUsed = CF_TEXT_MODEL; executionSuccess = true; }
+          if (result) { providerUsed = "cloudflare"; modelUsed = CF_TEXT_MODEL; executionSuccess = true; recordUsage("cloudflare", data); }
         } else {
           diagnosticErrors.push(`Cloudflare ${CF_TEXT_MODEL} (${cfRes.status}): ${(await cfRes.text().catch(() => "")).slice(0, 140)}`);
         }
@@ -1013,7 +1171,7 @@ serve(async (req) => {
           if (togetherRes.ok) {
             const data = await togetherRes.json();
             result = data?.choices?.[0]?.message?.content || "";
-            if (result) { providerUsed = "together"; modelUsed = togetherModel; executionSuccess = true; break; }
+            if (result) { providerUsed = "together"; modelUsed = togetherModel; executionSuccess = true; recordUsage("together", data); break; }
           } else {
             diagnosticErrors.push(`Together ${togetherModel} (${togetherRes.status})`);
           }
@@ -1037,7 +1195,7 @@ serve(async (req) => {
             if (hfRes.ok) {
               const data = await hfRes.json();
               result = data?.choices?.[0]?.message?.content || "";
-              if (result) { providerUsed = "huggingface"; modelUsed = candidateModel; executionSuccess = true; break; }
+              if (result) { providerUsed = "huggingface"; modelUsed = candidateModel; executionSuccess = true; recordUsage("huggingface", data); break; }
             } else {
               diagnosticErrors.push(`HF ${candidateModel} (${hfRes.status})`);
             }
@@ -1084,23 +1242,56 @@ serve(async (req) => {
     try {
       const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL") || "", serviceRoleKey || Deno.env.get("SUPABASE_ANON_KEY") || "");
       const isFreeTier = providerUsed === "gemini" || providerUsed === "groq" || providerUsed === "cloudflare" || modelUsed.includes(":free");
-      const promptTokens = Math.max(1, Math.ceil(prompt.length / 4));
-      const completionTokens = Math.max(0, Math.ceil(result.length / 4));
-      const estimatedCost = isFreeTier ? 0 : ((promptTokens + completionTokens) / 1000000) * 1.5;
+
+      // Prefer the provider's *reported* usage; fall back to the len/4 heuristic
+      // only when nothing usable came back on the successful response.
+      const real: ProviderUsage | null = providerUsage && (providerUsage as ProviderUsage).total > 0
+        ? (providerUsage as ProviderUsage)
+        : null;
+      const estPromptTokens = Math.max(1, Math.ceil(prompt.length / 4));
+      const estCompletionTokens = Math.max(0, Math.ceil(result.length / 4));
+      const promptTokens = real ? (real.prompt || estPromptTokens) : estPromptTokens;
+      const completionTokens = real ? (real.completion || estCompletionTokens) : estCompletionTokens;
+      const totalTokens = real ? real.total : promptTokens + completionTokens;
+
+      // Real cost math from the per-model price table when we have real tokens
+      // (or even estimated ones — a priced model still beats the flat guess).
+      const pricing = resolvePricing(modelUsed);
+      let estimatedCost: number;
+      let pricingSource: string;
+      if (pricing) {
+        estimatedCost = (promptTokens / 1_000_000) * pricing.pin + (completionTokens / 1_000_000) * pricing.pout;
+        pricingSource = pricing.src;
+      } else if (isFreeTier) {
+        estimatedCost = 0;
+        pricingSource = "free_tier_heuristic";
+      } else {
+        estimatedCost = ((promptTokens + completionTokens) / 1_000_000) * 1.5;
+        pricingSource = "flat_1.5_per_mtok";
+      }
+      const billable = estimatedCost > 0;
+
       void supabaseAdmin.from("ai_usage_log").insert({
         agent_role: currentTask,
         task_type: currentTask,
         model_used: modelUsed,
         provider: providerUsed,
-        cost_tier: isFreeTier ? "free" : "paid",
+        cost_tier: billable ? "paid" : "free",
         prompt_tokens: promptTokens,
         completion_tokens: completionTokens,
-        total_tokens: promptTokens + completionTokens,
+        total_tokens: totalTokens,
         estimated_cost_usd: Number(estimatedCost.toFixed(6)),
         latency_ms: Date.now() - requestStart,
         started_at: new Date(requestStart).toISOString(),
         success: true,
-        metadata: { is_free_tier: isFreeTier, model_candidate: model, preferred_provider: preferredProvider ?? null },
+        metadata: {
+          is_free_tier: isFreeTier,
+          model_candidate: model,
+          preferred_provider: preferredProvider ?? null,
+          token_source: real ? "provider" : "estimated",
+          pricing_source: pricingSource,
+          streamed: false,
+        },
       }).then(() => {});
     } catch { /* non-blocking */ }
 

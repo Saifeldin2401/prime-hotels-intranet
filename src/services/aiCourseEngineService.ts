@@ -3,7 +3,7 @@
  * Orchestrates multi-stage generation, AI image generation, Supabase persistence, presets, and QA audits.
  */
 
-import { aiCourseOrchestrator } from '@/lib/ai/agents/orchestrator'
+import { aiCourseOrchestrator, CourseGenerationCancelledError } from '@/lib/ai/agents/orchestrator'
 import { imageAgent } from '@/lib/ai/agents/imageAgent'
 import {
   analyzeLessonVisualOpportunities,
@@ -35,6 +35,7 @@ import type {
   CloudflareImageModel,
   CloudflareUsageStats,
   CourseBlueprint,
+  CourseGenerationCheckpoint,
   CourseGenerationJob,
   CourseGenerationPreset,
   CourseQAQualityReport,
@@ -53,12 +54,13 @@ export const aiCourseEngineService = {
   async executeCoursePipeline(
     rawConfig: FullCourseGenerationConfig,
     onProgress?: (stage: number, stageName: string, detail: string) => void,
-    opts?: { signal?: AbortSignal }
+    opts?: { signal?: AbortSignal; resumeJobId?: string }
   ): Promise<{
     blueprint: CourseBlueprint
     qaReport: CourseQAQualityReport
     jobId?: string
     durationMs: number
+    resumedFromCheckpoint: boolean
   }> {
     const startTime = Date.now()
     const config = harmonizeCourseConfig(rawConfig)
@@ -102,17 +104,114 @@ export const aiCourseEngineService = {
       final_scoring: { stage: 6, name: 'Final Packaging & Delivery' },
     }
 
-    const orchestrated = await aiCourseOrchestrator.orchestrate(config, {
-      preferredModel: config?.aiControls?.preferredModel,
-      signal: opts?.signal,
-      maxConcurrency: platformCfg.maxConcurrency,
-      skipAudio: config.audioConfig?.enableAudio !== true,
-      skipImages: config.imageConfig?.enableAIImages === false,
-      onProgress: (event) => {
-        const stageInfo = phaseToStageMap[event.phase] || { stage: 3, name: event.title }
-        onProgress?.(stageInfo.stage, stageInfo.name, `${event.title}: ${event.detail}`)
-      },
-    })
+    // ------------------------------------------------------------------
+    // Job row lifecycle + resume-from-checkpoint.
+    // The row is now created BEFORE the pipeline runs (status 'running') so
+    // checkpoints can be persisted into metadata.checkpoint mid-flight. A
+    // resumed run reuses the existing row and loads its checkpoint.
+    // ------------------------------------------------------------------
+    let jobId: string | undefined
+    let priorMetadata: Record<string, unknown> = {}
+    let resumeCheckpoint: CourseGenerationCheckpoint | null = null
+
+    if (opts?.resumeJobId) {
+      try {
+        const { data: existing } = await supabase
+          .from('course_generation_jobs')
+          .select('id, metadata')
+          .eq('id', opts.resumeJobId)
+          .maybeSingle()
+        if (existing?.id) {
+          jobId = existing.id
+          priorMetadata = ((existing.metadata as Record<string, unknown>) || {})
+          const cp = priorMetadata.checkpoint
+          if (cp && typeof cp === 'object' && (cp as { version?: number }).version === 1) {
+            resumeCheckpoint = cp as CourseGenerationCheckpoint
+          }
+          await supabase
+            .from('course_generation_jobs')
+            .update({ status: 'running', updated_at: new Date().toISOString() })
+            .eq('id', jobId)
+        }
+      } catch (resumeErr) {
+        console.warn('[aiCourseEngine] resume checkpoint load failed — full run:', resumeErr)
+      }
+    }
+
+    if (!jobId) {
+      try {
+        const { data: created } = await supabase
+          .from('course_generation_jobs')
+          .insert({
+            mode: config.generationMode,
+            status: 'running',
+            config: config as any,
+            created_by: generatingUserId,
+          })
+          .select('id')
+          .single()
+        jobId = created?.id
+      } catch (createErr) {
+        console.warn('[aiCourseEngine] could not pre-create job row:', createErr)
+      }
+    }
+
+    const persistCheckpoint = (checkpoint: CourseGenerationCheckpoint) => {
+      if (!jobId) return
+      void supabase
+        .from('course_generation_jobs')
+        .update({
+          status: 'running',
+          metadata: { ...priorMetadata, checkpoint } as any,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', jobId)
+        .then(() => {})
+    }
+
+    let orchestrated: Awaited<ReturnType<typeof aiCourseOrchestrator.orchestrate>>
+    try {
+      orchestrated = await aiCourseOrchestrator.orchestrate(config, {
+        preferredModel: config?.aiControls?.preferredModel,
+        signal: opts?.signal,
+        maxConcurrency: platformCfg.maxConcurrency,
+        skipAudio: config.audioConfig?.enableAudio !== true,
+        skipImages: config.imageConfig?.enableAIImages === false,
+        resumeJobId: opts?.resumeJobId,
+        resumeCheckpoint,
+        onCheckpoint: persistCheckpoint,
+        onProgress: (event) => {
+          const stageInfo = phaseToStageMap[event.phase] || { stage: 3, name: event.title }
+          onProgress?.(stageInfo.stage, stageInfo.name, `${event.title}: ${event.detail}`)
+        },
+      })
+    } catch (pipelineErr) {
+      // Mark the row so the history UI can offer "Resume". A cancellation (or any
+      // error with a checkpoint already on the row) => 'interrupted'; otherwise
+      // 'failed'. The checkpoint written mid-flight stays in metadata.
+      if (jobId) {
+        const cancelled = pipelineErr instanceof CourseGenerationCancelledError
+        try {
+          const { data: row } = await supabase
+            .from('course_generation_jobs')
+            .select('metadata')
+            .eq('id', jobId)
+            .maybeSingle()
+          const hasCheckpoint = Boolean((row?.metadata as { checkpoint?: unknown } | null)?.checkpoint)
+          await supabase
+            .from('course_generation_jobs')
+            .update({
+              status: cancelled || hasCheckpoint ? 'interrupted' : 'failed',
+              error_message: (pipelineErr as Error)?.message?.slice(0, 500) ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', jobId)
+        } catch (markErr) {
+          console.warn('[aiCourseEngine] could not mark interrupted job:', markErr)
+        }
+      }
+      throw pipelineErr
+    }
 
     const blueprint = orchestrated.blueprint
     const qaReport = orchestrated.legacyQaReport
@@ -125,38 +224,48 @@ export const aiCourseEngineService = {
     const telemetry = getPipelineTelemetry(orchestrated.pipelineRunId)
     const modelsUsed = telemetry ? Object.keys(telemetry.byModel) : [config?.aiControls?.preferredModel || 'auto']
 
-    // Record generation job in database
-    let jobId: string | undefined
-    try {
-      const { data: jobData } = await supabase
-        .from('course_generation_jobs')
-        .insert({
-          mode: config.generationMode,
-          status: 'completed',
-          config: config as any,
-          blueprint: blueprint as any,
-          qa_report: qaReport as any,
-          models_used: modelsUsed,
-          duration_ms: durationMs,
-          created_by: generatingUserId,
-          ...(telemetry
-            ? {
-                metadata: {
-                  ai_requests: telemetry.requests,
-                  ai_failures: telemetry.failures,
-                  ai_fallbacks: telemetry.totalFallbacks,
-                  free_requests: telemetry.freeRequests,
-                  paid_requests: telemetry.paidRequests,
-                  estimated_cost_usd: Number(telemetry.estimatedCostUSD.toFixed(4)),
-                  routing_mode: aiPlatformConfigService.activeRoutingMode,
-                },
-              }
-            : {}),
-        })
-        .select('id')
-        .single()
+    // Finalise the job row (pre-created above as status 'running'). The
+    // completed checkpoint (phase 'done') is left in metadata for provenance.
+    const finalMetadata: Record<string, unknown> = {
+      ...priorMetadata,
+      ...(telemetry
+        ? {
+            ai_requests: telemetry.requests,
+            ai_failures: telemetry.failures,
+            ai_fallbacks: telemetry.totalFallbacks,
+            free_requests: telemetry.freeRequests,
+            paid_requests: telemetry.paidRequests,
+            estimated_cost_usd: Number(telemetry.estimatedCostUSD.toFixed(4)),
+            routing_mode: aiPlatformConfigService.activeRoutingMode,
+          }
+        : {}),
+      resumed_from_checkpoint: orchestrated.resumedFromCheckpoint,
+    }
 
-      jobId = jobData?.id
+    const jobPayload = {
+      mode: config.generationMode,
+      status: 'completed' as const,
+      config: config as any,
+      blueprint: blueprint as any,
+      qa_report: qaReport as any,
+      models_used: modelsUsed,
+      duration_ms: durationMs,
+      created_by: generatingUserId,
+      metadata: finalMetadata as any,
+      updated_at: new Date().toISOString(),
+    }
+
+    try {
+      if (jobId) {
+        await supabase.from('course_generation_jobs').update(jobPayload).eq('id', jobId)
+      } else {
+        const { data: jobData } = await supabase
+          .from('course_generation_jobs')
+          .insert(jobPayload)
+          .select('id')
+          .single()
+        jobId = jobData?.id
+      }
     } catch (jobErr) {
       console.warn('Could not record course_generation_jobs record:', jobErr)
     }
@@ -166,6 +275,7 @@ export const aiCourseEngineService = {
       qaReport,
       jobId,
       durationMs,
+      resumedFromCheckpoint: orchestrated.resumedFromCheckpoint,
     }
   },
 
