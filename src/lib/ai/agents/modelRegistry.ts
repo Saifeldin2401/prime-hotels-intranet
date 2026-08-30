@@ -856,7 +856,12 @@ export class AIModelRegistry {
     }
 
     if (userPreferredModel && userPreferredModel !== 'auto') {
-      if (isTextModel(userPreferredModel)) {
+      // A preferred / admin-forced model is only honoured if it is actually an
+      // enabled text model under the current policy. Under Free-Only (or the
+      // daily-spend lockout) a forced PAID model is NOT in enabledIds, so it is
+      // dropped here — matching get_ai_routing_plan() server-side, which filters
+      // non-free models regardless of the agent's force_model_id.
+      if (isTextModel(userPreferredModel) && enabledIds.has(userPreferredModel)) {
         return [userPreferredModel, ...sanitized.filter((m) => m !== userPreferredModel)]
       }
     }

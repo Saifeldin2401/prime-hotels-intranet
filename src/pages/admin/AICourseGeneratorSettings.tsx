@@ -1013,6 +1013,47 @@ export default function AICourseGeneratorSettings() {
                   onChange={(v) => set('allowPremiumImages', v)}
                 />
               </div>
+
+              {/* How this baseline interacts with per-agent overrides (Agent Policies tab). */}
+              {(() => {
+                const overriders = (agentPolicies ?? []).filter(
+                  (p) => p.routingModeOverride || p.forceModelId || p.capabilityOverride || !p.enabled || p.disabledModelIds.length > 0,
+                )
+                const paidForcers = (agentPolicies ?? []).filter((p) => {
+                  const m = p.forceModelId ? models.find((x) => x.id === p.forceModelId) : undefined
+                  return m && m.costTier !== 'free'
+                })
+                const paidModeAgents = (agentPolicies ?? []).filter(
+                  (p) => p.routingModeOverride === 'quality_first' || p.routingModeOverride === 'premium',
+                )
+                if ((agentPolicies ?? []).length === 0) return null
+                return (
+                  <div className="mt-3 rounded-xl border bg-muted/20 px-3.5 py-2.5 text-[11px] space-y-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="font-semibold text-muted-foreground">Per-agent overrides:</span>
+                      <Badge variant="outline" className="text-[10px]">
+                        {overriders.length}/{(agentPolicies ?? []).length} agents override this baseline
+                      </Badge>
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab('policies')}
+                        className="text-[10px] font-semibold text-purple-600 hover:text-purple-700 underline underline-offset-2"
+                      >
+                        Open Agent Policies →
+                      </button>
+                    </div>
+                    {draft.freeOnlyMode && (paidForcers.length > 0 || paidModeAgents.length > 0) && (
+                      <p className="text-amber-700 dark:text-amber-300 leading-relaxed">
+                        ⚠ Free-Only is ON, so it overrides:{' '}
+                        {paidForcers.length > 0 && <>{paidForcers.map((p) => p.agentRole).join(', ')} (force a paid model)</>}
+                        {paidForcers.length > 0 && paidModeAgents.length > 0 && '; '}
+                        {paidModeAgents.length > 0 && <>{paidModeAgents.map((p) => p.agentRole).join(', ')} (quality/premium mode)</>}
+                        . These run free-first until Free-Only is turned off.
+                      </p>
+                    )}
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1587,12 +1628,41 @@ export default function AICourseGeneratorSettings() {
             </p>
           </div>
 
+          {/* Global baseline every "Inherit" below resolves to — kept in sync with the Strategy tab. */}
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border bg-muted/20 px-3.5 py-2.5 text-[11px]">
+            <span className="font-semibold text-muted-foreground">Global baseline (Strategy tab):</span>
+            <Badge variant="outline" className="text-[10px] capitalize">
+              {draft.routingMode.replace('_', '-')} mode
+            </Badge>
+            {draft.freeOnlyMode ? (
+              <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">
+                Free-Only ON — paid forced models &amp; quality/premium overrides below are skipped until it&apos;s turned off
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="text-[10px]">Free-Only OFF — paid models allowed</Badge>
+            )}
+            {(() => {
+              const overrideCount = (agentPolicies ?? []).filter(
+                (p) => p.routingModeOverride || p.forceModelId || p.capabilityOverride || !p.enabled || p.disabledModelIds.length > 0,
+              ).length
+              return overrideCount > 0 ? (
+                <Badge variant="outline" className="text-[10px] bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950 dark:text-purple-300">
+                  {overrideCount} agent{overrideCount === 1 ? '' : 's'} override the baseline
+                </Badge>
+              ) : (
+                <span className="text-muted-foreground">All {(agentPolicies ?? []).length} agents inherit the baseline.</span>
+              )
+            })()}
+          </div>
+
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {(agentPolicies ?? []).map((pol) => (
               <AgentPolicyCard
                 key={pol.agentRole}
                 policy={pol}
                 textModels={models.filter((m) => !isImageModel(m.id))}
+                globalRoutingMode={draft.routingMode}
+                globalFreeOnly={draft.freeOnlyMode}
                 saving={updateAgentPolicy.isPending}
                 onSave={(role, patch) =>
                   updateAgentPolicy.mutate(
@@ -2052,16 +2122,28 @@ const ROLE_LABELS: Record<string, string> = {
 function AgentPolicyCard({
   policy,
   textModels,
+  globalRoutingMode,
+  globalFreeOnly,
   saving,
   onSave,
 }: {
   policy: AIAgentPolicy
   textModels: ReturnType<typeof getAllModels>
+  globalRoutingMode: RoutingMode
+  globalFreeOnly: boolean
   saving: boolean
   onSave: (role: string, patch: Partial<AIAgentPolicy>) => void
 }) {
   const [draft, setDraft] = useState<AIAgentPolicy>(policy)
   useEffect(() => { setDraft(policy) }, [policy])
+
+  // The routing mode this agent effectively runs under, and whether the global
+  // Free-Only switch neutralises the agent's own choices.
+  const effectiveMode = draft.routingModeOverride ?? globalRoutingMode
+  const forcedModelMeta = draft.forceModelId ? textModels.find((m) => m.id === draft.forceModelId) : undefined
+  const forcedModelIsPaid = Boolean(forcedModelMeta && forcedModelMeta.costTier !== 'free')
+  const paidModeOverridden = globalFreeOnly && (draft.routingModeOverride === 'quality_first' || draft.routingModeOverride === 'premium')
+  const forcedModelBlocked = globalFreeOnly && forcedModelIsPaid
 
   const dirty = JSON.stringify(draft) !== JSON.stringify(policy)
   const patch = <K extends keyof AIAgentPolicy>(k: K, v: AIAgentPolicy[K]) =>
@@ -2097,9 +2179,33 @@ function AgentPolicyCard({
           </div>
           <Switch checked={draft.enabled} onCheckedChange={(v) => patch('enabled', v)} />
         </div>
+        {draft.enabled && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-2 text-[10px]">
+            <span className="text-muted-foreground">Effective routing:</span>
+            <Badge variant="outline" className="text-[9px] capitalize">
+              {effectiveMode.replace('_', '-')}
+              {!draft.routingModeOverride && <span className="text-muted-foreground ms-1">(inherited)</span>}
+            </Badge>
+            {globalFreeOnly && (
+              <Badge variant="outline" className="text-[9px] bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300">
+                Free-Only (global)
+              </Badge>
+            )}
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="p-4 pt-0 space-y-3">
+        {draft.enabled && (paidModeOverridden || forcedModelBlocked) && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/40 dark:border-amber-800 px-2.5 py-2 text-[10px] leading-relaxed text-amber-800 dark:text-amber-200 space-y-0.5">
+            {paidModeOverridden && (
+              <p>⚠ This agent&apos;s <strong>{draft.routingModeOverride}</strong> routing mode is ignored while the Strategy tab&apos;s <strong>Free-Only</strong> switch is on — it runs free-first until you turn Free-Only off.</p>
+            )}
+            {forcedModelBlocked && (
+              <p>⚠ Forced model <strong className="font-mono">{draft.forceModelId}</strong> is a paid model. <strong>Free-Only</strong> skips it — the agent falls through to the next free model. Turn Free-Only off (Strategy tab) or force a free model.</p>
+            )}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2.5">
           <div className="space-y-1">
             <Label className="text-[10px] text-muted-foreground font-semibold">Routing mode</Label>
@@ -2109,11 +2215,17 @@ function AgentPolicyCard({
             >
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value={INHERIT} className="text-xs">Inherit global</SelectItem>
+                <SelectItem value={INHERIT} className="text-xs">
+                  Inherit global <span className="text-muted-foreground">({globalRoutingMode.replace('_', '-')})</span>
+                </SelectItem>
                 <SelectItem value="free_first" className="text-xs">Free-first</SelectItem>
                 <SelectItem value="balanced" className="text-xs">Balanced</SelectItem>
-                <SelectItem value="quality_first" className="text-xs">Quality-first</SelectItem>
-                <SelectItem value="premium" className="text-xs">Premium</SelectItem>
+                <SelectItem value="quality_first" className="text-xs">
+                  Quality-first{globalFreeOnly ? ' — blocked by Free-Only' : ''}
+                </SelectItem>
+                <SelectItem value="premium" className="text-xs">
+                  Premium{globalFreeOnly ? ' — blocked by Free-Only' : ''}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
