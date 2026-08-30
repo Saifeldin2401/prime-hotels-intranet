@@ -59,11 +59,6 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
     const [isUploading, setIsUploading] = useState(false)
     const [showMediaPicker, setShowMediaPicker] = useState(false)
     const fileInputRef = useRef<HTMLInputElement>(null)
-    
-    // Get user's primary property for media uploads
-    const { data: properties } = useProperties()
-    const primaryProperty = properties?.[0]
-    const { uploadFile } = useMedia({ propertyId: primaryProperty?.id, autoFetch: false })
 
     const isValidUrl = useMemo(() => {
         try {
@@ -208,16 +203,9 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
 
                             setIsUploading(true)
                             try {
-                                // Auto-compress oversized files, upload, then sync
-                                // the stored (possibly compressed) file to the library.
-                                const { url, file: storedFile } = await uploadVideoWithCompression(file)
-
-                                await uploadFile(storedFile, {
-                                    title: file.name.replace(/\.[^/.]+$/, ''),
-                                    category: 'knowledgebase',
-                                    property_id: primaryProperty?.id,
-                                })
-
+                                // Auto-compress oversized files; upload also records
+                                // the video in the Media Library (see supabaseUpload).
+                                const { url } = await uploadVideoWithCompression(file)
                                 onChange(url)
                                 toast.success('Video uploaded and added to Media Library')
                             } catch (error) {

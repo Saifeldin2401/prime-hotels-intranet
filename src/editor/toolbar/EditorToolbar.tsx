@@ -255,7 +255,35 @@ export function EditorToolbar({
             </Popover>
           )}
 
-          {/* Insert menu — everything that adds a block lives here */}
+          {/* Media — dedicated, visible buttons */}
+          {config.features.media && (
+            <>
+              <Separator orientation="vertical" className="mx-1 h-6" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className={primaryBtn} disabled={disabledAll} title="Image">
+                    <ImageIcon className="h-4 w-4" /> Image
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-48">
+                  <DropdownMenuItem onSelect={onUploadImage}>
+                    <UploadCloud className="me-2 h-4 w-4" /> Upload image
+                  </DropdownMenuItem>
+                  {onPickMedia && (
+                    <DropdownMenuItem onSelect={() => onPickMedia('image')}>
+                      <FolderOpen className="me-2 h-4 w-4" /> From media library
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <Button variant="outline" size="sm" className={primaryBtn} disabled={disabledAll} onClick={() => setVideoDialogOpen(true)} title="Video">
+                <Video className="h-4 w-4" /> Video
+              </Button>
+            </>
+          )}
+
+          {/* Insert menu — blocks */}
           <Separator orientation="vertical" className="mx-1 h-6" />
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -264,23 +292,6 @@ export function EditorToolbar({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-52">
-              {config.features.media && (
-                <>
-                  <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Media</DropdownMenuLabel>
-                  <DropdownMenuItem onSelect={onUploadImage}>
-                    <ImageIcon className="me-2 h-4 w-4" /> Upload image
-                  </DropdownMenuItem>
-                  {onPickMedia && (
-                    <DropdownMenuItem onSelect={() => onPickMedia('image')}>
-                      <FolderOpen className="me-2 h-4 w-4" /> Image from library
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onSelect={() => setVideoDialogOpen(true)}>
-                    <Video className="me-2 h-4 w-4" /> Add video…
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </>
-              )}
               <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">Blocks</DropdownMenuLabel>
               {config.features.tables && (
                 <DropdownMenuItem onSelect={insertTable}>
