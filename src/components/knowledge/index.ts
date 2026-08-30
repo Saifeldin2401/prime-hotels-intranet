@@ -4,7 +4,7 @@
 
 export { AIDocumentSummary } from './AIDocumentSummary'
 export { ChecklistRenderer, FAQAccordion, ImageGalleryRenderer, RelatedArticles, VideoPlayer } from './ContentRenderers'
-export { ChecklistBuilder, FAQBuilder, VideoContentBuilder, VisualContentBuilder } from './ContentTypeBuilders'
+export { ChecklistBuilder, FAQBuilder, StringListBuilder, VideoContentBuilder, VisualContentBuilder } from './ContentTypeBuilders'
 export { ContextualHelpWidget, usePageContextualHelp } from './ContextualHelpWidget'
 export { KnowledgeAIAssistant } from './KnowledgeAIAssistant'
 export { KnowledgeSidebar } from './KnowledgeSidebar'
