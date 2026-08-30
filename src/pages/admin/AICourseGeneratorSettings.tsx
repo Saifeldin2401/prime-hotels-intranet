@@ -194,6 +194,66 @@ export default function AICourseGeneratorSettings() {
     },
   })
 
+  // Live DB registry (ai_providers + ai_models) — the source of truth the edge
+  // gateway's router actually reads. Surfaces real provider health / cooldown /
+  // key status and per-model availability, not the static client catalog.
+  const registryQuery = useQuery({
+    queryKey: ['ai-model-registry'],
+    refetchInterval: 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc('get_ai_model_registry' as never)
+      if (error || !data) return { providers: [], models: [] }
+      return data as unknown as {
+        providers: Array<{
+          id: string
+          display_name: string
+          enabled: boolean
+          priority: number
+          key_status: string
+          health_status: string
+          cooldown_until: string | null
+          daily_budget_usd: number | null
+          rate_limit_per_min: number | null
+          notes: string | null
+        }>
+        models: Array<{
+          id: string
+          provider: string
+          modality: string
+          availability: string
+          enabled: boolean
+          is_free: boolean
+          cost_tier: string
+          quality_score: number
+          speed_score: number
+          supports_json_object: boolean
+        }>
+      }
+    },
+  })
+
+  const registryData = registryQuery.data
+
+  const dbProviders = useMemo(() => {
+    const map: Record<string, NonNullable<typeof registryData>['providers'][number]> = {}
+    for (const p of registryData?.providers ?? []) map[p.id] = p
+    return map
+  }, [registryData])
+
+  const dbModelsByProvider = useMemo(() => {
+    const map: Record<string, NonNullable<typeof registryData>['models']> = {}
+    for (const m of registryData?.models ?? []) {
+      ;(map[m.provider] ||= []).push(m)
+    }
+    return map
+  }, [registryData])
+
+  const dbModelById = useMemo(() => {
+    const map: Record<string, NonNullable<typeof registryData>['models'][number]> = {}
+    for (const m of registryData?.models ?? []) map[m.id] = m
+    return map
+  }, [registryData])
+
   const summary = useMemo(() => {
     const rows = analytics.data ?? []
     const req = rows.reduce((s, r) => s + Number(r.requests || 0), 0)
@@ -865,7 +925,18 @@ export default function AICourseGeneratorSettings() {
             {PROVIDER_METAS.map((prov) => {
               const isEnabled = draft.enabledProviders.includes(prov.id)
               const ping = pingStates[prov.id]
-              const providerModelCount = models.filter((m) => m.provider === prov.id).length
+              const db = dbProviders[prov.id]
+              const dbModelCount = (dbModelsByProvider[prov.id] ?? []).length
+              const providerModelCount = dbModelCount || models.filter((m) => m.provider === prov.id).length
+              const cooldownActive = db?.cooldown_until ? new Date(db.cooldown_until) > new Date() : false
+              const healthTone =
+                !db || db.health_status === 'unknown'
+                  ? 'text-muted-foreground'
+                  : db.health_status === 'healthy'
+                    ? 'text-emerald-600'
+                    : db.health_status === 'degraded' || db.health_status === 'rate_limited'
+                      ? 'text-amber-600'
+                      : 'text-rose-600'
 
               return (
                 <Card
@@ -898,6 +969,28 @@ export default function AICourseGeneratorSettings() {
 
                   <CardContent className="p-4 pt-0 space-y-3">
                     <p className="text-xs text-muted-foreground leading-relaxed">{prov.tagline}</p>
+
+                    {db && (
+                      <div className="flex flex-wrap items-center gap-1.5 pt-2 border-t text-[10px]">
+                        <span className={`font-semibold ${healthTone}`}>
+                          ● {db.health_status}
+                          {cooldownActive && db.cooldown_until
+                            ? ` · cooldown until ${new Date(db.cooldown_until).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+                            : ''}
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] ${
+                            db.key_status === 'configured'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
+                        >
+                          key: {db.key_status}
+                        </Badge>
+                        <span className="text-muted-foreground">priority {db.priority}</span>
+                      </div>
+                    )}
 
                     <div className="flex items-center justify-between pt-2 border-t text-xs">
                       <div className="flex items-center gap-1.5">
@@ -1063,6 +1156,7 @@ export default function AICourseGeneratorSettings() {
             {filteredModels.map((m) => {
               const status = getModelStatus(m.id)
               const isImage = isImageModel(m.id)
+              const dbm = dbModelById[m.id]
 
               return (
                 <Card
@@ -1113,6 +1207,24 @@ export default function AICourseGeneratorSettings() {
                       </Badge>
                       {m.contextWindowTokens > 0 && (
                         <span className="text-muted-foreground">{Math.round(m.contextWindowTokens / 1024)}k ctx</span>
+                      )}
+                      {dbm ? (
+                        <Badge
+                          variant="outline"
+                          className={`text-[9px] font-semibold ${
+                            dbm.availability === 'verified' && dbm.enabled
+                              ? 'text-emerald-700 border-emerald-200 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-300'
+                              : 'text-rose-700 border-rose-200 bg-rose-50 dark:bg-rose-950 dark:text-rose-300'
+                          }`}
+                        >
+                          {dbm.availability === 'verified' && dbm.enabled
+                            ? `registry ✓ (Q${dbm.quality_score}/S${dbm.speed_score})`
+                            : `registry: ${dbm.enabled ? dbm.availability : 'disabled'}`}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[9px] text-muted-foreground">
+                          not in DB registry
+                        </Badge>
                       )}
                     </div>
 

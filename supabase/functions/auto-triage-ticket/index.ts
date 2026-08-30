@@ -88,7 +88,7 @@ DESCRIPTION: ${description}
 Respond with valid JSON only:
 {
   "priority": "low|medium|high|critical",
-  "suggested_category": "Plumbing|Electrical|HVAC|Carpentry|General|Safety",
+  "suggested_category": "plumbing|electrical|hvac|appliance|structural|cosmetic|safety|other",
   "estimated_hours": 1,
   "ai_notes": "Brief note about approach"
 }
@@ -212,7 +212,7 @@ Deno.serve(async (req: Request) => {
 
     const { data: ticket, error: fetchError } = await supabase
       .from("maintenance_tickets")
-      .select("id, title, description, priority, category")
+      .select("id, title, description, priority, category, ai_triage_status")
       .eq("id", ticket_id)
       .single();
 
@@ -224,7 +224,7 @@ Deno.serve(async (req: Request) => {
       });
     }
 
-    if (ticket.category && ticket.priority !== "medium") {
+    if (ticket.ai_triage_status === "triaged") {
       return new Response(
         JSON.stringify({
           success: true,
@@ -251,13 +251,28 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Column names must match the live schema: hours go in `labor_hours`
+    // (there is no `estimated_hours`), and `category` is the lowercase
+    // `maintenance_category` enum. An unrecognized category is dropped rather
+    // than failing the whole update.
+    const VALID_CATEGORIES = [
+      "plumbing", "electrical", "hvac", "appliance",
+      "structural", "cosmetic", "safety", "other",
+    ];
+    const normalizedCategory = String(triage.suggested_category || "").toLowerCase().trim();
+    const categoryUpdate = VALID_CATEGORIES.includes(normalizedCategory)
+      ? { category: normalizedCategory }
+      : {};
+
     const { error: updateError } = await supabase
       .from("maintenance_tickets")
       .update({
         priority: triage.priority,
-        category: triage.suggested_category,
-        estimated_hours: triage.estimated_hours,
+        ...categoryUpdate,
+        labor_hours: triage.estimated_hours,
+        ai_triage_status: "triaged",
         ai_triage_notes: triage.ai_notes,
+        ai_notes: triage.ai_notes,
         ai_triaged_at: new Date().toISOString(),
       })
       .eq("id", ticket_id);
