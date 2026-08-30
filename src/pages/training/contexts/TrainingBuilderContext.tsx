@@ -464,7 +464,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       if (!moduleId) return []
       const { data, error } = await supabase
         .from('documents')
-        .select('id, title, block_type, content, block_order, created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
+        .select('id, title, block_type, content, content_ar, block_order, created_at, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
         .eq('content_type', 'training_block')
         .eq('training_module_id', moduleId)
         .order('block_order', { ascending: true })
@@ -481,18 +481,29 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (contentBlocksData && contentBlocksData.length > 0 && !isLoadedRef.current) {
-      const blocks: ContentBlockForm[] = contentBlocksData.map((block, index) => ({
+      const blocks: ContentBlockForm[] = contentBlocksData.map((block, index) => {
+        const rawContentData = (block.content_data && typeof block.content_data === 'object' && !Array.isArray(block.content_data) ? (block.content_data as Record<string, unknown>) : {})
+        // Fold the persisted Arabic column into content_data.translations so the
+        // block round-trips losslessly (builder state -> save -> reload).
+        const contentData = { ...rawContentData }
+        const blockAr = (block as { content_ar?: string | null }).content_ar
+        if (typeof blockAr === 'string' && blockAr.trim()) {
+          const existing = (contentData.translations && typeof contentData.translations === 'object' && !Array.isArray(contentData.translations) ? contentData.translations as Record<string, unknown> : {})
+          if (!existing.ar) contentData.translations = { ...existing, ar: blockAr }
+        }
+        return {
         id: block.id,
         type: block.block_type as ContentType,
         title: block.title || '',
         content: block.content || '',
         content_url: block.content_url || '',
-        content_data: (block.content_data && typeof block.content_data === 'object' && !Array.isArray(block.content_data) ? (block.content_data as Record<string, unknown>) : {}),
+        content_data: contentData,
         is_mandatory: block.is_mandatory ?? true,
         duration: normalizeDurationMinutes(block.duration_seconds),
         points: block.points,
         order: block.block_order || index
-      }))
+      }
+      })
 
       // Section grouping is persisted inside each block's content_data
       // (section_id/section_title/section_description/section_order) since
@@ -1682,7 +1693,7 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // training_content_blocks has been consolidated into documents (content_type='training_block').
     const { data: existingBlocks, error: fetchError } = await supabase
       .from('documents')
-      .select('id, title, block_type, content, block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
+      .select('id, title, block_type, content, content_ar, block_order, content_url, content_data, is_mandatory, is_deleted, ai_generated, ai_source_content, duration_seconds, points')
       .eq('content_type', 'training_block')
       .eq('training_module_id', targetId)
       .order('block_order', { ascending: true })
@@ -1704,13 +1715,23 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
     // block_type/block_order/linked_training_id), and title is NOT NULL.
     // Note: linked_training_id on documents references training_modules(id), NOT documents(id).
     // The source SOP / document ID is stored inside content_data.sop_id / content_data.source_document_id.
-    const docRows = blocksToInsert.map((b) => ({
+    const docRows = blocksToInsert.map((b) => {
+      // Keep the dedicated Arabic column in sync with the block's persisted
+      // translation (content_data.translations.ar) so AI-generated bilingual
+      // content survives a builder round-trip.
+      const translations = (b.content_data as Record<string, unknown> | undefined)?.translations
+      const arContent =
+        translations && typeof translations === 'object' && !Array.isArray(translations)
+          ? (translations as Record<string, unknown>).ar
+          : undefined
+      return {
       training_module_id: b.training_module_id || targetId,
       content_type: 'training_block',
       block_type: b.type,
       block_order: b.order,
       title: b.title || 'Content block',
       content: b.content || '',
+      content_ar: typeof arContent === 'string' && arContent.trim() ? arContent : null,
       content_url: b.content_url || null,
       content_data: {
         ...(b.content_data || {}),
@@ -1720,7 +1741,8 @@ export function TrainingBuilderProvider({ children }: { children: React.ReactNod
       is_mandatory: b.is_mandatory ?? true,
       duration_seconds: b.duration_seconds ?? null,
       points: b.points ?? null,
-    }))
+      }
+    })
 
     const { error: insertError } = await supabase
       .from('documents')
