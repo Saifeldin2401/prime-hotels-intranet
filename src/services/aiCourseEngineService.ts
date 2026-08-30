@@ -523,19 +523,22 @@ export const aiCourseEngineService = {
 
     const moduleId = moduleData.id
 
-    // 3. Link source document if present
-    if (config.sourceDocumentId) {
-      try {
-        await supabase.from('documents').insert({
-          training_module_id: moduleId,
-          content_type: 'training_document',
-          title: `Source Document: ${config.courseTopic || 'SOP Reference'}`,
-          content_data: { source_document_id: config.sourceDocumentId },
-          is_mandatory: true,
-        })
-      } catch (docErr) {
-        console.warn('Could not link source document record:', docErr)
+    // 3. Auto-attach every source document that grounded this generation. The
+    //    files are stored once (documents rows) — this only records the link
+    //    (course_source_documents). Idempotent, so a regeneration re-affirms the
+    //    same links. Visibility follows the document; nothing is made public.
+    try {
+      const refs = Array.isArray(config.sourceDocuments) ? config.sourceDocuments : []
+      const legacyId = config.sourceDocumentId
+      const allRefs = legacyId && !refs.some((r) => r.documentId === legacyId)
+        ? [...refs, { documentId: legacyId, originalFilename: 'Source document', uploaded: false }]
+        : refs
+      if (allRefs.length > 0) {
+        const { linkSourceDocuments } = await import('@/lib/documentAttachments')
+        await linkSourceDocuments(moduleId, allRefs, jobId)
       }
+    } catch (docErr) {
+      console.warn('Could not link source documents to the course:', docErr)
     }
 
     // 4. Emit faithful content blocks from the blueprint.
