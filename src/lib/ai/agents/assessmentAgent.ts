@@ -118,13 +118,23 @@ Output a valid JSON Array with EXACTLY ${count} questions:
 
 Content:\n${sanitizedContext}`
 
-    const result = await this.executePrompt<GeneratedUnifiedQuestion[]>(prompt, {
-      ...options,
-      jsonMode: true,
-      temperature: 0.3,
-    })
+    // Structurally validate the question array (question_text + recognized
+    // question_type, options for option-based types) — a wrong-shape response
+    // cascades to the next model. If every model fails, fall back to the
+    // hand-written question bank below rather than aborting the pipeline.
+    let result: AgentExecutionResult<GeneratedUnifiedQuestion[]> | null = null
+    try {
+      result = await this.executePrompt<GeneratedUnifiedQuestion[]>(prompt, {
+        ...options,
+        jsonMode: true,
+        schema: 'questions',
+        temperature: 0.3,
+      })
+    } catch (genErr) {
+      console.warn('[AssessmentAgent] generation failed all models, using fallback bank:', genErr)
+    }
 
-    let questions = Array.isArray(result.data) ? result.data : []
+    let questions = Array.isArray(result?.data) ? result.data : []
 
     if (questions.length === 0) {
       const fallbackQuestions: GeneratedUnifiedQuestion[] = [
@@ -239,7 +249,14 @@ Content:\n${sanitizedContext}`
     }
 
     return {
-      ...result,
+      agentRole: this.role,
+      success: questions.length > 0,
+      modelUsed: result?.modelUsed ?? 'fallback-bank',
+      providerUsed: result?.providerUsed ?? ('none' as AgentExecutionResult['providerUsed']),
+      costTier: result?.costTier ?? 'free',
+      estimatedCostUSD: result?.estimatedCostUSD ?? 0,
+      latencyMs: result?.latencyMs ?? 0,
+      rawOutput: result?.rawOutput ?? '',
       data: questions,
     }
   }

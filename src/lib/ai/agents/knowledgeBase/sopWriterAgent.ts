@@ -129,6 +129,8 @@ Output JSON ONLY:
     return this.executePrompt<SopWriterOutput>(prompt, {
       ...options,
       jsonMode: true,
+      // Wrong-shape output (missing contentHtml/contentHtmlAr) cascades to the next model.
+      schema: 'kb_article',
       temperature: 0.3,
       maxTokens: 7000,
     })

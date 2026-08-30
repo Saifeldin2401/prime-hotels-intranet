@@ -228,6 +228,9 @@ Return exactly ${moduleTarget} modules and ${totalLessons} lessons total. Nothin
     const result = await this.executePrompt<CourseBlueprint>(prompt, {
       ...options,
       jsonMode: true,
+      // Structurally validate the blueprint (modules[].lessons[].title) — a
+      // well-formed-but-wrong-shape response cascades to the next model.
+      schema: 'blueprint',
       temperature: 0.4,
       // The bilingual blueprint (modules + lessons in EN & AR) is large — a low
       // token cap truncates the JSON, which then fails to parse and arrives as a
