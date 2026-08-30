@@ -589,12 +589,19 @@ serve(async (req) => {
           ok: jsonValid,
           httpStatus: o.httpStatus,
           latencyMs: o.latencyMs,
-          detail: jsonValid ? "json_object mode returned valid JSON" : `json_object mode failed: ${o.detail}`,
+          detail: jsonValid
+            ? "json_object mode returned valid JSON"
+            : `json_object mode probe did not return parseable JSON (chat probe: ${o.detail})`,
           notFound: false,
         });
+        // A failed capability probe is weak, noisy evidence (reasoning-token
+        // truncation, a transient model quirk, a probe bug) — record it and stamp
+        // the check, but NEVER silently flip supports_json_object off. That flag
+        // drives get_ai_routing_plan('structured_json'); downgrading a flagship
+        // model like openai/gpt-oss-120b from one bad probe would break routing.
+        // An admin acts on a persistent red probe manually in the Models tab.
         await admin.from("ai_models").update({
           capability_checked_at: new Date().toISOString(),
-          ...(jsonValid ? {} : { supports_json_object: false }),
         }).eq("id", m.id);
         summary.capability_checked++;
       }
@@ -622,7 +629,12 @@ async function validateJsonMode(
 ): Promise<boolean> {
   const parseable = (s: string) => {
     const cleaned = s.replace(/```json|```/g, "").trim();
-    try { JSON.parse(cleaned); return true; } catch { return false; }
+    try { JSON.parse(cleaned); return true; } catch { /* fall through */ }
+    // Reasoning models (groq gpt-oss, deepseek-r1, …) prepend analysis text
+    // before the JSON object. Accept a well-formed object found anywhere.
+    const m = cleaned.match(/\{[\s\S]*\}/);
+    if (m) { try { JSON.parse(m[0]); return true; } catch { /* not json */ } }
+    return false;
   };
 
   if (m.provider === "groq" && keys.GROQ_API_KEY) {
@@ -632,7 +644,7 @@ async function validateJsonMode(
       body: JSON.stringify({
         model: m.provider_model_id,
         messages: [{ role: "user", content: JSON_PROBE_PROMPT }],
-        max_tokens: 64, temperature: 0, response_format: { type: "json_object" },
+        max_tokens: 800, temperature: 0, response_format: { type: "json_object" },
       }),
       signal: AbortSignal.timeout(25000),
     });
@@ -652,7 +664,7 @@ async function validateJsonMode(
       body: JSON.stringify({
         model: m.provider_model_id,
         messages: [{ role: "user", content: JSON_PROBE_PROMPT }],
-        max_tokens: 64, temperature: 0, response_format: { type: "json_object" },
+        max_tokens: 800, temperature: 0, response_format: { type: "json_object" },
       }),
       signal: AbortSignal.timeout(30000),
     });
@@ -668,7 +680,7 @@ async function validateJsonMode(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ role: "user", parts: [{ text: JSON_PROBE_PROMPT }] }],
-          generationConfig: { maxOutputTokens: 64, responseMimeType: "application/json" },
+          generationConfig: { maxOutputTokens: 800, responseMimeType: "application/json" },
         }),
         signal: AbortSignal.timeout(25000),
       },
@@ -683,7 +695,7 @@ async function validateJsonMode(
       {
         method: "POST",
         headers: { Authorization: `Bearer ${keys.CF_API_TOKEN}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: [{ role: "user", content: JSON_PROBE_PROMPT }], max_tokens: 64 }),
+        body: JSON.stringify({ messages: [{ role: "user", content: JSON_PROBE_PROMPT }], max_tokens: 400 }),
         signal: AbortSignal.timeout(25000),
       },
     );
@@ -695,7 +707,7 @@ async function validateJsonMode(
     const r = await fetch("https://router.huggingface.co/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${keys.HF_TOKEN}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ model: m.provider_model_id, messages: [{ role: "user", content: JSON_PROBE_PROMPT }], max_tokens: 64 }),
+      body: JSON.stringify({ model: m.provider_model_id, messages: [{ role: "user", content: JSON_PROBE_PROMPT }], max_tokens: 400 }),
       signal: AbortSignal.timeout(25000),
     });
     if (!r.ok) return false;
