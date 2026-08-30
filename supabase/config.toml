@@ -83,6 +83,15 @@ enabled = true
 verify_jwt = true
 entrypoint = "./functions/ai-document-tagger/index.ts"
 
+[functions.ai-model-verifier]
+enabled = true
+# Model discovery / verification pipeline (Gap C). Invoked by the admin UI with a
+# user JWT and by the ai-model-verifier-nightly cron with the service-role key.
+# The handler enforces its own service-role / super_admin / corporate_admin check,
+# so the platform JWT gate is disabled (mirrors process-ai-request).
+verify_jwt = false
+entrypoint = "./functions/ai-model-verifier/index.ts"
+
 [functions.approval-escalation]
 enabled = true
 verify_jwt = true

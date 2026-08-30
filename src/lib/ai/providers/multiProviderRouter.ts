@@ -31,6 +31,9 @@ export type AICapabilityClass =
 export interface MultiProviderRequestOptions {
   task?: AITaskCategory
   capability?: AICapabilityClass
+  /** Agent role — forwarded to the gateway so get_ai_routing_plan can apply the
+   *  matching ai_agent_policies row (disabled_model_ids / force_model_id). */
+  agentRole?: string
   preferredModel?: string
   temperature?: number
   maxTokens?: number
@@ -199,6 +202,7 @@ export class MultiProviderRouter {
               systemPrompt: options.systemPrompt,
               task: options.task || 'chat',
               capability: options.capability,
+              agentRole: options.agentRole,
               temperature: options.temperature ?? 0.7,
               max_tokens: options.maxTokens ?? 2048,
               jsonMode: options.jsonMode ?? false,

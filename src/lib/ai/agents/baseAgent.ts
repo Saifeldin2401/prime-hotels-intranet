@@ -11,6 +11,7 @@ import { classifyError, logAIRequest } from '@/lib/ai/observability'
 import { validateBySchema, type SchemaName } from '@/lib/ai/schemaValidator'
 import { recordSuccess, recordFailure, type RecordableErrorType, type AIProvider } from '@/lib/ai/providerHealth'
 import { aiPlatformConfigService } from '@/services/aiPlatformConfigService'
+import { aiAgentPolicyService } from '@/services/aiAgentPolicyService'
 import { modelRegistry } from './modelRegistry'
 import type {
   AgentExecutionResult,
@@ -71,12 +72,29 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
     const phase = options.phase || 'content_synthesis'
     const systemPrompt = options.systemPromptOverride || this.defaultSystemPrompt
 
+    // Per-agent admin policy (Gap D). Cached rows are loaded by the orchestrator;
+    // trigger a best-effort background load for standalone agent calls.
+    if (!aiAgentPolicyService.isLoaded()) void aiAgentPolicyService.load()
+    const agentPolicy = aiAgentPolicyService.getAgentPolicy(this.role)
+    if (agentPolicy.enabled === false) {
+      throw new Error(`[${this.name}] Agent "${this.role}" is disabled by admin policy (ai_agent_policies).`)
+    }
+
+    // force_model_id wins over an ad-hoc preferredModel; excluded models are
+    // stripped from the resolved cascade.
+    const effectivePreferredModel = agentPolicy.forceModelId || options.preferredModel
+
     // Resolve dynamic candidate models
-    const cascade = modelRegistry.resolveModelCascade(
+    let cascade = modelRegistry.resolveModelCascade(
       this.role,
       customRequirements,
-      options.preferredModel
+      effectivePreferredModel
     )
+    if (agentPolicy.disabledModelIds.length > 0) {
+      const excluded = new Set(agentPolicy.disabledModelIds)
+      const filtered = cascade.filter((id) => !excluded.has(id))
+      if (filtered.length > 0) cascade = filtered
+    }
 
     if (!options.silent) {
       this.emitEvent(options.onProgress, {
@@ -97,7 +115,9 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
     let failoverCount = 0
 
     // Admin "Spend & QA Caps" tab → per-candidate transient-error retries.
-    const maxRetries = Math.max(0, Math.min(5, aiPlatformConfigService.getCached().maxRetries ?? 2))
+    // A per-agent max_retries_override (Agent Policies tab) takes precedence.
+    const maxRetries = Math.max(0, Math.min(5,
+      agentPolicy.maxRetriesOverride ?? aiPlatformConfigService.getCached().maxRetries ?? 2))
     const TRANSIENT: ReadonlySet<string> = new Set(['rate_limit', 'timeout', 'provider_error', 'empty_response'])
 
     for (let i = 0; i < cascade.length; i++) {
@@ -111,10 +131,11 @@ export abstract class BaseAIAgent<TInput = unknown, TOutput = unknown> {
       try {
         const response = await multiProviderRouter.execute<T>(prompt, {
           task: this.mapRoleToTaskCategory(this.role),
-          capability: this.mapRoleToCapability(this.role, options),
+          capability: agentPolicy.capabilityOverride ?? this.mapRoleToCapability(this.role, options),
+          agentRole: this.role,
           preferredModel: modelId,
           systemPrompt,
-          temperature: options.temperature ?? 0.5,
+          temperature: options.temperature ?? agentPolicy.temperatureOverride ?? 0.5,
           maxTokens: options.maxTokens ?? 3000,
           jsonMode: options.jsonMode ?? false,
           timeoutMs: options.timeoutMs ?? 30000,
