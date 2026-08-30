@@ -18,6 +18,9 @@ export interface CurriculumAgentInput {
   config: FullCourseGenerationConfig
   research?: ResearchFindings
   groundedKnowledge?: GroundedKnowledgeResult
+  /** Raw text of the user's uploaded / library source document, if any. The
+   *  module + lesson structure should be derived from this when present. */
+  sourceMaterial?: string
 }
 
 export class CurriculumAgent extends BaseAIAgent<CurriculumAgentInput, CourseBlueprint> {
@@ -36,7 +39,7 @@ Always output valid structured JSON conforming to the CourseBlueprint schema.`
     input: CurriculumAgentInput,
     options: AgentExecutionOptions = {}
   ): Promise<AgentExecutionResult<CourseBlueprint>> {
-    const { config, research, groundedKnowledge } = input
+    const { config, research, groundedKnowledge, sourceMaterial } = input
     const isArabic =
       (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar') ||
       (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('arabic')
@@ -79,6 +82,14 @@ Always output valid structured JSON conforming to the CourseBlueprint schema.`
 - Content depth: "${depthWord}". Each lesson's suggestedBlockTypes should reflect these requested components: ${selectedComponents}.`
 
     let contextualEnrichment = ''
+    const trimmedSource = (sourceMaterial || '').trim()
+    if (trimmedSource.length > 40) {
+      // The user grounded this course on a real document. Its structure and
+      // terminology must drive the blueprint — not a generic hospitality outline.
+      contextualEnrichment += isArabic
+        ? `\n\nالمستند المصدر الأساسي (اشتق الوحدات والدروس والمصطلحات من هذا المحتوى مباشرةً؛ لا تخترع إجراءات تخالفه):\n"""\n${trimmedSource.slice(0, 24000)}\n"""`
+        : `\n\nPRIMARY SOURCE DOCUMENT — derive the modules, lessons, terminology and sequence directly from this. Do NOT invent procedures that contradict it; cover what it actually contains:\n"""\n${trimmedSource.slice(0, 24000)}\n"""`
+    }
     if (research) {
       const standards = (research.keyOperationalStandards || []).join('\n- ')
       const forbes = (research.forbesBenchmarks || []).join(', ')

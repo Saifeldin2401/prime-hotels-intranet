@@ -56,17 +56,21 @@ export function DocumentCourseIngestionModal({
   const [isProcessing, setIsProcessing] = useState(false)
   const [ingestionResult, setIngestionResult] = useState<IngestionResult | null>(null)
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const [fileExtractError, setFileExtractError] = useState<string | null>(null)
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
     setFileName(file.name)
-    const reader = new FileReader()
-    reader.onload = (event) => {
-      const content = event.target?.result as string
-      setDocumentText(content || '')
+    setFileExtractError(null)
+    setDocumentText('')
+    try {
+      const { extractTextFromFile } = await import('@/lib/documentText')
+      const { text } = await extractTextFromFile(file, 40000)
+      setDocumentText(text)
+    } catch (err) {
+      setFileExtractError((err as Error).message)
     }
-    reader.readAsText(file)
   }
 
   const handleIngest = async () => {
@@ -130,7 +134,7 @@ export function DocumentCourseIngestionModal({
                     {fileName || t('docIngestion.dragPrompt', 'Click to browse or drag & drop hotel SOP manual')}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-1">
-                    Supports text, markdown, SOP exports, and compliance handbooks
+                    Reads PDF, Word (.docx), text, markdown &amp; CSV — the actual document text is extracted and fed to the AI
                   </p>
                   <input
                     type="file"
@@ -149,6 +153,14 @@ export function DocumentCourseIngestionModal({
                       {fileName ? t('docIngestion.changeFile', 'Change File') : t('docIngestion.selectFile', 'Select File')}
                     </Button>
                   </label>
+                  {fileExtractError && (
+                    <p className="mt-2 text-[11px] text-rose-600 dark:text-rose-400">{fileExtractError}</p>
+                  )}
+                  {fileName && !fileExtractError && documentText && (
+                    <p className="mt-2 text-[11px] text-emerald-600 dark:text-emerald-400">
+                      {documentText.split(/\s+/).filter(Boolean).length.toLocaleString()} words extracted
+                    </p>
+                  )}
                 </div>
               </div>
 
