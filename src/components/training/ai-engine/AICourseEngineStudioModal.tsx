@@ -669,14 +669,15 @@ export function AICourseEngineStudioModal({
     }
   }
 
-  // Handle Launching Full Pipeline
-  const handleStartGeneration = async () => {
+  // Handle Launching Full Pipeline. Pass a jobId to resume an interrupted run
+  // from its last persisted checkpoint instead of regenerating from scratch.
+  const handleStartGeneration = async (resumeJobId?: string) => {
     const config = buildCurrentConfig()
     setErrorState(undefined)
     setCurrentStep('generating')
 
     try {
-      const result = await executePipeline.mutateAsync(config)
+      const result = await executePipeline.mutateAsync({ config, resumeJobId })
       setGeneratedBlueprint(result.blueprint)
       setActiveJobId(result.jobId)
 
@@ -1384,7 +1385,7 @@ export function AICourseEngineStudioModal({
                       onJumpToStage={(stage) => setCurrentStage(stage)}
                       onHarmonize={handleAutoHarmonize}
                       onSavePresetClick={() => setSavePresetDialogOpen(true)}
-                      onGenerateClick={handleStartGeneration}
+                      onGenerateClick={() => handleStartGeneration()}
                       isGenerating={executePipeline.isPending}
                       consistencyReport={consistencyReport}
                       recommendations={intelligentRecommendations}
@@ -1461,7 +1462,7 @@ export function AICourseEngineStudioModal({
                     <Button
                       type="button"
                       size="sm"
-                      onClick={handleStartGeneration}
+                      onClick={() => handleStartGeneration()}
                       disabled={executePipeline.isPending}
                       className="h-9 px-6 text-xs font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white shadow-md"
                     >
@@ -1617,7 +1618,7 @@ export function AICourseEngineStudioModal({
                         />
 
                         {/* Attached Visual Asset / Recraft SVG Preview */}
-                        {Boolean((activeLesson.visualAssets && activeLesson.visualAssets.length > 0) || (activeLesson as any).visualAsset) ? (() => {
+                        {((activeLesson.visualAssets && activeLesson.visualAssets.length > 0) || (activeLesson as any).visualAsset) ? (() => {
                           const asset: any = (activeLesson.visualAssets && activeLesson.visualAssets[0]) || (activeLesson as any).visualAsset
                           const imageUrl = asset?.image_url || asset?.publicUrl
                           const modelDisplay = (asset?.model || asset?.imageModel || 'Recraft Vector').split('/').pop()
@@ -1871,12 +1872,16 @@ export function AICourseEngineStudioModal({
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         onSelectJob={(job) => {
-          if (job.generated_blueprint) {
-            setGeneratedBlueprint(job.generated_blueprint)
+          if (job.blueprint) {
+            setGeneratedBlueprint(job.blueprint)
             setActiveJobId(job.id)
             setCurrentStep('preview')
             setHistoryOpen(false)
           }
+        }}
+        onResumeJob={(job) => {
+          setHistoryOpen(false)
+          void handleStartGeneration(job.id)
         }}
       />
 
