@@ -38,7 +38,7 @@ export default function MyLearning() {
 
     const handleStart = (assignment: LearningAssignment) => {
         if (assignment.content_type === 'quiz') {
-            navigate(`/learning/quizzes/${assignment.content_id}/take?assignment=${assignment.id}`)
+            navigate(`/assessments/${assignment.content_id}/take?assignment=${assignment.id}`)
         } else if (assignment.content_type === 'module') {
             navigate(`/learning/training/${assignment.content_id}?assignment=${assignment.id}`)
         }

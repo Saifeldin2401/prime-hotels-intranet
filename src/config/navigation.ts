@@ -448,8 +448,12 @@ export const ROUTES: RouteConfig[] = [
         order: 9,
     },
     // Secondary sub-routes (hidden from main sidebar navigation to keep UI clean)
+    // NOTE: quiz + question bank surfaces consolidated into one page at /assessments
+    // (src/pages/assessments/QuestionBank.tsx). Legacy /learning/quizzes and
+    // /questions paths still redirect there. Keep this minimal if another branch
+    // also edits navigation.ts.
     {
-        path: '/learning/quizzes',
+        path: '/assessments?section=assessments',
         title: 'quizzes',
         icon: CheckSquare,
         description: 'Manage quizzes',
@@ -459,7 +463,7 @@ export const ROUTES: RouteConfig[] = [
         hideFromNav: true,
     },
     {
-        path: '/questions',
+        path: '/assessments',
         title: 'questions',
         icon: FileQuestion,
         description: 'Manage knowledge question bank',

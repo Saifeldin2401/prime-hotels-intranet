@@ -12,7 +12,8 @@ const KnowledgeAnalytics = lazy(() => import('@/pages/knowledge/KnowledgeAnalyti
 const KnowledgeReview = lazy(() => import('@/pages/knowledge/KnowledgeReview'))
 const QuestionEditor = lazy(() => import('@/pages/questions/QuestionEditor'))
 const QuestionReview = lazy(() => import('@/pages/questions/QuestionReview'))
-const QuestionLibrary = lazy(() => import('@/pages/questions/QuestionLibrary'))
+// Consolidated assessment surface: one browse/manage page (questions + assessments).
+const QuestionBank = lazy(() => import('@/pages/assessments/QuestionBank'))
 const QuestionGeneratorPage = lazy(() => import('@/pages/questions/QuestionGeneratorPage'))
 const SystemWiki = lazy(() => import('@/pages/knowledge/SystemWiki'))
 
@@ -132,10 +133,54 @@ export const KnowledgeRoutes = () => (
         />
         <Route
             path="/questions"
+            element={<PreserveQueryNavigate to="/assessments" />}
+        />
+        <Route
+            path="/assessments"
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <QuestionLibrary />
+                        <QuestionBank />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/assessments/questions/new"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <QuestionEditor />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/assessments/generate"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <QuestionGeneratorPage />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/assessments/questions/:id"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <QuestionReview />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/assessments/questions/:id/edit"
+            element={
+                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
+                    <AppLayout>
+                        <QuestionEditor />
                     </AppLayout>
                 </ProtectedRoute>
             }
