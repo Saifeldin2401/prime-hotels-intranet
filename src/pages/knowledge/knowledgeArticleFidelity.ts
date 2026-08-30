@@ -8,7 +8,7 @@
  * The `documents` table already carries first-class bilingual + SOP columns
  * (`title_ar`, `description_ar`, `summary_ar`, `content_ar`, `sop_code`,
  * `estimated_read_time`). Everything else that has no dedicated column
- * (critical control points, Forbes benchmarks, contingency protocols, the AI
+ * (critical control points, service benchmarks, contingency protocols, the AI
  * compliance scorecard and the visual-asset reference) is round-tripped through
  * the existing `content_data` jsonb column under a single namespaced key so no
  * schema migration is required.
@@ -42,7 +42,7 @@ export interface KnowledgeVisualAssetRef {
 /** Everything from a generated article that has no dedicated `documents` column. */
 export interface KnowledgeArticleMeta {
     critical_control_points: string[]
-    forbes_benchmarks: string[]
+    service_benchmarks: string[]
     contingency_protocols: string[]
     visual_asset: KnowledgeVisualAssetRef | null
     ai_compliance_score: number | null
@@ -99,7 +99,7 @@ const stringOrNull = (value: unknown): string | null =>
 export function emptyKnowledgeArticleMeta(): KnowledgeArticleMeta {
     return {
         critical_control_points: [],
-        forbes_benchmarks: [],
+        service_benchmarks: [],
         contingency_protocols: [],
         visual_asset: null,
         ai_compliance_score: null,
@@ -246,7 +246,7 @@ export function readKnowledgeMeta(contentData: Json | null | undefined): Knowled
     if (!isPlainObject(raw)) return meta
 
     meta.critical_control_points = toStringList(raw.critical_control_points)
-    meta.forbes_benchmarks = toStringList(raw.forbes_benchmarks)
+    meta.service_benchmarks = toStringList(raw.service_benchmarks)
     meta.contingency_protocols = toStringList(raw.contingency_protocols)
     meta.visual_asset = normalizeVisualAsset(raw.visual_asset as Record<string, unknown> | null)
     meta.ai_compliance_score = numberOrNull(raw.ai_compliance_score)
@@ -263,7 +263,7 @@ export function readKnowledgeMeta(contentData: Json | null | undefined): Knowled
 export function knowledgeMetaHasContent(meta: KnowledgeArticleMeta): boolean {
     return Boolean(
         toStringList(meta.critical_control_points).length ||
-            toStringList(meta.forbes_benchmarks).length ||
+            toStringList(meta.service_benchmarks).length ||
             toStringList(meta.contingency_protocols).length ||
             meta.visual_asset ||
             meta.ai_compliance_score != null ||
@@ -291,7 +291,7 @@ export function writeKnowledgeMeta(
 
     base[CONTENT_DATA_META_KEY] = {
         critical_control_points: toStringList(meta.critical_control_points),
-        forbes_benchmarks: toStringList(meta.forbes_benchmarks),
+        service_benchmarks: toStringList(meta.service_benchmarks),
         contingency_protocols: toStringList(meta.contingency_protocols),
         visual_asset: meta.visual_asset,
         ai_compliance_score: meta.ai_compliance_score,
@@ -318,7 +318,7 @@ export function generatedArticleToFormPatch(
 
     const meta: KnowledgeArticleMeta = {
         critical_control_points: toStringList(article.critical_control_points),
-        forbes_benchmarks: toStringList(article.forbes_benchmarks),
+        service_benchmarks: toStringList(article.service_benchmarks),
         contingency_protocols: toStringList(article.contingency_protocols),
         visual_asset: visualAsset,
         ai_compliance_score: numberOrNull(article.compliance_score),

@@ -28,10 +28,10 @@ export class CurriculumAgent extends BaseAIAgent<CurriculumAgentInput, CourseBlu
   public readonly name = 'Curriculum Architect Agent'
   public readonly nameAr = 'مهندس المناهج والهيكل التعليمي'
 
-  public readonly defaultSystemPrompt = `You are the Executive Vice President of Learning Design & Hospitality Academies for ALTUS 5-Star Hotels.
+  public readonly defaultSystemPrompt = `You are the Executive Vice President of Learning Design & Hospitality Academies for a five-star hotel group.
 Your role is to formulate pedagogical blueprints with strict adherence to:
 1. Clear cognitive progression from foundational standards to complex service recovery.
-2. Forbes 5-star operational precision and Saudi Karam luxury hospitality.
+2. Five-star operational precision and authentic Saudi Karam luxury hospitality.
 3. Realistic module-to-lesson granularity and verifiable terminal learning objectives.
 Always output valid structured JSON conforming to the CourseBlueprint schema.`
 
@@ -92,9 +92,9 @@ Always output valid structured JSON conforming to the CourseBlueprint schema.`
     }
     if (research) {
       const standards = (research.keyOperationalStandards || []).join('\n- ')
-      const forbes = (research.forbesBenchmarks || []).join(', ')
+      const benchmarks = (research.serviceBenchmarks || []).join(', ')
       const ksa = (research.saudiRegulatoryDirectives || []).join(', ')
-      contextualEnrichment += `\nRESEARCH STANDARDS:\n- ${standards}\n- Forbes: ${forbes}\n- KSA: ${ksa}`
+      contextualEnrichment += `\nRESEARCH STANDARDS:\n- ${standards}\n- Service benchmarks: ${benchmarks}\n- KSA: ${ksa}`
     }
     if (groundedKnowledge && groundedKnowledge.hasGroundedSources) {
       const sops = (groundedKnowledge.keyProceduresExtracted || []).join('\n- ')
@@ -102,7 +102,7 @@ Always output valid structured JSON conforming to the CourseBlueprint schema.`
     }
 
     const prompt = isArabic
-      ? `أنت كبير مهندسي المناهج الفندقية لمجموعة فنادق ألتوس (5 نجوم).
+      ? `أنت كبير مهندسي المناهج الفندقية لمجموعة فنادق فاخرة.
 قم بإنشاء مخطط هيكلي تعليمي متكامل (Course Blueprint) بصيغة JSON دقيقة للدورة:
 - النمط: ${config.courseType}
 - الاستراتيجية التعليمية: ${config.instructionalStrategy}
@@ -167,7 +167,7 @@ ${contextualEnrichment}
     "خلاصة رئيسية 2"
   ]
 }`
-      : `You are the Senior Curriculum Architect at Altus Luxury Hotels.
+      : `You are the Senior Curriculum Architect at a five-star luxury hotel group.
 Generate a structured, publication-grade Course Blueprint JSON:
 - Course Type: ${config.courseType}
 - Strategy: ${config.instructionalStrategy}

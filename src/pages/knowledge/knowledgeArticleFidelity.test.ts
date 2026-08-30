@@ -34,7 +34,7 @@ const baseArticle = (): GeneratedKnowledgeArticle => ({
         { id: 'f1', question: 'What if late?', question_ar: 'ماذا لو تأخر؟', answer: 'Notify butler', answer_ar: 'أبلغ الخادم' },
     ],
     critical_control_points: ['Verify identity before key handover', '  ', 'Log arrival time'],
-    forbes_benchmarks: ['Greet within 15 seconds'],
+    service_benchmarks: ['Greet within 15 seconds'],
     contingency_protocols: ['If PMS offline, use manual arrival log'],
     visual_asset: {
         id: 'v1',
@@ -75,7 +75,7 @@ describe('generatedArticleToFormPatch', () => {
 
         // meta
         expect(patch.meta.critical_control_points).toEqual(['Verify identity before key handover', 'Log arrival time'])
-        expect(patch.meta.forbes_benchmarks).toEqual(['Greet within 15 seconds'])
+        expect(patch.meta.service_benchmarks).toEqual(['Greet within 15 seconds'])
         expect(patch.meta.contingency_protocols).toEqual(['If PMS offline, use manual arrival log'])
         expect(patch.meta.ai_compliance_score).toBe(92)
         expect(patch.meta.ai_compliance_notes).toEqual(['Aligns with MoT standards', 'Add Balady reference'])
@@ -109,7 +109,7 @@ describe('generatedArticleToFormPatch', () => {
             content_html_ar: '',
             sop_code: undefined,
             critical_control_points: undefined,
-            forbes_benchmarks: undefined,
+            service_benchmarks: undefined,
             contingency_protocols: undefined,
             visual_asset: undefined,
             compliance_notes: [],
@@ -134,7 +134,7 @@ describe('content_data round-trip', () => {
 
         const readBack = readKnowledgeMeta(stored)
         expect(readBack.critical_control_points).toEqual(patch.meta.critical_control_points)
-        expect(readBack.forbes_benchmarks).toEqual(patch.meta.forbes_benchmarks)
+        expect(readBack.service_benchmarks).toEqual(patch.meta.service_benchmarks)
         expect(readBack.contingency_protocols).toEqual(patch.meta.contingency_protocols)
         expect(readBack.ai_compliance_score).toBe(92)
         expect(readBack.ai_compliance_notes).toEqual(patch.meta.ai_compliance_notes)
@@ -150,7 +150,7 @@ describe('content_data round-trip', () => {
 
     it('drops the meta key but keeps siblings when meta is cleared', () => {
         const stored = writeKnowledgeMeta(
-            { keep: true, knowledge_meta: { forbes_benchmarks: ['old'] } } as never,
+            { keep: true, knowledge_meta: { service_benchmarks: ['old'] } } as never,
             emptyKnowledgeArticleMeta(),
         )
         expect(stored).toEqual({ keep: true })

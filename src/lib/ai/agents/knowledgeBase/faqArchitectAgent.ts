@@ -29,7 +29,7 @@ export class FAQArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerationCon
   public readonly name = 'Knowledge Base FAQ Architect Agent'
   public readonly nameAr = 'وكيل صياغة الأسئلة الشائعة وقواعد المعرفة'
 
-  public readonly defaultSystemPrompt = `You are the Lead Frontline Knowledge Specialist for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Lead Frontline Knowledge Specialist for a five-star luxury hotel group.
 You formulate clear, concise, and helpful FAQ databases answering common employee and guest inquiries.`
 
   public async process(

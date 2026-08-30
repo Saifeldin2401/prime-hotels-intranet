@@ -208,7 +208,7 @@ export function DocumentCourseIngestionModal({
                     <SelectContent>
                       <SelectItem value="beginner">Foundational / Onboarding</SelectItem>
                       <SelectItem value="intermediate">Operational Standard</SelectItem>
-                      <SelectItem value="advanced">Forbes 5-Star Mastery</SelectItem>
+                      <SelectItem value="advanced">five-star Mastery</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

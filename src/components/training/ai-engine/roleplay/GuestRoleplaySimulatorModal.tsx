@@ -162,7 +162,7 @@ export function GuestRoleplaySimulatorModal({
                 <DialogTitle className="text-base font-bold flex items-center gap-2">
                   <span>{t('roleplay.title', '5-Star Hospitality Guest Roleplay Simulator')}</span>
                   <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 dark:bg-amber-950 dark:text-amber-300 border-amber-200">
-                    Live Forbes Standard AI
+                    Live five-star Standard AI
                   </Badge>
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground">
@@ -393,10 +393,10 @@ export function GuestRoleplaySimulatorModal({
 
                   <div className="space-y-1">
                     <div className="flex justify-between text-[11px]">
-                      <span>⭐ {t('roleplay.forbes', 'Forbes Standard Phrasing')}</span>
-                      <span className="font-bold">{latestEvaluation.forbesStandardScore}%</span>
+                      <span>⭐ {t('roleplay.serviceStandards', 'Five-Star Service Standards')}</span>
+                      <span className="font-bold">{latestEvaluation.serviceStandardScore}%</span>
                     </div>
-                    <Progress value={latestEvaluation.forbesStandardScore} className="h-1.5 [&>div]:bg-amber-500" />
+                    <Progress value={latestEvaluation.serviceStandardScore} className="h-1.5 [&>div]:bg-amber-500" />
                   </div>
 
                   <div className="space-y-1">
@@ -437,7 +437,7 @@ export function GuestRoleplaySimulatorModal({
               <div className="text-center py-12 space-y-2 text-muted-foreground">
                 <Bot className="w-8 h-8 mx-auto text-slate-300 dark:text-slate-700" />
                 <p className="text-xs">
-                  {t('roleplay.noEvaluationYet', 'Type your response to the guest to see live Forbes 5-star rubric scoring.')}
+                  {t('roleplay.noEvaluationYet', 'Type your response to the guest to see live five-star rubric scoring.')}
                 </p>
               </div>
             )}

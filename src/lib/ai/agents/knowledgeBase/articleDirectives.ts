@@ -19,7 +19,7 @@ export interface ArticleDirectives {
 }
 
 export function buildArticleDirectives(input: KnowledgeArticleGenerationConfig): ArticleDirectives {
-  const depth = input.depthLevel || 'forbes_5star'
+  const depth = input.depthLevel || 'five_star_comprehensive'
   const depthDirective =
     depth === 'concise'
       ? 'DEPTH: concise — short sentences, scannable bullet lists, no preamble.'
@@ -27,7 +27,7 @@ export function buildArticleDirectives(input: KnowledgeArticleGenerationConfig):
         ? 'DEPTH: standard — clear and practical, no exhaustive edge cases.'
         : depth === 'regulatory_compliance'
           ? 'DEPTH: regulatory — cite specific Saudi MoT / Balady / Civil Defense / Labor Law clauses, exact tolerances and logging requirements.'
-          : 'DEPTH: Forbes 5-star comprehensive — verbatim scripts, timing benchmarks, edge cases.'
+          : 'DEPTH: five-star comprehensive — verbatim scripts, timing benchmarks, edge cases.'
 
   const lang = input.languagePreference || 'bilingual'
   const langDirective =

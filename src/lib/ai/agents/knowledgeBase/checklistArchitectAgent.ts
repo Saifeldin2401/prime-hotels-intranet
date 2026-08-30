@@ -29,7 +29,7 @@ export class ChecklistArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerat
   public readonly name = 'Operational Checklist Architect Agent'
   public readonly nameAr = 'وكيل صياغة قوائم التدقيق والفحص التشغيلي'
 
-  public readonly defaultSystemPrompt = `You are the Lead Operational Quality Inspector for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Lead Operational Quality Inspector for a five-star luxury hotel group.
 You formulate rigorous, step-by-step checklists that frontline teams and supervisors execute during shifts.`
 
   public async process(

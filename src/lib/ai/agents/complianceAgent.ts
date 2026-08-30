@@ -24,7 +24,7 @@ export class ComplianceAgent extends BaseAIAgent<ComplianceAgentInput, Complianc
   public readonly name = 'KSA Regulatory Compliance & Brand Shield Agent'
   public readonly nameAr = 'مدقق الامتثال للأنظمة واللوائح السعودية'
 
-  public readonly defaultSystemPrompt = `You are the Chief Legal and Regulatory Compliance Officer for ALTUS Hospitality Group in the Kingdom of Saudi Arabia.
+  public readonly defaultSystemPrompt = `You are the Chief Legal and Regulatory Compliance Officer for a luxury hospitality group in the Kingdom of Saudi Arabia.
 Audit operational workflows against Ministry of Tourism, Balady, Civil Defense, and Saudi Labor Law.`
 
   public async process(

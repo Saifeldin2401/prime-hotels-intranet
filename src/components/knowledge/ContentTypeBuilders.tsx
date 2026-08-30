@@ -417,10 +417,10 @@ export function ChecklistBuilder({
         toast.success(t('editor.alerts.items_added', { defaultValue: `Added ${newItems.length} checklist items` }))
     }
 
-    const loadPreset = (presetType: 'forbes_vip' | 'housekeeping' | 'shift_handover' | 'food_safety') => {
+    const loadPreset = (presetType: 'vip_luxury' | 'housekeeping' | 'shift_handover' | 'food_safety') => {
         let presetItems: Array<{ text: string; text_ar: string; is_required: boolean }> = []
 
-        if (presetType === 'forbes_vip') {
+        if (presetType === 'vip_luxury') {
             presetItems = [
                 {
                     text: 'Verify guest profile, preferences, and loyalty tier in Opera PMS prior to arrival',
@@ -428,8 +428,8 @@ export function ChecklistBuilder({
                     is_required: true
                 },
                 {
-                    text: 'Inspect VIP suite for pristine Forbes 5-star standard (cleanliness, floral setup, linen count)',
-                    text_ar: 'فحص جناح كبار الشخصيات وفق معايير فوربس 5 نجوم (النظافة، التنسيق الزهري، الشراشف)',
+                    text: 'Inspect VIP suite for pristine five-star standard (cleanliness, floral setup, linen count)',
+                    text_ar: 'فحص جناح كبار الشخصيات وفق معايير الخدمة العالمية 5 نجوم (النظافة، التنسيق الزهري، الشراشف)',
                     is_required: true
                 },
                 {
@@ -471,7 +471,7 @@ export function ChecklistBuilder({
                     is_required: true
                 },
                 {
-                    text: 'Inspect shower drain velocity and replenish Forbes brand luxury toiletries',
+                    text: 'Inspect shower drain velocity and replenish five-star brand luxury toiletries',
                     text_ar: 'فحص سرعة تصريف مياه الدش وتزويد مستلزمات الاستحمام الفاخرة المعتمدة',
                     is_required: true
                 },
@@ -623,10 +623,10 @@ export function ChecklistBuilder({
                     <span className="text-[11px] font-semibold text-slate-400">⚡ Hotel Templates:</span>
                     <button
                         type="button"
-                        onClick={() => loadPreset('forbes_vip')}
+                        onClick={() => loadPreset('vip_luxury')}
                         className="text-[10px] px-2 py-0.5 rounded-full border border-slate-200 dark:border-slate-800 hover:border-orange-400 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 transition-colors"
                     >
-                        👑 Forbes VIP Arrival
+                        👑 five-star VIP Arrival
                     </button>
                     <button
                         type="button"
@@ -1332,7 +1332,7 @@ export function VisualContentBuilder({ images, onChange }: VisualContentBuilderP
 // ============================================================================
 // Generic editable/reorderable list of short text entries, used for the
 // structured operational sections the AI KB pipeline produces:
-// Critical Control Points, Forbes benchmarks and contingency protocols.
+// Critical Control Points, service benchmarks and contingency protocols.
 
 interface StringListBuilderProps {
     items: string[]

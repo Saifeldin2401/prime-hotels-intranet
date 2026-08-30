@@ -125,7 +125,7 @@ export function StudioStageAssessments({
       desc: 'Maximum pedagogical rigor with progressive checks and comprehensive certification.',
       desc_ar: 'الخيار الأكثر شمولية: تقييم مستمر بعد الوحدات مع اختبار نهائي معتمد.',
       icon: Sparkles,
-      badge: 'Forbes Rigor',
+      badge: 'five-star Rigor',
     },
     {
       id: 'none',
@@ -155,7 +155,7 @@ export function StudioStageAssessments({
       title: 'Hotel Scenario Dilemmas',
       title_ar: 'سيناريوهات ومواقف فندقية',
       desc: 'Realistic guest interaction situations requiring judgment.',
-      badge: 'Forbes Standard',
+      badge: 'five-star Standard',
     },
     {
       type: 'ordering',
@@ -293,7 +293,7 @@ export function StudioStageAssessments({
             />
             <div className="flex justify-between text-[10px] text-muted-foreground">
               <span>60% (Basic)</span>
-              <span className="text-purple-600 font-bold">85% (Forbes Luxury Standard)</span>
+              <span className="text-purple-600 font-bold">85% (five-star Luxury Standard)</span>
               <span>100% (Strict)</span>
             </div>
           </div>

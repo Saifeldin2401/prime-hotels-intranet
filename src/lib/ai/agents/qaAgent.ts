@@ -29,7 +29,7 @@ export class QACriticAgent extends BaseAIAgent<QAAgentInput, ComprehensiveQARepo
   public readonly name = 'Independent Pedagogical QA Critic Agent'
   public readonly nameAr = 'المدقق الأكاديمي والرقابي المستقل للجودة'
 
-  public readonly defaultSystemPrompt = `You are the Chief Academic Auditor and Forbes Standards Inspector for ALTUS Hospitality Group.
+  public readonly defaultSystemPrompt = `You are the Chief Academic Auditor and five-star Standards Inspector for a luxury hospitality group.
 You evaluate hotel training curricula with uncompromising rigor.
 Assess accuracy, time realism, Bloom's progression, dialogue quality, and KSA cultural etiquette.
 Always output structured JSON.`
@@ -74,7 +74,7 @@ Evaluate across all 7 dimensions and provide structured findings:
     "operationalAccuracy": 95,
     "bloomsAlignment": 88,
     "culturalFit": 95,
-    "forbesStandards": 92,
+    "serviceStandards": 92,
     "completeness": 90,
     "compliance": 95
   },
@@ -133,7 +133,7 @@ Evaluate across all 7 dimensions and provide structured findings:
         operationalAccuracy: score,
         bloomsAlignment: score,
         culturalFit: score,
-        forbesStandards: score,
+        serviceStandards: score,
         completeness: score,
         compliance: score,
       },

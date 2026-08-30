@@ -133,11 +133,11 @@
         "rubricTitle": "5-Star Rubric Assessment",
         "empathy": "Empathy & Validation",
         "resolution": "Problem Resolution",
-        "forbes": "Forbes Standard Phrasing",
+        "serviceStandards": "Five-Star Service Standards",
         "karam": "Saudi Karam & Etiquette",
         "coachInsight": "AI Coach Feedback",
         "keyImprovements": "Recommended Refinements",
-        "noEvaluationYet": "Type your response to the guest to see live Forbes 5-star rubric scoring."
+        "noEvaluationYet": "Type your response to the guest to see live five-star rubric scoring."
     },
     "docIngestion": {
         "title": "Multimodal Document-to-Course Ingestion",
@@ -1111,7 +1111,7 @@
         "lessonsCount": "Lesson Items",
         "quizzesCount": "Quiz Checkpoints",
         "estimatedTime": "Est. Duration",
-        "bestPractices": "ALTUS Hospitality Guidelines",
+        "bestPractices": "Hospitality Guidelines",
         "curriculumSub": "Organize learning modules, rich lesson blocks, and interactive knowledge checkpoints.",
         "aiDraft": "Draft with AI",
         "chooseMethod": "Choose a fast creation method to get started in seconds.",
@@ -1733,7 +1733,7 @@
         "noDocumentAttached": "None (Generate from topic & standards)",
         "noDocumentsFound": "No Knowledge Base SOPs found",
         "courseTopicLabel": "Course Topic or Luxury Standard",
-        "courseTopicPlaceholder": "e.g., Forbes 5-Star VIP Front Desk Check-in & Concierge Protocols",
+        "courseTopicPlaceholder": "e.g., VIP Front Desk Check-in & Concierge Protocols",
         "rawSourceText": "Raw Training Content or Operational Notes (Optional)",
         "rawSourcePlaceholder": "Paste SOP sections, policy bullet points, or department guidelines here..."
     }

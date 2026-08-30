@@ -9,7 +9,7 @@ import type { KnowledgeContentType, KnowledgeVisibility } from '@/types/knowledg
 import type { ModelProvider, ModelCostTier } from '../types'
 import type { CourseVisualAsset } from '@/types/aiCourseEngine'
 
-export type KnowledgeDepthLevel = 'concise' | 'standard' | 'forbes_5star' | 'regulatory_compliance'
+export type KnowledgeDepthLevel = 'concise' | 'standard' | 'five_star_comprehensive' | 'regulatory_compliance'
 
 export interface KnowledgeArticleGenerationConfig {
   title: string
@@ -73,7 +73,7 @@ export interface GeneratedKnowledgeArticle {
   checklist_items?: GeneratedChecklistItem[]
   faq_items?: GeneratedFAQItem[]
   critical_control_points?: string[]
-  forbes_benchmarks?: string[]
+  service_benchmarks?: string[]
   contingency_protocols?: string[]
   visual_asset?: CourseVisualAsset
   compliance_score: number

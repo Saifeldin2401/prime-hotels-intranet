@@ -341,7 +341,7 @@ export const DEFAULT_QA_THRESHOLDS: Record<CourseType, QAThresholdConfig> = {
 
 export interface QAFindingItem {
   id: string
-  dimension: 'pedagogy' | 'operational_accuracy' | 'blooms_alignment' | 'cultural_fit' | 'forbes_standards' | 'clarity' | 'safety_compliance'
+  dimension: 'pedagogy' | 'operational_accuracy' | 'blooms_alignment' | 'cultural_fit' | 'service_standards' | 'clarity' | 'safety_compliance'
   severity: 'critical' | 'major' | 'minor' | 'polish'
   moduleIndex?: number
   lessonIndex?: number
@@ -361,7 +361,7 @@ export interface ComprehensiveQAReport {
     operationalAccuracy: number
     bloomsAlignment: number
     culturalFit: number
-    forbesStandards: number
+    serviceStandards: number
     completeness: number
     compliance: number
   }

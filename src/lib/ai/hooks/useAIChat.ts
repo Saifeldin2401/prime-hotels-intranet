@@ -19,8 +19,8 @@ export function useAIChat(options: UseAIChatOptions = {}) {
         id: 'welcome',
         role: 'assistant',
         content: isArabic
-          ? 'مرحباً بك! أنا المساعد الذكي لعمليات ألتوس (Altus Copilot). كيف يمكنني مساعدتك في المهام التشغيلية، الإجراءات القياسية (SOPs)، أو إعداد التقارير اليوم؟'
-          : 'Welcome to Altus Connect Copilot. How can I assist with standard operating procedures, guest service recovery, or shift reports today?',
+          ? 'مرحباً بك! أنا المساعد الذكي لالعمليات (the Operations Copilot). كيف يمكنني مساعدتك في المهام التشغيلية، الإجراءات القياسية (SOPs)، أو إعداد التقارير اليوم؟'
+          : 'Welcome to the Operations Copilot. How can I assist with standard operating procedures, guest service recovery, or shift reports today?',
         timestamp: new Date(),
       },
     ]

@@ -22,7 +22,7 @@ export class ScenarioAgent extends BaseAIAgent<ScenarioAgentInput, RoleplayScena
   public readonly name = 'Guest Dilemma & Roleplay Scenario Specialist Agent'
   public readonly nameAr = 'أخصائي سيناريوهات معضلات النزلاء والمحاكاة'
 
-  public readonly defaultSystemPrompt = `You are the Forbes Hospitality Standards Director and Guest Experience Architect for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the five-star Hospitality Standards Director and Guest Experience Architect for a five-star luxury hotel group.
 You craft emotionally authentic, nuanced guest dilemmas testing empathy, LAST recovery, and Saudi Karam etiquette.`
 
   public async process(
@@ -61,9 +61,9 @@ Output JSON matching this exact structure:
     "مخرج تعليمي 1",
     "مخرج تعليمي 2"
   ],
-  "forbesStandardsTarget": [
-    "Forbes benchmark 1 (e.g. Address guest by surname)",
-    "Forbes benchmark 2 (e.g. Never blame other departments)"
+  "serviceStandardsTarget": [
+    "five-star benchmark 1 (e.g. Address guest by surname)",
+    "five-star benchmark 2 (e.g. Never blame other departments)"
   ]
 }`
 

@@ -37,7 +37,7 @@ export class ActivitiesAgent extends BaseAIAgent<ActivitiesAgentInput, Operation
   public readonly name = 'Interactive Activities & Drills Agent'
   public readonly nameAr = 'وكيل الأنشطة التفاعلية والتدريبات الميدانية'
 
-  public readonly defaultSystemPrompt = `You are the Lead Experiential Learning Designer for ALTUS 5-Star Hotel Academy.
+  public readonly defaultSystemPrompt = `You are the Lead Experiential Learning Designer for the hotel group's training academy.
 Generate practical, hands-on hotel operational drills and activities in structured JSON.`
 
   public async process(

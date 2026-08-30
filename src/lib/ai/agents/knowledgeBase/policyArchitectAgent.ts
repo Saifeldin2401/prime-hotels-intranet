@@ -31,7 +31,7 @@ export class PolicyArchitectAgent extends BaseAIAgent<KnowledgeArticleGeneration
   public readonly name = 'Corporate & Hotel Policy Architect Agent'
   public readonly nameAr = 'مهندس السياسات الفندقية والحوكمة المؤسسية'
 
-  public readonly defaultSystemPrompt = `You are the Chief Legal & Corporate Governance Officer for ALTUS Hospitality Group in KSA.
+  public readonly defaultSystemPrompt = `You are the Chief Legal & Corporate Governance Officer for a luxury hospitality group in KSA.
 You draft authoritative, fair, and legally compliant hotel policies.`
 
   public async process(

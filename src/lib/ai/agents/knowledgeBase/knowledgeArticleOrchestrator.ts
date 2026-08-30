@@ -78,8 +78,8 @@ export class KnowledgeArticleOrchestrator {
       'Research & RAG Grounding Agent',
       'وكيل البحث واسترجاع المعايير',
       15,
-      'Researching Forbes luxury standards and retrieving grounded hotel documents...',
-      'البحث عن معايير فوربس واسترجاع وثائق الفندق المرجعية...'
+      'Researching international luxury service standards and retrieving grounded hotel documents...',
+      'البحث عن معايير الخدمة العالمية واسترجاع وثائق الفندق المرجعية...'
     )
 
     const [researchResult, knowledgeResult] = await Promise.all([
@@ -117,8 +117,8 @@ export class KnowledgeArticleOrchestrator {
       'Research & RAG Grounding Agent',
       'وكيل البحث واسترجاع المعايير',
       30,
-      `[Model: ${researchResult.modelUsed || 'Auto Router'}] Grounded ${knowledgeResult.data?.relevantArticles?.length || 0} reference docs & ${researchResult.data?.forbesBenchmarks?.length || 0} Forbes benchmarks`,
-      `تم استرجاع ${knowledgeResult.data?.relevantArticles?.length || 0} وثيقة مرجعية و ${researchResult.data?.forbesBenchmarks?.length || 0} معيار فوربس`,
+      `[Model: ${researchResult.modelUsed || 'Auto Router'}] Grounded ${knowledgeResult.data?.relevantArticles?.length || 0} reference docs & ${researchResult.data?.serviceBenchmarks?.length || 0} service benchmarks`,
+      `تم استرجاع ${knowledgeResult.data?.relevantArticles?.length || 0} وثيقة مرجعية و ${researchResult.data?.serviceBenchmarks?.length || 0} معايير الخدمة العالمية`,
       researchResult.modelUsed
     )
 
@@ -246,7 +246,7 @@ export class KnowledgeArticleOrchestrator {
               description: [normalized.description, config.customVisualPrompt].filter(Boolean).join(' - '),
               learningOutcomes: [normalized.summary],
             } as any,
-            courseTitle: `ALTUS Knowledge Base • ${config.department || 'Operations'}`,
+            courseTitle: `Knowledge Base • ${config.department || 'Operations'}`,
             moduleTitle: normalized.title,
             imageModel: chosenImageModel,
             preferredStyle: config.visualStyle || 'technical_diagram',
@@ -334,10 +334,10 @@ export class KnowledgeArticleOrchestrator {
         'Adherence to Balady sanitation standards and Saudi Civil Defense safety clearances',
         'Immediate supervisory escalation via LAST protocol if service deviation exceeds 2 minutes',
       ],
-      forbes_benchmarks: [
+      service_benchmarks: [
         'Associate acknowledges guest warmly within 30 seconds using surname',
         'Staff demonstrates intuitive anticipation of unstated guest requests',
-        'Workstation and associate presentation strictly conform to Forbes 5-Star grooming benchmarks',
+        'Workstation and associate presentation strictly conform to five-star grooming standards',
       ],
       contingency_protocols: [
         'If PMS/POS system offline: Transition to manual triplicate vouchers and notify Duty Manager',
@@ -379,7 +379,7 @@ export class KnowledgeArticleOrchestrator {
     const title_ar = data?.titleAr || data?.title_ar || `${title} (بالعربية)`
     const description = data?.description || data?.desc || `Comprehensive operational standard for ${title}.`
     const description_ar = data?.descriptionAr || data?.description_ar || `المعايير التشغيلية القياسية لـ ${title_ar}.`
-    const summary = data?.summary || data?.executive_summary || `Forbes 5-Star verified operational guidelines for ${title}.`
+    const summary = data?.summary || data?.executive_summary || `five-star verified operational guidelines for ${title}.`
     const summary_ar = data?.summaryAr || data?.summary_ar || `دليل المعايير التشغيلية الفندقية لـ ${title_ar}.`
 
     let content_html = data?.contentHtml || data?.content_html || data?.content || ''
@@ -392,14 +392,14 @@ export class KnowledgeArticleOrchestrator {
   <section class="p-4 rounded-xl border bg-muted/20">
     <h3 class="text-base font-bold text-foreground mb-2">1. Purpose & Strategic Importance</h3>
     <p class="text-sm text-muted-foreground leading-relaxed">
-      To establish and uphold the highest Forbes 5-Star hospitality standard for <strong>${title}</strong> within ${dept}, ensuring seamless guest experiences and operational excellence.
+      To establish and uphold the highest five-star hospitality standard for <strong>${title}</strong> within ${dept}, ensuring seamless guest experiences and operational excellence.
     </p>
   </section>
 
   <section class="space-y-3">
     <h3 class="text-base font-bold text-foreground">2. Scope & Responsible Roles</h3>
     <p class="text-sm text-muted-foreground">
-      This standard applies to ${fallbackConfig.targetAudience || 'all frontline personnel, shift supervisors, and duty managers'} across ALTUS properties.
+      This standard applies to ${fallbackConfig.targetAudience || 'all frontline personnel, shift supervisors, and duty managers'} across all properties.
     </p>
   </section>
 
@@ -428,7 +428,7 @@ export class KnowledgeArticleOrchestrator {
   <section class="p-4 rounded-xl border bg-muted/20">
     <h3 class="text-base font-bold text-foreground mb-2">١. الهدف والأهمية الاستراتيجية</h3>
     <p class="text-sm text-muted-foreground leading-relaxed">
-      ترسيخ وتطبيق أعلى معايير الضيافة الفندقية الفاخرة (Forbes 5-Star) لـ <strong>${title_ar}</strong> في قسم ${dept} لضمان تجربة استثنائية للنزلاء.
+      ترسيخ وتطبيق أعلى معايير الضيافة الفندقية الفاخرة (five-star) لـ <strong>${title_ar}</strong> في قسم ${dept} لضمان تجربة استثنائية للنزلاء.
     </p>
   </section>
 

@@ -30,7 +30,7 @@ export class SopWriterAgent extends BaseAIAgent<KnowledgeArticleGenerationConfig
   public readonly name = 'Standard Operating Procedure (SOP) Writer Agent'
   public readonly nameAr = 'وكيل صياغة الإجراءات التشغيلية القياسية (SOP)'
 
-  public readonly defaultSystemPrompt = `You are the Executive Vice President of Hotel Operational Standards & Quality Assurance for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Executive Vice President of Hotel Operational Standards & Quality Assurance for a five-star luxury hotel group.
 You draft exhaustive, 5-star publication-ready Standard Operating Procedures (SOPs) for luxury hotel operations in the Kingdom of Saudi Arabia.
 Always output valid JSON conforming to the requested schema.`
 
@@ -47,7 +47,7 @@ Always output valid JSON conforming to the requested schema.`
       : ''
 
     // Honour the exact options the author chose in the studio.
-    const depth = input.depthLevel || 'forbes_5star'
+    const depth = input.depthLevel || 'five_star_comprehensive'
     const depthDirective =
       depth === 'concise'
         ? 'Keep it concise: short sentences, scannable bullet lists, minimal preamble.'
@@ -55,7 +55,7 @@ Always output valid JSON conforming to the requested schema.`
           ? 'Standard operational detail — clear and practical without exhaustive edge cases.'
           : depth === 'regulatory_compliance'
             ? 'Maximum rigour: cite specific Saudi MoT / Balady / Civil Defense clauses, exact tolerances, logging requirements.'
-            : 'Comprehensive Forbes 5-star depth with verbatim scripts, timing benchmarks and edge cases.'
+            : 'Comprehensive five-star depth with verbatim scripts, timing benchmarks and edge cases.'
     const lang = input.languagePreference || 'bilingual'
     const langDirective =
       lang === 'en' ? 'Write "contentHtml" in English only; set "contentHtmlAr" to an empty string.'

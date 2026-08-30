@@ -77,8 +77,8 @@ interface StudioStageBasicsProps {
   // Mode-Specific Advanced Options
   topicTheme: string
   onChangeTopicTheme: (t: string) => void
-  sopExtractionMode: 'strict_sop' | 'enhanced_forbes'
-  onChangeSopExtractionMode: (m: 'strict_sop' | 'enhanced_forbes') => void
+  sopExtractionMode: 'strict_sop' | 'enhanced_luxury'
+  onChangeSopExtractionMode: (m: 'strict_sop' | 'enhanced_luxury') => void
   remixGoal: 'expand' | 'microlearning' | 'translate_saudi' | 'modernize_2026' | 'add_assessments'
   onChangeRemixGoal: (g: any) => void
   pedagogicalFramework: string
@@ -604,7 +604,7 @@ export function StudioStageBasics({
                     <div className="flex flex-wrap gap-1.5">
                       {[
                         { title: 'Front Office VIP Arrival & Check-In Protocol', icon: '🛎️', dept: 'front_office' },
-                        { title: 'Housekeeping Forbes 5-Star Turndown Service', icon: '🧹', dept: 'housekeeping' },
+                        { title: 'Housekeeping Five-Star Turndown Service', icon: '🧹', dept: 'housekeeping' },
                         { title: 'F&B Fine Dining Sequence of Service', icon: '🍽️', dept: 'food_beverage' },
                         { title: 'Guest Complaint Resolution (LAST Protocol)', icon: '💬', dept: 'front_office' },
                         { title: 'Hotel Fire Safety & Emergency Evacuation', icon: '🚨', dept: 'security_safety' },
@@ -877,7 +877,7 @@ export function StudioStageBasics({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="forbes_5star">Forbes 5-Star Luxury Standards</SelectItem>
+                    <SelectItem value="five_star_comprehensive">five-star Luxury Standards</SelectItem>
                     <SelectItem value="saudi_hospitality">Saudi Cultural Hospitality & Etiquette</SelectItem>
                     <SelectItem value="standard_sop">Operational Compliance Standard</SelectItem>
                     <SelectItem value="rapid_onboarding">Rapid New Hire Onboarding</SelectItem>

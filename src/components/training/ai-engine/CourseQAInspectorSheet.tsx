@@ -292,7 +292,7 @@ export function CourseQAInspectorSheet({
                   {t('builder.ksaLaborSafety', 'Saudi Hospitality Regulatory Alignment')}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  {t('builder.verifiedForbesKsa', 'Verified against Forbes 5-Star benchmarks & local hotel hospitality regulations.')}
+                  {t('builder.verifiedServiceKsa', 'Verified against five-star benchmarks & local hotel hospitality regulations.')}
                 </p>
               </div>
               <Badge className="bg-emerald-600 text-white text-[10px] font-bold">

@@ -154,7 +154,7 @@ interface ArticleFormData {
     ai_processed_at: string
     // Structured operational sections from the AI KB pipeline
     critical_control_points: string[]
-    forbes_benchmarks: string[]
+    service_benchmarks: string[]
     contingency_protocols: string[]
     // Visual asset reference (also inlined into content HTML)
     visual_asset: KnowledgeVisualAssetRef | null
@@ -202,7 +202,7 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     ai_category: '',
     ai_processed_at: '',
     critical_control_points: [],
-    forbes_benchmarks: [],
+    service_benchmarks: [],
     contingency_protocols: [],
     visual_asset: null,
     ai_compliance_score: null,
@@ -236,7 +236,7 @@ const hasDraftableArticleContent = (formData: ArticleFormData) => {
         formData.content_ar.trim() ||
         formData.sop_code.trim() ||
         formData.critical_control_points.length > 0 ||
-        formData.forbes_benchmarks.length > 0 ||
+        formData.service_benchmarks.length > 0 ||
         formData.contingency_protocols.length > 0 ||
         formData.visual_asset ||
         formData.file_url.trim() ||
@@ -369,7 +369,7 @@ export default function KnowledgeEditor() {
                 faq_items: prefill.faq_items || prev.faq_items,
                 ai_tags: prefill.ai_tags || prev.ai_tags,
                 critical_control_points: prefill.critical_control_points || prev.critical_control_points,
-                forbes_benchmarks: prefill.forbes_benchmarks || prev.forbes_benchmarks,
+                service_benchmarks: prefill.service_benchmarks || prev.service_benchmarks,
                 contingency_protocols: prefill.contingency_protocols || prev.contingency_protocols,
                 visual_asset: prefill.visual_asset ?? prev.visual_asset,
             }))
@@ -397,7 +397,7 @@ export default function KnowledgeEditor() {
             ai_tags: Array.isArray(draft.ai_tags) ? draft.ai_tags : [],
             specific_department_ids: Array.isArray(draft.specific_department_ids) ? draft.specific_department_ids : [],
             critical_control_points: Array.isArray(draft.critical_control_points) ? draft.critical_control_points : [],
-            forbes_benchmarks: Array.isArray(draft.forbes_benchmarks) ? draft.forbes_benchmarks : [],
+            service_benchmarks: Array.isArray(draft.service_benchmarks) ? draft.service_benchmarks : [],
             contingency_protocols: Array.isArray(draft.contingency_protocols) ? draft.contingency_protocols : [],
             ai_compliance_notes: Array.isArray(draft.ai_compliance_notes) ? draft.ai_compliance_notes : [],
             ai_models_used: Array.isArray(draft.ai_models_used) ? draft.ai_models_used : [],
@@ -1013,7 +1013,7 @@ export default function KnowledgeEditor() {
                             ai_processed_at: data.ai_processed_at || '',
                             // Structured operational sections + compliance (from content_data)
                             critical_control_points: meta.critical_control_points,
-                            forbes_benchmarks: meta.forbes_benchmarks,
+                            service_benchmarks: meta.service_benchmarks,
                             contingency_protocols: meta.contingency_protocols,
                             visual_asset: meta.visual_asset,
                             ai_compliance_score: meta.ai_compliance_score,
@@ -1417,7 +1417,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             // (namespaced), preserving any unrelated keys already stored there.
             const knowledgeMeta: KnowledgeArticleMeta = {
                 critical_control_points: toStringList(formData.critical_control_points),
-                forbes_benchmarks: toStringList(formData.forbes_benchmarks),
+                service_benchmarks: toStringList(formData.service_benchmarks),
                 contingency_protocols: toStringList(formData.contingency_protocols),
                 visual_asset: formData.visual_asset,
                 ai_compliance_score: formData.ai_compliance_score,
@@ -1771,7 +1771,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     <Input
                                         value={formData.title}
                                         onChange={e => updateField('title', e.target.value)}
-                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. Forbes 5-Star VIP Arrival Protocol)...')}
+                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. five-star VIP Arrival Protocol)...')}
                                         className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
                                     />
                                 ) : (
@@ -2087,16 +2087,16 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         />
                                     </div>
 
-                                    {/* Forbes 5-Star Benchmarks */}
+                                    {/* Five-Star Service Benchmarks */}
                                     <div className="pt-2">
                                         <StringListBuilder
-                                            items={formData.forbes_benchmarks}
-                                            onChange={items => updateField('forbes_benchmarks', items)}
-                                            title={t('editor.forbes_benchmarks', 'Forbes 5-Star Benchmarks')}
-                                            description={t('editor.forbes_desc', 'Measurable luxury-service standards this procedure must meet.')}
+                                            items={formData.service_benchmarks}
+                                            onChange={items => updateField('service_benchmarks', items)}
+                                            title={t('editor.service_benchmarks', 'Five-Star Service Benchmarks')}
+                                            description={t('editor.luxury_desc', 'Measurable luxury-service standards this procedure must meet.')}
                                             icon={<Star className="h-4 w-4" />}
                                             accentClassName="text-amber-500"
-                                            placeholder={t('editor.forbes_placeholder', 'e.g. Guest greeted by name within 15 seconds of approach')}
+                                            placeholder={t('editor.luxury_placeholder', 'e.g. Guest greeted by name within 15 seconds of approach')}
                                             addLabel={t('editor.add_benchmark', 'Add benchmark')}
                                         />
                                     </div>
@@ -2696,7 +2696,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                         faq_items: patch.faq_items.length ? patch.faq_items : prev.faq_items,
                         ai_tags: patch.ai_tags.length ? patch.ai_tags : prev.ai_tags,
                         critical_control_points: patch.meta.critical_control_points.length ? patch.meta.critical_control_points : prev.critical_control_points,
-                        forbes_benchmarks: patch.meta.forbes_benchmarks.length ? patch.meta.forbes_benchmarks : prev.forbes_benchmarks,
+                        service_benchmarks: patch.meta.service_benchmarks.length ? patch.meta.service_benchmarks : prev.service_benchmarks,
                         contingency_protocols: patch.meta.contingency_protocols.length ? patch.meta.contingency_protocols : prev.contingency_protocols,
                         visual_asset: patch.meta.visual_asset ?? prev.visual_asset,
                         ai_compliance_score: patch.meta.ai_compliance_score ?? prev.ai_compliance_score,

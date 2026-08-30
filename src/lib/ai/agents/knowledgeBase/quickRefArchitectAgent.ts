@@ -30,7 +30,7 @@ export class QuickRefArchitectAgent extends BaseAIAgent<KnowledgeArticleGenerati
   public readonly name = 'Quick Reference & Pocket Guide Architect Agent'
   public readonly nameAr = 'مهندس الأدلة المرجعية السريعة وبطاقات الطوارئ'
 
-  public readonly defaultSystemPrompt = `You are the Lead Frontline Operations Quality Director for ALTUS Luxury Hospitality Group.
+  public readonly defaultSystemPrompt = `You are the Lead Frontline Operations Quality Director for a luxury hospitality group.
 You synthesize ultra-clear, rapid-reference cheat sheets and emergency decision guides for hotel staff.`
 
   public async process(
@@ -55,7 +55,7 @@ Structure of "contentHtml":
 - <h3>📋 Immediate Action Steps (Ordered Priority Sequence)</h3>
 - <h3>🚨 Red-Flag Warnings & Do Not Do Rules</h3>
 - <h3>📞 Emergency Contact & Department Escalation Matrix</h3>
-- <h3>💡 Forbes 5-Star Pro-Tips for Service Distinction</h3>
+- <h3>💡 Five-Star Pro-Tips for Service Distinction</h3>
 
 Output JSON ONLY:
 {
