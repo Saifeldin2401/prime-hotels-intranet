@@ -2,7 +2,7 @@
  * AI-Powered Interactive Guest Roleplay Simulator Engine
  * 
  * Simulates real-time 5-star hotel guest dilemmas across 10 departments,
- * evaluating staff responses with Forbes Hospitality standards and Saudi Karam etiquette.
+ * evaluating staff responses with five-star Hospitality standards and Saudi Karam etiquette.
  */
 
 import { multiProviderRouter } from './providers/multiProviderRouter'
@@ -36,7 +36,7 @@ export interface RoleplayScenario {
   initialGuestDialogueAr: string
   learningObjectives: string[]
   learningObjectivesAr: string[]
-  forbesStandardsTarget: string[]
+  serviceStandardsTarget: string[]
 }
 
 export interface RoleplayMessage {
@@ -49,7 +49,7 @@ export interface RoleplayMessage {
 export interface RoleplayTurnEvaluation {
   empathyScore: number // 0-100
   problemResolutionScore: number // 0-100
-  forbesStandardScore: number // 0-100
+  serviceStandardScore: number // 0-100
   saudiKaramScore: number // 0-100
   deescalationScore: number // 0-100
   overallScore: number // 0-100
@@ -78,7 +78,7 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
     initialGuestDialogueAr: 'لقد نسقت مسبقاً لتسجيل وصول مبكر قبل إقلاع طائرتي. لدي عرض استثماري هام بعد ساعتين وأنتم تخبرونني أن الغرفة غير جاهزة؟!',
     learningObjectives: ['Acknowledge high status without making excuses', 'Offer immediate hospitality lounge comfort and garment pressing', 'Provide concrete timeline resolution'],
     learningObjectivesAr: ['الاعتراف بمكانة الضيف دون أعذار', 'تقديم ضيافة الصالة التنفيذية وكي الملابس فوراً', 'تقديم حل زمني محدد ودقيق'],
-    forbesStandardsTarget: ['Address guest by surname', 'Never say "no" or blame housekeeping', 'Anticipate unexpressed business needs'],
+    serviceStandardsTarget: ['Address guest by surname', 'Never say "no" or blame housekeeping', 'Anticipate unexpressed business needs'],
   },
   {
     id: 'SCENARIO-FB-01',
@@ -95,7 +95,7 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
     initialGuestDialogueAr: 'لحظة! هل هذا صنوبر على سلطتي؟ لقد كررت ثلاث مرات أن المكسرات قد تسبب لي صدمة حساسية تنقلني للمستشفى!',
     learningObjectives: ['Instant apology and table safety intervention', 'Immediate retrieval and quarantine of contaminated plate', 'Executive Chef direct table consultation'],
     learningObjectivesAr: ['اعتذار فوري وتدخل مباشر لسلامة الطاولة', 'سحب وعزل الطبق فوراً', 'استدعاء الشيف التنفيذي مباشرة لطاولة الضيفة'],
-    forbesStandardsTarget: ['Immediate physical removal of risk item', 'Demonstrate sincere concern for guest safety', 'Full re-verification of entire table order'],
+    serviceStandardsTarget: ['Immediate physical removal of risk item', 'Demonstrate sincere concern for guest safety', 'Full re-verification of entire table order'],
   },
   {
     id: 'SCENARIO-HK-01',
@@ -112,7 +112,7 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
     initialGuestDialogueAr: 'عفواً! إشارة عدم الإزعاج مفعلة! كيف يفتح موظفكم الباب وأنا في منتصف مكالمة دبلوماسية سرية؟!',
     learningObjectives: ['Immediate ownership and profuse apology', 'Investigation of DND indicator system malfunction vs staff procedure', 'Restoration of absolute privacy and security audit'],
     learningObjectivesAr: ['تحمل المسؤولية والاعتذار البالغ', 'فحص نظام الإشارة الإلكترونية وتدريب العاملين', 'استعادة الخصوصية الكاملة وإجراء تدقيق أمني'],
-    forbesStandardsTarget: ['Total accountability without defensive posture', 'Management level follow-up within 15 minutes', 'Personalized recovery gesture'],
+    serviceStandardsTarget: ['Total accountability without defensive posture', 'Management level follow-up within 15 minutes', 'Personalized recovery gesture'],
   },
   {
     id: 'SCENARIO-CON-01',
@@ -129,7 +129,7 @@ export const ROLEPLAY_SCENARIOS: RoleplayScenario[] = [
     initialGuestDialogueAr: 'أطفالي جاهزون ونحن ننتظر في الردهة، وشريككم أرسل رسالة بإلغاء الرحلة؟! لقد وعدتمونا بتجربة استثنائية!',
     learningObjectives: ['Swift deployment of elite alternative itinerary (e.g. Private Diriyah / Al Bujairi Heritage VIP access)', 'Complimentary luxury transportation and private guide', 'Transforming potential disaster into a memorable highlight'],
     learningObjectivesAr: ['توفير برنامج بديل نخبوي فوراً (مثل جولة كبار الشخصيات في الدرعية ومطل البجيري)', 'توفير سيارة فاخرة ومرشد خاص مجاناً', 'تحويل الموقف إلى تجربة استثنائية تفوق التوقعات'],
-    forbesStandardsTarget: ['Resourcefulness and immediate empowerment', 'Never blame third-party vendor', 'Deliver a higher-value alternative within 10 minutes'],
+    serviceStandardsTarget: ['Resourcefulness and immediate empowerment', 'Never blame third-party vendor', 'Deliver a higher-value alternative within 10 minutes'],
   },
 ]
 
@@ -255,7 +255,7 @@ Return strict JSON:
   }
 
   /**
-   * Evaluate the trainee's response against Forbes 5-Star standards and Saudi Karam
+   * Evaluate the trainee's response against five-star standards and Saudi Karam
    */
   public async evaluateTraineeTurn(
     scenarioOrOptions: RoleplayScenario | EvaluateTraineeTurnOptions,
@@ -280,10 +280,10 @@ Return strict JSON:
       language = languageArg
     }
 
-    const prompt = `You are an elite Forbes 5-Star Hotel Quality & Training Evaluator.
+    const prompt = `You are an elite five-star Hotel Quality & Training Evaluator.
 Scenario: ${scenario.title}
 Guest: ${scenario.guestName} (${scenario.guestTemperament})
-Target Standards: ${(scenario.forbesStandardsTarget || []).join(', ') || '5-Star Guest Engagement'}
+Target Standards: ${(scenario.serviceStandardsTarget || []).join(', ') || '5-Star Guest Engagement'}
 
 Conversation History:
 ${history.map((m) => `${m.sender.toUpperCase()}: ${m.text}`).join('\n')}
@@ -293,7 +293,7 @@ Trainee's Latest Response: "${traineeResponse}"
 Evaluate the trainee's response rigorously across 5 dimensions (0 to 100):
 1. empathyScore: Warmth, sincere validation of guest emotions, eye contact mindset.
 2. problemResolutionScore: Speed of solution, empowerment, actionable steps.
-3. forbesStandardScore: 5-star phrasing (using guest surname, avoiding negative words like "no/policy").
+3. serviceStandardScore: 5-star phrasing (using guest surname, avoiding negative words like "no/policy").
 4. saudiKaramScore: Saudi generosity, welcoming spirit, and hospitality grace.
 5. deescalationScore: Lowering guest tension.
 
@@ -301,7 +301,7 @@ Return strict JSON:
 {
   "empathyScore": 85,
   "problemResolutionScore": 90,
-  "forbesStandardScore": 88,
+  "serviceStandardScore": 88,
   "saudiKaramScore": 92,
   "deescalationScore": 87,
   "overallScore": 88,
@@ -338,7 +338,7 @@ Return strict JSON:
     return {
       empathyScore: hasApology ? 90 : 75,
       problemResolutionScore: hasSolution ? 92 : 70,
-      forbesStandardScore: hasSurname ? 88 : 72,
+      serviceStandardScore: hasSurname ? 88 : 72,
       saudiKaramScore: 85,
       deescalationScore: 82,
       overallScore: Math.min(98, baseScore),

@@ -2,7 +2,7 @@
  * Research & Industry Benchmarks Agent
  * 
  * Conducts automated operational discovery for hospitality topics, extracting:
- * 1. 5-Star International Hospitality Benchmarks (Forbes Travel Guide standards)
+ * 1. 5-Star International Hospitality Benchmarks (international five-star hospitality standards)
  * 2. Saudi Vision 2030 & Ministry of Tourism Regulatory Requirements
  * 3. Essential frontline competencies, common failure modes, and safety touchpoints
  */
@@ -28,7 +28,7 @@ export interface ResearchFindings {
   keyOperationalStandardsAr: string[]
   commonFailureModes: string[]
   commonFailureModesAr: string[]
-  forbesBenchmarks: string[]
+  serviceBenchmarks: string[]
   saudiRegulatoryDirectives: string[]
   suggestedPrerequisites: string[]
   recommendedModules: Array<{
@@ -43,9 +43,9 @@ export class ResearchAgent extends BaseAIAgent<ResearchAgentInput, ResearchFindi
   public readonly name = 'Research & Industry Intelligence Agent'
   public readonly nameAr = 'وكيل البحث واستخبارات المعايير الفندقية'
 
-  public readonly defaultSystemPrompt = `You are the Principal Hospitality Intelligence & Research Specialist for ALTUS Luxury Hotels & Resorts (KSA).
+  public readonly defaultSystemPrompt = `You are the Principal Hospitality Intelligence & Research Specialist for a five-star luxury hotel group & Resorts (KSA).
 Your mission is to perform thorough operational research on hotel training subjects, synthesizing:
-1. 5-Star Forbes Travel Guide luxury service benchmarks and time standards.
+1. 5-Star international five-star hospitality standards luxury service benchmarks and time standards.
 2. Saudi Ministry of Tourism (MT), Balady Food Safety, and Saudi Labor Law mandates.
 3. Frontline execution workflows, subtle guest nuances, and common service failure points.
 Always respond in structured, valid JSON matching the requested schema.`
@@ -90,9 +90,9 @@ Generate a comprehensive JSON research report adhering strictly to this schema:
     "خطأ تشغيلي شائع 1",
     "خطأ تشغيلي شائع 2"
   ],
-  "forbesBenchmarks": [
-    "Forbes 5-star metric 1",
-    "Forbes 5-star metric 2"
+  "serviceBenchmarks": [
+    "five-star metric 1",
+    "five-star metric 2"
   ],
   "saudiRegulatoryDirectives": [
     "KSA regulatory touchpoint (e.g. Bilingual front-desk service mandate, VAT transparency)",

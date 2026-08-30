@@ -17,7 +17,7 @@ vi.mock('./providers/multiProviderRouter', () => ({
         data: {
           empathyScore: 92,
           problemResolutionScore: 95,
-          forbesStandardScore: 90,
+          serviceStandardScore: 90,
           saudiKaramScore: 94,
           deescalationScore: 91,
           overallScore: 93,

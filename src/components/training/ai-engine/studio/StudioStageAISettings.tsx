@@ -225,7 +225,7 @@ export function StudioStageAISettings({
                 Research & RAG Grounding Agent
               </p>
               <p className="text-[10px] text-muted-foreground">
-                Searches hotel SOP repository in PostgreSQL + Forbes 5-star hospitality benchmarks.
+                Searches hotel SOP repository in PostgreSQL + five-star hospitality benchmarks.
               </p>
             </div>
             <Switch checked={enableRAGDiscovery} onCheckedChange={setEnableRAGDiscovery} />
@@ -392,7 +392,7 @@ export function StudioStageAISettings({
               <div className="flex justify-between items-center text-xs font-semibold">
                 <span>{t('builder.creativityLevel', 'Pedagogical Strictness vs Creative Scenarios')}</span>
                 <span className="font-mono text-purple-600 font-bold">
-                  {creativityLevel === 1 ? 'Strict Procedural' : creativityLevel === 3 ? 'Balanced Forbes Standard' : 'Highly Creative Scenarios'}
+                  {creativityLevel === 1 ? 'Strict Procedural' : creativityLevel === 3 ? 'Balanced five-star Standard' : 'Highly Creative Scenarios'}
                 </span>
               </div>
               <Slider
@@ -404,7 +404,7 @@ export function StudioStageAISettings({
               />
               <div className="flex justify-between text-[10px] text-muted-foreground">
                 <span>Strict Fact-Only</span>
-                <span className="text-purple-600 font-bold">Balanced Forbes Quality</span>
+                <span className="text-purple-600 font-bold">Balanced five-star Quality</span>
                 <span>Rich Novel Dilemmas</span>
               </div>
             </div>

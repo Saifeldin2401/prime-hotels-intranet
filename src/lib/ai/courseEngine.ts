@@ -239,7 +239,7 @@ export const INSTRUCTIONAL_STRATEGIES: Array<{
     id: 'explain_example_practice',
     title: 'Explain → Example → Practice',
     title_ar: 'شرح ← مثال توضيحي ← تطبيق عملي',
-    description: 'Classic high-retention instructional model used by Forbes hospitality academies.',
+    description: 'Classic high-retention instructional model used by five-star hospitality academies.',
     description_ar: 'النموذج التعليمي الفعال المعتمد في أكاديميات الضيافة الفاخرة العالمية.',
     defaultTemplate: 'sop_standard',
   },
@@ -375,7 +375,7 @@ export async function generateCourseBlueprint(
   const sanitizedSource = (config.sourceContent || '').replace(/<[^>]*>/g, ' ').substring(0, 6000)
 
   const prompt = isArabic
-    ? `أنت كبير مهندسي المناهج الفندقية لمجموعة فنادق ألتوس (5 نجوم).
+    ? `أنت كبير مهندسي المناهج الفندقية لمجموعة فنادق فاخرة.
 قم بإنشاء مخطط هيكلي تعليمي (Course Blueprint) بصيغة JSON نظيفة وسريعة للدورة:
 - النمط: ${config.courseType}
 - الاستراتيجية: ${config.instructionalStrategy}
@@ -419,7 +419,7 @@ ${sanitizedSource ? `- المادة المرجعية:\n${sanitizedSource.substri
   ],
   "summaryTakeaways": ["3 خلاصات ختامية"]
 }`
-    : `You are a Senior Luxury Hospitality Curriculum Architect at Altus 5-Star Hotels.
+    : `You are a Senior Luxury Hospitality Curriculum Architect at a five-star hotel group.
 Generate a high-speed, publication-grade Course Blueprint JSON:
 - Course Type: ${config.courseType}
 - Strategy: ${config.instructionalStrategy}
@@ -610,7 +610,7 @@ export async function generateTemplatedLessonContent(
   const componentsList = (config?.lessonComponents || []).join(', ')
 
   const prompt = isArabic
-    ? `أنت خبير التدريب الفندقي الفاخر لمجموعة فنادق ألتوس.
+    ? `أنت خبير التدريب الفندقي الفاخر لمجموعة فنادق فاخرة.
 قم بكتابة محتوى تدريبي كامل وعالي الجودة بصيغة HTML دلالية نظيفة للدرس التالي:
 - الدورة: "${courseTitle}"
 - الوحدة: "${moduleTitle}"
@@ -623,17 +623,17 @@ export async function generateTemplatedLessonContent(
 الهيكل الإلزامي لكود HTML:
 1. <h3>1. المعايير والأهداف التشغيلية (Operational Standards & Objectives)</h3>
 2. <h3>2. خطوات الإجراءات بالتفصيل خطوة بخطوة (Step-by-Step Execution Workflow)</h3>
-   قائمة مرتبة <ol> تحتوي على خطوات إجرائية محددة بالدقائق ومعايير فوربس.
+   قائمة مرتبة <ol> تحتوي على خطوات إجرائية محددة بالدقائق ومعايير الخدمة العالمية.
 3. <h3>3. نصوص المحادثة والحوار مع النزلاء (Verbatim Dialogue Scripts)</h3>
    نصوص حوار واقعية بالعبارات الاحترافية المعتمدة ونبرة الصوت ولغة الجسد.
 4. <h3>4. قائمة تدقيق الجودة الإشرافية (5-Star Quality Inspection Checklist)</h3>
    قائمة <ul> للنقاط التي يفحصها المشرف قبل اعتماد الخدمة.
 5. <h3>5. بروتوكول التعافي من المشكلات (Service Recovery & LAST Framework)</h3>
    كيفية معالجة العقبات والشكاوى فوراً بنموذج (Listen, Apologize, Solve, Thank).
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة ألتوس الذهبية للتميز:</strong> توجيه تطبيقي ذكي.</div>
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>نصيحة التميز الذهبية:</strong> توجيه تطبيقي ذكي.</div>
 
 اكتب كود HTML فقط بدون كتل كود markdown وبدون نصوص خارجية.`
-    : `You are a Senior Luxury Hospitality Training Director at Altus Luxury Hotels.
+    : `You are a Senior Luxury Hospitality Training Director at a five-star luxury hotel group.
 Write an exhaustive, publication-grade training manual lesson in clean semantic HTML for:
 - Course: "${courseTitle}"
 - Module: "${moduleTitle}"
@@ -653,7 +653,7 @@ Structured HTML Requirements:
    Bullet points <ul> of mandatory items supervisors inspect.
 5. <h3>5. Service Recovery & Problem Resolution (LAST Protocol)</h3>
    Empowered frontline actions using Listen, Apologize, Solve, Thank.
-6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Altus 5-Star Pro Tip:</strong> Insider luxury tip.</div>
+6. <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-l-4 border-amber-500 rounded text-amber-900 dark:text-amber-200"><strong>Five-Star Pro Tip:</strong> Insider luxury tip.</div>
 
 Output clean HTML only, no markdown codeblocks.`
 
@@ -845,7 +845,7 @@ export async function generateExpandedQuiz(request: {
   const sanitized = request.contextContent.replace(/<[^>]*>/g, ' ').substring(0, 4000)
 
   const prompt = isArabic
-    ? `أنت خبير تقييم وجودة التعليم الفندقي لمجموعة ألتوس.
+    ? `أنت خبير تقييم وجودة التعليم الفندقي لمجموعة فنادق فاخرة.
 قم بإنشاء EXACTLY ${count} أسئلة اختبار دقيقة وعملية بناءً على المحتوى التدريبي التالي:
 - العنوان: "${request.title}"
 - أنواع الأسئلة المطلوبة حصراً: [${typesStr}]
@@ -893,7 +893,7 @@ export async function generateExpandedQuiz(request: {
 ]
 
 المحتوى:\n${sanitized}`
-    : `You are a Senior Hotel Learning Assessment & Psychometrics Director at Altus Luxury Hotels.
+    : `You are a Senior Hotel Learning Assessment & Psychometrics Director at a five-star luxury hotel group.
 Create EXACTLY ${count} rigorous, high-discrimination assessment questions based on the following training content:
 - Title: "${request.title}"
 - Required Question Types ONLY: [${typesStr}]
@@ -1007,7 +1007,7 @@ export function validateQuizQuestions(questions: GeneratedUnifiedQuestion[]): {
       if (!q.options || q.options.length < 2) {
         q.options = [
           { text: 'LAST Framework', match_value: 'Listen, Apologize, Solve, Thank', is_correct: true },
-          { text: 'Forbes 5-Star Greeting', match_value: 'Warm greeting using guest name within 30 seconds', is_correct: true },
+          { text: 'five-star Greeting', match_value: 'Warm greeting using guest name within 30 seconds', is_correct: true },
           { text: 'Turn-Down Service', match_value: 'Evening bed preparation, dim lighting, mineral water', is_correct: true },
         ]
       }
@@ -1162,15 +1162,15 @@ export async function auditCourseQuality(
   if (sparseLessonsCount > 0) {
     recommendations.push(
       isArabic
-        ? 'يوصى بتوسيع محتوى الدروس المقتضبة بإضافة خطوات إجرائية ونصوص محادثة فوربس.'
-        : 'Expand sparse lessons with step-by-step procedures, Forbes dialogue scripts, and supervisor checklists.'
+        ? 'يوصى بتوسيع محتوى الدروس المقتضبة بإضافة خطوات إجرائية ونصوص محادثة.'
+        : 'Expand sparse lessons with step-by-step procedures, five-star dialogue scripts, and supervisor checklists.'
     )
   }
   if (recommendations.length === 0) {
     recommendations.push(
       isArabic
         ? 'تم التحقق: المنهج متكامل، غير مكرر، ويلتزم بأعلى معايير الجودة والضيافة الفاخرة 5 نجوم.'
-        : 'Verified: Complete, non-repetitive curriculum adhering to 5-star Forbes operational standards.'
+        : 'Verified: Complete, non-repetitive curriculum adhering to 5-star five-star operational standards.'
     )
   }
 
@@ -1216,8 +1216,8 @@ export async function remediateCourseQAGap(
     ]
     cloned.enablingObjectives = [
       isArabic
-        ? `تحديد الخطوات الإجرائية بدقة وفق معايير فوربس العالمية`
-        : `Identify procedural steps according to Forbes luxury standards`,
+        ? `تحديد الخطوات الإجرائية بدقة وفق معايير الخدمة العالمية العالمية`
+        : `Identify procedural steps according to international luxury service standards`,
       isArabic
         ? `استخدام نصوص المحادثة اللبقة في مواقف الخدمة المباشرة`
         : `Demonstrate active listening and tailored dialogue scripts during guest interactions`,
@@ -1242,7 +1242,7 @@ export async function remediateCourseQAGap(
                 <div class="space-y-2">
                   <h4 class="font-bold text-sm text-foreground">📋 الإجراء التشغيلي القياسي (SOP)</h4>
                   <ol class="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
-                    <li><strong>التحضير المسبق:</strong> مراجعة بيانات النزيل والجاهزية التامة وفق معايير فوربس 5 نجوم.</li>
+                    <li><strong>التحضير المسبق:</strong> مراجعة بيانات النزيل والجاهزية التامة وفق معايير الخدمة العالمية 5 نجوم.</li>
                     <li><strong>التنفيذ الميداني:</strong> تطبيق الخطوات الإجرائية باحترافية وسرعة استجابة فائقة.</li>
                     <li><strong>التحقق وضمان الجودة:</strong> استخدام قائمة الفحص للتأكد من مطابقة الخدمة لأعلى المعايير.</li>
                   </ol>
@@ -1264,11 +1264,11 @@ export async function remediateCourseQAGap(
                   <ol class="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
                     <li><strong>Pre-Service Inspection:</strong> Verify workstation readiness and guest profile preferences.</li>
                     <li><strong>Frontline Execution:</strong> Carry out procedural steps with active listening and rapid responsiveness.</li>
-                    <li><strong>Quality Verification:</strong> Inspect deliverables against Forbes luxury criteria prior to guest handover.</li>
+                    <li><strong>Quality Verification:</strong> Inspect deliverables against five-star luxury criteria prior to guest handover.</li>
                   </ol>
                 </div>
                 <div class="p-3 rounded-lg bg-amber-50 border border-amber-200 text-xs text-amber-900">
-                  <strong>💬 Recommended Forbes Script:</strong> "It is our absolute pleasure to assist you today. Allow me to take care of that right away."
+                  <strong>💬 Recommended five-star Script:</strong> "It is our absolute pleasure to assist you today. Allow me to take care of that right away."
                 </div>
                 <div class="p-3 rounded-lg bg-muted/40 border text-xs">
                   <strong>✅ Supervisory Inspection Checklist:</strong> Validate timing, presentation, safety protocols, and PMS logging.
@@ -1309,7 +1309,7 @@ export async function remediateCourseQAGap(
               id: `q_${Date.now()}_${mIdx}_1`,
               question_type: 'scenario',
               prompt: isArabic
-                ? `طلب نزيل VIP خدمة خاصة أثناء وقت الذروة. ما هو الإجراء التشغيلي المعتمد وفق معايير فوربس؟`
+                ? `طلب نزيل VIP خدمة خاصة أثناء وقت الذروة. ما هو الإجراء التشغيلي المعتمد وفق معايير الخدمة العالمية؟`
                 : `A VIP guest requests an expedited service during peak occupancy. What is the approved 5-star protocol?`,
               options: [
                 { id: 'opt_1', text: isArabic ? 'الاعتذار للنزيل بسبب الازدحام' : 'Decline immediately due to high volume', is_correct: false },
@@ -1317,7 +1317,7 @@ export async function remediateCourseQAGap(
                 { id: 'opt_3', text: isArabic ? 'تأجيل الطلب حتى نهاية الوردية' : 'Postpone request until shift conclusion', is_correct: false },
               ],
               correct_answer: 'opt_2',
-              explanation: isArabic ? 'معايير فوربس تلزم بالاستجابة اللبقة وتقديم الحلول الاستباقية فوراً.' : 'Forbes luxury standards mandate gracious acknowledgment and proactive solution delivery.',
+              explanation: isArabic ? 'معايير الخدمة العالمية تلزم بالاستجابة اللبقة وتقديم الحلول الاستباقية فوراً.' : 'international luxury service standards mandate gracious acknowledgment and proactive solution delivery.',
               difficulty: 'intermediate',
               bloom_level: 'application',
               points: 10,
@@ -1408,7 +1408,7 @@ export async function refineCourseComponent(request: {
   const isArabic = language.toLowerCase().includes('ar')
 
   const prompt = isArabic
-    ? `أنت خبير التدريب الفندقي لمجموعة ألتوس.
+    ? `أنت خبير التدريب الفندقي لمجموعة فنادق فاخرة.
 قم بإعادة كتابة وتحسين المحتوى التالي وفق الإجراء المطلوب:
 - نوع العنصر: ${request.componentType}
 - الإجراء المطلوب: "${request.action}"
@@ -1418,7 +1418,7 @@ ${request.customInstruction ? `- تعليمات مخصصة: "${request.customIns
 ${request.currentContent}
 
 المطلوب: أعد كتابة المحتوى بصيغة HTML دلالية نظيفة وبأعلى درجات الاحترافية الفندقية. أخرج HTML فقط بدون كتل كود markdown.`
-    : `You are a Senior Hospitality Training Specialist at Altus Luxury Hotels.
+    : `You are a Senior Hospitality Training Specialist at a five-star luxury hotel group.
 Refine and rewrite the following course component according to the requested action:
 - Component Type: ${request.componentType}
 - Requested Action: "${request.action}"
@@ -1459,12 +1459,12 @@ function generateLocalBlueprintFallback(
   // Curated diverse modular curriculum structure (prevents duplicate generic titles)
   const curriculumTemplatesEn = [
     {
-      moduleTitle: 'Foundations of 5-Star Guest Anticipation & Forbes Benchmarks',
+      moduleTitle: 'Foundations of 5-Star Guest Anticipation & Service Benchmarks',
       lessons: [
         { title: 'The 30-Second Warm Acknowledgment & Eye Contact Protocol', desc: 'Mandatory frontline greeting standards, body language, and professional posture.', template: 'sop_standard' },
         { title: 'Proactive Need Anticipation & VIP Preference Profiling', desc: 'Reading non-verbal cues, personalization techniques, and PMS profile updating.', template: 'scenario_solving' },
         { title: 'Verbatim Dialogue Phrasing & Luxury Telephone Etiquette', desc: 'Positive language phrasing, tone modulation, and professional telephone communication.', template: 'dialogue_drill' },
-        { title: 'Cultural Etiquette & Saudi Hospitality (Karam) Excellence', desc: 'Integrating authentic Saudi Arabian warmth, coffee traditions, and cultural respect.', template: 'case_study' },
+        { title: 'Cultural Etiquette & Saudi Arabian Hospitality (Karam) Excellence', desc: 'Integrating authentic Saudi Arabian warmth, coffee traditions, and cultural respect.', template: 'case_study' },
       ],
     },
     {
@@ -1489,7 +1489,7 @@ function generateLocalBlueprintFallback(
       moduleTitle: 'Quality Auditing, Compliance & Continuous Operational Mastery',
       lessons: [
         { title: 'Daily Shift Briefings (15-Minute Huddles) & Team Coaching', desc: 'Structuring motivational shift briefings, reviewing VIP arrivals, and standard reviews.', template: 'dialogue_drill' },
-        { title: '5-Star Supervisory Checklist Auditing & Forbes Prep', desc: 'Conducting mystery shopper inspections, room readiness audits, and scorecards.', template: 'checklist_audit' },
+        { title: '5-Star Supervisory Checklist Auditing & five-star Prep', desc: 'Conducting mystery shopper inspections, room readiness audits, and scorecards.', template: 'checklist_audit' },
         { title: 'Saudi Labor Law Compliance & Workplace Safety Protocols', desc: 'Occupational health standards, emergency evacuation procedures, and KSA regulations.', template: 'sop_standard' },
         { title: 'KPI Performance Analytics & Personal Excellence Development', desc: 'Reviewing guest satisfaction scores, TripAdvisor metrics, and continuous development.', template: 'practical' },
       ],
@@ -1498,7 +1498,7 @@ function generateLocalBlueprintFallback(
 
   const curriculumTemplatesAr = [
     {
-      moduleTitle: 'أسس ومعايير الضيافة الفاخرة وتوقعات النزلاء (Forbes Standards)',
+      moduleTitle: 'أسس ومعايير الضيافة الفاخرة وتوقعات النزلاء (five-star Standards)',
       lessons: [
         { title: 'بروتوكول الترحيب الفوري خلال 30 ثانية والتواصل البصري', desc: 'معايير الاستقبال الفندقي الفاخر، لغة الجسد الإيجابية، والمظهر المهني المعتمد.', template: 'sop_standard' },
         { title: 'استباق احتياجات النزيل وتحديث ملف التفضيلات الشخصية (PMS)', desc: 'قراءة لغة الجسد، التخصيص الفندقي المتميز، وتسجيل الملاحظات في النظام.', template: 'scenario_solving' },
@@ -1528,7 +1528,7 @@ function generateLocalBlueprintFallback(
       moduleTitle: 'الرقابة الإشرافية ومعايير الامتثال والجودة المستمرة',
       lessons: [
         { title: 'إدارة الاجتماع التوجيهي اليومي للوردية (15 دقيقة) وتحفيز الفريق', desc: 'مراجعة كبار الشخصيات القادمين، مناقشة معايير الجودة، وتوزيع المهام.', template: 'dialogue_drill' },
-        { title: 'قوائم التدقيق الإشرافي الميداني والجاهزية لتقييمات فوربس', desc: 'إجراء جولات التفتيش، رصد الملاحظات، واستخدام بطاقات قياس الجودة.', template: 'checklist_audit' },
+        { title: 'قوائم التدقيق الإشرافي الميداني والجاهزية لتقييمات', desc: 'إجراء جولات التفتيش، رصد الملاحظات، واستخدام بطاقات قياس الجودة.', template: 'checklist_audit' },
         { title: 'معايير السلامة المهنية والامتثال لنظام العمل السعودي', desc: 'إجراءات الطوارئ، السلامة الغذائية، والالتزام بلوائح وزارة الموارد البشرية.', template: 'sop_standard' },
         { title: 'تحليل مؤشرات الأداء (KPIs) وتقييمات رضا النزلاء الشهرية', desc: 'مراجعة تقييمات النزلاء، منصات الحجوزات، وخطط التطوير المستمر.', template: 'practical' },
       ],
@@ -1552,7 +1552,7 @@ function generateLocalBlueprintFallback(
         templateType: (lesTemplate.template as LessonTemplateType) || config.defaultLessonTemplate,
         durationMinutes: config.granularity.lessonDuration,
         learningOutcomes: isArabic
-          ? [`إتقان تطبيق معيار: ${lesTemplate.title}`, 'تطبيق بروتوكولات التواصل الفاخر ومعايير فوربس']
+          ? [`إتقان تطبيق معيار: ${lesTemplate.title}`, 'تطبيق بروتوكولات التواصل الفاخر ومعايير الخدمة العالمية']
           : [`Master operational execution for: ${lesTemplate.title}`, 'Apply 5-star guest communication benchmarks'],
         suggestedBlockTypes: ['text', 'scenario'],
         components: config.lessonComponents,
@@ -1573,7 +1573,7 @@ function generateLocalBlueprintFallback(
   return {
     title: defaultTitle,
     title_ar: defaultTitle,
-    subtitle: isArabic ? 'دليل المعايير الفندقية الشامل لمجموعة ألتوس' : 'Altus Comprehensive Hospitality Operating Standard',
+    subtitle: isArabic ? 'دليل المعايير الفندقية الشامل لمجموعة فنادق فاخرة' : 'Comprehensive Hospitality Operating Standard',
     description: isArabic
       ? 'دورة تدريبية متكاملة مصممة لرفع كفاءة الكوادر الفندقية وتطبيق أعلى معايير الضيافة والامتثال.'
       : 'Comprehensive training program designed to elevate frontline hotel standards and ensure 5-star compliance.',
@@ -1601,7 +1601,7 @@ function generateLocalLessonHtmlFallback(title: string, isArabic: boolean): stri
   if (isArabic) {
     return `<div class="space-y-4">
 <h3>1. المعايير والأهداف التشغيلية: ${title}</h3>
-<p>يهدف هذا الإجراء إلى تطبيق أعلى معايير الجودة الفندقية 5 نجوم لمجموعة ألتوس الخاصة بـ (${title})، وضمان تقديم تجربة استثنائية للنزلاء تتوافق مع معايير فوربس العالمية.</p>
+<p>يهدف هذا الإجراء إلى تطبيق أعلى معايير الجودة الفندقية 5 نجوم لمجموعة فنادق فاخرة الخاصة بـ (${title})، وضمان تقديم تجربة استثنائية للنزلاء تتوافق مع معايير الخدمة العالمية العالمية.</p>
 <h3>2. خطوات التنفيذ خطوة بخطوة</h3>
 <ol class="list-decimal ps-6 space-y-2">
   <li><strong>الاستعداد والجاهزية (دقيقتان):</strong> التأكد من ارتداء الزي الرسمي المعتمد وتجهيز كافة الأدوات والمستندات المطلوبة الخاصة بـ ${title}.</li>
@@ -1611,7 +1611,7 @@ function generateLocalLessonHtmlFallback(title: string, isArabic: boolean): stri
 </ol>
 <h3>3. نصوص المحادثة المعتمدة</h3>
 <div class="p-3 bg-muted/40 rounded border-s-4 border-purple-500">
-  <p><strong>عند الترحيب:</strong> "أهلاً وسهلاً بك في فندق ألتوس، يسعدني خدمتكم في ${title} اليوم."</p>
+  <p><strong>عند الترحيب:</strong> "أهلاً وسهلاً بك في الفندق، يسعدني خدمتكم في ${title} اليوم."</p>
   <p><strong>عند ختام الخدمة:</strong> "أتمنى لكم إقامة ممتعة ومريحة، نحن دائماً في خدمتكم."</p>
 </div>
 <h3>4. قائمة تدقيق الجودة الإشرافية</h3>
@@ -1621,14 +1621,14 @@ function generateLocalLessonHtmlFallback(title: string, isArabic: boolean): stri
   <li>التسجيل الدقيق في نظام إدارة الفندق (PMS).</li>
 </ul>
 <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
-  <strong>نصيحة ألتوس الذهبية:</strong> المبادرة بالخدمة قبل أن يطلبها النزيل هي جوهر الضيافة الفاخرة في ${title}.
+  <strong>نصيحة التميز الذهبية:</strong> المبادرة بالخدمة قبل أن يطلبها النزيل هي جوهر الضيافة الفاخرة في ${title}.
 </div>
 </div>`
   }
 
   return `<div class="space-y-4">
 <h3>1. Executive Standard & Operational Purpose: ${title}</h3>
-<p>This operational standard establishes mandatory 5-star hospitality benchmarks for Altus Luxury Hotels for ${title}, ensuring consistent, flawless guest satisfaction in alignment with Forbes Travel Guide standards.</p>
+<p>This operational standard establishes mandatory 5-star hospitality benchmarks for a five-star luxury hotel group for ${title}, ensuring consistent, flawless guest satisfaction in alignment with international five-star hospitality standards.</p>
 <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
 <ol class="list-decimal ps-6 space-y-2">
   <li><strong>Pre-Service Inspection (2 mins):</strong> Verify professional grooming, uniform standards, and all required operational tools for ${title}.</li>
@@ -1648,7 +1648,7 @@ function generateLocalLessonHtmlFallback(title: string, isArabic: boolean): stri
   <li>Accurate status logging in hotel property management systems (PMS).</li>
 </ul>
 <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
-  <strong>Altus 5-Star Pro Tip:</strong> Proactive anticipation distinguishes genuine 5-star luxury from basic service during ${title}.
+  <strong>Five-Star Pro Tip:</strong> Proactive anticipation distinguishes genuine 5-star luxury from basic service during ${title}.
 </div>
 </div>`
 }
@@ -1668,13 +1668,13 @@ function generateLocalQuizFallback(
           question_type: 'mcq' as QuestionType,
           difficulty: 'medium' as QuestionDifficulty,
           options: [
-            { text: 'خلال 30 ثانية مع ابتسامة وتواصل بصري', is_correct: true, feedback: 'صحيح: معيار فوربس 5 نجوم يتطلب الترحيب خلال 30 ثانية.' },
+            { text: 'خلال 30 ثانية مع ابتسامة وتواصل بصري', is_correct: true, feedback: 'صحيح: معايير الخدمة العالمية 5 نجوم يتطلب الترحيب خلال 30 ثانية.' },
             { text: 'خلال 3 دقائق بعد انتهاء المكالمات', is_correct: false, feedback: 'غير صحيح: هذا وقت طويل يتجاوز معايير الفخامة.' },
             { text: 'عندما يتحدث النزيل أولاً', is_correct: false, feedback: 'غير صحيح: يجب المبادرة بالترحيب فوراً.' },
             { text: 'خلال 5 دقائق', is_correct: false, feedback: 'غير صحيح' },
           ],
           correct_answer: 'خلال 30 ثانية مع ابتسامة وتواصل بصري',
-          explanation: 'معايير فوربس للفنادق 5 نجوم تشترط المبادرة بالترحيب بالنزيل خلال 30 ثانية بابتسامة واستخدام اسمه.',
+          explanation: 'معايير الخدمة العالمية للفنادق 5 نجوم تشترط المبادرة بالترحيب بالنزيل خلال 30 ثانية بابتسامة واستخدام اسمه.',
           hint: 'تذكر المعيار الزمني الأسرع المعتمد للفنادق الفاخرة.',
         },
         {
@@ -1707,17 +1707,17 @@ function generateLocalQuizFallback(
       ]
     : [
         {
-          question_text: 'What is the Forbes 5-Star time benchmark for acknowledging an arriving guest at the front desk?',
+          question_text: 'What is the five-star time benchmark for acknowledging an arriving guest at the front desk?',
           question_type: 'mcq' as QuestionType,
           difficulty: 'medium' as QuestionDifficulty,
           options: [
-            { text: 'Within 30 seconds with a warm smile and eye contact', is_correct: true, feedback: 'Correct: Forbes 5-Star standards require immediate acknowledgment within 30 seconds.' },
+            { text: 'Within 30 seconds with a warm smile and eye contact', is_correct: true, feedback: 'Correct: five-star standards require immediate acknowledgment within 30 seconds.' },
             { text: 'Within 3 minutes after concluding back-office paperwork', is_correct: false, feedback: 'Incorrect: 3 minutes causes unacceptable guest wait times.' },
             { text: 'Only after the guest initiates conversation', is_correct: false, feedback: 'Incorrect: Proactive greeting is mandatory.' },
             { text: 'Within 5 minutes', is_correct: false, feedback: 'Incorrect' },
           ],
           correct_answer: 'Within 30 seconds with a warm smile and eye contact',
-          explanation: 'Forbes 5-Star standards mandate prompt acknowledgment within 30 seconds using positive eye contact and guest surname.',
+          explanation: 'five-star standards mandate prompt acknowledgment within 30 seconds using positive eye contact and guest surname.',
           hint: 'Consider the fastest standard required in ultra-luxury hospitality.',
         },
         {

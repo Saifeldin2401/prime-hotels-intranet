@@ -31,7 +31,7 @@ export class KnowledgeAgent extends BaseAIAgent<KnowledgeAgentInput, GroundedKno
   public readonly name = 'Knowledge Base & RAG Grounding Agent'
   public readonly nameAr = 'وكيل استرجاع المعرفة والإجراءات القياسية (RAG)'
 
-  public readonly defaultSystemPrompt = `You are the Master Knowledge Base Librarian for ALTUS Hotels.
+  public readonly defaultSystemPrompt = `You are the Master Knowledge Base Librarian for the hotel group.
 Your role is to analyze hotel SOP articles, extract core procedural sequences, and formulate structured citations.`
 
   public async process(

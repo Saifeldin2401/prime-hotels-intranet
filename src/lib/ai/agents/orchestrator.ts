@@ -347,8 +347,8 @@ export class AICourseOrchestrator {
       progressPercentage: 15,
       title: 'Discovery & SOPs Grounded',
       titleAr: 'تم استرجاع معايير الجودة والإجراءات',
-      detail: `[Model: ${researchResult?.modelUsed || 'Auto Router'}] Grounded ${knowledgeResult?.data?.relevantArticles?.length || 0} internal SOP articles & ${researchResult?.data?.forbesBenchmarks?.length || 0} Forbes benchmarks`,
-      detailAr: `تم استرجاع ${knowledgeResult?.data?.relevantArticles?.length || 0} وثيقة SOP و ${researchResult?.data?.forbesBenchmarks?.length || 0} معيار فوربس`,
+      detail: `[Model: ${researchResult?.modelUsed || 'Auto Router'}] Grounded ${knowledgeResult?.data?.relevantArticles?.length || 0} internal SOP articles & ${researchResult?.data?.serviceBenchmarks?.length || 0} service benchmarks`,
+      detailAr: `تم استرجاع ${knowledgeResult?.data?.relevantArticles?.length || 0} وثيقة SOP و ${researchResult?.data?.serviceBenchmarks?.length || 0} معايير الخدمة العالمية`,
       modelUsed: researchResult?.modelUsed,
     })
 
@@ -765,7 +765,7 @@ export class AICourseOrchestrator {
       progressPercentage: 80,
       title: 'Pedagogical & Regulatory QA Audit',
       titleAr: 'التدقيق الأكاديمي والرقابي الشامل',
-      detail: 'Auditing accuracy, Bloom alignment, Forbes benchmarks, and KSA regulations...',
+      detail: 'Auditing accuracy, Bloom alignment, service benchmarks, and KSA regulations...',
       detailAr: 'تقييم دقة المعايير والتدرج المعرفي واللوائح السعودية...',
     })
 
@@ -855,7 +855,7 @@ export class AICourseOrchestrator {
       operationalAccuracy: qaReport.dimensionScores.operationalAccuracy,
       bloomsDistributionScore: qaReport.dimensionScores.bloomsAlignment,
       assessmentAlignmentScore: qaReport.dimensionScores.operationalAccuracy,
-      forbesLuxuryStandardScore: qaReport.dimensionScores.forbesStandards,
+      serviceStandardScore: qaReport.dimensionScores.serviceStandards,
       repetitionScore: 95,
       distractorDiscriminationScore: 90,
       identifiedGaps: qaReport.findings.map((f) => ({

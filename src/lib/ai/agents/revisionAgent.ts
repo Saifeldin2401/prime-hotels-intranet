@@ -27,7 +27,7 @@ export class RevisionAgent extends BaseAIAgent<RevisionAgentInput, RevisionResul
   public readonly name = 'Surgical Revision & Auto-Remediation Agent'
   public readonly nameAr = 'وكيل المراجعة والتصحيح التلقائي'
 
-  public readonly defaultSystemPrompt = `You are the Master Editor and Curriculum Polisher for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Master Editor and Curriculum Polisher for a five-star luxury hotel group.
 Your role is to apply targeted, surgical improvements to training content based on quality auditor findings.`
 
   public async process(

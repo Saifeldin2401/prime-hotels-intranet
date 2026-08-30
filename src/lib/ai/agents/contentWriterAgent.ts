@@ -28,7 +28,7 @@ export class ContentWriterAgent extends BaseAIAgent<ContentWriterInput, string> 
   public readonly name = 'Content Writer & Instructional Synthesis Agent'
   public readonly nameAr = 'كاتب المحتوى التشغيلي والدروس التدريبية'
 
-  public readonly defaultSystemPrompt = `You are the Senior Executive Content Director at ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Senior Executive Content Director at a five-star luxury hotel group.
 Your role is to write thorough, practical, and highly engaging training lessons in clean semantic HTML.
 Do NOT output markdown fences or conversational wrappers. Output HTML only.`
 
@@ -136,7 +136,7 @@ Do NOT output markdown fences or conversational wrappers. Output HTML only.`
       : ''
 
     const prompt = isArabic
-      ? `أنت كبير مدربي الضيافة الفاخرة لمجموعة فنادق ألتوس (5 نجوم).
+      ? `أنت كبير مدربي الضيافة الفاخرة لمجموعة فنادق فاخرة.
 اكتب درساً تدريبياً متكاملاً وعالي الاحترافية بصيغة HTML دلالية نظيفة للدرس التالي:
 - الدورة: "${courseTitle}"
 - الوحدة: "${moduleTitle}"
@@ -150,7 +150,7 @@ ${extraContext}
 الهيكل الإلزامي لكود HTML:
 <div class="space-y-4">
   <h3>1. المعايير والأهداف التشغيلية (Operational Standards & Objectives)</h3>
-  <p>شرح واضح لأهمية الإجراء، الوقت المعتمد لتنفيذه، وتأثيره المباشر على تقييم فوربس 5 نجوم.</p>
+  <p>شرح واضح لأهمية الإجراء، الوقت المعتمد لتنفيذه، وتأثيره المباشر على تقييم 5 نجوم.</p>
 
   <h3>2. خطوات التنفيذ خطوة بخطوة (Step-by-Step Execution Workflow)</h3>
   <ol class="list-decimal ps-6 space-y-2">
@@ -161,12 +161,12 @@ ${extraContext}
   </ol>${dialogueSectionAr}${checklistSectionAr}${lastProtocolSectionAr}
 
   <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
-    <strong>نصيحة ألتوس الذهبية للتميز:</strong> المبادرة بالخدمة قبل أن يطلبها النزيل هي جوهر الضيافة الفاخرة.
+    <strong>نصيحة التميز الذهبية:</strong> المبادرة بالخدمة قبل أن يطلبها النزيل هي جوهر الضيافة الفاخرة.
   </div>
 </div>
 
 اكتب كود HTML فقط بدون وسوم markdown وبدون كتل كود خارجية.`
-      : `You are the Senior Executive Content Director at Altus Luxury Hotels.
+      : `You are the Senior Executive Content Director at a five-star luxury hotel group.
 Write an exhaustive, publication-grade training lesson in clean semantic HTML for:
 - Course: "${courseTitle}"
 - Module: "${moduleTitle}"
@@ -180,7 +180,7 @@ ${extraContext}
 Structured HTML Requirements:
 <div class="space-y-4">
   <h3>1. Executive Standard & Operational Purpose</h3>
-  <p>Detailed explanation of 5-star benchmarks, target completion timeframes, and Forbes Travel Guide relevance.</p>
+  <p>Detailed explanation of 5-star benchmarks, target completion timeframes, and international five-star relevance.</p>
 
   <h3>2. Step-by-Step Procedure & Time Benchmarks</h3>
   <ol class="list-decimal ps-6 space-y-2">
@@ -191,7 +191,7 @@ Structured HTML Requirements:
   </ol>${dialogueSectionEn}${checklistSectionEn}${lastProtocolSectionEn}
 
   <div class="p-3 my-3 bg-amber-50 dark:bg-amber-950/40 border-s-4 border-amber-500 rounded text-amber-900 dark:text-amber-200">
-    <strong>Altus 5-Star Pro Tip:</strong> Proactive anticipation distinguishes genuine 5-star luxury from basic service.
+    <strong>Five-Star Pro Tip:</strong> Proactive anticipation distinguishes genuine 5-star luxury from basic service.
   </div>
 </div>
 

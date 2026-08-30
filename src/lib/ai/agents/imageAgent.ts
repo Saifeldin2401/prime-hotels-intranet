@@ -109,7 +109,7 @@ function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
     s3Footer = 'Phase 3: Butler Handover'
     s3Sla = 'PMS Verified'
   } else if (isTurndown) {
-    cleanConcept = 'Forbes 5-Star Turndown Service, Bedding Geometry & Ambient Evening Atmosphere'
+    cleanConcept = 'Five-Star Turndown Service, Bedding Geometry & Ambient Evening Atmosphere'
     s1Title = 'Entry & Preparation'
     s1b1 = '• Knock 3x & announce entry'
     s1b2 = '• 360° visual room scan'
@@ -117,7 +117,7 @@ function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
     s1Footer = 'Phase 1: Room Entry'
     s1Sla = 'Knock 3x'
 
-    s2Title = 'Forbes Bedding Standard'
+    s2Title = 'Five-Star Bedding Standard'
     s2b1 = '• 45° duvet turn with linen mat'
     s2b2 = '• Slipper & bedside water setup'
     s2b3 = '• Pillow menu card presentation'
@@ -248,7 +248,7 @@ function generateEducationalSvgDataUri(params: DynamicVectorParams): string {
   <!-- Header Bar -->
   <rect x="36" y="36" width="728" height="46" fill="#1e293b" rx="8" stroke="#475569" stroke-width="0.75"/>
   <circle cx="58" cy="59" r="8" fill="#C39A45"/>
-  <text x="76" y="64" fill="#f8fafc" font-size="13" font-weight="700" letter-spacing="0.5">ALTUS LUXURY HOSPITALITY • OPERATIONAL SOP SCHEMATIC</text>
+  <text x="76" y="64" fill="#f8fafc" font-size="13" font-weight="700" letter-spacing="0.5">OPERATIONAL SOP SCHEMATIC</text>
   <rect x="652" y="46" width="96" height="24" fill="#7c3aed" rx="4"/>
   <text x="700" y="62" fill="#ffffff" font-size="10" font-weight="700" text-anchor="middle">5-STAR STANDARD</text>
 
@@ -425,7 +425,7 @@ export class ImageAgent extends BaseAIAgent<ImageAgentInput, CourseVisualAsset |
   public readonly name = 'Visual Asset & Recraft Vector AI Agent'
   public readonly nameAr = 'وكيل الوسائط البصرية والرسوم التوضيحية الذكية'
 
-  public readonly defaultSystemPrompt = `You are the Creative Visual Director for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Creative Visual Director for a five-star luxury hotel group.
 You evaluate training lesson text to decide whether a visual aid is genuinely necessary.
 If a visual is required, choose the optimal visual strategy:
 - 'vector_svg_diagram': For step-by-step procedures, technical specifications, and room schematics (Recraft Vector).

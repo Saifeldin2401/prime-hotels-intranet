@@ -96,17 +96,17 @@ const LUXURY_KB_PRESETS = [
     dept: 'Front Office',
     audience: 'Front Desk Agents, Butlers, and Guest Relations',
     icon: Sparkles,
-    depth: 'forbes_5star' as KnowledgeDepthLevel,
+    depth: 'five_star_comprehensive' as KnowledgeDepthLevel,
     promptHint: 'Include luggage escort protocol, welcome tea presentation, and room technology orientation.',
   },
   {
     id: 'turndown-experience',
-    title: 'Forbes 5-Star Evening Turndown & Scent Experience Protocol',
+    title: 'five-star Evening Turndown & Scent Experience Protocol',
     type: 'sop' as KnowledgeContentType,
     dept: 'Housekeeping',
     audience: 'Housekeeping Attendants & Floor Supervisors',
     icon: BookOpen,
-    depth: 'forbes_5star' as KnowledgeDepthLevel,
+    depth: 'five_star_comprehensive' as KnowledgeDepthLevel,
     promptHint: 'Include 45-degree duvet fold, slipper placement on linen mat, ambient lighting preset, and pillow menu.',
   },
   {
@@ -172,7 +172,7 @@ export function AIArticleStudioModal({
   const [contentType, setContentType] = useState<KnowledgeContentType>(defaultContentType)
   const [department, setDepartment] = useState(defaultDepartment)
   const [targetAudience, setTargetAudience] = useState('Frontline Staff & Shift Supervisors')
-  const [depthLevel, setDepthLevel] = useState<KnowledgeDepthLevel>('forbes_5star')
+  const [depthLevel, setDepthLevel] = useState<KnowledgeDepthLevel>('five_star_comprehensive')
   const [languagePreference, setLanguagePreference] = useState<'bilingual' | 'en' | 'ar'>('bilingual')
 
   // Content Depth & Structural Checkboxes
@@ -366,7 +366,7 @@ export function AIArticleStudioModal({
                   <DialogTitle className="text-lg font-bold flex items-center gap-2">
                     <span>AI Document Creator</span>
                     <Badge variant="secondary" className="text-[10px] bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                      Forbes 5-Star &amp; KSA Compliant
+                      five-star &amp; KSA Compliant
                     </Badge>
                   </DialogTitle>
                   <DialogDescription className="text-xs text-muted-foreground">
@@ -736,7 +736,7 @@ export function AIArticleStudioModal({
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="forbes_5star">🌟 Forbes 5-Star Luxury Benchmark (Exhaustive & Behavioral)</SelectItem>
+                              <SelectItem value="five_star_comprehensive">🌟 Five-Star Comprehensive (Exhaustive & Behavioral)</SelectItem>
                               <SelectItem value="standard">📘 Standard 5-Star Operating SOP (Balanced Detail)</SelectItem>
                               <SelectItem value="regulatory_compliance">🛡️ KSA Regulatory & Safety Mandate (Audit-Focused)</SelectItem>
                               <SelectItem value="concise">⚡ Concise Frontline Cheat Sheet (Rapid Execution)</SelectItem>
@@ -1232,7 +1232,7 @@ export function AIArticleStudioModal({
 
                       <div className="p-4 rounded-xl border bg-card space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-xs font-bold text-foreground">Forbes 5-Star Benchmarks</span>
+                          <span className="text-xs font-bold text-foreground">Five-Star Service Benchmarks</span>
                           <Badge variant="secondary" className="bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 text-[11px]">
                             100% Aligned
                           </Badge>

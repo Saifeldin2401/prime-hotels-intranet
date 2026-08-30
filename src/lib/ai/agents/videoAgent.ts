@@ -26,7 +26,7 @@ export class VideoAgent extends BaseAIAgent<VideoAgentInput, VideoBriefingResult
   public readonly name = 'Video Briefing AI Agent'
   public readonly nameAr = 'وكيل المقاطع المرئية الذكية والمحاكاة'
 
-  public readonly defaultSystemPrompt = `You are the Executive Video Producer for ALTUS Luxury Hotels.`
+  public readonly defaultSystemPrompt = `You are the Executive Video Producer for a five-star luxury hotel group.`
 
   public async process(
     input: VideoAgentInput,

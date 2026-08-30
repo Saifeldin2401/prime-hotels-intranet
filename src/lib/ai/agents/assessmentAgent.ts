@@ -25,7 +25,7 @@ export class AssessmentAgent extends BaseAIAgent<AssessmentAgentInput, Generated
   public readonly name = 'Psychometric Assessment & Quiz Specialist Agent'
   public readonly nameAr = 'أخصائي التقييمات والاختبارات القياسية'
 
-  public readonly defaultSystemPrompt = `You are the Chief Psychometrician and Assessment Architect for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Chief Psychometrician and Assessment Architect for a five-star luxury hotel group.
 You create rigorous, high-discrimination questions that verify genuine frontline operational capability.
 Distractors must represent realistic operational misconceptions, not obvious wrong answers.`
 
@@ -43,7 +43,7 @@ Distractors must represent realistic operational misconceptions, not obvious wro
     const sanitizedContext = (input.contextContent || '').replace(/<[^>]*>/g, ' ').slice(0, 3500)
 
     const prompt = isArabic
-      ? `أنت خبير قياس وتقويم التعليم الفندقي لمجموعة ألتوس (5 نجوم).
+      ? `أنت خبير قياس وتقويم التعليم الفندقي لمجموعة فنادق فاخرة.
 قم بإنشاء بالضبط ${count} أسئلة اختبار دقيقة وعملية بناءً على المحتوى التالي:
 - عنوان المحتوى: "${input.title || 'الوحدة التدريبية'}"
 - أنواع الأسئلة المطلوبة حصراً: [${questionTypes.join(', ')}]
@@ -80,7 +80,7 @@ Distractors must represent realistic operational misconceptions, not obvious wro
 ]
 
 المحتوى:\n${sanitizedContext}`
-      : `You are the Chief Psychometrician at Altus Luxury Hotels.
+      : `You are the Chief Psychometrician at a five-star luxury hotel group.
 Create EXACTLY ${count} rigorous, high-discrimination assessment questions based on:
 - Title: "${input.title}"
 - Required Question Types: [${questionTypes.join(', ')}]
@@ -205,12 +205,12 @@ Content:\n${sanitizedContext}`
               text: 'Transfer the guest to multiple departments before understanding their need',
               text_ar: 'تحويل الضيف بين عدة أقسام قبل فهم احتياجه بدقة',
               is_correct: false,
-              feedback: 'Incorrect: First-contact resolution is a core Forbes standard.',
+              feedback: 'Incorrect: First-contact resolution is a core five-star service standard.',
             },
           ],
           correct_answer: 'Acknowledge warmly, verify guest preferences, and execute standard operating steps promptly',
           explanation: 'Active listening, empathy, and immediate procedural follow-through are foundational to prime hotel guest satisfaction.',
-          hint: 'Think about Forbes 5-star first-contact resolution standards.',
+          hint: 'Think about five-star first-contact resolution standards.',
         },
       ]
       questions = fallbackQuestions.slice(0, count)

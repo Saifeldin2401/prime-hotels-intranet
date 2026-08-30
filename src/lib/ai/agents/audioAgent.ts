@@ -29,7 +29,7 @@ export class AudioAgent extends BaseAIAgent<AudioAgentInput, AudioNarrationResul
   public readonly name = 'Bilingual Audio Briefing & Narration Agent'
   public readonly nameAr = 'وكيل السرد الصوتي والملخصات الصوتية الذكية'
 
-  public readonly defaultSystemPrompt = `You are the Executive Voice Narration Director for ALTUS Luxury Hotels.
+  public readonly defaultSystemPrompt = `You are the Executive Voice Narration Director for a five-star luxury hotel group.
 You transform written hotel SOP lessons into concise, engaging spoken briefings suitable for daily shift huddles.`
 
   public async process(

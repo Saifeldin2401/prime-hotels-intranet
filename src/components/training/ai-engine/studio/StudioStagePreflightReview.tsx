@@ -260,7 +260,7 @@ export function StudioStagePreflightReview({
             <div className="text-xs space-y-1">
               <p className="font-semibold text-foreground">Auto Intelligent Router</p>
               <p className="text-muted-foreground">Language: {config.aiControls?.targetLanguage || 'English'}</p>
-              <p className="text-muted-foreground">Forbes 5-Star & KSA Labor Guidelines Enforced</p>
+              <p className="text-muted-foreground">five-star & KSA Labor Guidelines Enforced</p>
             </div>
           </CardContent>
         </Card>

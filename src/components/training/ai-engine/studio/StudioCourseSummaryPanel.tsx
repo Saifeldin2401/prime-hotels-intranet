@@ -279,7 +279,7 @@ export function StudioCourseSummaryPanel({
             </div>
             <p className="text-[10px] text-muted-foreground flex items-center gap-1">
               <ShieldCheck className="w-3 h-3 text-emerald-600 inline" />
-              <span>KSA Safeguards • Forbes QA Critic • Auto-Revision</span>
+              <span>KSA Safeguards • five-star QA Critic • Auto-Revision</span>
             </p>
           </div>
         </div>

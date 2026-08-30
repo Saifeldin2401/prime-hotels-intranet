@@ -204,9 +204,9 @@ export function AICourseEngineStudioModal({
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(initialDocumentId || null)
   const [rawSourceContent, setRawSourceContent] = useState('')
   const [targetDepartment, setTargetDepartment] = useState<string>('front_office')
-  const [topicTheme, setTopicTheme] = useState<string>('forbes_5star')
+  const [topicTheme, setTopicTheme] = useState<string>('five_star_comprehensive')
   const [topicStaffRole, setTopicStaffRole] = useState<string>('associate')
-  const [sopExtractionMode, setSopExtractionMode] = useState<'strict_sop' | 'enhanced_forbes'>('enhanced_forbes')
+  const [sopExtractionMode, setSopExtractionMode] = useState<'strict_sop' | 'enhanced_luxury'>('enhanced_luxury')
   const [remixGoal, setRemixGoal] = useState<'expand' | 'microlearning' | 'translate_saudi' | 'modernize_2026' | 'add_assessments'>('expand')
   const [pedagogicalFramework, setPedagogicalFramework] = useState<string>('bloom_taxonomy')
 
@@ -1821,7 +1821,7 @@ export function AICourseEngineStudioModal({
             <Input
               value={presetNameInput}
               onChange={(e) => setPresetNameInput(e.target.value)}
-              placeholder="e.g. Forbes 5-Star VIP Front Office Preset"
+              placeholder="e.g. five-star VIP Front Office Preset"
               className="text-xs"
             />
           </div>

@@ -166,7 +166,7 @@ export function VisualAssetEditorModal({
           description: prompt || asset.prompt || title,
           learningOutcomes: [caption || altText || title],
         } as any,
-        courseTitle: title || 'ALTUS Hospitality Training',
+        courseTitle: title || 'the hotel group Hospitality Training',
         moduleTitle: title || 'Standard Operating Procedure',
         imageModel: selectedModel,
         preferredStyle: visualStyle,
