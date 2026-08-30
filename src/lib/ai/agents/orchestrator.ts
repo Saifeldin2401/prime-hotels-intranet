@@ -379,8 +379,9 @@ export class AICourseOrchestrator {
       : await curriculumAgent.process(
       {
         config,
-        researchFindings: researchResult?.data as ResearchFindings,
+        research: researchResult?.data as ResearchFindings,
         groundedKnowledge: knowledgeResult?.data as GroundedKnowledgeResult,
+        sourceMaterial: config.sourceContent,
       },
       { pipelineRunId, phase: 'curriculum_architecture', preferredModel: options.preferredModel, onProgress }
     )
@@ -479,6 +480,7 @@ export class AICourseOrchestrator {
               config,
               researchContext: researchContextStr,
               groundedSopsContext: groundedSopsContextStr,
+              sourceMaterial: config.sourceContent,
             },
             { pipelineRunId, phase: 'content_synthesis', preferredModel: options.preferredModel, silent: true }
           ),

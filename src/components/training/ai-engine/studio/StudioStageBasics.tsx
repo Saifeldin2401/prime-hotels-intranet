@@ -27,6 +27,7 @@ import {
   GraduationCap,
   Layers,
   ListOrdered,
+  Loader2,
   RotateCw,
   Search,
   Sparkles,
@@ -133,6 +134,7 @@ export function StudioStageBasics({
   const [uploadedFileInfo, setUploadedFileInfo] = useState<UploadedDocumentInfo | null>(null)
   const [isDraggingFile, setIsDraggingFile] = useState(false)
   const [fileReadError, setFileReadError] = useState<string | null>(null)
+  const [isExtractingFile, setIsExtractingFile] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const MODES: Array<{
@@ -241,45 +243,36 @@ export function StudioStageBasics({
     (sopsData || []).find((d: any) => d.id === selectedDocumentId) ||
     (libraryDocuments || []).find((d: any) => d.id === selectedDocumentId)
 
-  // Handle File Upload and Text Extraction
-  const handleProcessFile = (file: File) => {
+  // Handle File Upload and Text Extraction — real PDF (pdfjs) / DOCX (mammoth)
+  // parsing, not readAsText (which returns binary garbage for those formats).
+  const handleProcessFile = async (file: File) => {
     setFileReadError(null)
-    const reader = new FileReader()
+    setIsExtractingFile(true)
+    try {
+      const { extractTextFromFile } = await import('@/lib/documentText')
+      const { text, wordCount, truncated } = await extractTextFromFile(file, 40000)
 
-    reader.onload = (e) => {
-      try {
-        const textContent = (e.target?.result as string) || ''
-        const wordCount = textContent.split(/\s+/).filter(Boolean).length
+      setUploadedFileInfo({
+        name: file.name,
+        size: file.size,
+        type: file.type || file.name.split('.').pop() || 'document',
+        extractedText: text,
+        wordCount,
+      })
+      onChangeRawSourceContent(
+        `[Uploaded Document: ${file.name} | ${wordCount.toLocaleString()} words${truncated ? ', truncated' : ''}]\n\n${text}`
+      )
 
-        const info: UploadedDocumentInfo = {
-          name: file.name,
-          size: file.size,
-          type: file.type || file.name.split('.').pop() || 'document',
-          extractedText: textContent,
-          wordCount,
-        }
-
-        setUploadedFileInfo(info)
-        onChangeRawSourceContent(
-          `[Uploaded Document: ${file.name} | Size: ${(file.size / 1024).toFixed(1)} KB]\n\n${textContent}`
-        )
-
-        // Auto-fill course topic if empty
-        if (!courseTopic.trim()) {
-          const cleanTitle = file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
-          onChangeTopic(cleanTitle)
-        }
-      } catch (err: any) {
-        setFileReadError(err?.message || 'Could not parse document text.')
+      if (!courseTopic.trim()) {
+        onChangeTopic(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '))
       }
+    } catch (err: any) {
+      setUploadedFileInfo(null)
+      onChangeRawSourceContent('')
+      setFileReadError(err?.message || 'Could not extract text from this document.')
+    } finally {
+      setIsExtractingFile(false)
     }
-
-    reader.onerror = () => {
-      setFileReadError('Failed to read file.')
-    }
-
-    // Read as text
-    reader.readAsText(file)
   }
 
   const handleFileDrop = (e: React.DragEvent) => {
@@ -741,6 +734,13 @@ export function StudioStageBasics({
                     Supports SOP Manuals, Policy PDFs, Word (.docx), Markdown (.md), and TXT files up to 25MB
                   </p>
                 </div>
+
+                {isExtractingFile && (
+                  <div className="p-2.5 rounded-lg border border-blue-200 bg-blue-50 dark:bg-blue-950/30 flex items-center gap-2 text-xs text-blue-700 dark:text-blue-300">
+                    <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+                    <span>Extracting text from the document…</span>
+                  </div>
+                )}
 
                 {fileReadError && (
                   <div className="p-2.5 rounded-lg border border-rose-200 bg-rose-50 dark:bg-rose-950/30 flex items-center gap-2 text-xs text-rose-700 dark:text-rose-300">

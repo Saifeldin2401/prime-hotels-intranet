@@ -124,6 +124,7 @@ import { VisualAssetEditorModal } from './VisualAssetEditorModal'
 import { GuestRoleplaySimulatorModal } from './roleplay/GuestRoleplaySimulatorModal'
 import { ComplianceShieldDialog } from './compliance/ComplianceShieldDialog'
 import { DocumentCourseIngestionModal } from './ingestion/DocumentCourseIngestionModal'
+import { extractTextFromFile } from '@/lib/documentText'
 import { LessonAudioNarrator } from './audio/LessonAudioNarrator'
 
 interface AICourseEngineStudioModalProps {
@@ -305,6 +306,35 @@ export function AICourseEngineStudioModal({
   const { data: sopsData, isLoading: isLoadingSOPs } = useArticles({ limit: 100 })
   const { data: selectedArticle } = useKnowledgeArticle(selectedDocumentId || undefined)
   const { data: libraryDocuments = [] } = useDocuments()
+
+  // When a picked Document Library file has no `content` column populated (the
+  // usual case for uploaded PDFs/DOCX), fetch the stored file and extract its
+  // text client-side so grounded generation actually sees the document.
+  const [libraryDocText, setLibraryDocText] = useState('')
+  const [libraryDocExtracting, setLibraryDocExtracting] = useState(false)
+  const [libraryDocExtractError, setLibraryDocExtractError] = useState<string | null>(null)
+  useEffect(() => {
+    setLibraryDocText('')
+    setLibraryDocExtractError(null)
+    if (!selectedDocumentId || !Array.isArray(libraryDocuments)) return
+    const doc = libraryDocuments.find((d: any) => d.id === selectedDocumentId) as
+      | { content?: string | null; file_url?: string | null; file_type?: string | null; file_extension?: string | null }
+      | undefined
+    if (!doc) return
+    if (doc.content && doc.content.trim().length > 50) return // already has usable text
+    const url = doc.file_url
+    if (!url) return
+    let cancelled = false
+    setLibraryDocExtracting(true)
+    import('@/lib/documentText')
+      .then(({ extractTextFromUrl }) =>
+        extractTextFromUrl(url, doc.file_type || doc.file_extension || url, 40000),
+      )
+      .then((res) => { if (!cancelled) setLibraryDocText(res.text) })
+      .catch((e) => { if (!cancelled) setLibraryDocExtractError((e as Error).message) })
+      .finally(() => { if (!cancelled) setLibraryDocExtracting(false) })
+    return () => { cancelled = true }
+  }, [selectedDocumentId, libraryDocuments])
 
   // Synchronize on modal open or prop change
   useEffect(() => {
@@ -577,7 +607,10 @@ export function AICourseEngineStudioModal({
     } else if (selectedDocumentId && Array.isArray(libraryDocuments)) {
       const found = libraryDocuments.find((d: any) => d.id === selectedDocumentId)
       if (found && found.title) {
-        combinedSource = `Document Library File: ${found.title}\nType: ${found.file_type || found.content_type || 'Document'}\nSummary: ${found.ai_summary || found.description || ''}\n\nContent:\n${found.content || ''}\n\n${rawSourceContent}`
+        // Prefer the DB `content` column; fall back to the text we extracted
+        // from the stored file (PDF/DOCX) so the AI sees the real document.
+        const bodyText = (found.content && found.content.trim()) || libraryDocText || ''
+        combinedSource = `Document Library File: ${found.title}\nType: ${found.file_type || found.content_type || 'Document'}\nSummary: ${found.ai_summary || found.description || ''}\n\nContent:\n${bodyText}\n\n${rawSourceContent}`
       }
     }
 
@@ -765,18 +798,28 @@ export function AICourseEngineStudioModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quickLaunch])
 
-  // Quick mode: read an uploaded document to plain text and use it as source material.
-  const handleQuickFileUpload = (file: File) => {
-    setQuickUploadName(`${file.name} (${(file.size / 1024).toFixed(0)} KB)`)
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      const text = (e.target?.result as string) || ''
-      setRawSourceContent(text.slice(0, 20000))
+  // Quick mode: extract the readable text of an uploaded document (real PDF /
+  // DOCX parsing, not readAsText) and use it as grounding source material.
+  const handleQuickFileUpload = async (file: File) => {
+    setQuickUploadName(`${file.name} — extracting…`)
+    try {
+      const { text, wordCount, truncated } = await extractTextFromFile(file, 40000)
+      setRawSourceContent(text)
+      setQuickUploadName(
+        `${file.name} · ${wordCount.toLocaleString()} words${truncated ? ' (truncated)' : ''}`,
+      )
       if (!courseTopic.trim()) {
         setCourseTopic(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '))
       }
+    } catch (err) {
+      setRawSourceContent('')
+      setQuickUploadName(`${file.name} — ${(err as Error).message}`)
+      toast({
+        title: t('common:error', 'Could not read document'),
+        description: (err as Error).message,
+        variant: 'destructive',
+      })
     }
-    reader.readAsText(file)
   }
   const handleQuickClearUpload = () => {
     setQuickUploadName('')

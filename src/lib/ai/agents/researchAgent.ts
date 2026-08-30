@@ -56,7 +56,7 @@ Always respond in structured, valid JSON matching the requested schema.`
   ): Promise<AgentExecutionResult<ResearchFindings>> {
     const isArabic = input.language === 'ar' || (input.language || '').toLowerCase().includes('arabic')
     const sourceContext = input.rawSourceMaterial
-      ? `\n\nSOURCE REFERENCE MATERIAL:\n"""\n${input.rawSourceMaterial.slice(0, 4000)}\n"""`
+      ? `\n\nSOURCE REFERENCE MATERIAL — extract the operational standards, procedures and terminology that a course on this document must teach:\n"""\n${input.rawSourceMaterial.slice(0, 20000)}\n"""`
       : ''
 
     const prompt = `Conduct comprehensive operational research for the following hotel training course:

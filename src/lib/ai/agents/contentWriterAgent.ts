@@ -17,6 +17,9 @@ export interface ContentWriterInput {
   config: Partial<FullCourseGenerationConfig>
   researchContext?: string
   groundedSopsContext?: string
+  /** Raw text of the user's grounding document. Lesson content must be adapted
+   *  from this — not invented — when present. */
+  sourceMaterial?: string
   language?: 'en' | 'ar' | 'bilingual'
 }
 
@@ -33,7 +36,7 @@ Do NOT output markdown fences or conversational wrappers. Output HTML only.`
     input: ContentWriterInput,
     options: AgentExecutionOptions = {}
   ): Promise<AgentExecutionResult<string>> {
-    const { courseTitle, moduleTitle, lesson, config, researchContext, groundedSopsContext } = input
+    const { courseTitle, moduleTitle, lesson, config, researchContext, groundedSopsContext, sourceMaterial } = input
     const isArabic =
       input.language === 'ar' ||
       (config?.aiControls?.targetLanguage || 'en').toLowerCase().includes('ar') ||
@@ -46,6 +49,12 @@ Do NOT output markdown fences or conversational wrappers. Output HTML only.`
     const hasLastProtocol = selectedComponentsList.includes('last_protocol')
 
     let extraContext = ''
+    const trimmedSource = (sourceMaterial || '').trim()
+    if (trimmedSource.length > 40) {
+      extraContext += isArabic
+        ? `\nالمستند المصدر (اكتب هذا الدرس بالاعتماد على هذا المحتوى؛ اقتبس الإجراءات والمصطلحات منه ولا تخترع ما يخالفه):\n"""\n${trimmedSource.slice(0, 16000)}\n"""`
+        : `\nSOURCE DOCUMENT (write this lesson FROM this material — quote its procedures, steps and terminology; never invent anything that contradicts it):\n"""\n${trimmedSource.slice(0, 16000)}\n"""`
+    }
     if (researchContext) extraContext += `\nINDUSTRY BENCHMARKS:\n${researchContext}`
     if (groundedSopsContext) extraContext += `\nGROUNDED HOTEL PROCEDURES:\n${groundedSopsContext}`
 
