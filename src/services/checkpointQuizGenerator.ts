@@ -4,7 +4,11 @@ import type { QuestionType } from '@/types/questions'
 
 // Must match the `question_type` Postgres enum (unified_questions table)
 // exactly - the AI-generated value isn't guaranteed to land on a valid member.
-const VALID_QUESTION_TYPES = new Set<string>(['mcq', 'mcq_multi', 'true_false', 'fill_blank', 'scenario', 'ordering', 'matching'])
+const VALID_QUESTION_TYPES = new Set<string>([
+    'mcq', 'mcq_multi', 'true_false', 'yes_no', 'fill_blank', 'short_answer',
+    'long_answer', 'matching', 'ordering', 'ranking', 'scenario', 'case_based',
+    'numeric', 'code_technical', 'categorization', 'hotspot_image',
+])
 
 export const toValidQuestionType = (value: string): QuestionType =>
     (VALID_QUESTION_TYPES.has(value) ? value : 'mcq') as QuestionType

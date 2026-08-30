@@ -37,6 +37,8 @@ export interface TrainingContentBlock {
   type: 'text' | 'image' | 'video' | 'audio' | 'interactive' | 'document_link' | 'quiz' | 'sop_reference' | 'inline_quiz' | 'ai_generated'
   title: string | null
   content: string
+  /** Persisted Arabic translation of `content` (documents.content_ar). */
+  content_ar?: string | null
   content_url: string | null
   content_data: Record<string, unknown> | null
   source_document_id?: string | null

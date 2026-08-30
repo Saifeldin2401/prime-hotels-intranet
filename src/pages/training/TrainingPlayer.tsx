@@ -802,7 +802,7 @@ export default function TrainingPlayer() {
             // training_content_blocks consolidated into documents (content_type='training_block').
             const { data: blocks, error: blocksError } = await supabase
                 .from('documents')
-                .select('id, training_module_id, created_at, title, block_type, content, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
+                .select('id, training_module_id, created_at, title, block_type, content, content_ar, block_order, content_url, content_data, is_mandatory, is_deleted, linked_training_id, ai_generated, ai_source_content, duration_seconds, points')
                 .eq('content_type', 'training_block')
                 .eq('training_module_id', id)
                 .eq('is_deleted', false)
@@ -890,6 +890,41 @@ export default function TrainingPlayer() {
         lastBlockIdRef.current = null
         resetModuleInteractionState()
     }, [moduleData?.module.id, resetModuleInteractionState])
+
+    // Seed the runtime translation cache with any translations persisted on the
+    // block itself (documents.content_ar, or content_data.translations keyed by
+    // language). AI-generated courses ship bilingual content this way, so the
+    // language toggle shows it instantly with no on-demand AI translation call.
+    useEffect(() => {
+        const blocks = moduleData?.blocks
+        if (!blocks || blocks.length === 0) return
+        const seed: Record<string, Partial<Record<TranslationTargetLanguage, string>>> = {}
+        for (const block of blocks) {
+            const entry: Partial<Record<TranslationTargetLanguage, string>> = {}
+            const persistedAr = (block as { content_ar?: string | null }).content_ar
+            if (typeof persistedAr === 'string' && persistedAr.trim()) {
+                entry.ar = persistedAr
+            }
+            const translations = (block.content_data as Record<string, unknown> | null)?.translations
+            if (translations && typeof translations === 'object' && !Array.isArray(translations)) {
+                for (const [lang, value] of Object.entries(translations as Record<string, unknown>)) {
+                    if (typeof value === 'string' && value.trim()) {
+                        entry[lang as TranslationTargetLanguage] = value
+                    }
+                }
+            }
+            if (Object.keys(entry).length > 0) seed[block.id] = entry
+        }
+        if (Object.keys(seed).length > 0) {
+            setBlockTranslations(prev => {
+                const next = { ...prev }
+                for (const [blockId, langs] of Object.entries(seed)) {
+                    next[blockId] = { ...langs, ...next[blockId] }
+                }
+                return next
+            })
+        }
+    }, [moduleData?.blocks])
 
     const totalBlocks = moduleData?.blocks.length || 1
     const quizBlockIds = useMemo(
