@@ -26,7 +26,7 @@ export function resolveCorsOrigin(req: Request): string {
   const origin = req.headers.get("origin") || "";
   const allowedOrigins = getAllowedOrigins();
 
-  if (!origin) return allowedOrigins[0] || "https://www.altus-advisory.com";
+  if (!origin) return allowedOrigins[0] || "https://phg-connect.com";
 
   const cleanOrigin = origin.trim().replace(/\/$/, "");
 
@@ -41,7 +41,9 @@ export function resolveCorsOrigin(req: Request): string {
     return cleanAo === cleanOrigin;
   });
 
-  return isAllowed ? origin : allowedOrigins[0] || "https://www.altus-advisory.com";
+  return isAllowed
+    ? origin
+    : allowedOrigins[allowedOrigins.length - 1] || "https://phg-connect.com";
 }
 
 export function buildCorsHeaders(req: Request): Record<string, string> {
