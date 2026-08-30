@@ -113,6 +113,20 @@ function runLocalHeuristics(file: File): ScanResult {
     }
 }
 
+// `supabase.functions.invoke` wraps a non-2xx response in a FunctionsHttpError
+// whose `.context` is the raw Response. Recover the JSON verdict body from it.
+async function readInvokeErrorBody(error: unknown): Promise<Record<string, unknown> | null> {
+    const ctx = (error as { context?: unknown })?.context
+    if (ctx instanceof Response) {
+        try {
+            return await ctx.clone().json()
+        } catch {
+            return null
+        }
+    }
+    return null
+}
+
 async function runServerScan(file: File, options?: ScanOptions): Promise<ScanResult> {
     const [sampleBase64, fileHash] = await Promise.all([
         fileToBase64(file),
@@ -138,8 +152,28 @@ async function runServerScan(file: File, options?: ScanOptions): Promise<ScanRes
         `scan-file timed out after ${Math.floor(SERVER_SCAN_TIMEOUT_MS / 1000)}s`
     )
 
-    if (error || !data) {
-        throw error || new Error('scan-file returned no data')
+    // supabase.functions.invoke reports any non-2xx as `error`. The scan
+    // function returns 422 for a genuine "not clean" verdict — that is a real
+    // result, not an outage, so read the body and pass the verdict through
+    // rather than masking it as "scanner unavailable".
+    if (error) {
+        const body = await readInvokeErrorBody(error)
+        if (body && typeof body.safe === 'boolean') {
+            return {
+                safe: body.safe,
+                status: body.status || (body.safe ? 'clean' : 'suspicious'),
+                riskScore: typeof body.risk_score === 'number' ? body.risk_score : undefined,
+                scanId: body.scan_id || null,
+                reasons: Array.isArray(body.reasons) ? body.reasons : [],
+                message: body.message || undefined,
+                hashSha256: fileHash
+            }
+        }
+        throw error
+    }
+
+    if (!data) {
+        throw new Error('scan-file returned no data')
     }
 
     return {

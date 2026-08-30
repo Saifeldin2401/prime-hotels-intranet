@@ -70,4 +70,32 @@ describe('scanFile', () => {
     expect(result.status).toBe('error')
     expect(result.message).toContain('security scanner is unavailable')
   })
+
+  it('passes through a real "not clean" verdict returned as a non-2xx response', async () => {
+    invokeMock.mockResolvedValue({
+      data: null,
+      error: {
+        name: 'FunctionsHttpError',
+        context: new Response(
+          JSON.stringify({
+            safe: false,
+            status: 'infected',
+            risk_score: 100,
+            reasons: ['Malware test signature detected (EICAR).'],
+            message: 'Malware test signature detected (EICAR).',
+            scan_id: 'scan-9',
+          }),
+          { status: 422 },
+        ),
+      },
+    })
+
+    const file = new File(['safe'], 'report.csv', { type: 'text/csv' })
+    const result = await scanFile(file)
+
+    expect(result.safe).toBe(false)
+    expect(result.status).toBe('infected')
+    expect(result.scanId).toBe('scan-9')
+    expect(result.message).not.toContain('security scanner is unavailable')
+  })
 })
