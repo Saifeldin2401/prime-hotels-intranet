@@ -472,6 +472,7 @@ Respond ONLY with JSON:
         ...options,
         preferredModel: undefined,
         jsonMode: true,
+        schema: 'visual_decision',
         temperature: 0.3,
       })
     } catch (decisionErr) {
