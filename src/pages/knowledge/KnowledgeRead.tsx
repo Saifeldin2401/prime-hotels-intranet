@@ -1,6 +1,6 @@
 /**
- * KnowledgeViewer - Article Detail Page
- * 
+ * KnowledgeRead - Article Detail Page (formerly KnowledgeViewer)
+ *
  * Simplified viewer for Knowledge Base documents.
  * Supports Title, Description, Content (HTML), and File Attachments.
  */
@@ -104,7 +104,7 @@ interface TOCItem {
     level: number
 }
 
-export default function KnowledgeViewer() {
+export default function KnowledgeRead() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const { t } = useTranslation('knowledge')
@@ -1844,6 +1844,32 @@ export default function KnowledgeViewer() {
                     {/* Premium Sidebar */}
                     {!isFocusMode && (
                         <aside className="lg:col-span-3 space-y-8 sticky top-20 h-fit print:hidden">
+                            {/* Ask AI about this article.
+                                TODO(kb-rag): wire to the Knowledge RAG backend once the
+                                retrieval-augmented answering slice lands. For now this is a
+                                stub that surfaces a "coming soon" notice. */}
+                            <div className="p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600">
+                                <div className="bg-white/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
+                                    <div className="flex items-center gap-2 text-indigo-600">
+                                        <Sparkles className="h-5 w-5" />
+                                        <span className="text-[11px] font-black uppercase tracking-wider">
+                                            {t('viewer.ask_ai_title', 'Ask AI')}
+                                        </span>
+                                    </div>
+                                    <p className="text-xs text-slate-500 leading-relaxed">
+                                        {t('viewer.ask_ai_desc', 'Get instant answers grounded in this article.')}
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                                        onClick={() => toast.info(t('viewer.ask_ai_coming_soon', 'Ask AI about this article is coming soon.'))}
+                                    >
+                                        <Sparkles className="h-4 w-4 me-2" />
+                                        {t('viewer.ask_ai_button', 'Ask AI about this')}
+                                    </Button>
+                                </div>
+                            </div>
+
                             {/* Table of Contents - Primary Sidebar Widget */}
                             {tocItems.length > 0 && (
                                 <div className="space-y-4">

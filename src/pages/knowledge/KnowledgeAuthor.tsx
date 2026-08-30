@@ -1,6 +1,6 @@
 /**
- * KnowledgeEditor
- * 
+ * KnowledgeAuthor (formerly KnowledgeEditor)
+ *
  * Simplified article editor for Knowledge Base.
  * Uses 'documents' table.
  */
@@ -325,7 +325,7 @@ function categorizeDocument(tags: string[]): string {
     return 'General'
 }
 
-export default function KnowledgeEditor() {
+export default function KnowledgeAuthor() {
     const { id } = useParams<{ id: string }>()
     const navigate = useNavigate()
     const location = useLocation()
@@ -951,7 +951,7 @@ export default function KnowledgeEditor() {
         if (primaryRole === 'staff') {
             setIsForbidden(true)
             toast.error('You do not have permission to create or edit articles.')
-            navigate('/knowledge/search')
+            navigate('/knowledge')
         }
     }, [primaryRole, navigate])
 

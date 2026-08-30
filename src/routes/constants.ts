@@ -57,11 +57,9 @@ export const ROUTES = {
   // Knowledge
   KNOWLEDGE: {
     HOME: '/knowledge',
-    WIKI: '/knowledge/wiki',
     SEARCH: '/knowledge/search',
     BROWSE: '/knowledge/browse',
     CREATE: '/knowledge/create',
-    ANALYTICS: '/knowledge/analytics',
     REVIEW: '/knowledge/review',
   },
 
