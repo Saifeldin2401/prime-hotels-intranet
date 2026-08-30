@@ -10,10 +10,11 @@ import type { EditorOutput, RichTextEditorProps, SaveState } from '@/editor/type
 import { copyToClipboard } from '@/editor/utils/clipboard'
 import { serializeEditorContent } from '@/editor/utils/serialization'
 import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
+import { uploadVideoWithCompression, type VideoUploadPhase } from '@/editor/utils/videoUpload'
 import { sanitizeHtml } from '@/lib/sanitize'
 import { cn } from '@/lib/utils'
 import type { Editor } from '@tiptap/react'
-import { EditorContent, useEditor } from '@tiptap/react'
+import { EditorContent, useEditor, useEditorState } from '@tiptap/react'
 import { Loader2 } from 'lucide-react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
@@ -30,11 +31,27 @@ function buildEmptyOutput(): EditorOutput {
   }
 }
 
+function phaseLabel(phase: VideoUploadPhase | null): string | null {
+  if (!phase) return null
+  switch (phase.stage) {
+    case 'loading-engine':
+      return 'Preparing video compressor…'
+    case 'compressing':
+      return phase.progress != null
+        ? `Compressing video… ${Math.round(phase.progress * 100)}%`
+        : 'Compressing video…'
+    case 'uploading':
+      return 'Uploading video…'
+    default:
+      return null
+  }
+}
+
 export function CustomRichTextEditor({
   value,
   onChange,
   onContentChange,
-  placeholder = 'Start typing your content here...',
+  placeholder = 'Start writing your content here…',
   className,
   minHeight = 320,
   disabled = false,
@@ -45,8 +62,8 @@ export function CustomRichTextEditor({
   // Editor uploads get embedded into saved HTML as <img src>, so they need a
   // durable URL -- 'documents' is private and would embed a URL that 404s.
   supabaseBucket = 'content-media',
+  onPickMedia,
 }: RichTextEditorProps) {
-  // 1. Config & State
   const mergedToolbarConfig = useMemo(() => mergeToolbarConfig(toolbarConfig), [toolbarConfig])
   const aiEnabled = ai?.enabled !== false
   const sanitizedValue = useMemo(() => sanitizeHtml(value || ''), [value])
@@ -55,21 +72,52 @@ export function CustomRichTextEditor({
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [isAiPanelOpen, setIsAiPanelOpen] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false)
+  const [videoPhase, setVideoPhase] = useState<VideoUploadPhase | null>(null)
   const [saveState, setSaveState] = useState<SaveState>('idle')
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null)
-  const [changeVersion, setChangeVersion] = useState(0)
   const [quickInsertPos, setQuickInsertPos] = useState<{ x: number; y: number } | null>(null)
 
-  // 2. Refs
   const editorRef = useRef<Editor | null>(null)
   const latestOutputRef = useRef<EditorOutput>(buildEmptyOutput())
   const autosaveTimerRef = useRef<number | null>(null)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const videoFileInputRef = useRef<HTMLInputElement | null>(null)
   const isMountedRef = useRef(false)
+  const autosaveRef = useRef(autosave)
+  autosaveRef.current = autosave
 
-  // 3. Editor Hook
+  const scheduleAutosave = useCallback(() => {
+    const cfg = autosaveRef.current
+    if (!cfg?.enabled || !cfg.onAutosave) return
+    if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
+    autosaveTimerRef.current = window.setTimeout(async () => {
+      setSaveState('saving')
+      try {
+        await cfg.onAutosave(latestOutputRef.current)
+        if (!isMountedRef.current) return
+        setSaveState('saved')
+        setLastSavedAt(new Date().toISOString())
+      } catch {
+        if (isMountedRef.current) setSaveState('error')
+      }
+    }, cfg.delayMs ?? 1200)
+  }, [])
+
+  const emitContentChange = useCallback(
+    (currentEditor: Editor, notifyExternal = true) => {
+      const output = serializeEditorContent(currentEditor)
+      latestOutputRef.current = output
+      if (!isMountedRef.current) return
+      if (notifyExternal) {
+        onChange?.(output.html)
+        onContentChange?.(output)
+        setSaveState((state) => (state === 'saving' ? state : 'idle'))
+        scheduleAutosave()
+      }
+    },
+    [onChange, onContentChange, scheduleAutosave],
+  )
+
   const editor = useEditor({
     extensions,
     content: sanitizedValue,
@@ -80,137 +128,127 @@ export function CustomRichTextEditor({
         dir: direction,
       },
       handleDrop: (view, event) => {
-        const droppedFiles = Array.from(event.dataTransfer?.files || []).filter((file) => file.type.startsWith('image/'))
-        if (!droppedFiles.length) return false
-
+        const dropped = Array.from(event.dataTransfer?.files || []).filter((f) => f.type.startsWith('image/'))
+        if (!dropped.length) return false
         event.preventDefault()
         const position = view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
-        // We use the ref here to avoid TDZ issues during initialization
-        void handleImageUpload(droppedFiles, position)
+        void handleImageUpload(dropped, position)
         return true
       },
       handlePaste: (_view, event) => {
-        const pastedFiles = Array.from(event.clipboardData?.files || []).filter((file) => file.type.startsWith('image/'))
-        if (!pastedFiles.length) return false
-
+        const pasted = Array.from(event.clipboardData?.files || []).filter((f) => f.type.startsWith('image/'))
+        if (!pasted.length) return false
         event.preventDefault()
-        void handleImageUpload(pastedFiles)
+        void handleImageUpload(pasted)
         return true
       },
+      handleKeyDown: (view, event) => {
+        // "/" at the start of an empty paragraph opens the quick-insert menu.
+        if (event.key !== '/') return false
+        const { $from, empty } = view.state.selection
+        if (!empty) return false
+        const inEmptyParagraph = $from.parent.type.name === 'paragraph' && $from.parent.content.size === 0
+        if (!inEmptyParagraph) return false
+        const coords = view.coordsAtPos($from.pos)
+        setQuickInsertPos({ x: coords.left, y: coords.bottom })
+        return false
+      },
     },
-    onCreate: ({ editor: currentEditor }) => {
-      editorRef.current = currentEditor
-      emitContentChange(currentEditor, false)
+    onCreate: ({ editor: e }) => {
+      editorRef.current = e
+      emitContentChange(e, false)
     },
-    onUpdate: ({ editor: currentEditor }) => {
-      emitContentChange(currentEditor)
-    },
+    onUpdate: ({ editor: e }) => emitContentChange(e),
     onDestroy: () => {
       editorRef.current = null
     },
   })
 
-  // 4. Callbacks
-  const emitContentChange = useCallback(
-    (currentEditor: Editor, notifyExternal = true) => {
-      const output = serializeEditorContent(currentEditor)
-      latestOutputRef.current = output
-
-      if (!isMountedRef.current) return
-
-      if (notifyExternal) {
-        onChange?.(output.html)
-        onContentChange?.(output)
-      }
-
-      setChangeVersion((version) => version + 1)
-      setSaveState((state) => (state === 'saving' ? state : 'idle'))
-    },
-    [onChange, onContentChange],
-  )
+  // Counts come straight off the CharacterCount extension — no per-keystroke
+  // React state, no re-serialization.
+  const counts = useEditorState({
+    editor,
+    selector: ({ editor: e }) => ({
+      words: (e?.storage.characterCount?.words?.() as number | undefined) ?? 0,
+      characters: (e?.storage.characterCount?.characters?.() as number | undefined) ?? 0,
+    }),
+  }) ?? { words: 0, characters: 0 }
 
   const handleImageUpload = useCallback(
     async (files: File[], position?: number) => {
       const currentEditor = editorRef.current || editor
       if (!currentEditor || !isMountedRef.current) return
-
-      const imageFiles = files.filter((file) => file.type.startsWith('image/'))
+      const imageFiles = files.filter((f) => f.type.startsWith('image/'))
       if (!imageFiles.length) return
 
       setIsUploadingImage(true)
       try {
         for (const file of imageFiles) {
-          const publicUrl = await uploadFileToSupabase(file, supabaseBucket)
-          if (!publicUrl) continue
-
+          const url = await uploadFileToSupabase(file, supabaseBucket)
+          if (!url) continue
           const chain = currentEditor.chain().focus()
-          if (typeof position === 'number') {
-            chain.setTextSelection(position)
-          }
-
-          chain
-            .insertContent({
-              type: 'image',
-              attrs: {
-                src: publicUrl,
-                alt: file.name,
-                title: file.name,
-                width: '100%',
-                align: 'center',
-              },
-            })
-            .run()
+          if (typeof position === 'number') chain.setTextSelection(position)
+          chain.insertContent({
+            type: 'image',
+            attrs: { src: url, alt: file.name, title: file.name, width: '100%', align: 'center' },
+          }).run()
         }
-        toast.success('Image uploaded successfully')
+        toast.success('Image added')
       } catch (error) {
         toast.error((error as Error).message || 'Image upload failed')
       } finally {
-        if (isMountedRef.current) {
-          setIsUploadingImage(false)
-        }
+        if (isMountedRef.current) setIsUploadingImage(false)
       }
     },
     [editor, supabaseBucket],
   )
 
   const handleVideoUpload = useCallback(
-    async (files: File[], position?: number) => {
+    async (files: File[]) => {
       const currentEditor = editorRef.current || editor
       if (!currentEditor || !isMountedRef.current) return
+      const file = files.find((f) => f.type.startsWith('video/'))
+      if (!file) return
 
-      const videoFiles = files.filter((file) => file.type.startsWith('video/'))
-      if (!videoFiles.length) return
-
-      setIsUploadingVideo(true)
+      setVideoPhase({ stage: 'idle' })
       try {
-        for (const file of videoFiles) {
-          const publicUrl = await uploadFileToSupabase(file, 'content-media')
-          if (!publicUrl) continue
-
-          const chain = currentEditor.chain().focus()
-          if (typeof position === 'number') {
-            chain.setTextSelection(position)
-          }
-
-          chain.setVideo({ src: publicUrl }).run()
-        }
-        toast.success('Video uploaded successfully to Altus Cloud')
+        const { url } = await uploadVideoWithCompression(file, {
+          onPhase: (p) => isMountedRef.current && setVideoPhase(p),
+        })
+        currentEditor.chain().focus().setVideo({ src: url }).run()
+        toast.success('Video added')
       } catch (error) {
         toast.error((error as Error).message || 'Video upload failed')
       } finally {
-        if (isMountedRef.current) {
-          setIsUploadingVideo(false)
-        }
+        if (isMountedRef.current) setVideoPhase(null)
       }
     },
     [editor],
   )
 
-  // 5. Effects
+  const handlePickFromLibrary = useCallback(
+    async (kind: 'image' | 'video') => {
+      const currentEditor = editorRef.current || editor
+      if (!currentEditor || !onPickMedia) return
+      const url = await onPickMedia(kind)
+      if (!url) return
+      if (kind === 'image') {
+        currentEditor.chain().focus().insertContent({
+          type: 'image',
+          attrs: { src: url, alt: '', width: '100%', align: 'center' },
+        }).run()
+      } else {
+        currentEditor.chain().focus().setVideo({ src: url }).run()
+      }
+    },
+    [editor, onPickMedia],
+  )
+
   useEffect(() => {
     isMountedRef.current = true
     return () => {
       isMountedRef.current = false
+      if (autosaveTimerRef.current) window.clearTimeout(autosaveTimerRef.current)
     }
   }, [])
 
@@ -221,91 +259,49 @@ export function CustomRichTextEditor({
   useEffect(() => {
     if (!editor || !isMountedRef.current) return
     const incoming = sanitizedValue
-    const current = editor.getHTML()
-
-    if (incoming !== current && !editor.isFocused && !isUploadingImage && !isUploadingVideo) {
+    if (incoming !== editor.getHTML() && !editor.isFocused && !isUploadingImage && !videoPhase) {
       editor.commands.setContent(incoming, { emitUpdate: false })
       latestOutputRef.current = serializeEditorContent(editor)
     }
-  }, [sanitizedValue, editor, isUploadingImage, isUploadingVideo])
+  }, [sanitizedValue, editor, isUploadingImage, videoPhase])
 
-  useEffect(() => {
-    if (!autosave?.enabled || !autosave.onAutosave) return
-    if (!changeVersion) return
-
-    if (autosaveTimerRef.current) {
-      window.clearTimeout(autosaveTimerRef.current)
-    }
-
-    const delay = autosave.delayMs ?? 1200
-    autosaveTimerRef.current = window.setTimeout(async () => {
-      setSaveState('saving')
-      try {
-        await autosave.onAutosave(latestOutputRef.current)
-        setSaveState('saved')
-        setLastSavedAt(new Date().toISOString())
-      } catch {
-        setSaveState('error')
-      }
-    }, delay)
-
-    return () => {
-      if (autosaveTimerRef.current) {
-        window.clearTimeout(autosaveTimerRef.current)
-      }
-    }
-  }, [autosave, changeVersion])
-
-  // 6. Handlers
   const handleFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
-    if (!files.length) return
-
-    await handleImageUpload(files)
     event.target.value = ''
+    if (files.length) await handleImageUpload(files)
   }
 
   const handleVideoFileInputChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(event.target.files || [])
-    if (!files.length) return
-
-    await handleVideoUpload(files)
     event.target.value = ''
+    if (files.length) await handleVideoUpload(files)
   }
 
   const copyHtml = async () => {
-    const success = await copyToClipboard(latestOutputRef.current.html)
-    if (success) toast.success('HTML copied')
-    else toast.error('Failed to copy HTML')
+    const ok = await copyToClipboard(latestOutputRef.current.html)
+    toast[ok ? 'success' : 'error'](ok ? 'HTML copied' : 'Failed to copy HTML')
   }
 
   const copyMarkdown = async () => {
-    const success = await copyToClipboard(latestOutputRef.current.markdown)
-    if (success) toast.success('Markdown copied')
-    else toast.error('Failed to copy Markdown')
+    const ok = await copyToClipboard(latestOutputRef.current.markdown)
+    toast[ok ? 'success' : 'error'](ok ? 'Markdown copied' : 'Failed to copy Markdown')
   }
 
   const handleDoubleClick = (event: React.MouseEvent) => {
     if (disabled || !editor) return
-
     const target = event.target as HTMLElement
-    // Ignore if clicked on image or already in a menu
-    if (target.tagName === 'IMG' || target.closest('.editor-image') || target.closest('.bubble-menu')) return
-
-    const view = editor.view
-    const coords = { left: event.clientX, top: event.clientY }
-    const pos = view.posAtCoords(coords)?.pos
-
-    if (typeof pos === 'number') {
-      try {
-        editor.chain().focus(pos).run()
-      } catch (_err) {
-        editor.commands.focus()
-      }
-
-      setQuickInsertPos({ x: event.clientX, y: event.clientY })
+    if (target.tagName === 'IMG' || target.closest('.editor-image') || target.closest('[data-tippy-root]')) return
+    const pos = editor.view.posAtCoords({ left: event.clientX, top: event.clientY })?.pos
+    if (typeof pos !== 'number') return
+    try {
+      editor.chain().focus(pos).run()
+    } catch {
+      editor.commands.focus()
     }
+    setQuickInsertPos({ x: event.clientX, y: event.clientY })
   }
+
+  const videoBanner = phaseLabel(videoPhase)
 
   return (
     <div
@@ -316,20 +312,8 @@ export function CustomRichTextEditor({
       )}
       dir={direction}
     >
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="image/*"
-        className="hidden"
-        onChange={handleFileInputChange}
-      />
-      <input
-        ref={videoFileInputRef}
-        type="file"
-        accept="video/*"
-        className="hidden"
-        onChange={handleVideoFileInputChange}
-      />
+      <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInputChange} />
+      <input ref={videoFileInputRef} type="file" accept="video/mp4,video/webm,video/quicktime" className="hidden" onChange={handleVideoFileInputChange} />
 
       <EditorToolbar
         editor={editor}
@@ -337,38 +321,28 @@ export function CustomRichTextEditor({
         config={mergedToolbarConfig}
         onUploadImage={() => fileInputRef.current?.click()}
         onUploadVideo={() => videoFileInputRef.current?.click()}
-        onOpenAiPanel={() => setIsAiPanelOpen(!isAiPanelOpen)}
+        onOpenAiPanel={() => setIsAiPanelOpen((s) => !s)}
         onCopyHtml={copyHtml}
         onCopyMarkdown={copyMarkdown}
-        onToggleFullscreen={() => setIsFullscreen((state) => !state)}
+        onToggleFullscreen={() => setIsFullscreen((s) => !s)}
         isFullscreen={isFullscreen}
+        onPickMedia={onPickMedia ? handlePickFromLibrary : undefined}
       />
 
       <div className="relative">
-        <FloatingToolbar
-          editor={editor}
-          disabled={disabled}
-          onOpenAiPanel={() => setIsAiPanelOpen(true)}
-        />
+        <FloatingToolbar editor={editor} disabled={disabled} onOpenAiPanel={() => setIsAiPanelOpen(true)} />
 
-        <div
-          className="altus-editor-surface px-3 py-3"
-          style={{ minHeight }}
-          onDoubleClick={handleDoubleClick}
-        >
+        <div className="altus-editor-surface px-3 py-3" style={{ minHeight }} onDoubleClick={handleDoubleClick}>
           <EditorContent editor={editor} />
 
           {isUploadingImage && (
             <div className="editor-uploading-banner">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading image...
+              <Loader2 className="h-4 w-4 animate-spin" /> Uploading image…
             </div>
           )}
-
-          {isUploadingVideo && (
+          {videoBanner && (
             <div className="editor-uploading-banner">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Uploading video to Cloud...
+              <Loader2 className="h-4 w-4 animate-spin" /> {videoBanner}
             </div>
           )}
         </div>
@@ -376,21 +350,15 @@ export function CustomRichTextEditor({
 
       {mergedToolbarConfig.features.aiAssist && aiEnabled && editor && isAiPanelOpen && (
         <div className="ai-assist-panel-inline">
-          <div className="max-w-4xl mx-auto">
-            <AIAssistPanel
-              editor={editor}
-              open={isAiPanelOpen}
-              onOpenChange={setIsAiPanelOpen}
-              aiConfig={ai}
-              direction={direction}
-            />
+          <div className="mx-auto max-w-4xl">
+            <AIAssistPanel editor={editor} open={isAiPanelOpen} onOpenChange={setIsAiPanelOpen} aiConfig={ai} direction={direction} />
           </div>
         </div>
       )}
 
       <EditorStatusBar
-        wordCount={latestOutputRef.current.wordCount}
-        characterCount={latestOutputRef.current.characterCount}
+        wordCount={counts.words}
+        characterCount={counts.characters}
         saveState={saveState}
         lastSavedAt={lastSavedAt}
       />
@@ -401,6 +369,7 @@ export function CustomRichTextEditor({
           position={quickInsertPos}
           onClose={() => setQuickInsertPos(null)}
           onUploadImage={() => fileInputRef.current?.click()}
+          onAddVideo={() => videoFileInputRef.current?.click()}
           onOpenAiPanel={() => setIsAiPanelOpen(true)}
         />
       )}

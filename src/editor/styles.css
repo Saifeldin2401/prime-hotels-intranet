@@ -159,24 +159,14 @@
   }
 }
 
-/* AI Assist & Bubble Menu Components */
-.tiptap .bubble-menu,
-[data-tiptap-bubble-menu],
-.quick-insert-menu {
-  background-color: #0f172a !important;
-  /* solid slate-900 */
-  border: 1px solid #334155 !important;
-  /* slate-700 */
-  border-radius: 0.75rem !important;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.4), 0 8px 10px -6px rgba(0, 0, 0, 0.2) !important;
-  padding: 4px !important;
-  z-index: 100 !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
+/* The floating (bubble) toolbar styles itself via Tailwind on its own root
+   element; it just needs to sit above editor content and never animate its
+   position (that was the old flicker). */
+.tiptap-bubble-menu,
+[data-tiptap-bubble-menu] {
+  z-index: 100;
 }
 
-/* Ensure no transparency in dark mode or backdrop filters that cause lag */
 .ai-assist-panel-inline {
   background-color: hsl(var(--card));
   border-top: 1px solid hsl(var(--hotel-gold) / 0.2);
@@ -196,10 +186,3 @@
   }
 }
 
-/* Fix for Quick Insert Menu positioning */
-.quick-insert-menu {
-  position: fixed;
-  width: 200px;
-}
-
-/* AI Assist Panel - Simple and direct */

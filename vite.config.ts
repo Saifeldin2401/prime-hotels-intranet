@@ -6,7 +6,8 @@ import { sentryVitePlugin } from "@sentry/vite-plugin"
 const securityHeaders = {
   'Content-Security-Policy': [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://phg-connect.com https://www.phg-connect.com https://altus-connect.com https://www.altus-connect.com https://altus-advisory.com https://www.altus-advisory.com https://va.vercel-scripts.com https://*.vercel-scripts.com", 
+    // blob: lets the ffmpeg.wasm worker importScripts() its (jsdelivr-fetched) core blob — see src/editor/utils/videoCompression.ts
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' blob: https://phg-connect.com https://www.phg-connect.com https://altus-connect.com https://www.altus-connect.com https://altus-advisory.com https://www.altus-advisory.com https://va.vercel-scripts.com https://*.vercel-scripts.com",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // Needed for Tailwind and Google Fonts
     "img-src 'self' data: https:",
     "font-src 'self' https://fonts.gstatic.com",
@@ -98,7 +99,9 @@ export default defineConfig({
   optimizeDeps: {
     // `marked` is imported by lazy-loaded routes. Excluding it avoids Vite's
     // prebundle cache serving stale `.vite/deps/marked.js` during local dev.
-    exclude: ['marked'],
+    // `@ffmpeg/*` ship a web worker that Vite must not prebundle (it breaks the
+    // `new URL('./worker.js', import.meta.url)` resolution).
+    exclude: ['marked', '@ffmpeg/ffmpeg', '@ffmpeg/util'],
   },
   build: {
     // Performance: skip module preload polyfill for modern browsers
