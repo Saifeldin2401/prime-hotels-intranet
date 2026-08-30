@@ -8,7 +8,6 @@ import {
     SemanticClassAttributes,
 } from '@/editor/plugins/semanticBlocks'
 import { VideoExtension } from '@/editor/plugins/video/VideoExtension'
-import BubbleMenu from '@tiptap/extension-bubble-menu'
 import CharacterCount from '@tiptap/extension-character-count'
 import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
@@ -45,12 +44,10 @@ export function createEditorExtensions(options: ExtensionOptions) {
       // Note: Underline might be included in StarterKit in newer versions
       link: false,
     }),
-    BubbleMenu.configure({
-      shouldShow: ({ editor, state }) => {
-        // We'll manage visibility logic in the component, but the extension is needed
-        return !state.selection.empty || editor.isActive('image') || editor.isActive('table')
-      },
-    }),
+    // NOTE: the BubbleMenu *extension* is intentionally NOT registered here.
+    // The <BubbleMenu> React component (@tiptap/react/menus) registers its own
+    // ProseMirror plugin; adding the extension too creates a second plugin under
+    // the same key, which is what made the floating toolbar flicker and misplace.
     SemanticClassAttributes,
     TextAlign.configure({
       types: ['heading', 'paragraph', 'articleBlock', 'sectionBlock', 'aiCalloutBlock', 'headerBlock', 'footerBlock'],

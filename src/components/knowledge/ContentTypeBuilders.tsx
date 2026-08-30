@@ -33,6 +33,7 @@ import { type ReactNode, useCallback, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { uploadFileToSupabase } from '@/editor/utils/supabaseUpload'
+import { uploadVideoWithCompression } from '@/editor/utils/videoUpload'
 
 import { MediaPicker } from '@/components/media/MediaPicker'
 import type { MediaAsset } from '@/lib/types/media'
@@ -207,16 +208,16 @@ export function VideoContentBuilder({ value, onChange }: VideoContentBuilderProp
 
                             setIsUploading(true)
                             try {
-                                // Upload to Supabase storage first
-                                const url = await uploadFileToSupabase(file, 'content-media')
-                                
-                                // Then sync to Media Library
-                                await uploadFile(file, {
+                                // Auto-compress oversized files, upload, then sync
+                                // the stored (possibly compressed) file to the library.
+                                const { url, file: storedFile } = await uploadVideoWithCompression(file)
+
+                                await uploadFile(storedFile, {
                                     title: file.name.replace(/\.[^/.]+$/, ''),
                                     category: 'knowledgebase',
                                     property_id: primaryProperty?.id,
                                 })
-                                
+
                                 onChange(url)
                                 toast.success('Video uploaded and added to Media Library')
                             } catch (error) {

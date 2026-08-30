@@ -634,6 +634,9 @@ export default function KnowledgeEditor() {
     const [isForbidden, setIsForbidden] = useState(false)
     const [showDocumentPicker, setShowDocumentPicker] = useState(false)
     const [showMediaPicker, setShowMediaPicker] = useState(false)
+    // Bridges the callback-based MediaPicker to the editor's promise-based onPickMedia.
+    const mediaPickResolveRef = useRef<((url: string | null) => void) | null>(null)
+    const mediaPickKindRef = useRef<'image' | 'video'>('image')
     const [beautifyOptions, setBeautifyOptions] = useState({
         includeTables: true,
         includeMermaid: false,
@@ -1055,9 +1058,27 @@ export default function KnowledgeEditor() {
         })
     }, [])
 
+    // The editor asks for a media URL and inserts it itself (proper TipTap node,
+    // not string concat). Returns null if the picker is dismissed.
+    const pickMediaFromLibrary = useCallback((kind: 'image' | 'video'): Promise<string | null> => {
+        return new Promise((resolve) => {
+            mediaPickKindRef.current = kind
+            mediaPickResolveRef.current = resolve
+            setShowMediaPicker(true)
+        })
+    }, [])
+
     const handleMediaSelect = useCallback((assets: MediaAsset[]) => {
         if (assets.length === 0) return
         const asset = assets[0]
+
+        // Editor-initiated pick: hand the URL back and let the editor insert it.
+        if (mediaPickResolveRef.current) {
+            mediaPickResolveRef.current(asset.public_url)
+            mediaPickResolveRef.current = null
+            setShowMediaPicker(false)
+            return
+        }
 
         if (asset.media_type === 'image') {
             const imgHtml = `<p><img src="${asset.public_url}" alt="${asset.title || asset.filename}" class="rounded-xl shadow-md my-4 max-w-full" /></p>`
@@ -2002,34 +2023,19 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     <Card className="shadow-sm border-slate-200 dark:border-slate-800">
                         <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}>
-                                        <TabsList className="h-8">
-                                            <TabsTrigger value="edit" className="text-xs h-7 px-3">
-                                                ✍️ {t('editor.content_tab', 'Write')}
-                                            </TabsTrigger>
-                                            <TabsTrigger value="preview" className="text-xs h-7 px-3">
-                                                👁️ {t('editor.preview_tab', 'Live Interactive Preview')}
-                                            </TabsTrigger>
-                                        </TabsList>
-                                    </Tabs>
+                                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'edit' | 'preview')}>
+                                    <TabsList className="h-8">
+                                        <TabsTrigger value="edit" className="text-xs h-7 px-3">
+                                            ✍️ {t('editor.content_tab', 'Write')}
+                                        </TabsTrigger>
+                                        <TabsTrigger value="preview" className="text-xs h-7 px-3">
+                                            👁️ {t('editor.preview_tab', 'Live Interactive Preview')}
+                                        </TabsTrigger>
+                                    </TabsList>
+                                </Tabs>
 
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={() => setShowMediaPicker(true)}
-                                        className="h-8 text-xs gap-1.5 font-medium border-slate-200 dark:border-slate-800 hover:border-hotel-gold hover:bg-hotel-gold/5 text-slate-700 dark:text-slate-200"
-                                    >
-                                        <ImageIcon className="w-3.5 h-3.5 text-hotel-gold" />
-                                        <span>Media Library</span>
-                                    </Button>
-                                </div>
-
-                                <div className="text-xs text-muted-foreground flex items-center gap-2">
-                                    <span>{formData.content ? `${formData.content.replace(/<[^>]*>/g, '').split(/\s+/).filter(Boolean).length} words` : '0 words'}</span>
-                                    <span>•</span>
-                                    <span>{calculateEstimatedReadTime(formData.content) || 1} min read</span>
+                                <div className="text-xs text-muted-foreground">
+                                    {calculateEstimatedReadTime(formData.content) || 1} min read
                                 </div>
                             </div>
                         </CardHeader>
@@ -2049,6 +2055,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         placeholder={t('editor.write_placeholder', 'Start typing the hotel operational procedure or policy standard here...')}
                                         minHeight={320}
                                         direction={editLang === 'ar' ? 'rtl' : 'ltr'}
+                                        onPickMedia={pickMediaFromLibrary}
                                     />
 
                                     {/* Interactive Execution Checklist Builder */}
@@ -2666,8 +2673,16 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
             {/* Central Media Library Picker Dialog */}
             <MediaPicker
                 open={showMediaPicker}
-                onOpenChange={setShowMediaPicker}
+                onOpenChange={(open) => {
+                    setShowMediaPicker(open)
+                    // Dismissed without picking -> resolve the editor's pending request.
+                    if (!open && mediaPickResolveRef.current) {
+                        mediaPickResolveRef.current(null)
+                        mediaPickResolveRef.current = null
+                    }
+                }}
                 onSelect={handleMediaSelect}
+                config={mediaPickResolveRef.current ? { allowedTypes: [mediaPickKindRef.current], multiple: false } : undefined}
                 title="Select Media from Hotel Library"
             />
 

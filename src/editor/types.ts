@@ -82,6 +82,12 @@ export interface RichTextEditorProps {
   autosave?: AutoSaveConfig
   ai?: AIConfig
   supabaseBucket?: string
+  /**
+   * Open the host application's media library and resolve with the chosen
+   * asset's public URL (or null if cancelled). When provided, the editor shows
+   * "from library" options next to its own upload buttons.
+   */
+  onPickMedia?: (kind: 'image' | 'video') => Promise<string | null>
 }
 
 export type SaveState = 'idle' | 'saving' | 'saved' | 'error'
