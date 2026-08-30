@@ -37,7 +37,7 @@ import {
   X,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { CourseDifficulty, CourseGenerationMode, TargetAudience } from '@/types/aiCourseEngine'
+import type { CourseDifficulty, CourseGenerationMode, SourceDocumentRef, TargetAudience } from '@/types/aiCourseEngine'
 
 export interface UploadedDocumentInfo {
   name: string
@@ -83,6 +83,11 @@ interface StudioStageBasicsProps {
   onChangeRemixGoal: (g: any) => void
   pedagogicalFramework: string
   onChangePedagogicalFramework: (f: string) => void
+  /** Called after an uploaded source file has been stored once in the document
+   *  repository — the ref is later linked to the generated course. */
+  onSourceFileUploaded?: (ref: SourceDocumentRef) => void
+  /** Called when the user clears the grounding document. */
+  onSourceFileCleared?: () => void
 }
 
 export function StudioStageBasics({
@@ -120,6 +125,8 @@ export function StudioStageBasics({
   onChangeRemixGoal,
   pedagogicalFramework,
   onChangePedagogicalFramework,
+  onSourceFileUploaded,
+  onSourceFileCleared,
 }: StudioStageBasicsProps) {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -266,6 +273,17 @@ export function StudioStageBasics({
       if (!courseTopic.trim()) {
         onChangeTopic(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '))
       }
+
+      // Store the original file once so it auto-attaches to the generated course.
+      if (onSourceFileUploaded) {
+        try {
+          const { uploadSourceDocument } = await import('@/lib/documentAttachments')
+          const ref = await uploadSourceDocument(file, text)
+          onSourceFileUploaded(ref)
+        } catch (attachErr) {
+          console.warn('[StudioStageBasics] could not store source document:', attachErr)
+        }
+      }
     } catch (err: any) {
       setUploadedFileInfo(null)
       onChangeRawSourceContent('')
@@ -293,6 +311,7 @@ export function StudioStageBasics({
     onSelectDocumentId(null)
     setUploadedFileInfo(null)
     onChangeRawSourceContent('')
+    onSourceFileCleared?.()
   }
 
   return (

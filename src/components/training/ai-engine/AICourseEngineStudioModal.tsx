@@ -76,6 +76,7 @@ import type {
   LessonTemplateType,
   OverallContentDepth,
   QuizPlacement,
+  SourceDocumentRef,
   TargetAudience,
   VisualStyle,
 } from '@/types/aiCourseEngine'
@@ -313,9 +314,28 @@ export function AICourseEngineStudioModal({
   const [libraryDocText, setLibraryDocText] = useState('')
   const [libraryDocExtracting, setLibraryDocExtracting] = useState(false)
   const [libraryDocExtractError, setLibraryDocExtractError] = useState<string | null>(null)
+
+  // Every document that grounds this generation — uploaded files (stored once)
+  // and picked Knowledge Base / Library docs — to auto-attach to the saved course.
+  const [sourceDocRefs, setSourceDocRefs] = useState<SourceDocumentRef[]>([])
+
   useEffect(() => {
     setLibraryDocText('')
     setLibraryDocExtractError(null)
+    // Track a picked Knowledge Base article or Library file as a source doc ref.
+    setSourceDocRefs((prev) => {
+      const kept = prev.filter((r) => r.uploaded)
+      if (selectedArticle?.id) {
+        kept.push({ documentId: selectedArticle.id, originalFilename: selectedArticle.title || 'Knowledge Base article', fileType: selectedArticle.content_type || 'knowledge_article', uploaded: false })
+      } else if (selectedDocumentId && Array.isArray(sopsData) && sopsData.find((a) => a.id === selectedDocumentId)) {
+        const a = sopsData.find((x) => x.id === selectedDocumentId)!
+        kept.push({ documentId: a.id, originalFilename: a.title || 'Knowledge Base article', fileType: a.content_type || 'knowledge_article', uploaded: false })
+      } else if (selectedDocumentId && Array.isArray(libraryDocuments)) {
+        const d = libraryDocuments.find((x: any) => x.id === selectedDocumentId)
+        if (d) kept.push({ documentId: d.id, originalFilename: d.title || 'Library document', fileType: d.file_type || d.file_extension || d.content_type || undefined, fileSize: d.file_size ?? undefined, uploaded: false })
+      }
+      return kept
+    })
     if (!selectedDocumentId || !Array.isArray(libraryDocuments)) return
     const doc = libraryDocuments.find((d: any) => d.id === selectedDocumentId) as
       | { content?: string | null; file_url?: string | null; file_type?: string | null; file_extension?: string | null }
@@ -334,7 +354,8 @@ export function AICourseEngineStudioModal({
       .catch((e) => { if (!cancelled) setLibraryDocExtractError((e as Error).message) })
       .finally(() => { if (!cancelled) setLibraryDocExtracting(false) })
     return () => { cancelled = true }
-  }, [selectedDocumentId, libraryDocuments])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDocumentId, libraryDocuments, sopsData, selectedArticle])
 
   // Synchronize on modal open or prop change
   useEffect(() => {
@@ -633,10 +654,16 @@ export function AICourseEngineStudioModal({
       combinedSource = `${combinedSource}${modeDirectives}`
     }
 
+    const sourceDocuments = sourceDocRefs
+      .filter((r, i, a) => r.documentId && a.findIndex((x) => x.documentId === r.documentId) === i)
+      .map((r, i) => ({ ...r, isPrimary: i === 0 }))
+
     return {
       generationMode,
       topic: courseTopic || 'Hospitality Excellence',
       sourceContent: combinedSource,
+      sourceDocuments,
+      sourceDocumentId: sourceDocuments[0]?.documentId ?? selectedDocumentId ?? undefined,
       courseType,
       instructionalStrategy,
       targetAudience,
@@ -805,11 +832,21 @@ export function AICourseEngineStudioModal({
     try {
       const { text, wordCount, truncated } = await extractTextFromFile(file, 40000)
       setRawSourceContent(text)
-      setQuickUploadName(
-        `${file.name} · ${wordCount.toLocaleString()} words${truncated ? ' (truncated)' : ''}`,
-      )
       if (!courseTopic.trim()) {
         setCourseTopic(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '))
+      }
+      // Store the original file once so it auto-attaches to the finished course
+      // as a Source Document (kept unchanged; not made learner-visible).
+      setQuickUploadName(`${file.name} · ${wordCount.toLocaleString()} words${truncated ? ' (truncated)' : ''} — saving file…`)
+      try {
+        const { uploadSourceDocument } = await import('@/lib/documentAttachments')
+        const ref = await uploadSourceDocument(file, text)
+        setSourceDocRefs((prev) => [...prev.filter((r) => r.originalFilename !== file.name), ref])
+        setQuickUploadName(`${file.name} · ${wordCount.toLocaleString()} words${truncated ? ' (truncated)' : ''} · attached`)
+      } catch (attachErr) {
+        // Extraction still succeeded — generation proceeds, just without the file link.
+        console.warn('[Studio] source document attach failed:', attachErr)
+        setQuickUploadName(`${file.name} · ${wordCount.toLocaleString()} words${truncated ? ' (truncated)' : ''}`)
       }
     } catch (err) {
       setRawSourceContent('')
@@ -824,6 +861,7 @@ export function AICourseEngineStudioModal({
   const handleQuickClearUpload = () => {
     setQuickUploadName('')
     setRawSourceContent('')
+    setSourceDocRefs((prev) => prev.filter((r) => !r.uploaded))
   }
 
   // Handle Save Blueprint to Database
@@ -1245,6 +1283,10 @@ export function AICourseEngineStudioModal({
                       onSelectDocumentId={setSelectedDocumentId}
                       rawSourceContent={rawSourceContent}
                       onChangeRawSourceContent={setRawSourceContent}
+                      onSourceFileUploaded={(ref) =>
+                        setSourceDocRefs((prev) => [...prev.filter((r) => r.originalFilename !== ref.originalFilename), ref])
+                      }
+                      onSourceFileCleared={() => setSourceDocRefs((prev) => prev.filter((r) => !r.uploaded))}
                       sopsData={sopsData}
                       isLoadingSOPs={isLoadingSOPs}
                       selectedArticle={selectedArticle}

@@ -17,6 +17,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 
 import { InlineErrorBoundary } from '@/components/common/InlineErrorBoundary'
+import { CourseSourceDocuments } from '@/components/training/CourseSourceDocuments'
 import { DocumentBlockRenderer } from '@/components/training/DocumentBlockRenderer'
 import { EmbeddedArticleViewer } from '@/components/training/EmbeddedArticleViewer'
 import { SmartObserver } from '@/components/training/SmartObserver'
@@ -2402,6 +2403,12 @@ export default function TrainingPlayer() {
                         </div>
                     )}
 
+                    <CourseSourceDocuments
+                        trainingModuleId={moduleData.module.id}
+                        variant="learner"
+                        className="mb-8 text-start"
+                    />
+
                     {newlyEarnedAchievements.length > 0 && (
                         <div className="mb-8 space-y-2">
                             {newlyEarnedAchievements.map((type, idx) => {
@@ -2951,6 +2958,14 @@ export default function TrainingPlayer() {
                                 )}
                             </m.div>
                         </AnimatePresence>
+
+                        {isLastBlock && (
+                            <CourseSourceDocuments
+                                trainingModuleId={moduleData.module.id}
+                                variant="learner"
+                                className="mt-8"
+                            />
+                        )}
 
                         <div className="h-12 shrink-0" /> {/* Spacer */}
                     </div>

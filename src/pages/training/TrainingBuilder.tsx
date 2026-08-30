@@ -3,6 +3,7 @@ import { BuilderCanvas } from '@/components/training/builder/BuilderCanvas'
 import { BuilderHeader } from '@/components/training/builder/BuilderHeader'
 import { BuilderPreview } from '@/components/training/builder/BuilderPreview'
 import { BuilderSidebar } from '@/components/training/builder/BuilderSidebar'
+import { CourseSourceDocuments } from '@/components/training/CourseSourceDocuments'
 import { Button } from '@/components/ui/button'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
@@ -196,6 +197,7 @@ function TrainingBuilderInner() {
 
     if (builderStep === 'publish') {
       return (
+        <>
         <StepPublish
           category={ctx.category} setCategory={ctx.setCategory}
           sections={ctx.sections} totalItems={ctx.totalItems}
@@ -207,6 +209,12 @@ function TrainingBuilderInner() {
           auditResult={ctx.auditResult} onOpenAuditModal={() => ctx.setShowAuditModal(true)}
           isRTL={ctx.isRTL}
         />
+        {ctx.moduleId && (
+          <div className="px-6 pb-6">
+            <CourseSourceDocuments trainingModuleId={ctx.moduleId} variant="admin" />
+          </div>
+        )}
+        </>
       )
     }
 

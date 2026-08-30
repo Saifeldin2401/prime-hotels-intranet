@@ -1,4 +1,15 @@
 {
+    "sourceDocs": {
+        "adminTitle": "Source Documents",
+        "learnerTitle": "Course Resources",
+        "primary": "Primary",
+        "sourceTag": "AI source",
+        "restricted": "Restricted",
+        "open": "Open",
+        "unlink": "Remove from course (keeps the file)",
+        "adminHint": "Removing a document here only unlinks it from this course — the original file stays in the document repository.",
+        "untitled": "Document"
+    },
     "builder": {
         "publishTitle": "Review & Publish Course",
         "summary": "Course Summary",

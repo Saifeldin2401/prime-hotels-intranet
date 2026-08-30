@@ -559,8 +559,28 @@ export interface FullCourseGenerationConfig {
   imageConfig?: ImageGenerationConfig
   sourceContent?: string
   sourceDocumentId?: string
+  /**
+   * Every document that grounded this generation. Uploaded files are stored
+   * once (a `documents` row) and linked to the finished course as Source
+   * Documents; existing library docs are linked in place. See
+   * `src/lib/documentAttachments.ts`.
+   */
+  sourceDocuments?: SourceDocumentRef[]
   existingCourseId?: string
   remixAction?: 'improve' | 'expand' | 'shorten' | 'advanced' | 'beginner' | 'new_audience' | 'translate'
+}
+
+/** A document that grounded course generation, to be linked to the finished course. */
+export interface SourceDocumentRef {
+  /** `documents.id` — the file is stored once and referenced, never duplicated. */
+  documentId: string
+  originalFilename: string
+  fileType?: string
+  fileSize?: number
+  /** True for a freshly uploaded file, false for a picked Knowledge Base / Library doc. */
+  uploaded: boolean
+  /** The first source is the primary one. */
+  isPrimary?: boolean
 }
 
 /**
