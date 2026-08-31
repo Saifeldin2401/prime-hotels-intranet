@@ -1,0 +1,29 @@
+-- ============================================================================
+-- §4 / §27 / §28 review outcome
+--
+-- Migration 20260901244000's `learning_assignments` is NOT a duplication
+-- regression (earlier concern retracted). It is the per-user *materialized*
+-- assignment record the frontend already expects (src/hooks/useTraining.ts,
+-- src/pages/learning/MyLearning.tsx, src/services/complianceEngineService.ts,
+-- the delete path in useTrainingAssignmentsMutations.ts) — schema matches. It is
+-- fed by the canonical `training_assignment_rules` engine + onboarding
+-- `training_paths` through trigger_auto_assign_new_hire(). The distinct
+-- concepts are: RULE (training_assignment_rules, target_type/content_id) ->
+-- MATERIALIZED ASSIGNMENT (learning_assignments, per user + status + due_date)
+-- -> PROGRESS (training_progress). That is a correct LMS model, KEEP it.
+-- `src/lib/learningAssignmentMutations.ts` writes to training_assignment_rules
+-- (the rules), despite its filename.
+--
+-- This migration hardens it:
+--  (1) trigger_auto_assign_new_hire() is now fail-soft — a bad rule/path config
+--      can never block a new-hire membership insert (logic moved to
+--      _auto_assign_new_hire_impl, wrapped in EXCEPTION WHEN OTHERS -> WARNING).
+--  (2) learning_assignments RLS gains the org-operational gate (it gated on
+--      current_user_organization_ids() directly, missed by the 235000 sweep).
+--
+-- Also flags the employee_transfer_logs column duplication
+-- (from_hotel_id vs previous_hotel_id) for the dead-code sweep.
+-- ============================================================================
+-- (see migration history version 20260901250000 for the applied statements;
+--  trigger_auto_assign_new_hire / _auto_assign_new_hire_impl bodies + the two
+--  learning_assignments policies + the employee_transfer_logs COMMENT)

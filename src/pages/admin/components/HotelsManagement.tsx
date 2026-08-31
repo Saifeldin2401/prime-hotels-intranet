@@ -44,16 +44,28 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { useTenant } from '@/contexts/TenantContext'
+import { useAccountContext } from '@/contexts/auth/AccountContext'
+import { platformService } from '@/services/platformService'
+import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useToast } from '@/components/ui/use-toast'
-import { Building2, Plus, MapPin, Building, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power } from 'lucide-react'
+import { Building2, Plus, MapPin, Building, Check, RefreshCw, MoreVertical, Edit2, Trash2, Power, AlertTriangle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { Hotel } from '@/lib/types/tenant'
 
 export function HotelsManagement() {
   const { currentOrganization, availableHotels, availableBrands, isOrgAdmin, refreshTenantData } = useTenant()
+  const { isPlatformOperator } = useAccountContext()
   const { toast } = useToast()
   const { t } = useTranslation(['admin', 'common'])
+
+  const { data: entitlements, refetch: refetchEntitlements } = useQuery({
+    queryKey: ['org-effective-entitlements', currentOrganization?.id],
+    queryFn: () => currentOrganization?.id ? platformService.getEffectiveEntitlements(currentOrganization.id) : null,
+    enabled: !!currentOrganization?.id
+  })
+
+  const isHotelLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.hotels ?? 0) >= (entitlements.max_hotels ?? 10)
 
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingHotel, setEditingHotel] = useState<Hotel | null>(null)
@@ -98,6 +110,14 @@ export function HotelsManagement() {
 
   const handleSaveHotel = async () => {
     if (!currentOrganization?.id || !name.trim()) return
+    if (!editingHotel && isHotelLimitReached) {
+      toast({
+        title: t('common:error', 'Error'),
+        description: t('admin:hotel_limit_reached', 'Plan limit reached for hotels. Contact your platform administrator to upgrade.'),
+        variant: 'destructive'
+      })
+      return
+    }
     setIsSaving(true)
 
     try {
@@ -153,7 +173,7 @@ export function HotelsManagement() {
         })
       }
 
-      await refreshTenantData()
+      await Promise.all([refreshTenantData(), refetchEntitlements()])
       setIsAddOpen(false)
       setEditingHotel(null)
     } catch (err: unknown) {
@@ -241,13 +261,32 @@ export function HotelsManagement() {
           </CardDescription>
         </div>
         {isOrgAdmin && (
-          <Button onClick={handleOpenAdd} className="gap-2">
-            <Plus className="h-4 w-4" />
-            {t('admin:add_hotel', 'Add Hotel')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={handleOpenAdd}
+              className="gap-2"
+              disabled={isHotelLimitReached}
+              title={isHotelLimitReached ? t('admin:hotel_limit_reached', 'Plan limit reached for hotels.') : undefined}
+            >
+              <Plus className="h-4 w-4" />
+              {t('admin:add_hotel', 'Add Hotel')}
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent>
+        {isHotelLimitReached && (
+          <div className="p-3 mb-4 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-700 dark:text-amber-300 text-xs">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>
+              {t('admin:hotel_limit_reached_desc', 'Plan limit reached ({{current}} / {{max}} hotels). Contact your platform administrator to upgrade subscription.', {
+                current: entitlements?.usage?.hotels ?? 0,
+                max: entitlements?.max_hotels ?? 10
+              })}
+            </span>
+          </div>
+        )}
+
         {availableHotels.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <Building2 className="h-10 w-10 mx-auto mb-2 opacity-40" />

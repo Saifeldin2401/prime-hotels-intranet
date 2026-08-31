@@ -1,44 +1,54 @@
-import { useState, useEffect } from 'react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { platformService } from '@/services/platformService'
+import { useQuery } from '@tanstack/react-query'
 import {
   Building2,
   Users,
-  GraduationCap,
   BookOpen,
   Send,
   Sparkles,
   TrendingUp,
   Activity,
   CheckCircle2,
+  GraduationCap,
   RefreshCw
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import type { PlatformStats } from '@/lib/types/platform'
+
+function Meter({ label, used, limit, colour }: { label: string; used: number; limit: number; colour: string }) {
+  const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : 0
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-between text-xs font-medium">
+        <span>{label}</span>
+        <span className="font-bold tabular-nums">{used.toLocaleString()} / {limit.toLocaleString()} ({pct}%)</span>
+      </div>
+      <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${colour}`} style={{ width: `${pct}%` }} />
+      </div>
+    </div>
+  )
+}
 
 export default function PlatformAnalytics() {
   const { t } = useTranslation(['admin', 'common'])
-  const [stats, setStats] = useState<PlatformStats | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
 
-  const loadStats = async () => {
-    setIsLoading(true)
-    try {
-      const data = await platformService.getPlatformStats()
-      setStats(data)
-    } catch (err) {
-      console.error('Failed to load platform stats:', err)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+  const { data: stats, isLoading: statsLoading, refetch: refetchStats } = useQuery({
+    queryKey: ['platform-analytics-stats'],
+    queryFn: () => platformService.getPlatformStats(),
+    staleTime: 1000 * 30,
+  })
+  const { data: usage, isLoading: usageLoading, refetch: refetchUsage } = useQuery({
+    queryKey: ['platform-usage-analytics'],
+    queryFn: () => platformService.getPlatformUsageAnalytics(),
+    staleTime: 1000 * 30,
+  })
 
-  useEffect(() => {
-    loadStats()
-  }, [])
+  const isLoading = statsLoading || usageLoading
+  const loadStats = () => { refetchStats(); refetchUsage() }
 
   return (
     <div className="space-y-6">
@@ -177,45 +187,78 @@ export default function PlatformAnalytics() {
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              AI Token Consumption & Service Quotas
+              Platform Usage & Quotas
             </CardTitle>
-            <CardDescription>
-              Real-time monitoring of AI generation and cognitive model utilization.
-            </CardDescription>
+            <CardDescription>Aggregate consumption across every customer organization.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span>AI Course & Quiz Generation Quota</span>
-                <span className="text-primary font-bold">42% Used</span>
-              </div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary rounded-full" style={{ width: '42%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span>RAG Knowledge Embeddings Storage</span>
-                <span className="text-indigo-600 font-bold">28% Used</span>
-              </div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-indigo-600 rounded-full" style={{ width: '28%' }} />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-xs font-medium">
-                <span>Active Enterprise Subscriptions</span>
-                <span className="text-emerald-600 font-bold">100% Good Standing</span>
-              </div>
-              <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-emerald-600 rounded-full" style={{ width: '100%' }} />
-              </div>
+            <Meter
+              label="AI generation credits (this month)"
+              used={usage?.ai_credits.used ?? 0}
+              limit={usage?.ai_credits.limit ?? 0}
+              colour="bg-primary"
+            />
+            <Meter
+              label="Training completion (all tenants)"
+              used={usage?.totals.training_completed ?? 0}
+              limit={usage?.totals.training_records ?? 0}
+              colour="bg-emerald-600"
+            />
+            <Meter
+              label="Background AI jobs — failed vs total"
+              used={usage?.totals.ai_jobs_failed ?? 0}
+              limit={usage?.totals.ai_jobs_total ?? 0}
+              colour="bg-rose-500"
+            />
+            <div className="text-[10px] text-muted-foreground pt-1">
+              {usage?.generated_at ? `Snapshot: ${new Date(usage.generated_at).toLocaleString()}` : ''}
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Per-organization breakdown */}
+      <Card className="border shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Building2 className="h-4 w-4 text-primary" /> Per-Organization Breakdown
+          </CardTitle>
+          <CardDescription>Entitlement usage and training engagement for each tenant.</CardDescription>
+        </CardHeader>
+        <CardContent className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-left text-muted-foreground border-b">
+                <th className="py-2 pe-3 font-semibold">Organization</th>
+                <th className="py-2 px-3 font-semibold">Plan</th>
+                <th className="py-2 px-3 font-semibold">Status</th>
+                <th className="py-2 px-3 font-semibold">Hotels</th>
+                <th className="py-2 px-3 font-semibold">Members</th>
+                <th className="py-2 px-3 font-semibold">Courses</th>
+                <th className="py-2 px-3 font-semibold">AI credits</th>
+                <th className="py-2 px-3 font-semibold">Completion</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(usage?.organizations || []).map((o) => (
+                <tr key={o.id} className="border-b last:border-0">
+                  <td className="py-2 pe-3 font-semibold">{o.name}</td>
+                  <td className="py-2 px-3">{o.plan || '—'}</td>
+                  <td className="py-2 px-3 capitalize">{o.lifecycle_status || '—'}</td>
+                  <td className="py-2 px-3 tabular-nums">{o.hotels} / {o.max_hotels}</td>
+                  <td className="py-2 px-3 tabular-nums">{o.members} / {o.max_learners}</td>
+                  <td className="py-2 px-3 tabular-nums">{o.courses}</td>
+                  <td className="py-2 px-3 tabular-nums">{o.ai_credits_used} / {o.ai_credits_limit}</td>
+                  <td className="py-2 px-3 tabular-nums">{o.training_completion_pct == null ? '—' : `${o.training_completion_pct}%`}</td>
+                </tr>
+              ))}
+              {(!usage || usage.organizations.length === 0) && (
+                <tr><td colSpan={8} className="py-6 text-center text-muted-foreground">No organizations.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   )
 }

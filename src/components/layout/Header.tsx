@@ -47,7 +47,7 @@ import {
 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
   sidebarCollapsed?: boolean
@@ -91,7 +91,7 @@ export function Header({
       {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent */}
       <div className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative">
         <div className="flex h-16 items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {setSidebarCollapsed && (
               <Button
                 variant="ghost"
@@ -103,6 +103,22 @@ export function Header({
                 <Menu className="h-5 w-5" />
               </Button>
             )}
+
+            <Link to="/dashboard" className="flex items-center gap-2.5 group">
+              <img
+                src="/altus-emblem-icon.png"
+                alt="ALTUS Advisory"
+                className="h-8 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
+              />
+              <div className="hidden sm:flex flex-col text-start">
+                <span className="font-serif text-sm font-bold text-white tracking-wide leading-none">
+                  ALTUS
+                </span>
+                <span className="font-sans text-[7px] tracking-[0.25em] text-[#C45B2F] font-bold mt-0.5">
+                  ADVISORY
+                </span>
+              </div>
+            </Link>
           </div>
 
           {/* Center Search - Premium Sleek Style */}

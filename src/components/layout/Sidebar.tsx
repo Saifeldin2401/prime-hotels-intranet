@@ -53,23 +53,20 @@ export function Sidebar() {
   return (
     <div className="flex flex-col w-64 bg-card border-e border-border/60 h-screen select-none">
       <div className="flex flex-col gap-2.5 p-4 border-b border-border/60 bg-white/50 dark:bg-hotel-navy/50 backdrop-blur-md overflow-hidden">
-        <Link to="/dashboard" className="flex items-center justify-center py-1 group">
+        <Link to="/dashboard" className="flex items-center justify-center gap-3 py-1 group">
           <img
-            src="/altus-logo-web.png"
+            src="/altus-emblem-icon.png"
             alt="ALTUS Advisory"
-            className="h-12 w-auto object-contain max-w-full drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
-            onError={(e) => {
-              const target = e.currentTarget
-              target.style.display = 'none'
-              const parent = target.parentElement
-              if (parent && !parent.querySelector('.altus-fallback')) {
-                const fallback = document.createElement('div')
-                fallback.className = 'altus-fallback text-center font-bold text-lg text-hotel-navy dark:text-hotel-gold'
-                fallback.innerText = 'ALTUS ADVISORY'
-                parent.appendChild(fallback)
-              }
-            }}
+            className="h-10 w-auto object-contain drop-shadow-sm transition-transform duration-200 group-hover:scale-105"
           />
+          <div className="flex flex-col text-start">
+            <span className="font-serif text-lg font-bold text-foreground tracking-wide leading-none">
+              ALTUS
+            </span>
+            <span className="font-sans text-[8px] tracking-[0.25em] text-altus-copper font-bold mt-0.5">
+              ADVISORY
+            </span>
+          </div>
         </Link>
 
         {/* Tenant Organization & Scope context */}

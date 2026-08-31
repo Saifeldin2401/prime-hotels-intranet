@@ -35,11 +35,18 @@ export {
   useUserData 
 } from './UserDataContext'
 
-export { 
-  AuthActionsContext, 
+export {
+  AuthActionsContext,
   AuthActionsProvider,
-  useAuthActions 
+  useAuthActions
 } from './AuthActionsContext'
+
+export {
+  AccountContext,
+  AccountProvider,
+  useAccountContext
+} from './AccountContext'
+export type { AccountContextValue } from './AccountContext'
 
 // Types
 export type { AuthIdentityContextType } from './AuthIdentityContext'

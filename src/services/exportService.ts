@@ -1,8 +1,22 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
+
+function escapeCSVValue(value: unknown): string {
+  const str = value === null || value === undefined
+    ? ''
+    : typeof value === 'object'
+      ? JSON.stringify(value)
+      : String(value)
+  // Quote if the value contains a comma, quote, or newline; double up embedded quotes.
+  if (/[",\r\n]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`
+  }
+  return str
+}
 
 export const exportService = {
   /**
-   * Converts an array of objects into a clean CSV string
+   * Converts an array of objects into a clean CSV string.
+   * Prepends a UTF-8 BOM so Excel renders Arabic/accented text correctly.
    */
   convertToCSV(data: Record<string, any>[], headers?: { key: string; label: string }[]): string {
     if (!data.length) return ''
@@ -10,19 +24,10 @@ export const exportService = {
     const keys = headers ? headers.map((h) => h.key) : Object.keys(data[0])
     const labels = headers ? headers.map((h) => h.label) : keys
 
-    const headerRow = labels.map((l) => "").join(',')
+    const headerRow = labels.map((l) => escapeCSVValue(l)).join(',')
+    const rows = data.map((row) => keys.map((k) => escapeCSVValue(row[k])).join(','))
 
-    const rows = data.map((row) =>
-      keys
-        .map((k) => {
-          const val = row[k] ?? ''
-          const str = typeof val === 'object' ? JSON.stringify(val) : String(val)
-          return ""
-        })
-        .join(',')
-    )
-
-    return [headerRow, ...rows].join('\r\n')
+    return '﻿' + [headerRow, ...rows].join('\r\n')
   },
 
   /**
@@ -44,7 +49,7 @@ export const exportService = {
    * Exports full organization archive for compliance and tenant offboarding
    */
   async exportOrganizationArchive(organizationId: string): Promise<any> {
-    const { data, error } = await supabase.rpc('export_organization_archive', {
+    const { data, error } = await (supabase.rpc as any)('export_organization_archive', {
       p_org_id: organizationId
     })
 

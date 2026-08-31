@@ -832,6 +832,15 @@
   "org_name": "Organization Name (English)",
   "org_name_ar": "Organization Name (Arabic)",
   "brand_styling": "Brand & Dynamic Theme",
-  "brand_styling_desc": "Customize the visual theme and colors displayed across your organization portal.",
-  "org_settings_saved": "Organization branding and settings updated successfully."
+  "org_settings_saved": "Organization branding and settings updated successfully.",
+  "upgrade_entitlements": "Upgrade Entitlements",
+  "capacity_100_warning": "Critical: One or more resource quotas have reached 100% capacity. Additions and provisioning may be blocked until entitlements are upgraded.",
+  "capacity_90_warning": "Warning: Resource utilization has reached 90%+. Upgrade entitlements now to prevent service disruptions.",
+  "capacity_80_warning": "Notice: Resource utilization has reached 80% of plan capacity.",
+  "quota_capacity_full": "100% Full",
+  "quota_capacity_critical": "90%+ Critical",
+  "quota_capacity_warning": "80%+ Warning",
+  "quota_capacity_normal": "Optimal",
+  "active_alerts": "Active Capacity Alerts",
+  "alerts_notified_admins": "Organization admins were proactively notified of this capacity threshold."
 }

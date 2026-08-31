@@ -424,6 +424,66 @@ Deno.serve(async (req: Request) => {
     // SECURITY CHECK: END
     // =================================================================
 
+    // =================================================================
+    // ENTITLEMENT CHECK: START
+    // =================================================================
+    let targetOrgId: string | null = body.organizationId || body.organization_id || null;
+    if (!targetOrgId && propertyIds.length > 0) {
+      const { data: propData } = await adminClient
+        .from("hotels")
+        .select("organization_id")
+        .eq("id", propertyIds[0])
+        .maybeSingle();
+      if (propData?.organization_id) {
+        targetOrgId = propData.organization_id;
+      }
+    }
+    if (!targetOrgId) {
+      const { data: userMembership } = await adminClient
+        .from("organization_memberships")
+        .select("organization_id")
+        .eq("user_id", user.id)
+        .eq("is_active", true)
+        .limit(1)
+        .maybeSingle();
+      if (userMembership?.organization_id) {
+        targetOrgId = userMembership.organization_id;
+      }
+    }
+
+    // Platform operators bypass entitlement check
+    const { data: isOp } = await adminClient.rpc("is_platform_operator", {
+      p_user_id: user.id,
+    });
+
+    if (!isOp && targetOrgId) {
+      const { data: hasHeadroom, error: entitlementError } = await adminClient.rpc(
+        "check_entitlement",
+        {
+          p_org_id: targetOrgId,
+          p_resource: "learner",
+        },
+      );
+
+      if (entitlementError) {
+        console.error("Entitlement check error:", entitlementError);
+      } else if (hasHeadroom === false) {
+        return new Response(
+          JSON.stringify({
+            error:
+              "User seat limit reached for this subscription plan. Please contact your platform administrator to upgrade.",
+          }),
+          {
+            status: 400,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
+      }
+    }
+    // =================================================================
+    // ENTITLEMENT CHECK: END
+    // =================================================================
+
     console.log(
       `Creating user: ${normalizedEmail}, mode: ${provisioningMethod}, jobTitle: ${jobTitle}, role: ${normalizedRole}, reportingTo: ${reportingTo}, by: ${user.email}`,
     );

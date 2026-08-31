@@ -24,6 +24,10 @@ import {
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
+import { useAccountContext } from '@/contexts/auth/AccountContext'
+import { platformService } from '@/services/platformService'
+import { useQuery } from '@tanstack/react-query'
 import {
     AlertTriangle,
     CheckCircle2,
@@ -490,6 +494,17 @@ async function createSingleUser(maps: MapsState, config: BulkConfig, row: InputU
 
 export default function BulkUserProvisioning() {
   const { toast } = useToast()
+  const { currentOrganization } = useTenant()
+  const { isPlatformOperator } = useAccountContext()
+
+  const { data: entitlements, refetch: refetchEntitlements } = useQuery({
+    queryKey: ['org-effective-entitlements', currentOrganization?.id],
+    queryFn: () => currentOrganization?.id ? platformService.getEffectiveEntitlements(currentOrganization.id) : null,
+    enabled: !!currentOrganization?.id
+  })
+
+  const remainingSeats = Math.max(0, (entitlements?.max_learners ?? 100) - (entitlements?.usage?.learners ?? 0))
+
   const [rawInput, setRawInput] = useState(DEFAULT_INPUT)
   const [config, setConfig] = useState<BulkConfig>(DEFAULT_CONFIG)
   const [parseError, setParseError] = useState<string | null>(null)
@@ -578,6 +593,15 @@ export default function BulkUserProvisioning() {
         toast({ title: 'Invalid input', description: message, variant: 'destructive' })
         return
       }
+    }
+
+    if (!config.dryRun && !isPlatformOperator && previewCounts.valid > remainingSeats) {
+      toast({
+        title: 'Plan Seat Limit Exceeded',
+        description: `Your plan has ${remainingSeats} seat(s) remaining, but ${previewCounts.valid} valid user(s) are queued. Please reduce batch or upgrade subscription.`,
+        variant: 'destructive'
+      })
+      return
     }
 
     if (!config.dryRun) {
@@ -822,10 +846,15 @@ export default function BulkUserProvisioning() {
             Preview ({previewRows.length})
           </CardTitle>
           <CardDescription>
-            <span className="inline-flex items-center gap-2">
+            <span className="inline-flex flex-wrap items-center gap-2">
               <Badge variant="default">{previewCounts.valid} valid</Badge>
               <Badge variant="secondary">{previewCounts.duplicates} duplicate</Badge>
               <Badge variant={previewCounts.invalid > 0 ? 'destructive' : 'secondary'}>{previewCounts.invalid} invalid</Badge>
+              {entitlements && (
+                <Badge variant={previewCounts.valid > remainingSeats && !config.dryRun ? 'destructive' : 'outline'} className="font-mono text-xs">
+                  Seats: {entitlements.usage?.learners ?? 0} / {entitlements.max_learners ?? 100} ({remainingSeats} available)
+                </Badge>
+              )}
             </span>
           </CardDescription>
         </CardHeader>

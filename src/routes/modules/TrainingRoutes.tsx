@@ -14,6 +14,8 @@ const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
 const TrainingAnalytics = lazy(() => import('@/pages/training/TrainingAnalytics'))
 const LearningAnalyticsHub = lazy(() => import('@/pages/analytics/LearningAnalyticsHub'))
 const SkillsMatrix = lazy(() => import('@/pages/training/SkillsMatrix'))
+const CompetencyMatrix = lazy(() => import('@/pages/training/CompetencyMatrix'))
+const InstructorWorkspace = lazy(() => import('@/pages/training/InstructorWorkspace'))
 const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
 // Consolidated assessment surfaces (see src/pages/assessments/). The QuestionBank
 // browse page is routed from KnowledgeRoutes at /assessments.
@@ -145,6 +147,28 @@ export const TrainingRoutes = () => (
                 </ProtectedRoute>
             }
             errorElement={<RouteErrorBoundary section="Training Paths" />}
+        />
+        <Route
+            path="/training/competencies"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'training_manager', 'administrator']}>
+                    <AppLayout>
+                        <CompetencyMatrix />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Competency Matrix" />}
+        />
+        <Route
+            path="/training/instructor"
+            element={
+                <ProtectedRoute allowedRoles={['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head', 'training_manager', 'administrator']}>
+                    <AppLayout>
+                        <InstructorWorkspace />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Instructor Workspace" />}
         />
         {/* Consolidated assessment routes. Legacy /learning/quizzes* paths are kept
             as redirects so existing links, assignments and bookmarks keep working. */}

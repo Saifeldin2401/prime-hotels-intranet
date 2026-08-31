@@ -5,7 +5,7 @@ import type {
   PlatformAuditLog,
   PlatformStats
 } from '@/lib/types/platform'
-import type { Organization, Subscription } from '@/lib/types/tenant'
+import type { Organization, Subscription, SubscriptionPlan } from '@/lib/types/tenant'
 
 export interface MasterDeploymentProgress {
   orgId: string
@@ -46,15 +46,17 @@ export const platformService = {
   // ============================================================================
   async getPlatformStats(): Promise<PlatformStats> {
     try {
-      // 1. Organizations counts
+      // 1. Organizations counts (lifecycle_status is the source of truth; is_active
+      //    is kept in sync by set_organization_status)
       const { data: orgs } = await supabase
         .from('organizations')
-        .select('id, is_active, is_deleted')
+        .select('id, is_active, is_deleted, lifecycle_status')
 
-      const totalOrganizations = orgs?.length || 0
-      const activeOrganizations = orgs?.filter(o => o.is_active && !o.is_deleted).length || 0
-      const suspendedOrganizations = orgs?.filter(o => !o.is_active && !o.is_deleted).length || 0
-      const trialOrganizations = 0
+      const liveOrgs = (orgs || []).filter(o => !o.is_deleted)
+      const totalOrganizations = liveOrgs.length
+      const activeOrganizations = liveOrgs.filter(o => (o.lifecycle_status ?? (o.is_active ? 'active' : 'suspended')) === 'active').length
+      const suspendedOrganizations = liveOrgs.filter(o => ['suspended', 'expired'].includes(o.lifecycle_status ?? '')).length
+      const trialOrganizations = liveOrgs.filter(o => ['trial', 'prospect', 'onboarding'].includes(o.lifecycle_status ?? '')).length
 
       // 2. Hotels count
       const { count: totalHotels } = await supabase
@@ -95,6 +97,20 @@ export const platformService = {
         .from('master_content_deployments')
         .select('id', { count: 'exact', head: true })
 
+      // 7. Real platform-wide completion rate from training_progress
+      const { count: progressTotal } = await supabase
+        .from('training_progress')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+      const { count: progressCompleted } = await supabase
+        .from('training_progress')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_deleted', false)
+        .or('status.eq.completed,passed.eq.true')
+      const averageCompletionRate = (progressTotal || 0) > 0
+        ? Math.round(((progressCompleted || 0) / (progressTotal || 1)) * 1000) / 10
+        : 0
+
       return {
         totalOrganizations,
         activeOrganizations,
@@ -105,19 +121,21 @@ export const platformService = {
         totalMasterSops: totalMasterSops || 0,
         totalMasterCourses,
         totalDeployments: totalDeployments || 0,
-        averageCompletionRate: 88.5
+        averageCompletionRate
       }
     } catch (err) {
       console.error('Error in getPlatformStats:', err)
+      // Do NOT fabricate plausible-looking numbers on failure — return zeros so
+      // the UI can show an empty/error state rather than fake telemetry.
       return {
-        totalOrganizations: 1,
-        activeOrganizations: 1,
+        totalOrganizations: 0,
+        activeOrganizations: 0,
         trialOrganizations: 0,
         suspendedOrganizations: 0,
-        totalHotels: 1,
-        totalLearners: 1,
-        totalMasterSops: 1,
-        totalMasterCourses: 1,
+        totalHotels: 0,
+        totalLearners: 0,
+        totalMasterSops: 0,
+        totalMasterCourses: 0,
         totalDeployments: 0,
         averageCompletionRate: 0
       }
@@ -127,13 +145,34 @@ export const platformService = {
   // ============================================================================
   // 2. ORGANIZATIONS MANAGEMENT (LEVEL 1 -> LEVEL 2)
   // ============================================================================
+  async getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+    const { data, error } = await supabase
+      .from('subscription_plans')
+      .select('*')
+      .order('max_users', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching subscription plans:', error)
+      return []
+    }
+    return (data || []) as SubscriptionPlan[]
+  },
+
   async getOrganizations(): Promise<(Organization & { hotelCount: number; userCount: number; subscription?: Subscription })[]> {
     const { data: orgs, error } = await supabase
       .from('organizations')
       .select(`
         *,
         hotels:hotels(count),
-        memberships:organization_memberships(count)
+        memberships:organization_memberships(count),
+        subscriptions:subscriptions(
+          id,
+          plan_id,
+          status,
+          current_period_start,
+          current_period_end,
+          plan:subscription_plans(*)
+        )
       `)
       .order('created_at', { ascending: false })
 
@@ -145,7 +184,11 @@ export const platformService = {
     return (orgs || []).map((o: any) => ({
       ...o,
       hotelCount: o.hotels?.[0]?.count || 0,
-      userCount: o.memberships?.[0]?.count || 0
+      userCount: o.memberships?.[0]?.count || 0,
+      subscription: o.subscriptions?.[0] ? {
+        ...o.subscriptions[0],
+        plan: o.subscriptions[0]?.plan
+      } : undefined
     }))
   },
 
@@ -155,6 +198,18 @@ export const platformService = {
     slug: string
     industry?: string
     planId?: string
+    maxHotels?: number
+    maxLearners?: number
+    maxStorageGb?: number
+    maxAiCreditsMonthly?: number
+    billingEmail?: string
+    lifecycleStatus?: 'prospect' | 'trial' | 'onboarding' | 'active' | 'renewal' | 'suspended' | 'archived'
+    trialEndsAt?: string
+    brandColors?: { primary: string; secondary: string; accent?: string }
+    initialBrandName?: string
+    initialHotelName?: string
+    initialAdminEmail?: string
+    initialAdminName?: string
     actorId?: string
   }): Promise<Organization> {
     const { data: org, error } = await supabase
@@ -164,25 +219,68 @@ export const platformService = {
         name_ar: params.nameAr?.trim() || null,
         slug: params.slug.trim().toLowerCase(),
         industry: params.industry || 'hospitality',
-        is_active: true,
+        is_active: params.lifecycleStatus !== 'suspended',
         is_deleted: false,
-        brand_colors: { primary: '#0f172a', secondary: '#2563eb', accent: '#d97706' }
+        lifecycle_status: (params.lifecycleStatus || 'active') as any,
+        trial_ends_at: params.trialEndsAt || null,
+        max_hotels: params.maxHotels !== undefined ? params.maxHotels : 10,
+        max_learners: params.maxLearners !== undefined ? params.maxLearners : 100,
+        max_storage_gb: params.maxStorageGb !== undefined ? params.maxStorageGb : 50,
+        max_ai_credits_monthly: params.maxAiCreditsMonthly !== undefined ? params.maxAiCreditsMonthly : 1000,
+        billing_email: params.billingEmail?.trim() || null,
+        brand_colors: params.brandColors || { primary: '#0f172a', secondary: '#2563eb', accent: '#d97706' }
       })
       .select()
       .single()
 
     if (error) throw error
 
-    // Create default subscription if plan specified
+    // Create subscription if plan specified
     if (params.planId) {
       await supabase.from('subscriptions').insert({
         organization_id: org.id,
         plan_id: params.planId,
-        status: 'active',
-        billing_cycle: 'yearly',
+        status: params.lifecycleStatus === 'trial' ? 'trialing' : 'active',
         current_period_start: new Date().toISOString(),
         current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
       })
+    }
+
+    // Optional bootstrap: Create initial brand & hotel
+    if (params.initialBrandName?.trim()) {
+      const { data: brand } = await supabase
+        .from('brands')
+        .insert({
+          organization_id: org.id,
+          name: params.initialBrandName.trim(),
+          is_active: true,
+          is_deleted: false
+        })
+        .select()
+        .single()
+
+      if (brand && params.initialHotelName?.trim()) {
+        await supabase
+          .from('hotels')
+          .insert({
+            organization_id: org.id,
+            brand_id: brand.id,
+            name: params.initialHotelName.trim(),
+            city: 'Riyadh',
+            is_active: true,
+            is_deleted: false
+          })
+      }
+    } else if (params.initialHotelName?.trim()) {
+      await supabase
+        .from('hotels')
+        .insert({
+          organization_id: org.id,
+          name: params.initialHotelName.trim(),
+          city: 'Riyadh',
+          is_active: true,
+          is_deleted: false
+        })
     }
 
     // Audit log
@@ -192,10 +290,120 @@ export const platformService = {
       resourceId: org.id,
       targetOrgId: org.id,
       actorId: params.actorId,
-      metadata: { name: params.name, slug: params.slug }
+      metadata: {
+        name: params.name,
+        slug: params.slug,
+        planId: params.planId,
+        maxHotels: params.maxHotels,
+        maxLearners: params.maxLearners,
+        lifecycleStatus: params.lifecycleStatus
+      }
     })
 
     return org
+  },
+
+  async updateOrganizationEntitlements(orgId: string, params: {
+    maxHotels?: number
+    maxLearners?: number
+    maxStorageGb?: number
+    maxAiCreditsMonthly?: number
+    planId?: string
+    billingEmail?: string
+    actorId?: string
+  }): Promise<void> {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+    if (params.maxHotels !== undefined) updateData.max_hotels = params.maxHotels
+    if (params.maxLearners !== undefined) updateData.max_learners = params.maxLearners
+    if (params.maxStorageGb !== undefined) updateData.max_storage_gb = params.maxStorageGb
+    if (params.maxAiCreditsMonthly !== undefined) updateData.max_ai_credits_monthly = params.maxAiCreditsMonthly
+    if (params.billingEmail !== undefined) updateData.billing_email = params.billingEmail.trim() || null
+
+    const { error: orgErr } = await supabase
+      .from('organizations')
+      .update(updateData)
+      .eq('id', orgId)
+
+    if (orgErr) throw orgErr
+
+    if (params.planId) {
+      const { data: existingSub } = await supabase
+        .from('subscriptions')
+        .select('id')
+        .eq('organization_id', orgId)
+        .maybeSingle()
+
+      if (existingSub) {
+        await supabase
+          .from('subscriptions')
+          .update({
+            plan_id: params.planId,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingSub.id)
+      } else {
+        await supabase
+          .from('subscriptions')
+          .insert({
+            organization_id: orgId,
+            plan_id: params.planId,
+            status: 'active',
+            current_period_start: new Date().toISOString(),
+            current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          })
+      }
+    }
+
+    await this.logPlatformAction({
+      action: 'update_organization_entitlements',
+      resourceType: 'organization',
+      resourceId: orgId,
+      targetOrgId: orgId,
+      actorId: params.actorId,
+      metadata: params
+    })
+  },
+
+  async updateOrganizationDetails(orgId: string, params: {
+    name?: string
+    nameAr?: string
+    slug?: string
+    industry?: string
+    logoUrl?: string
+    faviconUrl?: string
+    brandColors?: { primary: string; secondary: string; accent?: string }
+    billingEmail?: string
+    actorId?: string
+  }): Promise<void> {
+    const updateData: any = {
+      updated_at: new Date().toISOString()
+    }
+    if (params.name !== undefined) updateData.name = params.name.trim()
+    if (params.nameAr !== undefined) updateData.name_ar = params.nameAr.trim() || null
+    if (params.slug !== undefined) updateData.slug = params.slug.trim().toLowerCase()
+    if (params.industry !== undefined) updateData.industry = params.industry
+    if (params.logoUrl !== undefined) updateData.logo_url = params.logoUrl
+    if (params.faviconUrl !== undefined) updateData.favicon_url = params.faviconUrl
+    if (params.brandColors !== undefined) updateData.brand_colors = params.brandColors
+    if (params.billingEmail !== undefined) updateData.billing_email = params.billingEmail.trim() || null
+
+    const { error } = await supabase
+      .from('organizations')
+      .update(updateData)
+      .eq('id', orgId)
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: 'update_organization_details',
+      resourceType: 'organization',
+      resourceId: orgId,
+      targetOrgId: orgId,
+      actorId: params.actorId,
+      metadata: params
+    })
   },
 
   async toggleOrganizationStatus(orgId: string, isActive: boolean, actorId?: string): Promise<void> {
@@ -541,15 +749,6 @@ export const platformService = {
     deployedBy: string
     onProgress?: (progress: MasterDeploymentProgress) => void
   }): Promise<{ deployedCount: number; errors: Array<{ orgId: string; error: string }> }> {
-    const { data: masterDoc, error: masterErr } = await supabase
-      .from('documents')
-      .select('*')
-      .eq('id', params.masterDocId)
-      .single()
-
-    if (masterErr || !masterDoc) throw new Error('Master SOP not found')
-
-    const masterVersion = masterDoc.current_version || 1
     const errors: Array<{ orgId: string; error: string }> = []
     let count = 0
     const total = params.targetOrgIds.length
@@ -564,97 +763,10 @@ export const platformService = {
       })
 
       try {
-        // 1. Check if a deployment already exists for this master SOP in the org
-        const { data: existingDeployment } = await supabase
-          .from('master_content_deployments')
-          .select('*, target_content_id')
-          .eq('master_content_id', masterDoc.id)
-          .eq('target_organization_id', orgId)
-          .maybeSingle()
-
-        let targetDocId: string
-
-        if (existingDeployment?.target_content_id) {
-          // Update the existing deployed doc
-          targetDocId = existingDeployment.target_content_id
-          await supabase
-            .from('documents')
-            .update({
-              title: masterDoc.title,
-              title_ar: masterDoc.title_ar,
-              description: masterDoc.description,
-              description_ar: masterDoc.description_ar,
-              content: masterDoc.content,
-              content_ar: masterDoc.content_ar,
-              status: 'PUBLISHED',
-              current_version: masterVersion,
-              document_number: masterDoc.document_number,
-              is_master_template: false,
-              master_source_id: masterDoc.id,
-              is_deleted: false,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', targetDocId)
-
-          await supabase
-            .from('master_content_deployments')
-            .update({
-              deployed_version: masterVersion,
-              current_master_version: masterVersion,
-              has_update_available: false,
-              last_synced_at: new Date().toISOString(),
-              deployed_by: params.deployedBy
-            })
-            .eq('id', existingDeployment.id)
-        } else {
-          // Clone fresh copy for target org
-          const { data: newDoc, error: insertDocErr } = await supabase
-            .from('documents')
-            .insert({
-              organization_id: orgId,
-              scope_type: 'organization',
-              title: masterDoc.title,
-              title_ar: masterDoc.title_ar,
-              description: masterDoc.description,
-              description_ar: masterDoc.description_ar,
-              content: masterDoc.content,
-              content_ar: masterDoc.content_ar,
-              status: 'PUBLISHED',
-              current_version: masterVersion,
-              document_number: masterDoc.document_number,
-              is_master_template: false,
-              master_source_id: masterDoc.id
-            })
-            .select('id')
-            .single()
-
-          if (insertDocErr || !newDoc) {
-            throw insertDocErr || new Error('Failed to create target SOP')
-          }
-          targetDocId = newDoc.id
-
-          await supabase.from('master_content_deployments').insert({
-            content_type: 'document_sop',
-            master_content_id: masterDoc.id,
-            target_organization_id: orgId,
-            target_content_id: targetDocId,
-            deployed_version: masterVersion,
-            current_master_version: masterVersion,
-            has_update_available: false,
-            deployed_by: params.deployedBy,
-            deployed_at: new Date().toISOString(),
-            last_synced_at: new Date().toISOString()
-          })
-        }
-
-        // Audit log
-        await this.logPlatformAction({
-          action: 'deploy_master_sop',
-          resourceType: 'document_sop',
-          resourceId: targetDocId,
-          targetOrgId: orgId,
-          actorId: params.deployedBy,
-          metadata: { master_id: masterDoc.id, title: masterDoc.title, version: masterVersion }
+        await this.deployMasterContentViaRPC({
+          masterId: params.masterDocId,
+          contentType: 'document',
+          targetOrgId: orgId
         })
 
         count++
@@ -686,28 +798,6 @@ export const platformService = {
     deployedBy: string
     onProgress?: (progress: MasterDeploymentProgress) => void
   }): Promise<{ deployedCount: number; errors: Array<{ orgId: string; error: string }> }> {
-    // 1. Fetch master course (from training_modules or courses)
-    let masterCourse: any = null
-    const { data: tmData } = await supabase
-      .from('training_modules')
-      .select('*')
-      .eq('id', params.masterCourseId)
-      .single()
-
-    if (tmData) {
-      masterCourse = tmData
-    } else {
-      const { data: cData } = await supabase
-        .from('courses')
-        .select('*')
-        .eq('id', params.masterCourseId)
-        .single()
-      masterCourse = cData
-    }
-
-    if (!masterCourse) throw new Error('Master Course not found')
-
-    const masterVersion = Number((masterCourse.blueprint as any)?.version || masterCourse.current_version || 1)
     const errors: Array<{ orgId: string; error: string }> = []
     let count = 0
     const total = params.targetOrgIds.length
@@ -722,92 +812,10 @@ export const platformService = {
       })
 
       try {
-        // Check existing deployment
-        const { data: existingDeployment } = await supabase
-          .from('master_content_deployments')
-          .select('*, target_content_id')
-          .eq('master_content_id', masterCourse.id)
-          .eq('target_organization_id', orgId)
-          .maybeSingle()
-
-        let targetModuleId: string
-
-        if (existingDeployment?.target_content_id) {
-          targetModuleId = existingDeployment.target_content_id
-          await supabase
-            .from('training_modules')
-            .update({
-              title: masterCourse.title,
-              description: masterCourse.description,
-              category: masterCourse.category,
-              difficulty_level: masterCourse.difficulty_level,
-              estimated_duration_minutes: masterCourse.estimated_duration_minutes,
-              blueprint: masterCourse.blueprint,
-              status: 'published',
-              is_master_template: false,
-              master_source_id: masterCourse.id,
-              is_deleted: false,
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', targetModuleId)
-
-          await supabase
-            .from('master_content_deployments')
-            .update({
-              deployed_version: masterVersion,
-              current_master_version: masterVersion,
-              has_update_available: false,
-              last_synced_at: new Date().toISOString(),
-              deployed_by: params.deployedBy
-            })
-            .eq('id', existingDeployment.id)
-        } else {
-          // Clone into training_modules
-          const { data: newModule, error: insertModuleErr } = await supabase
-            .from('training_modules')
-            .insert({
-              organization_id: orgId,
-              scope_type: 'organization',
-              title: masterCourse.title,
-              description: masterCourse.description,
-              category: masterCourse.category,
-              difficulty_level: masterCourse.difficulty_level,
-              estimated_duration_minutes: masterCourse.estimated_duration_minutes,
-              blueprint: masterCourse.blueprint,
-              status: 'published',
-              is_master_template: false,
-              master_source_id: masterCourse.id
-            })
-            .select('id')
-            .single()
-
-          if (insertModuleErr || !newModule) {
-            throw insertModuleErr || new Error('Failed to create target course module')
-          }
-          targetModuleId = newModule.id
-
-          await supabase.from('master_content_deployments').insert({
-            content_type: 'course',
-            master_content_id: masterCourse.id,
-            target_organization_id: orgId,
-            target_content_id: targetModuleId,
-            deployed_version: masterVersion,
-            current_master_version: masterVersion,
-            has_update_available: false,
-            deployed_by: params.deployedBy,
-            deployed_at: new Date().toISOString(),
-            last_synced_at: new Date().toISOString()
-          })
-        }
-
-        // Audit log
-        await this.logPlatformAction({
-          action: 'deploy_master_course',
-          resourceType: 'course',
-          resourceId: targetModuleId,
-          targetOrgId: orgId,
-          actorId: params.deployedBy,
-          metadata: { master_id: masterCourse.id, title: masterCourse.title, version: masterVersion }
+        await this.deployMasterContentViaRPC({
+          masterId: params.masterCourseId,
+          contentType: 'course',
+          targetOrgId: orgId
         })
 
         count++
@@ -818,7 +826,7 @@ export const platformService = {
           total
         })
       } catch (err: any) {
-        console.error(`Error deploying course to org ${orgId}:`, err)
+        console.error(`Error deploying Course to org ${orgId}:`, err)
         errors.push({ orgId, error: err?.message || 'Deployment error' })
         params.onProgress?.({
           orgId,
@@ -1292,27 +1300,82 @@ export const platformService = {
     return data || []
   },
 
-  async setUserPlatformRole(params: {
+  // ---- Platform operator identity management (platform_users / platform_role_assignments) ----
+
+  /** List internal platform operators with their active role assignments. */
+  async listPlatformUsers(): Promise<Array<{
+    user_id: string
+    email: string
+    full_name: string
+    is_active: boolean
+    employment_type: string
+    roles: string[]
+    created_at: string
+  }>> {
+    const sb = supabase as any
+    const { data: pu, error } = await sb
+      .from('platform_users')
+      .select('user_id, is_active, employment_type, created_at, profile:profiles!platform_users_user_id_fkey(email, full_name)')
+      .order('created_at', { ascending: true })
+    if (error) { console.error('listPlatformUsers:', error); throw error }
+
+    const ids = (pu || []).map((r: any) => r.user_id)
+    const { data: pra } = ids.length
+      ? await sb
+          .from('platform_role_assignments')
+          .select('platform_user_id, platform_role')
+          .is('revoked_at', null)
+          .in('platform_user_id', ids)
+      : { data: [] as any[] }
+
+    const rolesByUser = new Map<string, string[]>()
+    for (const a of (pra || []) as any[]) {
+      const list = rolesByUser.get(a.platform_user_id) || []
+      list.push(a.platform_role)
+      rolesByUser.set(a.platform_user_id, list)
+    }
+
+    return (pu || []).map((r: any) => ({
+      user_id: r.user_id,
+      email: r.profile?.email || '',
+      full_name: r.profile?.full_name || '',
+      is_active: r.is_active,
+      employment_type: r.employment_type,
+      roles: rolesByUser.get(r.user_id) || [],
+      created_at: r.created_at,
+    }))
+  },
+
+  /** Grant a platform role (creates the platform_users row if needed, revokes the same role first). */
+  async assignPlatformRole(params: {
     userId: string
-    role: 'super_admin' | 'corporate_admin' | 'regional_admin' | 'administrator'
-    actorId?: string
+    role: string
+    scopeType?: 'global' | 'org_list'
+    scopeOrgIds?: string[]
   }): Promise<void> {
-    const { error } = await supabase
-      .from('user_roles')
-      .upsert({
-        user_id: params.userId,
-        role: params.role
-      }, { onConflict: 'user_id,role' })
-
-    if (error) throw error
-
-    await this.logPlatformAction({
-      action: 'assign_platform_role',
-      resourceType: 'user_role',
-      resourceId: params.userId,
-      actorId: params.actorId,
-      metadata: { new_role: params.role }
+    const { error } = await (supabase.rpc as any)('assign_platform_role', {
+      p_user_id: params.userId,
+      p_role: params.role,
+      p_scope_type: params.scopeType || 'global',
+      p_scope_org_ids: params.scopeOrgIds || [],
     })
+    if (error) throw error
+  },
+
+  async revokePlatformRole(params: { userId: string; role: string }): Promise<void> {
+    const { error } = await (supabase.rpc as any)('revoke_platform_role', {
+      p_user_id: params.userId,
+      p_role: params.role,
+    })
+    if (error) throw error
+  },
+
+  async setPlatformUserActive(params: { userId: string; active: boolean }): Promise<void> {
+    const { error } = await (supabase.rpc as any)('set_platform_user_active', {
+      p_user_id: params.userId,
+      p_active: params.active,
+    })
+    if (error) throw error
   },
 
   async toggleUserActiveStatus(params: {
@@ -1449,5 +1512,319 @@ export const platformService = {
       actorId: params.actorId,
       metadata: { key: params.key, new_value: params.value }
     })
+  },
+
+  // ============================================================================
+  // 10. FEATURE FLAGS & ENTITLEMENTS (migration 20260901231000)
+  // ============================================================================
+  async getFeatureMatrix(): Promise<{
+    flags: Array<{ key: string; label: string; description: string | null; category: string; default_enabled: boolean; min_plan_code: string | null }>
+    organizations: Array<{ id: string; name: string; lifecycle_status: string | null; features: Record<string, { effective: boolean; override: boolean | null }> }>
+  }> {
+    const { data, error } = await (supabase.rpc as any)('get_platform_feature_matrix')
+    if (error) throw error
+    return data || { flags: [], organizations: [] }
+  },
+
+  // ---- Organization lifecycle & profile ----
+  async setOrganizationStatus(orgId: string, status: string, reason?: string): Promise<void> {
+    const { error } = await (supabase.rpc as any)('set_organization_status', {
+      p_org_id: orgId, p_status: status, p_reason: reason ?? null,
+    })
+    if (error) throw error
+  },
+
+  async getOrganizationProfile(orgId: string): Promise<any> {
+    const { data, error } = await (supabase.rpc as any)('get_organization_profile', { p_org_id: orgId })
+    if (error) throw error
+    return data
+  },
+
+
+  async getPlatformUsageAnalytics(): Promise<{
+    generated_at: string
+    totals: Record<string, number>
+    ai_credits: { used: number; limit: number }
+    organizations: Array<{
+      id: string; name: string; lifecycle_status: string | null; plan: string | null
+      hotels: number; members: number; courses: number; documents: number
+      ai_credits_used: number; ai_credits_limit: number
+      max_hotels: number; max_learners: number
+      training_completion_pct: number | null
+    }>
+  }> {
+    const { data, error } = await (supabase.rpc as any)('get_platform_usage_analytics')
+    if (error) throw error
+    return data
+  },
+
+  async setFeatureFlagDefault(key: string, enabled: boolean): Promise<void> {
+    const { error } = await (supabase.rpc as any)('set_feature_flag_default', { p_key: key, p_enabled: enabled })
+    if (error) throw error
+  },
+
+  async setOrgFeatureOverride(orgId: string, key: string, enabled: boolean, note?: string): Promise<void> {
+    const { error } = await (supabase.rpc as any)('set_org_feature_override', {
+      p_org_id: orgId, p_key: key, p_enabled: enabled, p_note: note ?? null,
+    })
+    if (error) throw error
+  },
+
+  async clearOrgFeatureOverride(orgId: string, key: string): Promise<void> {
+    const { error } = await (supabase.rpc as any)('clear_org_feature_override', { p_org_id: orgId, p_key: key })
+    if (error) throw error
+  },
+
+  // ---- Platform session-governance config (platform_config) ----
+  async getPlatformConfig(): Promise<{
+    legacy_role_fallback_enabled: boolean
+    default_session_ttl_minutes: number
+    max_session_ttl_minutes: number
+    min_session_reason_length: number
+    require_session_reason: boolean
+  } | null> {
+    const { data, error } = await (supabase as any)
+      .from('platform_config')
+      .select('legacy_role_fallback_enabled, default_session_ttl_minutes, max_session_ttl_minutes, min_session_reason_length, require_session_reason')
+      .limit(1)
+      .maybeSingle()
+    if (error) { console.error('getPlatformConfig:', error); return null }
+    return data as any
+  },
+
+  async updatePlatformConfig(patch: Partial<{
+    default_session_ttl_minutes: number
+    max_session_ttl_minutes: number
+    min_session_reason_length: number
+    require_session_reason: boolean
+  }>, actorId?: string): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('platform_config')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('id', true)
+    if (error) throw error
+    await this.logPlatformAction({
+      action: 'update_platform_config',
+      resourceType: 'platform_config',
+      actorId,
+      metadata: patch,
+    })
+  },
+
+  async getEffectiveEntitlements(orgId: string): Promise<{
+    plan: string
+    plan_code: string | null
+    max_hotels: number
+    max_learners: number
+    max_storage_gb: number
+    ai_credits_monthly: number
+    ai_credits_used: number
+    plan_features: Record<string, any>
+    usage: {
+      hotels: number
+      learners: number
+    }
+  } | null> {
+    const { data, error } = await (supabase.rpc as any)('effective_entitlements', { p_org_id: orgId })
+    if (error) {
+      console.error('getEffectiveEntitlements error:', error)
+      return null
+    }
+    return data
+  },
+
+  async evaluateOrganizationQuotas(orgId: string): Promise<{
+    org_id: string
+    billing_period: string
+    utilization: {
+      hotels: { used: number; max: number; pct: number }
+      learners: { used: number; max: number; pct: number }
+      storage: { used: number; max: number; pct: number; used_gb?: number; max_gb?: number }
+      ai_credits: { used: number; max: number; pct: number }
+    }
+    warnings_triggered: Array<{
+      quota_type: string
+      threshold_pct: number
+      current_pct: number
+      recipients_count: number
+    }>
+  } | null> {
+    const { data, error } = await (supabase.rpc as any)('evaluate_organization_quotas', { p_org_id: orgId })
+    if (error) {
+      console.error('evaluateOrganizationQuotas error:', error)
+      return null
+    }
+    return data
+  },
+
+  async deployMasterContentViaRPC(params: {
+    masterId: string
+    contentType: 'course' | 'document' | 'assessment' | 'question_bank'
+    targetOrgId: string
+  }): Promise<string> {
+    const { data, error } = await (supabase.rpc as any)('deploy_master_content', {
+      p_master_id: params.masterId,
+      p_content_type: params.contentType,
+      p_org_id: params.targetOrgId
+    })
+    if (error) throw error
+    return data as string
+  },
+
+  async getNotificationPolicies(): Promise<Array<{
+    key: string
+    name: string
+    name_ar: string | null
+    description: string | null
+    description_ar: string | null
+    category: string
+    default_enabled: boolean
+    allow_tenant_override: boolean
+    channels: string[]
+    created_at: string
+    updated_at: string
+  }>> {
+    const { data, error } = await (supabase as any)
+      .from('platform_notification_policies')
+      .select('*')
+      .order('category', { ascending: true })
+    if (error) throw error
+    return data || []
+  },
+
+  async updateNotificationPolicy(key: string, patch: Partial<{
+    default_enabled: boolean
+    allow_tenant_override: boolean
+    channels: string[]
+  }>): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('platform_notification_policies')
+      .update({ ...patch, updated_at: new Date().toISOString() })
+      .eq('key', key)
+    if (error) throw error
+  },
+
+  async getOrgNotificationOverrides(orgId: string): Promise<Array<{
+    id: string
+    organization_id: string
+    policy_key: string
+    is_enabled: boolean
+    channels: string[] | null
+    updated_at: string
+  }>> {
+    const { data, error } = await (supabase as any)
+      .from('organization_notification_overrides')
+      .select('*')
+      .eq('organization_id', orgId)
+    if (error) throw error
+    return data || []
+  },
+
+  async upsertOrgNotificationOverride(params: {
+    orgId: string
+    policyKey: string
+    isEnabled: boolean
+    channels?: string[]
+  }): Promise<void> {
+    const { error } = await (supabase as any)
+      .from('organization_notification_overrides')
+      .upsert({
+        organization_id: params.orgId,
+        policy_key: params.policyKey,
+        is_enabled: params.isEnabled,
+        channels: params.channels || null,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'organization_id,policy_key' })
+    if (error) throw error
+  },
+
+  async getPlatformAiOperations(): Promise<{
+    summary: {
+      total_jobs: number
+      failed_jobs: number
+      processing_jobs: number
+      completed_jobs: number
+    }
+    recent_jobs: Array<{
+      id: string
+      mode: string
+      course_id: string | null
+      status: string
+      error_message: string | null
+      duration_ms: number | null
+      models_used: string[] | null
+      created_at: string
+      updated_at: string
+    }>
+    cron_jobs: Array<{
+      jobid: number
+      jobname: string
+      schedule: string
+      active: boolean
+    }>
+    recent_cron_runs: Array<{
+      jobid: number
+      jobname: string | null
+      runid: number
+      status: string
+      return_message: string | null
+      start_time: string
+      end_time: string | null
+    }>
+  } | null> {
+    const { data, error } = await (supabase.rpc as any)('get_platform_ai_operations')
+    if (error) {
+      console.error('getPlatformAiOperations error:', error)
+      return null
+    }
+    return data
+  },
+
+  async retryCourseGenerationJob(jobId: string): Promise<boolean> {
+    const { data, error } = await (supabase.rpc as any)('retry_course_generation_job', { p_job_id: jobId })
+    if (error) throw error
+    return !!data
+  },
+
+  async getOrgStructure(orgId: string): Promise<{
+    organization: {
+      id: string
+      name: string
+      lifecycle_status: string
+    }
+    brands: Array<{
+      id: string
+      name: string
+      hotels: Array<{
+        id: string
+        name: string
+        city: string | null
+        member_count: number
+        departments: Array<{
+          id: string
+          name: string
+        }>
+      }>
+    }>
+    hotels: Array<{
+      id: string
+      name: string
+      city: string | null
+      brand_id: string | null
+      member_count: number
+      departments: Array<{
+        id: string
+        name: string
+      }>
+    }>
+  } | null> {
+    const { data, error } = await (supabase.rpc as any)('get_org_structure', { p_org_id: orgId })
+    if (error) {
+      console.error('getOrgStructure error:', error)
+      return null
+    }
+    return data
   }
 }
+
+

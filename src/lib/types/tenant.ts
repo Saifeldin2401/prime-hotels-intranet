@@ -28,6 +28,15 @@ export interface Organization {
   industry: string
   is_active: boolean
   is_deleted: boolean
+  lifecycle_status?: 'prospect' | 'trial' | 'onboarding' | 'active' | 'renewal' | 'suspended' | 'archived'
+  trial_ends_at?: string | null
+  max_hotels?: number | null
+  max_learners?: number | null
+  max_storage_gb?: number | null
+  max_ai_credits_monthly?: number | null
+  ai_credits_used_this_month?: number | null
+  billing_email?: string | null
+  suspension_reason?: string | null
   created_at: string
   updated_at: string
 }

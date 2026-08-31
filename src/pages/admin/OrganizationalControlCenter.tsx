@@ -21,7 +21,6 @@ import { buildOrgTree, useOrgHierarchy, type OrgTreeNode } from '@/hooks/useOrga
 import { useTenant } from '@/contexts/TenantContext'
 import { supabase } from '@/lib/supabase'
 import { cn, escapeSearchQuery, formatDateTime } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
 import { OrganizationProfileSettings } from './components/OrganizationProfileSettings'
 import { SubscriptionEntitlementsCard } from './components/SubscriptionEntitlementsCard'
 import { HotelsManagement } from './components/HotelsManagement'
@@ -29,6 +28,7 @@ import { BrandsManagement } from './components/BrandsManagement'
 import { DepartmentsManagement } from './components/DepartmentsManagement'
 import { RolesManagement } from './components/RolesManagement'
 import { MembershipsManagement } from './components/MembershipsManagement'
+import { OrgStructureTree } from '@/components/org/OrgStructureTree'
 import {
     Building,
     Building2,
@@ -41,7 +41,8 @@ import {
     Shield,
     Users,
     Briefcase,
-    CreditCard
+    CreditCard,
+    FolderTree
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
@@ -103,7 +104,7 @@ export default function OrganizationalControlCenter() {
     const [selectedHotelId, setSelectedHotelId] = useState<string>('')
     const [selectedEmployee, setSelectedEmployee] = useState<OrgTreeNode | null>(null)
     const [isEditorOpen, setIsEditorOpen] = useState(false)
-    const [viewMode, setViewMode] = useState<'hierarchy' | 'department'>('department')
+    const [viewMode, setViewMode] = useState<'hierarchy' | 'department' | 'structure'>('department')
 
     // Fetch hierarchy data for org tree
     const { data: hierarchyData, isLoading: isLoadingHierarchy, refetch: refetchHierarchy } = useOrgHierarchy(
@@ -336,10 +337,24 @@ export default function OrganizationalControlCenter() {
                                 <GitBranch className="h-4 w-4" />
                                 {t('admin:organization.by_hierarchy', 'By Hierarchy')}
                             </button>
+                            <button
+                                onClick={() => setViewMode('structure')}
+                                className={cn(
+                                    "px-3 py-1.5 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5",
+                                    viewMode === 'structure'
+                                        ? "bg-card shadow-sm text-primary font-semibold"
+                                        : "text-muted-foreground hover:text-foreground"
+                                )}
+                            >
+                                <FolderTree className="h-4 w-4" />
+                                {t('admin:organization.by_structure', 'Entity Structure')}
+                            </button>
                         </div>
                     </div>
 
-                    {viewMode === 'department' ? (
+                    {viewMode === 'structure' ? (
+                        <OrgStructureTree orgId={currentOrganization?.id || ''} />
+                    ) : viewMode === 'department' ? (
                         <OrgByDepartment
                             selectedPropertyId={selectedHotelId || undefined}
                             searchTerm={searchTerm}

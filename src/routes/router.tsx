@@ -3,6 +3,7 @@ import { RouteErrorBoundary } from '@/components/common'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
+import { useAccountContext } from '@/hooks/useAccountContext'
 import {
     buildLoginUrl,
     consumePostLoginRedirect,
@@ -47,6 +48,7 @@ const NotFound = lazy(() => import('@/pages/NotFound'))
 // DashboardRoutes are churned by other branches — on conflict, keep this route
 // plus the RootIndex learner branch and re-apply on top.
 const LearnerHome = lazy(() => import('@/pages/home/LearnerHome'))
+const OrgSuspended = lazy(() => import('@/pages/OrgSuspended'))
 
 
 
@@ -84,7 +86,8 @@ const RootLayout = () => {
 }
 
 const RootIndex = () => {
-    const { user, loading, primaryRole } = useAuth()
+    const { user, loading } = useAuth()
+    const account = useAccountContext()
     const location = useLocation()
 
     const destination = useMemo(() => {
@@ -95,28 +98,14 @@ const RootIndex = () => {
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        // Smart Multi-Tenant Destination Resolution:
-        // 1. Platform Operators -> /platform (Platform Control Center)
-        // 2. Learners / Frontline Staff -> /home/learner (Learner Portal)
-        // 3. Tenant Admins & Managers -> /dashboard or /admin/control-center
-        let defaultDestination = '/dashboard'
-        if (
-            primaryRole === 'super_admin' ||
-            primaryRole === 'corporate_admin' ||
-            primaryRole === 'regional_admin' ||
-            primaryRole === 'administrator'
-        ) {
-            defaultDestination = '/platform'
-        } else if (
-            primaryRole === 'staff' ||
-            primaryRole === 'manager' ||
-            primaryRole === 'learner'
-        ) {
-            defaultDestination = '/home/learner'
-        }
+        // Smart destination: an explicit deep-link wins, otherwise send the user
+        // to the environment their account authorises. `recommendedDestination`
+        // is resolved server-side (resolve_account_context) from platform-operator
+        // status + highest tenant membership role.
+        const defaultDestination = account.recommendedDestination || '/dashboard'
 
         return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? defaultDestination
-    }, [user, location.search, primaryRole])
+    }, [user, location.search, account.recommendedDestination])
 
     useEffect(() => {
         if (user && getAuthFlowRedirectPath()) {
@@ -124,7 +113,7 @@ const RootIndex = () => {
         }
     }, [user])
 
-    if (loading) {
+    if (loading || (user && account.loading)) {
         return <PageSkeleton />
     }
 
@@ -240,6 +229,14 @@ export const router = createBrowserRouter(
                     path="/home/learner"
                     element={<LearnerHomeRoute />}
                     errorElement={<RouteErrorBoundary section="Learner Home" />}
+                />
+                <Route
+                    path="/suspended"
+                    element={
+                        <ProtectedRoute smartFallback={false}>
+                            <OrgSuspended />
+                        </ProtectedRoute>
+                    }
                 />
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}

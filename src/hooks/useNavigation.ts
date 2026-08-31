@@ -18,6 +18,7 @@ import {
     type RouteConfig
 } from '@/config/navigation'
 import { useAuth } from '@/hooks/useAuth'
+import { useAccountContext } from '@/hooks/useAccountContext'
 import { useSidebarCounts } from '@/hooks/useSidebarCounts'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { useCallback, useMemo } from 'react'
@@ -60,8 +61,26 @@ export interface UseNavigationReturn {
 // All possible dashboard paths for active state detection
 const DASHBOARD_PATHS = ['/dashboard']
 
+/**
+ * The `platform_operations` nav group is the Platform Control Center. Its
+ * visibility is the platform-operator identity (resolved server-side), NOT a
+ * tenant role — a tenant `corporate_admin` who is not a platform operator must
+ * not see it. Per-item visibility maps to `platform_operator_can(...)`.
+ */
+const PLATFORM_GROUP: NavigationGroup = 'platform_operations'
+const PLATFORM_ITEM_PERMISSION: Record<string, string> = {
+    '/platform/users': 'operator.manage',
+    '/platform/master-library': 'master_content.manage',
+    '/platform/operations': 'ops.manage',
+    '/platform/settings': 'config.manage',
+    '/platform/organizations': 'tenant.read',
+    '/platform/analytics': 'tenant.read',
+    '/platform/audit': 'tenant.read',
+}
+
 export function useNavigation(): UseNavigationReturn {
     const { primaryRole } = useAuth()
+    const account = useAccountContext()
     const location = useLocation()
     const { data: counts } = useSidebarCounts()
     const favorites = useNavigationStore((state) => state.favorites)
@@ -115,7 +134,20 @@ export function useNavigation(): UseNavigationReturn {
             const config = getGroupConfig(groupId)
             if (!config) continue
 
-            const items = routes.map(enrichRoute)
+            // Platform Control Center: gate on real platform-operator identity,
+            // then filter each item by the operator's permissions.
+            if (groupId === PLATFORM_GROUP) {
+                if (!account.isPlatformOperator) continue
+            }
+
+            let items = routes.map(enrichRoute)
+            if (groupId === PLATFORM_GROUP) {
+                items = items.filter(item => {
+                    const perm = PLATFORM_ITEM_PERMISSION[item.path]
+                    return !perm || account.can(perm)
+                })
+                if (items.length === 0) continue
+            }
             const hasActiveItem = items.some(item => item.isActive)
 
             groups.push({
@@ -126,12 +158,21 @@ export function useNavigation(): UseNavigationReturn {
         }
 
         return groups.sort((a, b) => a.config.order - b.config.order)
-    }, [primaryRole, enrichRoute])
+    }, [primaryRole, enrichRoute, account])
+
+    // Drop platform-console routes for anyone who is not a platform operator
+    // (or lacks the specific permission), regardless of their tenant role.
+    const allowPlatformRoute = useCallback((route: RouteConfig): boolean => {
+        if (route.group !== PLATFORM_GROUP) return true
+        if (!account.isPlatformOperator) return false
+        const perm = PLATFORM_ITEM_PERMISSION[route.path]
+        return !perm || account.can(perm)
+    }, [account])
 
     // Flat navigation for mobile
     const flatNavigation = useMemo((): NavigationItem[] => {
-        return getFlatRoutesForRole(primaryRole).map(enrichRoute)
-    }, [primaryRole, enrichRoute])
+        return getFlatRoutesForRole(primaryRole).filter(allowPlatformRoute).map(enrichRoute)
+    }, [primaryRole, enrichRoute, allowPlatformRoute])
 
     // Quick actions for mobile bottom bar
     const quickActions = useMemo((): NavigationItem[] => {
@@ -142,17 +183,17 @@ export function useNavigation(): UseNavigationReturn {
     const favoriteItems = useMemo((): NavigationItem[] => {
         return favorites
             .map(path => ROUTES.find(r => r.path === path))
-            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole))
+            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole) && allowPlatformRoute(r))
             .map(enrichRoute)
-    }, [favorites, primaryRole, enrichRoute])
+    }, [favorites, primaryRole, enrichRoute, allowPlatformRoute])
 
     // Recently visited routes
     const recentItems = useMemo((): NavigationItem[] => {
         return recentlyVisited
             .map(recent => ROUTES.find(r => r.path === recent.path))
-            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole))
+            .filter((r): r is RouteConfig => r !== undefined && canAccessRoute(r, primaryRole) && allowPlatformRoute(r))
             .map(enrichRoute)
-    }, [recentlyVisited, primaryRole, enrichRoute])
+    }, [recentlyVisited, primaryRole, enrichRoute, allowPlatformRoute])
 
     // Filter permitted routes by search term
     const searchRoutes = useCallback((query: string): NavigationItem[] => {
@@ -161,6 +202,7 @@ export function useNavigation(): UseNavigationReturn {
 
         return ROUTES
             .filter(r => canAccessRoute(r, primaryRole))
+            .filter(allowPlatformRoute)
             .filter(r =>
                 r.path.toLowerCase().includes(q) ||
                 r.title.toLowerCase().includes(q) ||
@@ -169,13 +211,13 @@ export function useNavigation(): UseNavigationReturn {
             )
             .map(enrichRoute)
             .slice(0, 10)
-    }, [primaryRole, enrichRoute])
+    }, [primaryRole, enrichRoute, allowPlatformRoute])
 
     // Check if user can access a path
     const canAccess = (path: string): boolean => {
         const route = ROUTES.find(r => r.path === path)
         if (!route) return false
-        return canAccessRoute(route, primaryRole)
+        return canAccessRoute(route, primaryRole) && allowPlatformRoute(route)
     }
 
     // Get route config by path

@@ -53,8 +53,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Skeleton } from '@/components/ui/skeleton';
+import { useTenant } from '@/contexts/TenantContext';
+import { useAccountContext } from '@/contexts/auth/AccountContext';
+import { platformService } from '@/services/platformService';
+import { useQuery } from '@tanstack/react-query';
 import { useInvitations } from '@/hooks/useInvitations';
 import { useProperties } from '@/hooks/useProperties';
 import { useDepartments } from '@/hooks/useDepartments';
@@ -63,6 +65,8 @@ import type { AppRole } from '@/lib/types';
 
 export default function UserInvitations() {
   const { t } = useTranslation(['admin', 'common']);
+  const { currentOrganization } = useTenant();
+  const { isPlatformOperator } = useAccountContext();
   const {
     invitations,
     isLoading,
@@ -76,6 +80,14 @@ export default function UserInvitations() {
   } = useInvitations();
   const { data: properties = [], isLoading: propertiesLoading } = useProperties();
   const { departments = [], isLoading: departmentsLoading } = useDepartments();
+
+  const { data: entitlements, refetch: refetchEntitlements } = useQuery({
+    queryKey: ['org-effective-entitlements', currentOrganization?.id],
+    queryFn: () => currentOrganization?.id ? platformService.getEffectiveEntitlements(currentOrganization.id) : null,
+    enabled: !!currentOrganization?.id,
+  });
+
+  const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100);
 
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [invitationToCancel, setInvitationToCancel] = useState<string | null>(null);
@@ -116,6 +128,10 @@ export default function UserInvitations() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (isSeatLimitReached) {
+      return;
+    }
+
     if (!validateForm()) return;
 
     const success = await createInvitation({
@@ -128,6 +144,7 @@ export default function UserInvitations() {
     if (success) {
       setFormData({ email: '', role: '', propertyId: '', departmentId: '' });
       setIsCreateDialogOpen(false);
+      refetchEntitlements();
     }
   };
 
@@ -203,12 +220,29 @@ export default function UserInvitations() {
             <RefreshCw className={`w-4 h-4 me-2 ${isLoading ? 'animate-spin' : ''}`} />
             {t('common.refresh', { defaultValue: 'Refresh' })}
           </Button>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            disabled={isSeatLimitReached}
+            title={isSeatLimitReached ? t('invitations.seat_limit_reached', { defaultValue: 'Plan seat limit reached. Upgrade to invite more users.' }) : undefined}
+          >
             <UserPlus className="w-4 h-4 me-2" />
             {t('invitations.invite_user', { defaultValue: 'Invite User' })}
           </Button>
         </div>
       </div>
+
+      {isSeatLimitReached && (
+        <div className="p-4 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-700 dark:text-amber-300 text-sm">
+          <AlertCircle className="w-5 h-5 shrink-0 text-amber-500" />
+          <span>
+            {t('invitations.seat_limit_reached_desc', {
+              defaultValue: 'User seat limit reached ({{current}} / {{max}} seats used). Contact your platform administrator to upgrade.',
+              current: entitlements?.usage?.learners ?? 0,
+              max: entitlements?.max_learners ?? 100,
+            })}
+          </span>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">

@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type {
   PracticalAssessment,
   PracticalSubmission
@@ -13,9 +13,11 @@ export const practicalAssessmentService = {
     let query = supabase
       .from('practical_assessments')
       .select(
+        `
         *,
         course:courses(id, title),
         department:departments(id, name)
+      `.trim()
       )
       .eq('is_active', true)
       .order('title')
@@ -44,10 +46,12 @@ export const practicalAssessmentService = {
     let query = supabase
       .from('practical_submissions')
       .select(
+        `
         *,
         learner:profiles!practical_submissions_learner_id_fkey(id, full_name, email, avatar_url),
         evaluator:profiles!practical_submissions_evaluator_id_fkey(id, full_name, email),
         assessment:practical_assessments(*)
+      `.trim()
       )
       .order('evaluated_at', { ascending: false })
 

@@ -1,9 +1,12 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type {
   Competency,
   DepartmentCompetencyGap,
   UserCompetency
 } from '@/types/enterpriseOperatingModel'
+
+// Fallback required proficiency when a competency is not mapped to any course.
+const DEFAULT_REQUIRED_LEVEL = 3
 
 export const competencyService = {
   async getCompetencies(organizationId?: string): Promise<Competency[]> {
@@ -34,42 +37,80 @@ export const competencyService = {
     return data || []
   },
 
+  /**
+   * Required proficiency per competency, derived from the highest `target_level`
+   * across every course that trains it. Competencies with no course mapping fall
+   * back to DEFAULT_REQUIRED_LEVEL.
+   */
+  async getRequiredLevels(): Promise<Map<string, number>> {
+    const { data, error } = await supabase
+      .from('course_competencies')
+      .select('competency_id, target_level')
+
+    if (error) throw error
+
+    const required = new Map<string, number>()
+    for (const row of data || []) {
+      const current = required.get(row.competency_id) ?? 0
+      if (row.target_level > current) required.set(row.competency_id, row.target_level)
+    }
+    return required
+  },
+
   async getDepartmentCompetencyGaps(
     departmentId?: string,
     hotelId?: string
   ): Promise<DepartmentCompetencyGap[]> {
-    // 1. Get competencies
-    const competencies = await this.getCompetencies()
+    const [competencies, requiredLevels] = await Promise.all([
+      this.getCompetencies(),
+      this.getRequiredLevels()
+    ])
     if (!competencies.length) return []
 
-    // 2. Fetch department user competencies
-    let userQuery = supabase
-      .from('user_competencies')
-      .select('competency_id, current_level, user_id')
+    // Resolve the department/hotel scope to a set of user IDs.
+    let scopedUserIds: Set<string> | null = null
+    if (departmentId || hotelId) {
+      let memberQuery = supabase
+        .from('organization_memberships')
+        .select('user_id')
+        .eq('is_active', true)
+        .eq('is_deleted', false)
 
-    const { data: userComps, error } = await userQuery
-    if (error) throw error
+      if (departmentId) memberQuery = memberQuery.eq('department_id', departmentId)
+      if (hotelId) memberQuery = memberQuery.eq('hotel_id', hotelId)
 
-    const compsByCompId = new Map<string, number[]>()
-    for (const uc of userComps || []) {
-      const list = compsByCompId.get(uc.competency_id) || []
-      list.push(uc.current_level)
-      compsByCompId.set(uc.competency_id, list)
+      const { data: members, error: memberErr } = await memberQuery
+      if (memberErr) throw memberErr
+      scopedUserIds = new Set((members || []).map((m) => m.user_id))
     }
 
-    // Default required baseline level is 3 (Proficient)
-    const REQUIRED_LEVEL = 3
+    const { data: userComps, error } = await supabase
+      .from('user_competencies')
+      .select('competency_id, current_level, user_id')
+    if (error) throw error
+
+    const scopedComps = (userComps || []).filter(
+      (uc) => !scopedUserIds || scopedUserIds.has(uc.user_id)
+    )
+
+    const levelsByCompId = new Map<string, number[]>()
+    for (const uc of scopedComps) {
+      const list = levelsByCompId.get(uc.competency_id) || []
+      list.push(uc.current_level)
+      levelsByCompId.set(uc.competency_id, list)
+    }
 
     return competencies.map((comp) => {
-      const scores = compsByCompId.get(comp.id) || []
+      const requiredLevel = requiredLevels.get(comp.id) ?? DEFAULT_REQUIRED_LEVEL
+      const scores = levelsByCompId.get(comp.id) || []
       const totalEvaluated = scores.length
       const avgLevel = totalEvaluated > 0
         ? Number((scores.reduce((a, b) => a + b, 0) / totalEvaluated).toFixed(1))
         : 0
-      const belowCount = scores.filter((s) => s < REQUIRED_LEVEL).length + (totalEvaluated === 0 ? 1 : 0)
-      const gap = Math.max(0, Number((REQUIRED_LEVEL - avgLevel).toFixed(1)))
+      const belowCount = scores.filter((s) => s < requiredLevel).length
+      const gap = Math.max(0, Number((requiredLevel - avgLevel).toFixed(1)))
       const compliance = totalEvaluated > 0
-        ? Math.min(100, Math.round((avgLevel / REQUIRED_LEVEL) * 100))
+        ? Math.min(100, Math.round((avgLevel / requiredLevel) * 100))
         : 0
 
       return {
@@ -77,7 +118,7 @@ export const competencyService = {
         competency_name: comp.name,
         competency_name_ar: comp.name_ar,
         category: comp.category,
-        required_level: REQUIRED_LEVEL,
+        required_level: requiredLevel,
         average_actual_level: avgLevel,
         gap,
         compliance_percentage: compliance,

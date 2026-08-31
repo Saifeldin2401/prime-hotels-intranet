@@ -198,6 +198,22 @@ async function sendEmailNotification(toUserId: string, payload: EmailNotificatio
 }
 
 /**
+ * Check if a notification policy key is enabled for a given tenant organization
+ */
+export async function isPolicyEnabled(orgId: string, policyKey: string): Promise<boolean> {
+  try {
+    const { data, error } = await (supabase.rpc as any)('notification_policy_enabled', {
+      p_org_id: orgId,
+      p_key: policyKey,
+    })
+    if (error) return true
+    return data ?? true
+  } catch {
+    return true
+  }
+}
+
+/**
  * Create a single notification for a user (and send email)
  */
 export async function createNotification(params: CreateNotificationParams): Promise<void> {

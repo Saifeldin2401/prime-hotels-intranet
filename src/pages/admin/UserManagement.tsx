@@ -27,6 +27,7 @@ import { Label } from '@/components/ui/label'
 import { useToast } from '@/components/ui/use-toast'
 import { useAccountActions } from '@/hooks/useAccountActions'
 import { PendingUserApprovals } from '@/components/admin/PendingUserApprovals'
+import { EmployeeTransferModal } from '@/components/directory/EmployeeTransferModal'
 import {
     Sheet,
     SheetContent,
@@ -34,12 +35,15 @@ import {
     SheetHeader,
     SheetTitle,
 } from '@/components/ui/sheet'
-import { AlertTriangle, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
+import { AlertTriangle, ArrowRightLeft, CheckSquare, Clock, Edit, KeyRound, Loader2, MailPlus, MoreVertical, Plus, ShieldAlert, ShieldCheck, ShieldOff, Square, Trash2, Unlock, Upload, UserX, Users, XCircle, Eye, Mail, Phone, Building, Briefcase, Calendar, Shield, Sparkles, ExternalLink, UserCheck } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { useTenant } from '@/contexts/TenantContext'
+import { useAccountContext } from '@/contexts/auth/AccountContext'
+import { platformService } from '@/services/platformService'
 import type { Profile, AppRole } from '@/lib/types'
 
 
@@ -64,8 +68,19 @@ type AccountActionNoteRow = Omit<AccountActionNote, 'created_by'> & {
 export default function UserManagement() {
   const { t: t_ext } = useTranslation('extracted');
   const { t } = useTranslation('users')
+  const { currentOrganization } = useTenant()
+  const { isPlatformOperator } = useAccountContext()
   const { toast } = useToast()
   const queryClient = useQueryClient()
+
+  const { data: entitlements, refetch: refetchEntitlements } = useQuery({
+    queryKey: ['org-effective-entitlements', currentOrganization?.id],
+    queryFn: () => currentOrganization?.id ? platformService.getEffectiveEntitlements(currentOrganization.id) : null,
+    enabled: !!currentOrganization?.id,
+  })
+
+  const isSeatLimitReached = !isPlatformOperator && !!entitlements && (entitlements.usage?.learners ?? 0) >= (entitlements.max_learners ?? 100)
+
   const [showForm, setShowForm] = useState(false)
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -84,6 +99,8 @@ export default function UserManagement() {
   const [suspendUntil, setSuspendUntil] = useState('')
   const [notifyUser, setNotifyUser] = useState(true)
   const [actionNote, setActionNote] = useState('')
+  const [transferModalOpen, setTransferModalOpen] = useState(false)
+  const [transferTargetUser, setTransferTargetUser] = useState<Profile | null>(null)
 
   // Bulk selection state
   const [selectedUserIds, setSelectedUserIds] = useState<Set<string>>(new Set())
@@ -272,6 +289,10 @@ export default function UserManagement() {
 
   const inviteUserMutation = useMutation({
     mutationFn: async (params: { email: string; role: AppRole | '' }) => {
+      if (isSeatLimitReached) {
+        throw new Error('User seat limit reached for this subscription plan. Contact your platform administrator to upgrade.')
+      }
+
       const { email, role } = params
       const trimmedEmail = email.trim().toLowerCase()
       if (!trimmedEmail || !trimmedEmail.includes('@')) {
@@ -334,6 +355,7 @@ export default function UserManagement() {
       setInvitePropertyId('')
       setInviteDepartmentId('')
       refetch()
+      refetchEntitlements()
     },
     onError: (error: Error) => {
       toast({
@@ -386,6 +408,14 @@ export default function UserManagement() {
   }
 
   const openCreateForm = () => {
+    if (isSeatLimitReached) {
+      toast({
+        title: t('form.error.create_failed', 'Action Blocked'),
+        description: t('seat_limit_reached', 'User seat limit reached for this subscription plan. Contact your platform administrator to upgrade.'),
+        variant: 'destructive',
+      })
+      return
+    }
     setSelectedUser(null)
     setShowForm(true)
   }
@@ -394,6 +424,7 @@ export default function UserManagement() {
     setShowForm(false)
     setSelectedUser(null)
     refetch()
+    refetchEntitlements()
   }
 
   // Account action handlers
@@ -613,6 +644,8 @@ export default function UserManagement() {
             <Button
               variant="outline"
               onClick={() => setInviteDialogOpen(true)}
+              disabled={isSeatLimitReached}
+              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to invite users.' : undefined}
               className="h-9 rounded-2xl border-amber-500/30 bg-amber-500/10 px-3.5 text-xs font-bold text-amber-700 dark:text-amber-300 hover:bg-amber-500/20 shadow-xs"
             >
               <MailPlus className="me-1.5 h-3.5 w-3.5 text-amber-500" />
@@ -621,6 +654,8 @@ export default function UserManagement() {
 
             <Button
               onClick={openCreateForm}
+              disabled={isSeatLimitReached}
+              title={isSeatLimitReached ? 'Plan seat limit reached. Upgrade to add employees.' : undefined}
               className="h-9 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 px-4 text-xs font-bold text-slate-950 shadow-md shadow-amber-500/15 hover:from-amber-400 hover:to-amber-500 transition-all hover:scale-[1.02] active:scale-[0.98]"
             >
               <Plus className="me-1.5 h-3.5 w-3.5" />
@@ -628,6 +663,15 @@ export default function UserManagement() {
             </Button>
           </div>
         </div>
+
+        {isSeatLimitReached && (
+          <div className="mt-4 p-3 bg-amber-500/15 border border-amber-500/30 rounded-2xl flex items-center gap-3 text-amber-700 dark:text-amber-300 text-xs">
+            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
+            <span>
+              User seat limit reached ({entitlements?.usage?.learners ?? 0} / {entitlements?.max_learners ?? 100} seats used). Contact your platform administrator to upgrade subscription tier.
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Pending User Approvals */}
@@ -912,6 +956,17 @@ export default function UserManagement() {
                           <DropdownMenuItem onClick={() => openActionDialog(user, 'resend_credentials')} className="gap-2 text-xs font-semibold">
                             <MailPlus className="w-4 h-4 text-sky-600" />
                             {t('account_actions.resend_credentials', 'Resend Credentials')}
+                          </DropdownMenuItem>
+
+                          <DropdownMenuItem
+                            onClick={() => {
+                              setTransferTargetUser(user)
+                              setTransferModalOpen(true)
+                            }}
+                            className="gap-2 text-xs font-semibold text-primary focus:text-primary"
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                            {t('transfer.action_title', 'Transfer Employee')}
                           </DropdownMenuItem>
 
                           <DropdownMenuSeparator />
@@ -1445,6 +1500,16 @@ export default function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <EmployeeTransferModal
+        isOpen={transferModalOpen}
+        onClose={() => {
+          setTransferModalOpen(false)
+          setTransferTargetUser(null)
+        }}
+        user={transferTargetUser}
+        onSuccess={() => refetch()}
+      />
     </div>
   )
 }

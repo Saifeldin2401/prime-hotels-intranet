@@ -26,10 +26,12 @@ import {
   AuthSecurityProvider,
   UserDataProvider,
   AuthActionsProvider,
+  AccountProvider,
   useAuthIdentity,
   useAuthSecurity,
   useUserData,
   useAuthActions,
+  useAccountContext,
 } from './auth'
 
 // ─── Backward-compatible Context Type ────────────────────────────────────────
@@ -103,11 +105,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthIdentityProvider>
       <AuthSecurityProvider>
         <UserDataProvider>
-          <AuthActionsProvider>
-            <AuthProviderInternal>
-              {children}
-            </AuthProviderInternal>
-          </AuthActionsProvider>
+          <AccountProvider>
+            <AuthActionsProvider>
+              <AuthProviderInternal>
+                {children}
+              </AuthProviderInternal>
+            </AuthActionsProvider>
+          </AccountProvider>
         </UserDataProvider>
       </AuthSecurityProvider>
     </AuthIdentityProvider>
@@ -115,7 +119,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 // Re-export individual hooks for direct access
-export { useAuthIdentity, useAuthSecurity, useUserData, useAuthActions }
+export { useAuthIdentity, useAuthSecurity, useUserData, useAuthActions, useAccountContext }
 
 // Re-export context types
 export type { AuthIdentityContextType } from './auth/AuthIdentityContext'

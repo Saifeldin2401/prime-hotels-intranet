@@ -42,6 +42,8 @@ const DEFAULT_ENTERPRISE_PLAN: SubscriptionPlan = {
   created_at: new Date().toISOString()
 }
 
+import { platformService } from '@/services/platformService'
+
 export function SubscriptionEntitlementsCard() {
   const { currentOrganization, isOrgAdmin } = useTenant()
   const { t, i18n } = useTranslation(['admin', 'common'])
@@ -80,67 +82,67 @@ export function SubscriptionEntitlementsCard() {
         } as unknown as Subscription
       }
 
-      return {
-        id: 'mock-sub',
-        organization_id: currentOrganization.id,
-        plan_id: DEFAULT_ENTERPRISE_PLAN.id,
-        status: 'active',
-        current_period_start: new Date().toISOString(),
-        current_period_end: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        plan: DEFAULT_ENTERPRISE_PLAN
-      } as Subscription
+      return null
     },
     enabled: !!currentOrganization?.id
   })
 
-  // 2. Query actual usage counts (users, hotels, storage, AI spend)
-  const { data: usage } = useQuery({
-    queryKey: ['org-usage-metrics', currentOrganization?.id],
+  // 2. Query effective entitlements & live usage counts from DB RPC
+  const { data: entitlements, isLoading: isLoadingEntitlements } = useQuery({
+    queryKey: ['org-effective-entitlements', currentOrganization?.id],
     queryFn: async () => {
-      if (!currentOrganization?.id) return { users: 0, hotels: 0, aiSpendUsd: 14.50, storageGb: 8.2 }
-
-      // Count members
-      const { count: userCount } = await supabase
-        .from('organization_memberships')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_active', true)
-
-      // Count hotels
-      const { count: hotelCount } = await supabase
-        .from('hotels')
-        .select('id', { count: 'exact', head: true })
-        .eq('organization_id', currentOrganization.id)
-        .eq('is_deleted', false)
-
-      return {
-        users: userCount || 1,
-        hotels: hotelCount || 1,
-        aiSpendUsd: 28.50, // Simulated current month compute telemetry
-        storageGb: 12.4
-      }
+      if (!currentOrganization?.id) return null
+      return platformService.getEffectiveEntitlements(currentOrganization.id)
     },
     enabled: !!currentOrganization?.id
   })
 
-  const plan = subscription?.plan || DEFAULT_ENTERPRISE_PLAN
-  const userCount = usage?.users || 1
-  const hotelCount = usage?.hotels || 1
-  const aiSpend = usage?.aiSpendUsd || 0
-  const storageGb = usage?.storageGb || 0
+  // 3. Evaluate organization quotas (80%, 90%, 100% proactive alerts & metering)
+  const { data: quotaEvaluation, isLoading: isLoadingQuotaEval } = useQuery({
+    queryKey: ['org-quota-evaluation', currentOrganization?.id],
+    queryFn: async () => {
+      if (!currentOrganization?.id) return null
+      return platformService.evaluateOrganizationQuotas(currentOrganization.id)
+    },
+    enabled: !!currentOrganization?.id,
+    staleTime: 60 * 1000
+  })
 
-  // Calculate percentages
-  const userPercent = Math.min(100, Math.round((userCount / (plan.max_users || 1)) * 100))
-  const hotelPercent = Math.min(100, Math.round((hotelCount / (plan.max_hotels || 1)) * 100))
-  const aiPercent = Math.min(100, Math.round((aiSpend / (plan.ai_monthly_quota_usd || 1)) * 100))
-  const storagePercent = Math.min(100, Math.round((storageGb / (plan.max_storage_gb || 1)) * 100))
+  const planName = entitlements?.plan || subscription?.plan?.name || DEFAULT_ENTERPRISE_PLAN.name
+  const planCode = entitlements?.plan_code || subscription?.plan?.code || 'enterprise'
 
-  const isNearLimit = userPercent >= 85 || hotelPercent >= 85 || aiPercent >= 85
+  // Metric values prioritized from quota evaluation RPC
+  const userCount = quotaEvaluation?.utilization?.learners?.used ?? entitlements?.usage?.learners ?? 0
+  const maxUsers = quotaEvaluation?.utilization?.learners?.max ?? entitlements?.max_learners ?? subscription?.plan?.max_users ?? DEFAULT_ENTERPRISE_PLAN.max_users
+  const userPercent = quotaEvaluation?.utilization?.learners?.pct ?? Math.min(100, Math.round((userCount / (maxUsers || 1)) * 100))
+
+  const hotelCount = quotaEvaluation?.utilization?.hotels?.used ?? entitlements?.usage?.hotels ?? 0
+  const maxHotels = quotaEvaluation?.utilization?.hotels?.max ?? entitlements?.max_hotels ?? subscription?.plan?.max_hotels ?? DEFAULT_ENTERPRISE_PLAN.max_hotels
+  const hotelPercent = quotaEvaluation?.utilization?.hotels?.pct ?? Math.min(100, Math.round((hotelCount / (maxHotels || 1)) * 100))
+
+  const aiCreditsUsed = quotaEvaluation?.utilization?.ai_credits?.used ?? entitlements?.ai_credits_used ?? 0
+  const aiMonthlyQuota = quotaEvaluation?.utilization?.ai_credits?.max ?? entitlements?.ai_credits_monthly ?? subscription?.plan?.ai_monthly_quota_usd ?? DEFAULT_ENTERPRISE_PLAN.ai_monthly_quota_usd
+  const aiPercent = quotaEvaluation?.utilization?.ai_credits?.pct ?? (aiMonthlyQuota > 0 ? Math.min(100, Math.round((aiCreditsUsed / (aiMonthlyQuota || 1)) * 100)) : 0)
+
+  const storageUsedGb = quotaEvaluation?.utilization?.storage?.used_gb ?? (quotaEvaluation?.utilization?.storage?.used ? Number((quotaEvaluation.utilization.storage.used / (1024 * 1024 * 1024)).toFixed(2)) : 0)
+  const maxStorageGb = quotaEvaluation?.utilization?.storage?.max_gb ?? entitlements?.max_storage_gb ?? subscription?.plan?.max_storage_gb ?? DEFAULT_ENTERPRISE_PLAN.max_storage_gb
+  const storagePercent = quotaEvaluation?.utilization?.storage?.pct ?? Math.min(100, Math.round((storageUsedGb / (maxStorageGb || 1)) * 100))
+
+  const features = entitlements?.plan_features || subscription?.plan?.features || DEFAULT_ENTERPRISE_PLAN.features
+
+  // Capacity Threshold Assessment (80%, 90%, 100%)
+  const maxPercent = Math.max(userPercent, hotelPercent, aiPercent, storagePercent)
+  const isAtCapacity = maxPercent >= 100
+  const isUrgentWarning = maxPercent >= 90 && maxPercent < 100
+  const isWarning = maxPercent >= 80 && maxPercent < 90
+  const isNearLimit = maxPercent >= 80
+
+  const handleUpgradeClick = () => {
+    window.open('mailto:sales@altus-advisory.com?subject=Altus%20Subscription%20Quota%20Upgrade%20Inquiry', '_blank')
+  }
 
   const planBadgeStyle = useMemo(() => {
-    switch (plan.code) {
+    switch (planCode) {
       case 'enterprise':
         return 'bg-purple-500/15 text-purple-600 dark:text-purple-400 border-purple-500/40 font-bold'
       case 'growth':
@@ -148,7 +150,32 @@ export function SubscriptionEntitlementsCard() {
       default:
         return 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 font-bold'
     }
-  }, [plan.code])
+  }, [planCode])
+
+  const getCapacityBadge = (pct: number) => {
+    if (pct >= 100) {
+      return (
+        <Badge variant="destructive" className="bg-rose-600 text-white font-bold text-[10px] px-1.5 py-0 shadow-sm">
+          {t('admin:quota_capacity_full', '100% Full')}
+        </Badge>
+      )
+    }
+    if (pct >= 90) {
+      return (
+        <Badge className="bg-amber-500 text-slate-950 font-bold text-[10px] px-1.5 py-0 shadow-sm">
+          {t('admin:quota_capacity_critical', '90%+ Critical')}
+        </Badge>
+      )
+    }
+    if (pct >= 80) {
+      return (
+        <Badge className="bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40 text-[10px] px-1.5 py-0">
+          {t('admin:quota_capacity_warning', '80%+ Warning')}
+        </Badge>
+      )
+    }
+    return null
+  }
 
   return (
     <Card className="border shadow-sm overflow-hidden bg-card">
@@ -156,13 +183,13 @@ export function SubscriptionEntitlementsCard() {
       <div className="bg-gradient-to-r from-hotel-navy-dark via-hotel-navy to-hotel-navy-light p-6 text-white border-b border-hotel-gold/20">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="space-y-1">
-            <div className="flex items-center gap-2.5">
-              <CreditCard className="h-5 w-5 text-hotel-gold" />
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <CreditCard className="h-5 w-5 text-hotel-gold shrink-0" />
               <h3 className="text-lg font-bold tracking-tight text-white">
                 {t('admin:subscription_and_entitlements', 'Subscription Plan & Quota Entitlements')}
               </h3>
               <Badge variant="outline" className={planBadgeStyle}>
-                {plan.name}
+                {planName}
               </Badge>
               <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 text-[11px] capitalize">
                 {subscription?.status || 'active'}
@@ -185,25 +212,59 @@ export function SubscriptionEntitlementsCard() {
                 variant="outline"
                 size="sm"
                 className="bg-hotel-gold text-hotel-navy hover:bg-hotel-gold-light border-none font-semibold text-xs shadow-md"
-                onClick={() => {
-                  window.open('mailto:sales@altus-advisory.com?subject=Altus%20Subscription%20Upgrade%20Inquiry', '_blank')
-                }}
+                onClick={handleUpgradeClick}
               >
                 <Sparkles className="h-3.5 w-3.5 me-1.5" />
-                {t('admin:manage_upgrade_plan', 'Upgrade Tier')}
+                {t('admin:upgrade_entitlements', 'Upgrade Entitlements')}
                 <ArrowUpRight className="h-3 w-3 ms-1" />
               </Button>
             )}
           </div>
         </div>
 
-        {/* Quota Threshold Warning Alert */}
+        {/* Proactive Quota Capacity Warning Alert Banner (80% / 90% / 100%) */}
         {isNearLimit && (
-          <div className="mt-4 p-3 bg-amber-500/15 border border-amber-500/30 rounded-xl flex items-center gap-3 text-amber-200 text-xs">
-            <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
-            <span>
-              {t('admin:quota_warning', 'You are approaching your plan limit for one or more resources. Upgrade to avoid service restrictions.')}
-            </span>
+          <div className={`mt-4 p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-inner ${
+            isAtCapacity
+              ? 'bg-rose-500/25 border-rose-500/50 text-rose-100'
+              : isUrgentWarning
+                ? 'bg-amber-500/25 border-amber-500/50 text-amber-100'
+                : 'bg-yellow-500/15 border-yellow-500/30 text-yellow-100'
+          }`}>
+            <div className="flex items-start gap-3">
+              <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${
+                isAtCapacity ? 'text-rose-400' : isUrgentWarning ? 'text-amber-400' : 'text-yellow-400'
+              }`} />
+              <div className="space-y-0.5">
+                <p className="font-bold text-sm">
+                  {isAtCapacity
+                    ? t('admin:capacity_100_warning', 'Critical: One or more resource quotas have reached 100% capacity. Additions and provisioning may be blocked until entitlements are upgraded.')
+                    : isUrgentWarning
+                      ? t('admin:capacity_90_warning', 'Warning: Resource utilization has reached 90%+. Upgrade entitlements now to prevent service disruptions.')
+                      : t('admin:capacity_80_warning', 'Notice: Resource utilization has reached 80% of plan capacity.')}
+                </p>
+                <p className="text-white/70 text-[11px]">
+                  {t('admin:alerts_notified_admins', 'Organization admins were proactively notified of this capacity threshold.')}
+                </p>
+              </div>
+            </div>
+            {isOrgAdmin && (
+              <Button
+                size="sm"
+                className={`shrink-0 font-bold text-xs shadow-md border-none ${
+                  isAtCapacity
+                    ? 'bg-rose-600 hover:bg-rose-700 text-white'
+                    : isUrgentWarning
+                      ? 'bg-amber-500 hover:bg-amber-600 text-slate-950'
+                      : 'bg-yellow-500 hover:bg-yellow-600 text-slate-950'
+                }`}
+                onClick={handleUpgradeClick}
+              >
+                <Sparkles className="h-3.5 w-3.5 me-1.5" />
+                {t('admin:upgrade_entitlements', 'Upgrade Entitlements')}
+                <ArrowUpRight className="h-3 w-3 ms-1" />
+              </Button>
+            )}
           </div>
         )}
       </div>
@@ -218,17 +279,20 @@ export function SubscriptionEntitlementsCard() {
                 <Users className="h-4 w-4 text-primary" />
                 {t('admin:user_seats', 'User Seats')}
               </span>
-              <span className="font-mono font-bold text-foreground">
-                {userCount} / {plan.max_users.toLocaleString()}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {getCapacityBadge(userPercent)}
+                <span className="font-mono font-bold text-foreground">
+                  {userCount} / {maxUsers.toLocaleString()}
+                </span>
+              </div>
             </div>
             <Progress
               value={userPercent}
-              className={userPercent >= 90 ? '[&>div]:bg-rose-500' : userPercent >= 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
+              className={userPercent >= 100 ? '[&>div]:bg-rose-600' : userPercent >= 90 ? '[&>div]:bg-rose-500' : userPercent >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
             />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{userPercent}% {t('admin:utilized', 'used')}</span>
-              <span>{(plan.max_users - userCount).toLocaleString()} {t('admin:seats_remaining', 'available')}</span>
+              <span className="font-medium">{userPercent}% {t('admin:utilized', 'used')}</span>
+              <span>{Math.max(0, maxUsers - userCount).toLocaleString()} {t('admin:seats_remaining', 'available')}</span>
             </div>
           </div>
 
@@ -239,17 +303,20 @@ export function SubscriptionEntitlementsCard() {
                 <Building2 className="h-4 w-4 text-primary" />
                 {t('admin:hotels_locations', 'Hotels / Units')}
               </span>
-              <span className="font-mono font-bold text-foreground">
-                {hotelCount} / {plan.max_hotels}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {getCapacityBadge(hotelPercent)}
+                <span className="font-mono font-bold text-foreground">
+                  {hotelCount} / {maxHotels}
+                </span>
+              </div>
             </div>
             <Progress
               value={hotelPercent}
-              className={hotelPercent >= 90 ? '[&>div]:bg-rose-500' : hotelPercent >= 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
+              className={hotelPercent >= 100 ? '[&>div]:bg-rose-600' : hotelPercent >= 90 ? '[&>div]:bg-rose-500' : hotelPercent >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
             />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{hotelPercent}% {t('admin:utilized', 'used')}</span>
-              <span>{plan.max_hotels - hotelCount} {t('admin:hotels_left', 'remaining')}</span>
+              <span className="font-medium">{hotelPercent}% {t('admin:utilized', 'used')}</span>
+              <span>{Math.max(0, maxHotels - hotelCount)} {t('admin:hotels_left', 'remaining')}</span>
             </div>
           </div>
 
@@ -258,19 +325,22 @@ export function SubscriptionEntitlementsCard() {
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-muted-foreground flex items-center gap-1.5">
                 <Cpu className="h-4 w-4 text-primary" />
-                {t('admin:ai_monthly_compute', 'AI Monthly Spend')}
+                {t('admin:ai_monthly_compute', 'AI Monthly Credits')}
               </span>
-              <span className="font-mono font-bold text-foreground">
-                ${aiSpend.toFixed(2)} / ${plan.ai_monthly_quota_usd.toFixed(0)}
-              </span>
+              <div className="flex items-center gap-1.5">
+                {getCapacityBadge(aiPercent)}
+                <span className="font-mono font-bold text-foreground">
+                  {aiCreditsUsed} / {aiMonthlyQuota.toLocaleString()}
+                </span>
+              </div>
             </div>
             <Progress
               value={aiPercent}
-              className={aiPercent >= 90 ? '[&>div]:bg-rose-500' : aiPercent >= 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
+              className={aiPercent >= 100 ? '[&>div]:bg-rose-600' : aiPercent >= 90 ? '[&>div]:bg-rose-500' : aiPercent >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
             />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{aiPercent}% {t('admin:utilized', 'used')}</span>
-              <span>${(plan.ai_monthly_quota_usd - aiSpend).toFixed(2)} {t('admin:budget_left', 'left')}</span>
+              <span className="font-medium">{aiPercent}% {t('admin:utilized', 'used')}</span>
+              <span>{Math.max(0, aiMonthlyQuota - aiCreditsUsed).toLocaleString()} {t('admin:budget_left', 'left')}</span>
             </div>
           </div>
 
@@ -281,17 +351,20 @@ export function SubscriptionEntitlementsCard() {
                 <HardDrive className="h-4 w-4 text-primary" />
                 {t('admin:cloud_storage', 'Cloud Storage')}
               </span>
-              <span className="font-mono font-bold text-foreground">
-                {storageGb.toFixed(1)} / {plan.max_storage_gb} GB
-              </span>
+              <div className="flex items-center gap-1.5">
+                {getCapacityBadge(storagePercent)}
+                <span className="font-mono font-bold text-foreground">
+                  {storageUsedGb.toFixed(1)} / {maxStorageGb} GB
+                </span>
+              </div>
             </div>
             <Progress
               value={storagePercent}
-              className={storagePercent >= 90 ? '[&>div]:bg-rose-500' : storagePercent >= 75 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
+              className={storagePercent >= 100 ? '[&>div]:bg-rose-600' : storagePercent >= 90 ? '[&>div]:bg-rose-500' : storagePercent >= 80 ? '[&>div]:bg-amber-500' : '[&>div]:bg-emerald-500'}
             />
             <div className="flex justify-between text-[11px] text-muted-foreground">
-              <span>{storagePercent}% {t('admin:utilized', 'used')}</span>
-              <span>{(plan.max_storage_gb - storageGb).toFixed(1)} GB {t('admin:storage_free', 'free')}</span>
+              <span className="font-medium">{storagePercent}% {t('admin:utilized', 'used')}</span>
+              <span>{(Math.max(0, maxStorageGb - storageUsedGb)).toFixed(1)} GB {t('admin:storage_free', 'free')}</span>
             </div>
           </div>
         </div>
@@ -305,8 +378,8 @@ export function SubscriptionEntitlementsCard() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {/* Custom Branding */}
-            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${plan.features?.custom_branding ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
-              {plan.features?.custom_branding ? (
+            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${features?.custom_branding ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
+              {features?.custom_branding ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
               ) : (
                 <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -318,8 +391,8 @@ export function SubscriptionEntitlementsCard() {
             </div>
 
             {/* AI Generation */}
-            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${plan.features?.ai_generation ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
-              {plan.features?.ai_generation ? (
+            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${features?.ai_generation ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
+              {features?.ai_generation ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
               ) : (
                 <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -331,8 +404,8 @@ export function SubscriptionEntitlementsCard() {
             </div>
 
             {/* API Access */}
-            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${plan.features?.api_access ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
-              {plan.features?.api_access ? (
+            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${features?.api_access ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
+              {features?.api_access ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
               ) : (
                 <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -344,8 +417,8 @@ export function SubscriptionEntitlementsCard() {
             </div>
 
             {/* Advanced Analytics */}
-            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${plan.features?.advanced_analytics ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
-              {plan.features?.advanced_analytics ? (
+            <div className={`p-3 rounded-xl border flex items-center gap-2.5 text-xs ${features?.advanced_analytics ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/40 border-muted opacity-50'}`}>
+              {features?.advanced_analytics ? (
                 <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
               ) : (
                 <XCircle className="h-4 w-4 text-muted-foreground shrink-0" />

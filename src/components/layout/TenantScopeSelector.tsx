@@ -105,62 +105,54 @@ export function TenantScopeSelector({ className }: TenantScopeSelectorProps) {
         <Button
           variant="outline"
           className={cn(
-            "h-13 min-w-[240px] max-w-[320px] bg-hotel-navy-dark border border-hotel-gold/30 text-white hover:bg-hotel-navy-light focus:ring-hotel-gold/50 focus:ring-2 transition-all duration-300 rounded-xl shadow-lg relative group overflow-hidden px-3.5 py-2",
-            isConsolidated && "border-hotel-gold/60 bg-gradient-to-r from-hotel-navy-dark via-hotel-navy to-hotel-navy-light shadow-[0_0_15px_rgba(212,175,55,0.15)]",
+            "h-10 min-w-[190px] max-w-[260px] bg-hotel-navy-dark/90 border border-hotel-gold/30 text-white hover:bg-hotel-navy-light hover:border-hotel-gold/50 focus:ring-hotel-gold/50 transition-all duration-200 rounded-xl shadow-sm relative group overflow-hidden px-2.5 py-1.5",
             className
           )}
           aria-label={t('nav:select_working_context', 'Select working context')}
         >
-          {isConsolidated && (
-            <div className="absolute inset-0 bg-hotel-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-          )}
-
-          <div className="flex items-center gap-3 w-full text-start">
+          <div className="flex items-center gap-2.5 w-full text-start">
             {/* Scope Type Icon Avatar */}
             <div className={cn(
-              "w-9 h-9 rounded-lg flex items-center justify-center shrink-0 transition-all duration-300",
+              "w-7 h-7 rounded-lg flex items-center justify-center shrink-0 transition-all duration-200",
               isHotelScoped
-                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 group-hover:bg-amber-500/30"
+                ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
                 : isBrandScoped
-                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30 group-hover:bg-blue-500/30"
-                  : "bg-gradient-to-br from-hotel-gold via-yellow-500 to-yellow-600 text-hotel-navy shadow-md group-hover:brightness-110"
+                  ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                  : "bg-hotel-gold/20 text-hotel-gold border border-hotel-gold/40"
             )}>
               {isHotelScoped ? (
-                <Building className="h-4 w-4" />
+                <Building className="h-3.5 w-3.5" />
               ) : isBrandScoped ? (
-                <Crown className="h-4 w-4" />
+                <Crown className="h-3.5 w-3.5" />
               ) : (
-                <Globe className="h-4 w-4 stroke-[2.5]" />
+                <Globe className="h-3.5 w-3.5" />
               )}
             </div>
 
             {/* Scope Title & Hierarchy Label */}
             <div className="flex flex-col min-w-0 flex-1 overflow-hidden">
-              <div className="flex items-center gap-1.5 leading-none mb-1">
-                <span className={cn(
-                  "text-[9.5px] uppercase tracking-[0.1em] font-bold truncate",
-                  isConsolidated ? "text-hotel-gold" : "text-white/70"
-                )}>
+              <div className="flex items-center gap-1 leading-none mb-0.5">
+                <span className="text-[9px] uppercase tracking-wider font-semibold text-hotel-gold truncate">
                   {isHotelScoped
                     ? t('admin:hotel_location', 'Hotel Property')
                     : isBrandScoped
                       ? t('admin:brand_division', 'Brand Division')
-                      : t('admin:tenant_scope', 'Tenant Organization')}
+                      : t('admin:tenant_scope', 'Organization')}
                 </span>
 
                 {isImpersonating && (
-                  <Badge className="bg-amber-500 text-hotel-navy text-[9px] font-bold px-1 py-0 h-3.5 leading-none">
+                  <Badge className="bg-amber-500 text-hotel-navy text-[8px] font-bold px-1 py-0 h-3 leading-none">
                     {t('admin:acting_as', 'Acting As')}
                   </Badge>
                 )}
               </div>
 
-              <span className="text-[13px] font-semibold text-white/95 truncate tracking-wide leading-tight">
+              <span className="text-xs font-semibold text-white/95 truncate tracking-normal leading-tight">
                 {activeScopeTitle}
               </span>
             </div>
 
-            <ChevronDown className="h-4 w-4 text-hotel-gold/80 shrink-0 transition-transform duration-300 group-data-[state=open]:rotate-180" />
+            <ChevronDown className="h-3.5 w-3.5 text-hotel-gold/80 shrink-0 transition-transform duration-200 group-data-[state=open]:rotate-180" />
           </div>
         </Button>
       </DropdownMenuTrigger>

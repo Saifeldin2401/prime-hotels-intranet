@@ -1,4 +1,5 @@
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { PlatformRoute } from '@/components/auth/PlatformRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { MotionWrapper } from '@/components/ui/MotionWrapper'
 import { lazy } from 'react'
@@ -26,10 +27,12 @@ const NewsPublisher = lazy(() => import('@/pages/admin/NewsPublisher'))
 const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPolicies'))
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
+const TenantDataExport = lazy(() => import('@/pages/admin/TenantDataExport'))
 
 // Platform Owner Super Admin Pages
 const PlatformControlCenter = lazy(() => import('@/pages/platform/PlatformControlCenter'))
 const OrganizationsHub = lazy(() => import('@/pages/platform/OrganizationsHub'))
+const OrganizationProfile = lazy(() => import('@/pages/platform/OrganizationProfile'))
 const PlatformUserDirectory = lazy(() => import('@/pages/platform/PlatformUserDirectory'))
 const MasterContentLibrary = lazy(() => import('@/pages/platform/MasterContentLibrary'))
 const PlatformOperationsHub = lazy(() => import('@/pages/platform/PlatformOperationsHub'))
@@ -270,84 +273,112 @@ export const AdminRoutes = () => (
         />
 
         {/* ------------------------------------------------------------------ */}
-        {/* PLATFORM OWNER SUPER ADMIN ROUTES                                  */}
+        {/* PLATFORM CONTROL CENTER — internal platform operators only.        */}
+        {/* Authorization = platform_users / platform_role_assignments,        */}
+        {/* NOT the tenant app_role list. RLS is the real boundary.            */}
         {/* ------------------------------------------------------------------ */}
         <Route
             path="/platform"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute>
                     <AppLayout>
                         <PlatformControlCenter />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/organizations"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="tenant.read">
                     <AppLayout>
                         <OrganizationsHub />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
+            }
+        />
+        <Route
+            path="/platform/organizations/:id"
+            element={
+                <PlatformRoute requiredPermission="tenant.read">
+                    <AppLayout>
+                        <OrganizationProfile />
+                    </AppLayout>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/users"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="operator.manage">
                     <AppLayout>
                         <PlatformUserDirectory />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/master-library"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="master_content.manage">
                     <AppLayout>
                         <MasterContentLibrary />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/operations"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="ops.manage">
                     <AppLayout>
                         <PlatformOperationsHub />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/settings"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="config.manage">
                     <AppLayout>
                         <PlatformSettings />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/analytics"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="tenant.read">
                     <AppLayout>
                         <PlatformAnalytics />
                     </AppLayout>
-                </ProtectedRoute>
+                </PlatformRoute>
             }
         />
         <Route
             path="/platform/audit"
             element={
-                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                <PlatformRoute requiredPermission="tenant.read">
                     <AppLayout>
                         <PlatformAuditLogs />
+                    </AppLayout>
+                </PlatformRoute>
+            }
+        />
+
+        {/* ------------------------------------------------------------------ */}
+        {/* TENANT DATA PORTABILITY & COMPLIANCE ARCHIVE                       */}
+        {/* ------------------------------------------------------------------ */}
+        <Route
+            path="/admin/export"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'administrator']}>
+                    <AppLayout>
+                        <MotionWrapper>
+                            <TenantDataExport />
+                        </MotionWrapper>
                     </AppLayout>
                 </ProtectedRoute>
             }

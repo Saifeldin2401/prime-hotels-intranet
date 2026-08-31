@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useAccountContext } from '@/hooks/useAccountContext'
 import { supabase } from '@/lib/supabase'
 import type { Organization, Brand, Hotel, OrganizationMembership, TenantRole } from '@/lib/types/tenant'
 import type { PlatformAccessSession } from '@/lib/types/platform'
@@ -55,7 +56,8 @@ const DEFAULT_ORGANIZATION: Organization = {
 }
 
 export function TenantProvider({ children }: { children: React.ReactNode }) {
-  const { user, primaryRole } = useAuth()
+  const { user } = useAuth()
+  const account = useAccountContext()
   const [organizations, setOrganizations] = useState<Organization[]>([])
   const [currentOrganization, setCurrentOrganization] = useState<Organization | null>(null)
   const [availableBrands, setAvailableBrands] = useState<Brand[]>([])
@@ -66,7 +68,10 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   const [impersonationSession, setImpersonationSession] = useState<PlatformAccessSession | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const isPlatformAdmin = primaryRole === 'super_admin'
+  // Platform-operator identity is resolved server-side (resolve_account_context),
+  // not from a tenant role string. Name kept as `isPlatformAdmin` for the many
+  // existing consumers.
+  const isPlatformAdmin = account.isPlatformOperator
   const isImpersonating = !!impersonationSession && impersonationSession.is_active
 
   const fetchTenantData = useCallback(async () => {
@@ -203,35 +208,66 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
   }
 
   const enterOrganization = async (targetOrgId: string, reason: string, actingRole = 'organization_admin') => {
-    if (!user || !isPlatformAdmin) return
-    const targetOrg = organizations.find(o => o.id === targetOrgId)
-    if (!targetOrg) return
+    if (!user) throw new Error('Not authenticated')
+    if (!account.can('tenant.enter')) {
+      throw new Error('Your platform role does not permit entering customer environments')
+    }
+    if (!reason || reason.trim().length < 10) {
+      throw new Error('A substantive access reason (at least 10 characters) is required')
+    }
 
+    // The RPC (start_platform_session) is the authority — it re-checks the
+    // operator permission, records the audit log, and enforces the TTL.
     const session = await platformService.startPlatformAccessSession({
       adminUserId: user.id,
       targetOrganizationId: targetOrgId,
       actingRole,
-      accessReason: reason
+      accessReason: reason.trim()
     })
 
     setImpersonationSession(session)
-    setCurrentOrganization(targetOrg)
+    // The target org may not be in `organizations` (operator isn't a member) —
+    // fall back to the org embedded on the returned session.
+    const targetOrg =
+      organizations.find(o => o.id === targetOrgId) ||
+      (session.target_organization as Organization | undefined) ||
+      null
+    if (targetOrg) setCurrentOrganization(targetOrg)
     setCurrentBrand(null)
     setCurrentHotel(null)
     await loadScopesForOrg(targetOrgId)
+    await account.refresh()
   }
 
   const exitImpersonation = async () => {
     if (impersonationSession) {
-      await platformService.endPlatformAccessSession(impersonationSession.id, user?.id)
+      try {
+        await platformService.endPlatformAccessSession(impersonationSession.id, user?.id)
+      } catch (err) {
+        console.warn('Error ending platform session:', err)
+      }
       setImpersonationSession(null)
       // Switch back to primary or default org
       const defaultOrg = organizations[0] || DEFAULT_ORGANIZATION
       safeLocalStorage.setItem('altus_active_tenant_id', defaultOrg.id)
       setCurrentOrganization(defaultOrg)
       await loadScopesForOrg(defaultOrg.id)
+      await account.refresh()
     }
   }
+
+  // Auto-exit an impersonation session the moment its server-side TTL lapses.
+  useEffect(() => {
+    if (!impersonationSession?.expires_at) return
+    const msLeft = new Date(impersonationSession.expires_at).getTime() - Date.now()
+    if (msLeft <= 0) {
+      void exitImpersonation()
+      return
+    }
+    const timer = setTimeout(() => { void exitImpersonation() }, msLeft)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [impersonationSession?.id, impersonationSession?.expires_at])
 
   const setBrandScope = (brandId: string | null) => {
     if (!brandId) {

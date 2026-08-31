@@ -1,4 +1,4 @@
-﻿import { supabase } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 import type {
   TrainingSession,
   TrainingSessionAttendee,
@@ -16,11 +16,13 @@ export const iltService = {
     let query = supabase
       .from('training_sessions')
       .select(
+        `
         *,
         instructor:profiles!training_sessions_instructor_id_fkey(id, full_name, email, avatar_url),
         hotel:hotels(id, name),
         course:courses(id, title),
         attendees:training_session_attendees(count)
+      `.trim()
       )
       .order('start_time', { ascending: true })
 
@@ -53,8 +55,10 @@ export const iltService = {
     const { data, error } = await supabase
       .from('training_session_attendees')
       .select(
+        `
         *,
         user:profiles(id, full_name, email, avatar_url)
+      `.trim()
       )
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true })

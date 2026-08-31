@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { Navigate, useLocation } from 'react-router-dom'
 
 import { useUserData } from '@/contexts/auth'
+import { useAccountContext } from '@/hooks/useAccountContext'
 import { canRoleAccess, type Permission } from '@/features/access/policy'
 import { useAuth } from '@/hooks/useAuth'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -34,6 +35,7 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, primaryRole, rolesLoading, loading } = useAuth()
   const { rolesError, loadUserData } = useUserData()
+  const account = useAccountContext()
   const { hasPermission } = usePermissions()
   const { t } = useTranslation('common')
   const location = useLocation()
@@ -59,6 +61,17 @@ export function ProtectedRoute({
   if (!user) {
     const loginUrl = buildLoginUrl(location.pathname, location.search, location.hash)
     return <Navigate to={loginUrl} replace />
+  }
+
+  // A tenant user whose every organization is suspended/archived is held on the
+  // suspension screen. Platform operators are exempt.
+  if (
+    !account.loading &&
+    account.allOrgsSuspended &&
+    !account.isPlatformOperator &&
+    location.pathname !== '/suspended'
+  ) {
+    return <Navigate to="/suspended" replace />
   }
 
   // This route's access decision depends on primaryRole - wait for it to resolve before
@@ -98,8 +111,13 @@ export function ProtectedRoute({
     )
   }
 
+  // A platform operator who has opened an audited tenant session is legitimately
+  // acting inside that org — let them through org-scoped guards without loosening
+  // the role check for anyone else.
+  const operatorInSession = account.isPlatformOperator && !!account.activePlatformSession
+
   if (allowedRoles && allowedRoles.length > 0) {
-    if (!canRoleAccess(primaryRole, allowedRoles)) {
+    if (!canRoleAccess(primaryRole, allowedRoles) && !operatorInSession) {
       if (smartFallback && primaryRole) {
         return <Navigate to="/dashboard" replace />
       }
@@ -107,7 +125,11 @@ export function ProtectedRoute({
     }
   }
 
-  if (requiredPermission && !hasPermission(requiredPermission, requiredPropertyId, requiredDepartmentId)) {
+  if (
+    requiredPermission &&
+    !hasPermission(requiredPermission, requiredPropertyId, requiredDepartmentId) &&
+    !operatorInSession
+  ) {
     if (smartFallback && primaryRole) {
       return <Navigate to="/dashboard" replace />
     }

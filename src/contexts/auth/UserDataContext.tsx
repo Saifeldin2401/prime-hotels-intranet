@@ -49,16 +49,24 @@ export function useUserData() {
 }
 
 // ─── Role priority order (lower = higher privilege) ──────────────────────────
+// Covers all 14 app_role values. The five learning-platform roles are
+// interleaved so a platform-role-only user gets a coherent primaryRole
+// instead of NaN (the old map only had the 9 legacy roles).
 const ROLE_ORDER: Record<AppRole, number> = {
   super_admin: 0,
   corporate_admin: 1,
+  administrator: 1,
   regional_admin: 2,
+  training_manager: 2,
   regional_hr: 3,
+  knowledge_manager: 3,
   property_manager: 4,
   property_hr: 5,
   department_head: 6,
+  author: 6,
   manager: 7,
   staff: 8,
+  learner: 8,
 }
 
 // ─── Types for session helpers (to avoid circular deps) ──────────────────────
@@ -178,7 +186,7 @@ export function UserDataProvider({ children }: { children: ReactNode }) {
   // ── Derived: primary role ─────────────────────────────────────────────────
   const primaryRole = useMemo(() => {
     if (roles.length === 0) return null
-    return [...roles].sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])[0]?.role || null
+    return [...roles].sort((a, b) => (ROLE_ORDER[a.role] ?? 99) - (ROLE_ORDER[b.role] ?? 99))[0]?.role || null
   }, [roles])
 
   // Effective roles loading: true if explicitly loading, or if we have an authenticated user

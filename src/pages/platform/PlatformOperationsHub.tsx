@@ -12,7 +12,11 @@ import {
   Activity,
   Cpu,
   RefreshCw,
-  RotateCcw
+  RotateCcw,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Play
 } from 'lucide-react'
 import { format } from 'date-fns'
 
@@ -23,25 +27,29 @@ export default function PlatformOperationsHub() {
   const [filterTab, setFilterTab] = useState<'all' | 'active' | 'failed' | 'completed'>('all')
 
   const { data: operations, isLoading, refetch } = useQuery({
-    queryKey: ['platform-operations-full-queue'],
-    queryFn: () => platformService.getPlatformOperationsSummary(),
+    queryKey: ['platform-ai-operations'],
+    queryFn: () => platformService.getPlatformAiOperations(),
     refetchInterval: 10000,
   })
 
   const retryMutation = useMutation({
-    mutationFn: (jobId: string) => platformService.retryFailedJob(jobId),
+    mutationFn: (jobId: string) => platformService.retryCourseGenerationJob(jobId),
     onSuccess: () => {
-      toast({ title: 'Job Requeued', description: 'The job has been reset to pending status.' })
-      queryClient.invalidateQueries({ queryKey: ['platform-operations-full-queue'] })
+      toast({ title: 'Job Requeued', description: 'The task has been reset to pending status.' })
+      queryClient.invalidateQueries({ queryKey: ['platform-ai-operations'] })
     },
     onError: (err: any) => {
       toast({ title: 'Retry Failed', description: err.message, variant: 'destructive' })
     },
   })
 
+  const summary = operations?.summary || { total_jobs: 0, failed_jobs: 0, processing_jobs: 0, completed_jobs: 0 }
   const jobs = operations?.recent_jobs || []
+  const cronJobs = operations?.cron_jobs || []
+  const cronRuns = operations?.recent_cron_runs || []
+
   const filteredJobs = jobs.filter((j) => {
-    if (filterTab === 'active') return ['pending', 'processing', 'in_progress', 'queued'].includes(j.status)
+    if (filterTab === 'active') return ['pending', 'processing', 'in_progress', 'queued', 'generating', 'running'].includes(j.status)
     if (filterTab === 'failed') return ['failed', 'error'].includes(j.status)
     if (filterTab === 'completed') return ['completed', 'success'].includes(j.status)
     return true
@@ -71,28 +79,28 @@ export default function PlatformOperationsHub() {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
         <Card className="p-4 border shadow-sm">
           <span className="text-xs text-muted-foreground font-semibold">Total Pipeline Tasks</span>
-          <div className="text-2xl font-black mt-1">{operations?.total_jobs || 0}</div>
+          <div className="text-2xl font-black mt-1">{summary.total_jobs}</div>
         </Card>
         <Card className="p-4 border shadow-sm bg-amber-500/5 border-amber-500/20">
           <span className="text-xs text-amber-700 dark:text-amber-300 font-semibold">Actively Processing</span>
-          <div className="text-2xl font-black mt-1 text-amber-700 dark:text-amber-300">{operations?.active_jobs || 0}</div>
+          <div className="text-2xl font-black mt-1 text-amber-700 dark:text-amber-300">{summary.processing_jobs}</div>
         </Card>
         <Card className="p-4 border shadow-sm bg-green-500/5 border-green-500/20">
           <span className="text-xs text-green-700 dark:text-green-300 font-semibold">Successfully Completed</span>
-          <div className="text-2xl font-black mt-1 text-green-700 dark:text-green-300">{operations?.completed_jobs || 0}</div>
+          <div className="text-2xl font-black mt-1 text-green-700 dark:text-green-300">{summary.completed_jobs}</div>
         </Card>
         <Card className="p-4 border shadow-sm bg-rose-500/5 border-rose-500/20">
           <span className="text-xs text-rose-700 dark:text-rose-300 font-semibold">Failed Tasks</span>
-          <div className="text-2xl font-black mt-1 text-rose-700 dark:text-rose-300">{operations?.failed_jobs || 0}</div>
+          <div className="text-2xl font-black mt-1 text-rose-700 dark:text-rose-300">{summary.failed_jobs}</div>
         </Card>
       </div>
 
       <Tabs value={filterTab} onValueChange={(v: any) => setFilterTab(v)} className="space-y-4">
         <TabsList className="bg-card border">
           <TabsTrigger value="all" className="text-xs font-semibold">All Tasks ({jobs.length})</TabsTrigger>
-          <TabsTrigger value="active" className="text-xs font-semibold">In Progress ({operations?.active_jobs || 0})</TabsTrigger>
-          <TabsTrigger value="failed" className="text-xs font-semibold">Failed ({operations?.failed_jobs || 0})</TabsTrigger>
-          <TabsTrigger value="completed" className="text-xs font-semibold">Completed ({operations?.completed_jobs || 0})</TabsTrigger>
+          <TabsTrigger value="active" className="text-xs font-semibold">In Progress ({summary.processing_jobs})</TabsTrigger>
+          <TabsTrigger value="failed" className="text-xs font-semibold">Failed ({summary.failed_jobs})</TabsTrigger>
+          <TabsTrigger value="completed" className="text-xs font-semibold">Completed ({summary.completed_jobs})</TabsTrigger>
         </TabsList>
 
         <Card className="border shadow-sm overflow-hidden">
@@ -192,6 +200,51 @@ export default function PlatformOperationsHub() {
           </Table>
         </Card>
       </Tabs>
+
+      {/* pg_cron Scheduled Jobs Telemetry */}
+      {cronJobs.length > 0 && (
+        <Card className="border shadow-sm">
+          <CardHeader className="p-5 pb-3">
+            <CardTitle className="text-sm font-bold flex items-center gap-2">
+              <Clock className="h-4 w-4 text-blue-600" />
+              Scheduled Platform Cron Jobs ({cronJobs.length})
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Automated maintenance, report delivery, and notification dispatch daemons managed via pg_cron.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-5 pt-2">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {cronJobs.map((c) => {
+                const lastRun = cronRuns.find((r) => r.jobid === c.jobid)
+                return (
+                  <div key={c.jobid} className="p-3.5 rounded-xl border bg-card/60 space-y-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-xs font-bold text-foreground">{c.jobname || `Job #${c.jobid}`}</div>
+                        <div className="text-[10px] font-mono text-muted-foreground">Schedule: {c.schedule}</div>
+                      </div>
+                      <Badge variant={c.active ? 'default' : 'secondary'} className="text-[9px]">
+                        {c.active ? 'Active' : 'Inactive'}
+                      </Badge>
+                    </div>
+
+                    {lastRun && (
+                      <div className="text-[10px] pt-1 border-t flex items-center justify-between text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <span className={`inline-block w-1.5 h-1.5 rounded-full ${lastRun.status === 'succeeded' ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {lastRun.status}
+                        </span>
+                        <span>{lastRun.start_time ? format(new Date(lastRun.start_time), 'HH:mm:ss') : '—'}</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   )
 }

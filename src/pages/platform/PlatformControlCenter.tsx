@@ -140,65 +140,152 @@ export default function PlatformControlCenter() {
 
         {/* Global Search Results Overlay */}
         {searchQuery.trim().length >= 2 && searchResults && (
-          <Card className="absolute top-14 start-0 end-0 z-50 shadow-2xl border bg-card/95 backdrop-blur-lg max-h-96 overflow-y-auto">
+          <Card className="absolute top-14 start-0 end-0 z-50 shadow-2xl border bg-card/95 backdrop-blur-lg max-h-[32rem] overflow-y-auto">
             <CardContent className="p-4 space-y-4 text-xs">
-              {searchResults.organizations.length > 0 && (
+              {/* Organizations */}
+              {searchResults.organizations?.length > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
                     <Building2 className="h-3.5 w-3.5 text-amber-500" /> Organizations ({searchResults.organizations.length})
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {searchResults.organizations.map((org) => (
+                    {searchResults.organizations.map((org: any) => (
                       <div
                         key={org.id}
-                        onClick={() => navigate('/platform/organizations')}
+                        onClick={() => navigate(`/platform/organizations/${org.id}`)}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
-                        <div className="font-semibold">{org.name}</div>
-                        <Badge variant="outline" className="text-[10px]">{org.hotel_count} Hotels</Badge>
+                        <div>
+                          <div className="font-semibold text-foreground">{org.name}</div>
+                          <div className="text-[10px] text-muted-foreground font-mono">{org.slug}</div>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <Badge variant="outline" className="text-[10px] capitalize">{org.lifecycle_status || (org.is_active ? 'active' : 'inactive')}</Badge>
+                          <Badge variant="secondary" className="text-[10px]">{org.hotel_count} Hotels</Badge>
+                        </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {searchResults.users.length > 0 && (
+              {/* Hotels */}
+              {searchResults.hotels?.length > 0 && (
+                <div>
+                  <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <Building2 className="h-3.5 w-3.5 text-indigo-500" /> Hotels & Properties ({searchResults.hotels.length})
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {searchResults.hotels.map((h: any) => (
+                      <div
+                        key={h.id}
+                        onClick={() => navigate('/platform/organizations')}
+                        className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{h.name}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {[h.brand_name, h.city, h.organization_name].filter(Boolean).join(' · ')}
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">Hotel</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Users */}
+              {searchResults.users?.length > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
                     <Users className="h-3.5 w-3.5 text-blue-500" /> Staff & Learners ({searchResults.users.length})
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {searchResults.users.map((u) => (
+                    {searchResults.users.map((u: any) => (
                       <div
                         key={u.id}
                         onClick={() => navigate('/platform/users')}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
                         <div>
-                          <div className="font-semibold">{u.full_name}</div>
-                          <div className="text-[10px] text-muted-foreground">{u.email}</div>
+                          <div className="font-semibold text-foreground">{u.full_name}</div>
+                          <div className="text-[10px] text-muted-foreground">
+                            {u.email} {u.organization_name ? `· ${u.organization_name}` : ''} {u.hotel_name ? `(${u.hotel_name})` : ''}
+                          </div>
                         </div>
-                        <Badge variant="secondary" className="text-[10px]">{u.primary_org || 'Platform'}</Badge>
+                        <Badge variant="secondary" className="text-[10px] capitalize">{u.role || 'Member'}</Badge>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              {searchResults.master_courses.length > 0 && (
+              {/* Master & Tenant Courses */}
+              {((searchResults.master_courses?.length || 0) + (searchResults.tenant_courses?.length || 0)) > 0 && (
                 <div>
                   <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
-                    <GraduationCap className="h-3.5 w-3.5 text-emerald-500" /> Master Courses ({searchResults.master_courses.length})
+                    <GraduationCap className="h-3.5 w-3.5 text-emerald-500" /> Courses & Modules
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {searchResults.master_courses.map((c) => (
+                    {(searchResults.master_courses || []).map((c: any) => (
                       <div
                         key={c.id}
                         onClick={() => navigate('/platform/master-library')}
                         className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
                       >
-                        <div className="font-semibold">{c.title}</div>
-                        <Badge variant="outline" className="text-[10px] capitalize">{c.difficulty_level || 'General'}</Badge>
+                        <div>
+                          <div className="font-semibold text-foreground">{c.title}</div>
+                          <div className="text-[10px] text-muted-foreground">Master Template · {c.category || 'General'}</div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px] capitalize bg-purple-500/10 text-purple-700">Master</Badge>
+                      </div>
+                    ))}
+                    {(searchResults.tenant_courses || []).map((c: any) => (
+                      <div
+                        key={c.id}
+                        className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{c.title}</div>
+                          <div className="text-[10px] text-muted-foreground">{c.organization_name || 'Tenant'} · {c.category || 'General'}</div>
+                        </div>
+                        <Badge variant="secondary" className="text-[10px]">Tenant</Badge>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Assessments & Question Banks */}
+              {((searchResults.assessments?.length || 0) + (searchResults.question_banks?.length || 0)) > 0 && (
+                <div>
+                  <div className="font-bold text-[11px] uppercase tracking-wider text-muted-foreground mb-2 flex items-center gap-1.5">
+                    <BookOpen className="h-3.5 w-3.5 text-amber-500" /> Assessments & Question Banks
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {(searchResults.assessments || []).map((a: any) => (
+                      <div
+                        key={a.id}
+                        className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{a.title}</div>
+                          <div className="text-[10px] text-muted-foreground">{a.organization_name || 'Global'} · Pass {a.passing_score}%</div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">Assessment</Badge>
+                      </div>
+                    ))}
+                    {(searchResults.question_banks || []).map((qb: any) => (
+                      <div
+                        key={qb.id}
+                        className="p-2.5 rounded-lg border hover:bg-accent/50 cursor-pointer flex items-center justify-between"
+                      >
+                        <div>
+                          <div className="font-semibold text-foreground">{qb.name}</div>
+                          <div className="text-[10px] text-muted-foreground">{qb.organization_name || 'Global'}</div>
+                        </div>
+                        <Badge variant="outline" className="text-[10px]">Bank</Badge>
                       </div>
                     ))}
                   </div>

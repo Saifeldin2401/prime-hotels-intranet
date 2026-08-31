@@ -32,7 +32,7 @@ export default function PlatformUserDirectory() {
   const [selectedOrgId, setSelectedOrgId] = useState('all')
   const [selectedRole, setSelectedRole] = useState('all')
   const [editingUser, setEditingUser] = useState<any | null>(null)
-  const [newPlatformRole, setNewPlatformRole] = useState<string>('super_admin')
+  const [newPlatformRole, setNewPlatformRole] = useState<string>('platform_support')
 
   const { data: orgs = [] } = useQuery({
     queryKey: ['platform-orgs-filter'],
@@ -72,16 +72,12 @@ export default function PlatformUserDirectory() {
   })
 
   const assignRoleMutation = useMutation({
-    mutationFn: (params: { userId: string; role: any }) =>
-      platformService.setUserPlatformRole({
-        userId: params.userId,
-        role: params.role,
-        actorId: currentActor?.id,
-      }),
+    mutationFn: (params: { userId: string; role: string }) =>
+      platformService.assignPlatformRole({ userId: params.userId, role: params.role }),
     onSuccess: () => {
       toast({
         title: 'Platform Role Granted',
-        description: 'Assigned platform operator role to user.',
+        description: 'The user is now an internal platform operator with the selected role.',
       })
       setEditingUser(null)
       queryClient.invalidateQueries({ queryKey: ['platform-global-user-directory'] })
@@ -90,6 +86,29 @@ export default function PlatformUserDirectory() {
       toast({ title: 'Role Assignment Failed', description: err.message, variant: 'destructive' })
     },
   })
+
+  const revokeRoleMutation = useMutation({
+    mutationFn: (params: { userId: string; role: string }) =>
+      platformService.revokePlatformRole({ userId: params.userId, role: params.role }),
+    onSuccess: () => {
+      toast({ title: 'Operator Access Revoked', description: 'The platform role was removed.' })
+      setEditingUser(null)
+      queryClient.invalidateQueries({ queryKey: ['platform-global-user-directory'] })
+    },
+    onError: (err: any) => {
+      toast({ title: 'Revoke Failed', description: err.message, variant: 'destructive' })
+    },
+  })
+
+  const PLATFORM_ROLE_OPTIONS: Array<{ value: string; label: string }> = [
+    { value: 'system_owner', label: 'System Owner (full root control)' },
+    { value: 'platform_admin', label: 'Platform Admin (tenants, operators, billing, content)' },
+    { value: 'platform_training_manager', label: 'Platform Training Manager' },
+    { value: 'platform_knowledge_manager', label: 'Platform Knowledge Manager' },
+    { value: 'platform_operations', label: 'Platform Operations' },
+    { value: 'platform_support', label: 'Platform Support (assisted tenant access only)' },
+    { value: 'platform_instructor', label: 'Platform Instructor' },
+  ]
 
   return (
     <div className="space-y-6 pb-12">
@@ -146,15 +165,17 @@ export default function PlatformUserDirectory() {
             <SelectValue placeholder="All Roles" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All App & Tenant Roles</SelectItem>
-            <SelectItem value="super_admin">Platform Super Admin</SelectItem>
-            <SelectItem value="corporate_admin">Corporate Admin</SelectItem>
-            <SelectItem value="organization_owner">Organization Owner</SelectItem>
-            <SelectItem value="organization_admin">Organization Admin</SelectItem>
-            <SelectItem value="training_manager">Training Manager</SelectItem>
-            <SelectItem value="hotel_admin">Hotel Admin</SelectItem>
-            <SelectItem value="department_manager">Department Manager</SelectItem>
-            <SelectItem value="learner">Frontline Learner</SelectItem>
+            <SelectItem value="all">All Roles</SelectItem>
+            <SelectItem value="system_owner">Platform · System Owner</SelectItem>
+            <SelectItem value="platform_admin">Platform · Admin</SelectItem>
+            <SelectItem value="platform_support">Platform · Support</SelectItem>
+            <SelectItem value="platform_operations">Platform · Operations</SelectItem>
+            <SelectItem value="organization_owner">Tenant · Organization Owner</SelectItem>
+            <SelectItem value="organization_admin">Tenant · Organization Admin</SelectItem>
+            <SelectItem value="training_manager">Tenant · Training Manager</SelectItem>
+            <SelectItem value="hotel_admin">Tenant · Hotel Admin</SelectItem>
+            <SelectItem value="department_manager">Tenant · Department Manager</SelectItem>
+            <SelectItem value="learner">Tenant · Learner</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -257,7 +278,7 @@ export default function PlatformUserDirectory() {
                         size="sm"
                         onClick={() => {
                           setEditingUser(u)
-                          setNewPlatformRole(u.platform_role || 'super_admin')
+                          setNewPlatformRole(u.platform_role || 'platform_support')
                         }}
                         className="h-7 text-[11px] px-2"
                       >
@@ -302,19 +323,25 @@ export default function PlatformUserDirectory() {
 
             <div className="space-y-4 py-3 text-xs">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold">Platform Role Level</Label>
+                <Label className="text-xs font-bold">Platform Operator Role</Label>
                 <Select value={newPlatformRole} onValueChange={setNewPlatformRole}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="super_admin">Platform Super Admin (Full Root Control)</SelectItem>
-                    <SelectItem value="corporate_admin">Corporate Admin</SelectItem>
-                    <SelectItem value="regional_admin">Regional Admin</SelectItem>
-                    <SelectItem value="administrator">System Administrator</SelectItem>
+                    {PLATFORM_ROLE_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
+
+              {editingUser.platform_role && (
+                <div className="text-[11px] text-muted-foreground">
+                  Currently holds: <strong className="capitalize">{String(editingUser.platform_role).replace(/_/g, ' ')}</strong>.
+                  Granting a new role replaces it.
+                </div>
+              )}
 
               <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 space-y-1">
                 <div className="font-bold flex items-center gap-1.5">
@@ -322,27 +349,38 @@ export default function PlatformUserDirectory() {
                   Privileged Operator Access
                 </div>
                 <div className="text-[11px] leading-relaxed">
-                  Platform operators can enter customer tenants in assisted mode, deploy master content, and access all global telemetry.
+                  Operators are internal staff — separate from any tenant account. Depending on role they can open audited
+                  sessions into customer environments, deploy master content, and view cross-tenant telemetry. Every grant is audited.
                 </div>
               </div>
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="flex-col sm:flex-row gap-2">
+              {editingUser.platform_role && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    revokeRoleMutation.mutate({ userId: editingUser.id, role: editingUser.platform_role })
+                  }
+                  disabled={revokeRoleMutation.isPending}
+                  className="text-rose-600 border-rose-300 hover:bg-rose-50 me-auto"
+                >
+                  {revokeRoleMutation.isPending ? 'Revoking…' : 'Revoke operator access'}
+                </Button>
+              )}
               <Button variant="ghost" size="sm" onClick={() => setEditingUser(null)}>
                 Cancel
               </Button>
               <Button
                 size="sm"
                 onClick={() =>
-                  assignRoleMutation.mutate({
-                    userId: editingUser.id,
-                    role: newPlatformRole as any,
-                  })
+                  assignRoleMutation.mutate({ userId: editingUser.id, role: newPlatformRole })
                 }
                 disabled={assignRoleMutation.isPending}
                 className="bg-amber-600 hover:bg-amber-700 text-white font-bold"
               >
-                {assignRoleMutation.isPending ? 'Granting...' : 'Grant Role'}
+                {assignRoleMutation.isPending ? 'Granting…' : 'Grant Role'}
               </Button>
             </DialogFooter>
           </DialogContent>
