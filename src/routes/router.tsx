@@ -3,7 +3,6 @@ import { RouteErrorBoundary } from '@/components/common'
 import { SessionTimeoutWarning } from '@/components/ui/SessionTimeoutWarning'
 import { NotificationProvider } from '@/contexts/NotificationContext'
 import { useAuth } from '@/hooks/useAuth'
-import { usePermissions } from '@/hooks/usePermissions'
 import {
     buildLoginUrl,
     consumePostLoginRedirect,
@@ -24,17 +23,12 @@ import {
 
 import { AdminRoutes } from './modules/AdminRoutes'
 import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
-import { CommercialRoutes } from './modules/CommercialRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
-import { FinanceRoutes } from './modules/FinanceRoutes'
-import { HousekeepingRoutes } from './modules/HousekeepingRoutes'
-import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
 import { MediaRoutes } from './modules/MediaRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
-import { OperationsRoutes } from './modules/OperationsRoutes'
-import { ProcurementRoutes } from './modules/ProcurementRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
+import { LegacyDomainRedirects } from './redirects'
 
 const VerifyCertificate = lazy(() => import('@/pages/public/VerifyCertificate'))
 const PublicLayout = lazy(() => import('@/pages/public/PublicLayout'))
@@ -175,25 +169,7 @@ const LegacyAnalyticsRedirect = () => {
     return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
 }
 
-const LegacyScheduleRedirect = () => {
-    const { user, loading } = useAuth()
-    const { hasPermission } = usePermissions()
-    const location = useLocation()
-
-    if (loading) {
-        return <PageSkeleton />
-    }
-
-    if (!user) {
-        return <Navigate to={buildLoginUrl(location.pathname, location.search, location.hash)} replace />
-    }
-
-    const destination = hasPermission('scheduling.manage')
-        ? '/hr/scheduling'
-        : '/hr/attendance'
-
-    return <Navigate to={`${destination}${location.search}${location.hash}`} replace />
-}
+const LegacyScheduleRedirect = () => <Navigate to="/" replace />
 
 export const router = createBrowserRouter(
     createRoutesFromElements(
@@ -214,23 +190,15 @@ export const router = createBrowserRouter(
                 <Route path="/analytics" element={<LegacyAnalyticsRedirect />} />
                 <Route path="/calendar" element={<LegacyScheduleRedirect />} />
                 <Route path="/schedule" element={<LegacyScheduleRedirect />} />
-                <Route path="/social" element={<PreserveQueryNavigate to="/announcements" />} />
                 <Route path="/support" element={<PreserveQueryNavigate to="/knowledge" />} />
                 <Route path="/admin" element={<PreserveQueryNavigate to="/admin/users" />} />
-                <Route path="/hr/leave-requests" element={<PreserveQueryNavigate to="/hr/leave" />} />
-                <Route path="/hr/my-attendance" element={<PreserveQueryNavigate to="/hr/attendance" />} />
-                <Route path="/hr/staff" element={<PreserveQueryNavigate to="/directory" />} />
                 <Route path="/learning/reports" element={<PreserveQueryNavigate to="/learning/analytics" />} />
                 <Route path="/learning/team" element={<PreserveQueryNavigate to="/learning/analytics" />} />
 
+                {LegacyDomainRedirects()}
+
                 {AuthRoutes()}
                 {AdminRoutes()}
-                {HRRoutes()}
-                {OperationsRoutes()}
-                {HousekeepingRoutes()}
-                {CommercialRoutes()}
-                {ProcurementRoutes()}
-                {FinanceRoutes()}
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
                 {MediaRoutes()}
