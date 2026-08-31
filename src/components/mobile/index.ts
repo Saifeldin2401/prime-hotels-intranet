@@ -18,7 +18,6 @@ export { SwipeableItem } from './SwipeableItem'
 export { MobileHeader } from '../layout/MobileHeader'
 
 // Dashboard Components
-export { MobileDashboard } from '../dashboard/MobileDashboard'
 export { MobileStatsGrid } from '../dashboard/MobileStatsGrid'
 
 // Training Components (import directly from source when needed to avoid bundle bloat)

@@ -4,7 +4,6 @@ import * as Sentry from '@sentry/react'
 
 import App from './App'
 import './i18n/i18n'
-import './altus-kit/global.css'
 import './index.css'
 import './rtl.css'
 

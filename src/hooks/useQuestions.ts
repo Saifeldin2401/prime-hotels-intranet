@@ -5,6 +5,7 @@
  */
 
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { crudToasts } from '@/lib/toastHelpers'
 import { supabase } from '@/lib/supabase'
 import * as QuestionService from '@/services/questionService'
@@ -22,9 +23,14 @@ import { toast } from 'sonner'
 // ============================================================================
 
 export function useQuestions(filters: QuestionService.QuestionFilters = {}, page = 1, pageSize = 20) {
+    const { currentOrganization } = useTenant()
+    const mergedFilters: QuestionService.QuestionFilters = {
+        organization_id: filters.organization_id !== undefined ? filters.organization_id : currentOrganization?.id,
+        ...filters
+    }
     return useQuery({
-        queryKey: ['questions', filters, page, pageSize],
-        queryFn: () => QuestionService.getQuestions(filters, page, pageSize)
+        queryKey: ['questions', mergedFilters, page, pageSize],
+        queryFn: () => QuestionService.getQuestions(mergedFilters, page, pageSize)
     })
 }
 
@@ -45,19 +51,25 @@ export function useQuestionsForContext(usageType: QuestionUsageType, entityId: s
 }
 
 export function usePublishedQuestions(sopId?: string) {
+    const { currentOrganization } = useTenant()
     return useQuery({
-        queryKey: ['questions-published', sopId],
+        queryKey: ['questions-published', sopId, currentOrganization?.id],
         queryFn: () => QuestionService.getQuestions({
             status: 'published',
-            sop_id: sopId
+            sop_id: sopId,
+            organization_id: currentOrganization?.id
         }, 1, 100)
     })
 }
 
 export function usePendingReviewQuestions() {
+    const { currentOrganization } = useTenant()
     return useQuery({
-        queryKey: ['questions-pending-review'],
-        queryFn: () => QuestionService.getQuestions({ status: 'pending_review' }, 1, 100)
+        queryKey: ['questions-pending-review', currentOrganization?.id],
+        queryFn: () => QuestionService.getQuestions({
+            status: 'pending_review',
+            organization_id: currentOrganization?.id
+        }, 1, 100)
     })
 }
 

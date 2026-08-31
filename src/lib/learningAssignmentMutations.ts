@@ -7,6 +7,9 @@ export type LearningAssignmentMutationPayload = {
   target_id: string | null
   content_type: string
   content_id: string
+  organization_id?: string | null
+  hotel_id?: string | null
+  brand_id?: string | null
   assigned_by?: string | null
   due_date?: string | null
   valid_from?: string | null

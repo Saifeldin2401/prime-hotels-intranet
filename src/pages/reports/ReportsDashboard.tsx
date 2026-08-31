@@ -1,24 +1,20 @@
-
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useAuth } from '@/hooks/useAuth'
 import { useDocuments } from '@/hooks/useDocuments'
-import { useMaintenanceStats, useMaintenanceTrends } from '@/hooks/useMaintenanceStats'
 import { useMessagingStats } from '@/hooks/useMessaging'
 import { useTaskStats } from '@/hooks/useTasks'
 import { downloadCSV } from '@/lib/exportUtils'
 import { format } from 'date-fns'
-import { Activity, AlertTriangle, CheckSquare, Clock, Download, FileText, MessageSquare } from 'lucide-react'
+import { Award, BookOpen, CheckSquare, Download, FileText, MessageSquare } from 'lucide-react'
 
 export default function ReportsDashboard() {
     const { user } = useAuth()
 
     // Fetch Data
     const { data: taskStats } = useTaskStats(user?.id)
-    const { data: maintenanceStats } = useMaintenanceStats()
-    const { data: maintenanceTrends } = useMaintenanceTrends(7)
     const { data: messageStats } = useMessagingStats()
     const { data: documents } = useDocuments()
 
@@ -36,14 +32,12 @@ export default function ReportsDashboard() {
             const overviewData = [
                 { Metric: 'Total Tasks', Value: taskStats?.total_tasks || 0 },
                 { Metric: 'Completed Tasks', Value: taskStats?.completed_tasks || 0 },
-                { Metric: 'Open Maintenance Tickets', Value: maintenanceStats?.open || 0 },
-                { Metric: 'Critical Maintenance Tickets', Value: maintenanceStats?.critical || 0 },
-                { Metric: 'Urgent Maintenance Tickets', Value: maintenanceStats?.urgent || 0 },
+                { Metric: 'Total Documents', Value: docStats.total },
+                { Metric: 'Published Documents', Value: docStats.published },
+                { Metric: 'Pending Review Documents', Value: docStats.pending },
+                { Metric: 'Rejected Documents', Value: docStats.rejected },
                 { Metric: 'Total Messages', Value: messageStats?.totalMessages || 0 },
                 { Metric: 'Unread Messages', Value: messageStats?.unreadMessages || 0 },
-                { Metric: 'Published Documents', Value: docStats.published },
-                { Metric: 'Pending Documents', Value: docStats.pending },
-                { Metric: 'Rejected Documents', Value: docStats.rejected },
             ]
             const columns = [
                 { key: 'Metric', header: 'Metric' },
@@ -57,7 +51,7 @@ export default function ReportsDashboard() {
         <div className="space-y-6">
             <PageHeader
                 title="Reports & Analytics"
-                description="Overview of system activity, tasks, maintenance, and communications."
+                description="Executive analytics for Knowledge Base SOPs, Learning, and Platform activity."
                 actions={
                     <Button onClick={() => handleExport('overview')}>
                         <Download className="w-4 h-4 me-2" />
@@ -70,8 +64,34 @@ export default function ReportsDashboard() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Total Tasks</CardTitle>
-                        <CheckSquare className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Published Knowledge SOPs</CardTitle>
+                        <BookOpen className="h-4 w-4 text-amber-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{docStats.published}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {docStats.pending} pending governance review
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total Documents</CardTitle>
+                        <FileText className="h-4 w-4 text-blue-500" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{docStats.total}</div>
+                        <p className="text-xs text-muted-foreground">
+                            {docStats.approved} approved manuals
+                        </p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Actionable Tasks</CardTitle>
+                        <CheckSquare className="h-4 w-4 text-emerald-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{taskStats?.total_tasks || 0}</div>
@@ -83,34 +103,8 @@ export default function ReportsDashboard() {
 
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Open Maintenance</CardTitle>
-                        <Activity className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{maintenanceStats?.open || 0}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {maintenanceStats?.critical || 0} critical issues
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Published Docs</CardTitle>
-                        <FileText className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{docStats.published}</div>
-                        <p className="text-xs text-muted-foreground">
-                            {docStats.pending} pending review
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Messages</CardTitle>
-                        <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                        <CardTitle className="text-sm font-medium">Communications</CardTitle>
+                        <MessageSquare className="h-4 w-4 text-purple-500" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{messageStats?.totalMessages || 0}</div>
@@ -121,89 +115,49 @@ export default function ReportsDashboard() {
                 </Card>
             </div>
 
-            <Tabs defaultValue="maintenance" className="space-y-4">
+            <Tabs defaultValue="documents" className="space-y-4">
                 <TabsList>
-                    <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-                    <TabsTrigger value="tasks">Tasks</TabsTrigger>
-                    <TabsTrigger value="documents">Documents</TabsTrigger>
+                    <TabsTrigger value="documents">Knowledge & Documents</TabsTrigger>
+                    <TabsTrigger value="tasks">Tasks & Operations</TabsTrigger>
                     <TabsTrigger value="communications">Communications</TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="maintenance" className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-                        <Card className="col-span-4">
-                            <CardHeader>
-                                <CardTitle>Maintenance Requests (Last 7 Days)</CardTitle>
-                            </CardHeader>
-                            <CardContent className="ps-2">
-                                <div className="h-[200px] flex items-end justify-between px-4 pb-4 border-b">
-                                    {/* Simple visual bar chart since we don't have recharts installed */}
-                                    {maintenanceTrends?.map((trend, index) => (
-                                        <div key={index} className="flex flex-col items-center gap-2 group relative">
-                                            <div className="w-8 bg-primary rounded-t transition-all hover:bg-primary/80"
-                                                style={{ height: `${Math.max(trend.created * 20, 4)}px`, maxHeight: '160px' }}></div>
-                                            <span className="text-xs text-muted-foreground">{format(new Date(trend.date), 'dd MMM')}</span>
-                                            <div className="absolute bottom-full mb-2 bg-white dark:bg-slate-900 text-foreground text-xs rounded p-1 shadow-lg border opacity-0 group-hover:opacity-100 transition-opacity z-50">
-                                                {trend.created} Created
-                                            </div>
-                                        </div>
-                                    ))}
-                                    {(!maintenanceTrends || maintenanceTrends.length === 0) && (
-                                        <div className="w-full text-center text-muted-foreground pt-12">No data available</div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                        <Card className="col-span-3">
-                            <CardHeader>
-                                <CardTitle>Priority Breakdown</CardTitle>
-                                <CardDescription>
-                                    Distribution of tickets by priority
-                                </CardDescription>
+                <TabsContent value="documents" className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium">Published SOPs</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="space-y-4">
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="me-2 h-4 w-4 text-red-500" />
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm font-medium leading-none">Critical</p>
-                                            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                                <div className="h-full bg-red-500" style={{ width: `${(maintenanceStats?.critical || 0) / (maintenanceStats?.total || 1) * 100}%` }}></div>
-                                            </div>
-                                        </div>
-                                        <div className="ms-4 font-medium">{maintenanceStats?.critical || 0}</div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <AlertTriangle className="me-2 h-4 w-4 text-orange-500" />
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm font-medium leading-none">Urgent</p>
-                                            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                                <div className="h-full bg-orange-500" style={{ width: `${(maintenanceStats?.urgent || 0) / (maintenanceStats?.total || 1) * 100}%` }}></div>
-                                            </div>
-                                        </div>
-                                        <div className="ms-4 font-medium">{maintenanceStats?.urgent || 0}</div>
-                                    </div>
-                                    <div className="flex items-center">
-                                        <Activity className="me-2 h-4 w-4 text-blue-500" />
-                                        <div className="flex-1 space-y-1">
-                                            <p className="text-sm font-medium leading-none">Normal</p>
-                                            <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                                                {/* Combining High, Medium, Low for simplicity in this view */}
-                                                <div className="h-full bg-blue-500" style={{ width: `${((maintenanceStats?.high || 0) + (maintenanceStats?.medium || 0) + (maintenanceStats?.low || 0)) / (maintenanceStats?.total || 1) * 100}%` }}></div>
-                                            </div>
-                                        </div>
-                                        <div className="ms-4 font-medium">{(maintenanceStats?.high || 0) + (maintenanceStats?.medium || 0) + (maintenanceStats?.low || 0)}</div>
-                                    </div>
-                                </div>
-
-                                <div className="mt-6 pt-6 border-t">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-muted-foreground flex items-center">
-                                            <Clock className="w-4 h-4 me-1" /> Avg Resolution Time
-                                        </div>
-                                        <div className="font-bold">{maintenanceStats?.avgResolutionTime || 0} days</div>
-                                    </div>
-                                </div>
+                                <div className="text-2xl font-bold text-emerald-600">{docStats.published}</div>
+                                <p className="text-xs text-muted-foreground mt-1">Live in Knowledge Base</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium">Approved Manuals</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-blue-600">{docStats.approved}</div>
+                                <p className="text-xs text-muted-foreground mt-1">Verified compliance</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium">Pending Review</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-amber-600">{docStats.pending}</div>
+                                <p className="text-xs text-muted-foreground mt-1">In approval queue</p>
+                            </CardContent>
+                        </Card>
+                        <Card>
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-sm font-medium">Drafts & Changes</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-2xl font-bold text-muted-foreground">{docStats.rejected}</div>
+                                <p className="text-xs text-muted-foreground mt-1">Requiring revision</p>
                             </CardContent>
                         </Card>
                     </div>
@@ -220,15 +174,15 @@ export default function ReportsDashboard() {
                                     <span>To Do</span>
                                     <span className="font-bold">{taskStats?.todo_tasks || 0}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-blue-50 p-2 rounded text-blue-700">
+                                <div className="flex justify-between items-center bg-blue-500/10 p-2 rounded text-blue-500">
                                     <span>In Progress</span>
                                     <span className="font-bold">{taskStats?.in_progress_tasks || 0}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-purple-50 p-2 rounded text-purple-700">
+                                <div className="flex justify-between items-center bg-purple-500/10 p-2 rounded text-purple-500">
                                     <span>Review</span>
                                     <span className="font-bold">{taskStats?.review_tasks || 0}</span>
                                 </div>
-                                <div className="flex justify-between items-center bg-green-50 p-2 rounded text-green-700">
+                                <div className="flex justify-between items-center bg-emerald-500/10 p-2 rounded text-emerald-500">
                                     <span>Completed</span>
                                     <span className="font-bold">{taskStats?.completed_tasks || 0}</span>
                                 </div>
@@ -245,47 +199,13 @@ export default function ReportsDashboard() {
                                     </div>
                                     <p className="text-sm text-muted-foreground">Completion Rate</p>
                                 </div>
-                                <div className="mt-4 flex justify-between items-center border-t pt-4">
-                                    <span className="text-sm text-red-600 flex items-center font-medium">
-                                        <AlertTriangle className="w-4 h-4 me-1" /> Overdue
-                                    </span>
-                                    <span className="font-bold text-red-600">{taskStats?.overdue_tasks || 0}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </TabsContent>
-
-                <TabsContent value="documents" className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-3">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Document Status</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2">
-                                <div className="flex justify-between items-center bg-green-50 p-2 rounded text-green-700">
-                                    <span>Published</span>
-                                    <span className="font-bold">{docStats.published}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-blue-50 p-2 rounded text-blue-700">
-                                    <span>Approved</span>
-                                    <span className="font-bold">{docStats.approved}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-yellow-50 p-2 rounded text-yellow-700">
-                                    <span>Pending Review</span>
-                                    <span className="font-bold">{docStats.pending}</span>
-                                </div>
-                                <div className="flex justify-between items-center bg-red-50 p-2 rounded text-red-700">
-                                    <span>Rejected</span>
-                                    <span className="font-bold">{docStats.rejected}</span>
-                                </div>
                             </CardContent>
                         </Card>
                     </div>
                 </TabsContent>
 
                 <TabsContent value="communications" className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         <Card>
                             <CardHeader>
                                 <CardTitle className="text-sm font-medium">Direct Messages</CardTitle>

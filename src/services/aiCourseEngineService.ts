@@ -479,15 +479,28 @@ export const aiCourseEngineService = {
     const { data: userAuth } = await supabase.auth.getUser()
     const currentUserId = userAuth?.user?.id
 
-    // 1. Fetch user property
+    // 1. Fetch user organization & property
     let userPropertyId: string | null = null
+    let userOrgId: string | null = null
     if (currentUserId) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('property_id')
+        .select('property_id, organization_id')
         .eq('id', currentUserId)
         .single()
       userPropertyId = profile?.property_id || null
+      userOrgId = (profile as any)?.organization_id || null
+
+      if (!userOrgId) {
+        const { data: member } = await supabase
+          .from('organization_memberships')
+          .select('organization_id')
+          .eq('user_id', currentUserId)
+          .eq('is_active', true)
+          .limit(1)
+          .maybeSingle()
+        userOrgId = member?.organization_id || 'e0000000-0000-0000-0000-000000000001'
+      }
     }
 
     // 2. Insert or update training_module
@@ -512,6 +525,7 @@ export const aiCourseEngineService = {
         quality_score: blueprint.qualityScore || 90,
         qa_report: blueprint.qaReport as any,
         created_by: currentUserId,
+        organization_id: userOrgId,
         property_id: userPropertyId,
       })
       .select('id')
@@ -569,6 +583,7 @@ export const aiCourseEngineService = {
           title: meta.title,
           description: meta.description,
           training_module_id: moduleId,
+          organization_id: userOrgId,
           passing_score_percentage: meta.passingScore,
           time_limit_minutes: meta.timeLimitMinutes,
           max_attempts: meta.maxAttempts,
@@ -586,9 +601,13 @@ export const aiCourseEngineService = {
       let linked = 0
       for (let qIdx = 0; qIdx < quiz.questions.length; qIdx++) {
         const q = quiz.questions[qIdx]
+        const questionRow = {
+          ...buildUnifiedQuestionRow(q, { trainingModuleId: moduleId, createdBy: currentUserId }),
+          organization_id: userOrgId,
+        }
         const { data: newQ, error: qErr } = await supabase
           .from('unified_questions')
-          .insert(buildUnifiedQuestionRow(q, { trainingModuleId: moduleId, createdBy: currentUserId }))
+          .insert(questionRow)
           .select('id')
           .single()
 

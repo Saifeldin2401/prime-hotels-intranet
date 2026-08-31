@@ -130,32 +130,39 @@ export function useUserDataLoader(
         }
 
         // ── Load profile ──────────────────────────────────────────
-        const profilePromise = supabase
-          .from('profiles')
-          .select('id, email, full_name, phone, avatar_url, hire_date, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at, date_of_birth, iqama_number, bio')
-          .eq('id', userId)
-          .limit(1)
+        try {
+          const profilePromise = supabase
+            .from('profiles')
+            .select('id, email, full_name, phone, avatar_url, hire_date, job_title, staff_id, reporting_to, is_active, emergency_contact_name, emergency_contact_phone, nationality, blood_group, created_at, updated_at, date_of_birth, iqama_number, bio')
+            .eq('id', userId)
+            .limit(1)
 
-        const { data: profileRows, error: profileError } = await withTimeout(
-          profilePromise as any,
-          10000,
-          'Profile load'
-        ) as any
-        if (isStale()) { setRolesLoading(false); return }
-        const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
+          const { data: profileRows, error: profileError } = await withTimeout(
+            profilePromise as any,
+            10000,
+            'Profile load'
+          ) as any
 
-        if (profileError) {
-          if (await handleQueryAuthError('Profile', profileError)) { setRolesLoading(false); return }
-          console.warn('Error loading profile.')
-          // Try fallback from auth metadata
-          const { data: { user } } = await supabase.auth.getUser()
           if (isStale()) { setRolesLoading(false); return }
-          if (user) setProfile(buildFallbackProfile(user))
-        } else if (profileData) {
-          if (isStale()) { setRolesLoading(false); return }
-          setProfile(profileData)
-        } else {
-          // No profile row yet — use auth metadata
+          const profileData = Array.isArray(profileRows) ? profileRows[0] ?? null : null
+
+          if (profileError) {
+            if (await handleQueryAuthError('Profile', profileError)) { setRolesLoading(false); return }
+            console.warn('Error loading profile from DB, falling back to auth metadata:', profileError)
+            const { data: { user } } = await supabase.auth.getUser()
+            if (isStale()) { setRolesLoading(false); return }
+            if (user) setProfile(buildFallbackProfile(user))
+          } else if (profileData) {
+            if (isStale()) { setRolesLoading(false); return }
+            setProfile(profileData)
+          } else {
+            // No profile row yet — use auth metadata
+            const { data: { user } } = await supabase.auth.getUser()
+            if (isStale()) { setRolesLoading(false); return }
+            if (user) setProfile(buildFallbackProfile(user))
+          }
+        } catch (profileLoadErr) {
+          console.warn('Profile load timed out or failed, falling back to auth user metadata:', profileLoadErr)
           const { data: { user } } = await supabase.auth.getUser()
           if (isStale()) { setRolesLoading(false); return }
           if (user) setProfile(buildFallbackProfile(user))
@@ -183,10 +190,7 @@ export function useUserDataLoader(
           const { data: directRoles, error: rolesError } = rolesResult.value
           if (rolesError) {
             if (await handleQueryAuthError('Roles', rolesError)) { setRolesLoading(false); return }
-            console.warn('Error loading roles.')
-            // Distinct from rolesLoading: this is a definitive failure, not "still working on
-            // it" - without this, a dropped/failed roles query left rolesLoading=false and
-            // roles=[], which route guards read as "resolved to no role" and spin forever.
+            console.warn('Error loading roles:', rolesError)
             setRolesError('Failed to load your account permissions. Please try again.')
             setRolesLoading(false)
           } else {
@@ -205,7 +209,7 @@ export function useUserDataLoader(
           const { data: directProps, error: propertiesError } = propertiesResult.value
           if (propertiesError) {
             if (await handleQueryAuthError('Properties', propertiesError)) return
-            console.warn('Error loading properties.')
+            console.warn('Error loading properties:', propertiesError)
           } else {
             const props = directProps?.map((up) => up.properties).filter(Boolean) || []
             setProperties(props)
@@ -219,7 +223,7 @@ export function useUserDataLoader(
           const { data: directDepts, error: departmentsError } = departmentsResult.value
           if (departmentsError) {
             if (await handleQueryAuthError('Departments', departmentsError)) return
-            console.warn('Error loading departments.')
+            console.warn('Error loading departments:', departmentsError)
           } else {
             const depts = directDepts?.map((ud) => ud.departments).filter(Boolean) || []
             setDepartments(depts)
@@ -241,7 +245,7 @@ export function useUserDataLoader(
           }
           return
         }
-        console.warn('Unexpected error loading user data.')
+        console.warn('Unexpected error loading user data:', error)
         state.setRolesError('Failed to load your account permissions. Please try again.')
       }
     },

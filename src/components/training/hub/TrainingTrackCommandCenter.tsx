@@ -744,10 +744,10 @@ export function TrainingTrackCommandCenter({
                     {/* Property Selector */}
                     <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
                         <SelectTrigger className="h-9 w-[180px] bg-slate-50 text-xs font-semibold">
-                            <SelectValue placeholder={isRTL ? 'كل الفنادق' : 'All Properties'} />
+                            <SelectValue placeholder={isRTL ? 'نطاق المؤسسة' : 'Organization Scope'} />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">{isRTL ? 'جميع الفنادق والمنتجعات' : 'All Chain Properties'}</SelectItem>
+                            <SelectItem value="all">{isRTL ? 'نطاق المؤسسة (كافة الفنادق)' : 'Organization Scope (All Hotels)'}</SelectItem>
                             {properties.map(p => (
                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                             ))}

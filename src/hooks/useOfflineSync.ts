@@ -71,16 +71,20 @@ export function useOfflineSync(): OfflineSyncState & OfflineSyncActions {
       
       for (const submission of submissions) {
         try {
-          const response = await fetch(submission.url, {
-            method: submission.method,
-            headers: submission.headers,
-            body: submission.body,
-          });
+          if (submission.url) {
+            const response = await fetch(submission.url, {
+              method: submission.method || 'POST',
+              headers: submission.headers,
+              body: submission.body,
+            });
 
-          if (response.ok) {
-            await removeSubmission(submission.id);
+            if (response.ok) {
+              await removeSubmission(submission.id);
+            } else {
+              setLastSyncError(`Sync failed: Server returned ${response.status}`);
+            }
           } else {
-            setLastSyncError(`Sync failed: Server returned ${response.status}`);
+            await removeSubmission(submission.id);
           }
         } catch (error) {
           setLastSyncError(`Sync failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

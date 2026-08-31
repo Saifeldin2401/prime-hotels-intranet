@@ -1,16 +1,13 @@
 import { lazy, Suspense, type ReactNode } from 'react'
-
 import { QueryClientProvider } from '@tanstack/react-query'
-
 import { Toaster } from '@/components/ui/toaster'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { PresenceProvider } from '@/contexts/PresenceContext'
 import { PropertyProvider } from '@/contexts/PropertyContext'
+import { TenantProvider } from '@/contexts/TenantContext'
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { UserSettingsProvider } from '@/contexts/UserSettingsContext'
 import { queryClient } from '@/lib/queryClient'
-import { ThemeProvider as AltusKitThemeProvider } from '@/altus-kit/theme'
-
 import { QueryRuntimeBridge } from './QueryRuntimeBridge'
 
 // Dev-only: lazily loaded so it is never bundled into production builds.
@@ -25,8 +22,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <QueryRuntimeBridge />
       <ThemeProvider>
-        <AltusKitThemeProvider>
-          <AuthProvider>
+        <AuthProvider>
+          <TenantProvider>
             <PropertyProvider>
               <UserSettingsProvider>
                 <PresenceProvider>
@@ -34,8 +31,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
                 </PresenceProvider>
               </UserSettingsProvider>
             </PropertyProvider>
-          </AuthProvider>
-        </AltusKitThemeProvider>
+          </TenantProvider>
+        </AuthProvider>
         {ReactQueryDevtools && (
           <Suspense fallback={null}>
             <ReactQueryDevtools initialIsOpen={false} />
@@ -46,4 +43,3 @@ export function AppProviders({ children }: { children: ReactNode }) {
     </QueryClientProvider>
   )
 }
-

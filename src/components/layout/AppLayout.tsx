@@ -1,19 +1,14 @@
-import { getRouteByPath } from '@/config/navigation'
+import React, { Suspense, lazy, useEffect, useState, useMemo } from 'react'
+import { useLocation } from 'react-router-dom'
+import { Header } from '@/components/layout/Header'
+import { Sidebar } from '@/components/layout/Sidebar'
+import { MobileNavigation } from '@/components/layout/MobileNavigation'
 import { PageTransition } from '@/components/layout/PageTransition'
 import { HolidayCelebration } from '@/components/ui/HolidayCelebration'
-import { useProperty } from '@/contexts/PropertyContext'
-import { useAuth } from '@/hooks/useAuth'
-import { useNavigation } from '@/hooks/useNavigation'
-import { useNotifications } from '@/hooks/useNotifications'
-import { usePermissions } from '@/hooks/usePermissions'
-import { getNotificationLink } from '@/lib/notificationLinks'
+import { AltusCopilotTrigger } from '@/components/ai/AltusCopilotTrigger'
+import { PlatformImpersonationBanner } from '@/components/platform/PlatformImpersonationBanner'
+import { getRouteByPath } from '@/config/navigation'
 import { useNavigationStore } from '@/stores/navigationStore'
-import { DashboardLayout } from '@/altus-kit/layouts/dashboard'
-import { Iconify } from '@/altus-kit/components/iconify'
-import { AnimatePresence } from 'framer-motion'
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate } from 'react-router-dom'
 
 const CommandPalette = lazy(() =>
   import('@/components/common/CommandPalette').then((module) => ({ default: module.CommandPalette }))
@@ -21,33 +16,21 @@ const CommandPalette = lazy(() =>
 const KeyboardShortcutsModal = lazy(() =>
   import('@/components/common/KeyboardShortcutsModal').then((module) => ({ default: module.KeyboardShortcutsModal }))
 )
-const WizardTrigger = lazy(() =>
-  import('@/components/common/WizardTrigger').then((module) => ({ default: module.WizardTrigger }))
-)
 const AltusCopilotDrawer = lazy(() =>
   import('@/components/ai/AltusCopilotDrawer').then((module) => ({ default: module.AltusCopilotDrawer }))
 )
-import { AltusCopilotTrigger } from '@/components/ai/AltusCopilotTrigger'
-import { Sparkles } from 'lucide-react'
 
 interface AppLayoutProps {
   children: React.ReactNode
 }
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const navigate = useNavigate()
   const location = useLocation()
-  const { t } = useTranslation(['nav', 'common'])
-  const { groupedNavigation, favoriteItems } = useNavigation()
-  const { profile, user, signOut } = useAuth()
-  const { notifications, markAsRead, markAllAsRead } = useNotifications()
-  const { hasPermission } = usePermissions()
-  const { currentProperty, availableProperties, switchProperty } = useProperty()
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false)
   const [copilotOpen, setCopilotOpen] = useState(false)
   const [deferredChromeReady, setDeferredChromeReady] = useState(false)
 
-  // Track page transitions for recently visited shortcuts cleanly without hook loops
+  // Track page transitions for recently visited shortcuts
   useEffect(() => {
     const route = getRouteByPath(location.pathname)
     if (route) {
@@ -55,103 +38,7 @@ export function AppLayout({ children }: AppLayoutProps) {
     }
   }, [location.pathname])
 
-  const mappedFavorites = useMemo(
-    () =>
-      favoriteItems.map((item) => {
-        const Icon = item.icon
-        return {
-          title: t(item.title, { defaultValue: item.title }),
-          path: item.resolvedPath,
-          icon: <Icon size={16} />,
-          badgeCount: item.badgeCount,
-        }
-      }),
-    [favoriteItems, t]
-  )
-
-  const groupedNavItems = useMemo(
-    () =>
-      groupedNavigation.map((group) => {
-        const GroupIcon = group.config.icon
-        const groupTitle = t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })
-        return {
-          id: group.config.id,
-          title: groupTitle,
-          icon: <GroupIcon size={18} />,
-          collapsible: group.config.collapsible,
-          items: group.items.map((item) => {
-            const Icon = item.icon
-            return {
-              title: t(item.title, { defaultValue: item.title }),
-              path: item.resolvedPath,
-              icon: <Icon size={18} />,
-              badgeCount: item.badgeCount,
-            }
-          }),
-        }
-      }),
-    [groupedNavigation, t]
-  )
-
-  const navItems = useMemo(
-    () =>
-      groupedNavigation.flatMap((group) => {
-        const groupTitle = t(group.config.title, { defaultValue: group.config.id.replace(/_/g, ' ') })
-        return group.items.map((item, itemIdx) => {
-          const Icon = item.icon
-          return {
-            title: t(item.title, { defaultValue: item.title }),
-            path: item.resolvedPath,
-            icon: <Icon size={20} />,
-            subheader: itemIdx === 0 ? groupTitle : undefined,
-            badgeCount: item.badgeCount,
-          }
-        })
-      }),
-    [groupedNavigation, t]
-  )
-
-  const workspaces = useMemo(() => {
-    const list = availableProperties.length > 0 ? availableProperties : currentProperty ? [currentProperty] : []
-    const uniqueProps = Array.from(new Map(list.map((p) => [p.id, p])).values())
-    return uniqueProps.map((property) => ({
-      id: property.id,
-      name: property.name,
-      plan: property.id === currentProperty?.id ? 'Active' : 'Property',
-      logo: '/altus-emblem-icon.png',
-    }))
-  }, [availableProperties, currentProperty])
-
-  const accountLinks = useMemo(
-    () => [
-      {
-        label: t('nav:profile', 'Profile'),
-        href: '/profile',
-        icon: <Iconify icon="solar:home-angle-bold-duotone" />,
-      },
-      {
-        label: t('nav:settings', 'Settings'),
-        href: '/settings',
-        icon: <Iconify icon="solar:settings-bold-duotone" />,
-      },
-    ],
-    [t]
-  )
-
-  const notificationItems = useMemo(
-    () =>
-      (notifications ?? []).slice(0, 8).map((notification) => ({
-        id: notification.id,
-        type: notification.type,
-        title: notification.title,
-        description: notification.message,
-        isUnRead: !notification.is_read,
-        avatarUrl: null,
-        postedAt: notification.created_at,
-      })),
-    [notifications]
-  )
-
+  // Global keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement
@@ -177,43 +64,9 @@ export function AppLayout({ children }: AppLayoutProps) {
     return () => window.clearTimeout(timeoutId)
   }, [])
 
-  const handleLogout = useCallback(async () => {
-    await signOut()
-    navigate('/login')
-  }, [navigate, signOut])
-
-  const handleNotificationClick = useCallback(
-    (notification: { id: string; type: string; title: string; isUnRead: boolean }) => {
-      // Find the original notification to get full data for link resolution
-      const original = notifications?.find((n) => n.id === notification.id)
-      if (original && !original.is_read) {
-        markAsRead.mutate(original.id)
-      }
-      const link = getNotificationLink(
-        { type: notification.type, title: notification.title, link: original?.link },
-        { hasPermission }
-      )
-      if (link) {
-        navigate(link)
-      }
-    },
-    [notifications, markAsRead, navigate, hasPermission]
-  )
-
-  const handleMarkAllRead = useCallback(() => {
-    markAllAsRead.mutate()
-  }, [markAllAsRead])
-
-  const handleViewAllNotifications = useCallback(() => {
-    navigate('/notifications')
-  }, [navigate])
-
-  const shouldRenderDeferredChrome = deferredChromeReady || commandPaletteOpen
-
   const isImmersiveOrFocusedPage = useMemo(() => {
     const p = location.pathname.toLowerCase()
     return (
-      p.startsWith('/messaging') ||
       p.startsWith('/learning/training/') ||
       p.startsWith('/learning/microlearning/') ||
       p.includes('/take') ||
@@ -225,51 +78,43 @@ export function AppLayout({ children }: AppLayoutProps) {
   }, [location.pathname])
 
   return (
-    <DashboardLayout
-      navItems={navItems}
-      groupedNavItems={groupedNavItems}
-      favoriteItems={mappedFavorites}
-      workspaces={workspaces}
-      currentWorkspaceId={currentProperty?.id}
-      onChangeWorkspace={switchProperty}
-      notifications={notificationItems}
-      onNotificationClick={handleNotificationClick}
-      onMarkAllRead={handleMarkAllRead}
-      onViewAllNotifications={handleViewAllNotifications}
-      accountLinks={accountLinks}
-      account={{
-        displayName: profile?.full_name ?? user?.email ?? 'User',
-        email: user?.email ?? null,
-        photoURL: profile?.avatar_url ?? null,
-      }}
-      onLogout={handleLogout}
-      onCommandOpen={() => setCommandPaletteOpen(true)}
-      slotProps={{
-        main: {
-          sx: {
-            bgcolor: 'background.default',
-          },
-        },
-      }}
-    >
-      {!isImmersiveOrFocusedPage && <HolidayCelebration />}
-      <AnimatePresence mode="wait">
-        <PageTransition className="w-full">{children}</PageTransition>
-      </AnimatePresence>
+    <div className="flex min-h-screen bg-background text-foreground antialiased selection:bg-altus-copper/20 selection:text-altus-copper">
+      {/* Desktop Sidebar */}
+      {!isImmersiveOrFocusedPage && (
+        <aside className="hidden lg:flex lg:w-64 lg:flex-col lg:fixed lg:inset-y-0 z-30 border-e border-border/60 bg-card/80 backdrop-blur-2xl shadow-sm">
+          <Sidebar />
+        </aside>
+      )}
 
-      {/* Floating Altus Copilot Trigger Button (hidden in messaging, player, and immersive screens) */}
+      {/* Main Content Area */}
+      <div className={`flex flex-1 flex-col ${!isImmersiveOrFocusedPage ? 'lg:ps-64' : ''}`}>
+        <PlatformImpersonationBanner />
+        {/* Top Header */}
+        <Header onOpenSearch={() => setCommandPaletteOpen(true)} />
+
+        {/* Main Content Stage */}
+        <main className="flex-1 px-4 sm:px-6 lg:px-8 py-6 max-w-7xl w-full mx-auto pb-24 lg:pb-12">
+          {!isImmersiveOrFocusedPage && <HolidayCelebration />}
+          <PageTransition className="w-full">{children}</PageTransition>
+        </main>
+
+        {/* Mobile Bottom Navigation */}
+        {!isImmersiveOrFocusedPage && <MobileNavigation />}
+      </div>
+
+      {/* Floating Altus Copilot Trigger */}
       {!copilotOpen && !isImmersiveOrFocusedPage && (
         <AltusCopilotTrigger onClick={() => setCopilotOpen(true)} />
       )}
 
+      {/* Deferred Modals and Drawers */}
       <Suspense fallback={null}>
-        {shouldRenderDeferredChrome && <WizardTrigger />}
-        {shouldRenderDeferredChrome && (
+        {(deferredChromeReady || commandPaletteOpen) && (
           <CommandPalette open={commandPaletteOpen} onOpenChange={setCommandPaletteOpen} />
         )}
-        {shouldRenderDeferredChrome && <KeyboardShortcutsModal />}
+        {deferredChromeReady && <KeyboardShortcutsModal />}
         <AltusCopilotDrawer isOpen={copilotOpen} onClose={() => setCopilotOpen(false)} />
       </Suspense>
-    </DashboardLayout>
+    </div>
   )
 }

@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useSystemSettings, type SystemSetting } from '@/hooks/useSystemSettings'
+import { SubscriptionEntitlementsCard } from '@/pages/admin/components/SubscriptionEntitlementsCard'
 import {
     Bell,
     Building,
@@ -15,6 +16,7 @@ import {
     Settings,
     Shield,
     Users,
+    CreditCard
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 
@@ -146,8 +148,11 @@ export default function SystemSettings() {
         <div className="space-y-6">
             <PageHeader
                 title="System Settings"
-                description="Configure global application settings"
+                description="Configure global application settings and inspect tenant subscription limits"
             />
+
+            {/* Tenant Subscription & Entitlements Overview */}
+            <SubscriptionEntitlementsCard />
 
             {isLoading ? (
                 <div className="flex justify-center py-8">

@@ -26,7 +26,6 @@ import { AuthRoutes, StandaloneAuthRoutes } from './modules/AuthRoutes'
 import { DashboardRoutes } from './modules/DashboardRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
 import { ManageRoutes } from './modules/ManageRoutes'
-import { MediaRoutes } from './modules/MediaRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
 import { TrainingRoutes } from './modules/TrainingRoutes'
 import { LegacyDomainRedirects } from './redirects'
@@ -231,7 +230,6 @@ export const router = createBrowserRouter(
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
                 {ManageRoutes()}
-                {MediaRoutes()}
                 {DashboardRoutes()}
                 {MiscRoutes()}
 

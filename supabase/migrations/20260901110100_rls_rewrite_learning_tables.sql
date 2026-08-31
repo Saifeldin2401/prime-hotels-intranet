@@ -144,34 +144,45 @@ CREATE POLICY p5_learning_quizzes_delete ON public.learning_quizzes
 -- ===========================================================================
 -- learning_quiz_questions  (quiz <-> question link rows)
 -- ===========================================================================
-ALTER TABLE public.learning_quiz_questions ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS p5_learning_quiz_questions_select ON public.learning_quiz_questions;
-DROP POLICY IF EXISTS p5_learning_quiz_questions_write  ON public.learning_quiz_questions;
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relname = 'learning_quiz_questions' AND c.relkind = 'r'
+  ) THEN
+    ALTER TABLE public.learning_quiz_questions ENABLE ROW LEVEL SECURITY;
+    DROP POLICY IF EXISTS p5_learning_quiz_questions_select ON public.learning_quiz_questions;
+    DROP POLICY IF EXISTS p5_learning_quiz_questions_insert ON public.learning_quiz_questions;
+    DROP POLICY IF EXISTS p5_learning_quiz_questions_update ON public.learning_quiz_questions;
+    DROP POLICY IF EXISTS p5_learning_quiz_questions_delete ON public.learning_quiz_questions;
 
-CREATE POLICY p5_learning_quiz_questions_select ON public.learning_quiz_questions
-  FOR SELECT TO authenticated
-  USING (
-    EXISTS (SELECT 1 FROM public.learning_quizzes q WHERE q.id = quiz_id)
-  );
+    CREATE POLICY p5_learning_quiz_questions_select ON public.learning_quiz_questions
+      FOR SELECT TO authenticated
+      USING (
+        EXISTS (SELECT 1 FROM public.learning_quizzes q WHERE q.id = quiz_id)
+      );
 
-CREATE POLICY p5_learning_quiz_questions_insert ON public.learning_quiz_questions
-  FOR INSERT TO authenticated
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.learning_quizzes q
-      WHERE q.id = quiz_id
-        AND (q.created_by = (SELECT auth.uid()) OR public.is_training_manager() OR public.is_platform_admin())
-    )
-  );
+    CREATE POLICY p5_learning_quiz_questions_insert ON public.learning_quiz_questions
+      FOR INSERT TO authenticated
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.learning_quizzes q
+          WHERE q.id = quiz_id
+            AND (q.created_by = (SELECT auth.uid()) OR public.is_training_manager() OR public.is_platform_admin())
+        )
+      );
 
-CREATE POLICY p5_learning_quiz_questions_update ON public.learning_quiz_questions
-  FOR UPDATE TO authenticated
-  USING (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin())
-  WITH CHECK (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin());
+    CREATE POLICY p5_learning_quiz_questions_update ON public.learning_quiz_questions
+      FOR UPDATE TO authenticated
+      USING (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin())
+      WITH CHECK (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin());
 
-CREATE POLICY p5_learning_quiz_questions_delete ON public.learning_quiz_questions
-  FOR DELETE TO authenticated
-  USING (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin());
+    CREATE POLICY p5_learning_quiz_questions_delete ON public.learning_quiz_questions
+      FOR DELETE TO authenticated
+      USING (public.is_content_author() OR public.is_training_manager() OR public.is_platform_admin());
+  END IF;
+END $$;
 
 -- ===========================================================================
 -- unified_questions
@@ -414,6 +425,11 @@ CREATE POLICY p5_training_paths_delete ON public.training_paths
 -- training_path_modules  (link rows)
 -- ===========================================================================
 ALTER TABLE public.training_path_modules ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS path_modules_view          ON public.training_path_modules;
+DROP POLICY IF EXISTS path_modules_manage        ON public.training_path_modules;
+DROP POLICY IF EXISTS path_modules_manage_insert ON public.training_path_modules;
+DROP POLICY IF EXISTS path_modules_manage_update ON public.training_path_modules;
+DROP POLICY IF EXISTS path_modules_manage_delete ON public.training_path_modules;
 DROP POLICY IF EXISTS p5_training_path_modules_select ON public.training_path_modules;
 DROP POLICY IF EXISTS p5_training_path_modules_insert ON public.training_path_modules;
 DROP POLICY IF EXISTS p5_training_path_modules_update ON public.training_path_modules;

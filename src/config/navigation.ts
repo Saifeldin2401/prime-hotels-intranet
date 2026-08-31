@@ -73,6 +73,7 @@ export type NavigationGroup =
     | 'personal_space'
     | 'knowledge_sop'
     | 'administration'
+    | 'platform_operations'
 
 export type Permission = 'read' | 'write' | 'approve' | 'delete' | 'manage'
 
@@ -146,6 +147,14 @@ export const NAVIGATION_GROUPS: NavigationGroupConfig[] = [
         icon: Shield,
         order: 6,
         visibleTo: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        collapsible: true
+    },
+    {
+        id: 'platform_operations',
+        title: 'groups.platform_operations',
+        icon: Building2,
+        order: 7,
+        visibleTo: ['corporate_admin', 'regional_admin'],
         collapsible: true
     }
 ]
@@ -435,6 +444,50 @@ export const ROUTES: RouteConfig[] = [
         keywords: ['settings', 'preferences', 'dark mode', 'theme'],
         group: 'administration',
         order: 20,
+    },
+
+    // -------------------------------------------------------------------------
+    // 7. PLATFORM OPERATOR & SUPER ADMIN (platform_operations)
+    // -------------------------------------------------------------------------
+    {
+        path: '/platform/organizations',
+        title: 'organizations_hub',
+        icon: Building2,
+        description: 'Manage customer organizations, subscriptions, and authorized cross-tenant access',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['platform', 'tenants', 'organizations', 'enter tenant', 'impersonation'],
+        group: 'platform_operations',
+        order: 1,
+    },
+    {
+        path: '/platform/master-library',
+        title: 'global_master_library',
+        icon: BookOpen,
+        description: 'Platform master SOPs and hospitality courses deployable to customer tenants',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['master', 'library', 'deploy', 'templates', 'master sops', 'master courses'],
+        group: 'platform_operations',
+        order: 2,
+    },
+    {
+        path: '/platform/analytics',
+        title: 'platform_analytics',
+        icon: BarChart3,
+        description: 'Cross-tenant business intelligence, global learner counts, and usage metrics',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['analytics', 'platform', 'metrics', 'learners', 'ai usage'],
+        group: 'platform_operations',
+        order: 3,
+    },
+    {
+        path: '/platform/audit',
+        title: 'cross_tenant_audit',
+        icon: Shield,
+        description: 'Immutable audit trail of cross-tenant operator actions and impersonation sessions',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['audit', 'security', 'logs', 'cross-tenant', 'compliance'],
+        group: 'platform_operations',
+        order: 4,
     },
     {
         path: '/search',

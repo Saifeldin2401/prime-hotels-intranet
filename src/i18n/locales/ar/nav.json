@@ -26,6 +26,18 @@
     "performance_management": "إدارة الأداء",
     "goals_management": "إدارة الأهداف",
     "payslips_management": "إدارة مسيرات الرواتب",
+    "groups": {
+        "personal_space": "مساحتي الشخصية",
+        "knowledge_sop": "المعرفة والأكاديمية",
+        "administration": "الإدارة والذكاء المؤسسي",
+        "platform_operations": "عمليات المنصة والمشغل",
+        "favorites": "المفضلة والاختصارات",
+        "recents": "تمت زيارته مؤخراً"
+    },
+    "organizations_hub": "مركز المنظمات والعملاء",
+    "global_master_library": "المكتبة الرئيسية للمعايير والدورات",
+    "platform_analytics": "تحليلات المنصة الشاملة",
+    "cross_tenant_audit": "سجل التدقيق عبر المنظمات",
 
     "dashboard": "لوحة التحكم",
     "staff_dashboard": "لوحتي",
@@ -156,8 +168,20 @@
     "quality_audits": "تدقيقات الجودة",
     "motivational_content": "المحتوى التحفيزي",
     "compliance_center": "مركز الامتثال",
-    "email_writer": "كاتب البريد الإلكتروني",
     "inbound_emails": "البريد الوارد",
     "manual_certificates": "الشهادات اليدوية",
-    "ai_course_generator": "إعدادات محرك الدورات بالذكاء الاصطناعي"
+    "ai_course_generator": "إعدادات محرك الدورات بالذكاء الاصطناعي",
+    "all_hotels": "كافة الفنادق",
+    "all_hotels_portfolio": "نطاق المؤسسة (كافة الفنادق)",
+    "all_hotels_cluster": "نطاق المؤسسة (كافة الفنادق)",
+    "organization_wide": "نطاق المؤسسة",
+    "organization_wide_scope": "عرض موحد لكافة الفنادق على مستوى المنظمة",
+    "tenant_wide_scope": "عرض موحد لكافة الفنادق على مستوى المنظمة",
+    "group_portfolio": "نطاق المنظمة",
+    "active_property": "الفندق النشط",
+    "hotel_property": "الفندق",
+    "hierarchy_scope": "الهيكل التنظيمي ونطاق العمل",
+    "switch_scope_desc": "تحديد المنظمة، قطاع العلامة التجارية، أو الفندق.",
+    "search_scope_placeholder": "ابحث عن الفنادق والعلامات التجارية...",
+    "search_hotels_brands": "ابحث عن الفنادق والعلامات التجارية..."
 }

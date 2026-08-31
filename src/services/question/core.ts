@@ -12,8 +12,12 @@ export interface QuestionFilters {
     type?: QuestionType
     difficulty?: QuestionDifficulty
     sop_id?: string
-    // category_id removed
     ai_generated?: boolean
+    organization_id?: string
+    hotel_id?: string
+    brand_id?: string
+    scope_type?: string
+    is_master_template?: boolean
     search?: string
     tags?: string[]
 }
@@ -34,10 +38,11 @@ export async function getQuestions(
 
     // Apply filters
     if (filters.status) query = query.eq('status', filters.status)
-    if (filters.type) query = query.eq('question_type', filters.type)
+    if (filters.type) query = query.eq('question_type', filters.type as any)
     if (filters.difficulty) query = query.eq('difficulty_level', filters.difficulty)
     if (filters.sop_id) query = query.eq('linked_sop_id', filters.sop_id)
-    // category_id filter removed
+    if (filters.organization_id) query = query.or(`organization_id.eq.${filters.organization_id},organization_id.is.null,is_master_template.eq.true`)
+    if (filters.is_master_template !== undefined) query = query.eq('is_master_template', filters.is_master_template)
     if (filters.ai_generated !== undefined) query = query.eq('ai_generated', filters.ai_generated)
     if (filters.search) query = query.ilike('question_text', `%${filters.search}%`)
     if (filters.tags?.length) query = query.overlaps('tags', filters.tags)
@@ -166,7 +171,7 @@ export async function createQuestion(
             created_by: userId,
             ai_generated: aiGenerated,
             status: 'draft' as QuestionStatus
-        })
+        } as any)
         .select()
         .single()
 
@@ -216,7 +221,7 @@ export async function updateQuestion(
             ...questionData,
             ...(difficulty_level !== undefined ? { difficulty: difficulty_level } : {}),
             updated_at: new Date().toISOString()
-        })
+        } as any)
         .eq('id', id)
         .select()
         .single()

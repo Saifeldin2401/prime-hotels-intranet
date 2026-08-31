@@ -18,12 +18,12 @@ import {
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
+import { useTenant } from '@/contexts/TenantContext'
 import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
 import type { NavigationGroupWithItems, NavigationItem } from '@/hooks/useNavigation'
 import { useNavigation } from '@/hooks/useNavigation'
 import { sidebarItemVariants } from '@/lib/motion'
-import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
 import { useNavigationStore } from '@/stores/navigationStore'
 import { AnimatePresence, LazyMotion, domAnimation, m, type PanInfo } from 'framer-motion'
@@ -58,6 +58,7 @@ export function SidebarNavigation({
   const navigate = useNavigate()
 
   const authState = useAuth()
+  const { currentOrganization } = useTenant()
   const { groupedNavigation, favoriteItems } = useNavigation()
   const { currentProperty } = useProperty()
   const { expandedGroups, toggleGroupExpanded, isFavorite, toggleFavorite } = useNavigationStore()
@@ -407,21 +408,14 @@ export function SidebarNavigation({
             )}
           </div>
 
-          {/* Property / Cluster Mode Indicator - Desktop only */}
-          {!collapsed && !isMobile && currentProperty && (
+          {/* Multi-Tenant Organization & Scope Indicator - Desktop only */}
+          {!collapsed && !isMobile && (currentOrganization || currentProperty) && (
             <div className="px-4 py-2">
-              <div className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider border transition-colors",
-                isConsolidatedPropertyId(currentProperty.id)
-                  ? "bg-hotel-gold/10 text-hotel-gold border-hotel-gold/20"
-                  : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
-              )}>
-                {isConsolidatedPropertyId(currentProperty.id) ? (
-                  <Globe className="w-3.5 h-3.5" />
-                ) : (
-                  <Building className="w-3.5 h-3.5" />
-                )}
-                <span className="truncate">{currentProperty.name}</span>
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-semibold uppercase tracking-wider border transition-colors bg-hotel-gold/10 text-hotel-gold border-hotel-gold/20">
+                <Globe className="w-3.5 h-3.5" />
+                <span className="truncate">
+                  {currentOrganization?.name || currentProperty?.name}
+                </span>
               </div>
             </div>
           )}
@@ -469,10 +463,10 @@ export function SidebarNavigation({
                       <p className="text-[10px] text-gray-400 uppercase tracking-wider font-medium truncate">
                         {profile?.job_title || (primaryRole ? t(`common:roles.${primaryRole}`) : 'Guest')}
                       </p>
-                      {currentProperty && (
+                      {(currentOrganization || currentProperty) && (
                         <div className="flex items-center gap-1 text-[9px] text-hotel-gold/80 italic truncate">
-                          {isConsolidatedPropertyId(currentProperty.id) ? <Globe className="w-2.5 h-2.5" /> : <Building className="w-2.5 h-2.5" />}
-                          <span>{currentProperty.name}</span>
+                          <Building className="w-2.5 h-2.5" />
+                          <span>{currentOrganization?.name || currentProperty?.name}</span>
                         </div>
                       )}
                     </div>

@@ -42,6 +42,7 @@ import { Switch } from '@/components/ui/switch'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useProperty } from '@/contexts/PropertyContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import { useDepartments } from '@/hooks/useDepartments'
 import { useDuplicateDetection } from '@/hooks/useDuplicateDetection'
@@ -135,6 +136,8 @@ interface ArticleFormData {
     storage_path: string
     content_type: string
     visibility: KnowledgeVisibility
+    scope_type: 'organization' | 'brand' | 'hotel' | 'department' | 'global'
+    is_master_template: boolean
     requires_acknowledgment: boolean
     featured: boolean
     department_id: string | null
@@ -186,6 +189,8 @@ const createEmptyArticleFormData = (): ArticleFormData => ({
     storage_path: '',
     content_type: 'document',
     visibility: 'all_properties',
+    scope_type: 'organization',
+    is_master_template: false,
     requires_acknowledgment: false,
     featured: false,
     department_id: null,
@@ -330,6 +335,7 @@ export default function KnowledgeAuthor() {
     const location = useLocation()
     const { t } = useTranslation(['knowledge', 'common'])
     const { user, profile, primaryRole } = useAuth()
+    const { currentOrganization, currentBrand, currentHotel, isPlatformAdmin } = useTenant()
     const { currentProperty } = useProperty()
     const queryClient = useQueryClient()
     const isEditing = Boolean(id)
@@ -997,6 +1003,8 @@ export default function KnowledgeAuthor() {
                             storage_path: '',
                             content_type: data.content_type || 'document',
                             visibility: (data.visibility || 'all_properties') as KnowledgeVisibility,
+                            scope_type: ((data as any).scope_type || 'organization') as any,
+                            is_master_template: Boolean((data as any).is_master_template),
                             requires_acknowledgment: data.requires_acknowledgment || false,
                             featured: false,
                             department_id: data.department_id || null,
@@ -1466,6 +1474,11 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 visibility: formData.visibility,
                 requires_acknowledgment: formData.requires_acknowledgment,
                 status: status,
+                organization_id: currentOrganization?.id || null,
+                hotel_id: currentHotel?.id || normalizedPropertyId || null,
+                brand_id: currentBrand?.id || null,
+                scope_type: formData.scope_type || 'organization',
+                is_master_template: isPlatformAdmin ? Boolean(formData.is_master_template) : false,
                 property_id: normalizedPropertyId,
                 department_id: isUuid(formData.department_id) ? formData.department_id : null,
                 category_id: isUuid(formData.category_id) ? formData.category_id : null,
@@ -1517,6 +1530,11 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                     title: formData.title,
                     status: status,
                     visibility: formData.visibility,
+                    organization_id: currentOrganization?.id || null,
+                    hotel_id: currentHotel?.id || normalizedPropertyId || null,
+                    brand_id: currentBrand?.id || null,
+                    scope_type: formData.scope_type || 'organization',
+                    is_master_template: isPlatformAdmin ? Boolean(formData.is_master_template) : false,
                     created_by: user?.id
                 }
                 const { data, error } = await supabase
@@ -1785,8 +1803,8 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     <Input
                                         value={formData.title}
                                         onChange={e => updateField('title', e.target.value)}
-                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. five-star VIP Arrival Protocol)...')}
-                                        className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                                        placeholder={t('editor.title_placeholder', 'Article Title (e.g. Five-Star VIP Arrival Protocol)...')}
+                                        className="text-2xl md:text-3xl font-serif font-display font-black text-hotel-navy dark:text-white border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
                                     />
                                 ) : (
                                     <Input
@@ -1794,7 +1812,7 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                         onChange={e => updateField('title_ar', e.target.value)}
                                         dir="rtl"
                                         placeholder={t('editor.title_placeholder_ar', 'عنوان المستند بالعربية...')}
-                                        className="text-2xl md:text-3xl font-bold border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight"
+                                        className="text-2xl md:text-3xl font-serif font-display font-bold text-hotel-navy dark:text-white border-none px-0 shadow-none focus-visible:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-600 tracking-tight font-arabic"
                                     />
                                 )}
                                 <div className="h-px w-full bg-slate-100 dark:bg-slate-800 my-2" />
@@ -2336,6 +2354,46 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                                     {visibilitySummary}
                                 </div>
                             </div>
+
+                            {/* Multi-Tenant Scope Type */}
+                            <div className="pt-2 border-t space-y-1.5">
+                                <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                                    Tenant Scope Level
+                                </Label>
+                                <Select
+                                    value={formData.scope_type}
+                                    onValueChange={v => updateField('scope_type', v as any)}
+                                >
+                                    <SelectTrigger className="w-full text-xs bg-white dark:bg-slate-950">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="organization">Organization-wide (All brands & hotels)</SelectItem>
+                                        <SelectItem value="brand">Brand-specific ({currentBrand?.name || 'Selected Brand'})</SelectItem>
+                                        <SelectItem value="hotel">Hotel-specific ({currentHotel?.name || 'Selected Hotel'})</SelectItem>
+                                        <SelectItem value="department">Department-specific</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            {/* Master Template Toggle (Platform Super Admin only) */}
+                            {isPlatformAdmin && (
+                                <div className="pt-2 border-t flex items-center justify-between p-2.5 rounded-lg bg-amber-50/70 border border-amber-200">
+                                    <div className="space-y-0.5">
+                                        <Label className="text-xs font-bold text-amber-900 cursor-pointer" htmlFor="master-switch">
+                                            Master SOP Template
+                                        </Label>
+                                        <p className="text-[10px] text-amber-700">
+                                            Publish to Platform Master Library for cross-tenant distribution
+                                        </p>
+                                    </div>
+                                    <Switch
+                                        id="master-switch"
+                                        checked={formData.is_master_template}
+                                        onCheckedChange={v => updateField('is_master_template', v)}
+                                    />
+                                </div>
+                            )}
 
                             <div className="pt-2 border-t flex items-center justify-between">
                                 <Label className="text-xs font-medium cursor-pointer" htmlFor="ack-switch">

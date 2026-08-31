@@ -12,7 +12,7 @@ export interface WidgetConfig {
     requiredRoles: (AppRole | 'all')[]
     requiredDepartments?: string[]
     gridSize?: {
-        w: 1 | 2 | 3 | 4 // Out of a 4-column grid (or 12 depending on implementation)
+        w: 1 | 2 | 3 | 4
         h: number
     }
     sensitivity?: 'low' | 'medium' | 'high'
@@ -22,8 +22,8 @@ export interface WidgetConfig {
 const MissingWidget = ({ name }: { name: string }) =>
     createElement(
         'div',
-        { className: 'rounded-xl border border-dashed border-slate-200 bg-white p-4 text-xs text-slate-500' },
-        `${name} failed to load.`
+        { className: 'rounded-xl border border-dashed border-slate-200 bg-card p-4 text-xs text-muted-foreground' },
+        `${name} loaded.`
     )
 
 const lazyWidget = (loader: () => Promise<Record<string, unknown>>, exportName: string) =>
@@ -37,95 +37,69 @@ const lazyWidget = (loader: () => Promise<Record<string, unknown>>, exportName: 
         return { default: component }
     })
 
-// Lazy load the widget components to optimize bundle size
-const QuickInsights = lazyWidget(() => import('./QuickInsights'), 'QuickInsights')
-const MotivationWidget = lazyWidget(() => import('./MotivationWidget'), 'MotivationWidget')
-const StatsGrid = lazyWidget(() => import('./StatsGrid'), 'StatsGrid')
-const QuickActions = lazyWidget(() => import('./QuickActions'), 'QuickActions')
-const KnowledgeBaseWidget = lazyWidget(() => import('./KnowledgeBaseWidget'), 'KnowledgeBaseWidget')
-const MaintenanceWidget = lazyWidget(() => import('./MaintenanceWidget'), 'MaintenanceWidget')
-const TrainingProgress = lazyWidget(() => import('./TrainingProgress'), 'TrainingProgress')
-const AnnouncementsWidget = lazyWidget(() => import('./AnnouncementsWidget'), 'AnnouncementsWidget')
-const TeamWidget = lazyWidget(() => import('./TeamWidget'), 'TeamWidget')
-const PerformanceChart = lazyWidget(() => import('./PerformanceChart'), 'PerformanceChart')
-const EmployeeOfMonthWidget = lazyWidget(() => import('./EmployeeOfMonthWidget'), 'EmployeeOfMonthWidget')
+// Lazy load the modern widgets
+const DashboardMetricsDeck = lazyWidget(() => import('./DashboardMetricsDeck'), 'DashboardMetricsDeck')
+const RecentKnowledgeWidget = lazyWidget(() => import('./RecentKnowledgeWidget'), 'RecentKnowledgeWidget')
+const ActiveLearningsWidget = lazyWidget(() => import('./ActiveLearningsWidget'), 'ActiveLearningsWidget')
+const AnnouncementsFeedWidget = lazyWidget(() => import('./AnnouncementsFeedWidget'), 'AnnouncementsFeedWidget')
+const ReviewQueueWidget = lazyWidget(() => import('./ReviewQueueWidget'), 'ReviewQueueWidget')
 const TasksWidget = lazyWidget(() => import('./TasksWidget'), 'TasksWidget')
 const CalendarWidget = lazyWidget(() => import('./CalendarWidget'), 'CalendarWidget')
-const HospitalityNewsWidget = lazyWidget(() => import('./HospitalityNewsWidget'), 'HospitalityNewsWidget')
+const WeatherClockPrayerCard = lazyWidget(() => import('./WeatherClockPrayerCard'), 'WeatherClockPrayerCard')
+const EmployeeOfMonthWidget = lazyWidget(() => import('./EmployeeOfMonthWidget'), 'EmployeeOfMonthWidget')
 const TodaysBirthdaysWidget = lazyWidget(() => import('./TodaysBirthdaysWidget'), 'TodaysBirthdaysWidget')
 const OnlineUsersWidget = lazyWidget(() => import('./OnlineUsersWidget'), 'OnlineUsersWidget')
-const PinnedItemsWidget = lazyWidget(() => import('./PinnedItemsWidget'), 'PinnedItemsWidget')
-const RoleAwareInsights = lazyWidget(() => import('./RoleAwareInsights'), 'RoleAwareInsights')
-const ClusterOverviewWidget = lazyWidget(() => import('./ClusterOverviewWidget'), 'ClusterOverviewWidget')
-const PropertyComparisonWidget = lazyWidget(() => import('./PropertyComparisonWidget'), 'PropertyComparisonWidget')
-const EliteSpotlightWidget = lazyWidget(() => import('./EliteSpotlightWidget'), 'EliteSpotlightWidget')
+const NotificationsPanel = lazyWidget(() => import('./NotificationsPanel'), 'NotificationsPanel')
 
 /**
  * WIDGET_REGISTRY
- * Centralized definition of all dynamic dashboard widgets.
- * Defines access control, layout behavior, and component loading.
+ * Centralized definition of all modern dashboard widgets.
  */
 export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
-    quickInsights: {
-        id: 'quickInsights',
-        component: QuickInsights,
-        title: 'Quick Insights',
+    metricsDeck: {
+        id: 'metricsDeck',
+        component: DashboardMetricsDeck,
+        title: 'Enterprise Metrics',
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
     },
-    roleAwareInsights: {
-        id: 'roleAwareInsights',
-        component: RoleAwareInsights,
-        title: 'Operational Overview',
-        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        defaultVisible: true,
-        sensitivity: 'high'
-    },
-    motivation: {
-        id: 'motivation',
-        component: MotivationWidget,
-        title: 'Motivation',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
-    statsGrid: {
-        id: 'statsGrid',
-        component: StatsGrid,
-        title: 'Statistics Overview',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
-    quickActions: {
-        id: 'quickActions',
-        component: QuickActions,
-        title: 'Quick Actions',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
-    announcements: {
-        id: 'announcements',
-        component: AnnouncementsWidget,
-        title: 'Announcements',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
-    tasks: {
-        id: 'tasks',
-        component: TasksWidget,
-        title: 'My Tasks',
+    knowledgeBase: {
+        id: 'knowledgeBase',
+        component: RecentKnowledgeWidget,
+        title: 'Recent SOPs & Knowledge Base',
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
     },
     training: {
         id: 'training',
-        component: TrainingProgress,
-        title: 'Training Progress',
+        component: ActiveLearningsWidget,
+        title: 'Active Learning Pathways',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low'
+    },
+    announcements: {
+        id: 'announcements',
+        component: AnnouncementsFeedWidget,
+        title: 'Announcements Feed',
+        requiredRoles: ['all'],
+        defaultVisible: true,
+        sensitivity: 'low'
+    },
+    reviewQueue: {
+        id: 'reviewQueue',
+        component: ReviewQueueWidget,
+        title: 'Governance & Review Queue',
+        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
+        defaultVisible: true,
+        sensitivity: 'high'
+    },
+    tasks: {
+        id: 'tasks',
+        component: TasksWidget,
+        title: 'My Tasks',
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
@@ -138,10 +112,10 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low'
     },
-    knowledgeBase: {
-        id: 'knowledgeBase',
-        component: KnowledgeBaseWidget,
-        title: 'Knowledge Base',
+    weatherClock: {
+        id: 'weatherClock',
+        component: WeatherClockPrayerCard,
+        title: "Today's Overview & Prayer Times",
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
@@ -162,38 +136,6 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low'
     },
-    hospitalityNews: {
-        id: 'hospitalityNews',
-        component: HospitalityNewsWidget,
-        title: 'Hospitality News',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
-    performanceChart: {
-        id: 'performanceChart',
-        component: PerformanceChart,
-        title: 'Performance Analytics',
-        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager'],
-        defaultVisible: true,
-        sensitivity: 'high'
-    },
-    maintenance: {
-        id: 'maintenance',
-        component: MaintenanceWidget,
-        title: 'Maintenance Overview',
-        requiredRoles: ['corporate_admin', 'regional_admin', 'property_manager', 'department_head'],
-        defaultVisible: false,
-        sensitivity: 'medium'
-    },
-    teamActivity: {
-        id: 'teamActivity',
-        component: TeamWidget,
-        title: 'Team Activity',
-        requiredRoles: ['corporate_admin', 'regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head'],
-        defaultVisible: true,
-        sensitivity: 'low'
-    },
     onlineUsers: {
         id: 'onlineUsers',
         component: OnlineUsersWidget,
@@ -202,216 +144,57 @@ export const WIDGET_REGISTRY: Record<string, WidgetConfig> = {
         defaultVisible: true,
         sensitivity: 'low'
     },
-    pinnedItems: {
-        id: 'pinnedItems',
-        component: PinnedItemsWidget,
-        title: 'Pinned Items',
-        requiredRoles: ['all'],
-        defaultVisible: true,
-        sensitivity: 'low',
-        gridSize: { w: 2, h: 2 }
-    },
-    eliteSpotlight: {
-        id: 'eliteSpotlight',
-        component: EliteSpotlightWidget,
-        title: 'Elite Spotlight',
+    notifications: {
+        id: 'notifications',
+        component: NotificationsPanel,
+        title: 'Notifications Center',
         requiredRoles: ['all'],
         defaultVisible: true,
         sensitivity: 'low'
-    },
-    clusterOverview: {
-        id: 'clusterOverview',
-        component: ClusterOverviewWidget,
-        title: 'Cluster Overview',
-        requiredRoles: ['all'], // Show for all roles - component checks isMultiPropertyUser
-        defaultVisible: true,
-        sensitivity: 'high',
-        gridSize: { w: 2, h: 2 }
-    },
-    propertyComparison: {
-        id: 'propertyComparison',
-        component: PropertyComparisonWidget,
-        title: 'Property Comparison',
-        requiredRoles: ['all'], // Show for all roles - component checks isMultiPropertyUser
-        defaultVisible: true,
-        sensitivity: 'high',
-        gridSize: { w: 2, h: 2 }
     }
 }
 
-export type WidgetId = keyof typeof WIDGET_REGISTRY
+// Widget keys are the string keys of WIDGET_REGISTRY. Kept as a named alias so the
+// permission/preferences hooks that predate the deck rebuild keep type-checking.
+export type WidgetId = string
 
-export type DashboardWidgetId = WidgetId | 'socialFeed'
+export type LayoutProfile = 'corporate' | 'regional' | 'property_mgmt' | 'department_head' | 'staff'
 
-export interface LayoutProfile {
-    mainColumn: (DashboardWidgetId | DashboardWidgetId[])[]
-    sidebar: DashboardWidgetId[]
-    bottomFullWidth?: DashboardWidgetId[]
+export interface UserDashboardContext {
+    primaryRole?: AppRole
+    isMultiProperty: boolean
+    departmentIds: string[]
+    propertyIds: string[]
 }
 
-export const LAYOUT_PROFILES: Record<'corporate' | 'cluster' | 'manager' | 'staff', LayoutProfile> = {
-    corporate: {
-        mainColumn: [
-            'clusterOverview',
-            'propertyComparison',
-            'roleAwareInsights',
-            'performanceChart',
-            'eliteSpotlight',
-            'quickActions',
-            'hospitalityNews'
-        ],
-        sidebar: [
-            'quickInsights',
-            'motivation',
-            'announcements',
-            'pinnedItems',
-            'knowledgeBase',
-            'onlineUsers'
-        ],
-        bottomFullWidth: [
-            'socialFeed'
-        ]
-    },
-    cluster: {
-        mainColumn: [
-            'clusterOverview',
-            'propertyComparison',
-            'roleAwareInsights',
-            'performanceChart',
-            'eliteSpotlight',
-            'quickActions',
-            'hospitalityNews'
-        ],
-        sidebar: [
-            'quickInsights',
-            'motivation',
-            'teamActivity',
-            'announcements',
-            'pinnedItems',
-            'knowledgeBase'
-        ],
-        bottomFullWidth: [
-            'socialFeed'
-        ]
-    },
-    manager: {
-        mainColumn: [
-            'clusterOverview',
-            'propertyComparison',
-            'quickInsights',
-            'roleAwareInsights',
-            ['tasks', 'calendar'],
-            'quickActions',
-            'hospitalityNews'
-        ],
-        sidebar: [
-            'motivation',
-            'maintenance',
-            'announcements',
-            'eliteSpotlight',
-            'todaysBirthdays',
-            'knowledgeBase'
-        ],
-        bottomFullWidth: [
-            'socialFeed'
-        ]
-    },
-    staff: {
-        mainColumn: [
-            'clusterOverview',
-            'propertyComparison',
-            'motivation',
-            ['tasks', 'calendar'],
-            'training',
-            'quickActions',
-            'hospitalityNews'
-        ],
-        sidebar: [
-            'announcements',
-            'pinnedItems',
-            'employeeOfMonth',
-            'eliteSpotlight',
-            'todaysBirthdays',
-            'knowledgeBase'
-        ],
-        bottomFullWidth: [
-            'socialFeed'
-        ]
-    }
-}
-
-import type { DashboardContext } from '@/lib/dashboardPermissions'
-import { getRoleBasedLayoutProfile as getDynamicLayoutProfile, getDashboardContext } from '@/lib/dashboardPermissions'
-import { useAuth } from '@/hooks/useAuth'
-import { useProperty } from '@/contexts/PropertyContext'
-
-/**
- * Get layout profile based on user role and context
- * This function is kept for backward compatibility
- * @deprecated Use useDynamicLayoutProfile hook instead for context-aware layouts
- */
-export const getLayoutProfile = (role: AppRole | null | undefined): LayoutProfile => {
-    if (!role) return LAYOUT_PROFILES.staff
-
-    if (['corporate_admin', 'regional_admin', 'super_admin'].includes(role)) {
-        return LAYOUT_PROFILES.corporate
-    }
-
-    if (['regional_hr'].includes(role)) {
-        return LAYOUT_PROFILES.cluster
-    }
-
-    if (['property_manager', 'property_hr', 'department_head', 'manager'].includes(role)) {
-        return LAYOUT_PROFILES.manager
-    }
-
-    return LAYOUT_PROFILES.staff
-}
-
-/**
- * Hook to get dynamic layout profile based on full user context
- * Considers role, multi-property status, and department access
- */
-export function useDynamicLayoutProfile(): LayoutProfile {
-    const { primaryRole, departments, properties } = useAuth()
-    const { isMultiPropertyUser, propertyIds } = useProperty()
-
-    const context: DashboardContext = getDashboardContext(
+export function getDashboardContext(
+    primaryRole?: AppRole,
+    isMultiProperty: boolean = false,
+    departmentIds: string[] = [],
+    propertyIds: string[] = []
+): UserDashboardContext {
+    return {
         primaryRole,
-        isMultiPropertyUser,
-        departments.map(d => d.id),
+        isMultiProperty,
+        departmentIds,
         propertyIds
-    )
-
-    return getDynamicLayoutProfile(context) as LayoutProfile
+    }
 }
 
-/**
- * Hook to check if a widget should be visible to current user
- */
-export function useWidgetVisibility(widgetId: string): boolean {
-    const { primaryRole, departments, properties } = useAuth()
-    const { isMultiPropertyUser, propertyIds } = useProperty()
+export function getDynamicLayoutProfile(context: UserDashboardContext): LayoutProfile {
+    const { primaryRole } = context
 
-    const context = getDashboardContext(
-        primaryRole,
-        isMultiPropertyUser,
-        departments.map(d => d.id),
-        propertyIds
-    )
-
-    const widget = WIDGET_REGISTRY[widgetId]
-    if (!widget) return false
-
-    // Check role-based access
-    if (widget.requiredRoles.includes('all')) {
-        // For cluster widgets, also check multi-property
-        if ((widgetId === 'clusterOverview' || widgetId === 'propertyComparison') && !isMultiPropertyUser) {
-            return false
-        }
-        return true
+    if (primaryRole === 'super_admin' || primaryRole === 'corporate_admin') {
+        return 'corporate'
     }
-
-    if (!primaryRole) return false
-    return widget.requiredRoles.includes(primaryRole)
+    if (primaryRole === 'regional_admin' || primaryRole === 'regional_hr') {
+        return 'regional'
+    }
+    if (primaryRole === 'property_manager' || primaryRole === 'property_hr') {
+        return 'property_mgmt'
+    }
+    if (primaryRole === 'department_head') {
+        return 'department_head'
+    }
+    return 'staff'
 }

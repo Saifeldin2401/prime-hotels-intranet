@@ -305,7 +305,7 @@ AS $$
     FROM public.documents d
     LEFT JOIN recent ON recent.document_id = d.id
     WHERE d.is_deleted IS NOT TRUE
-      AND d.status = 'published'
+      AND (d.status = 'PUBLISHED' OR (d.status)::text = 'published')
       AND (SELECT ok FROM allowed)
     ORDER BY coalesce(recent.recent_views, 0) DESC, coalesce(d.view_count, 0) DESC
     LIMIT greatest(p_limit, 1);

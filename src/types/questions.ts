@@ -85,6 +85,13 @@ export interface KnowledgeQuestion {
     status: QuestionStatus
     version: number
 
+    // Multi-Tenant & Master Scoping
+    organization_id?: string
+    hotel_id?: string
+    brand_id?: string
+    scope_type?: string
+    is_master_template?: boolean
+
     // Review
     reviewed_by?: string
     reviewed_at?: string
@@ -263,6 +270,11 @@ export interface QuestionFormData {
     tags: string[]
     estimated_time_seconds: number
     points: number
+    organization_id?: string
+    hotel_id?: string
+    brand_id?: string
+    scope_type?: string
+    is_master_template?: boolean
     options: Array<{
         option_text: string
         option_text_ar?: string

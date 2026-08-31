@@ -1,16 +1,16 @@
-import { PublicNavbar } from '@/components/layout/PublicNavbar'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { PublicNavbar } from '@/components/layout/PublicNavbar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     verifyCertificate,
     generateCertificatePDF,
     loadLogoAsDataUrl,
     type Certificate
-} from '@/services/certificateService'
-import { format } from 'date-fns'
-import { ar, enUS } from 'date-fns/locale'
-import { motion, AnimatePresence } from 'framer-motion'
+} from '@/services/certificateService';
+import { format } from 'date-fns';
+import { ar, enUS } from 'date-fns/locale';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft,
     Award,
@@ -19,142 +19,159 @@ import {
     CheckCircle2,
     Copy,
     Download,
-    ExternalLink,
     FileCheck2,
     FileText,
     Globe,
     Layers,
     Lock,
     Printer,
-    QrCode,
     RefreshCw,
     Search,
     ShieldAlert,
     ShieldCheck,
     Sparkles,
     User,
-    XCircle
-} from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
-import { useParams } from 'react-router-dom'
-import { toast } from 'sonner'
+} from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
+import { useParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { canela, inter, mono, neueHaas } from './publicConstants';
 
 interface CertificateVerificationResult {
-    isValid: boolean
-    certificate?: Certificate
-    verifiedAt?: string
-    message?: string
+    isValid: boolean;
+    certificate?: Certificate;
+    verifiedAt?: string;
+    message?: string;
 }
 
 interface DetailItemProps {
-    icon: React.ComponentType<{ className?: string }>
-    label: string
-    value?: string | number | null
-    className?: string
-    highlight?: boolean
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    value?: string | number | null;
+    className?: string;
+    highlight?: boolean;
+}
+
+function OfficialSealGraphic({ className = '', isRTL = false }: { className?: string; isRTL?: boolean }) {
+    return (
+        <div className={`relative flex items-center justify-center ${className}`}>
+            <div className="absolute inset-0 rounded-full bg-[#C45B2F]/20 blur-xl animate-pulse" />
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-full border-2 border-[#C45B2F] bg-gradient-to-br from-[#1C222D] via-[#12161F] to-[#0A0D12] p-1.5 shadow-[0_0_40px_rgba(196,91,47,0.35)] flex items-center justify-center select-none">
+                <div className="w-full h-full rounded-full border border-dashed border-[#E07A5F]/70 flex flex-col items-center justify-center p-2 text-center relative overflow-hidden">
+                    <div className="absolute inset-0 opacity-15 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-amber-400 via-transparent to-transparent pointer-events-none" />
+                    <ShieldCheck className="w-8 h-8 text-[#E07A5F] drop-shadow-md mb-1" />
+                    <span className="text-[8px] font-black uppercase tracking-[0.2em] text-[#F3C99F] leading-none">
+                        ALTUS ADVISORY
+                    </span>
+                    <span className="text-[6.5px] font-bold tracking-[0.15em] text-[#C45B2F] uppercase mt-1">
+                        {isRTL ? 'معتمد رسمياً • KSA' : 'OFFICIAL SEAL • KSA'}
+                    </span>
+                </div>
+            </div>
+        </div>
+    );
 }
 
 export default function VerifyCertificate() {
-    const { code: urlCode } = useParams<{ code?: string }>()
-    const { t, i18n } = useTranslation('public')
-    const isRTL = i18n.dir() === 'rtl'
-    const dateLocale = i18n.language === 'ar' ? ar : enUS
+    const { code: urlCode } = useParams<{ code?: string }>();
+    const { t, i18n } = useTranslation('public');
+    const isRTL = i18n.dir() === 'rtl';
+    const dateLocale = i18n.language === 'ar' ? ar : enUS;
 
-    const [code, setCode] = useState(urlCode || '')
-    const [isVerifying, setIsVerifying] = useState(false)
-    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
-    const [result, setResult] = useState<CertificateVerificationResult | null>(null)
-    const [error, setError] = useState<string | null>(null)
+    const [code, setCode] = useState(urlCode || '');
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [result, setResult] = useState<CertificateVerificationResult | null>(null);
+    const [error, setError] = useState<string | null>(null);
 
     const handleVerify = useCallback(async (e?: React.FormEvent, targetCode?: string) => {
-        if (e) e.preventDefault()
-        const queryCode = (targetCode || code).trim()
-        if (!queryCode) return
+        if (e) e.preventDefault();
+        const queryCode = (targetCode || code).trim();
+        if (!queryCode) return;
 
-        setIsVerifying(true)
-        setError(null)
-        setResult(null)
+        setIsVerifying(true);
+        setError(null);
+        setResult(null);
 
         try {
-            const data = await verifyCertificate(queryCode)
+            const data = await verifyCertificate(queryCode);
             if (data && data.isValid) {
-                setResult(data as CertificateVerificationResult)
-                setError(null)
+                setResult(data as CertificateVerificationResult);
+                setError(null);
             } else {
-                setResult(null)
-                setError(t('verification.invalid_code', 'Invalid Verification Code'))
+                setResult(null);
+                setError(t('verification.invalid_code', 'Invalid Verification Code'));
             }
         } catch (err) {
-            console.error('Verification error:', err)
-            setError(t('verification.invalid_code', 'Invalid Verification Code'))
-            setResult(null)
+            console.error('Verification error:', err);
+            setError(t('verification.invalid_code', 'Invalid Verification Code'));
+            setResult(null);
         } finally {
-            setIsVerifying(false)
+            setIsVerifying(false);
         }
-    }, [code, t])
+    }, [code, t]);
 
-    // Auto-verify if code is present in URL
     useEffect(() => {
         if (urlCode) {
-            void handleVerify(undefined, urlCode)
+            void handleVerify(undefined, urlCode);
         }
-    }, [urlCode, handleVerify])
+    }, [urlCode, handleVerify]);
 
     const handleCopyLink = () => {
-        const url = `${window.location.origin}/verify/${encodeURIComponent(code.trim())}`
-        void navigator.clipboard.writeText(url)
-        toast.success(t('verification.copy_success', 'Verification link copied to clipboard'))
-    }
+        const url = `${window.location.origin}/verify/${encodeURIComponent(code.trim())}`;
+        void navigator.clipboard.writeText(url);
+        toast.success(t('verification.copy_success', 'Verification link copied to clipboard'));
+    };
 
     const handlePrint = () => {
-        window.print()
-    }
+        window.print();
+    };
 
     const handleDownloadPDF = async () => {
-        if (!result?.certificate) return
-        setIsGeneratingPdf(true)
-        toast.info(t('verification.generating_pdf', 'Generating official PDF certificate...'))
+        if (!result?.certificate) return;
+        setIsGeneratingPdf(true);
+        toast.info(t('verification.generating_pdf', 'Generating official PDF certificate...'));
 
         try {
-            const logoUrl = await loadLogoAsDataUrl()
-            const pdfBlob = await generateCertificatePDF(result.certificate, logoUrl || undefined)
+            const logoUrl = await loadLogoAsDataUrl();
+            const pdfBlob = await generateCertificatePDF(result.certificate, logoUrl || undefined);
             
-            const downloadUrl = URL.createObjectURL(pdfBlob)
-            const a = document.createElement('a')
-            a.href = downloadUrl
-            a.download = `ALTUS_Certificate_${result.certificate.certificateNumber || result.certificate.verificationCode}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            URL.revokeObjectURL(downloadUrl)
+            const downloadUrl = URL.createObjectURL(pdfBlob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `ALTUS_Certificate_${result.certificate.certificateNumber || result.certificate.verificationCode}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(downloadUrl);
 
-            toast.success(t('verification.pdf_success', 'Official Certificate PDF downloaded successfully!'))
+            toast.success(t('verification.pdf_success', 'Official Certificate PDF downloaded successfully!'));
         } catch (err) {
-            console.error('Failed to generate PDF:', err)
-            toast.error(t('verification.pdf_error', 'Failed to generate PDF. You can still print the official report.'))
+            console.error('Failed to generate PDF:', err);
+            toast.error(t('verification.pdf_error', 'Failed to generate PDF. You can still print the official report.'));
         } finally {
-            setIsGeneratingPdf(false)
+            setIsGeneratingPdf(false);
         }
-    }
+    };
 
     const formatDateString = (dateVal?: Date | string | null) => {
-        if (!dateVal) return 'N/A'
+        if (!dateVal) return 'N/A';
         try {
-            const dateObj = typeof dateVal === 'string' ? new Date(dateVal) : dateVal
-            return format(dateObj, 'PPPP', { locale: dateLocale })
+            const dateObj = typeof dateVal === 'string' ? new Date(dateVal) : dateVal;
+            return format(dateObj, 'PPPP', { locale: dateLocale });
         } catch {
-            return String(dateVal)
+            return String(dateVal);
         }
-    }
+    };
 
     return (
-        <div className="verify-page-wrapper min-h-screen text-slate-100 flex flex-col font-sans relative overflow-x-hidden selection:bg-amber-500/30 selection:text-amber-200" dir={isRTL ? 'rtl' : 'ltr'}>
+        <div className="verify-page-wrapper min-h-screen text-slate-100 flex flex-col font-sans relative overflow-x-hidden selection:bg-[#C45B2F]/30 selection:text-white" dir={isRTL ? 'rtl' : 'ltr'}>
             
             {/* Global Print Style Overrides to Guarantee Pure White Single-Page Output */}
             <style>{`
                 .verify-page-wrapper {
-                    background-color: #070B14;
+                    background-color: #0A0D12;
                 }
                 @media print {
                     @page {
@@ -180,20 +197,16 @@ export default function VerifyCertificate() {
             `}</style>
 
             {/* Dark Ambient Lighting & Background Effects (Hidden on Print) */}
-            <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(245,158,11,0.15),rgba(7,11,20,1))] print:hidden" />
+            <div className="fixed inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(196,91,47,0.15),rgba(10,13,18,1))] print:hidden" />
             <motion.div 
                 animate={{
-                    scale: [1, 1.2, 1],
-                    opacity: [0.15, 0.25, 0.15]
+                    scale: [1, 1.15, 1],
+                    opacity: [0.12, 0.22, 0.12]
                 }}
-                transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-                className="fixed top-1/4 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-amber-500/10 rounded-full blur-[160px] pointer-events-none print:hidden" 
+                transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
+                className="fixed top-1/4 start-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] bg-[#C45B2F]/15 rounded-full blur-[160px] pointer-events-none print:hidden" 
             />
-            <div className="fixed bottom-10 end-10 w-[450px] h-[450px] bg-indigo-600/10 rounded-full blur-[130px] pointer-events-none print:hidden" />
-            <div className="fixed inset-0 opacity-[0.03] pointer-events-none print:hidden" style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.9) 1px, transparent 0)',
-                backgroundSize: '40px 40px'
-            }} />
+            <div className="fixed bottom-10 end-10 w-[450px] h-[450px] bg-slate-800/20 rounded-full blur-[130px] pointer-events-none print:hidden" />
 
             {/* Navigation Header (Hidden on Print) */}
             <div className="print:hidden">
@@ -201,7 +214,7 @@ export default function VerifyCertificate() {
             </div>
 
             {/* Main Web Content (Hidden on Print) */}
-            <main className="flex-grow pt-32 pb-20 px-4 md:px-6 relative z-10 print:hidden">
+            <main className="flex-grow pt-32 pb-24 px-4 sm:px-6 md:px-8 relative z-10 print:hidden">
                 <div className="max-w-4xl mx-auto">
 
                     {/* Hero Branding Banner */}
@@ -211,27 +224,24 @@ export default function VerifyCertificate() {
                         transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
                         className="text-center mb-12"
                     >
-                        {/* Animated Emblem */}
-                        <div className="relative w-20 h-20 mx-auto mb-6 flex items-center justify-center">
-                            <div className="absolute inset-0 rounded-3xl bg-amber-500/20 blur-xl animate-pulse" />
-                            <div style={{ backgroundColor: '#0F172A', borderColor: 'rgba(245, 158, 11, 0.4)' }} className="relative w-20 h-20 rounded-3xl border flex items-center justify-center shadow-xl shadow-amber-500/10">
-                                <ShieldCheck className="w-10 h-10 text-amber-400" />
-                            </div>
+                        {/* Official Seal Graphic Hero Emblem */}
+                        <div className="mx-auto mb-6 flex justify-center">
+                            <OfficialSealGraphic isRTL={isRTL} />
                         </div>
 
-                        {/* Gold Badge */}
-                        <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)' }} className="inline-flex items-center gap-2 border rounded-full px-5 py-2 mb-6 shadow-xl shadow-amber-500/10">
-                            <Sparkles className="w-4 h-4 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
-                            <span className="text-xs font-bold text-amber-300 uppercase tracking-widest">
+                        {/* Gold/Copper Badge */}
+                        <div className="inline-flex items-center gap-2.5 border border-[#C45B2F]/40 bg-[#C45B2F]/10 rounded-full px-5 py-2 mb-6 shadow-xl shadow-[#C45B2F]/10">
+                            <Sparkles className="w-4 h-4 text-[#E07A5F] animate-spin" style={{ animationDuration: '7s' }} />
+                            <span className="text-xs font-bold text-[#F3C99F] uppercase tracking-widest" style={neueHaas}>
                                 {t('verification.badge', 'ALTUS CONNECT • OFFICIAL CREDENTIAL VERIFICATION')}
                             </span>
                         </div>
 
-                        {/* Title */}
-                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-extrabold bg-gradient-to-r from-white via-slate-100 to-amber-200 bg-clip-text text-transparent mb-5 tracking-tight leading-tight">
+                        {/* Title with Canela font */}
+                        <h1 className="text-4xl sm:text-5xl md:text-6xl font-normal text-white mb-4 tracking-tight leading-tight" style={canela}>
                             {t('verification.title', 'Certificate Verification')}
                         </h1>
-                        <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto leading-relaxed">
+                        <p className="text-base sm:text-lg text-slate-300 max-w-xl mx-auto leading-relaxed" style={inter}>
                             {t('verification.subtitle', 'Official validation service for ALTUS Advisory certifications and accreditation credentials across KSA.')}
                         </p>
                     </motion.div>
@@ -247,43 +257,42 @@ export default function VerifyCertificate() {
                                 transition={{ duration: 0.4 }}
                                 className="space-y-10"
                             >
-                                <div style={{ backgroundColor: '#0F172A', borderColor: '#1E293B' }} className="shadow-[0_0_60px_rgba(245,158,11,0.15)] border rounded-3xl overflow-hidden">
+                                <div className="bg-[#12161F] border border-[#C45B2F]/40 shadow-[0_0_60px_rgba(0,0,0,0.8),0_0_30px_rgba(196,91,47,0.15)] rounded-3xl overflow-hidden">
                                     {/* Multi-tone Metallic Ribbon Accent */}
-                                    <div className="h-2.5 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-600" />
+                                    <div className="h-2.5 bg-gradient-to-r from-[#C45B2F] via-[#E07A5F] to-[#D9C6A3]" />
                                     
                                     <div className="p-6 sm:p-10 md:p-12">
                                         <form onSubmit={(e) => void handleVerify(e)} className="space-y-8">
                                             <div className="space-y-3">
                                                 <div className="flex items-center justify-between text-sm font-semibold text-slate-200">
-                                                    <label className="flex items-center gap-2">
-                                                        <FileCheck2 className="w-4 h-4 text-amber-400" />
+                                                    <label className="flex items-center gap-2" style={neueHaas}>
+                                                        <FileCheck2 className="w-4 h-4 text-[#E07A5F]" />
                                                         <span>{t('verification.input_label', 'Verification Code / Certificate Number')}</span>
                                                     </label>
-                                                    <span style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }} className="text-xs text-amber-300 font-mono px-3 py-1 rounded-lg border">
+                                                    <span className="text-xs text-[#E07A5F] px-3 py-1 rounded-lg border border-[#C45B2F]/30 bg-[#C45B2F]/10" style={mono}>
                                                         Format: CERT-XXXX-XXXX
                                                     </span>
                                                 </div>
                                                 
                                                 <div className="relative group">
-                                                    <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-amber-500/40 via-yellow-400/40 to-amber-600/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-500 blur-md pointer-events-none" />
+                                                    <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-[#C45B2F]/40 via-[#E07A5F]/40 to-[#D9C6A3]/40 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-500 blur-md pointer-events-none" />
                                                     <div className="relative flex items-center">
                                                         <Input
                                                             value={code}
                                                             onChange={(e) => setCode(e.target.value)}
                                                             placeholder={t('verification.input_placeholder', 'Enter code e.g. PH-CERT-2026-001')}
-                                                            style={{ backgroundColor: '#070B14', borderColor: '#334155', color: '#FFFFFF' }}
-                                                            className="h-16 sm:h-20 text-lg sm:text-xl ps-14 pe-14 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/20 placeholder:text-slate-500 rounded-2xl shadow-inner font-mono tracking-widest uppercase"
+                                                            className="h-16 sm:h-20 text-lg sm:text-xl ps-14 pe-14 bg-[#0A0D12] border-slate-700 text-white focus:border-[#C45B2F] focus:ring-4 focus:ring-[#C45B2F]/20 placeholder:text-slate-500 rounded-2xl shadow-inner tracking-widest uppercase"
+                                                            style={mono}
                                                             disabled={isVerifying}
                                                             autoComplete="off"
                                                         />
-                                                        <Search className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 text-amber-400 pointer-events-none ${isRTL ? 'end-5' : 'start-5'}`} />
+                                                        <Search className={`absolute top-1/2 -translate-y-1/2 w-6 h-6 text-[#E07A5F] pointer-events-none ${isRTL ? 'end-5' : 'start-5'}`} />
                                                         
                                                         {code && (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => setCode('')}
-                                                                style={{ backgroundColor: '#1E293B' }}
-                                                                className={`absolute top-1/2 -translate-y-1/2 text-slate-400 hover:text-white w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors ${isRTL ? 'start-5' : 'end-5'}`}
+                                                                className={`absolute top-1/2 -translate-y-1/2 bg-slate-800 text-slate-400 hover:text-white w-7 h-7 rounded-full flex items-center justify-center text-xs transition-colors ${isRTL ? 'start-5' : 'end-5'}`}
                                                             >
                                                                 ✕
                                                             </button>
@@ -292,20 +301,21 @@ export default function VerifyCertificate() {
                                                 </div>
                                             </div>
 
-                                            {/* Glowing Submit Button */}
+                                            {/* Shimmering Submit Button */}
                                             <Button
                                                 type="submit"
                                                 disabled={isVerifying || !code.trim()}
-                                                className="w-full h-16 sm:h-18 text-lg sm:text-xl font-bold bg-gradient-to-r from-amber-400 via-amber-500 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-slate-950 rounded-2xl transition-all duration-300 shadow-[0_0_30px_rgba(245,158,11,0.4)] hover:shadow-[0_0_45px_rgba(245,158,11,0.6)] active:scale-[0.98] disabled:opacity-50"
+                                                className="w-full h-16 sm:h-18 text-base sm:text-lg font-bold bg-gradient-to-r from-[#C45B2F] via-[#D96B3D] to-[#B34D24] hover:from-[#D96B3D] hover:to-[#C45B2F] text-white rounded-2xl transition-all duration-300 shadow-[0_0_30px_rgba(196,91,47,0.35)] hover:shadow-[0_0_45px_rgba(196,91,47,0.55)] active:scale-[0.98] disabled:opacity-50 tracking-wider uppercase"
+                                                style={neueHaas}
                                             >
                                                 {isVerifying ? (
                                                     <div className="flex items-center justify-center gap-3">
-                                                        <RefreshCw className="w-6 h-6 animate-spin text-slate-950" />
+                                                        <RefreshCw className="w-6 h-6 animate-spin text-white" />
                                                         <span>{t('verification.verifying', 'Authenticating Credential...')}</span>
                                                     </div>
                                                 ) : (
                                                     <div className="flex items-center justify-center gap-2">
-                                                        <ShieldCheck className="w-6 h-6 text-slate-950" />
+                                                        <ShieldCheck className="w-6 h-6 text-white" />
                                                         <span>{t('verification.verify_button', 'Verify Authenticity')}</span>
                                                     </div>
                                                 )}
@@ -313,43 +323,43 @@ export default function VerifyCertificate() {
                                         </form>
 
                                         {/* Security Notice Footer */}
-                                        <div style={{ borderColor: '#1E293B' }} className="mt-8 pt-6 border-t flex items-center justify-between text-xs text-slate-400">
+                                        <div className="mt-8 pt-6 border-t border-white/10 flex items-center justify-between text-xs text-slate-400">
                                             <span className="flex items-center gap-2">
                                                 <Lock className="w-4 h-4 text-emerald-400" />
                                                 {t('verification.secure_notice', 'Encrypted Cryptographic Validation Ledger')}
                                             </span>
-                                            <span className="font-mono text-amber-400 font-bold">ALTUS CONNECT • KSA</span>
+                                            <span className="text-[#E07A5F] font-bold" style={mono}>ALTUS CONNECT • KSA</span>
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* Trust & Accreditation Highlights */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                    <div style={{ backgroundColor: '#0F172A', borderColor: '#1E293B' }} className="p-5 rounded-2xl border flex items-start gap-4 shadow-lg">
-                                        <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }} className="w-10 h-10 rounded-xl border flex items-center justify-center text-amber-400 shrink-0">
+                                    <div className="p-5 rounded-2xl border border-white/10 bg-[#12161F] flex items-start gap-4 shadow-lg">
+                                        <div className="w-10 h-10 rounded-xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 flex items-center justify-center text-[#E07A5F] shrink-0">
                                             <Lock className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-white">Cryptographic Proof</h4>
-                                            <p className="text-xs text-slate-400 mt-1">Direct lookup against ALTUS immutable certificate registry.</p>
+                                            <h4 className="text-sm font-bold text-white" style={neueHaas}>Cryptographic Proof</h4>
+                                            <p className="text-xs text-slate-400 mt-1" style={inter}>Direct lookup against ALTUS immutable certificate registry.</p>
                                         </div>
                                     </div>
-                                    <div style={{ backgroundColor: '#0F172A', borderColor: '#1E293B' }} className="p-5 rounded-2xl border flex items-start gap-4 shadow-lg">
-                                        <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }} className="w-10 h-10 rounded-xl border flex items-center justify-center text-amber-400 shrink-0">
+                                    <div className="p-5 rounded-2xl border border-white/10 bg-[#12161F] flex items-start gap-4 shadow-lg">
+                                        <div className="w-10 h-10 rounded-xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 flex items-center justify-center text-[#E07A5F] shrink-0">
                                             <Globe className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-white">Kingdom Accredited</h4>
-                                            <p className="text-xs text-slate-400 mt-1">Recognized across all partner hotel properties in KSA.</p>
+                                            <h4 className="text-sm font-bold text-white" style={neueHaas}>Kingdom Accredited</h4>
+                                            <p className="text-xs text-slate-400 mt-1" style={inter}>Recognized across partner hotel properties in KSA.</p>
                                         </div>
                                     </div>
-                                    <div style={{ backgroundColor: '#0F172A', borderColor: '#1E293B' }} className="p-5 rounded-2xl border flex items-start gap-4 shadow-lg">
-                                        <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.3)' }} className="w-10 h-10 rounded-xl border flex items-center justify-center text-amber-400 shrink-0">
+                                    <div className="p-5 rounded-2xl border border-white/10 bg-[#12161F] flex items-start gap-4 shadow-lg">
+                                        <div className="w-10 h-10 rounded-xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 flex items-center justify-center text-[#E07A5F] shrink-0">
                                             <Award className="w-5 h-5" />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-white">Official Report</h4>
-                                            <p className="text-xs text-slate-400 mt-1">Generate shareable links and printable verification records.</p>
+                                            <h4 className="text-sm font-bold text-white" style={neueHaas}>Official Report</h4>
+                                            <p className="text-xs text-slate-400 mt-1" style={inter}>Generate shareable links and printable verification records.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -363,22 +373,21 @@ export default function VerifyCertificate() {
                                 exit={{ opacity: 0 }}
                                 transition={{ duration: 0.4 }}
                             >
-                                <div style={{ backgroundColor: '#0F172A', borderColor: 'rgba(244, 63, 94, 0.3)' }} className="shadow-2xl border rounded-3xl overflow-hidden">
+                                <div className="shadow-2xl border border-rose-500/30 bg-[#12161F] rounded-3xl overflow-hidden">
                                     <div className="h-2.5 bg-gradient-to-r from-rose-500 via-red-500 to-orange-500" />
                                     <div className="p-8 sm:p-12 text-center">
-                                        <div style={{ backgroundColor: 'rgba(244, 63, 94, 0.15)', borderColor: 'rgba(244, 63, 94, 0.3)' }} className="inline-flex items-center justify-center w-20 h-20 border rounded-2xl mb-6 text-rose-400 shadow-xl shadow-rose-500/10">
+                                        <div className="inline-flex items-center justify-center w-20 h-20 border border-rose-500/30 bg-rose-500/10 rounded-2xl mb-6 text-rose-400 shadow-xl shadow-rose-500/10">
                                             <ShieldAlert className="w-10 h-10" />
                                         </div>
-                                        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
+                                        <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3" style={canela}>
                                             {t('verification.invalid_code', 'Invalid Verification Code')}
                                         </h2>
-                                        <p className="text-slate-300 mb-8 max-w-md mx-auto text-sm sm:text-base leading-relaxed">
+                                        <p className="text-slate-300 mb-8 max-w-md mx-auto text-sm sm:text-base leading-relaxed" style={inter}>
                                             {t('verification.invalid_desc', 'The certificate code provided could not be authenticated in our records. Please confirm the code from your certificate or contact HR.')}
                                         </p>
                                         <Button
-                                            onClick={() => { setError(null); setCode('') }}
-                                            style={{ backgroundColor: '#1E293B', borderColor: '#334155' }}
-                                            className="hover:bg-slate-700 text-white rounded-xl px-8 py-3.5 text-sm font-semibold transition-all border"
+                                            onClick={() => { setError(null); setCode(''); }}
+                                            className="bg-slate-800 hover:bg-slate-700 text-white rounded-xl px-8 py-3.5 text-sm font-semibold transition-all border border-slate-700"
                                         >
                                             <ArrowLeft className={`w-4 h-4 ${isRTL ? 'ms-2' : 'me-2'}`} />
                                             {t('verification.search_again', 'Try Another Code')}
@@ -396,47 +405,46 @@ export default function VerifyCertificate() {
                                 transition={{ duration: 0.5 }}
                                 className="space-y-6"
                             >
-                                <div style={{ backgroundColor: '#0F172A', borderColor: 'rgba(245, 158, 11, 0.4)' }} className="shadow-[0_0_80px_rgba(245,158,11,0.2)] border rounded-3xl overflow-hidden">
+                                <div className="shadow-[0_0_80px_rgba(0,0,0,0.8),0_0_40px_rgba(196,91,47,0.2)] border border-[#C45B2F]/40 bg-[#12161F] rounded-3xl overflow-hidden">
                                     {/* Gold Header Ribbon */}
-                                    <div className="h-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-500" />
+                                    <div className="h-3 bg-gradient-to-r from-[#C45B2F] via-[#E07A5F] to-[#D9C6A3]" />
                                     
-                                    <div style={{ backgroundColor: '#070B14', borderColor: '#1E293B' }} className="border-b p-6 sm:p-8">
+                                    <div className="border-b border-white/10 bg-[#0E121A] p-6 sm:p-8">
                                         <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
                                             <div className="flex items-center gap-4">
-                                                <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.15)', borderColor: 'rgba(16, 185, 129, 0.4)' }} className="w-16 h-16 border rounded-2xl flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/15">
+                                                <div className="w-16 h-16 border border-emerald-500/40 bg-emerald-500/15 rounded-2xl flex items-center justify-center text-emerald-400 shrink-0 shadow-lg shadow-emerald-500/15">
                                                     <CheckCircle2 className="w-9 h-9" />
                                                 </div>
                                                 <div className="text-center sm:text-start">
                                                     <div className="flex items-center gap-2 mb-1 justify-center sm:justify-start">
-                                                        <Badge style={{ backgroundColor: 'rgba(16, 185, 129, 0.2)', borderColor: 'rgba(16, 185, 129, 0.4)' }} className="text-emerald-300 border text-xs px-3 py-1 font-bold uppercase tracking-wider">
+                                                        <Badge className="bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs px-3 py-1 font-bold uppercase tracking-wider">
                                                             {t('verification.details.valid', 'AUTHENTIC & ACTIVE')}
                                                         </Badge>
                                                         {result?.certificate?.status && (
-                                                            <Badge style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)' }} variant="outline" className="text-amber-300 border text-xs uppercase font-bold">
+                                                            <Badge variant="outline" className="bg-[#C45B2F]/15 border-[#C45B2F]/40 text-[#E07A5F] text-xs uppercase font-bold">
                                                                 {result.certificate.status}
                                                             </Badge>
                                                         )}
                                                     </div>
-                                                    <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight font-sans">
+                                                    <h2 className="text-2xl sm:text-3xl text-white tracking-tight" style={canela}>
                                                         {t('verification.valid_title', 'Certificate Verified')}
                                                     </h2>
                                                 </div>
                                             </div>
 
                                             {/* Header Quick Actions */}
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handleDownloadPDF}
                                                     disabled={isGeneratingPdf}
-                                                    style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)', color: '#FDE68A' }}
-                                                    className="hover:bg-amber-500/20 font-bold rounded-xl shadow-lg"
+                                                    className="bg-[#C45B2F]/15 border-[#C45B2F]/40 text-[#F3C99F] hover:bg-[#C45B2F]/25 font-bold rounded-xl shadow-lg"
                                                 >
                                                     {isGeneratingPdf ? (
-                                                        <RefreshCw className="w-4 h-4 me-1.5 animate-spin text-amber-400" />
+                                                        <RefreshCw className="w-4 h-4 me-1.5 animate-spin text-[#E07A5F]" />
                                                     ) : (
-                                                        <Download className="w-4 h-4 me-1.5 text-amber-400" />
+                                                        <Download className="w-4 h-4 me-1.5 text-[#E07A5F]" />
                                                     )}
                                                     <span>{t('verification.download_pdf', 'Download PDF')}</span>
                                                 </Button>
@@ -444,37 +452,35 @@ export default function VerifyCertificate() {
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handleCopyLink}
-                                                    style={{ backgroundColor: '#1E293B', borderColor: '#334155', color: '#F1F5F9' }}
-                                                    className="hover:bg-slate-700 font-semibold rounded-xl"
+                                                    className="bg-slate-800/80 border-slate-700 text-slate-100 hover:bg-slate-700 font-semibold rounded-xl"
                                                 >
-                                                    <Copy className="w-4 h-4 me-1.5 text-amber-400" />
+                                                    <Copy className="w-4 h-4 me-1.5 text-[#E07A5F]" />
                                                     <span className="hidden sm:inline">{t('verification.share', 'Share')}</span>
                                                 </Button>
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
                                                     onClick={handlePrint}
-                                                    style={{ backgroundColor: '#1E293B', borderColor: '#334155', color: '#F1F5F9' }}
-                                                    className="hover:bg-slate-700 font-semibold rounded-xl"
+                                                    className="bg-slate-800/80 border-slate-700 text-slate-100 hover:bg-slate-700 font-semibold rounded-xl"
                                                 >
-                                                    <Printer className="w-4 h-4 me-1.5 text-amber-400" />
+                                                    <Printer className="w-4 h-4 me-1.5 text-[#E07A5F]" />
                                                     <span className="hidden sm:inline">{t('verification.print', 'Print')}</span>
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => { setResult(null); setCode(''); setError(null) }}
+                                                    onClick={() => { setResult(null); setCode(''); setError(null); }}
                                                     className="text-slate-300 hover:text-white rounded-xl"
                                                 >
                                                     <Search className="w-4 h-4 me-1.5" />
-                                                    <span className="hidden sm:inline">{t('verification.search_again', 'Verify Another Certificate')}</span>
+                                                    <span className="hidden sm:inline">{t('verification.search_again', 'Verify Another')}</span>
                                                 </Button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div style={{ backgroundColor: '#0F172A' }} className="p-6 sm:p-10 space-y-8">
-                                        {/* Certificate Details Grid (Solid Dark Boxes) */}
+                                    <div className="p-6 sm:p-10 space-y-8 bg-[#12161F]">
+                                        {/* Certificate Details Grid */}
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                                             <DetailItem
                                                 icon={User}
@@ -516,29 +522,27 @@ export default function VerifyCertificate() {
 
                                         {/* Certificate Description if present */}
                                         {result?.certificate?.description && (
-                                            <div style={{ backgroundColor: '#070B14', borderColor: '#1E293B' }} className="p-5 rounded-2xl border text-sm text-slate-200">
-                                                <span className="font-bold text-amber-400 uppercase text-xs tracking-wider block mb-1">Description:</span>
+                                            <div className="p-5 rounded-2xl border border-white/10 bg-[#0A0D12] text-sm text-slate-200" style={inter}>
+                                                <span className="font-bold text-[#E07A5F] uppercase text-xs tracking-wider block mb-1">Description:</span>
                                                 <p>{result.certificate.description}</p>
                                             </div>
                                         )}
 
-                                        {/* Official Seal Statement (Solid Dark Box) */}
-                                        <div style={{ backgroundColor: '#070B14', borderColor: 'rgba(245, 158, 11, 0.4)' }} className="p-6 border rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-                                            <div className="flex items-center gap-4 text-center sm:text-start">
-                                                <div style={{ backgroundColor: 'rgba(245, 158, 11, 0.15)', borderColor: 'rgba(245, 158, 11, 0.4)' }} className="w-14 h-14 rounded-2xl border flex items-center justify-center text-amber-300 shrink-0 shadow-lg shadow-amber-500/10">
-                                                    <ShieldCheck className="w-8 h-8" />
-                                                </div>
+                                        {/* Official Seal Statement Box */}
+                                        <div className="p-6 border border-[#C45B2F]/40 bg-[#0A0D12] rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xl">
+                                            <div className="flex items-center gap-5 text-center sm:text-start">
+                                                <OfficialSealGraphic isRTL={isRTL} className="shrink-0" />
                                                 <div>
-                                                    <h4 className="text-base sm:text-lg font-bold text-amber-300">
+                                                    <h4 className="text-base sm:text-lg font-bold text-[#F3C99F]" style={neueHaas}>
                                                         {t('verification.authentic_seal', 'ALTUS Advisory Excellence Center Seal')}
                                                     </h4>
-                                                    <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed">
+                                                    <p className="text-xs sm:text-sm text-slate-300 mt-1 leading-relaxed" style={inter}>
                                                         {t('verification.valid_desc', 'This certificate is authentic and was issued by the Altus Advisory Excellence Center.')}
                                                     </p>
                                                 </div>
                                             </div>
                                             {result?.verifiedAt && (
-                                                <span style={{ backgroundColor: '#0F172A', borderColor: '#1E293B' }} className="text-[11px] font-mono text-amber-300 shrink-0 px-3.5 py-2 rounded-xl border">
+                                                <span className="text-xs text-[#E07A5F] shrink-0 px-4 py-2 rounded-xl border border-white/10 bg-[#12161F]" style={mono}>
                                                     Verified: {new Date(result.verifiedAt).toLocaleTimeString()}
                                                 </span>
                                             )}
@@ -547,7 +551,7 @@ export default function VerifyCertificate() {
                                 </div>
 
                                 {/* Footer Copyright */}
-                                <p className="text-center text-xs text-slate-400">
+                                <p className="text-center text-xs text-slate-400" style={inter}>
                                     © {new Date().getFullYear()} ALTUS Advisory. {t('footer.all_rights', 'All Rights Reserved.')}
                                 </p>
                             </motion.div>
@@ -578,7 +582,7 @@ export default function VerifyCertificate() {
                     {/* Verification Title */}
                     <div className="text-center my-4">
                         <div className="inline-block bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-full px-5 py-1 text-[11px] font-sans font-bold uppercase tracking-widest mb-2">
-                            ✓ Authenticated & Registered Credential
+                            ✓ Authenticated &amp; Registered Credential
                         </div>
                         <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Official Credential Verification Statement</h2>
                         <p className="text-xs font-sans text-slate-600 mt-1 max-w-lg mx-auto leading-relaxed">
@@ -620,7 +624,7 @@ export default function VerifyCertificate() {
                                 )}
                                 <tr className="bg-emerald-50">
                                     <td className="py-2.5 px-3 font-bold text-emerald-900 border-r border-slate-300">Database Registration Status</td>
-                                    <td className="py-2.5 px-3 font-bold text-emerald-700 uppercase">VALID & ACTIVE (AUTHENTICATED)</td>
+                                    <td className="py-2.5 px-3 font-bold text-emerald-700 uppercase">VALID &amp; ACTIVE (AUTHENTICATED)</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -639,7 +643,7 @@ export default function VerifyCertificate() {
                                 <span className="text-[8px] font-bold tracking-widest uppercase mt-0.5">OFFICIAL SEAL</span>
                             </div>
                             <p className="text-[11px] font-bold text-slate-900 uppercase">ALTUS Advisory Registrar</p>
-                            <p className="text-[10px] text-slate-500">Excellence & Compliance Center</p>
+                            <p className="text-[10px] text-slate-500">Excellence &amp; Compliance Center</p>
                         </div>
                     </div>
 
@@ -651,35 +655,37 @@ export default function VerifyCertificate() {
                 </div>
             )}
         </div>
-    )
+    );
 }
 
 function DetailItem({ icon: Icon, label, value, className = '', highlight = false }: DetailItemProps) {
     return (
         <div 
-            style={{ backgroundColor: '#070B14', borderColor: '#1E293B' }} 
-            className={`flex items-start gap-4 p-5 sm:p-6 rounded-2xl border transition-all duration-300 shadow-xl ${className}`}
+            className={`flex items-start gap-4 p-5 sm:p-6 rounded-2xl border transition-all duration-300 shadow-xl bg-[#0A0D12] ${
+                highlight ? 'border-[#C45B2F]/50 bg-[#C45B2F]/5' : 'border-white/10'
+            } ${className}`}
         >
             <div 
-                style={{ 
-                    backgroundColor: highlight ? 'rgba(245, 158, 11, 0.2)' : 'rgba(30, 41, 59, 0.8)', 
-                    borderColor: highlight ? 'rgba(245, 158, 11, 0.4)' : '#334155' 
-                }}
-                className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-md"
+                className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 border shadow-md ${
+                    highlight ? 'bg-[#C45B2F]/20 border-[#C45B2F]/40 text-[#E07A5F]' : 'bg-slate-800/80 border-slate-700 text-slate-400'
+                }`}
             >
-                <Icon className="w-6 h-6 text-amber-400" />
+                <Icon className="w-6 h-6" />
             </div>
             <div className="min-w-0 flex-1">
-                <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest block mb-1.5">
+                <span className="text-[11px] font-bold text-[#E07A5F] uppercase tracking-widest block mb-1.5" style={neueHaas}>
                     {label}
                 </span>
                 <span 
-                    style={{ color: highlight ? '#FDE68A' : '#FFFFFF' }}
-                    className="text-base sm:text-lg font-extrabold leading-snug break-words block"
+                    style={highlight ? canela : mono}
+                    className={`text-base sm:text-lg font-bold leading-snug break-words block ${
+                        highlight ? 'text-white' : 'text-slate-200'
+                    }`}
                 >
                     {value || 'N/A'}
                 </span>
             </div>
         </div>
-    )
+    );
 }
+

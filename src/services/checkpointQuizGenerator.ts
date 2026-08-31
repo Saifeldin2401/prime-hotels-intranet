@@ -84,7 +84,7 @@ export async function generateAndLinkCheckpointQuestions(params: CheckpointQuizP
                 ai_generated: true,
                 status: 'published',
                 created_by: params.createdBy
-            })
+            } as any)
             .select()
             .single()
 

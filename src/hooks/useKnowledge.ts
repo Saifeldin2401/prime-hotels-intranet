@@ -5,6 +5,7 @@
  */
 
 import { useProperty } from '@/contexts/PropertyContext'
+import { useTenant } from '@/contexts/TenantContext'
 import { useAuth } from '@/hooks/useAuth'
 import { isRealPropertyId } from '@/lib/propertyScope'
 import { supabase } from '@/lib/supabase'
@@ -22,15 +23,19 @@ import { toast } from 'sonner'
 
 export function useKnowledgeArticles(filters: KnowledgeSearchFilters, page = 1, pageSize = 20) {
     const { currentProperty } = useProperty()
+    const { currentOrganization, currentHotel, currentBrand } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-articles', filters, page, pageSize, currentProperty?.id],
+        queryKey: ['knowledge-articles', filters, page, pageSize, currentProperty?.id, currentOrganization?.id, currentHotel?.id, currentBrand?.id],
         queryFn: () => {
             const propertyFilter = isRealPropertyId(currentProperty?.id)
                 ? currentProperty.id
                 : undefined
             const mergedFilters: KnowledgeSearchFilters = {
                 ...filters,
+                organization_id: filters.organization_id ?? currentOrganization?.id,
+                hotel_id: filters.hotel_id ?? currentHotel?.id,
+                brand_id: filters.brand_id ?? currentBrand?.id,
                 property_id: filters.property_id ?? propertyFilter
             }
             return KnowledgeService.getArticles(mergedFilters, page, pageSize)
@@ -45,17 +50,26 @@ export function useArticles(options?: {
     limit?: number
     departmentId?: string
     required?: boolean
+    organizationId?: string
+    hotelId?: string
+    brandId?: string
+    isMasterTemplate?: boolean
 }) {
     const { currentProperty } = useProperty()
+    const { currentOrganization, currentHotel, currentBrand } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-articles', options, currentProperty?.id],
+        queryKey: ['knowledge-articles', options, currentProperty?.id, currentOrganization?.id, currentHotel?.id, currentBrand?.id],
         queryFn: async () => {
             const filters: KnowledgeSearchFilters = {
                 query: options?.search,
                 content_type: options?.type as KnowledgeContentType | undefined,
                 department_id: options?.departmentId,
                 requires_acknowledgment: options?.required,
+                organization_id: options?.organizationId ?? currentOrganization?.id,
+                hotel_id: options?.hotelId ?? currentHotel?.id,
+                brand_id: options?.brandId ?? currentBrand?.id,
+                is_master_template: options?.isMasterTemplate,
                 property_id: isRealPropertyId(currentProperty?.id) ? currentProperty.id : undefined
             }
             const result = await KnowledgeService.getArticles(filters, 1, options?.limit || 50)
@@ -77,19 +91,21 @@ export function useKnowledgeArticle(id: string | undefined) {
 
 export function useFeaturedArticles(limit = 5) {
     const { currentProperty } = useProperty()
+    const { currentOrganization, currentHotel } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-featured', limit, currentProperty?.id],
-        queryFn: () => KnowledgeService.getFeaturedArticles(limit, currentProperty?.id)
+        queryKey: ['knowledge-featured', limit, currentProperty?.id, currentOrganization?.id, currentHotel?.id],
+        queryFn: () => KnowledgeService.getFeaturedArticles(limit, currentHotel?.id || currentProperty?.id)
     })
 }
 
 export function useRecentArticles(limit = 10) {
     const { currentProperty } = useProperty()
+    const { currentOrganization, currentHotel } = useTenant()
 
     return useQuery({
-        queryKey: ['knowledge-recent', limit, currentProperty?.id],
-        queryFn: () => KnowledgeService.getRecentArticles(limit, currentProperty?.id)
+        queryKey: ['knowledge-recent', limit, currentProperty?.id, currentOrganization?.id, currentHotel?.id],
+        queryFn: () => KnowledgeService.getRecentArticles(limit, currentHotel?.id || currentProperty?.id)
     })
 }
 

@@ -27,6 +27,12 @@ const AuditRetentionPolicies = lazy(() => import('@/pages/admin/AuditRetentionPo
 const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
 
+// Platform Owner Super Admin Pages
+const OrganizationsHub = lazy(() => import('@/pages/platform/OrganizationsHub'))
+const MasterContentLibrary = lazy(() => import('@/pages/platform/MasterContentLibrary'))
+const PlatformAnalytics = lazy(() => import('@/pages/platform/PlatformAnalytics'))
+const PlatformAuditLogs = lazy(() => import('@/pages/platform/PlatformAuditLogs'))
+
 export const AdminRoutes = () => (
     <>
         <Route
@@ -258,5 +264,48 @@ export const AdminRoutes = () => (
             }
         />
 
+        {/* ------------------------------------------------------------------ */}
+        {/* PLATFORM OWNER SUPER ADMIN ROUTES                                  */}
+        {/* ------------------------------------------------------------------ */}
+        <Route
+            path="/platform/organizations"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <OrganizationsHub />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/master-library"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <MasterContentLibrary />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/analytics"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformAnalytics />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/audit"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformAuditLogs />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
     </>
 )

@@ -14,6 +14,8 @@ const QuestionReview = lazy(() => import('@/pages/questions/QuestionReview'))
 // Consolidated assessment surface: one browse/manage page (questions + assessments).
 const QuestionBank = lazy(() => import('@/pages/assessments/QuestionBank'))
 const QuestionGeneratorPage = lazy(() => import('@/pages/questions/QuestionGeneratorPage'))
+// Media Library & Digital Asset Hub
+const MediaLibraryPage = lazy(() => import('@/pages/media/MediaLibraryPage'))
 
 const SOPViewerRedirect = () => {
     const { id } = useParams()
@@ -111,6 +113,16 @@ export const KnowledgeRoutes = () => (
                 <ProtectedRoute>
                     <AppLayout>
                         <KnowledgeRead />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/media"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <MediaLibraryPage />
                     </AppLayout>
                 </ProtectedRoute>
             }

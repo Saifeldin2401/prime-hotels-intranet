@@ -1,7 +1,7 @@
 /**
  * Bulk Operations Hook
  * 
- * Provides bulk actions for tasks, maintenance tickets, and other entities.
+ * Provides bulk actions for tasks and core entities.
  * Includes progress tracking and error handling for partial failures.
  */
 
@@ -9,7 +9,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { logAuditEvent } from '@/lib/auditLog'
 import { getValidNextStatuses, validateTransition } from '@/lib/statusTransitions'
 import { supabase } from '@/lib/supabase'
-import type { Database } from '@/types/database.generated'
+import type { Database } from '@/lib/database.types'
 import { crudToasts } from '@/lib/toastHelpers'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
@@ -20,14 +20,13 @@ export interface BulkOperationResult {
     undoToken?: BulkUndoToken
 }
 
-type BulkEntity = 'task' | 'maintenance_ticket' | 'leave_request'
+export type BulkEntity = 'task'
 
-type BulkUndoAction =
+export type BulkUndoAction =
     | 'update'
     | 'assign'
     | 'status'
     | 'delete'
-    | 'approve'
 
 export interface BulkUndoToken {
     entity: BulkEntity
@@ -47,25 +46,24 @@ const assertBulkOperationSize = (ids: string[], operationLabel: string) => {
     }
 }
 
-interface BulkUpdateParams {
+export interface BulkUpdateParams {
     ids: string[]
     updates: Record<string, unknown>
 }
 
-interface BulkAssignParams {
+export interface BulkAssignParams {
     ids: string[]
     assigneeId: string | null
 }
 
-interface BulkStatusParams {
+export interface BulkStatusParams {
     ids: string[]
     newStatus: string
 }
 
 const getBulkEntityTable = (entity: BulkEntity) => {
     if (entity === 'task') return 'tasks'
-    if (entity === 'maintenance_ticket') return 'maintenance_tickets'
-    return 'leave_requests'
+    return 'tasks'
 }
 
 const sanitizeUndoPayload = (before: Record<string, unknown>) =>
@@ -85,12 +83,12 @@ export async function undoBulkOperation(token: BulkUndoToken): Promise<BulkOpera
             updated_at: new Date().toISOString()
         })
 
-        const { data, error } = await supabase
-            .from(table)
-            .update(payload)
+        const { data, error } = await (supabase
+            .from(table as 'tasks')
+            .update(payload as never)
             .eq('id', snapshot.id)
             .select('id')
-            .maybeSingle()
+            .maybeSingle() as unknown as Promise<{ data: { id: string } | null; error: { message?: string } | null }>)
 
         if (error || !data?.id) {
             result.failed.push({ id: snapshot.id, error: error?.message || 'Unable to undo item' })
@@ -131,7 +129,7 @@ export function useBulkUpdateTasks() {
                 : { data: [] as Array<{ id: string }> }
 
             const beforeById = new Map<string, Record<string, unknown>>(
-                ((beforeRows || []) as Array<Record<string, unknown>>).map((row) => {
+                ((beforeRows || []) as unknown as Array<Record<string, unknown>>).map((row) => {
                     const id = String(row.id)
                     const before = updateKeys.reduce<Record<string, unknown>>((acc, key) => {
                         acc[key] = row[key]
@@ -148,7 +146,7 @@ export function useBulkUpdateTasks() {
 
                 const { data, error } = await supabase
                     .from('tasks')
-                    .update({ ...updates, updated_at: new Date().toISOString() })
+                    .update({ ...updates, updated_at: new Date().toISOString() } as never)
                     .in('id', batch)
                     .select('id')
 
@@ -179,7 +177,7 @@ export function useBulkUpdateTasks() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry) => !!entry.before)
+                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -274,7 +272,7 @@ export function useBulkAssignTasks() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry) => !!entry.before)
+                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -333,10 +331,10 @@ export function useBulkUpdateTaskStatus() {
 
             for (const task of currentTasks) {
                 try {
-                    validateTransition('task', task.status, newStatus)
+                    validateTransition('task', task.status || 'todo', newStatus)
                     validIds.push(task.id)
                 } catch (_error) {
-                    const validOptions = getValidNextStatuses('task', task.status)
+                    const validOptions = getValidNextStatuses('task', task.status || 'todo')
                     result.failed.push({
                         id: task.id,
                         error: `Cannot change from "${task.status}" to "${newStatus}". Valid: ${validOptions.join(', ')}`
@@ -386,7 +384,7 @@ export function useBulkUpdateTaskStatus() {
                     id,
                     before: beforeById.get(id)
                 }))
-                .filter((entry) => !!entry.before)
+                .filter((entry): entry is { id: string; before: Record<string, unknown> } => !!entry.before)
 
             if (undoSnapshots.length > 0) {
                 result.undoToken = {
@@ -498,291 +496,6 @@ export function useBulkDeleteTasks() {
 
             if (result.success.length > 0) {
                 crudToasts.delete.success(`${result.success.length} tasks`)
-            }
-        }
-    })
-}
-
-/**
- * Bulk update maintenance tickets
- */
-export function useBulkUpdateMaintenanceTickets() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
-    return useMutation({
-        mutationFn: async ({ ids, updates }: BulkUpdateParams): Promise<BulkOperationResult> => {
-            if (!user?.id) throw new Error('User must be authenticated')
-
-            assertBulkOperationSize(ids, 'Bulk update maintenance tickets')
-
-            const result: BulkOperationResult = {
-                success: [],
-                failed: [],
-                total: ids.length
-            }
-
-            const updateKeys = Object.keys(updates).filter((key) => key !== 'updated_at')
-            const selectColumns = ['id', ...updateKeys].join(',')
-            const { data: beforeRows } = updateKeys.length > 0
-                ? await supabase
-                    .from('maintenance_tickets')
-                    .select(selectColumns)
-                    .in('id', ids)
-                : { data: [] as Array<{ id: string }> }
-
-            const { data, error } = await supabase
-                .from('maintenance_tickets')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .in('id', ids)
-                .select('id')
-
-            if (error) {
-                ids.forEach(id => result.failed.push({ id, error: error.message }))
-            } else {
-                data?.forEach(item => result.success.push(item.id))
-            }
-
-            if (result.success.length > 0) {
-                await logAuditEvent({
-                    event_type: 'admin.action',
-                    entity_type: 'maintenance_ticket',
-                    description: 'Bulk update maintenance tickets',
-                    metadata: {
-                        bulk_operation: true,
-                        total_selected: result.total,
-                        success_count: result.success.length,
-                        failure_count: result.failed.length,
-                        updates
-                    }
-                })
-            }
-
-            const beforeById = new Map<string, Record<string, unknown>>(
-                ((beforeRows || []) as Array<Record<string, unknown>>).map((row) => {
-                    const id = String(row.id)
-                    const before = updateKeys.reduce<Record<string, unknown>>((acc, key) => {
-                        acc[key] = row[key]
-                        return acc
-                    }, {})
-                    return [id, before] as const
-                })
-            )
-
-            const undoSnapshots = result.success
-                .map((id) => ({
-                    id,
-                    before: beforeById.get(id)
-                }))
-                .filter((entry) => !!entry.before)
-
-            if (undoSnapshots.length > 0) {
-                result.undoToken = {
-                    entity: 'maintenance_ticket',
-                    action: 'update',
-                    snapshots: undoSnapshots,
-                    createdAt: new Date().toISOString()
-                }
-            }
-
-            return result
-        },
-        onSuccess: (result) => {
-            queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-
-            if (result.success.length > 0) {
-                crudToasts.update.success(`${result.success.length} tickets`)
-            }
-        }
-    })
-}
-
-/**
- * Bulk assign maintenance tickets
- */
-export function useBulkAssignMaintenanceTickets() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
-    return useMutation({
-        mutationFn: async ({ ids, assigneeId }: BulkAssignParams): Promise<BulkOperationResult> => {
-            if (!user?.id) throw new Error('User must be authenticated')
-
-            assertBulkOperationSize(ids, 'Bulk assign maintenance tickets')
-
-            const result: BulkOperationResult = {
-                success: [],
-                failed: [],
-                total: ids.length
-            }
-
-            const { data: beforeRows } = await supabase
-                .from('maintenance_tickets')
-                .select('id,assigned_to_id,status')
-                .in('id', ids)
-
-            const updates: Record<string, unknown> = {
-                assigned_to_id: assigneeId,
-                updated_at: new Date().toISOString()
-            }
-
-            // If assigning, also set to in_progress
-            if (assigneeId) {
-                updates.status = 'in_progress'
-            }
-
-            const { data, error } = await supabase
-                .from('maintenance_tickets')
-                .update(updates)
-                .in('id', ids)
-                .select('id')
-
-            if (error) {
-                ids.forEach(id => result.failed.push({ id, error: error.message }))
-            } else {
-                data?.forEach(item => result.success.push(item.id))
-            }
-
-            if (result.success.length > 0) {
-                await logAuditEvent({
-                    event_type: 'admin.action',
-                    entity_type: 'maintenance_ticket',
-                    description: 'Bulk assign maintenance tickets',
-                    metadata: {
-                        bulk_operation: true,
-                        total_selected: result.total,
-                        success_count: result.success.length,
-                        failure_count: result.failed.length,
-                        assigned_to_id: assigneeId
-                    }
-                })
-            }
-
-            const beforeById = new Map(
-                (beforeRows || []).map((row: { id: string; assigned_to_id: string | null; status: string }) => [
-                    row.id,
-                    { assigned_to_id: row.assigned_to_id, status: row.status }
-                ])
-            )
-
-            const undoSnapshots = result.success
-                .map((id) => ({
-                    id,
-                    before: beforeById.get(id)
-                }))
-                .filter((entry) => !!entry.before)
-
-            if (undoSnapshots.length > 0) {
-                result.undoToken = {
-                    entity: 'maintenance_ticket',
-                    action: 'assign',
-                    snapshots: undoSnapshots,
-                    createdAt: new Date().toISOString()
-                }
-            }
-
-            return result
-        },
-        onSuccess: (result) => {
-            queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-
-            if (result.success.length > 0) {
-                crudToasts.update.success(`Assigned ${result.success.length} tickets`)
-            }
-        }
-    })
-}
-
-/**
- * Bulk approve leave requests
- */
-export function useBulkApproveLeaveRequests() {
-    const queryClient = useQueryClient()
-    const { user } = useAuth()
-
-    return useMutation({
-        mutationFn: async (ids: string[]): Promise<BulkOperationResult> => {
-            if (!user?.id) throw new Error('User must be authenticated')
-
-            assertBulkOperationSize(ids, 'Bulk approve leave requests')
-
-            const result: BulkOperationResult = {
-                success: [],
-                failed: [],
-                total: ids.length
-            }
-
-            const { data: beforeRows } = await supabase
-                .from('leave_requests')
-                .select('id,status,approved_by_id')
-                .in('id', ids)
-
-            const { data, error } = await supabase
-                .from('leave_requests')
-                .update({
-                    status: 'approved',
-                    approved_by_id: user.id,
-                    updated_at: new Date().toISOString()
-                })
-                .in('id', ids)
-                .eq('status', 'pending')
-                .select('id')
-
-            if (error) {
-                ids.forEach(id => result.failed.push({ id, error: error.message }))
-            } else {
-                data?.forEach(item => result.success.push(item.id))
-                // Mark non-updated as already processed
-                const notUpdated = ids.filter(id => !data?.find(d => d.id === id))
-                notUpdated.forEach(id => result.failed.push({ id, error: 'Already processed or not found' }))
-            }
-
-            if (result.success.length > 0) {
-                await logAuditEvent({
-                    event_type: 'admin.action',
-                    entity_type: 'leave_request',
-                    description: 'Bulk approve leave requests',
-                    metadata: {
-                        bulk_operation: true,
-                        total_selected: result.total,
-                        success_count: result.success.length,
-                        failure_count: result.failed.length
-                    }
-                })
-            }
-
-            const beforeById = new Map(
-                (beforeRows || []).map((row: { id: string; status: string; approved_by_id: string | null }) => [
-                    row.id,
-                    { status: row.status, approved_by_id: row.approved_by_id }
-                ])
-            )
-
-            const undoSnapshots = result.success
-                .map((id) => ({
-                    id,
-                    before: beforeById.get(id)
-                }))
-                .filter((entry): entry is { id: string; before: { status: string; approved_by_id: string | null } } => !!entry.before)
-
-            if (undoSnapshots.length > 0) {
-                result.undoToken = {
-                    entity: 'leave_request',
-                    action: 'approve',
-                    snapshots: undoSnapshots,
-                    createdAt: new Date().toISOString()
-                }
-            }
-
-            return result
-        },
-        onSuccess: (result) => {
-            queryClient.invalidateQueries({ queryKey: ['leave-requests'] })
-            queryClient.invalidateQueries({ queryKey: ['pending-approvals'] })
-            queryClient.invalidateQueries({ queryKey: ['approval-stats'] })
-
-            if (result.success.length > 0) {
-                crudToasts.approve.success(`${result.success.length} leave requests`)
             }
         }
     })

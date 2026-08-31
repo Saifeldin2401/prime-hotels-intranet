@@ -28,6 +28,7 @@ import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { useDebounce } from '@/hooks/useDebounce'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -81,6 +82,8 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { TrainingAssignmentsPanel } from './TrainingAssignments'
 import { TrainingBuilder } from './TrainingBuilder'
+import { MasterVersionSyncModal } from '@/components/platform/MasterVersionSyncModal'
+import { platformService } from '@/services/platformService'
 
 // Lazy load heavy chart component
 const TrainingProgressVisualization = lazy(() => import('@/components/training/TrainingProgressVisualization').then(m => ({ default: m.TrainingProgressVisualization })))
@@ -97,6 +100,12 @@ interface TrainingModule {
   category?: string | null
   estimated_duration_minutes?: number | null
   status?: ModuleStatus
+  organization_id?: string | null
+  brand_id?: string | null
+  hotel_id?: string | null
+  scope_type?: string | null
+  is_master_template?: boolean | null
+  master_source_id?: string | null
   created_by?: string | null
   updated_by?: string | null
   created_at?: string | null
@@ -105,6 +114,7 @@ interface TrainingModule {
 
 export default function TrainingHub() {
   const { primaryRole } = useAuth()
+  const { currentOrganization, currentHotel, currentBrand } = useTenant()
   const navigate = useNavigate()
   const { id: moduleId } = useParams()
   const [searchParams] = useSearchParams()
@@ -191,16 +201,21 @@ export default function TrainingHub() {
   const [moduleToReject, setModuleToReject] = useState<TrainingModule | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
-  // Data fetching: fetch all non-deleted modules
+  // Data fetching: fetch all non-deleted modules scoped to tenant
   const { data: rawModules, isLoading } = useQuery({
-    queryKey: ['training-modules'],
+    queryKey: ['training-modules', currentOrganization?.id, currentHotel?.id, currentBrand?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('training_modules')
         .select('*')
         .not('is_deleted', 'is', true)
         .order('created_at', { ascending: false })
 
+      if (currentOrganization?.id) {
+        query = query.or(`organization_id.eq.${currentOrganization.id},organization_id.is.null,is_master_template.eq.true`)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       return data as TrainingModule[]
     },
@@ -208,18 +223,45 @@ export default function TrainingHub() {
   })
 
   const { data: assignmentLinks } = useQuery({
-    queryKey: ['learning-assignments-module-links'],
+    queryKey: ['learning-assignments-module-links', currentOrganization?.id],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('training_assignment_rules')
         .select('content_id')
         .eq('content_type', 'module')
         .or('is_deleted.is.null,is_deleted.eq.false')
+
+      if (currentOrganization?.id) {
+        query = query.or(`organization_id.eq.${currentOrganization.id},organization_id.is.null`)
+      }
+
+      const { data, error } = await query
       if (error) throw error
       return data || []
     },
     enabled: canManageModules
   })
+
+  // Master Content Deployments & Version Sync query
+  const { data: masterDeployments, refetch: refetchMasterDeployments } = useQuery({
+    queryKey: ['master-content-deployments', currentOrganization?.id],
+    queryFn: () => platformService.getDeploymentsForTenant(currentOrganization?.id || ''),
+    enabled: !!currentOrganization?.id && canManageModules
+  })
+
+  const deploymentsByTargetId = useMemo(() => {
+    const map = new Map<string, any>()
+    masterDeployments?.forEach((dep) => {
+      map.set(dep.target_content_id, dep)
+    })
+    return map
+  }, [masterDeployments])
+
+  // Sync with Master Modal State
+  const [syncModalState, setSyncModalState] = useState<{
+    open: boolean
+    module: TrainingModule | null
+  }>({ open: false, module: null })
 
   const assignedModuleIds = useMemo(() => {
     return new Set((assignmentLinks || []).map((a) => a.content_id))
@@ -1352,6 +1394,12 @@ export default function TrainingHub() {
                   {paginatedModules.map((module) => {
                     const isSelected = selectedModuleIds.has(module.id)
                     const isAssigned = assignedModuleIds.has(module.id)
+                    const isMaster = Boolean(module.is_master_template || module.master_source_id)
+                    const deployment = deploymentsByTargetId.get(module.id)
+                    const hasUpdate = Boolean(
+                      deployment?.has_update_available ||
+                      (deployment && deployment.current_master_version > deployment.deployed_version)
+                    )
                     return (
                       <Card
                         key={module.id}
@@ -1376,7 +1424,7 @@ export default function TrainingHub() {
 
                         {/* Top action row: Checkbox, Category Theme & Badges */}
                         <div className="p-4 pb-0 flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                             <Checkbox
                               checked={isSelected}
                               onCheckedChange={() => handleToggleSelect(module.id)}
@@ -1384,6 +1432,26 @@ export default function TrainingHub() {
                               className="data-[state=checked]:bg-hotel-navy shrink-0"
                             />
                             <TrainingCategoryBadge category={module.category} size="sm" />
+                            {isMaster && (
+                              <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 h-5 font-semibold flex items-center gap-1">
+                                <Crown className="h-2.5 w-2.5 text-indigo-600" />
+                                <span>Platform Master</span>
+                              </Badge>
+                            )}
+                            {hasUpdate && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setSyncModalState({ open: true, module })
+                                }}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-[10px] font-bold shadow-sm transition-transform hover:scale-105 animate-pulse cursor-pointer"
+                                title="Click to view upstream master changes and synchronize"
+                              >
+                                <span>🔔</span>
+                                <span>Update Available</span>
+                              </button>
+                            )}
                           </div>
 
                           <div className="flex items-center gap-1.5 shrink-0">
@@ -1471,6 +1539,9 @@ export default function TrainingHub() {
                             onAssign={() => handleAssign(module.id)}
                             onClone={() => handleClone(module)}
                             onDelete={() => handleDelete(module)}
+                            onSyncWithMaster={isMaster ? () => setSyncModalState({ open: true, module }) : undefined}
+                            isMaster={isMaster}
+                            hasUpdate={hasUpdate}
                             onSubmitForReview={module.status === 'draft' ? () => handleSubmitForReview(module) : undefined}
                             onApprove={module.status === 'pending_review' && canReviewModules ? () => handleApprove(module) : undefined}
                             onReject={module.status === 'pending_review' && canReviewModules ? () => handleRequestReject(module) : undefined}
@@ -1530,6 +1601,12 @@ export default function TrainingHub() {
                       {paginatedModules.map((module) => {
                         const isSelected = selectedModuleIds.has(module.id)
                         const isAssigned = assignedModuleIds.has(module.id)
+                        const isMaster = Boolean(module.is_master_template || module.master_source_id)
+                        const deployment = deploymentsByTargetId.get(module.id)
+                        const hasUpdate = Boolean(
+                          deployment?.has_update_available ||
+                          (deployment && deployment.current_master_version > deployment.deployed_version)
+                        )
                         return (
                           <TableRow
                             key={module.id}
@@ -1548,12 +1625,34 @@ export default function TrainingHub() {
 
                             <TableCell className="py-3">
                               <div className="flex flex-col">
-                                <span
-                                  onClick={() => handleOpenPreview(module.id)}
-                                  className="font-semibold text-sm text-slate-900 group-hover:text-hotel-gold cursor-pointer transition-colors line-clamp-1"
-                                >
-                                  {module.title || t('untitledModule', 'Untitled Module')}
-                                </span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span
+                                    onClick={() => handleOpenPreview(module.id)}
+                                    className="font-semibold text-sm text-slate-900 group-hover:text-hotel-gold cursor-pointer transition-colors line-clamp-1"
+                                  >
+                                    {module.title || t('untitledModule', 'Untitled Module')}
+                                  </span>
+                                  {isMaster && (
+                                    <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px] py-0 h-4 font-semibold flex items-center gap-0.5">
+                                      <Crown className="h-2.5 w-2.5 text-indigo-600" />
+                                      <span>Platform Master</span>
+                                    </Badge>
+                                  )}
+                                  {hasUpdate && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setSyncModalState({ open: true, module })
+                                      }}
+                                      className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-amber-500 hover:bg-amber-600 text-slate-950 text-[9px] font-bold shadow-sm animate-pulse cursor-pointer"
+                                      title="Click to view upstream master changes and synchronize"
+                                    >
+                                      <span>🔔</span>
+                                      <span>Update Available</span>
+                                    </button>
+                                  )}
+                                </div>
                                 {module.description && (
                                   <span className="text-xs text-slate-400 line-clamp-1 mt-0.5">
                                     {module.description}
@@ -1653,6 +1752,9 @@ export default function TrainingHub() {
                                     onAssign={() => handleAssign(module.id)}
                                     onClone={() => handleClone(module)}
                                     onDelete={() => handleDelete(module)}
+                                    onSyncWithMaster={isMaster ? () => setSyncModalState({ open: true, module }) : undefined}
+                                    isMaster={isMaster}
+                                    hasUpdate={hasUpdate}
                                     onSubmitForReview={module.status === 'draft' ? () => handleSubmitForReview(module) : undefined}
                                     onApprove={module.status === 'pending_review' && canReviewModules ? () => handleApprove(module) : undefined}
                                     onReject={module.status === 'pending_review' && canReviewModules ? () => handleRequestReject(module) : undefined}
@@ -1858,6 +1960,19 @@ export default function TrainingHub() {
         onEdit={(id) => setViewMode('builder', { moduleId: id })}
         onView={(id) => navigate(`/learning/training/${id}`)}
         onAssign={(id) => handleAssign(id)}
+      />
+
+      {/* Upstream Master Version Sync Modal */}
+      <MasterVersionSyncModal
+        open={syncModalState.open}
+        onOpenChange={(open) => setSyncModalState((prev) => ({ ...prev, open }))}
+        targetContentId={syncModalState.module?.id || ''}
+        targetTitle={syncModalState.module?.title || ''}
+        contentType="course"
+        onSyncComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ['training-modules'] })
+          refetchMasterDeployments()
+        }}
       />
     </div>
   )

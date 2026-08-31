@@ -129,6 +129,8 @@ const ARTICLE_LIST_SELECT = `
           status, content_type,
           visibility,
           property_id, department_id,
+          organization_id, brand_id, hotel_id,
+          scope_type, is_master_template, master_source_id,
           requires_acknowledgment,
           created_by, last_published_by,
           created_at, updated_at,
@@ -293,11 +295,24 @@ export async function getArticles(
             // Default Knowledge Base view should only display indexed, active KB versions
             query = query.eq('status', 'PUBLISHED').eq('knowledge_base_status', 'indexed').eq('is_active_kb_version', true)
         }
+        // Multi-Tenant Scoping Filters
+        if (filters.organization_id && filters.organization_id !== 'undefined' && filters.organization_id.length === 36) {
+            query = query.eq('organization_id', filters.organization_id)
+        }
+        if (filters.hotel_id && filters.hotel_id !== 'undefined' && filters.hotel_id.length === 36) {
+            query = query.or(`hotel_id.is.null,hotel_id.eq.${filters.hotel_id}`)
+        }
+        if (filters.brand_id && filters.brand_id !== 'undefined' && filters.brand_id.length === 36) {
+            query = query.or(`brand_id.is.null,brand_id.eq.${filters.brand_id}`)
+        }
+        if (filters.is_master_template !== undefined) {
+            query = query.eq('is_master_template', filters.is_master_template)
+        }
+
         // Validate department_id is a real UUID, not 'undefined' string
         if (filters.department_id && filters.department_id !== 'undefined' && filters.department_id.length === 36) {
             query = query.eq('department_id', filters.department_id)
         }
-        // category_id not available
         // Validate property_id is a real UUID, not 'undefined' string
         if (filters.property_id && filters.property_id !== 'undefined' && filters.property_id.length === 36) {
             query = query.or(`property_id.is.null,property_id.eq.${filters.property_id}`)
@@ -1128,6 +1143,12 @@ function formatArticle(data: RawKnowledgeArticle): KnowledgeArticle {
         updated_at: toStringValue(data.updated_at),
         content_type: (typeof data.content_type === 'string' ? data.content_type.toLowerCase() : 'document') as KnowledgeArticle['content_type'],
         visibility_scope: (data.visibility_scope || data.visibility || 'all_properties') as KnowledgeArticle['visibility_scope'],
+        organization_id: toOptionalString(data.organization_id),
+        hotel_id: toOptionalString(data.hotel_id),
+        brand_id: toOptionalString(data.brand_id),
+        scope_type: (data.scope_type || 'organization') as KnowledgeArticle['scope_type'],
+        is_master_template: Boolean(data.is_master_template),
+        master_source_id: toNullableString(data.master_source_id),
         linked_training_id: toNullableString(data.linked_training_id) || toNullableString(sopData?.linked_training_id),
         linked_quiz_id: toNullableString(data.linked_quiz_id) || toNullableString(sopData?.linked_quiz_id),
         department: normalizeNamedJoin(finalDepartment) || (toOptionalString(data.department_id) ? { id: toStringValue(data.department_id), name: 'Department' } : undefined),
@@ -1178,7 +1199,7 @@ export interface PublishToKBParams {
  */
 export async function publishDocumentToKnowledgeBase(params: PublishToKBParams): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data, error } = await supabase.rpc('publish_document_to_kb', {
+        const { data, error } = await (supabase.rpc as any)('publish_document_to_kb', {
             p_document_id: params.documentId,
             p_user_id: params.userId,
             p_visibility: params.visibility || null,
@@ -1192,7 +1213,7 @@ export async function publishDocumentToKnowledgeBase(params: PublishToKBParams):
             return { success: false, error: error.message }
         }
 
-        const result = data as { success: boolean; error?: string }
+        const result = (data || { success: true }) as { success: boolean; error?: string }
         return result
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error'
@@ -1210,7 +1231,7 @@ export async function removeDocumentFromKnowledgeBase(
     reason = 'Removed by administrator'
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data, error } = await supabase.rpc('remove_document_from_kb', {
+        const { data, error } = await (supabase.rpc as any)('remove_document_from_kb', {
             p_document_id: documentId,
             p_user_id: userId,
             p_reason: reason,
@@ -1221,7 +1242,7 @@ export async function removeDocumentFromKnowledgeBase(
             return { success: false, error: error.message }
         }
 
-        const result = data as { success: boolean; error?: string }
+        const result = (data || { success: true }) as { success: boolean; error?: string }
         return result
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error'
@@ -1237,7 +1258,7 @@ export async function setDocumentInternal(
     userId: string
 ): Promise<{ success: boolean; error?: string }> {
     try {
-        const { data, error } = await supabase.rpc('set_document_internal', {
+        const { data, error } = await (supabase.rpc as any)('set_document_internal', {
             p_document_id: documentId,
             p_user_id: userId,
         })
@@ -1247,7 +1268,7 @@ export async function setDocumentInternal(
             return { success: false, error: error.message }
         }
 
-        const result = data as { success: boolean; error?: string }
+        const result = (data || { success: true }) as { success: boolean; error?: string }
         return result
     } catch (err: unknown) {
         const message = err instanceof Error ? err.message : 'Unknown error'

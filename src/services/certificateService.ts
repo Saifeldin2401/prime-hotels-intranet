@@ -35,7 +35,10 @@ export interface CertificateData {
     sopId?: string
     quizAttemptId?: string
 
-    // Context
+    // Context & Multi-Tenant Scoping
+    organizationId?: string
+    brandId?: string
+    hotelId?: string
     propertyId?: string
     propertyName?: string
     departmentId?: string
@@ -421,6 +424,8 @@ export async function createCertificate(data: CertificateData): Promise<Certific
             training_progress_id: resolvedTrainingProgressId,
             sop_id: data.sopId,
             quiz_attempt_id: data.quizAttemptId,
+            organization_id: data.organizationId || null,
+            hotel_id: data.hotelId || data.propertyId || null,
             property_id: data.propertyId,
             department_id: data.departmentId,
             issued_by: data.issuedBy,

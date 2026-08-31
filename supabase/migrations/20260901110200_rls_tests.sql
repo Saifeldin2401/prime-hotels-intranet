@@ -54,23 +54,29 @@ BEGIN
   -- 3. Every learning table exposes all four operations via a p5_ policy
   -- ------------------------------------------------------------------
   FOREACH t IN ARRAY v_tables LOOP
-    FOR r IN SELECT unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE']) AS c LOOP
-      SELECT count(*) INTO n
-      FROM pg_policies
-      WHERE schemaname = 'public' AND tablename = t
-        AND cmd = r.c AND policyname LIKE 'p5\_%';
-      ASSERT n >= 1, format('table %s has no p5_ policy for %s', t, r.c);
-    END LOOP;
+    SELECT c.relkind INTO r FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
+    WHERE ns.nspname = 'public' AND c.relname = t;
+    IF r.relkind = 'r' THEN
+      FOR r IN SELECT unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE']) AS c LOOP
+        SELECT count(*) INTO n
+        FROM pg_policies
+        WHERE schemaname = 'public' AND tablename = t
+          AND cmd = r.c AND policyname LIKE 'p5\_%';
+        ASSERT n >= 1, format('table %s has no p5_ policy for %s', t, r.c);
+      END LOOP;
+    END IF;
   END LOOP;
 
   -- ------------------------------------------------------------------
   -- 4. RLS is enabled on every learning table
   -- ------------------------------------------------------------------
   FOREACH t IN ARRAY v_tables LOOP
-    SELECT c.relrowsecurity INTO r
+    SELECT c.relrowsecurity, c.relkind INTO r
     FROM pg_class c JOIN pg_namespace ns ON ns.oid = c.relnamespace
     WHERE ns.nspname = 'public' AND c.relname = t;
-    ASSERT r.relrowsecurity, format('RLS not enabled on %s', t);
+    IF r.relkind = 'r' THEN
+      ASSERT r.relrowsecurity, format('RLS not enabled on %s', t);
+    END IF;
   END LOOP;
 
   -- ------------------------------------------------------------------

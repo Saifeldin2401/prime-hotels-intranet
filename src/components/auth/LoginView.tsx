@@ -441,20 +441,20 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
           >
             <Button
               type="submit"
-              className="w-full h-12 bg-gradient-to-r from-amber-400 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-sm rounded-full shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition-all relative overflow-hidden border-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+              className="w-full h-12 bg-gradient-to-r from-[#C45B2F] via-[#D96B3D] to-[#B34D24] hover:from-[#D96B3D] hover:to-[#C45B2F] text-white font-bold text-xs uppercase tracking-[0.18em] rounded-xl shadow-lg shadow-[#C45B2F]/30 flex items-center justify-center gap-2 hover:brightness-105 active:scale-[0.99] transition-all relative overflow-hidden border-none disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
               disabled={loading || emailValid === false}
             >
               {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/25 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
 
               {loading ? (
                 <div className="flex items-center gap-2 justify-center">
                   <Loader2 className="h-4 w-4 animate-spin text-white" aria-hidden="true" />
-                  <span className="tracking-wide text-white font-bold">{t('logging_in')}</span>
+                  <span className="tracking-widest text-white font-bold">{t('logging_in')}</span>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 justify-center">
-                  <span className="tracking-wide text-white font-bold">{t('sign_in_button')}</span>
+                  <span className="tracking-widest text-white font-bold">{t('sign_in_button')}</span>
                   <ArrowRight
                     className={cn(
                       'h-4 w-4 text-white transition-transform group-hover:translate-x-1',
@@ -472,25 +472,25 @@ function LoginViewComponent({ isRTL = false, onForgotPassword, onUnlockAccount }
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.7 }}
-            className="pt-4 border-t border-slate-100"
+            className="pt-4 border-t border-white/10"
           >
             <div className="flex items-center justify-between text-xs text-slate-400 mb-2.5">
               <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-md bg-amber-50 text-amber-600 flex items-center justify-center">
+                <div className="w-5 h-5 rounded-md bg-[#C45B2F]/10 text-[#E07A5F] flex items-center justify-center">
                   <Shield className="h-3 w-3" aria-hidden="true" />
                 </div>
-                <span className="font-bold uppercase tracking-wider text-[10px] text-slate-700">
+                <span className="font-bold uppercase tracking-wider text-[10px] text-slate-300">
                   {t('security_tips.title')}
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                 KSA Enterprise Verified
               </span>
             </div>
-            <ul className="text-xs text-slate-500 space-y-1.5">
+            <ul className="text-xs text-slate-400 space-y-1.5">
               <li className="flex items-center gap-2">
-                <div className="w-1.5 h-1.5 rounded-full bg-amber-500" aria-hidden="true" />
+                <div className="w-1.5 h-1.5 rounded-full bg-[#C45B2F]" aria-hidden="true" />
                 {t('security_tips.never_share')}
               </li>
             </ul>
