@@ -4,7 +4,7 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center rounded-full border font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
   {
     variants: {
       variant: {
@@ -18,44 +18,58 @@ const badgeVariants = cva(
         gold: "border-transparent bg-hotel-gold text-white hover:bg-hotel-gold-dark",
         navy: "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light",
         "outline-gold": "text-hotel-gold border-hotel-gold hover:bg-hotel-gold/10",
-        success: "border-transparent bg-success text-success-foreground",
-        warning: "border-transparent bg-warning text-warning-foreground",
+        success: "border-success/20 bg-success text-success-foreground",
+        warning: "border-warning/20 bg-warning text-warning-foreground",
+      },
+      size: {
+        sm: "px-2 py-0.5 text-xs",
+        md: "px-2.5 py-0.5 text-xs",
+        lg: "px-3 py-1 text-sm",
       },
     },
     defaultVariants: {
       variant: "default",
+      size: "md",
     },
   }
 )
 
-const dotColorMap: Record<NonNullable<VariantProps<typeof badgeVariants>['variant']>, string> = {
-  default: "bg-hotel-navy",
-  secondary: "bg-secondary",
-  destructive: "bg-destructive",
-  outline: "border border-input bg-transparent",
-  gold: "bg-hotel-gold",
-  navy: "bg-hotel-navy",
-  "outline-gold": "bg-hotel-gold",
-  success: "bg-success",
-  warning: "bg-warning",
-}
-
 export interface BadgeProps
-  extends React.HTMLAttributes<HTMLDivElement>,
+  extends React.HTMLAttributes<HTMLSpanElement>,
   VariantProps<typeof badgeVariants> {
+  /** Renders a small filled dot instead of a label */
   dot?: boolean
+  /** Numeric count to display; overrides children when set */
+  count?: number
+  /** Max count before showing "N+" (default 99) */
+  maxCount?: number
 }
 
-function Badge({ className, variant, dot, ...props }: BadgeProps) {
+function Badge({ className, variant, size, dot, count, maxCount = 99, children, ...props }: BadgeProps) {
   if (dot) {
+    const dotSizes: Record<string, string> = { sm: "h-2 w-2", md: "h-2.5 w-2.5", lg: "h-3 w-3" }
     return (
-      <div className={cn("h-2.5 w-2.5 rounded-full", dotColorMap[variant ?? 'default'], className)} />
+      <span
+        className={cn(
+          "rounded-full",
+          badgeVariants({ variant }),
+          dotSizes[size ?? "md"],
+          className
+        )}
+        {...props}
+      />
     )
   }
+
+  const displayCount = count !== undefined
+    ? (count > maxCount ? `${maxCount}+` : count)
+    : undefined
+
   return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
+    <span className={cn(badgeVariants({ variant, size }), className)} {...props}>
+      {displayCount !== undefined ? displayCount : children}
+    </span>
   )
 }
 
 export { Badge, badgeVariants }
-

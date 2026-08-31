@@ -63,7 +63,7 @@ export function EmptyState({
       )}
       {action && (
         <Button
-          variant={action.variant ?? 'default'}
+          variant={action.variant === 'primary' ? 'default' : action.variant ?? 'default'}
           onClick={action.onClick}
         >
           {action.label}
