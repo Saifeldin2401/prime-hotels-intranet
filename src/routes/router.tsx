@@ -48,10 +48,27 @@ const LeadershipPage = lazy(() => import('@/pages/public/LeadershipPage'))
 const DigitalAIPage = lazy(() => import('@/pages/public/DigitalAIPage'))
 const NotFound = lazy(() => import('@/pages/NotFound'))
 
+// Learner platform landing page (Training + Knowledge Base + Quiz).
+// Minimal wiring: routed at /home/learner and made the default post-login
+// destination for learner roles (see RootIndex below). NOTE: navigation.ts /
+// DashboardRoutes are churned by other branches — on conflict, keep this route
+// plus the RootIndex learner branch and re-apply on top.
+const LearnerHome = lazy(() => import('@/pages/home/LearnerHome'))
+
 
 
 import { MaintenanceGuard } from '@/components/common/MaintenanceGuard'
 import { PageSkeleton } from '@/components/ui/loading-skeleton'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { AppLayout } from '@/components/layout/AppLayout'
+
+const LearnerHomeRoute = () => (
+    <ProtectedRoute allowedRoles={['staff', 'manager', 'department_head']}>
+        <AppLayout>
+            <LearnerHome />
+        </AppLayout>
+    </ProtectedRoute>
+)
 
 const RootLayout = () => {
     const { loading } = useAuth()
@@ -74,7 +91,7 @@ const RootLayout = () => {
 }
 
 const RootIndex = () => {
-    const { user, loading } = useAuth()
+    const { user, loading, primaryRole } = useAuth()
     const location = useLocation()
 
     const destination = useMemo(() => {
@@ -85,8 +102,14 @@ const RootIndex = () => {
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? '/dashboard'
-    }, [user, location.search])
+        // Learner roles land on the learning-focused home; everyone else keeps /dashboard.
+        const defaultDestination =
+            primaryRole === 'staff' || primaryRole === 'manager'
+                ? '/home/learner'
+                : '/dashboard'
+
+        return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? defaultDestination
+    }, [user, location.search, primaryRole])
 
     useEffect(() => {
         if (user && getAuthFlowRedirectPath()) {
@@ -232,6 +255,12 @@ export const router = createBrowserRouter(
                 {CommercialRoutes()}
                 {ProcurementRoutes()}
                 {FinanceRoutes()}
+                <Route
+                    path="/home/learner"
+                    element={<LearnerHomeRoute />}
+                    errorElement={<RouteErrorBoundary section="Learner Home" />}
+                />
+
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
                 {ManageRoutes()}
