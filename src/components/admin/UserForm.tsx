@@ -10,7 +10,6 @@ import { ROLES, ROLE_HIERARCHY } from '@/lib/constants'
 import { getUserFriendlyError } from '@/lib/errorMessages'
 import { supabase } from '@/lib/supabase'
 import { userSchema, type UserFormData } from '@/lib/validationSchemas'
-import { triggerService } from '@/services/triggerService'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useCallback, useEffect, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { useTranslation } from 'react-i18next'
@@ -198,11 +197,6 @@ export function UserForm({ user, onClose }: UserFormProps) {
         ),
         duration: 30000,
       })
-
-      // Trigger new hire automation (onboarding, etc)
-      if (response.userId) {
-        triggerService.onNewHire(response.userId, selectedDepartments[0])
-      }
 
       onClose()
     },
@@ -664,7 +658,6 @@ export function UserForm({ user, onClose }: UserFormProps) {
       })
 
       if (user && originalRole && role && originalRole !== role) {
-        triggerService.onRoleChange(user.id, originalRole, role, selectedDepartments[0])
         setOriginalRole(role)
       }
 

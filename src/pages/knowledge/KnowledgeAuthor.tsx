@@ -67,7 +67,6 @@ import {
 } from '@/pages/knowledge/knowledgeArticleFidelity'
 import { supabase } from '@/lib/supabase'
 import * as KnowledgeService from '@/services/knowledgeService'
-import { triggerService } from '@/services/triggerService'
 import type { Database, Json } from '@/types/database.generated'
 import {
     type ChecklistItem,
@@ -1507,9 +1506,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(id, formData.title)
                 }
-                if (status === 'PUBLISHED') {
-                    await triggerService.onSOPPublished(id, formData.department_id || undefined)
-                }
 
                 const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
                 toast.success(status === 'PENDING_REVIEW'
@@ -1543,9 +1539,6 @@ ${aiLanguage === 'Arabic' ? 'مثال: "إجراءات التعامل مع شك�
 
                 if (status === 'PENDING_REVIEW') {
                     await notifyReviewersOfSubmission(data.id, formData.title)
-                }
-                if (status === 'PUBLISHED') {
-                    await triggerService.onSOPPublished(data.id, formData.department_id || undefined)
                 }
 
                 const typeLabel = t(`content_types.${formData.content_type}`, { defaultValue: formData.content_type.toUpperCase() })
