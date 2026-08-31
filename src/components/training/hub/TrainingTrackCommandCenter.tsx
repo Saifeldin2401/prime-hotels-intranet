@@ -102,13 +102,14 @@ export function TrainingTrackCommandCenter({
     const [recertTarget, setRecertTarget] = useState<any | null>(null)
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
-    // Fetch Properties
+    // Fetch Properties / Hotels
     const { data: properties = [] } = useQuery({
-        queryKey: ['properties-list-tracking'],
+        queryKey: ['properties-list-tracking', 'hotels'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .select('id, name')
+                .eq('is_deleted', false)
                 .order('name')
             if (error) throw error
             return data || []

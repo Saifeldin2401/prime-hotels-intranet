@@ -85,7 +85,7 @@ export function QuickReplyChips({
 
     setIsGeneratingAi(true)
     try {
-      const prompt = `You are an executive hospitality messaging assistant for PRIME Hotels & Resorts in Saudi Arabia.
+      const prompt = `You are an executive hospitality messaging assistant for Altus Advisory in Saudi Arabia.
 Write a concise, polished, Forbes 5-star hotel operational reply to the message below.
 
 CRITICAL INSTRUCTIONS:

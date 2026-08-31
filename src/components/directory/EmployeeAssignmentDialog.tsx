@@ -115,14 +115,15 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
         ].filter(role => assignable.includes(role.value))
     }, [primaryRole])
 
-    // Fetch properties - filtered based on admin role
+    // Fetch properties / hotels - filtered based on admin role
     const { data: allProperties = [] } = useQuery({
-        queryKey: ['admin-properties'],
+        queryKey: ['admin-properties', 'hotels'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .select('id, name, is_headquarters')
                 .eq('is_active', true)
+                .eq('is_deleted', false)
                 .order('is_headquarters', { ascending: false })
                 .order('name')
             if (error) throw error
@@ -258,75 +259,32 @@ export function EmployeeAssignmentDialog({ employee, isOpen, onClose }: Employee
 
             const isValidUUID = (value: string) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
 
-            // 1. Update or insert user_properties
-            if (selectedPropertyId) {
-                const propertyExists = properties.some((p) => p.id === selectedPropertyId)
-                if (!isValidUUID(selectedPropertyId) || !propertyExists) {
-                    throw new Error('Selected property is invalid')
-                }
-
-                const { data: existingProperties, error: existingPropertiesError } = await supabase
-                    .from('user_properties')
-                    .select('property_id')
-                    .eq('user_id', employee.id)
-                if (existingPropertiesError) throw existingPropertiesError
-
-                const { error: propError } = await supabase
-                    .from('user_properties')
-                    .upsert(
-                        { user_id: employee.id, property_id: selectedPropertyId },
-                        { onConflict: 'user_id,property_id', ignoreDuplicates: true }
-                    )
-                if (propError) throw propError
-
-                const propertiesToRemove = (existingProperties || [])
-                    .map((row) => row.property_id)
-                    .filter((id): id is string => !!id && id !== selectedPropertyId)
-                if (propertiesToRemove.length > 0) {
-                    const { error: removePropertiesError } = await supabase
-                        .from('user_properties')
-                        .delete()
-                        .eq('user_id', employee.id)
-                        .in('property_id', propertiesToRemove)
-                    if (removePropertiesError) throw removePropertiesError
-                }
-            }
-
-            // 2. Update or insert user_departments
+            // 1. Update organization_memberships (hotel and department scope)
             const actualDeptId = selectedDepartmentId === 'none' ? null : selectedDepartmentId
+            const tenantRole = selectedRole === 'corporate_admin' || selectedRole === 'super_admin'
+                ? 'organization_admin'
+                : selectedRole === 'training_manager'
+                ? 'training_manager'
+                : selectedRole === 'property_manager'
+                ? 'hotel_admin'
+                : selectedRole === 'department_head'
+                ? 'department_manager'
+                : 'learner'
 
-            const { data: existingDepartments, error: existingDepartmentsError } = await supabase
-                .from('user_departments')
-                .select('department_id')
-                .eq('user_id', employee.id)
-            if (existingDepartmentsError) throw existingDepartmentsError
+            const { error: membershipError } = await supabase
+                .from('organization_memberships')
+                .upsert({
+                    user_id: employee.id,
+                    organization_id: 'e0000000-0000-0000-0000-000000000001',
+                    hotel_id: selectedPropertyId || null,
+                    department_id: actualDeptId,
+                    role: tenantRole as any,
+                    is_active: true,
+                    is_primary: true,
+                    updated_at: new Date().toISOString()
+                }, { onConflict: 'organization_id,user_id' })
 
-            const departmentExists = departments.some((d) => d.id === actualDeptId)
-            if (actualDeptId) {
-                if (!isValidUUID(actualDeptId) || !departmentExists) {
-                    throw new Error('Selected department is invalid')
-                }
-
-                const { error: deptError } = await supabase
-                    .from('user_departments')
-                    .upsert(
-                        { user_id: employee.id, department_id: actualDeptId },
-                        { onConflict: 'user_id,department_id', ignoreDuplicates: true }
-                    )
-                if (deptError) throw deptError
-            }
-
-            const departmentsToRemove = (existingDepartments || [])
-                .map((row) => row.department_id)
-                .filter((id): id is string => !!id && id !== actualDeptId)
-            if (departmentsToRemove.length > 0) {
-                const { error: removeDepartmentsError } = await supabase
-                    .from('user_departments')
-                    .delete()
-                    .eq('user_id', employee.id)
-                    .in('department_id', departmentsToRemove)
-                if (removeDepartmentsError) throw removeDepartmentsError
-            }
+            if (membershipError) throw membershipError
 
             // 3. Update user role (only if allowed)
             if (selectedRole && selectedRole !== employee.roles?.[0]) {

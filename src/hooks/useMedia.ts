@@ -41,13 +41,14 @@ async function checkMediaAccess(assetId: string, userId: string): Promise<boolea
     // Public assets are accessible
     if (asset.is_public) return true;
     
-    // Check if user has access to this property
+    // Check if user has access to this property / hotel
     if (asset.property_id) {
       const { data: userProperty } = await supabase
-        .from('user_properties')
+        .from('organization_memberships')
         .select('id')
         .eq('user_id', userId)
-        .eq('property_id', asset.property_id)
+        .eq('hotel_id', asset.property_id)
+        .eq('is_active', true)
         .maybeSingle();
       
       if (userProperty) return true;

@@ -312,14 +312,15 @@ export function useOrgHierarchy(searchTerm?: string) {
         }
     })
 
-    // Fetch all properties with enhanced fields
+    // Fetch all properties / hotels with enhanced fields
     const { data: properties, isLoading: propertiesLoading } = useQuery({
-        queryKey: ['org-hierarchy-properties-enhanced'],
+        queryKey: ['org-hierarchy-properties-enhanced', 'hotels'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .select('id, name, address, phone, is_active, is_headquarters, property_code, city, country')
                 .eq('is_active', true)
+                .eq('is_deleted', false)
                 .order('is_headquarters', { ascending: false }) // HQ first
                 .order('name')
             if (error) throw error

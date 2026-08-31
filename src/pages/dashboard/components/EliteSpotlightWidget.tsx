@@ -110,9 +110,10 @@ export function EliteSpotlightWidget() {
       let scopedUserIds: string[] = []
       if (isScoped && propertyId) {
         const { data: propUsers, error: propUsersError } = await supabase
-          .from('user_properties')
+          .from('organization_memberships')
           .select('user_id')
-          .eq('property_id', propertyId)
+          .eq('hotel_id', propertyId)
+          .eq('is_active', true)
 
         if (propUsersError) {
           console.warn('Elite spotlight: failed to load property users', propUsersError)
@@ -258,9 +259,10 @@ export function EliteSpotlightWidget() {
       let propertyMap = new Map<string, PropertyLite>()
       if (propertyIds.length > 0) {
         const { data, error } = await supabase
-          .from('properties')
+          .from('hotels')
           .select('id, name')
           .in('id', propertyIds)
+          .eq('is_deleted', false)
 
         if (error) {
           console.warn('Elite spotlight: failed to load property details', error)

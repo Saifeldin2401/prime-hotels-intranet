@@ -138,17 +138,18 @@ export function usePropertyManagerStats(options?: { enabled?: boolean }) {
 
             // Fetch property users first for training stats
             let propertyUsersQuery = supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
+                .eq('is_active', true)
 
             if (isScopedProperty) {
-                propertyUsersQuery = propertyUsersQuery.eq('property_id', propertyId)
+                propertyUsersQuery = propertyUsersQuery.eq('hotel_id', propertyId)
             } else if (propertyIds.length > 0) {
-                propertyUsersQuery = propertyUsersQuery.in('property_id', propertyIds)
+                propertyUsersQuery = propertyUsersQuery.in('hotel_id', propertyIds)
             }
 
             const { data: propertyUsers } = await propertyUsersQuery
-            const userIds = Array.from(new Set((propertyUsers?.map((user) => user.user_id) || [])))
+            const userIds = Array.from(new Set((propertyUsers?.map((user: any) => user.user_id) || [])))
 
             const propertyManagerSettled = await Promise.allSettled([
                 // 1. Pending Tasks
@@ -434,17 +435,18 @@ export function useHRStats(options?: { propertyId?: string; enabled?: boolean })
 
             // Pre-fetch property users for training
             let propUsersQuery = supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
+                .eq('is_active', true)
 
             if (isScopedProperty) {
-                propUsersQuery = propUsersQuery.eq('property_id', propId)
+                propUsersQuery = propUsersQuery.eq('hotel_id', propId)
             } else if (propertyIds.length > 0) {
-                propUsersQuery = propUsersQuery.in('property_id', propertyIds)
+                propUsersQuery = propUsersQuery.in('hotel_id', propertyIds)
             }
 
             const { data: propUsers } = await propUsersQuery
-            const propUserIds = Array.from(new Set((propUsers?.map((user) => user.user_id) || [])))
+            const propUserIds = Array.from(new Set((propUsers?.map((user: any) => user.user_id) || [])))
 
             const now = new Date().toISOString()
             const startOfMonth = new Date()
@@ -581,9 +583,9 @@ export function useBentoStats() {
 
             const bentoSettled = await Promise.allSettled([
                 (() => {
-                    const q = supabase.from('user_properties').select('user_id', { count: 'exact', head: true })
-                    if (isScoped && currentProperty) { q.eq('property_id', currentProperty.id) }
-                    else if (propertyIds.length > 0) { q.in('property_id', propertyIds) }
+                    const q = supabase.from('organization_memberships').select('user_id', { count: 'exact', head: true }).eq('is_active', true)
+                    if (isScoped && currentProperty) { q.eq('hotel_id', currentProperty.id) }
+                    else if (propertyIds.length > 0) { q.in('hotel_id', propertyIds) }
                     return q
                 })(),
                 (() => {
@@ -639,25 +641,25 @@ export function useAreaManagerStats(options?: { propertyId?: string; enabled?: b
 
             // Pre-fetch users if we need to filter by property/cluster
             let userIds: string[] = []
-            let userPropsQuery = supabase.from('user_properties').select('user_id')
+            let userPropsQuery = supabase.from('organization_memberships').select('user_id').eq('is_active', true)
 
             if (isScoped) {
-                userPropsQuery = userPropsQuery.eq('property_id', propertyId)
+                userPropsQuery = userPropsQuery.eq('hotel_id', propertyId)
             } else if (propertyIds.length > 0) {
-                userPropsQuery = userPropsQuery.in('property_id', propertyIds)
+                userPropsQuery = userPropsQuery.in('hotel_id', propertyIds)
             }
 
             const { data: users } = await userPropsQuery
-            userIds = users?.map(u => u.user_id) || []
+            userIds = users?.map((u: any) => u.user_id) || []
 
             // maintenance efficiency date range
             const thirtyDaysAgo = new Date()
             thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
 
             const areaManagerSettled = await Promise.allSettled([
-                // 1. Total Properties
+                // 1. Total Properties / Hotels
                 (async () => {
-                    const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
+                    const q = supabase.from('hotels').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('is_deleted', false)
                     if (isScoped) {
                         q.eq('id', propertyId)
                     } else if (propertyIds.length > 0) {
@@ -805,21 +807,21 @@ export function useCorporateStats(options?: { propertyId?: string; enabled?: boo
 
             // Pre-fetch users if we need to filter by property/cluster
             let userIds: string[] = []
-            let userPropsQuery = supabase.from('user_properties').select('user_id')
+            let userPropsQuery = supabase.from('organization_memberships').select('user_id').eq('is_active', true)
 
             if (isScoped) {
-                userPropsQuery = userPropsQuery.eq('property_id', propertyId)
+                userPropsQuery = userPropsQuery.eq('hotel_id', propertyId)
             } else if (propertyIds.length > 0) {
-                userPropsQuery = userPropsQuery.in('property_id', propertyIds)
+                userPropsQuery = userPropsQuery.in('hotel_id', propertyIds)
             }
 
             const { data: users } = await userPropsQuery
-            userIds = users?.map(u => u.user_id) || []
+            userIds = users?.map((u: any) => u.user_id) || []
 
             const corporateSettled = await Promise.allSettled([
-                // 1. Total Properties
+                // 1. Total Properties / Hotels
                 (async () => {
-                    const q = supabase.from('properties').select('id', { count: 'exact', head: true }).eq('is_active', true)
+                    const q = supabase.from('hotels').select('id', { count: 'exact', head: true }).eq('is_active', true).eq('is_deleted', false)
                     if (isScoped) {
                         q.eq('id', propertyId)
                     } else if (propertyIds.length > 0) {
@@ -830,11 +832,11 @@ export function useCorporateStats(options?: { propertyId?: string; enabled?: boo
 
                 // 2. Total Staff
                 (async () => {
-                    const q = supabase.from('user_properties').select('user_id', { count: 'exact', head: true })
+                    const q = supabase.from('organization_memberships').select('user_id', { count: 'exact', head: true }).eq('is_active', true)
                     if (isScoped) {
-                        q.eq('property_id', propertyId)
+                        q.eq('hotel_id', propertyId)
                     } else if (propertyIds.length > 0) {
-                        q.in('property_id', propertyIds)
+                        q.in('hotel_id', propertyIds)
                     }
                     return q
                 })(),

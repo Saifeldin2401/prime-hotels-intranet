@@ -161,7 +161,7 @@ export function AIMediaGeneratorModal({
           description: prompt,
           learningOutcomes: [activeTitle],
         } as any,
-        courseTitle: 'PRIME Hotels Media Library',
+        courseTitle: 'Altus Advisory Media Library',
         moduleTitle: 'Central Assets',
         imageModel: selectedModel,
         preferredStyle: visualStyle,

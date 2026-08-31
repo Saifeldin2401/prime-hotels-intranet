@@ -135,10 +135,10 @@ export async function fetchPersonalExecutiveContext(
 - Employee Name: ${profile?.full_name || 'Staff Member'}
 - Job Title: ${profile?.job_title || 'Hospitality Associate'}
 - Department: ${profile?.departments?.[0]?.name || profile?.department_id || 'Hotel Operations'}
-- Hotel Property: ${profile?.property?.name || 'PRIME Hotels & Resorts (KSA)'}
-- Staff ID / Code: ${profile?.staff_id || 'PRIME-EMP'}
+- Hotel Property: ${profile?.property?.name || 'Altus Advisory Hotel (KSA)'}
+- Staff ID / Code: ${profile?.staff_id || 'ALTUS-EMP'}
 - Role / Permissions: ${profile?.role || 'staff'}
-- Email: ${profile?.email || 'employee@primehotels.sa'}
+- Email: ${profile?.email || 'employee@altus-advisory.com'}
 `.trim()
 
     // Build the master context block
@@ -182,7 +182,7 @@ ${announcementsSummary}
       learningSummary: 'Live learning data temporarily unavailable.',
       announcementsSummary: 'Live announcements temporarily unavailable.',
       shiftsSummary: 'Live shift schedule temporarily unavailable.',
-      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}, Property: ${profile?.property?.name || 'PRIME Hotels'}`,
+      rawContextBlock: `Employee: ${profile?.full_name || 'Staff Member'}, Property: ${profile?.property?.name || 'Altus Advisory'}`,
     }
   }
 }

@@ -62,9 +62,12 @@ export function useTrainingAssignmentsData(manageModuleId: string | null) {
   })
 
   const { data: userProperties } = useQuery({
-    queryKey: ['user-properties'],
+    queryKey: ['user-properties', 'memberships'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_properties').select('user_id, property:properties(id, name)')
+      const { data, error } = await supabase
+        .from('organization_memberships')
+        .select('user_id, property:hotels(id, name)')
+        .eq('is_active', true)
       if (error) throw error
       return data
     }
@@ -82,7 +85,7 @@ export function useTrainingAssignmentsData(manageModuleId: string | null) {
   const { data: departments } = useQuery({
     queryKey: ['departments-list'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('departments').select('id, name, property_id, property:properties(name)').order('name')
+      const { data, error } = await supabase.from('departments').select('id, name, property_id, property:hotels(name)').order('name')
       if (error) throw error
       return (data || []).map((d) => {
         const propertyName = Array.isArray(d.property) && d.property.length > 0
@@ -99,11 +102,12 @@ export function useTrainingAssignmentsData(manageModuleId: string | null) {
   })
 
   const { data: properties } = useQuery({
-    queryKey: ['properties-for-assignment'],
+    queryKey: ['properties-for-assignment', 'hotels'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('properties')
+        .from('hotels')
         .select('id, name')
+        .eq('is_deleted', false)
         .order('name')
       if (error) throw error
       return data || []

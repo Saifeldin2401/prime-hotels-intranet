@@ -111,7 +111,7 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
     sendMessage,
     clearChat,
   } = useAIChat({
-    property: profile?.property?.name || 'PRIME Luxury Hotel',
+    property: profile?.property?.name || 'Altus Luxury Hotel',
     department: profile?.departments?.[0]?.name || profile?.department_id || 'Operations',
     role: profile?.role || 'Staff',
     isArabic,
@@ -257,7 +257,7 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
     let modeInstruction = ''
     switch (activeMode) {
       case 'assistant':
-        modeInstruction = `You are ${firstName}'s dedicated personal 5-star executive AI assistant and chief of staff at PRIME Hotels. Speak with warm courtesy, proactivity, and efficiency.`
+        modeInstruction = `You are ${firstName}'s dedicated personal 5-star executive AI assistant and chief of staff at Altus Advisory. Speak with warm courtesy, proactivity, and efficiency.`
         break
       case 'concierge':
         modeInstruction = 'Act as an ultra-luxury 5-star Hotel Concierge & Guest Relations Specialist following Forbes Travel Guide benchmarks.'
@@ -436,7 +436,7 @@ export function AltusCopilotDrawer({ isOpen, onClose }: AltusCopilotDrawerProps)
                     </Badge>
                   </div>
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {profile?.job_title ? `${profile.job_title} · ` : ''}{profile?.property?.name || 'PRIME Hotels'}
+                    {profile?.job_title ? `${profile.job_title} · ` : ''}{profile?.property?.name || 'Altus Advisory'}
                   </p>
                 </div>
               </div>

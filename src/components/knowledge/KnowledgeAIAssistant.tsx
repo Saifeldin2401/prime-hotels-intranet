@@ -166,7 +166,7 @@ export function KnowledgeAIAssistant({ isOpen, onClose }: KnowledgeAIAssistantPr
             
             const targetLanguage = i18n.language === 'ar' ? 'Arabic' : 'English'
 
-            const prompt = `You are the AI Knowledge Pro Assistant for PRIME Hotels & Resorts across Saudi Arabia (KSA).
+            const prompt = `You are the AI Knowledge Pro Assistant for Altus Advisory across Saudi Arabia (KSA).
             
 Your task is to answer the hotel staff's question or search query concisely, professionally, and accurately.
 

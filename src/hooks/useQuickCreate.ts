@@ -194,11 +194,12 @@ export function useQuickCreateAnnouncement() {
           case 'department':
             for (const deptId of values) {
               const { data: deptUsers } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('user_id')
                 .eq('department_id', deptId)
+                .eq('is_active', true)
               if (deptUsers) {
-                targetUserIds.push(...deptUsers.map(u => u.user_id))
+                targetUserIds.push(...deptUsers.map((u: any) => u.user_id))
               }
             }
             break
@@ -206,11 +207,12 @@ export function useQuickCreateAnnouncement() {
           case 'property':
             for (const propId of values) {
               const { data: propUsers } = await supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
-                .eq('property_id', propId)
+                .eq('hotel_id', propId)
+                .eq('is_active', true)
               if (propUsers) {
-                targetUserIds.push(...propUsers.map(u => u.user_id))
+                targetUserIds.push(...propUsers.map((u: any) => u.user_id))
               }
             }
             break

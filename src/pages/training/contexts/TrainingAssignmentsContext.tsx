@@ -554,9 +554,12 @@ export function TrainingAssignmentsProvider({
   })
 
   const { data: userProperties } = useQuery({
-    queryKey: ['user-properties'],
+    queryKey: ['user-properties', 'memberships'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('user_properties').select('user_id, property:properties(id, name)')
+      const { data, error } = await supabase
+        .from('organization_memberships')
+        .select('user_id, property:hotels(id, name)')
+        .eq('is_active', true)
       if (error) throw error
       return data
     }
@@ -576,7 +579,7 @@ export function TrainingAssignmentsProvider({
     queryFn: async () => {
       const { data, error } = await supabase
         .from('departments')
-        .select('id, name, property_id, property:properties(name)')
+        .select('id, name, property_id, property:hotels(name)')
         .order('name')
       if (error) throw error
       return (data || []).map((d) => {
@@ -594,11 +597,12 @@ export function TrainingAssignmentsProvider({
   })
 
   const { data: properties } = useQuery({
-    queryKey: ['properties-for-assignment'],
+    queryKey: ['properties-for-assignment', 'hotels'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('properties')
+        .from('hotels')
         .select('id, name')
+        .eq('is_deleted', false)
         .order('name')
       if (error) throw error
       return data || []
@@ -855,19 +859,21 @@ export function TrainingAssignmentsProvider({
               .map((assignment) => assignment.target_id)
               .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: deptUsers } = await supabase
-              .from('user_departments')
+              .from('organization_memberships')
               .select('user_id')
+              .eq('is_active', true)
               .in('department_id', departmentIds)
-            userIdsToNotify = [...new Set(deptUsers?.map(d => d.user_id) || [])]
+            userIdsToNotify = [...new Set(deptUsers?.map((d: any) => d.user_id) || [])]
           } else if (formTargetType === 'properties') {
             const propertyIds = changedAssignments
               .map((assignment) => assignment.target_id)
               .filter((targetId): targetId is string => typeof targetId === 'string' && targetId.length > 0)
             const { data: propUsers } = await supabase
-              .from('user_properties')
+              .from('organization_memberships')
               .select('user_id')
-              .in('property_id', propertyIds)
-            userIdsToNotify = [...new Set(propUsers?.map(p => p.user_id) || [])]
+              .eq('is_active', true)
+              .in('hotel_id', propertyIds)
+            userIdsToNotify = [...new Set(propUsers?.map((p: any) => p.user_id) || [])]
           }
 
           if (userIdsToNotify.length === 0) return

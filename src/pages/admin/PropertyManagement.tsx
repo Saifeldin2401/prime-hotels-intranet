@@ -212,12 +212,12 @@ export default function PropertyManagement() {
         is_active: true
     })
 
-    // Fetch Properties
+    // Fetch Properties / Hotels
     const { data: properties, isLoading } = useQuery({
-        queryKey: ['properties'],
+        queryKey: ['properties', 'hotels'],
         queryFn: async () => {
             const { data, error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .select('*')
                 .eq('is_deleted', false)
                 .order('name')
@@ -230,7 +230,7 @@ export default function PropertyManagement() {
     const deleteMutation = useMutation({
         mutationFn: async (propertyId: string) => {
             const { error } = await supabase
-                .from('properties')
+                .from('hotels')
                 .update({ is_deleted: true, is_active: false })
                 .eq('id', propertyId)
 
@@ -238,11 +238,12 @@ export default function PropertyManagement() {
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['properties'] })
+            queryClient.invalidateQueries({ queryKey: ['hotels'] })
             setIsDeleteOpen(false)
             setDeleteProperty(null)
             toast({
                 title: t('common:common.success', { defaultValue: 'Success' }),
-                description: t('admin:properties.success.deleted', { defaultValue: 'Property deleted successfully.' })
+                description: t('admin:properties.success.deleted', { defaultValue: 'Hotel deleted successfully.' })
             })
         },
         onError: (error) => {
@@ -260,15 +261,18 @@ export default function PropertyManagement() {
             if (selectedProperty) {
                 // Update
                 const { error } = await supabase
-                    .from('properties')
+                    .from('hotels')
                     .update(data)
                     .eq('id', selectedProperty.id)
                 if (error) throw error
             } else {
                 // Create
                 const { error } = await supabase
-                    .from('properties')
-                    .insert([data])
+                    .from('hotels')
+                    .insert([{
+                        ...data,
+                        organization_id: 'e0000000-0000-0000-0000-000000000001'
+                    }])
                 if (error) throw error
             }
         },

@@ -201,9 +201,9 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
   })
 
   const { data: properties } = useQuery({
-    queryKey: ['properties'],
+    queryKey: ['properties', 'hotels'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('properties').select('id,name')
+      const { data, error } = await supabase.from('hotels').select('id,name').eq('is_deleted', false)
       if (error) throw error
       return data
     }
@@ -278,11 +278,12 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           case 'department':
             for (const deptId of values) {
               const { data: deptUsers } = await supabase
-                .from('user_departments')
+                .from('organization_memberships')
                 .select('user_id')
                 .eq('department_id', deptId)
+                .eq('is_active', true)
               if (deptUsers) {
-                targetUserIds.push(...deptUsers.map(u => u.user_id))
+                targetUserIds.push(...deptUsers.map((u: any) => u.user_id))
               }
             }
             break
@@ -290,11 +291,12 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
           case 'property':
             for (const propId of values) {
               const { data: propUsers } = await supabase
-                .from('user_properties')
+                .from('organization_memberships')
                 .select('user_id')
-                .eq('property_id', propId)
+                .eq('hotel_id', propId)
+                .eq('is_active', true)
               if (propUsers) {
-                targetUserIds.push(...propUsers.map(u => u.user_id))
+                targetUserIds.push(...propUsers.map((u: any) => u.user_id))
               }
             }
             break
@@ -381,19 +383,21 @@ export function AnnouncementEditor({ initialData, onClose, onSave }: Announcemen
             case 'department':
               for (const deptId of values) {
                 const { data: deptUsers } = await supabase
-                  .from('user_departments')
+                  .from('organization_memberships')
                   .select('user_id')
                   .eq('department_id', deptId)
-                if (deptUsers) targetUserIds.push(...deptUsers.map(u => u.user_id))
+                  .eq('is_active', true)
+                if (deptUsers) targetUserIds.push(...deptUsers.map((u: any) => u.user_id))
               }
               break
             case 'property':
               for (const propId of values) {
                 const { data: propUsers } = await supabase
-                  .from('user_properties')
+                  .from('organization_memberships')
                   .select('user_id')
-                  .eq('property_id', propId)
-                if (propUsers) targetUserIds.push(...propUsers.map(u => u.user_id))
+                  .eq('hotel_id', propId)
+                  .eq('is_active', true)
+                if (propUsers) targetUserIds.push(...propUsers.map((u: any) => u.user_id))
               }
               break
             case 'individual':

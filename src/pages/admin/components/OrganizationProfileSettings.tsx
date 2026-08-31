@@ -93,7 +93,7 @@ export function OrganizationProfileSettings() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               disabled={!isOrgAdmin}
-              placeholder="e.g. PRIME Hospitality Group"
+              placeholder="e.g. Altus Hospitality Group"
             />
           </div>
 

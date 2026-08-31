@@ -442,8 +442,9 @@ export function useConversations() {
           const participantIds: string[] = Array.isArray(conv.participant_ids) ? conv.participant_ids : []
           const { data: userProps } = participantIds.length
             ? await supabase
-              .from('user_properties')
-              .select('user_id, property:properties(name)')
+              .from('organization_memberships')
+              .select('user_id, property:hotels(name)')
+              .eq('is_active', true)
               .in('user_id', participantIds)
             : { data: [] }
 

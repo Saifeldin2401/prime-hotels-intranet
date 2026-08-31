@@ -15,15 +15,14 @@ export function DocumentRecommendations({ className }: { className?: string } = 
     queryFn: async () => {
       if (!user?.id) return [];
 
-      const [{ data: deptRows }, { data: roleRows }, { data: propRows }] = await Promise.all([
-        supabase.from('user_departments').select('department_id').eq('user_id', user.id),
+      const [{ data: memberships }, { data: roleRows }] = await Promise.all([
+        supabase.from('organization_memberships').select('department_id, hotel_id').eq('user_id', user.id).eq('is_active', true),
         supabase.from('user_roles').select('role').eq('user_id', user.id),
-        supabase.from('user_properties').select('property_id').eq('user_id', user.id),
       ])
 
-      const departmentIds = [...new Set((deptRows || []).map((d) => d.department_id).filter(Boolean))]
+      const departmentIds = [...new Set((memberships || []).map((m: any) => m.department_id).filter(Boolean))]
       const roles = [...new Set((roleRows || []).map((r) => r.role).filter(Boolean))]
-      const propertyIds = [...new Set((propRows || []).map((p) => p.property_id).filter(Boolean))]
+      const propertyIds = [...new Set((memberships || []).map((m: any) => m.hotel_id).filter(Boolean))]
 
       // Build query for recommended documents
       let query = supabase

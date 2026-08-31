@@ -108,9 +108,10 @@ export default function UserManagement() {
     queryKey: ['properties', 'invite'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('properties')
+        .from('hotels')
         .select('id, name')
         .eq('is_active', true)
+        .eq('is_deleted', false)
         .order('name', { ascending: true })
 
       if (error) throw error

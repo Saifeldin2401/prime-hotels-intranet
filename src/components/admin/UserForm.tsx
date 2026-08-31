@@ -212,12 +212,13 @@ export function UserForm({ user, onClose }: UserFormProps) {
 
 
   const { data: properties, isLoading: propertiesLoading } = useQuery({
-    queryKey: ['properties'],
+    queryKey: ['properties', 'hotels'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('properties')
+        .from('hotels')
         .select('*')
         .eq('is_active', true)
+        .eq('is_deleted', false)
         .order('name')
 
       if (error) throw error
@@ -403,30 +404,22 @@ export function UserForm({ user, onClose }: UserFormProps) {
       setOriginalRole(rolesData[0].role)
     }
 
-    // Load properties
-    const { data: propertiesData } = await supabase
-      .from('user_properties')
-      .select('property_id')
+    // Load properties / hotels and departments from memberships
+    const { data: membershipData } = await supabase
+      .from('organization_memberships')
+      .select('hotel_id, department_id')
       .eq('user_id', user.id)
+      .eq('is_active', true)
 
-    if (propertiesData) {
+    if (membershipData) {
       setSelectedProperties(
-        propertiesData
-          .map((p) => p.property_id)
+        membershipData
+          .map((m: any) => m.hotel_id)
           .filter((id): id is string => typeof id === 'string' && isValidUUID(id))
       )
-    }
-
-    // Load departments
-    const { data: departmentsData } = await supabase
-      .from('user_departments')
-      .select('department_id')
-      .eq('user_id', user.id)
-
-    if (departmentsData) {
       setSelectedDepartments(
-        departmentsData
-          .map((d) => d.department_id)
+        membershipData
+          .map((m: any) => m.department_id)
           .filter((id): id is string => typeof id === 'string' && isValidUUID(id))
       )
     }
@@ -579,77 +572,31 @@ export function UserForm({ user, onClose }: UserFormProps) {
         if (cleanupRoleErr) throw cleanupRoleErr
       }
 
-      // Update properties safely:
-      // 1) upsert missing selections first, 2) remove stale ones.
-      const propertyIdSet = properties?.length ? new Set(properties.map((p) => p.id)) : null
-      const validPropertyIds = Array.from(new Set(
-        selectedProperties.filter((id) => isValidUUID(id) && (!propertyIdSet || propertyIdSet.has(id)))
-      ))
-      const { data: existingProperties, error: existingPropertiesError } = await supabase
-        .from('user_properties')
-        .select('property_id')
-        .eq('user_id', user.id)
-      if (existingPropertiesError) throw existingPropertiesError
+      // Update organization memberships (hotel and department scope)
+      const primaryHotelId = selectedProperties.find((id) => isValidUUID(id)) || null
+      const primaryDeptId = selectedDepartments.find((id) => isValidUUID(id)) || null
+      const tenantRole = role === 'corporate_admin' || role === 'super_admin'
+        ? 'organization_admin'
+        : role === 'training_manager'
+        ? 'training_manager'
+        : role === 'property_manager'
+        ? 'hotel_admin'
+        : role === 'department_head'
+        ? 'department_manager'
+        : 'learner'
 
-      const existingPropertyIds = new Set(
-        (existingProperties || [])
-          .map((p) => p.property_id)
-          .filter((id): id is string => isValidUUID(String(id)))
-      )
-
-      const propertiesToAdd = validPropertyIds.filter((id) => !existingPropertyIds.has(id))
-      for (const propertyId of propertiesToAdd) {
-        const { error: upsertPropertyErr } = await supabase
-          .from('user_properties')
-          .upsert({ user_id: user.id, property_id: propertyId }, { onConflict: 'user_id,property_id', ignoreDuplicates: true })
-        if (upsertPropertyErr) throw upsertPropertyErr
-      }
-
-      const propertiesToRemove = Array.from(existingPropertyIds).filter((id) => !validPropertyIds.includes(id))
-      if (propertiesToRemove.length > 0) {
-        const { error: deletePropertiesErr } = await supabase
-          .from('user_properties')
-          .delete()
-          .eq('user_id', user.id)
-          .in('property_id', propertiesToRemove)
-        if (deletePropertiesErr) throw deletePropertiesErr
-      }
-
-      // Update departments safely:
-      // 1) upsert missing selections first, 2) remove stale ones.
-      const departmentIdSet = departments?.length ? new Set(departments.map((d) => d.id)) : null
-      const validDepartmentIds = Array.from(new Set(
-        selectedDepartments.filter((id) => isValidUUID(id) && (!departmentIdSet || departmentIdSet.has(id)))
-      ))
-      const { data: existingDepartments, error: existingDepartmentsError } = await supabase
-        .from('user_departments')
-        .select('department_id')
-        .eq('user_id', user.id)
-      if (existingDepartmentsError) throw existingDepartmentsError
-
-      const existingDepartmentIds = new Set(
-        (existingDepartments || [])
-          .map((d) => d.department_id)
-          .filter((id): id is string => isValidUUID(String(id)))
-      )
-
-      const departmentsToAdd = validDepartmentIds.filter((id) => !existingDepartmentIds.has(id))
-      for (const departmentId of departmentsToAdd) {
-        const { error: upsertDepartmentErr } = await supabase
-          .from('user_departments')
-          .upsert({ user_id: user.id, department_id: departmentId }, { onConflict: 'user_id,department_id', ignoreDuplicates: true })
-        if (upsertDepartmentErr) throw upsertDepartmentErr
-      }
-
-      const departmentsToRemove = Array.from(existingDepartmentIds).filter((id) => !validDepartmentIds.includes(id))
-      if (departmentsToRemove.length > 0) {
-        const { error: deleteDepartmentsErr } = await supabase
-          .from('user_departments')
-          .delete()
-          .eq('user_id', user.id)
-          .in('department_id', departmentsToRemove)
-        if (deleteDepartmentsErr) throw deleteDepartmentsErr
-      }
+      await supabase
+        .from('organization_memberships')
+        .upsert({
+          user_id: user.id,
+          organization_id: 'e0000000-0000-0000-0000-000000000001',
+          hotel_id: primaryHotelId,
+          department_id: primaryDeptId,
+          role: tenantRole as any,
+          is_active: true,
+          is_primary: true,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'organization_id,user_id' })
     },
     onSuccess: () => {
       toast({

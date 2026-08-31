@@ -63,8 +63,8 @@ export function OrgByDepartment({ onEmployeeClick, selectedPropertyId, searchTer
     const { data: propertyGroups, isLoading } = useQuery({
         queryKey: ['org-by-department', selectedPropertyId, searchTerm],
         queryFn: async () => {
-            // 1. Fetch properties
-            let propQuery = supabase.from('properties').select('id, name').eq('is_active', true).order('name')
+            // 1. Fetch properties / hotels
+            let propQuery = supabase.from('hotels').select('id, name').eq('is_active', true).eq('is_deleted', false).order('name')
             if (selectedPropertyId) {
                 propQuery = propQuery.eq('id', selectedPropertyId)
             }

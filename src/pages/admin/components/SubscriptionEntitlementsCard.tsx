@@ -186,7 +186,7 @@ export function SubscriptionEntitlementsCard() {
                 size="sm"
                 className="bg-hotel-gold text-hotel-navy hover:bg-hotel-gold-light border-none font-semibold text-xs shadow-md"
                 onClick={() => {
-                  window.open('mailto:sales@primehotels.com?subject=PRIME%20Subscription%20Upgrade%20Inquiry', '_blank')
+                  window.open('mailto:sales@altus-advisory.com?subject=Altus%20Subscription%20Upgrade%20Inquiry', '_blank')
                 }}
               >
                 <Sparkles className="h-3.5 w-3.5 me-1.5" />

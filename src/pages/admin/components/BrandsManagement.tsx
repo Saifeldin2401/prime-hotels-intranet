@@ -306,7 +306,7 @@ export function BrandsManagement() {
                   id="brand-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. PRIME Luxury Collection"
+                  placeholder="e.g. Altus Luxury Collection"
                 />
               </div>
               <div className="space-y-2">

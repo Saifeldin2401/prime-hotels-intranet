@@ -172,13 +172,14 @@ export default function TrainingPaths() {
     }
   })
 
-  // Fetch properties for targeting
+  // Fetch properties / hotels for targeting
   const { data: properties } = useQuery({
-    queryKey: ['properties'],
+    queryKey: ['properties', 'hotels'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('properties')
+        .from('hotels')
         .select('id, name')
+        .eq('is_deleted', false)
       if (error) throw error
       return data as { id: string; name: string }[]
     }
