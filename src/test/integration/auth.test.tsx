@@ -114,11 +114,11 @@ describe('Database Query Patterns', () => {
       then: vi.fn().mockResolvedValue(mockQueryResponse([]))
     })
 
-    mockClient.from('maintenance_tickets')
+    mockClient.from('tasks')
       .select('*')
       .eq('property_id', propertyId)
 
-    expect(mockClient.from).toHaveBeenCalledWith('maintenance_tickets')
+    expect(mockClient.from).toHaveBeenCalledWith('tasks')
   })
 })
 

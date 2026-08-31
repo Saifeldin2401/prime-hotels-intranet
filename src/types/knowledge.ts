@@ -68,8 +68,14 @@ export interface KnowledgeArticle {
     last_translated_at?: string
     content_ar?: string
 
-    // Relations
+    // Relations & Multi-Tenant Scoping
     property_id?: string
+    hotel_id?: string
+    brand_id?: string
+    organization_id?: string
+    scope_type?: 'organization' | 'brand' | 'hotel' | 'department' | 'global'
+    is_master_template?: boolean
+    master_source_id?: string | null
     department_id?: string
     category_id?: string
 
@@ -260,6 +266,11 @@ export interface KnowledgeSearchFilters {
     department_id?: string
     category_id?: string
     property_id?: string
+    hotel_id?: string
+    brand_id?: string
+    organization_id?: string
+    scope_type?: string
+    is_master_template?: boolean
     visibility_scope?: KnowledgeVisibility
     featured?: boolean
     requires_acknowledgment?: boolean
@@ -330,10 +341,10 @@ export const STATUS_CONFIG = {
 } as const
 
 export const VISIBILITY_CONFIG = {
-    global: { label: 'All Properties', icon: 'Globe' },
-    property: { label: 'Specific Property', icon: 'Building' },
+    global: { label: 'Organization-Wide (All Hotels)', icon: 'Globe' },
+    property: { label: 'Specific Hotel', icon: 'Building' },
     department: { label: 'Department Only', icon: 'Users' },
     role: { label: 'Role Specific', icon: 'Shield' },
-    property_department: { label: 'Property + Department', icon: 'Layers' },
+    property_department: { label: 'Hotel + Department', icon: 'Layers' },
     custom: { label: 'Custom Rules', icon: 'Settings' }
 } as const

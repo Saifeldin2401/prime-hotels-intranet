@@ -143,6 +143,13 @@ export function BriefingDialog({ open, onOpenChange }: BriefingDialogProps) {
     notes: '',
   });
 
+  const mandateOptions = [
+    { id: 'Hospitality Solutions', labelEn: 'Hospitality Solutions', labelAr: 'حلول الضيافة والأصول' },
+    { id: 'Business Growth & AI', labelEn: 'Business Growth & AI', labelAr: 'نمو الأعمال والذكاء الاصطناعي' },
+    { id: 'Asset Management & HMAs', labelEn: 'Asset Management & HMAs', labelAr: 'إدارة الأصول واتفاقيات الإدارة' },
+    { id: 'HK&P Digital Platform', labelEn: 'HK&P Platform License', labelAr: 'ترخيص منصة HK&P الرقمية' },
+  ];
+
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -166,8 +173,8 @@ export function BriefingDialog({ open, onOpenChange }: BriefingDialogProps) {
 
       toast.success(
         isRTL
-          ? 'تم استلام طلب الإحاطة بنجاح. سيتواصل معك أحد الشركاء خلال يومي عمل.'
-          : 'Briefing request received. A partner will respond directly within two business days.'
+          ? 'تم استلام طلب الإحاطة بنجاح. سيتواصل معك أحد الشركاء التنفيذيين خلال يومي عمل وبسرية تامة.'
+          : 'Briefing request received. A partner will respond directly within two business days under strict confidence.'
       );
       onOpenChange(false);
       setForm({ name: '', email: '', phone: '', organization: '', mandateType: 'Hospitality Solutions', notes: '' });
@@ -175,8 +182,8 @@ export function BriefingDialog({ open, onOpenChange }: BriefingDialogProps) {
       console.error('Failed to submit partner briefing request:', err);
       toast.error(
         isRTL
-          ? 'تعذر إرسال الطلب. يرجى المحاولة مرة أخرى.'
-          : 'We couldn\'t submit your request. Please try again.'
+          ? 'تعذر إرسال الطلب. يرجى المحاولة مرة أخرى أو الاتصال بنا مباشرة.'
+          : 'We couldn\'t submit your request. Please try again or contact us directly.'
       );
     } finally {
       setIsSubmitting(false);
@@ -188,51 +195,155 @@ export function BriefingDialog({ open, onOpenChange }: BriefingDialogProps) {
       <DialogTrigger asChild>
         <span className="hidden" />
       </DialogTrigger>
-      <DialogContent className="bg-[#09101F] border border-amber-500/30 text-white max-w-lg rounded-none p-6 sm:p-8" style={inter}>
-        <DialogHeader>
-          <DialogTitle className="text-2xl text-amber-400" style={playfair}>
-            {isRTL ? 'طلب إحاطة شريك متقدم' : 'Request Partner Briefing'}
-          </DialogTitle>
-          <DialogDescription className="text-slate-400 text-xs mt-1">
-            {isRTL
-              ? 'تُعالج جميع الاستفسارات بسرية تامة. سيتواصل معك أحد الشركاء خلال يومي عمل.'
-              : 'All inquiries are received in strict confidence. A partner will respond directly within two business days.'}
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent
+        className="bg-[#0F131A] border border-[#C45B2F]/40 text-white max-w-xl rounded-2xl p-0 overflow-hidden shadow-[0_20px_70px_rgba(0,0,0,0.8),0_0_40px_rgba(196,91,47,0.15)]"
+        style={inter}
+      >
+        {/* Metallic Copper Top Accent Ribbon */}
+        <div className="h-2 bg-gradient-to-r from-[#C45B2F] via-[#E07A5F] to-[#D9C6A3]" />
 
-        <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-4 text-start">
-          <div>
-            <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'الاسم الكامل' : 'Full Name'}</Label>
-            <Input required disabled={isSubmitting} placeholder={isRTL ? 'مثال: عبد المحسن السعد' : 'e.g. Sultan Al-Rashid'} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'البريد الإلكتروني' : 'Corporate Email'}</Label>
-              <Input required disabled={isSubmitting} type="email" placeholder="name@company.sa" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+        <div className="p-6 sm:p-8">
+          <DialogHeader className="text-start space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-[#C45B2F] px-2.5 py-1 rounded bg-[#C45B2F]/10 border border-[#C45B2F]/30" style={neueHaas}>
+                {isRTL ? 'إحاطة شريك تنفيذي' : 'EXECUTIVE PARTNER BRIEFING'}
+              </span>
             </div>
+            <DialogTitle className="text-2xl sm:text-3xl text-white font-normal leading-tight" style={canela}>
+              {isRTL ? (
+                <>طلب إحاطة <span className="italic text-[#E07A5F]">شريك تنفيذي</span></>
+              ) : (
+                <>Request a <span className="italic text-[#E07A5F]">Partner Briefing</span></>
+              )}
+            </DialogTitle>
+            <DialogDescription className="text-slate-400 text-xs sm:text-sm leading-relaxed" style={inter}>
+              {isRTL
+                ? 'تُعالج جميع الاستفسارات بسرية تامة تحت معيار أمانة العميل. سيتواصل معك أحد الشركاء مباشرة.'
+                : 'All inquiries are received in strict confidence under our fiduciary client mandate. A partner will respond directly.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={(e) => void handleSubmit(e)} className="space-y-4 mt-6 text-start">
+            {/* Mandate Type Chips */}
             <div>
-              <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'رقم الهاتف' : 'Phone Number'}</Label>
-              <Input disabled={isSubmitting} placeholder="+966 50 000 0000" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
+              <Label className="text-xs font-semibold text-slate-300 block mb-2" style={neueHaas}>
+                {isRTL ? 'نوع الاستشارة والمهمة المطلوبة' : 'Primary Advisory Mandate'}
+              </Label>
+              <div className="grid grid-cols-2 gap-2">
+                {mandateOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, mandateType: opt.id })}
+                    className={`px-3 py-2 text-xs rounded-lg border text-start transition-all ${
+                      form.mandateType === opt.id
+                        ? 'border-[#C45B2F] bg-[#C45B2F]/15 text-white font-semibold'
+                        : 'border-white/10 bg-white/[0.02] text-slate-400 hover:text-slate-200 hover:bg-white/[0.05]'
+                    }`}
+                  >
+                    {isRTL ? opt.labelAr : opt.labelEn}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-          <div>
-            <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'اسم الشركة / الأصل' : 'Organization / Asset'}</Label>
-            <Input disabled={isSubmitting} placeholder={isRTL ? 'شركة الفنادق والضيافة' : 'Hospitality Group / Asset Co.'} value={form.organization} onChange={(e) => setForm({ ...form, organization: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
-          </div>
-          <div>
-            <Label className="text-xs font-semibold text-slate-300">{isRTL ? 'تفاصيل المهمة والاستشارة' : 'Mandate Overview'}</Label>
-            <Textarea rows={3} disabled={isSubmitting} placeholder={isRTL ? 'صف النطاق التشغيلي أو الاستثماري المطلوب...' : 'Briefly describe your operational or advisory mandate...'} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="bg-[#050A12] border-slate-800 text-white mt-1 focus:border-amber-500 rounded-none" />
-          </div>
-          <Button type="submit" disabled={isSubmitting} className="w-full h-11 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs uppercase tracking-wider mt-2 rounded-none disabled:opacity-60">
-            {isSubmitting ? (
-              <RefreshCw className="me-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="me-2 h-4 w-4" />
-            )}
-            {isRTL ? 'إرسال طلب الإحاطة' : 'Submit Confidential Inquiry'}
-          </Button>
-        </form>
+
+            {/* Name */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-300" style={neueHaas}>
+                {isRTL ? 'الاسم الكامل *' : 'Full Name *'}
+              </Label>
+              <Input
+                required
+                disabled={isSubmitting}
+                placeholder={isRTL ? 'مثال: عبد المحسن السعد' : 'e.g. Sultan Al-Rashid'}
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                className="bg-[#080B10] border-white/15 text-white mt-1.5 focus:border-[#C45B2F] focus:ring-1 focus:ring-[#C45B2F] rounded-xl h-11"
+              />
+            </div>
+
+            {/* Email & Phone Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label className="text-xs font-semibold text-slate-300" style={neueHaas}>
+                  {isRTL ? 'البريد المؤسسي *' : 'Corporate Email *'}
+                </Label>
+                <Input
+                  required
+                  disabled={isSubmitting}
+                  type="email"
+                  placeholder="name@company.sa"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="bg-[#080B10] border-white/15 text-white mt-1.5 focus:border-[#C45B2F] focus:ring-1 focus:ring-[#C45B2F] rounded-xl h-11"
+                />
+              </div>
+              <div>
+                <Label className="text-xs font-semibold text-slate-300" style={neueHaas}>
+                  {isRTL ? 'رقم الهاتف' : 'Phone Number'}
+                </Label>
+                <Input
+                  disabled={isSubmitting}
+                  placeholder="+966 50 000 0000"
+                  value={form.phone}
+                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                  className="bg-[#080B10] border-white/15 text-white mt-1.5 focus:border-[#C45B2F] focus:ring-1 focus:ring-[#C45B2F] rounded-xl h-11"
+                />
+              </div>
+            </div>
+
+            {/* Organization / Asset */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-300" style={neueHaas}>
+                {isRTL ? 'اسم الشركة / الأصل الفندقي' : 'Organization / Asset Name'}
+              </Label>
+              <Input
+                disabled={isSubmitting}
+                placeholder={isRTL ? 'شركة الضيافة والأصول الفندقية' : 'Hospitality Holding / Asset Co.'}
+                value={form.organization}
+                onChange={(e) => setForm({ ...form, organization: e.target.value })}
+                className="bg-[#080B10] border-white/15 text-white mt-1.5 focus:border-[#C45B2F] focus:ring-1 focus:ring-[#C45B2F] rounded-xl h-11"
+              />
+            </div>
+
+            {/* Mandate Notes */}
+            <div>
+              <Label className="text-xs font-semibold text-slate-300" style={neueHaas}>
+                {isRTL ? 'نبذة عن نطاق المهمة' : 'Mandate Scope & Objectives'}
+              </Label>
+              <Textarea
+                rows={3}
+                disabled={isSubmitting}
+                placeholder={isRTL ? 'صف النطاق التشغيلي، الجدوى، أو التحول المطلوب...' : 'Briefly outline the operational challenge or advisory objectives...'}
+                value={form.notes}
+                onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                className="bg-[#080B10] border-white/15 text-white mt-1.5 focus:border-[#C45B2F] focus:ring-1 focus:ring-[#C45B2F] rounded-xl resize-none"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full h-12 bg-gradient-to-r from-[#C45B2F] via-[#D96B3D] to-[#B34D24] hover:from-[#D96B3D] hover:to-[#C45B2F] text-white font-bold text-xs uppercase tracking-[0.2em] mt-3 rounded-xl shadow-lg shadow-[#C45B2F]/30 disabled:opacity-60 transition-all"
+              style={neueHaas}
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="me-2 h-4 w-4 animate-spin" />
+                  <span>{isRTL ? 'جاري الإرسال...' : 'Submitting Request...'}</span>
+                </>
+              ) : (
+                <>
+                  <Send className="me-2 h-4 w-4" />
+                  <span>{isRTL ? 'إرسال طلب الإحاطة السري' : 'Submit Confidential Inquiry'}</span>
+                </>
+              )}
+            </Button>
+          </form>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
+

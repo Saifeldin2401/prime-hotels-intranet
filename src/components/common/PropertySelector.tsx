@@ -43,7 +43,7 @@ export function PropertySelector({
       <div className="flex items-center gap-2 p-2 border rounded-md">
         <Building className="w-4 h-4" />
         <span className="text-sm font-medium">
-          {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'All Properties (Group Portfolio)') : property.name}
+          {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'Organization-Wide (All Hotels)') : property.name}
         </span>
       </div>
     )
@@ -57,13 +57,13 @@ export function PropertySelector({
       <SelectContent>
         {hasConsolidatedOption && (
           <SelectGroup>
-            <SelectLabel>{t_ext('views', 'Views')}</SelectLabel>
+            <SelectLabel>{t_ext('organization_scope', 'Organization Scope')}</SelectLabel>
             {consolidatedProperties.map((property) => (
               <SelectItem key={property.id} value={property.id}>
                 <div className="flex items-center gap-2">
-                  <LayoutDashboard className="w-4 h-4 text-indigo-500" />
+                  <LayoutDashboard className="w-4 h-4 text-amber-500" />
                   <span>
-                    {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'All Properties (Group Portfolio)') : property.name}
+                    {isConsolidatedPropertyId(property.id) ? t_ext('consolidated_view_all', 'Organization-Wide (All Hotels)') : property.name}
                   </span>
                 </div>
               </SelectItem>
@@ -77,7 +77,7 @@ export function PropertySelector({
 
         {realProperties.length > 0 && (
           <SelectGroup>
-            <SelectLabel>{t_ext('properties', 'Properties')}</SelectLabel>
+            <SelectLabel>{t_ext('hotels_locations', 'Hotels & Locations')}</SelectLabel>
             {realProperties.map((property) => {
               const hasAccess = canAccessProperty(property.id)
               return (
@@ -112,7 +112,7 @@ export function PropertyAccessBadge({ propertyId, showDetails = false }: Propert
   const { canAccessProperty } = usePermissions()
 
   if (!propertyId || isConsolidatedPropertyId(propertyId)) {
-    return <Badge variant="outline">{t_ext('consolidated_view_all', 'All Properties (Group Portfolio)')}</Badge>
+    return <Badge variant="outline">{t_ext('consolidated_view_all', 'Organization-Wide (All Hotels)')}</Badge>
   }
 
   const property = properties.find(p => p.id === propertyId)

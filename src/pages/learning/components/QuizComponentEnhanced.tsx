@@ -1215,16 +1215,18 @@ export function QuizComponentEnhanced({
                         </m.div>
                     )}
 
-                    {/* Timer */}
+                    {/* Luxury Countdown Timer Badge */}
                     {timeLeft !== null && (
                         <div className={cn(
-                            "flex items-center gap-2 px-4 py-2 rounded-xl border-2 font-mono font-bold",
-                            timeLeft < 60 ? 'border-red-200 text-red-600 bg-red-50' : 'border-hotel-gold/30 text-hotel-navy bg-white',
-                            timeFrozen && "border-blue-200 text-blue-600 bg-blue-50"
+                            "flex items-center gap-2 px-3.5 py-1.5 rounded-2xl border font-mono font-bold text-xs sm:text-sm shadow-sm transition-all",
+                            timeLeft < 60
+                                ? 'border-destructive/40 text-destructive bg-destructive/10 animate-pulse'
+                                : 'border-amber-500/30 text-foreground bg-card',
+                            timeFrozen && "border-blue-500/40 text-blue-600 bg-blue-500/10"
                         )}>
-                            <Clock className={cn("h-4 w-4", timeLeft < 60 && "animate-pulse")} />
+                            <Clock className={cn("h-4 w-4", timeLeft < 60 ? "text-destructive" : "text-amber-500")} />
                             <span>{formatTime(timeLeft)}</span>
-                            {timeFrozen && <span className="text-xs">FROZEN</span>}
+                            {timeFrozen && <Badge variant="outline" className="text-[9px] px-1 py-0 border-blue-400 text-blue-600">FROZEN</Badge>}
                         </div>
                     )}
 
@@ -1250,14 +1252,43 @@ export function QuizComponentEnhanced({
                 </div>
             </m.div>
 
-            {/* Progress Bar */}
-            <div className="relative h-3 w-full bg-slate-100 rounded-full overflow-hidden">
-                <m.div
-                    className="absolute start-0 top-0 h-full bg-gradient-to-r from-hotel-gold-dark via-hotel-gold to-hotel-gold-light"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${((currentQuestionIndex) / (quiz.questions?.length || 1)) * 100}%` }}
-                    transition={{ type: "spring", stiffness: 50 }}
-                />
+            {/* Smooth Question Step Indicators */}
+            <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono text-muted-foreground px-1">
+                    <span>
+                        Question <strong className="text-foreground">{currentQuestionIndex + 1}</strong> of {quiz.questions?.length || 1}
+                    </span>
+                    <span className="font-bold text-amber-600 dark:text-amber-400">
+                        {Math.round(((currentQuestionIndex + 1) / (quiz.questions?.length || 1)) * 100)}%
+                    </span>
+                </div>
+
+                <div className="flex items-center gap-1.5 overflow-x-auto py-1 px-0.5 no-scrollbar">
+                    {quiz.questions?.map((q, idx) => {
+                        const isCurrent = idx === currentQuestionIndex
+                        const isAnswered = hasAnswer(q.question_id)
+
+                        return (
+                            <button
+                                key={q.question_id || idx}
+                                type="button"
+                                onClick={() => {
+                                    if (!showFeedback) setCurrentQuestionIndex(idx)
+                                }}
+                                disabled={showFeedback}
+                                className={cn(
+                                    "flex-1 min-w-[20px] max-w-[40px] h-2 rounded-full transition-all duration-300 relative",
+                                    isCurrent
+                                        ? "h-2.5 bg-amber-500 shadow-sm shadow-amber-500/40"
+                                        : isAnswered
+                                            ? "bg-emerald-500 hover:bg-emerald-600"
+                                            : "bg-muted hover:bg-muted-foreground/30"
+                                )}
+                                title={`Question ${idx + 1}`}
+                            />
+                        )
+                    })}
+                </div>
             </div>
 
             {/* Power-ups Bar */}
@@ -1342,10 +1373,10 @@ export function QuizComponentEnhanced({
                                                             whileHover={{ scale: 1.01 }}
                                                             whileTap={{ scale: 0.99 }}
                                                             className={cn(
-                                                                "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
+                                                                "group flex items-center gap-4 border-2 p-4 rounded-2xl transition-all duration-200 cursor-pointer",
                                                                 isSelected
-                                                                    ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
-                                                                    : 'bg-white border-slate-100 hover:border-hotel-gold/50'
+                                                                    ? 'bg-amber-500/[0.06] border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                                                                    : 'bg-card border-border/60 hover:border-amber-500/40 hover:bg-muted/30'
                                                             )}
                                                             onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
                                                             role="radio"
@@ -1359,14 +1390,18 @@ export function QuizComponentEnhanced({
                                                             }}
                                                         >
                                                             <div className={cn(
-                                                                "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                                                                isSelected ? "border-hotel-gold bg-hotel-gold" : "border-slate-200"
+                                                                "h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                                                                isSelected ? "border-amber-500 bg-amber-500 text-slate-950 font-bold shadow-sm" : "border-muted-foreground/30 bg-transparent"
                                                             )}>
-                                                                {isSelected && <div className="h-2 w-2 rounded-full bg-hotel-navy" />}
+                                                                {isSelected ? (
+                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                ) : (
+                                                                    <div className="h-2 w-2 rounded-full bg-transparent group-hover:bg-muted-foreground/20" />
+                                                                )}
                                                             </div>
                                                             <span className={cn(
-                                                                "flex-1 text-base",
-                                                                isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
+                                                                "flex-1 text-sm sm:text-base font-sans transition-colors",
+                                                                isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
                                                                 isRTL && "text-right"
                                                             )}>
                                                                 {translatedOption}
@@ -1395,17 +1430,17 @@ export function QuizComponentEnhanced({
                                                             whileHover={{ scale: 1.01 }}
                                                             whileTap={{ scale: 0.99 }}
                                                             className={cn(
-                                                                "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
+                                                                "group flex items-center gap-4 border-2 p-4 rounded-2xl transition-all duration-200 cursor-pointer",
                                                                 isSelected
-                                                                    ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
-                                                                    : 'bg-white border-slate-100 hover:border-hotel-gold/50'
+                                                                    ? 'bg-amber-500/[0.06] border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                                                                    : 'bg-card border-border/60 hover:border-amber-500/40 hover:bg-muted/30'
                                                             )}
                                                             onClick={() => {
                                                                 const next = isSelected
                                                                     ? selectedAnswers.filter(id => id !== opt.id)
                                                                     : [...selectedAnswers, opt.id]
                                                                 setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
-                                                            }}
+                             }}
                                                             role="checkbox"
                                                             aria-checked={isSelected}
                                                             tabIndex={0}
@@ -1419,19 +1454,15 @@ export function QuizComponentEnhanced({
                                                                 }
                                                             }}
                                                         >
-                                                            <Checkbox
-                                                                checked={isSelected}
-                                                                onCheckedChange={(checked) => {
-                                                                    const next = checked
-                                                                        ? [...selectedAnswers, opt.id]
-                                                                        : selectedAnswers.filter(id => id !== opt.id)
-                                                                    setAnswers({ ...answers, [currentQuestion.question_id]: Array.from(new Set(next)) })
-                                                                }}
-                                                                className="h-5 w-5"
-                                                            />
+                                                            <div className={cn(
+                                                                "h-6 w-6 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all",
+                                                                isSelected ? "border-amber-500 bg-amber-500 text-slate-950 font-bold shadow-sm" : "border-muted-foreground/30 bg-transparent"
+                                                            )}>
+                                                                {isSelected && <CheckCircle2 className="h-4 w-4" />}
+                                                            </div>
                                                             <span className={cn(
-                                                                "flex-1 text-base",
-                                                                isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
+                                                                "flex-1 text-sm sm:text-base font-sans transition-colors",
+                                                                isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
                                                                 isRTL && "text-right"
                                                             )}>
                                                                 {translatedOption}
@@ -1458,14 +1489,23 @@ export function QuizComponentEnhanced({
                                                         whileTap={{ scale: 0.98 }}
                                                         onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: option })}
                                                         className={cn(
-                                                            "flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all gap-3",
+                                                            "flex flex-col items-center justify-center p-6 rounded-2xl border-2 transition-all gap-3 cursor-pointer shadow-sm",
                                                             isSelected
-                                                                ? 'bg-hotel-navy border-hotel-gold text-white'
-                                                                : 'bg-white border-slate-100 text-slate-500 hover:border-hotel-gold/50'
+                                                                ? 'bg-amber-500/[0.08] border-amber-500 ring-2 ring-amber-500/20 text-foreground font-bold'
+                                                                : 'bg-card border-border/60 text-muted-foreground hover:border-amber-500/40 hover:bg-muted/30'
                                                         )}
                                                     >
-                                                        {option === 'true' ? <CheckCircle2 className="h-8 w-8" /> : <XCircle className="h-8 w-8" />}
-                                                        <span className="text-lg font-bold uppercase">{option}</span>
+                                                        <div className={cn(
+                                                            "h-12 w-12 rounded-2xl flex items-center justify-center border-2 transition-all",
+                                                            isSelected
+                                                                ? "border-amber-500 bg-amber-500 text-slate-950 shadow-md"
+                                                                : "border-border bg-background"
+                                                        )}>
+                                                            {option === 'true' ? <CheckCircle2 className="h-6 w-6" /> : <XCircle className="h-6 w-6" />}
+                                                        </div>
+                                                        <span className="text-base font-bold uppercase tracking-wider font-mono">
+                                                            {option === 'true' ? (isRTL ? 'صحيح' : 'True') : (isRTL ? 'خطأ' : 'False')}
+                                                        </span>
                                                     </m.button>
                                                 )
                                             })}
@@ -1501,10 +1541,10 @@ export function QuizComponentEnhanced({
                                                             whileHover={{ scale: 1.01 }}
                                                             whileTap={{ scale: 0.99 }}
                                                             className={cn(
-                                                                "group flex items-center gap-4 border-2 p-4 rounded-xl transition-all cursor-pointer",
+                                                                "group flex items-center gap-4 border-2 p-4 rounded-2xl transition-all duration-200 cursor-pointer",
                                                                 isSelected
-                                                                    ? 'bg-hotel-navy/5 border-hotel-gold shadow-md'
-                                                                    : 'bg-white border-slate-100 hover:border-hotel-gold/50'
+                                                                    ? 'bg-amber-500/[0.06] border-amber-500 ring-2 ring-amber-500/20 shadow-md'
+                                                                    : 'bg-card border-border/60 hover:border-amber-500/40 hover:bg-muted/30'
                                                             )}
                                                             onClick={() => setAnswers({ ...answers, [currentQuestion.question_id]: opt.id })}
                                                             role="radio"
@@ -1518,14 +1558,18 @@ export function QuizComponentEnhanced({
                                                             }}
                                                         >
                                                             <div className={cn(
-                                                                "h-5 w-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors",
-                                                                isSelected ? "border-hotel-gold bg-hotel-gold" : "border-slate-200"
+                                                                "h-6 w-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-all",
+                                                                isSelected ? "border-amber-500 bg-amber-500 text-slate-950 font-bold shadow-sm" : "border-muted-foreground/30 bg-transparent"
                                                             )}>
-                                                                {isSelected && <div className="h-2 w-2 rounded-full bg-hotel-navy" />}
+                                                                {isSelected ? (
+                                                                    <CheckCircle2 className="h-4 w-4" />
+                                                                ) : (
+                                                                    <div className="h-2 w-2 rounded-full bg-transparent group-hover:bg-muted-foreground/20" />
+                                                                )}
                                                             </div>
                                                             <span className={cn(
-                                                                "flex-1 text-base",
-                                                                isSelected ? "text-hotel-navy font-bold" : "text-slate-600",
+                                                                "flex-1 text-sm sm:text-base font-sans transition-colors",
+                                                                isSelected ? "text-foreground font-bold" : "text-muted-foreground group-hover:text-foreground",
                                                                 isRTL && "text-right"
                                                             )}>
                                                                 {translatedOption}
@@ -1740,104 +1784,156 @@ function QuizResultsScreen({
         >
             {/* Main Result Card */}
             <Card className={cn(
-                "text-center p-8 border-2 shadow-xl",
-                result.passed ? "border-emerald-200 bg-gradient-to-br from-emerald-50 to-white" : "border-red-200 bg-gradient-to-br from-red-50 to-white"
+                "text-center p-8 sm:p-10 border-2 rounded-3xl shadow-2xl overflow-hidden relative backdrop-blur-xl",
+                result.passed
+                    ? "border-emerald-500/40 bg-gradient-to-br from-card via-card/95 to-emerald-500/[0.06]"
+                    : "border-destructive/40 bg-gradient-to-br from-card via-card/95 to-destructive/[0.06]"
             )}>
-                <CardContent className="space-y-6">
+                {/* Decorative top accent bar */}
+                <div className={cn(
+                    "absolute top-0 start-0 end-0 h-1.5",
+                    result.passed
+                        ? "bg-gradient-to-r from-emerald-500 via-amber-400 to-emerald-600"
+                        : "bg-gradient-to-r from-destructive via-orange-500 to-destructive"
+                )} />
+
+                <CardContent className="space-y-6 pt-2">
                     {/* Status Icon */}
                     <m.div
-                        initial={{ scale: 0.95, opacity: 0 }}
+                        initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
+                        transition={{ type: "spring", stiffness: 200, damping: 15 }}
                         className={cn(
-                            "w-24 h-24 rounded-full flex items-center justify-center mx-auto",
-                            result.passed ? "bg-emerald-100" : "bg-red-100"
+                            "w-24 h-24 rounded-3xl flex items-center justify-center mx-auto shadow-inner border-2",
+                            result.passed
+                                ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                : "bg-destructive/15 border-destructive/30 text-destructive"
                         )}>
                         {result.passed ? (
-                            <Award className="h-12 w-12 text-emerald-600" />
+                            <Award className="h-12 w-12" />
                         ) : (
-                            <XCircle className="h-12 w-12 text-red-500" />
+                            <XCircle className="h-12 w-12" />
                         )}
                     </m.div>
 
-                    {/* Score */}
-                    <div>
-                        <h2 className="text-3xl font-bold mb-2 text-hotel-navy">
-                            {result.passed ? 'Congratulations!' : 'Keep Practicing'}
+                    {/* Score Title & Feedback */}
+                    <div className="space-y-2">
+                        <Badge variant="outline" className={cn(
+                            "text-xs px-3 py-1 font-semibold uppercase tracking-wider",
+                            result.passed
+                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                                : "bg-destructive/10 border-destructive/30 text-destructive"
+                        )}>
+                            {result.passed ? 'Assessment Passed' : 'Assessment Incomplete'}
+                        </Badge>
+
+                        <h2 className="font-display text-3xl sm:text-4xl font-bold tracking-tight text-foreground">
+                            {result.passed ? 'Hospitality Standard Achieved' : 'Review & Practice Recommended'}
                         </h2>
-                        <p className="text-muted-foreground">
-                            You scored <span className="font-bold text-hotel-navy">{result.score}%</span>
-                            {' '}({result.correctCount}/{result.totalQuestions} correct)
-                        </p>
+
+                        <div className="flex items-center justify-center gap-2 pt-2">
+                            <span className="font-mono text-4xl sm:text-5xl font-bold text-foreground">
+                                {result.score}%
+                            </span>
+                            <span className="text-sm text-muted-foreground font-mono self-end pb-1">
+                                ({result.correctCount}/{result.totalQuestions} correct)
+                            </span>
+                        </div>
                     </div>
 
                     {/* Stats Grid */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2">
                         <StatCard
-                            icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}
+                            icon={<CheckCircle2 className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />}
                             value={result.correctCount}
                             label="Correct"
                             color="emerald"
                         />
                         <StatCard
-                            icon={<TrendingUp className="h-5 w-5 text-blue-600" />}
+                            icon={<TrendingUp className="h-5 w-5 text-amber-600 dark:text-amber-400" />}
                             value={`${result.score}%`}
-                            label="Score"
-                            color="blue"
+                            label="Final Score"
+                            color="amber"
                         />
                         <StatCard
-                            icon={<Flame className="h-5 w-5 text-orange-600" />}
+                            icon={<Flame className="h-5 w-5 text-orange-600 dark:text-orange-400" />}
                             value={result.streakAchieved}
                             label="Best Streak"
                             color="orange"
                         />
                         <StatCard
-                            icon={<Clock className="h-5 w-5 text-purple-600" />}
+                            icon={<Clock className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
                             value={formatTime(result.timeSpentSeconds)}
-                            label={t("common:time")}
-                            color="purple"
+                            label={t("common:time", "Time")}
+                            color="blue"
                         />
                     </div>
 
-                    {/* Achievements */}
+                    {/* Achievements & Streak pill */}
                     {result.streakAchieved >= 3 && (
                         <m.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.3 }}
-                            className="flex items-center justify-center gap-2 bg-orange-100 text-orange-800 px-4 py-2 rounded-full"
+                            className="inline-flex items-center justify-center gap-2 bg-orange-500/10 border border-orange-500/20 text-orange-600 dark:text-orange-400 px-4 py-1.5 rounded-full text-xs font-bold"
                         >
                             <Sparkles className="h-4 w-4" />
-                            <span className="font-semibold">{result.streakAchieved} Answer Streak!</span>
+                            <span>{result.streakAchieved} Consecutive Answers Streak!</span>
                         </m.div>
                     )}
 
                     {/* Actions */}
-                    <div className="flex flex-wrap justify-center gap-3 pt-4">
+                    <div className="flex flex-wrap justify-center gap-3 pt-4 border-t border-border/40">
                         {onExit && (
-                            <Button onClick={onExit} variant="outline" className="px-6">
-                                Back to Learning
+                            <Button
+                                onClick={onExit}
+                                variant="outline"
+                                className="px-6 h-11 rounded-xl text-xs sm:text-sm font-semibold hover:bg-muted/60"
+                            >
+                                Back to Learning Dashboard
                             </Button>
                         )}
                         {!result.passed && canRetry && (
-                            <Button onClick={onRetry} className="bg-hotel-navy hover:bg-hotel-navy-dark text-white px-6">
-                                Try Again
+                            <Button
+                                onClick={onRetry}
+                                className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-6 h-11 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95"
+                            >
+                                Retry Assessment
+                            </Button>
+                        )}
+                        {result.passed && (
+                            <Button
+                                onClick={() => {
+                                    if (onExit) onExit()
+                                }}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 h-11 rounded-xl text-xs sm:text-sm shadow-md transition-all active:scale-95 gap-2"
+                            >
+                                <Award className="h-4 w-4" />
+                                Claim & View Credential
                             </Button>
                         )}
                         {!result.passed && !canRetry && (
-                            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
-                                Attempt limit reached
+                            <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2 text-xs font-semibold text-destructive">
+                                Maximum attempt limit reached
                             </div>
                         )}
                     </div>
                 </CardContent>
             </Card>
 
-            {/* Review Answers */}
-            <Card className="border-slate-200">
-                <CardContent className="p-6">
-                    <h3 className="font-bold text-lg text-hotel-navy mb-4">Review Answers</h3>
-                    <div className="space-y-4">
+            {/* Review Answers Card */}
+            <Card className="rounded-3xl border border-border/60 bg-card/80 backdrop-blur-md shadow-sm">
+                <CardContent className="p-6 sm:p-8 space-y-4">
+                    <div className="flex items-center justify-between border-b border-border/40 pb-4">
+                        <h3 className="font-display font-bold text-lg text-foreground">
+                            Question Breakdown & Official Rationale
+                        </h3>
+                        <span className="text-xs font-mono text-muted-foreground">
+                            {result.reviewItems?.length || 0} questions reviewed
+                        </span>
+                    </div>
+
+                    <div className="space-y-3">
                         {result.reviewItems?.map((item, index) => (
                             <m.div
                                 key={item.questionId || `answer-${index}`}
@@ -1845,37 +1941,47 @@ function QuizResultsScreen({
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: index * 0.05 }}
                                 className={cn(
-                                    "p-4 rounded-xl border-2",
-                                    item.correct ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100"
+                                    "p-4 sm:p-5 rounded-2xl border-2 transition-all space-y-2",
+                                    item.correct
+                                        ? "bg-emerald-500/[0.04] border-emerald-500/20"
+                                        : "bg-destructive/[0.04] border-destructive/20"
                                 )}
                             >
                                 <div className="flex items-start gap-3">
                                     <div className={cn(
-                                        "w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-sm font-bold",
-                                        item.correct ? "bg-emerald-200 text-emerald-800" : "bg-red-200 text-red-800"
+                                        "w-7 h-7 rounded-xl flex items-center justify-center shrink-0 text-xs font-mono font-bold mt-0.5",
+                                        item.correct
+                                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300"
+                                            : "bg-destructive/20 text-destructive"
                                     )}>
                                         {index + 1}
                                     </div>
-                                    <div className="flex-1 space-y-2">
-                                        <p className="font-medium text-slate-800">{item.questionText}</p>
-                                        <div className="flex items-center gap-4 text-sm">
-                                            <span className={item.correct ? "text-emerald-700" : "text-red-700"}>
-                                                Your answer: {item.selectedAnswer}
+                                    <div className="flex-1 space-y-1.5 min-w-0">
+                                        <p className="font-semibold text-sm text-foreground">{item.questionText}</p>
+                                        <div className="flex flex-wrap items-center gap-3 text-xs font-sans">
+                                            <span className={cn(
+                                                "font-medium",
+                                                item.correct ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"
+                                            )}>
+                                                Your response: <strong>{item.selectedAnswer}</strong>
                                             </span>
                                             {!item.correct && (
-                                                <span className="text-emerald-700">
-                                                    Correct: {item.correctAnswer}
+                                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                                    Correct answer: <strong>{item.correctAnswer}</strong>
                                                 </span>
                                             )}
                                         </div>
                                         {item.explanation && (
-                                            <p className="text-xs text-slate-500 italic">{item.explanation}</p>
+                                            <div className="text-xs text-muted-foreground p-3 rounded-xl bg-background/60 border border-border/40 font-sans mt-2">
+                                                <span className="font-semibold text-foreground block mb-0.5">SOP Guideline & Rationale:</span>
+                                                {item.explanation}
+                                            </div>
                                         )}
                                     </div>
                                     {item.correct ? (
-                                        <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+                                        <CheckCircle2 className="h-5 w-5 text-emerald-500 shrink-0 mt-0.5" />
                                     ) : (
-                                        <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                                        <XCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                                     )}
                                 </div>
                             </m.div>
@@ -1889,17 +1995,18 @@ function QuizResultsScreen({
 
 function StatCard({ icon, value, label, color }: { icon: React.ReactNode, value: string | number, label: string, color: string }) {
     const colorClasses: Record<string, string> = {
-        emerald: 'bg-emerald-50 border-emerald-100',
-        blue: 'bg-blue-50 border-blue-100',
-        orange: 'bg-orange-50 border-orange-100',
-        purple: 'bg-purple-50 border-purple-100',
+        emerald: 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+        amber: 'bg-amber-500/10 border-amber-500/20 text-amber-600 dark:text-amber-400',
+        blue: 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:text-blue-400',
+        orange: 'bg-orange-500/10 border-orange-500/20 text-orange-600 dark:text-orange-400',
+        purple: 'bg-purple-500/10 border-purple-500/20 text-purple-600 dark:text-purple-400',
     }
 
     return (
-        <div className={cn("p-4 rounded-xl border-2 text-center", colorClasses[color])}>
-            <div className="flex justify-center mb-2">{icon}</div>
-            <div className="text-2xl font-bold text-slate-800">{value}</div>
-            <div className="text-xs text-slate-500 uppercase tracking-wider">{label}</div>
+        <div className={cn("p-3.5 sm:p-4 rounded-2xl border text-center transition-all", colorClasses[color] || colorClasses.amber)}>
+            <div className="flex justify-center mb-1">{icon}</div>
+            <div className="font-mono text-xl sm:text-2xl font-bold text-foreground">{value}</div>
+            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mt-0.5">{label}</div>
         </div>
     )
 }

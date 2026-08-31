@@ -4,7 +4,7 @@ import type { Event } from '@/hooks/useEvents'
 import { createNotification } from '@/services/notificationService'
 import { supabase } from '@/lib/supabase'
 import { crudToasts } from '@/lib/toastHelpers'
-import type { Announcement, AppRole, MaintenanceTicket, Task } from '@/lib/types'
+import type { Announcement, AppRole, Task } from '@/lib/types'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 const mapToAnnouncementPriority = (p?: string): 'normal' | 'important' | 'critical' => {
@@ -128,77 +128,6 @@ export function useQuickCreateEvent() {
   })
 }
 
-// Quick Maintenance Ticket Creation
-export function useQuickCreateMaintenanceTicket() {
-  const queryClient = useQueryClient()
-  const { user, properties } = useAuth()
-  const { currentProperty } = useProperty()
-
-  return useMutation({
-    mutationFn: async (data: {
-      title: string
-      description: string
-      category: MaintenanceTicket['category']
-      priority: MaintenanceTicket['priority']
-      location?: string
-      room_number?: string
-    }) => {
-      if (!user?.id) throw new Error('User must be authenticated')
-
-      const propertyId = currentProperty?.id || (properties.length > 0 ? properties[0].id : null)
-
-      const { data: result, error } = await supabase
-        .from('maintenance_tickets')
-        .insert({
-          title: data.title,
-          description: data.description,
-          category: data.category,
-          priority: data.priority,
-          room_number: data.room_number || data.location || null,
-          property_id: propertyId,
-          reported_by_id: user.id,
-          status: 'open'
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      // Audit log
-      supabase.from('system_events').insert({
-        event_type: 'audit',
-        actor_id: user.id,
-        entity_type: 'maintenance_ticket',
-        entity_id: result.id,
-        metadata: { action: 'create', details: { title: data.title, property_id: propertyId } }
-      }).then(({ error: auditError }) => {
-        if (auditError) console.error('Failed to write audit log:', auditError)
-      })
-
-      // Trigger AI triage in background
-      if (result && data.description && data.description.length > 20) {
-        await supabase
-          .from('maintenance_tickets')
-          .update({ ai_triage_status: 'pending' })
-          .eq('id', result.id)
-
-        supabase.functions.invoke('auto-triage-ticket', {
-          body: { ticket_id: result.id }
-        }).catch((error) => {
-          console.error('AI triage failed for maintenance ticket:', error)
-        })
-      }
-
-      return result as MaintenanceTicket
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['maintenance-tickets'] })
-      crudToasts.create.success('Maintenance ticket')
-    },
-    onError: () => crudToasts.create.error('maintenance ticket')
-  })
-}
-
 // Quick Announcement Creation
 export function useQuickCreateAnnouncement() {
   const queryClient = useQueryClient()
@@ -294,7 +223,7 @@ export function useQuickCreateAnnouncement() {
         // Remove duplicates and exclude creator
         const uniqueUserIds = [...new Set(targetUserIds)].filter(id => id !== user.id)
 
-        // Send notifications concurrently instead of one-at-a-time
+        // Send notifications concurrently
         await Promise.all(
           uniqueUserIds.map(userId =>
             createNotification({
@@ -325,7 +254,6 @@ export function useQuickCreate() {
   return {
     createTask: useQuickCreateTask(),
     createEvent: useQuickCreateEvent(),
-    createMaintenanceTicket: useQuickCreateMaintenanceTicket(),
     createAnnouncement: useQuickCreateAnnouncement(),
   }
 }

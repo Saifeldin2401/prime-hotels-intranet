@@ -90,15 +90,35 @@
     --hotel-emerald: 154 43% 18%;
     --hotel-emerald-light: 154 35% 28%;
 
+    /* Animation Easings (Apple & Emil Kowalski standards) */
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+    --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-spring: cubic-bezier(0.2, 0.8, 0.2, 1);
+
     /* Shadows used by animations.css */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
-    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.04);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.04);
+    --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.08), 0 8px 10px -6px rgb(0 0 0 / 0.04);
+    --shadow-2xl: 0 25px 50px -12px rgb(0 0 0 / 0.2);
+
+    /* Altus Advisory Signature Colors (HSL format) */
+    --altus-copper: 18 62% 48%;
+    --altus-copper-light: 18 64% 58%;
+    --altus-copper-dark: 18 67% 38%;
+    --altus-sand: 38 43% 75%;
+    --altus-sand-light: 38 40% 88%;
+    --altus-sand-dark: 38 33% 64%;
+    --altus-cream: 38 25% 96%;
+    --altus-ivory: 40 33% 97%;
+    --altus-slate: 214 12% 41%;
+    --altus-charcoal: 214 16% 14%;
+    --altus-emerald: 153 46% 33%;
 
     /* Typography */
-    --font-heading: 'Playfair Display', Georgia, serif;
+    --font-heading: 'Canela', 'Playfair Display', Georgia, serif;
     --font-body: 'Inter', sans-serif;
   }
 
@@ -135,6 +155,16 @@
     --border-accent: 43 53% 55%;
     --ring: 43 53% 55%;
     --focus-ring: 43 53% 55%;
+
+    /* Altus Dark Mode Token Adjustments */
+    --altus-copper: 18 62% 52%;
+    --altus-copper-light: 18 64% 62%;
+    --altus-copper-dark: 18 67% 35%;
+    --altus-sand: 38 35% 65%;
+    --altus-cream: 219 35% 14%;
+    --altus-ivory: 219 45% 9%;
+    --altus-charcoal: 214 16% 10%;
+    --altus-emerald: 153 46% 40%;
   }
 
   * {
@@ -144,14 +174,17 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     background-image:
-      radial-gradient(at 0% 0%, hsla(var(--hotel-gold), 0.15) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(var(--altus-copper), 0.05) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(var(--hotel-gold), 0.06) 0px, transparent 40%),
+      radial-gradient(at 50% 100%, hsla(var(--altus-sand), 0.04) 0px, transparent 60%),
       linear-gradient(to bottom right, hsl(var(--background)), hsl(var(--muted)));
     overflow-x: hidden;
   }
 
   .dark body {
     background-image:
-      radial-gradient(at 0% 0%, hsla(var(--hotel-gold), 0.08) 0px, transparent 50%),
+      radial-gradient(at 0% 0%, hsla(var(--altus-copper), 0.07) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, hsla(var(--hotel-gold), 0.05) 0px, transparent 40%),
       linear-gradient(to bottom, hsl(var(--background)), hsl(var(--muted)));
   }
 
@@ -233,22 +266,24 @@ html {
   }
 }
 
-/* Custom scrollbar */
+/* Custom polished scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-secondary;
+  background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-muted-foreground/30 rounded-full;
+  background: hsl(var(--muted-foreground) / 0.25);
+  border-radius: 9999px;
+  transition: background 150ms var(--ease-out);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-muted-foreground/50;
+  background: hsl(var(--muted-foreground) / 0.45);
 }
 
 /* ============================================

@@ -330,6 +330,17 @@ function QuestionCard({ question, passRate, onApprove, onDelete, isApproving }: 
                             <Badge variant="outline" className={`text-${statusConfig.color}-600`}>{statusConfig.label}</Badge>
                             <Badge variant="secondary">{typeConfig.label}</Badge>
                             <Badge variant="outline" className={`text-${difficultyConfig.color}-600`}>{difficultyConfig.label}</Badge>
+                            {question.is_master_template && (
+                                <Badge className="bg-amber-100 text-amber-800 border-amber-300">
+                                    <Sparkles className="h-3 w-3 me-1 text-amber-600" />
+                                    Master
+                                </Badge>
+                            )}
+                            {question.scope_type && question.scope_type !== 'organization' && (
+                                <Badge variant="outline" className="text-slate-600">
+                                    {question.scope_type}
+                                </Badge>
+                            )}
                             {question.ai_generated && (
                                 <Badge className="bg-purple-100 text-purple-700">
                                     <Sparkles className="h-3 w-3 me-1" />

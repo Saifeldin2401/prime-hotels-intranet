@@ -1287,6 +1287,9 @@ export default function TrainingPlayer() {
                             passingScore: moduleData.module.passing_score_percentage ?? undefined,
                             trainingModuleId: moduleData.module.id,
                             trainingProgressId: linkedTrainingProgressId,
+                            organizationId: (moduleData.module as any).organization_id,
+                            hotelId: (moduleData.module as any).hotel_id || primaryProperty?.id,
+                            brandId: (moduleData.module as any).brand_id,
                             propertyId: primaryProperty?.id,
                             propertyName: primaryProperty?.name,
                             departmentId: primaryDepartment?.id,
@@ -1861,7 +1864,7 @@ export default function TrainingPlayer() {
 
                     return (
                         <div className="space-y-6">
-                            <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-4 border-white/10 relative group">
+                            <div className="aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border-2 border-white/10 ring-1 ring-amber-500/20 relative group">
                                 {videoUrl ? (
                                     isDirectVideo ? (
                                         <VideoPlayer
@@ -1885,22 +1888,25 @@ export default function TrainingPlayer() {
                                         />
                                     )
                                 ) : (
-                                    <div className="flex flex-col items-center justify-center h-full text-white/50">
-                                        <VideoIcon className="h-12 w-12 mb-4 animate-pulse" />
-                                        <span>{t('videoUrlMissing')}</span>
+                                    <div className="flex flex-col items-center justify-center h-full text-white/50 space-y-3">
+                                        <div className="h-16 w-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10">
+                                            <VideoIcon className="h-8 w-8 text-amber-400 animate-pulse" />
+                                        </div>
+                                        <span className="text-sm font-medium font-sans">{t('videoUrlMissing')}</span>
                                     </div>
                                 )}
                             </div>
                             {block.is_mandatory && (
-                                <div className="flex flex-col items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5">
-                                    <div>
-                                        <p className="text-sm font-semibold text-hotel-navy">
+                                <div className="flex flex-col items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/[0.04] p-4 sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:px-5 backdrop-blur-sm">
+                                    <div className="space-y-0.5">
+                                        <p className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                                            <Sparkles className="h-4 w-4 text-amber-500" />
                                             {completedMediaBlocks.has(block.id)
-                                                ? t('videoCompleted', 'Video completed')
-                                                : t('videoRequired', 'Watch the video to continue')}
+                                                ? t('videoCompleted', 'Video requirement completed')
+                                                : t('videoRequired', 'Mandatory video walkthrough')}
                                         </p>
-                                        <p className="text-xs text-slate-500">
-                                            {t('videoCompletionHint', 'You can mark it as watched if the player does not support tracking.')}
+                                        <p className="text-xs text-muted-foreground font-sans">
+                                            {t('videoCompletionHint', 'Watch the full video to unlock the next lesson or mark it as watched.')}
                                         </p>
                                     </div>
                                     {!completedMediaBlocks.has(block.id) && (
@@ -1908,15 +1914,16 @@ export default function TrainingPlayer() {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => handleMarkWatched(block.id)}
-                                            className="w-full sm:w-auto"
+                                            className="w-full sm:w-auto text-xs font-semibold border-amber-500/40 text-amber-600 hover:bg-amber-500/10 active:scale-95 transition-all"
                                         >
+                                            <CheckCircle className="h-3.5 w-3.5 me-1.5" />
                                             {t('markWatched', 'Mark as watched')}
                                         </Button>
                                     )}
                                 </div>
                             )}
                             {block.content && (
-                                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100">
+                                <div className="bg-card/70 p-6 rounded-2xl border border-border/60 shadow-sm backdrop-blur-sm">
                                     <RichTextBlockContent
                                         originalHtml={block.content}
                                         translatedHtml={translatedBlockContent}
@@ -2514,69 +2521,85 @@ export default function TrainingPlayer() {
                         </div>
 
                         <div className="flex-1 overflow-y-auto px-4 py-6 custom-scrollbar">
-                            <div className="space-y-1">
+                            <div className="space-y-1.5">
                                 {moduleData.blocks.map((block, idx) => {
                                     const itemState = progression.blockStates[block.id] || 'AVAILABLE'
                                     const isLocked = itemState === 'LOCKED'
                                     const isActive = idx === activeBlockIndex
+                                    const isCompleted = itemState === 'COMPLETED'
 
                                     return (
                                         <button
                                             key={block.id}
                                             onClick={() => handleSelectBlock(idx)}
                                             className={cn(
-                                                "w-full flex items-start gap-4 p-4 rounded-xl text-sm transition-all duration-200 group relative overflow-hidden",
+                                                "w-full flex items-start gap-3.5 p-3.5 rounded-2xl text-sm transition-all duration-200 group relative overflow-hidden text-start",
                                                 isActive
-                                                    ? "bg-hotel-gold/15 text-white ring-1 ring-hotel-gold/30"
+                                                    ? "bg-hotel-gold/20 text-white ring-1 ring-hotel-gold/40 shadow-sm"
                                                     : isLocked
-                                                        ? "text-white/40 opacity-60 hover:bg-white/5 cursor-pointer"
-                                                        : "text-white/70 hover:bg-white/5 hover:text-white"
+                                                        ? "text-white/30 opacity-60 hover:bg-white/5 cursor-pointer"
+                                                        : isCompleted
+                                                            ? "text-white/80 hover:bg-white/10 hover:text-white"
+                                                            : "text-white/70 hover:bg-white/5 hover:text-white"
                                             )}
                                         >
                                             {isActive && (
                                                 <m.div
                                                     layoutId="active-pill"
                                                     className={cn(
-                                                        "absolute top-0 bottom-0 w-1 bg-hotel-gold",
+                                                        "absolute top-0 bottom-0 w-1.5 bg-hotel-gold rounded-full",
                                                         isRTL ? "end-0" : "start-0"
                                                     )}
                                                 />
                                             )}
-                                            <div className={cn(
-                                                "mt-0.5 shrink-0 transition-colors",
-                                                isActive
-                                                    ? "text-hotel-gold"
-                                                    : isLocked
-                                                        ? "text-white/30"
-                                                        : "text-white/40 group-hover:text-white/60"
-                                            )}>
-                                                {isLocked ? (
-                                                    <Lock className="w-4 h-4" />
-                                                ) : block.type === 'video' ? (
-                                                    <VideoIcon className="w-4 h-4" />
-                                                ) : block.type === 'audio' ? (
-                                                    <Headphones className="w-4 h-4" />
-                                                ) : block.type === 'interactive' ? (
-                                                    <Gamepad2 className="w-4 h-4" />
-                                                ) : block.type === 'quiz' ? (
-                                                    <HelpCircle className="w-4 h-4" />
-                                                ) : block.type === 'image' ? (
-                                                    <ImageIcon className="w-4 h-4" />
-                                                ) : block.type === 'text' ? (
-                                                    <FileText className="w-4 h-4" />
-                                                ) : block.type === 'document_link' ? (
-                                                    <LinkIcon className="w-4 h-4" />
-                                                ) : (
-                                                    <BookOpen className="w-4 h-4" />
-                                                )}
+                                            
+                                            {/* Step Number / Status Icon */}
+                                            <div className="flex items-center gap-2 mt-0.5 shrink-0">
+                                                <span className={cn(
+                                                    "font-mono text-xs font-bold w-5 text-center",
+                                                    isActive ? "text-hotel-gold" : isCompleted ? "text-emerald-400" : "text-white/40"
+                                                )}>
+                                                    {String(idx + 1).padStart(2, '0')}
+                                                </span>
+                                                <div className={cn(
+                                                    "transition-colors",
+                                                    isActive
+                                                        ? "text-hotel-gold"
+                                                        : isCompleted
+                                                            ? "text-emerald-400"
+                                                            : isLocked
+                                                                ? "text-white/30"
+                                                                : "text-white/40 group-hover:text-white/70"
+                                                )}>
+                                                    {isLocked ? (
+                                                        <Lock className="w-4 h-4" />
+                                                    ) : block.type === 'video' ? (
+                                                        <VideoIcon className="w-4 h-4" />
+                                                    ) : block.type === 'audio' ? (
+                                                        <Headphones className="w-4 h-4" />
+                                                    ) : block.type === 'interactive' ? (
+                                                        <Gamepad2 className="w-4 h-4" />
+                                                    ) : block.type === 'quiz' ? (
+                                                        <HelpCircle className="w-4 h-4" />
+                                                    ) : block.type === 'image' ? (
+                                                        <ImageIcon className="w-4 h-4" />
+                                                    ) : block.type === 'text' ? (
+                                                        <FileText className="w-4 h-4" />
+                                                    ) : block.type === 'document_link' ? (
+                                                        <LinkIcon className="w-4 h-4" />
+                                                    ) : (
+                                                        <BookOpen className="w-4 h-4" />
+                                                    )}
+                                                </div>
                                             </div>
+
                                             <div className={cn(
-                                                "flex-1 text-left",
+                                                "flex-1 min-w-0 text-left",
                                                 isRTL && "text-right"
                                             )}>
                                                 <p className={cn(
-                                                    "font-medium leading-tight line-clamp-2",
-                                                    isActive ? "text-white" : isLocked ? "text-white/50" : ""
+                                                    "font-medium leading-snug line-clamp-2 text-xs sm:text-sm",
+                                                    isActive ? "text-white font-bold" : isLocked ? "text-white/40" : "text-white/90"
                                                 )}>
                                                     {block.title ||
                                                         (block.type === 'sop_reference'
@@ -2588,7 +2611,7 @@ export default function TrainingPlayer() {
                                                         (block.type === 'quiz' && block.content_data?.quiz_id ? moduleData.referencedTitles?.[block.content_data.quiz_id as string] : '') ||
                                                         t('blockTitle', { number: idx + 1 })}
                                                 </p>
-                                                <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider">
+                                                <p className="text-[10px] text-white/40 uppercase mt-1 tracking-wider font-mono">
                                                     {(block.title ||
                                                         (block.type === 'sop_reference'
                                                             ? moduleData.referencedTitles?.[
@@ -2602,9 +2625,10 @@ export default function TrainingPlayer() {
                                                     }
                                                 </p>
                                             </div>
+
                                             {isLocked ? (
                                                 <Lock className="w-3.5 h-3.5 text-white/30 shrink-0 mt-0.5" />
-                                            ) : itemState === 'COMPLETED' ? (
+                                            ) : isCompleted ? (
                                                 <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
                                             ) : itemState === 'RETRY_REQUIRED' || itemState === 'FAILED' ? (
                                                 <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -3005,7 +3029,7 @@ export default function TrainingPlayer() {
 
                 {/* Navigation Bar */}
                 <footer className={cn(
-                    "min-h-[5rem] md:min-h-[6rem] bg-white border-t border-slate-100 flex items-center justify-between gap-2 px-3 sm:px-4 md:px-12 py-2 md:py-0 pb-[max(0.5rem,env(safe-area-inset-bottom))] md:pb-0 shrink-0 z-20 sticky bottom-0",
+                    "min-h-[5rem] md:min-h-[5.5rem] bg-card/95 backdrop-blur-xl border-t border-border/60 flex items-center justify-between gap-3 px-4 sm:px-6 md:px-12 py-3 md:py-0 pb-[max(0.75rem,env(safe-area-inset-bottom))] md:pb-0 shrink-0 z-20 sticky bottom-0 shadow-lg",
                     isRTL ? "flex-row-reverse" : "flex-row"
                 )}>
                     <Button
@@ -3014,7 +3038,7 @@ export default function TrainingPlayer() {
                         onClick={handlePrevious}
                         disabled={activeBlockIndex === 0}
                         className={cn(
-                            "h-10 md:h-12 px-3 sm:px-4 md:px-6 text-sm md:text-base font-bold tracking-wide border-2 hover:bg-slate-50 transition-all duration-150 ease-out active:scale-[0.97] rounded-xl",
+                            "h-11 md:h-12 px-4 sm:px-5 md:px-6 text-xs sm:text-sm md:text-base font-bold tracking-wide border-border/80 hover:bg-muted/60 transition-all duration-150 ease-out active:scale-[0.96] rounded-xl shadow-sm",
                             isRTL ? "flex-row-reverse" : ""
                         )}
                     >
@@ -3022,22 +3046,29 @@ export default function TrainingPlayer() {
                             "h-4 w-4 md:h-5 md:w-5",
                             isRTL ? "ms-2 md:ms-3 rotate-180" : "me-2 md:me-3"
                         )} />
-                        <span className="hidden md:inline">{t('previous')}</span>
+                        <span className="hidden md:inline">{t('previous', 'Previous')}</span>
                         <ChevronLeft className="h-4 w-4 md:hidden" />
                     </Button>
 
                     <div className="hidden md:flex flex-col items-center">
-                        <div className="flex gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 mb-1.5">
                             {moduleData.blocks.map((block, i) => (
                                 <div
                                     key={block.id}
                                     className={cn(
                                         "h-1.5 rounded-full transition-all duration-300",
-                                        i === activeBlockIndex ? "w-8 bg-hotel-gold" : "w-1.5 bg-slate-200"
+                                        i === activeBlockIndex
+                                            ? "w-8 bg-amber-500 shadow-sm shadow-amber-500/40"
+                                            : i < activeBlockIndex
+                                                ? "w-2 bg-emerald-500"
+                                                : "w-1.5 bg-border"
                                     )}
                                 />
                             ))}
                         </div>
+                        <span className="text-[11px] font-mono text-muted-foreground">
+                            {t('pageOf', { current: activeBlockIndex + 1, total: totalBlocks })}
+                        </span>
                     </div>
 
                     <Button
@@ -3045,10 +3076,10 @@ export default function TrainingPlayer() {
                         onClick={handleNext}
                         disabled={!canProceedToNext}
                         className={cn(
-                            "h-10 md:h-12 min-w-[7.5rem] sm:min-w-[10rem] justify-center px-3 sm:px-4 md:px-8 text-sm md:text-base font-bold tracking-wide transition-all duration-150 ease-out shadow-lg hover:shadow-xl active:scale-[0.97] rounded-xl",
+                            "h-11 md:h-12 min-w-[8rem] sm:min-w-[10.5rem] justify-center px-4 sm:px-5 md:px-8 text-xs sm:text-sm md:text-base font-bold tracking-wide transition-all duration-150 ease-out shadow-md hover:shadow-xl active:scale-[0.96] rounded-xl",
                             isLastBlock
-                                ? "bg-emerald-600 hover:bg-emerald-700 text-white"
-                                : "bg-hotel-navy hover:bg-hotel-navy-light text-white",
+                                ? "bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20"
+                                : "bg-amber-500 hover:bg-amber-600 text-slate-950 shadow-amber-500/20 font-bold",
                             isRTL ? "flex-row-reverse" : "",
                         )}
                     >

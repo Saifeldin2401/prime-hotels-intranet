@@ -9,20 +9,24 @@ const badgeVariants = cva(
     variants: {
       variant: {
         default:
-          "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light",
+          "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm",
         secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary-foreground hover:text-secondary",
+          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
         destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-red-700",
-        outline: "border border-input text-foreground bg-transparent",
-        gold: "border-transparent bg-hotel-gold text-white hover:bg-hotel-gold-dark",
-        navy: "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light",
-        "outline-gold": "text-hotel-gold border-hotel-gold hover:bg-hotel-gold/10",
-        success: "border-success/20 bg-success text-success-foreground",
-        warning: "border-warning/20 bg-warning text-warning-foreground",
+          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm",
+        outline: "border-border text-foreground bg-transparent",
+        gold: "border-transparent bg-hotel-gold text-white hover:bg-hotel-gold-dark shadow-sm",
+        navy: "border-transparent bg-hotel-navy text-white hover:bg-hotel-navy-light shadow-sm",
+        copper: "border-transparent bg-altus-copper text-white hover:bg-altus-copper/90 shadow-sm",
+        emerald: "border-transparent bg-altus-emerald text-white hover:bg-altus-emerald/90 shadow-sm",
+        sand: "border-altus-sand/40 bg-altus-sand/20 text-hotel-navy dark:text-altus-sand-light font-semibold",
+        "outline-gold": "text-hotel-gold border-hotel-gold/40 hover:bg-hotel-gold/10",
+        "outline-copper": "text-altus-copper border-altus-copper/40 hover:bg-altus-copper/10",
+        success: "border-success/20 bg-success/15 text-success dark:text-success-foreground font-semibold",
+        warning: "border-warning/20 bg-warning/15 text-warning dark:text-warning-foreground font-semibold",
       },
       size: {
-        sm: "px-2 py-0.5 text-xs",
+        sm: "px-2 py-0.5 text-[11px]",
         md: "px-2.5 py-0.5 text-xs",
         lg: "px-3 py-1 text-sm",
       },
@@ -65,8 +69,10 @@ function Badge({ className, variant, size, dot, count, maxCount = 99, children, 
     ? (count > maxCount ? `${maxCount}+` : count)
     : undefined
 
+  const isNumeric = count !== undefined || typeof children === 'number'
+
   return (
-    <span className={cn(badgeVariants({ variant, size }), className)} {...props}>
+    <span className={cn(badgeVariants({ variant, size }), isNumeric && "font-mono tracking-tight", className)} {...props}>
       {displayCount !== undefined ? displayCount : children}
     </span>
   )

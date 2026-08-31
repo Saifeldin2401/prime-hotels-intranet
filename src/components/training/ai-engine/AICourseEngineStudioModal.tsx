@@ -320,22 +320,59 @@ export function AICourseEngineStudioModal({
   const [sourceDocRefs, setSourceDocRefs] = useState<SourceDocumentRef[]>([])
 
   useEffect(() => {
+    if (!open) return
+
     setLibraryDocText('')
     setLibraryDocExtractError(null)
+
     // Track a picked Knowledge Base article or Library file as a source doc ref.
-    setSourceDocRefs((prev) => {
-      const kept = prev.filter((r) => r.uploaded)
-      if (selectedArticle?.id) {
-        kept.push({ documentId: selectedArticle.id, originalFilename: selectedArticle.title || 'Knowledge Base article', fileType: selectedArticle.content_type || 'knowledge_article', uploaded: false })
-      } else if (selectedDocumentId && Array.isArray(sopsData) && sopsData.find((a) => a.id === selectedDocumentId)) {
-        const a = sopsData.find((x) => x.id === selectedDocumentId)!
-        kept.push({ documentId: a.id, originalFilename: a.title || 'Knowledge Base article', fileType: a.content_type || 'knowledge_article', uploaded: false })
-      } else if (selectedDocumentId && Array.isArray(libraryDocuments)) {
-        const d = libraryDocuments.find((x: any) => x.id === selectedDocumentId)
-        if (d) kept.push({ documentId: d.id, originalFilename: d.title || 'Library document', fileType: d.file_type || d.file_extension || d.content_type || undefined, fileSize: d.file_size ?? undefined, uploaded: false })
+    if (selectedArticle?.id) {
+      setSourceDocRefs((prev) => {
+        const hasExisting = prev.some(r => r.documentId === selectedArticle.id)
+        if (hasExisting) return prev
+        const kept = prev.filter((r) => r.uploaded)
+        kept.push({
+          documentId: selectedArticle.id,
+          originalFilename: selectedArticle.title || 'Knowledge Base article',
+          fileType: selectedArticle.content_type || 'knowledge_article',
+          uploaded: false
+        })
+        return kept
+      })
+    } else if (selectedDocumentId) {
+      const sop = Array.isArray(sopsData) ? sopsData.find((a) => a.id === selectedDocumentId) : null
+      const libDoc = Array.isArray(libraryDocuments) ? libraryDocuments.find((x: any) => x.id === selectedDocumentId) : null
+
+      if (sop) {
+        setSourceDocRefs((prev) => {
+          const hasExisting = prev.some(r => r.documentId === sop.id)
+          if (hasExisting) return prev
+          const kept = prev.filter((r) => r.uploaded)
+          kept.push({
+            documentId: sop.id,
+            originalFilename: sop.title || 'Knowledge Base article',
+            fileType: sop.content_type || 'knowledge_article',
+            uploaded: false
+          })
+          return kept
+        })
+      } else if (libDoc) {
+        setSourceDocRefs((prev) => {
+          const hasExisting = prev.some(r => r.documentId === libDoc.id)
+          if (hasExisting) return prev
+          const kept = prev.filter((r) => r.uploaded)
+          kept.push({
+            documentId: libDoc.id,
+            originalFilename: libDoc.title || 'Library document',
+            fileType: libDoc.file_type || libDoc.file_extension || libDoc.content_type || undefined,
+            fileSize: libDoc.file_size ?? undefined,
+            uploaded: false
+          })
+          return kept
+        })
       }
-      return kept
-    })
+    }
+
     if (!selectedDocumentId || !Array.isArray(libraryDocuments)) return
     const doc = libraryDocuments.find((d: any) => d.id === selectedDocumentId) as
       | { content?: string | null; file_url?: string | null; file_type?: string | null; file_extension?: string | null }
@@ -344,6 +381,7 @@ export function AICourseEngineStudioModal({
     if (doc.content && doc.content.trim().length > 50) return // already has usable text
     const url = doc.file_url
     if (!url) return
+
     let cancelled = false
     setLibraryDocExtracting(true)
     import('@/lib/documentText')
@@ -354,8 +392,7 @@ export function AICourseEngineStudioModal({
       .catch((e) => { if (!cancelled) setLibraryDocExtractError((e as Error).message) })
       .finally(() => { if (!cancelled) setLibraryDocExtracting(false) })
     return () => { cancelled = true }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDocumentId, libraryDocuments, sopsData, selectedArticle])
+  }, [open, selectedDocumentId, selectedArticle?.id])
 
   // Synchronize on modal open or prop change
   useEffect(() => {

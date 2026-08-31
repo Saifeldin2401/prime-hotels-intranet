@@ -64,14 +64,14 @@ const VISIBILITY_OPTIONS: {
   },
   {
     value: 'property',
-    label: 'Property Wide',
-    description: 'Visible to all staff at the selected property',
+    label: 'Hotel Wide',
+    description: 'Visible to all staff at the selected hotel',
     icon: Building,
   },
   {
     value: 'all_properties',
-    label: 'All Properties',
-    description: 'Visible to all staff across all properties',
+    label: 'Organization-Wide',
+    description: 'Visible to all staff across all tenant hotels',
     icon: Globe,
   },
 ];

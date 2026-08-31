@@ -1,8 +1,8 @@
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Award, CheckCircle2, ChevronRight, Compass, Quote, ShieldCheck, Sparkles, UserCheck } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
 import { useBriefing } from './PublicLayout';
-import { FadeInSection, StaggerChildren } from './publicComponents';
+import { CopperDivider, FadeInSection, StaggerChildren } from './publicComponents';
 import { COLOR, canela, inter, mono, neueHaas, staggerItem } from './publicConstants';
 
 export default function AboutPage() {
@@ -14,75 +14,149 @@ export default function AboutPage() {
     {
       id: 'division-1',
       tag: isRTL ? 'القسم الأول' : 'Division I',
-      title: isRTL ? 'حلول الضيافة' : 'Hospitality Solutions',
+      title: isRTL ? 'حلول الضيافة والأصول' : 'Hospitality Solutions & Asset Operations',
       desc: isRTL
-        ? 'الهندسة المتميزة وإدارة النمو، من المخطط الأولي إلى النضج التشغيلي الكامل.'
-        : 'Engineering excellence. Delivering growth, from blueprint to full operational maturity.',
+        ? 'الهندسة التشغيلية المتميزة وإدارة النمو، من المخطط الأولي ودراسة الجدوى إلى النضج التشغيلي الكامل.'
+        : 'Engineering operational excellence and delivering sustained growth, from initial blueprint to full asset maturity.',
       services: isRTL
         ? [
-            'تطوير الفنادق وتمثيل المالك',
+            'تطوير الفنادق وتمثيل المالك والحوكمة',
             'تحسين العمليات ودعم ما قبل الافتتاح',
             'دراسات الجدوى والتحقق من الاستثمار',
-            'تعزيز تجربة النزيل وتدقيق الجودة',
-            'تحسين الأداء التجاري',
+            'تدقيق معايير الجودة الفندقية وتجربة النزيل',
+            'تحسين الأداء التجاري وإيرادات الغرف',
           ]
         : [
             'Hotel Development & Owner Representation',
             'Operations Optimisation & Pre-Opening Support',
             'Feasibility Studies & Investment Validation',
             'Guest Experience Enhancement & Quality Audits',
-            'Commercial Performance Improvement',
+            'Commercial Performance & RevPAR Improvement',
           ],
     },
     {
       id: 'division-2',
       tag: isRTL ? 'القسم الثاني' : 'Division II',
-      title: isRTL ? 'حلول نمو الأعمال' : 'Business Growth Solutions',
+      title: isRTL ? 'حلول نمو الأعمال والذكاء الاصطناعي' : 'Business Growth & Applied AI Solutions',
       desc: isRTL
-        ? 'حيث تلتقي الضيافة بالذكاء: استراتيجيات قائمة على البيانات وتميز متمحور حول العنصر البشري.'
-        : 'Where hospitality meets intelligence: data-driven strategy, human-centred excellence.',
+        ? 'حيث تلتقي عراقة الضيافة بالذكاء الرقمي: استراتيجيات مدعومة بالبيانات وتميز متمحور حول الكفاءة البشرية.'
+        : 'Where hospitality meets advanced intelligence: data-driven commercial strategy and human-centred performance.',
       services: isRTL
         ? [
             'التخطيط الاستراتيجي وإعادة الهيكلة التنظيمية',
             'تحسين الإيرادات والذكاء الاصطناعي التطبيقي',
-            'التحول الرقمي',
-            'تطوير القيادة والقدرات',
+            'التحول الرقمي ومنظومات العمل الذكية',
+            'تطوير القيادات التنفيذية وتوطين القدرات',
             'تقييم الاستثمار وفحص الاندماج والاستحواذ',
           ]
         : [
             'Strategic Planning & Organisational Restructuring',
-            'Revenue Optimisation & Applied AI',
-            'Digital Transformation',
-            'Leadership & Capability Development',
+            'Revenue Optimisation & Applied AI Intelligence',
+            'Digital Transformation & Smart Workflows',
+            'Executive Leadership & Capability Development',
             'Investment Appraisal & M&A Due Diligence',
           ],
     },
   ];
 
   return (
-    <div className="flex flex-col pt-20">
-      {/* ═══════════════ WHY ALTUS (THE EDGE) ═══════════════ */}
-      <section id="why-altus" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoalDeep }}>
+    <div className="flex flex-col pt-16 selection:bg-[#C45B2F]/30 selection:text-white">
+      {/* ═══════════════ SECTION 1: FIRM PHILOSOPHY & EDITORIAL HERO ═══════════════ */}
+      <section className="py-24 sm:py-32 px-4 sm:px-6 relative overflow-hidden" style={{ backgroundColor: COLOR.charcoalDeep }}>
+        {/* Subtle Ambient Art Deco Lines */}
+        <div className="absolute inset-0 opacity-15 pointer-events-none" style={{
+          backgroundImage: 'radial-gradient(circle at 50% 20%, rgba(196, 91, 47, 0.3) 0%, transparent 70%)',
+        }} />
+
+        <FadeInSection className="max-w-5xl mx-auto text-center space-y-8 relative z-10">
+          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full border border-[#C45B2F]/40 bg-[#C45B2F]/10">
+            <span className="w-2 h-2 rounded-full bg-[#C45B2F] animate-pulse" />
+            <span className="text-[11px] font-bold uppercase tracking-[0.25em] text-[#E07A5F]" style={neueHaas}>
+              {isRTL ? '٠١ — فلسفة المنظومة وميثاق الأمانة' : '01 — FIRM PHILOSOPHY & MANDATE'}
+            </span>
+          </div>
+
+          <h1
+            className="text-4xl sm:text-6xl md:text-7xl text-white font-normal leading-[1.08] tracking-tight"
+            style={canela}
+          >
+            {isRTL ? (
+              <>
+                الارتقاء بالضيافة. <br />
+                <span className="italic" style={{ color: '#E07A5F' }}>هندسة القيمة</span> المؤسسية.
+              </>
+            ) : (
+              <>
+                Elevating Hospitality. <br />
+                <span className="italic" style={{ color: '#E07A5F' }}>Engineering Value.</span>
+              </>
+            )}
+          </h1>
+
+          <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-slate-300 max-w-3xl mx-auto" style={inter}>
+            {isRTL
+              ? 'صُممت ألتوس استشارات كمنظومة نخبوية متكاملة تسد الفجوة الهيكلية بين العمليات التشغيلية الفندقية التقليدية وذكاء الأعمال الرقمي المتقدم، بقيادة تنفيذية مسؤولة عن النتيجة وليس مجرد التقارير.'
+              : 'Altus Advisory was engineered as an elite strategy house closing the structural gap between traditional hospitality operations and advanced AI business intelligence — led by principals accountable for returns, not reports.'}
+          </p>
+        </FadeInSection>
+      </section>
+
+      {/* ═══════════════ SECTION 2: LUXURY EDITORIAL QUOTE BLOCK ═══════════════ */}
+      <section className="py-20 px-4 sm:px-6 relative border-y border-white/10" style={{ backgroundColor: '#111419' }}>
+        <div className="max-w-4xl mx-auto">
+          <div className="relative p-8 sm:p-12 rounded-2xl border border-[#C45B2F]/30 bg-white/[0.02] shadow-2xl overflow-hidden">
+            <Quote className="absolute -top-4 -start-4 w-28 h-28 text-[#C45B2F]/10 pointer-events-none" />
+            
+            <div className="relative z-10 space-y-6 text-center">
+              <div className="w-12 h-1 bg-[#C45B2F] mx-auto rounded-full" />
+              
+              <blockquote className="text-xl sm:text-2xl md:text-3xl text-white font-normal leading-relaxed" style={canela}>
+                {isRTL ? (
+                  <>
+                    «لا ننتج تقارير استشارية لتُحفظ على الرفوف؛ بل <span className="italic text-[#E07A5F]">نهندس قدرات تشغيلية</span> ونظم عمل حية تتحول مباشرة إلى عوائد استثمارية للمالك.»
+                  </>
+                ) : (
+                  <>
+                    “We do not produce advisory reports for executive shelves; <span className="italic text-[#E07A5F]">we engineer operating capabilities</span> that transfer directly into asset returns.”
+                  </>
+                )}
+              </blockquote>
+
+              <div className="pt-2">
+                <div className="text-xs uppercase tracking-[0.25em] font-bold text-[#E07A5F]" style={neueHaas}>
+                  {isRTL ? 'ميثاق ألتوس الاستشاري' : 'THE ALTUS ADVISORY CREED'}
+                </div>
+                <div className="text-xs text-slate-400 mt-1" style={inter}>
+                  {isRTL ? 'المملكة العربية السعودية • الرياض' : 'Kingdom of Saudi Arabia • Riyadh'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ═══════════════ SECTION 3: THE ALTUS EDGE (6 PILLARS) ═══════════════ */}
+      <section id="why-altus" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoalDeep }}>
         <FadeInSection className="max-w-6xl mx-auto">
           <div className="max-w-2xl mb-16">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
-              {isRTL ? '03 — ميزة ألتوس' : '03 — The Altus Edge'}
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+              {isRTL ? '٠٣ — ميزة ألتوس التنافسية' : '03 — The Altus Edge'}
             </div>
             <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>لماذا <span className="italic" style={{ ...canela, color: COLOR.copper }}>ألتوس استشارات.</span></>
+                <>لماذا <span className="italic" style={{ ...canela, color: '#E07A5F' }}>ألتوس استشارات.</span></>
               ) : (
-                <>Why <span className="italic" style={{ ...canela, color: COLOR.copper }}>Altus Advisory.</span></>
+                <>Why <span className="italic" style={{ ...canela, color: '#E07A5F' }}>Altus Advisory.</span></>
               )}
             </h2>
-            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: '#94A3B8' }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5 text-slate-300" style={inter}>
               {isRTL
                 ? 'يعمل قطاع الاستشارات غالباً بمعزل: العمليات التقليدية من جهة، والتحول الرقمي من جهة أخرى. صُممت ألتوس لسد هذه الفجوة الهيكلية بولاية واحدة متكاملة.'
                 : 'The consulting landscape too often operates in silos: traditional operations on one side, digital transformation on the other. Altus was engineered to close that structural gap with a single, integrated mandate.'}
             </p>
           </div>
 
-          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px" style={{ backgroundColor: 'rgba(255,255,255,0.08)' }}>
+          <StaggerChildren className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {[
               {
                 title: isRTL ? 'استشارات في صف المالك' : 'Owner-Side Advisory',
@@ -91,21 +165,21 @@ export default function AboutPage() {
                   : 'Independent, client-side oversight across the full asset lifecycle: protecting budgets, governing HMAs, and safeguarding investor interests against operator and contractor drift.',
               },
               {
-                title: isRTL ? 'عمق بمستوى المشغّل' : 'Operator-Grade Depth',
+                title: isRTL ? 'عمق بمستوى المشغّل الدولي' : 'Operator-Grade Depth',
                 desc: isRTL
-                  ? 'قيادة صُقلت داخل أنظمة ماريوت وIHG وستارووود وأكور. أكثر من 60 عاماً من المسؤولية المباشرة عن الأرباح والخسائر، لا أطر نظرية.'
+                  ? 'قيادة صُقلت داخل كبرى السلاسل العالمية (ماريوت، IHG، ستارووود، أكور). أكثر من 60 عاماً من المسؤولية المباشرة عن الأرباح والخسائر.'
                   : 'Leadership forged inside Marriott, IHG, Starwood, and Accor systems. 60+ combined years of P&L accountability, not theoretical frameworks.',
               },
               {
                 title: isRTL ? 'نموذج مزدوج التخصص' : 'A Dual-Discipline Model',
                 desc: isRTL
-                  ? 'عمليات الضيافة الرفيعة مندمجة مع ذكاء تجاري مدعوم بالذكاء الاصطناعي، لهندسة نمو في المجالين في آن واحد.'
+                  ? 'عمليات الضيافة الرفيعة مندمجة مع ذكاء تجاري مدعوم بالذكاء الاصطناعي، لهندسة نمو حقيقي في المجالين في آن واحد.'
                   : 'Elite hospitality operations fused with AI-enabled commercial intelligence, engineering growth across both domains simultaneously.',
               },
               {
-                title: isRTL ? 'الأدلة قبل الحدس' : 'Evidence over Intuition',
+                title: isRTL ? 'الأدلة والبيانات قبل الحدس' : 'Evidence over Intuition',
                 desc: isRTL
-                  ? 'تحليلات تجريبية، نمذجة مالية، وانضباط Six Sigma يحل محل الرأي. كل توصية قابلة للقياس والتدقيق.'
+                  ? 'تحليلات تجريبية، نمذجة مالية، وانضباط Six Sigma يحل محل الرأي الشخصي. كل توصية قابلة للقياس والتدقيق.'
                   : 'Empirical analytics, financial modelling, and Six Sigma discipline replace opinion. Every recommendation is measurable and auditable.',
               },
               {
@@ -115,24 +189,29 @@ export default function AboutPage() {
                   : 'Deep-rooted Saudi and GCC market knowledge, bilingual delivery, and Tier-1 international benchmarks applied without dilution.',
               },
               {
-                title: isRTL ? 'شراكة دائمة' : 'An Enduring Partnership',
+                title: isRTL ? 'شراكة مستدامة' : 'An Enduring Partnership',
                 desc: isRTL
-                  ? 'توجيه ميداني مباشر من أول مخطط حتى التنفيذ المستدام: علاقة تتجاوز عمر التكليف نفسه.'
+                  ? 'توجيه ميداني مباشر من أول مخطط حتى التنفيذ المستدام: علاقة مؤسسية تتجاوز عمر التكليف نفسه.'
                   : 'Hands-on guidance from first blueprint to sustained execution: a relationship that outlives the engagement itself.',
               },
             ].map((edge) => (
-              <div key={edge.title} className="p-8 sm:p-9 hover:bg-white/[0.03] transition-colors duration-300" style={{ backgroundColor: COLOR.charcoalDeep }}>
-                <h4 className="text-lg text-white font-medium mb-3" style={neueHaas}>{edge.title}</h4>
-                <p className="text-sm leading-relaxed" style={{ ...inter, color: '#94A3B8' }}>{edge.desc}</p>
-              </div>
+              <motion.div
+                key={edge.title}
+                variants={staggerItem}
+                className="p-8 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 bg-white/[0.02] hover:bg-white/[0.05] transition-all duration-300 shadow-xl group"
+              >
+                <div className="w-2 h-2 rounded-full bg-[#C45B2F] mb-4 group-hover:scale-150 transition-transform" />
+                <h4 className="text-lg text-white font-bold mb-3" style={neueHaas}>{edge.title}</h4>
+                <p className="text-sm leading-relaxed text-slate-300" style={inter}>{edge.desc}</p>
+              </motion.div>
             ))}
           </StaggerChildren>
 
-          <div className="mt-10 p-8 sm:p-10 border" style={{ borderColor: `${COLOR.copper}40`, backgroundColor: `${COLOR.copper}0D` }}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2" style={{ ...neueHaas, color: COLOR.copper }}>
+          <div className="mt-12 p-8 sm:p-10 rounded-2xl border border-[#C45B2F]/40 bg-[#C45B2F]/10 shadow-2xl">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-2 text-[#E07A5F]" style={neueHaas}>
               {isRTL ? 'عرض القيمة الفريد' : 'Unique Value Proposition'}
             </div>
-            <p className="text-base sm:text-lg leading-relaxed text-white" style={canela}>
+            <p className="text-base sm:text-xl leading-relaxed text-white" style={canela}>
               {isRTL
                 ? 'تميّز تشغيلي رفيع في الضيافة، مندمج مع ذكاء إيرادي مدعوم بالذكاء الاصطناعي: أثر ملموس عبر وضوح استراتيجي، وانضباط تشغيلي، وابتكار رقمي متواصل.'
                 : 'High-level hospitality operational excellence, integrated with AI-driven revenue intelligence: delivering measurable impact through strategic clarity, operational rigour, and continuous digital innovation.'}
@@ -141,56 +220,52 @@ export default function AboutPage() {
         </FadeInSection>
       </section>
 
-      {/* ═══════════════ TWO DIVISIONS ═══════════════ */}
-      <section id="practices" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
+      {/* ═══════════════ SECTION 4: TWO DIVISIONS (PRACTICES) ═══════════════ */}
+      <section id="practices" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-6xl mx-auto">
-          <FadeInSection className="mb-12">
-            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
-              {isRTL ? '04–05 — محفظة الخدمات' : '04–05 — Service Portfolio'}
+          <FadeInSection className="mb-14">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+              {isRTL ? '٠٤–٠٥ — محفظة الممارسة الاستشارية' : '04–05 — Service Portfolio'}
             </div>
-            <h2
-              className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight"
-              style={neueHaas}
-            >
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight" style={neueHaas}>
               {isRTL ? (
-                <>قسمان استشاريان. <span className="italic" style={{ ...canela, color: COLOR.copper }}>منصة حصريّة واحدة.</span></>
+                <>قسمان استشاريان. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>منصة حصريّة واحدة.</span></>
               ) : (
-                <>Two divisions. <span className="italic" style={{ ...canela, color: COLOR.copper }}>One proprietary platform.</span></>
+                <>Two divisions. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>One proprietary platform.</span></>
               )}
             </h2>
           </FadeInSection>
 
-          <StaggerChildren className="grid md:grid-cols-2 gap-6">
+          <StaggerChildren className="grid md:grid-cols-2 gap-8">
             {practices.map((pr) => (
               <motion.div
                 variants={staggerItem}
                 key={pr.id}
-                className="p-8 sm:p-10 border border-white/10 hover:border-[#C45B2F]/50 transition-[border-color,box-shadow] duration-200 group relative overflow-hidden flex flex-col shadow-sm hover:shadow-md"
-                style={{ backgroundColor: COLOR.charcoalDeep }}
+                className="p-8 sm:p-10 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 transition-all duration-300 group relative overflow-hidden flex flex-col shadow-2xl bg-[#141820]"
               >
                 <div className="relative z-10 flex-1">
-                  <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-3" style={{ ...neueHaas, color: COLOR.copper }}>
+                  <div className="inline-block text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#E07A5F] px-3 py-1 rounded bg-[#C45B2F]/15 border border-[#C45B2F]/30" style={neueHaas}>
                     {pr.tag}
                   </div>
-                  <h3 className="text-xl sm:text-2xl text-white font-medium mb-3" style={neueHaas}>{pr.title}</h3>
-                  <p className="text-sm text-slate-300 leading-relaxed mb-6" style={{ ...inter, color: '#94A3B8' }}>{pr.desc}</p>
+                  <h3 className="text-2xl text-white font-bold mb-3" style={neueHaas}>{pr.title}</h3>
+                  <p className="text-sm leading-relaxed mb-6 text-slate-300" style={inter}>{pr.desc}</p>
 
-                  <ul className="space-y-2.5 mb-8 border-t pt-5" style={{ borderColor: 'rgba(255,255,255,0.08)' }}>
+                  <ul className="space-y-3 mb-8 border-t border-white/10 pt-6">
                     {pr.services.map((s) => (
-                      <li key={s} className="text-xs sm:text-sm text-slate-300 flex items-start gap-2.5" style={inter}>
-                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full shrink-0" style={{ backgroundColor: COLOR.copper }} />
-                        {s}
+                      <li key={s} className="text-sm text-slate-200 flex items-start gap-3" style={inter}>
+                        <span className="mt-1.5 h-2 w-2 rounded-full shrink-0 bg-[#C45B2F]" />
+                        <span>{s}</span>
                       </li>
                     ))}
                   </ul>
 
                   <button
                     onClick={openBriefing}
-                    className="text-[11px] font-semibold tracking-[0.15em] uppercase flex items-center gap-2 group-hover:text-white transition-colors duration-300"
-                    style={{ ...neueHaas, color: COLOR.copper }}
+                    className="text-xs font-bold tracking-[0.2em] uppercase flex items-center gap-2 text-[#E07A5F] hover:text-white transition-colors duration-300"
+                    style={neueHaas}
                   >
-                    <span>{isRTL ? 'استكشف' : 'EXPLORE'}</span>
-                    <ArrowRight className="w-3.5 h-3.5 rtl:rotate-180" />
+                    <span>{isRTL ? 'طلب إحاطة للخدمة' : 'REQUEST SERVICE BRIEFING'}</span>
+                    <ArrowRight className="w-4 h-4 rtl:rotate-180" />
                   </button>
                 </div>
               </motion.div>
@@ -199,125 +274,243 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ═══════════════ HK&P PLATFORM ═══════════════ */}
-      <section id="platform" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
+      {/* ═══════════════ SECTION 5: EXECUTIVE LEADERSHIP PROFILES ═══════════════ */}
+      <section id="leadership" className="py-24 sm:py-32 px-4 sm:px-6 relative border-t border-white/10" style={{ backgroundColor: COLOR.charcoalDeep }}>
+        <div className="max-w-6xl mx-auto">
+          <FadeInSection className="text-center space-y-4 mb-16">
+            <div className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={neueHaas}>
+              {isRTL ? '٠٦ — القيادة والشركاء المؤسسون' : '06 — Executive Leadership'}
+            </div>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal" style={neueHaas}>
+              {isRTL ? (
+                <>أسماء موثوقة. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>حضور ميداني.</span> مسؤولية كاملة.</>
+              ) : (
+                <>Named. <span className="italic" style={{ ...canela, color: '#E07A5F' }}>Present.</span> Accountable.</>
+              )}
+            </h2>
+            <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto" style={inter}>
+              {isRTL
+                ? 'يقود كل مهمة استشارية الشركاء المؤسسون مباشرة، بخبرة تراكمية تزيد عن 60 عاماً داخل كبرى المجموعات الفندقية العالمية.'
+                : 'Every advisory engagement is directly orchestrated by principals, backed by 60+ combined years of operating leadership across global hotel powerhouses.'}
+            </p>
+          </FadeInSection>
+
+          <StaggerChildren className="grid md:grid-cols-2 gap-8 text-start">
+            {/* Islam Mahrous Profile Card */}
+            <motion.div
+              variants={staggerItem}
+              className="p-8 sm:p-10 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 transition-all duration-300 bg-[#12161F] shadow-2xl space-y-6 flex flex-col justify-between"
+            >
+              <div className="space-y-6">
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <img
+                      src="/founder-islam.jpg"
+                      alt="Islam Mahrous"
+                      className="w-24 h-24 rounded-2xl object-cover object-top border-2 border-[#C45B2F] shadow-lg"
+                    />
+                    <span className="absolute -bottom-2 -end-2 w-7 h-7 rounded-full bg-[#C45B2F] text-white flex items-center justify-center text-xs font-bold shadow-md">
+                      <Sparkles className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl text-white font-normal" style={canela}>Islam Mahrous</h3>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={neueHaas}>
+                      {isRTL ? 'مؤسس مشارك: الاستراتيجية التجارية والتحول الرقمي' : 'Co-Founder: Brand, Commercial Strategy & AI Transformation'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-white/5 border border-white/10">Marriott • IHG • Starwood • Accor</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-slate-300 leading-relaxed" style={inter}>
+                  {isRTL
+                    ? 'إسلام هو مبتكر النمو في الشركة وحافتها التقنية المستقبلية: الجسر الحيوي بين نماذج الأعمال التقليدية ومتطلبات العصر الحديث. عبر ثلاثة عقود من القيادة متعددة العلامات مع ماريوت وIHG وستارووود وأكور، وإدارة أصول مستقلة عبر السعودية والخليج ومصر وشمال أفريقيا.'
+                    : 'Islam is the firm’s growth innovator and forward-looking technological edge: the vital bridge between traditional business models and modern digital agility. Over three decades of multi-brand leadership across Marriott, IHG, Starwood, and Accor systems in Saudi Arabia and the MENA region.'}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                <span className="text-xs font-mono text-[#E07A5F]">P&L Accountability • 30+ Yrs</span>
+                <button
+                  onClick={openBriefing}
+                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-colors flex items-center gap-1.5"
+                  style={neueHaas}
+                >
+                  <span>{isRTL ? 'حجز جلسة' : 'Request Briefing'}</span>
+                  <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            </motion.div>
+
+            {/* Hossam Smadi Profile Card */}
+            <motion.div
+              variants={staggerItem}
+              className="p-8 sm:p-10 rounded-2xl border border-white/10 hover:border-[#C45B2F]/60 transition-all duration-300 bg-[#12161F] shadow-2xl space-y-6 flex flex-col justify-between"
+            >
+              <div className="space-y-6">
+                <div className="flex items-center gap-5">
+                  <div className="relative">
+                    <img
+                      src="/founder-hossam.png"
+                      alt="Hossam Smadi"
+                      className="w-24 h-24 rounded-2xl object-cover object-top border-2 border-[#C45B2F] shadow-lg"
+                    />
+                    <span className="absolute -bottom-2 -end-2 w-7 h-7 rounded-full bg-[#C45B2F] text-white flex items-center justify-center text-xs font-bold shadow-md">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-2xl text-white font-normal" style={canela}>Hossam Smadi</h3>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#E07A5F] mt-1" style={neueHaas}>
+                      {isRTL ? 'مؤسس مشارك: العمليات الفندقية وإدارة الأصول' : 'Co-Founder: Hospitality Operations & Asset Management'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-2">
+                      <span className="text-[10px] font-mono text-slate-400 px-2 py-0.5 rounded bg-white/5 border border-white/10">Operations • HMA Governance • Asset Oversight</span>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-sm text-slate-300 leading-relaxed" style={inter}>
+                  {isRTL
+                    ? 'حسام هو المهندس التشغيلي للشركة. بخبرة عميقة في تعقيدات تشغيل الضيافة الدولية وحوكمة عقود الإدارة الفندقية، يركّز على تحويل الأصول المادية إلى مؤسسات عالية العائد وخالية من العيوب التشغيلية.'
+                    : 'Hossam is the firm’s operational architect. With deep expertise in the operational complexities of international hospitality and HMA governance, his focus is converting physical hotel assets into high-yield, operationally flawless institutions.'}
+                </p>
+              </div>
+
+              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
+                <span className="text-xs font-mono text-[#E07A5F]">Operations Architect • 30+ Yrs</span>
+                <button
+                  onClick={openBriefing}
+                  className="text-xs font-bold uppercase tracking-wider text-white hover:text-[#E07A5F] transition-colors flex items-center gap-1.5"
+                  style={neueHaas}
+                >
+                  <span>{isRTL ? 'حجز جلسة' : 'Request Briefing'}</span>
+                  <ChevronRight className={`w-3.5 h-3.5 ${isRTL ? 'rotate-180' : ''}`} />
+                </button>
+              </div>
+            </motion.div>
+          </StaggerChildren>
+        </div>
+      </section>
+
+      {/* ═══════════════ SECTION 6: HK&P PROPRIETARY PLATFORM ═══════════════ */}
+      <section id="platform" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.creamyWhite }}>
         <div className="max-w-6xl mx-auto">
           <div className="max-w-3xl mb-14">
             <div className="flex items-center gap-3 mb-4">
-              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-2.5 py-1 text-white" style={{ ...neueHaas, backgroundColor: COLOR.emerald }}>
-                {isRTL ? 'جديد' : 'NEW'}
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] px-3 py-1 rounded bg-[#2E7D5A] text-white" style={neueHaas}>
+                {isRTL ? 'المنصة الرقمية' : 'PROPRIETARY PLATFORM'}
               </span>
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em]" style={{ ...neueHaas, color: COLOR.copper }}>
-                {isRTL ? '06 — المنصة الرقمية الحصرية' : '06 — Proprietary Digital Platform'}
+              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#C45B2F]" style={neueHaas}>
+                {isRTL ? '٠٧ — معهد المعرفة والأداء' : '07 — Knowledge & Performance System'}
               </span>
             </div>
-            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight" style={{ ...neueHaas, color: COLOR.charcoal }}>
-              altus <span className="italic" style={{ ...canela, color: COLOR.emerald }}>{isRTL ? 'للمعرفة والأداء' : 'Hospitality Knowledge & Performance'}</span>
+            <h2 className="text-3xl sm:text-5xl md:text-6xl font-normal leading-tight text-[#1E2329]" style={neueHaas}>
+              altus <span className="italic" style={{ ...canela, color: COLOR.emerald }}>{isRTL ? 'للمعرفة وأداء الضيافة' : 'Hospitality Knowledge & Performance'}</span>
             </h2>
-            <p className="text-sm sm:text-base leading-relaxed mt-5" style={{ ...inter, color: COLOR.slate }}>
+            <p className="text-sm sm:text-base leading-relaxed mt-5 text-[#5B6775]" style={inter}>
               {isRTL
-                ? 'منتج استراتيجي حصري يحوّل ثلاثة عقود من الخبرة الفندقية ومعايير التشغيل إلى نظام رقمي منظم للتعلم وإدارة المعرفة وقياس الأداء، مصمم خصيصاً للفنادق المستقلة والشقق الفندقية والمنشآت الصغيرة والمتوسطة في المملكة والمنطقة العربية.'
-                : 'A strategic Altus product that converts three decades of hotel expertise and operating standards into a structured digital system for learning, knowledge management, and performance measurement — purpose-built for independent hotels, serviced apartments, and SME establishments across Saudi Arabia and the Arab region.'}
-            </p>
-            <p className="text-base sm:text-lg italic mt-6 ps-5 border-s-2" style={{ ...canela, color: COLOR.charcoal, borderColor: COLOR.copper }}>
-              {isRTL
-                ? '"المعرفة الصحيحة، للشخص الصحيح، في الوقت الصحيح، مع دليل واضح على التعلّم والتحسّن."'
-                : '“The right knowledge, to the right person, at the right time, with clear evidence of learning and improvement.”'}
+                ? 'منتج استراتيجي حصري يحوّل ثلاثة عقود من الخبرة الفندقية ومعايير التشغيل إلى نظام رقمي منظم للتعلم وإدارة المعرفة وقياس الأداء، مصمم خصيصاً للفنادق المستقلة والشقق الفندقية والمنشآت في المملكة والمنطقة.'
+                : 'A proprietary Altus product converting three decades of hotel operating standards into a structured digital system for learning, SOP governance, and performance measurement — purpose-built for hospitality establishments across Saudi Arabia.'}
             </p>
           </div>
 
           {/* Five integrated layers */}
           <div className="mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6" style={{ ...neueHaas, color: COLOR.charcoal }}>
-              {isRTL ? 'خمس طبقات متكاملة' : 'Five Integrated Layers'}
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-6 text-[#1E2329]" style={neueHaas}>
+              {isRTL ? 'خمس طبقات معمارية متكاملة' : 'Five Integrated Architectural Layers'}
             </h3>
             <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-4">
               {[
                 {
                   n: '01',
-                  t: isRTL ? 'المنتج والتجربة' : 'Product & Experience',
-                  d: isRTL ? 'نطاق واضح وتجربة متسقة عبر بنية المعلومات وواجهة المستخدم.' : 'Clear scope and a consistent experience across information architecture and UX.',
+                  t: isRTL ? 'المنتج والتجربة' : 'Product & UX',
+                  d: isRTL ? 'نطاق واضح وتجربة رقمية متسقة عبر بنية المعلومات والواجهة.' : 'Clear scope and consistent experience across information architecture and UX.',
                 },
                 {
                   n: '02',
                   t: isRTL ? 'المعرفة والتعلّم' : 'Knowledge & Learning',
-                  d: isRTL ? 'بنية معرفية، منهج رئيسي، محرك تعلّم، تقييم وشهادات.' : 'Knowledge architecture, master curriculum, learning engine, assessment and certification.',
+                  d: isRTL ? 'بنية معرفية، منهج رئيسي، محرك تعلّم، تقييم واعتماد رسمي.' : 'Knowledge architecture, master curriculum, assessment, and certification engine.',
                 },
                 {
                   n: '03',
-                  t: isRTL ? 'الذكاء والأداء' : 'Intelligence & Performance',
-                  d: isRTL ? 'محرك معرفي، بحث ذكي، مساعد ذكاء اصطناعي محكوم، ومؤشرات أداء حية.' : 'Knowledge engine, smart search, governed AI assistant, and live performance indicators.',
+                  t: isRTL ? 'الذكاء والأداء' : 'Intelligence & KPIs',
+                  d: isRTL ? 'محرك معرفي، بحث ذكي، مساعد ذكاء اصطناعي، ومؤشرات أداء حية.' : 'Knowledge engine, smart search, governed AI assistant, and live metrics.',
                 },
                 {
                   n: '04',
                   t: isRTL ? 'العمليات التقنية' : 'Technical Operations',
-                  d: isRTL ? 'قاعدة بيانات، هوية وصلاحيات، تخصيص لكل منشأة، إدارة وتقارير.' : 'Database, identity and permissions, per-property customisation, admin and reporting.',
+                  d: isRTL ? 'قاعدة بيانات آمنة، هوية وصلاحيات، تخصيص لكل منشأة وتقارير.' : 'Database, identity & permissions, per-property customisation, admin reporting.',
                 },
                 {
                   n: '05',
                   t: isRTL ? 'الحوكمة والنمو' : 'Governance & Growth',
-                  d: isRTL ? 'أمن وخصوصية، ضبط الإصدارات، خارطة طريق المنتج، قنوات ويب وجوال.' : 'Security and privacy, version control, product roadmap, web and mobile channels.',
+                  d: isRTL ? 'أمن وخصوصية، ضبط الإصدارات، خارطة طريق المنتج وقنوات الجوال.' : 'Security and privacy, version control, product roadmap, web and mobile channels.',
                 },
               ].map((layer) => (
-                <div key={layer.n} className="p-6 border" style={{ backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>
-                  <div className="text-2xl font-semibold mb-3" style={{ ...mono, color: COLOR.copper }}>{layer.n}</div>
-                  <h4 className="text-sm font-bold mb-2" style={{ ...neueHaas, color: COLOR.charcoal }}>{layer.t}</h4>
-                  <p className="text-xs leading-relaxed" style={{ ...inter, color: COLOR.slate }}>{layer.d}</p>
+                <div key={layer.n} className="p-6 rounded-xl border border-[#D9C6A3]/60 bg-white/80 shadow-sm hover:shadow-md transition-shadow">
+                  <div className="text-2xl font-bold mb-3 text-[#C45B2F]" style={mono}>{layer.n}</div>
+                  <h4 className="text-sm font-bold mb-2 text-[#1E2329]" style={neueHaas}>{layer.t}</h4>
+                  <p className="text-xs leading-relaxed text-[#5B6775]" style={inter}>{layer.d}</p>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Master curriculum */}
-          <div className="mb-16">
-            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-2" style={{ ...neueHaas, color: COLOR.charcoal }}>
-              {isRTL ? 'المنهج الرئيسي: عشرة مجالات مهنية' : 'Master Curriculum: Ten Professional Domains'}
+          <div className="mb-12">
+            <h3 className="text-xs font-bold uppercase tracking-[0.2em] mb-2 text-[#1E2329]" style={neueHaas}>
+              {isRTL ? 'المنهج الرئيسي: عشرة مجالات مهنية معتمدة' : 'Master Curriculum: Ten Professional Domains'}
             </h3>
-            <p className="text-xs mb-6" style={{ ...inter, color: COLOR.slate }}>
+            <p className="text-xs mb-6 text-[#5B6775]" style={inter}>
               {isRTL
-                ? 'نموذج محتوى منظم: المجال المهني ← المسار ← الوحدة ← الدرس ← التقييم والشهادة'
+                ? 'نموذج محتوى منظم: المجال المهني ← المسار ← الوحدة التدريبية ← الدرس ← التقييم والشهادة المعتمدة'
                 : 'Structured content model: Professional Domain → Track → Module → Lesson → Assessment & Certification'}
             </p>
             <div className="flex flex-wrap gap-2.5">
               {(isRTL
-                ? ['أساسيات الفندقة', 'الاستقبال', 'التدبير المنزلي', 'الأطعمة والمشروبات', 'المطبخ', 'المبيعات والتسويق', 'الإيرادات والحجوزات', 'تجربة النزيل', 'الجودة والتدقيق', 'الأمن والسلامة']
-                : ['Hotel Fundamentals', 'Front Office', 'Housekeeping', 'Food & Beverage', 'Kitchen', 'Sales & Marketing', 'Revenue & Reservations', 'Guest Experience', 'Quality & Audit', 'Security & Safety']
+                ? ['أساسيات الفندقة', 'الاستقبال وخدمات النزلاء', 'التدبير المنزلي', 'الأغذية والمشروبات', 'المطبخ وفنون الطهي', 'المبيعات والتسويق', 'إدارة الإيرادات والحجوزات', 'تجربة النزيل الفاخرة', 'الجودة والتدقيق التشغيلي', 'الأمن والسلامة والصحة المهنية']
+                : ['Hotel Fundamentals', 'Front Office & Concierge', 'Housekeeping Operations', 'Food & Beverage Service', 'Culinary & Kitchen', 'Sales & Marketing', 'Revenue & Reservations', 'Guest Experience', 'Quality & Operational Audit', 'Safety, Security & Health']
               ).map((d) => (
-                <span key={d} className="text-xs px-3.5 py-2 border font-medium" style={{ ...neueHaas, color: COLOR.charcoal, backgroundColor: COLOR.ivory, borderColor: COLOR.sand }}>{d}</span>
+                <span key={d} className="text-xs px-4 py-2 rounded-lg border border-[#D9C6A3]/80 bg-white text-[#1E2329] font-medium shadow-sm" style={neueHaas}>
+                  {d}
+                </span>
               ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* ═══════════════ INDUSTRIES WE SERVE ═══════════════ */}
-      <section id="industries" className="py-24 sm:py-32 px-4 relative" style={{ backgroundColor: COLOR.charcoal }}>
+      {/* ═══════════════ SECTION 7: INDUSTRIES WE SERVE ═══════════════ */}
+      <section id="industries" className="py-24 sm:py-32 px-4 sm:px-6 relative" style={{ backgroundColor: COLOR.charcoal }}>
         <div className="max-w-5xl mx-auto text-center">
-          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ ...neueHaas, color: COLOR.copper }}>
-            {isRTL ? '08 — تغطية القطاعات' : '08 — Sector Coverage'}
+          <div className="text-[11px] font-bold uppercase tracking-[0.2em] mb-4 text-[#C45B2F]" style={neueHaas}>
+            {isRTL ? '٠٨ — تغطية القطاعات' : '08 — Sector Coverage'}
           </div>
           <h2 className="text-3xl sm:text-5xl md:text-6xl text-white font-normal leading-tight mb-6" style={neueHaas}>
             {isRTL ? (
-              <>القطاعات <span className="italic" style={{ ...canela, color: COLOR.copper }}>التي نخدمها.</span></>
+              <>القطاعات <span className="italic" style={{ ...canela, color: '#E07A5F' }}>التي نخدمها.</span></>
             ) : (
-              <>Industries <span className="italic" style={{ ...canela, color: COLOR.copper }}>we serve.</span></>
+              <>Industries <span className="italic" style={{ ...canela, color: '#E07A5F' }}>we serve.</span></>
             )}
           </h2>
-          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-14" style={{ ...inter, color: '#94A3B8' }}>
+          <p className="text-sm sm:text-base text-slate-300 max-w-2xl mx-auto mb-14" style={inter}>
             {isRTL
-              ? 'فلسفة تشغيلية واحدة، مطبقة عبر القطاعات التي تقود تحول المملكة، أينما تحدّد الخدمة وأداء الأصل وتجربة النزيل النتيجة.'
+              ? 'فلسفة تشغيلية واحدة، مطبقة عبر القطاعات الحيوية التي تقود تحول المملكة، أينما تحدّد الخدمة الرفيعة وأداء الأصل وتجربة النزيل النتيجة الاستثمارية.'
               : 'One operating philosophy, applied across the sectors driving the Kingdom’s transformation, wherever service, asset performance, and guest experience decide the outcome.'}
           </p>
 
           <div className="flex flex-wrap justify-center gap-3">
             {(isRTL
-              ? ['الفنادق', 'المنتجعات الفاخرة', 'السياحة والوجهات', 'العقارات', 'الحكومة والهيئات', 'التطويرات متعددة الاستخدام', 'الترفيه', 'الرعاية الصحية', 'المطاعم والضيافة بالتجزئة', 'الرياضة والفعاليات', 'الاستثمار والأسهم الخاصة', 'المكاتب العائلية']
-              : ['Hotels', 'Luxury Resorts', 'Tourism & Destinations', 'Real Estate', 'Government & PSAs', 'Mixed-Use Developments', 'Entertainment', 'Healthcare', 'Hospitality Retail & F&B', 'Sports & Events', 'Investment & PE', 'Family Offices']
+              ? ['الفنادق المستقلة والعالمية', 'المنتجعات الفاخرة', 'السياحة والوجهات التراثية', 'التطوير العقاري والضيافة', 'الهيئات والكيانات الحكومية', 'المشاريع متعددة الاستخدام', 'المطاعم والضيافة بالتجزئة', 'الرعاية الصحية الفاخرة', 'الاستثمار والأسهم الخاصة', 'المكاتب العائلية']
+              : ['Independent & Global Hotels', 'Luxury Resorts & Spas', 'Tourism & Heritage Destinations', 'Real Estate & Hospitality Assets', 'Government & Development Authorities', 'Mixed-Use Giga Developments', 'Hospitality Retail & F&B', 'Premium Healthcare & Wellness', 'Investment Funds & PE', 'Family Offices']
             ).map((ind) => (
               <span
                 key={ind}
-                className="text-xs px-5 py-2.5 border border-white/15 text-slate-300 hover:border-[#C45B2F] hover:text-white transition-colors duration-300 font-medium"
-                style={{ ...neueHaas, backgroundColor: COLOR.charcoalDeep }}
+                className="text-xs px-5 py-3 rounded-xl border border-white/15 text-slate-300 hover:border-[#C45B2F] hover:text-white transition-all duration-300 font-medium bg-[#16191E] shadow-md"
+                style={neueHaas}
               >
                 {ind}
               </span>
@@ -328,3 +521,4 @@ export default function AboutPage() {
     </div>
   );
 }
+

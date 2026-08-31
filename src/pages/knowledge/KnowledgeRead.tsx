@@ -1330,13 +1330,24 @@ export default function KnowledgeRead() {
                                     ? ` · ${t('viewer.published_revision', 'Published')} v${article.published_version_number}`
                                     : ''}
                             </div>
+                            {article.is_master_template && (
+                                <Badge className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-amber-50 text-amber-800 ring-1 ring-amber-300 flex items-center gap-1">
+                                    <Sparkles className="h-3 w-3 text-amber-600" />
+                                    {t('viewer.master_sop', 'Master SOP')}
+                                </Badge>
+                            )}
+                            {article.scope_type && article.scope_type !== 'organization' && (
+                                <Badge variant="outline" className="rounded-full px-3 py-1 font-semibold text-[10px] uppercase tracking-wider bg-white/70 border-slate-300 text-slate-600">
+                                    {article.scope_type}
+                                </Badge>
+                            )}
                         </div>
 
                         {/* Title & Description */}
                         <div className="max-w-4xl space-y-4">
                             <h1 className={cn(
-                                "text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-slate-900 leading-[1.15] tracking-tight",
-                                shouldUseRtl && "font-arabic"
+                                "text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-serif font-display font-black text-hotel-navy dark:text-white leading-[1.15] tracking-tight",
+                                shouldUseRtl && "font-arabic leading-[1.25]"
                             )}>
                                 {translatedData && !showBilingual ? translatedData.title : article.title}
                             </h1>
@@ -1345,8 +1356,8 @@ export default function KnowledgeRead() {
                                 <h1
                                     dir={isRtlTarget ? 'rtl' : 'ltr'}
                                     className={cn(
-                                        "text-2xl md:text-4xl font-bold text-indigo-500/80 leading-snug",
-                                        isRtlTarget ? "font-arabic pe-6 border-r-4 border-indigo-200" : "ps-6 border-l-4 border-indigo-200"
+                                        "text-2xl md:text-4xl font-serif font-bold text-hotel-gold-dark dark:text-hotel-gold leading-snug",
+                                        isRtlTarget ? "font-arabic pe-6 border-r-4 border-hotel-gold/60" : "ps-6 border-l-4 border-hotel-gold/60"
                                     )}
                                 >
                                     {translatedData.title}
@@ -1354,40 +1365,46 @@ export default function KnowledgeRead() {
                             )}
 
                             {(translatedData?.description || article.description) && (
-                                <p className="text-lg md:text-xl text-slate-500 font-medium leading-relaxed max-w-3xl">
+                                <p className="text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 font-normal leading-relaxed max-w-3xl">
                                     {translatedData ? translatedData.description : article.description}
                                 </p>
                             )}
                         </div>
 
                         {/* Lower Metadata Row */}
-                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-4 sm:gap-x-8 mt-4 pt-6 sm:pt-8 border-t border-slate-200/40">
+                        <div className="flex flex-col items-start gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:gap-y-4 sm:gap-x-8 mt-4 pt-6 sm:pt-8 border-t border-slate-200/60">
                             {article.author && (
                                 <div className="flex items-center gap-3 group">
                                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm transition-transform group-hover:scale-105">
                                         <AvatarImage src={article.author.avatar_url} />
-                                        <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold">
+                                        <AvatarFallback className="bg-gradient-to-br from-hotel-navy to-hotel-navy-dark text-white font-bold">
                                             {article.author.full_name?.charAt(0) || '?'}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex flex-col">
-                                        <span className="text-sm font-bold text-slate-900">{article.author.full_name}</span>
+                                        <span className="text-sm font-bold text-slate-900 dark:text-white">{article.author.full_name}</span>
+                                        {article.department?.name && (
+                                            <span className="text-xs text-slate-500 flex items-center gap-1">
+                                                <Briefcase className="h-3 w-3 text-slate-400" />
+                                                {article.department.name}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             )}
 
                             {article.last_editor?.full_name && (
-                                <div className="flex items-center gap-2 text-sm text-slate-600">
+                                <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-600 dark:text-slate-400">
                                     <Pencil className="h-3.5 w-3.5 text-slate-400" />
                                     <span>{article.last_editor.full_name}</span>
                                 </div>
                             )}
 
-                            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+                            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.updated')}</span>
-                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                                        <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        <Calendar className="h-3.5 w-3.5 text-hotel-gold" />
                                         {t('viewer.updated_at', { date: article.updated_at ? new Date(article.updated_at).toLocaleDateString() : '' })}
                                     </div>
                                 </div>
@@ -1396,9 +1413,9 @@ export default function KnowledgeRead() {
 
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.reading_time', 'Est. Time')}</span>
-                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
-                                        <Timer className="h-3.5 w-3.5 text-slate-400" />
-                                        {readingTime} min read
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
+                                        <Timer className="h-3.5 w-3.5 text-hotel-navy dark:text-hotel-gold" />
+                                        {readingTime} {t('article.min_read', 'min read')}
                                     </div>
                                 </div>
 
@@ -1406,7 +1423,7 @@ export default function KnowledgeRead() {
 
                                 <div className="flex flex-col gap-0.5">
                                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t('viewer.views', 'Views')}</span>
-                                    <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-700">
+                                    <div className="flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300">
                                         <Eye className="h-3.5 w-3.5 text-slate-400" />
                                         {article.view_count || 0}
                                     </div>
@@ -1915,45 +1932,79 @@ export default function KnowledgeRead() {
                             )}
 
                             {/* Linked Learning - Featured Card */}
-                            {(article.linked_training_id || article.linked_quiz_id) && (
+                            {(article.linked_training_id || article.linked_quiz_id) ? (
                                 <div className="p-[1px] rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600">
-                                    <div className="bg-white/95 rounded-[15px] p-5 backdrop-blur-sm">
-                                        <div className="flex items-center gap-2 text-indigo-600 mb-3">
+                                    <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm">
+                                        <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 mb-3">
                                             <GraduationCap className="h-5 w-5" />
-                                            <span className="text-[11px] font-black uppercase tracking-wider">{t('viewer.linked_learning')}</span>
+                                            <span className="text-[11px] font-black uppercase tracking-wider">{t('viewer.linked_learning', 'Linked Learning')}</span>
                                         </div>
 
                                         <div className="space-y-4">
                                             {article.linked_training_id && (
                                                 <div className="space-y-3">
-                                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{t('viewer.training_hint')}</p>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{t('viewer.training_hint', 'Complete this interactive training course based on this SOP.')}</p>
                                                     <Button
-                                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 rounded-xl"
+                                                        className="w-full bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none rounded-xl"
                                                         onClick={() => navigate(`/learning/training/${article.linked_training_id}`)}
                                                     >
                                                         <PlayCircle className="h-4 w-4 me-2" />
-                                                        {t('viewer.start_training')}
+                                                        {t('viewer.start_training', 'Start Training Course')}
                                                     </Button>
                                                 </div>
                                             )}
 
                                             {article.linked_quiz_id && (
                                                 <div className="space-y-3">
-                                                    {article.linked_training_id && <div className="h-px bg-slate-100" />}
-                                                    <p className="text-xs text-slate-500 leading-relaxed font-medium">{t('viewer.quiz_hint')}</p>
+                                                    {article.linked_training_id && <div className="h-px bg-slate-100 dark:bg-slate-800" />}
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{t('viewer.quiz_hint', 'Verify your procedural understanding with a quick checkpoint assessment.')}</p>
                                                     <Button
                                                         variant="outline"
-                                                        className="w-full border-indigo-200 text-indigo-600 hover:bg-indigo-50 rounded-xl"
+                                                        className="w-full border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-xl"
                                                         onClick={() => navigate(`/learning/quizzes/${article.linked_quiz_id}/take`)}
                                                     >
                                                         <Lightbulb className="h-4 w-4 me-2" />
-                                                        {t('viewer.take_quiz')}
+                                                        {t('viewer.take_quiz', 'Take Assessment')}
                                                     </Button>
                                                 </div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
+                            ) : (
+                                /* AI Course & Quiz Generation Quick Actions for Authors/Managers */
+                                (hasPermission('training.create') || hasPermission('knowledge.publish') || profile?.role === 'admin' || profile?.role === 'super_admin') && (
+                                    <div className="p-[1px] rounded-2xl bg-gradient-to-br from-amber-500 via-hotel-gold to-yellow-600">
+                                        <div className="bg-white/95 dark:bg-slate-900/95 rounded-[15px] p-5 backdrop-blur-sm space-y-3">
+                                            <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                                                <Sparkles className="h-4 w-4 text-amber-500" />
+                                                <span className="text-[11px] font-black uppercase tracking-wider">{t('viewer.ai_learning_pipeline', 'AI Learning Pipeline')}</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium">
+                                                {t('viewer.ai_pipeline_desc', 'Convert this verified SOP into an interactive course with Bloom-level quizzes.')}
+                                            </p>
+                                            <div className="space-y-2 pt-1">
+                                                <Button
+                                                    size="sm"
+                                                    className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white shadow-sm rounded-xl text-xs font-semibold"
+                                                    onClick={() => navigate(`/learning/training/create?source_doc_id=${article.id}`)}
+                                                >
+                                                    <GraduationCap className="h-3.5 w-3.5 me-1.5" />
+                                                    {t('viewer.generate_course_from_sop', 'Generate Course from SOP')}
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    className="w-full border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 rounded-xl text-xs font-semibold"
+                                                    onClick={() => navigate(`/learning/quizzes/generate?source_doc_id=${article.id}`)}
+                                                >
+                                                    <Lightbulb className="h-3.5 w-3.5 me-1.5" />
+                                                    {t('viewer.generate_quiz_from_sop', 'Generate Quiz from SOP')}
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
                             )}
 
                             {/* Related Articles */}

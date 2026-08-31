@@ -1,6 +1,7 @@
 import { LanguageSwitcher } from '@/components/common/LanguageSwitcher'
 import { NotificationBell } from '@/components/notifications/NotificationBell'
 import { SyncStatus } from '@/components/common/SyncStatus'
+import { TenantScopeSelector } from '@/components/layout/TenantScopeSelector'
 import {
     AlertDialogAction,
     AlertDialogCancel,
@@ -31,22 +32,12 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSub as DropdownSub,
 } from '@/components/ui/dropdown-menu'
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger
-} from '@/components/ui/select'
-import { useProperty } from '@/contexts/PropertyContext'
 import { useAuth } from '@/hooks/useAuth'
-import { isConsolidatedPropertyId } from '@/lib/propertyScope'
 import { cn } from '@/lib/utils'
 import {
     Bell,
-    Building,
     Check,
     ChevronDown,
-    Globe,
     LogOut,
     Menu,
     Search,
@@ -59,31 +50,36 @@ import { useTranslation } from 'react-i18next'
 import { useNavigate } from 'react-router-dom'
 
 interface HeaderProps {
-  sidebarCollapsed: boolean
-  setSidebarCollapsed: (value: boolean) => void
+  sidebarCollapsed?: boolean
+  setSidebarCollapsed?: (value: boolean) => void
   setCommandPaletteOpen?: (value: boolean) => void
+  onOpenSearch?: () => void
 }
 
 export function Header({
-  sidebarCollapsed,
+  sidebarCollapsed = false,
   setSidebarCollapsed,
-  setCommandPaletteOpen
+  setCommandPaletteOpen,
+  onOpenSearch
 }: HeaderProps) {
   const navigate = useNavigate()
   const { user, profile, primaryRole, signOut } = useAuth()
-  const { currentProperty, availableProperties, isMultiPropertyUser, switchProperty } = useProperty()
   const { t } = useTranslation(['common', 'nav'])
   const [userStatus, setUserStatus] = useState<'online' | 'away' | 'busy'>('online')
 
   const statusColors = {
-    online: 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]',
-    away: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]',
-    busy: 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]'
+    online: 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]',
+    away: 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]',
+    busy: 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]'
   }
-  const isConsolidatedContext = isConsolidatedPropertyId(currentProperty?.id)
-  const consolidatedProperties = availableProperties.filter((property) => isConsolidatedPropertyId(property.id))
-  const scopedProperties = availableProperties.filter((property) => !isConsolidatedPropertyId(property.id))
-  const hasConsolidatedOption = consolidatedProperties.length > 0
+
+  const handleOpenSearch = () => {
+    if (onOpenSearch) {
+      onOpenSearch()
+    } else if (setCommandPaletteOpen) {
+      setCommandPaletteOpen(true)
+    }
+  }
 
   const handleSignOut = useCallback(async () => {
     await signOut()
@@ -91,223 +87,44 @@ export function Header({
   }, [signOut, navigate])
 
   return (
-    <header className="sticky top-0 z-40 w-full transition-all duration-300">
-      {/* Altus Advisory Premium Header Bar - Navy Background */}
-      <div className="bg-hotel-navy text-white shadow-md border-b-4 border-hotel-gold">
-        <div className="flex h-16 items-center justify-between px-6">
+    <header className="sticky top-0 z-40 w-full transition-all duration-200">
+      {/* Altus Advisory Premium Header Bar - Executive Navy Background with Gold/Copper Accent */}
+      <div className="bg-hotel-navy text-white shadow-md border-b-2 border-hotel-gold/70 relative">
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white"
-              aria-label={sidebarCollapsed ? t('accessibility.expand_sidebar', 'Expand sidebar') : t('accessibility.collapse_sidebar', 'Collapse sidebar')}
-            >
-              <Menu className="h-5 w-5" />
-            </Button>
+            {setSidebarCollapsed && (
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                className="hidden lg:flex text-gray-200 hover:bg-hotel-navy-light hover:text-white active:scale-[0.98] transition-transform duration-150"
+                aria-label={sidebarCollapsed ? t('accessibility.expand_sidebar', 'Expand sidebar') : t('accessibility.collapse_sidebar', 'Collapse sidebar')}
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
           </div>
 
-          {/* Center Search - Premium Style */}
-          <div className="flex-1 max-w-2xl mx-6 hidden md:flex items-center gap-2">
+          {/* Center Search - Premium Sleek Style */}
+          <div className="flex-1 max-w-2xl mx-4 lg:mx-6 hidden md:flex items-center gap-2">
             <Button
               variant="outline"
-              className="w-full justify-start text-sm text-gray-400 bg-hotel-navy-dark border-hotel-navy-dark hover:bg-hotel-navy-light hover:text-white"
-              onClick={() => setCommandPaletteOpen?.(true)}
+              className="w-full justify-start text-sm text-slate-300 bg-hotel-navy-dark/80 border-hotel-navy-light/60 hover:bg-hotel-navy-light hover:text-white hover:border-hotel-gold/40 active:scale-[0.99] transition-all duration-150 shadow-inner"
+              onClick={handleOpenSearch}
             >
-              <Search className="me-2 h-4 w-4" />
-              {t('nav:search_placeholder', 'Search pages, people, documents...')}
+              <Search className="me-2 h-4 w-4 text-hotel-gold/80" />
+              <span className="truncate">{t('nav:search_placeholder', 'Search pages, people, documents...')}</span>
             </Button>
-            <kbd className="hidden lg:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/50 px-2 font-mono text-[10px] font-medium text-hotel-gold/80" aria-hidden="true">
+            <kbd className="hidden lg:inline-flex h-6 select-none items-center gap-1 rounded border border-hotel-gold/30 bg-hotel-navy-dark/90 px-2 font-mono text-[10px] font-semibold text-hotel-gold shadow-sm" aria-hidden="true">
               Ctrl+K
             </kbd>
           </div>
 
-          <div className="flex items-center gap-3">
-            {/* Property Switcher for Multi-Property Users */}
-            {isMultiPropertyUser && (
-              <div className="hidden md:flex flex-col items-start me-4">
-                <Select value={currentProperty?.id ?? ''} onValueChange={switchProperty}>
-                  <SelectTrigger className={cn(
-                    "w-[290px] h-14 bg-hotel-navy-dark border border-hotel-gold/30 text-white hover:bg-hotel-navy-light focus:ring-hotel-gold/50 focus:ring-2 transition-all duration-300 rounded-xl shadow-lg relative group overflow-hidden [&>svg]:text-hotel-gold/80 [&>svg]:opacity-100 [&>svg]:w-4 [&>svg]:h-4 [&>svg]:transition-transform [&>svg]:duration-300 ps-3 pe-4",
-                    isConsolidatedContext && "border-hotel-gold/60 bg-gradient-to-r from-hotel-navy-dark to-hotel-navy-light shadow-[0_0_20px_rgba(212,175,55,0.15)]"
-                  )}>
-                    {isConsolidatedContext && (
-                        <div className="absolute inset-0 bg-hotel-gold/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
-                    )}
-                    <div className="flex items-center gap-3 w-full pe-1">
-                      <div className={cn(
-                        "flex items-center justify-center w-9 h-9 rounded-lg shrink-0 transition-all duration-300",
-                        isConsolidatedContext ? "bg-gradient-to-br from-hotel-gold via-yellow-500 to-yellow-600 text-hotel-navy shadow-md" : "bg-hotel-navy/80 text-hotel-gold border border-hotel-gold/20 group-hover:bg-hotel-navy"
-                      )}>
-                        {isConsolidatedContext ? (
-                          <Globe className="h-4 w-4 stroke-[2.5]" />
-                        ) : (
-                          <Building className="h-4 w-4" />
-                        )}
-                      </div>
-                      <div className="flex flex-col items-start overflow-hidden min-w-0 text-left pt-0.5">
-                        <span className={cn(
-                          "text-[9.5px] uppercase tracking-[0.1em] font-bold leading-tight mb-0.5 transition-colors duration-300",
-                          isConsolidatedContext ? "text-hotel-gold" : "text-hotel-gold/70 group-hover:text-hotel-gold/90"
-                        )}>
-                          {isConsolidatedContext ? t('nav:administrative_context', 'Administrative Context') : t('nav:active_property', 'Active Property')}
-                        </span>
-                        <span className="text-[13px] font-semibold truncate w-full text-white/95 tracking-wide">
-                          {currentProperty?.name || t('nav:select_property', 'Select Property')}
-                        </span>
-                      </div>
-                    </div>
-                  </SelectTrigger>
-                  <SelectContent className="w-[340px] max-h-[500px] border border-hotel-gold/20 bg-hotel-navy shadow-2xl shadow-black/40 rounded-xl p-0 overflow-hidden">
-                    {/* Header */}
-                    <div className="px-4 py-4 bg-gradient-to-br from-hotel-navy-dark to-hotel-navy border-b border-hotel-gold/20 relative overflow-hidden">
-                      <div className="absolute top-0 end-0 w-32 h-32 bg-hotel-gold/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/4"></div>
-                      <p className="text-xs font-bold text-hotel-gold uppercase tracking-[0.1em] relative z-10">{t('nav:available_properties', 'Available Properties')}</p>
-                      <p className="text-[11px] text-white/50 mt-1 font-medium relative z-10">{t('nav:select_working_context', 'Select your working context')}</p>
-                    </div>
-                    {/* Property List - Dynamically Grouped by Region */}
-                    <div className="py-2">
-                      {/* Administrative/Consolidated View First */}
-                      {consolidatedProperties.map(prop => (
-                        <SelectItem
-                          key={prop.id}
-                          value={prop.id}
-                          className={cn(
-                            "cursor-pointer mx-2 my-1.5 rounded-lg border transition-all duration-200 focus:bg-hotel-navy-light/60 focus:text-white ps-3 [&>span.absolute]:hidden",
-                            currentProperty?.id === prop.id
-                              ? "bg-hotel-navy-light/80 text-white border-hotel-gold/40 shadow-[0_2px_10px_rgba(212,175,55,0.1)] py-3"
-                              : "hover:bg-hotel-navy-light/40 border-transparent py-2.5 text-white/80"
-                          )}
-                        >
-                          <div className="flex items-center gap-3 w-full">
-                            <div className={cn(
-                              "flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors duration-300",
-                              currentProperty?.id === prop.id ? "bg-gradient-to-br from-hotel-gold to-yellow-600 text-hotel-navy" : "bg-white/10 text-hotel-gold/80"
-                            )}>
-                              <Globe className="h-4 w-4" />
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <span className={cn(
-                                "font-semibold text-[13px] truncate",
-                                currentProperty?.id === prop.id ? "text-white" : "text-white/90"
-                              )}>
-                                {prop.name}
-                              </span>
-                              <span className={cn(
-                                "text-[10px] truncate",
-                                currentProperty?.id === prop.id ? "text-hotel-gold/90 font-medium" : "text-white/50"
-                              )}>
-                                Corporate Headquarters & Global Operations
-                              </span>
-                            </div>
-                            {currentProperty?.id === prop.id && (
-                              <div className="ms-auto shrink-0 ps-3">
-                                <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center shadow-lg">
-                                  <Check className="w-3 h-3 stroke-[3]" />
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        </SelectItem>
-                      ))}
-
-                      {/* Divider if both types exist */}
-                      {hasConsolidatedOption && scopedProperties.length > 0 && (
-                        <div className="my-3 mx-4 h-px bg-hotel-gold/20" />
-                      )}
-
-                      {/* Dynamic Region Grouping */}
-                      {(() => {
-                        // Extract all unique regions from property addresses
-                        const regionMap = new Map<string, typeof availableProperties>()
-                        const regionOrder = ['Riyadh', 'Jeddah', 'Makkah', 'Madinah', 'Dammam', 'Khobar', 'Tabuk', 'Abha', 'Taif', 'Buraidah', 'Hail', 'Jubail', 'Yanbu', 'Najran', 'Hafar Al-Batin', 'Other']
-
-                        scopedProperties
-                          .forEach(prop => {
-                            const address = (prop.address || '').toLowerCase()
-                            // Find matching region from known KSA cities
-                            let region = 'Other'
-                            for (const city of regionOrder) {
-                              if (address.includes(city.toLowerCase())) {
-                                region = city
-                                break
-                              }
-                            }
-
-                            if (!regionMap.has(region)) {
-                              regionMap.set(region, [])
-                            }
-                            regionMap.get(region)!.push(prop)
-                          })
-
-                        // Sort regions by predefined order, new regions go to end
-                        const sortedRegions = Array.from(regionMap.entries()).sort((a, b) => {
-                          const indexA = regionOrder.indexOf(a[0])
-                          const indexB = regionOrder.indexOf(b[0])
-                          if (indexA === -1 && indexB === -1) return a[0].localeCompare(b[0])
-                          if (indexA === -1) return 1
-                          if (indexB === -1) return -1
-                          return indexA - indexB
-                        })
-
-                        return sortedRegions.map(([region, props]) => (
-                          <div key={region} className="mb-3">
-                            <p className="px-4 py-2 mt-2 mb-1 text-[10px] font-bold text-hotel-gold uppercase tracking-[0.15em] flex items-center gap-2 bg-hotel-navy-dark/40 border-y border-hotel-gold/10">
-                              <span className="w-1.5 h-1.5 rounded-full bg-hotel-gold shadow-[0_0_5px_rgba(212,175,55,0.5)]" />
-                              {region}
-                            </p>
-                            {props.map(prop => (
-                              <SelectItem
-                                key={prop.id}
-                                value={prop.id}
-                                className={cn(
-                                  "cursor-pointer mx-2 my-1 rounded-lg border transition-all duration-200 focus:bg-hotel-navy-light/60 focus:text-white ps-3 [&>span.absolute]:hidden",
-                                  currentProperty?.id === prop.id
-                                    ? "bg-hotel-navy-light/80 text-white border-hotel-gold/40 shadow-[0_2px_10px_rgba(212,175,55,0.1)] py-3"
-                                    : "hover:bg-hotel-navy-light/40 border-transparent py-2.5 text-white/80"
-                                )}
-                              >
-                                <div className="flex items-center gap-3 w-full">
-                                  <div className={cn(
-                                    "flex items-center justify-center w-8 h-8 rounded-md shrink-0 transition-colors duration-300",
-                                    currentProperty?.id === prop.id ? "bg-hotel-gold/20 text-hotel-gold border border-hotel-gold/30" : "bg-white/5 text-white/60"
-                                  )}>
-                                    <Building className="h-4 w-4" />
-                                  </div>
-                                  <div className="flex flex-col min-w-0">
-                                    <span className={cn(
-                                      "font-medium text-[13px] truncate",
-                                      currentProperty?.id === prop.id ? "text-white" : "text-white/90"
-                                    )}>
-                                      {prop.name}
-                                    </span>
-                                    {prop.address && (
-                                      <span className={cn(
-                                        "text-[10px] truncate",
-                                        currentProperty?.id === prop.id ? "text-hotel-gold/80" : "text-white/50"
-                                      )}>
-                                        {prop.address}
-                                      </span>
-                                    )}
-                                  </div>
-                                  {currentProperty?.id === prop.id && (
-                                    <div className="ms-auto shrink-0 ps-3">
-                                      <div className="w-5 h-5 rounded-full bg-hotel-gold text-hotel-navy flex items-center justify-center shadow-lg">
-                                        <Check className="w-3 h-3 stroke-[3]" />
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </div>
-                        ))
-                      })()}
-                    </div>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Multi-Tenant Scope Hierarchy Selector (Org / Brand / Hotel) */}
+            <div className="hidden sm:flex items-center me-1 sm:me-2">
+              <TenantScopeSelector />
+            </div>
 
             {/* Sync Status */}
             <SyncStatus className="hidden md:flex" />
@@ -316,7 +133,7 @@ export function Header({
             <div id="language-switcher" className="text-white">
               <LanguageSwitcher
                 variant="ghost"
-                className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2.5 rounded-lg border-transparent"
+                className="text-white/90 hover:text-white hover:bg-hotel-navy-light text-xs font-semibold h-9 px-2.5 rounded-lg border-transparent active:scale-[0.98] transition-transform duration-150"
               />
             </div>
 
@@ -334,7 +151,7 @@ export function Header({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark transition-all duration-200 group"
+                    className="flex items-center gap-3 hover:bg-hotel-navy-light px-3 py-2 rounded-full border border-transparent hover:border-hotel-navy-dark active:scale-[0.98] transition-all duration-150 group"
                     aria-label={t('nav:user_menu', "User menu")}
                   >
                     <div className="hidden md:flex flex-col items-end">
@@ -348,7 +165,7 @@ export function Header({
                     </div>
 
                     <div className="relative">
-                      <Avatar className="h-9 w-9 border-2 border-hotel-gold/30 group-hover:border-hotel-gold transition-all duration-300 shadow-sm ring-2 ring-hotel-navy/50">
+                      <Avatar className="h-9 w-9 border-2 border-hotel-gold/40 group-hover:border-hotel-gold transition-all duration-200 shadow-sm ring-2 ring-hotel-navy/50">
                         <AvatarImage src={profile?.avatar_url || ''} alt={profile?.full_name || 'User'} />
                         <AvatarFallback className="bg-hotel-gold text-hotel-navy font-bold">
                           {profile?.full_name
@@ -356,9 +173,9 @@ export function Header({
                             : (user?.email?.[0]?.toUpperCase() || 'U')}
                         </AvatarFallback>
                       </Avatar>
-                      <span className={cn("absolute bottom-0 end-0 w-2.5 h-2.5 border-2 border-hotel-navy rounded-full transition-all duration-300", statusColors[userStatus])} />
+                      <span className={cn("absolute bottom-0 end-0 w-2.5 h-2.5 border-2 border-hotel-navy rounded-full transition-all duration-200", statusColors[userStatus])} />
                     </div>
-                    <ChevronDown className="h-4 w-4 text-hotel-gold-light transition-transform duration-300 group-data-[state=open]:rotate-180" />
+                    <ChevronDown className="h-4 w-4 text-hotel-gold-light transition-transform duration-200 group-data-[state=open]:rotate-180" />
                   </Button>
                 </DropdownMenuTrigger>
 

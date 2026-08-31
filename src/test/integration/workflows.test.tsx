@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMockSupabaseClient, mockQueryResponse } from '../mocks/supabase'
 import { createMockUserContext } from '../factories'
 
@@ -141,102 +141,75 @@ describe('Training Module Critical Path', () => {
   })
 })
 
-describe('Leave Request Critical Path', () => {
+describe('Task Management Critical Path', () => {
   const mockClient = createMockSupabaseClient()
   const staff = createMockUserContext('staff')
 
-  it('should submit leave request', async () => {
-    const leaveRequest = {
-      id: 'leave-123',
-      requester_id: staff.profile.id,
-      leave_type: 'annual',
-      start_date: '2026-05-01',
-      end_date: '2026-05-05',
-      status: 'pending'
-    }
-
-    mockClient.from.mockReturnValue({
-      insert: vi.fn().mockReturnThis(),
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue(mockQueryResponse(leaveRequest))
-    })
-
-    const result = await mockClient.from('leave_requests')
-      .insert(leaveRequest)
-      .select()
-      .single()
-
-    expect(result.data?.status).toBe('pending')
-  })
-
-  it('should route request to approver', async () => {
-    const requestId = 'leave-123'
-    
-    mockClient.rpc.mockResolvedValue(mockQueryResponse({
-      request_id: requestId,
-      assigned_to: 'manager-456',
-      routed_at: new Date().toISOString()
-    }))
-
-    const result = await mockClient.rpc('route_leave_request', {
-      p_request_id: requestId
-    })
-
-    expect(result.data?.assigned_to).toBeDefined()
-  })
-})
-
-describe('Maintenance Ticket Critical Path', () => {
-  const mockClient = createMockSupabaseClient()
-
-  it('should create maintenance ticket', async () => {
-    const ticket = {
-      id: 'ticket-123',
-      title: 'AC Not Working',
-      description: 'Room 205 AC is not cooling',
+  it('should create a task', async () => {
+    const task = {
+      id: 'task-123',
+      title: 'Complete Fire Drill Inspection Review',
+      description: 'Review SOP evacuation document and take the quiz',
+      assigned_to_id: staff.profile.id,
       priority: 'high',
-      status: 'open',
-      property_id: 'prop-456',
-      department_id: 'dept-789'
+      status: 'todo'
     }
 
     mockClient.from.mockReturnValue({
       insert: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue(mockQueryResponse(ticket))
+      single: vi.fn().mockResolvedValue(mockQueryResponse(task))
     })
 
-    const result = await mockClient.from('maintenance_tickets')
-      .insert(ticket)
+    const result = await mockClient.from('tasks')
+      .insert(task)
       .select()
       .single()
 
+    expect(result.data?.status).toBe('todo')
     expect(result.data?.priority).toBe('high')
   })
 
-  it('should assign ticket to technician', async () => {
-    const ticketId = 'ticket-123'
+  it('should update task status to in_progress and complete', async () => {
+    const taskId = 'task-123'
     
     mockClient.from.mockReturnValue({
       update: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       select: vi.fn().mockReturnThis(),
       single: vi.fn().mockResolvedValue(mockQueryResponse({
-        id: ticketId,
-        assigned_to: 'tech-456',
-        status: 'assigned'
+        id: taskId,
+        status: 'completed'
       }))
     })
 
-    const result = await mockClient.from('maintenance_tickets')
-      .update({ assigned_to: 'tech-456', status: 'assigned' })
-      .eq('id', ticketId)
+    const result = await mockClient.from('tasks')
+      .update({ status: 'completed' })
+      .eq('id', taskId)
       .select()
       .single()
 
-    expect(result.data?.status).toBe('assigned')
+    expect(result.data?.status).toBe('completed')
   })
 })
 
-// Import beforeEach
-import { beforeEach } from 'vitest'
+describe('Assessment & Quiz Submission Critical Path', () => {
+  const mockClient = createMockSupabaseClient()
+
+  it('should submit quiz attempt and receive score', async () => {
+    mockClient.rpc.mockResolvedValue(mockQueryResponse({
+      attempt_id: 'attempt-123',
+      score: 90,
+      passed: true
+    }))
+
+    const result = await mockClient.rpc('submit_quiz_attempt', {
+      p_user_id: 'user-456',
+      p_assessment_id: 'assessment-789',
+      p_answers: { q1: 'opt-a', q2: 'opt-c' }
+    })
+
+    expect(result.data?.passed).toBe(true)
+    expect(result.data?.score).toBe(90)
+  })
+})

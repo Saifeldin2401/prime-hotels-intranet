@@ -729,7 +729,7 @@ async function applyQuestionRepair(payload: RepairPayload) {
       explanation: normalized.explanation,
       hint: normalized.hint,
       updated_at: new Date().toISOString()
-    })
+    } as any)
     .eq('id', normalized.question_id)
 
   if (questionError) throw questionError

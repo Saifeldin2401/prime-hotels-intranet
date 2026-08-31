@@ -17,7 +17,7 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/hooks/useAuth'
 import { useNotifications } from '@/hooks/useNotifications'
 import { cn } from '@/lib/utils'
-import { Bell, Briefcase, Home, FileText } from 'lucide-react'
+import { Bell, FileText, GraduationCap, Home } from 'lucide-react'
 import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useLocation } from 'react-router-dom'
@@ -81,7 +81,7 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
       aria-label={t('mobileNav', { defaultValue: 'Mobile navigation' })}
     >
       {/* Glassmorphism Background — tokenized so it adapts to light/dark */}
-      <div className="absolute inset-0 bg-card/90 backdrop-blur-xl border-t border-border/60 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]" />
+      <div className="absolute inset-0 bg-card/85 backdrop-blur-2xl border-t border-border/60 shadow-[0_-4px_24px_rgba(0,0,0,0.06)]" />
       
       {/* Safe Area Spacer */}
       <div className="relative flex items-end justify-around h-20 max-w-lg mx-auto pb-safe">
@@ -96,14 +96,14 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
           label={t('home', 'Home')}
         />
 
-        {/* Tasks */}
+        {/* Learning */}
         <NavButton
-          to="/tasks"
-          isActive={isActive('/tasks')}
+          to="/learning/my"
+          isActive={isActive('/learning/my') || isActive('/learning') || isActive('/training')}
           onClick={handleHaptic}
-          icon={<Briefcase className="w-5 h-5" />}
-          activeIcon={<Briefcase className="w-5 h-5 fill-current" />}
-          label={t('tasks', 'Tasks')}
+          icon={<GraduationCap className="w-5 h-5" />}
+          activeIcon={<GraduationCap className="w-5 h-5 fill-current" />}
+          label={t('my_learning', 'Learning')}
         />
 
         {/* Documents */}
@@ -134,15 +134,15 @@ export function MobileNavigation({ className }: MobileNavigationProps) {
           onClick={handleHaptic}
           icon={
             <Avatar className={cn(
-              'h-5 w-5 transition-all duration-300 ring-2 ring-transparent',
-              isActive('/profile') && 'ring-hotel-gold'
+              'h-5 w-5 transition-all duration-200 ring-2 ring-transparent',
+              isActive('/profile') && 'ring-altus-copper dark:ring-hotel-gold'
             )}>
               <AvatarImage 
                 src={profile?.avatar_url || undefined}
                 alt={profile?.full_name || 'User'}
                 className="object-cover"
               />
-              <AvatarFallback className="bg-gradient-to-br from-hotel-gold to-hotel-gold-dark text-hotel-navy text-[9px] font-semibold flex items-center justify-center">
+              <AvatarFallback className="bg-gradient-to-br from-hotel-gold to-altus-copper text-white text-[9px] font-semibold flex items-center justify-center">
                 {userInitials}
               </AvatarFallback>
             </Avatar>
@@ -171,23 +171,23 @@ function NavButton({ to, isActive, onClick, icon, activeIcon, label, badge }: Na
       onClick={onClick}
       className={cn(
         'flex flex-col items-center justify-center gap-1',
-        'w-16 h-14 rounded-2xl transition-all duration-300',
+        'w-16 h-14 rounded-2xl transition-[transform,color] duration-150 ease-out active:scale-90',
         'min-h-touch min-w-touch', // Enforces minimum touch hit target size of 44x44px
-        'relative',
+        'relative select-none',
         isActive
-          ? 'text-hotel-gold'
+          ? 'text-altus-copper dark:text-hotel-gold'
           : 'text-muted-foreground hover:text-foreground'
       )}
     >
-      {/* Active indicator pill — widened from a 4px dot so the active tab is actually visible */}
+      {/* Active indicator pill with Altus Copper/Gold gradient & glow */}
       {isActive && (
-        <div className="absolute -top-1 w-5 h-1 rounded-full bg-hotel-gold animate-in fade-in zoom-in duration-200" />
+        <div className="absolute -top-1 w-6 h-1 rounded-full bg-gradient-to-r from-hotel-gold to-altus-copper animate-in fade-in zoom-in duration-150 shadow-[0_0_8px_rgba(196,91,47,0.35)]" />
       )}
 
       {/* Icon container */}
       <div className={cn(
-        'relative p-1.5 rounded-xl transition-all duration-300',
-        isActive && 'bg-hotel-gold/10'
+        'relative p-1.5 rounded-xl transition-all duration-200',
+        isActive && 'bg-altus-copper/10 dark:bg-hotel-gold/10'
       )}>
         {isActive ? activeIcon || icon : icon}
         
@@ -196,8 +196,8 @@ function NavButton({ to, isActive, onClick, icon, activeIcon, label, badge }: Na
           <Badge 
             variant="destructive" 
             className={cn(
-              'absolute -top-1 -end-1 h-4 min-w-4 px-1 text-[9px] flex items-center justify-center',
-              'animate-in zoom-in duration-200'
+              'absolute -top-1 -end-1 h-4 min-w-4 px-1 text-[9px] font-mono font-bold flex items-center justify-center',
+              'animate-in zoom-in duration-150 shadow-xs'
             )}
           >
             {badge > 99 ? '99+' : badge}
@@ -207,8 +207,8 @@ function NavButton({ to, isActive, onClick, icon, activeIcon, label, badge }: Na
       
       {/* Label */}
       <span className={cn(
-        'text-[11px] font-medium transition-all duration-300',
-        isActive ? 'text-hotel-gold' : 'text-muted-foreground'
+        'text-[11px] font-medium transition-colors duration-150',
+        isActive ? 'text-altus-copper dark:text-hotel-gold font-semibold' : 'text-muted-foreground'
       )}>
         {label}
       </span>

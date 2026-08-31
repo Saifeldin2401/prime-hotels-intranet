@@ -30,9 +30,9 @@ export interface ConfidentialityConfig {
 const CONFIDENTIALITY_CONFIGS: Record<ConfidentialityLevel, ConfidentialityConfig> = {
   public: {
     level: "public",
-    label: "Company-Wide",
-    description: "All properties & group employees",
-    detailedDescription: "General company-wide document published across all hotel properties (corporate brand standards, group policies, company calendar).",
+    label: "Organization-Wide",
+    description: "All tenant hotels & staff",
+    detailedDescription: "General company-wide document published across all tenant hotels (brand standards, group policies, organization calendar).",
     icon: <Globe className="w-3.5 h-3.5" />,
     color: {
       bg: "bg-gray-100",
@@ -40,18 +40,18 @@ const CONFIDENTIALITY_CONFIGS: Record<ConfidentialityLevel, ConfidentialityConfi
       border: "border-gray-200",
       hover: "hover:bg-gray-200",
     },
-    accessDescription: "All Properties & Staff",
+    accessDescription: "Organization-Wide (All Hotels)",
     examples: [
-      "Company Announcements",
-      "Corporate Brand Guidelines",
+      "Tenant Announcements",
+      "Brand Guidelines & Standards",
       "Code of Business Conduct",
-      "Group Holiday Calendar",
+      "Annual Calendar",
     ],
   },
   internal: {
     level: "internal",
-    label: "Property-Level",
-    description: "Local property & department staff",
+    label: "Hotel-Level",
+    description: "Specific hotel & department staff",
     detailedDescription: "Operational standard document accessible only to staff and team members in the assigned hotel property and department.",
     icon: <Building2 className="w-3.5 h-3.5" />,
     color: {

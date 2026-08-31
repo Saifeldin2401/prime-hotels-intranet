@@ -1,5 +1,6 @@
 import { useToast } from '@/components/ui/use-toast'
 import { useAuth } from '@/hooks/useAuth'
+import { useTenant } from '@/contexts/TenantContext'
 import { useNotificationTriggers } from '@/hooks/useNotificationTriggers'
 import {
   getLearningAssignmentErrorMessage,
@@ -65,6 +66,7 @@ export function useTrainingAssignmentsMutations(options: {
   onReassignSuccess: () => void
 }) {
   const { profile } = useAuth()
+  const { currentOrganization } = useTenant()
   const queryClient = useQueryClient()
   const { t } = useTranslation('training')
   const { toast } = useToast()
@@ -122,6 +124,7 @@ export function useTrainingAssignmentsMutations(options: {
           target_id: null,
           content_type: 'module',
           content_id: formModuleId,
+          organization_id: currentOrganization?.id || null,
           assigned_by: profile?.id,
           due_date: formDeadline || null,
           valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),
@@ -143,6 +146,7 @@ export function useTrainingAssignmentsMutations(options: {
             target_id: id,
             content_type: 'module',
             content_id: formModuleId,
+            organization_id: currentOrganization?.id || null,
             assigned_by: profile?.id,
             due_date: formDeadline || null,
             valid_from: formValidFrom ? new Date(formValidFrom).toISOString() : new Date().toISOString(),

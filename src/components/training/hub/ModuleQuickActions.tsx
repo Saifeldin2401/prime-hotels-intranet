@@ -7,7 +7,7 @@ import {
     DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu'
 import { cn } from '@/lib/utils'
-import { CheckCircle2, Copy, Edit, Eye, MoreVertical, SendHorizonal, Trash2, Users, XCircle } from 'lucide-react'
+import { CheckCircle2, Copy, Crown, Edit, Eye, MoreVertical, RefreshCw, SendHorizonal, Trash2, Users, XCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 
 interface TrainingModule {
@@ -25,6 +25,9 @@ interface ModuleQuickActionsProps {
   onSubmitForReview?: () => void
   onApprove?: () => void
   onReject?: () => void
+  onSyncWithMaster?: () => void
+  isMaster?: boolean
+  hasUpdate?: boolean
 }
 
 export function ModuleQuickActions({
@@ -36,7 +39,10 @@ export function ModuleQuickActions({
   onDelete,
   onSubmitForReview,
   onApprove,
-  onReject
+  onReject,
+  onSyncWithMaster,
+  isMaster,
+  hasUpdate
 }: ModuleQuickActionsProps) {
   const { t, i18n } = useTranslation('training')
   const isRTL = i18n.dir() === 'rtl'
@@ -69,6 +75,23 @@ export function ModuleQuickActions({
             <Users className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
             {t('assign')}
           </DropdownMenuItem>
+
+          {onSyncWithMaster && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={onSyncWithMaster}
+                className={cn(
+                  hasUpdate ? "text-amber-700 font-bold focus:text-amber-700 bg-amber-50/50" : "text-indigo-700",
+                  isRTL ? "flex-row-reverse" : ""
+                )}
+              >
+                <RefreshCw className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2", hasUpdate ? "animate-spin" : "")} />
+                {hasUpdate ? t('syncWithMaster', 'Sync with Master 🔔') : t('syncWithMaster', 'Sync with Master')}
+              </DropdownMenuItem>
+            </>
+          )}
+
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={onClone} className={cn(isRTL ? "flex-row-reverse" : "")}>
             <Copy className={cn("h-4 w-4", isRTL ? "ms-2" : "me-2")} />
@@ -106,4 +129,3 @@ export function ModuleQuickActions({
     </div>
   )
 }
-
