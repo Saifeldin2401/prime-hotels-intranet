@@ -30,6 +30,7 @@ import { FinanceRoutes } from './modules/FinanceRoutes'
 import { HousekeepingRoutes } from './modules/HousekeepingRoutes'
 import { HRRoutes } from './modules/HRRoutes'
 import { KnowledgeRoutes } from './modules/KnowledgeRoutes'
+import { ManageRoutes } from './modules/ManageRoutes'
 import { MediaRoutes } from './modules/MediaRoutes'
 import { MiscRoutes } from './modules/MiscRoutes'
 import { OperationsRoutes } from './modules/OperationsRoutes'
@@ -233,6 +234,7 @@ export const router = createBrowserRouter(
                 {FinanceRoutes()}
                 {TrainingRoutes()}
                 {KnowledgeRoutes()}
+                {ManageRoutes()}
                 {MediaRoutes()}
                 {DashboardRoutes()}
                 {MiscRoutes()}
