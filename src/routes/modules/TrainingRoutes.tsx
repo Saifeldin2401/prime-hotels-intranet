@@ -12,6 +12,7 @@ const TrainingAssignmentRules = lazy(() => import('@/pages/training/TrainingAssi
 const TrainingPaths = lazy(() => import('@/pages/training/TrainingPaths'))
 const TrainingPlayer = lazy(() => import('@/pages/training/TrainingPlayer'))
 const TrainingAnalytics = lazy(() => import('@/pages/training/TrainingAnalytics'))
+const LearningAnalyticsHub = lazy(() => import('@/pages/analytics/LearningAnalyticsHub'))
 const SkillsMatrix = lazy(() => import('@/pages/training/SkillsMatrix'))
 const MyLearning = lazy(() => import('@/pages/learning/MyLearning'))
 const QuizList = lazy(() => import('@/pages/learning/QuizList'))
@@ -231,6 +232,17 @@ export const TrainingRoutes = () => (
                 <ProtectedRoute>
                     <AppLayout>
                         <TrainingAnalytics />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+            errorElement={<RouteErrorBoundary section="Learning Analytics" />}
+        />
+        <Route
+            path="/analytics/learning"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <LearningAnalyticsHub />
                     </AppLayout>
                 </ProtectedRoute>
             }

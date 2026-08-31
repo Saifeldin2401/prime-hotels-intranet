@@ -52,6 +52,7 @@ export const ROUTES = {
     QUIZZES: '/learning/quizzes',
     ASSIGNMENTS: '/learning/assignments',
     ANALYTICS: '/learning/analytics',
+    ANALYTICS_LENSES: '/analytics/learning',
   },
 
   // Knowledge
