@@ -41,12 +41,12 @@ const TenantContext = createContext<TenantContextType | undefined>(undefined)
 
 const DEFAULT_ORGANIZATION: Organization = {
   id: 'e0000000-0000-0000-0000-000000000001',
-  name: 'PRIME Hospitality Group',
-  name_ar: 'مجموعة فنادق برايم',
-  slug: 'prime-hospitality',
+  name: 'Altus Hospitality Group',
+  name_ar: 'مجموعة ألتوس للضيافة',
+  slug: 'altus-hospitality',
   logo_url: null,
   favicon_url: null,
-  brand_colors: { primary: '#0f172a', secondary: '#2563eb', accent: '#d97706' },
+  brand_colors: { primary: '#0B1528', secondary: '#C45B2F', accent: '#D9C6A3' },
   industry: 'hospitality',
   is_active: true,
   is_deleted: false,
@@ -131,7 +131,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Restore active organization from localStorage or pick first
-      const storedOrgId = safeLocalStorage.getItem('prime_active_tenant_id')
+      const storedOrgId = safeLocalStorage.getItem('altus_active_tenant_id') || safeLocalStorage.getItem('prime_active_tenant_id')
       const initialOrg = fetchedOrgs.find(o => o.id === storedOrgId) || fetchedOrgs[0]
       setCurrentOrganization(initialOrg)
 
@@ -194,7 +194,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     const targetOrg = organizations.find(o => o.id === orgId)
     if (!targetOrg) return
 
-    safeLocalStorage.setItem('prime_active_tenant_id', orgId)
+    safeLocalStorage.setItem('altus_active_tenant_id', orgId)
     setCurrentOrganization(targetOrg)
     setCurrentBrand(null)
     setCurrentHotel(null)
@@ -227,7 +227,7 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
       setImpersonationSession(null)
       // Switch back to primary or default org
       const defaultOrg = organizations[0] || DEFAULT_ORGANIZATION
-      safeLocalStorage.setItem('prime_active_tenant_id', defaultOrg.id)
+      safeLocalStorage.setItem('altus_active_tenant_id', defaultOrg.id)
       setCurrentOrganization(defaultOrg)
       await loadScopesForOrg(defaultOrg.id)
     }
@@ -246,14 +246,14 @@ export function TenantProvider({ children }: { children: React.ReactNode }) {
     if (!hotelId) {
       setCurrentHotel(null)
       if (currentOrganization) {
-        safeLocalStorage.removeItem(`prime_hotel_scope_${currentOrganization.id}`)
+        safeLocalStorage.removeItem(`altus_hotel_scope_${currentOrganization.id}`)
       }
       return
     }
     const targetHotel = availableHotels.find(h => h.id === hotelId) || null
     setCurrentHotel(targetHotel)
     if (currentOrganization && targetHotel) {
-      safeLocalStorage.setItem(`prime_hotel_scope_${currentOrganization.id}`, targetHotel.id)
+      safeLocalStorage.setItem(`altus_hotel_scope_${currentOrganization.id}`, targetHotel.id)
     }
   }
 

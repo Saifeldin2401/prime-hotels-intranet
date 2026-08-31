@@ -178,6 +178,16 @@ export const ROUTES: RouteConfig[] = [
         order: 1,
     },
     {
+        path: '/home/learner',
+        title: 'learner_cockpit',
+        icon: Target,
+        description: 'Learner cockpit with streaks, progress, courses and assessments',
+        allowedRoles: 'all',
+        keywords: ['learner', 'cockpit', 'study', 'streak', 'quizzes', 'my learning'],
+        group: 'personal_space',
+        order: 2,
+    },
+    {
         path: '/learning/my',
         title: 'my_training',
         icon: GraduationCap,
@@ -186,7 +196,7 @@ export const ROUTES: RouteConfig[] = [
         badgeKey: 'pendingTraining',
         keywords: ['training', 'learning', 'courses', 'modules', 'masterclass'],
         group: 'personal_space',
-        order: 5,
+        order: 3,
     },
     {
         path: '/profile',

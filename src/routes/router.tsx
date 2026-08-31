@@ -56,7 +56,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { AppLayout } from '@/components/layout/AppLayout'
 
 const LearnerHomeRoute = () => (
-    <ProtectedRoute allowedRoles={['staff', 'manager', 'department_head']}>
+    <ProtectedRoute>
         <AppLayout>
             <LearnerHome />
         </AppLayout>

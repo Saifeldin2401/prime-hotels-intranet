@@ -152,7 +152,7 @@ export function useMedia(options: UseMediaOptions = {}) {
           `
           *,
           uploader:uploaded_by(full_name),
-          property:property_id(name)
+          property:hotels(name)
         `
         )
         .eq('is_archived', false)
