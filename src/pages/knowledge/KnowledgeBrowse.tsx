@@ -48,7 +48,7 @@ import {
 import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useAuth } from '@/hooks/useAuth'
-import { useArticles, useBookmarks, useRequiredReading } from '@/hooks/useKnowledge'
+import { useArticles, useBookmarks, useFeaturedArticles, useRecentArticles, useRequiredReading } from '@/hooks/useKnowledge'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import { CONTENT_TYPE_CONFIG } from '@/types/knowledge'
@@ -80,7 +80,14 @@ function readTime(article: { estimated_read_time?: number; content?: string }): 
     return Math.max(1, Math.round(stripped.split(' ').length / 200))
 }
 
-export default function KnowledgeLibrary() {
+/**
+ * KnowledgeBrowse - unified Knowledge Base browse/search surface.
+ * Merges the former KnowledgeHome (landing hub), KnowledgeLibrary (filtered
+ * library) and KnowledgeSearch (search experience) into one page:
+ * category/tag/department filters (via KnowledgeSidebar) + a keyword search box,
+ * plus a featured/recent hub shown when no query or filter is active.
+ */
+export default function KnowledgeBrowse() {
     const { t, i18n } = useTranslation(['knowledge', 'common'])
     const { primaryRole } = useAuth()
     const navigate = useNavigate()
@@ -163,6 +170,17 @@ export default function KnowledgeLibrary() {
         return filtered
     }, [articles, activeFeatured, activeBookmarks, bookmarks, sortBy])
 
+    // Featured / recent content for the idle hub (shown when nothing is filtered).
+    const { data: featured } = useFeaturedArticles(6)
+    const { data: recentArticles } = useRecentArticles(8)
+    const hasAnyFilter = Boolean(
+        activeType || activeDept || activeFeatured || activeBookmarks || activeRequired || debouncedSearch
+    )
+    const showHub = !hasAnyFilter
+
+    // TODO(kb-semantic-search): this box performs keyword search only (passed to
+    // useArticles as `search`). When the semantic/RAG retrieval slice lands, route
+    // the query through the embeddings endpoint and merge ranked results here.
     const handleSearch = (val: string) => {
         setLocalSearch(val)
         const newParams = new URLSearchParams(searchParams)
@@ -194,7 +212,7 @@ export default function KnowledgeLibrary() {
     }
 
     const breadcrumbItems = useMemo(() => {
-        const items = [{ label: t('library.title', 'Knowledge Library'), href: '/knowledge/search' }]
+        const items = [{ label: t('library.title', 'Knowledge Library'), href: '/knowledge' }]
         if (activeDept) items.push({ label: t('library.department', 'Department'), href: undefined })
         if (activeType) items.push({ label: t(`content_types.${activeType}`, activeType), href: undefined })
         if (activeFeatured) items.push({ label: t('library.featured', 'Featured'), href: undefined })
@@ -316,6 +334,50 @@ export default function KnowledgeLibrary() {
                     {/* Results Section */}
                     <ScrollArea className="flex-1 lg:min-h-0">
                         <div className="p-4 sm:p-6">
+                            {/* Idle hub: featured + recently updated (only when nothing is filtered) */}
+                            {showHub && (featured?.length || recentArticles?.length) ? (
+                                <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+                                    {featured && featured.length > 0 && (
+                                        <section>
+                                            <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-400">
+                                                <Star className="h-4 w-4 text-hotel-gold" />
+                                                {t('featured', 'Featured')}
+                                            </h2>
+                                            <div className="divide-y divide-gray-50 overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                                {featured.slice(0, 6).map(a => (
+                                                    <Link key={a.id} to={`/knowledge/${a.id}`} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50">
+                                                        <FileText className="h-4 w-4 shrink-0 text-hotel-navy/60" />
+                                                        <span className="truncate text-gray-700">{a.title}</span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+                                    {recentArticles && recentArticles.length > 0 && (
+                                        <section>
+                                            <h2 className="mb-3 flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-gray-400">
+                                                <Clock className="h-4 w-4 text-hotel-navy/60" />
+                                                {t('recent', 'Recently updated')}
+                                            </h2>
+                                            <div className="divide-y divide-gray-50 overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                                {recentArticles.slice(0, 6).map(a => (
+                                                    <Link key={a.id} to={`/knowledge/${a.id}`} className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50">
+                                                        <FileText className="h-4 w-4 shrink-0 text-hotel-navy/60" />
+                                                        <span className="truncate text-gray-700">{a.title}</span>
+                                                    </Link>
+                                                ))}
+                                            </div>
+                                        </section>
+                                    )}
+                                </div>
+                            ) : null}
+
+                            {showHub && (
+                                <h2 className="mb-4 text-sm font-bold uppercase tracking-wider text-gray-400">
+                                    {t('library.all_articles', 'All articles')}
+                                </h2>
+                            )}
+
                             {isLoading || !bookmarks ? (
                                 <div className={cn(
                                     "grid gap-6",

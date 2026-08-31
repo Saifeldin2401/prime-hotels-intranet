@@ -137,6 +137,10 @@
         "updated_at": "Updated on {{date}}"
     },
     "viewer": {
+        "ask_ai_title": "Ask AI",
+        "ask_ai_desc": "Get instant answers grounded in this article.",
+        "ask_ai_button": "Ask AI about this",
+        "ask_ai_coming_soon": "Ask AI about this article is coming soon.",
         "back": "Back",
         "edit": "Edit",
         "delete": "Delete",
@@ -543,6 +547,7 @@
     },
     "library": {
         "title": "Knowledge Library",
+        "all_articles": "All articles",
         "description": "Access the complete repository of Altus Advisory standards and SOPs.",
         "search_results": "Search Results: {{q}}",
         "department": "Department",

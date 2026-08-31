@@ -4,17 +4,15 @@ import { PreserveQueryNavigate } from '@/routes/utils/QueryPreserveRedirect'
 import { lazy } from 'react'
 import { Navigate, Route, useLocation, useParams } from 'react-router-dom'
 
-const KnowledgeHome = lazy(() => import('@/pages/knowledge/KnowledgeHome'))
-const KnowledgeViewer = lazy(() => import('@/pages/knowledge/KnowledgeViewer'))
-const KnowledgeLibrary = lazy(() => import('@/pages/knowledge/KnowledgeLibrary'))
-const KnowledgeEditor = lazy(() => import('@/pages/knowledge/KnowledgeEditor'))
-const KnowledgeAnalytics = lazy(() => import('@/pages/knowledge/KnowledgeAnalytics'))
+// Knowledge Base consolidated surfaces: Browse, Read, Author.
+const KnowledgeBrowse = lazy(() => import('@/pages/knowledge/KnowledgeBrowse'))
+const KnowledgeRead = lazy(() => import('@/pages/knowledge/KnowledgeRead'))
+const KnowledgeAuthor = lazy(() => import('@/pages/knowledge/KnowledgeAuthor'))
 const KnowledgeReview = lazy(() => import('@/pages/knowledge/KnowledgeReview'))
 const QuestionEditor = lazy(() => import('@/pages/questions/QuestionEditor'))
 const QuestionReview = lazy(() => import('@/pages/questions/QuestionReview'))
 const QuestionLibrary = lazy(() => import('@/pages/questions/QuestionLibrary'))
 const QuestionGeneratorPage = lazy(() => import('@/pages/questions/QuestionGeneratorPage'))
-const SystemWiki = lazy(() => import('@/pages/knowledge/SystemWiki'))
 
 const SOPViewerRedirect = () => {
     const { id } = useParams()
@@ -40,42 +38,28 @@ export const KnowledgeRoutes = () => (
             path="/operations/sops/:id"
             element={<SOPViewerRedirect />}
         />
+        {/* Legacy wiki route now folds into the unified browse surface */}
         <Route
             path="/knowledge/wiki"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <SystemWiki />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
+            element={<PreserveQueryNavigate to="/knowledge" />}
         />
         <Route
             path="/knowledge"
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <KnowledgeHome />
+                        <KnowledgeBrowse />
                     </AppLayout>
                 </ProtectedRoute>
             }
         />
-        <Route
-            path="/knowledge/:id"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <KnowledgeViewer />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
+        {/* Legacy aliases kept so existing links (KnowledgeSidebar, dashboards) keep working */}
         <Route
             path="/knowledge/search"
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <KnowledgeLibrary />
+                        <KnowledgeBrowse />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -85,7 +69,7 @@ export const KnowledgeRoutes = () => (
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <KnowledgeLibrary />
+                        <KnowledgeBrowse />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -95,7 +79,7 @@ export const KnowledgeRoutes = () => (
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <KnowledgeEditor />
+                        <KnowledgeAuthor />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -105,17 +89,7 @@ export const KnowledgeRoutes = () => (
             element={
                 <ProtectedRoute>
                     <AppLayout>
-                        <KnowledgeEditor />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/knowledge/analytics"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <KnowledgeAnalytics />
+                        <KnowledgeAuthor />
                     </AppLayout>
                 </ProtectedRoute>
             }
@@ -126,6 +100,16 @@ export const KnowledgeRoutes = () => (
                 <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr']}>
                     <AppLayout>
                         <KnowledgeReview />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/knowledge/:id"
+            element={
+                <ProtectedRoute>
+                    <AppLayout>
+                        <KnowledgeRead />
                     </AppLayout>
                 </ProtectedRoute>
             }

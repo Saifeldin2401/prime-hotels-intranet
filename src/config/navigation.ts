@@ -437,16 +437,8 @@ export const ROUTES: RouteConfig[] = [
         group: 'knowledge_sop',
         order: 8,
     },
-    {
-        path: '/knowledge/wiki',
-        title: 'system_wiki',
-        icon: BookOpen,
-        description: 'System wiki, user manuals, and how-to platform guides',
-        allowedRoles: 'all',
-        keywords: ['wiki', 'help', 'docs', 'manual', 'system'],
-        group: 'knowledge_sop',
-        order: 9,
-    },
+    // NOTE: the standalone System Wiki page was removed in the KB 8->3 consolidation.
+    // The `system_wiki` table is retained; a later data-migration slice folds it into articles.
     // Secondary sub-routes (hidden from main sidebar navigation to keep UI clean)
     {
         path: '/learning/quizzes',
