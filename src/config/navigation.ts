@@ -460,6 +460,16 @@ export const ROUTES: RouteConfig[] = [
     // 7. PLATFORM OPERATOR & SUPER ADMIN (platform_operations)
     // -------------------------------------------------------------------------
     {
+        path: '/platform',
+        title: 'platform_control_center',
+        icon: Crown,
+        description: 'Executive SaaS control plane, cross-tenant telemetry, and background jobs',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['platform', 'control center', 'super admin', 'telemetry', 'operations'],
+        group: 'platform_operations',
+        order: 1,
+    },
+    {
         path: '/platform/organizations',
         title: 'organizations_hub',
         icon: Building2,
@@ -467,7 +477,17 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         keywords: ['platform', 'tenants', 'organizations', 'enter tenant', 'impersonation'],
         group: 'platform_operations',
-        order: 1,
+        order: 2,
+    },
+    {
+        path: '/platform/users',
+        title: 'platform_user_directory',
+        icon: Users,
+        description: 'Global multi-tenant user directory, platform operator roles, and status control',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['platform', 'users', 'directory', 'operator roles', 'super admin'],
+        group: 'platform_operations',
+        order: 3,
     },
     {
         path: '/platform/master-library',
@@ -477,7 +497,27 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         keywords: ['master', 'library', 'deploy', 'templates', 'master sops', 'master courses'],
         group: 'platform_operations',
-        order: 2,
+        order: 4,
+    },
+    {
+        path: '/platform/operations',
+        title: 'platform_operations_hub',
+        icon: Activity,
+        description: 'Real-time task queue, AI generation pipeline, and document vector ingestion',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['operations', 'queue', 'ai generation', 'background tasks', 'retry'],
+        group: 'platform_operations',
+        order: 5,
+    },
+    {
+        path: '/platform/settings',
+        title: 'platform_settings',
+        icon: Settings,
+        description: 'Platform feature flags, AI provider routing defaults, and runtime governance',
+        allowedRoles: ['corporate_admin', 'regional_admin'],
+        keywords: ['platform settings', 'feature flags', 'ai routing', 'config'],
+        group: 'platform_operations',
+        order: 6,
     },
     {
         path: '/platform/analytics',
@@ -487,7 +527,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         keywords: ['analytics', 'platform', 'metrics', 'learners', 'ai usage'],
         group: 'platform_operations',
-        order: 3,
+        order: 7,
     },
     {
         path: '/platform/audit',
@@ -497,7 +537,7 @@ export const ROUTES: RouteConfig[] = [
         allowedRoles: ['corporate_admin', 'regional_admin'],
         keywords: ['audit', 'security', 'logs', 'cross-tenant', 'compliance'],
         group: 'platform_operations',
-        order: 4,
+        order: 8,
     },
     {
         path: '/search',

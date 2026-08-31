@@ -28,10 +28,15 @@ const ReportBuilder = lazy(() => import('@/pages/admin/ReportBuilder'))
 const UserInvitations = lazy(() => import('@/pages/admin/UserInvitations'))
 
 // Platform Owner Super Admin Pages
+const PlatformControlCenter = lazy(() => import('@/pages/platform/PlatformControlCenter'))
 const OrganizationsHub = lazy(() => import('@/pages/platform/OrganizationsHub'))
+const PlatformUserDirectory = lazy(() => import('@/pages/platform/PlatformUserDirectory'))
 const MasterContentLibrary = lazy(() => import('@/pages/platform/MasterContentLibrary'))
+const PlatformOperationsHub = lazy(() => import('@/pages/platform/PlatformOperationsHub'))
+const PlatformSettings = lazy(() => import('@/pages/platform/PlatformSettings'))
 const PlatformAnalytics = lazy(() => import('@/pages/platform/PlatformAnalytics'))
 const PlatformAuditLogs = lazy(() => import('@/pages/platform/PlatformAuditLogs'))
+
 
 export const AdminRoutes = () => (
     <>
@@ -268,6 +273,16 @@ export const AdminRoutes = () => (
         {/* PLATFORM OWNER SUPER ADMIN ROUTES                                  */}
         {/* ------------------------------------------------------------------ */}
         <Route
+            path="/platform"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformControlCenter />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
             path="/platform/organizations"
             element={
                 <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
@@ -278,11 +293,41 @@ export const AdminRoutes = () => (
             }
         />
         <Route
+            path="/platform/users"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformUserDirectory />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
             path="/platform/master-library"
             element={
                 <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
                     <AppLayout>
                         <MasterContentLibrary />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/operations"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformOperationsHub />
+                    </AppLayout>
+                </ProtectedRoute>
+            }
+        />
+        <Route
+            path="/platform/settings"
+            element={
+                <ProtectedRoute allowedRoles={['super_admin', 'corporate_admin', 'regional_admin']}>
+                    <AppLayout>
+                        <PlatformSettings />
                     </AppLayout>
                 </ProtectedRoute>
             }

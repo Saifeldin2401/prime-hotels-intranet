@@ -14,7 +14,7 @@ export function PlatformImpersonationBanner() {
 
   const handleExit = async () => {
     await exitImpersonation()
-    navigate('/platform/organizations')
+    navigate('/platform')
   }
 
   return (

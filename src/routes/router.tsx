@@ -95,11 +95,25 @@ const RootIndex = () => {
         const urlRedirect = getRedirectFromSearch(location.search)
         const sessionRedirect = consumePostLoginRedirect()
 
-        // Learner roles land on the learning-focused home; everyone else keeps /dashboard.
-        const defaultDestination =
-            primaryRole === 'staff' || primaryRole === 'manager'
-                ? '/home/learner'
-                : '/dashboard'
+        // Smart Multi-Tenant Destination Resolution:
+        // 1. Platform Operators -> /platform (Platform Control Center)
+        // 2. Learners / Frontline Staff -> /home/learner (Learner Portal)
+        // 3. Tenant Admins & Managers -> /dashboard or /admin/control-center
+        let defaultDestination = '/dashboard'
+        if (
+            primaryRole === 'super_admin' ||
+            primaryRole === 'corporate_admin' ||
+            primaryRole === 'regional_admin' ||
+            primaryRole === 'administrator'
+        ) {
+            defaultDestination = '/platform'
+        } else if (
+            primaryRole === 'staff' ||
+            primaryRole === 'manager' ||
+            primaryRole === 'learner'
+        ) {
+            defaultDestination = '/home/learner'
+        }
 
         return pendingAuthFlowPath ?? spaRedirect ?? urlRedirect ?? sessionRedirect ?? defaultDestination
     }, [user, location.search, primaryRole])

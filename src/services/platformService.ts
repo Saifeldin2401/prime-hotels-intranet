@@ -1242,5 +1242,212 @@ export const platformService = {
       metadata: row.metadata || {},
       created_at: row.created_at
     }))
+  },
+
+  // ============================================================================
+  // 6. GLOBAL USER DIRECTORY & ACCESS CONTROL
+  // ============================================================================
+  async getPlatformUserDirectory(params?: {
+    search?: string
+    organizationId?: string
+    role?: string
+    limit?: number
+    offset?: number
+  }): Promise<{
+    id: string
+    email: string
+    full_name: string
+    avatar_url?: string
+    is_active: boolean
+    is_platform_user: boolean
+    platform_role?: string
+    primary_organization_id?: string
+    primary_organization_name?: string
+    membership_count: number
+    memberships: Array<{
+      organization_id: string
+      organization_name: string
+      role: string
+      hotel_id?: string
+      hotel_name?: string
+      department_id?: string
+      department_name?: string
+      is_active: boolean
+    }>
+    created_at: string
+  }[]> {
+    const { data, error } = await (supabase.rpc as any)('get_platform_user_directory', {
+      p_search: params?.search || null,
+      p_org_id: params?.organizationId || null,
+      p_role: params?.role || null,
+      p_limit: params?.limit || 50,
+      p_offset: params?.offset || 0
+    })
+
+    if (error) {
+      console.error('Error in getPlatformUserDirectory:', error)
+      throw error
+    }
+
+    return data || []
+  },
+
+  async setUserPlatformRole(params: {
+    userId: string
+    role: 'super_admin' | 'corporate_admin' | 'regional_admin' | 'administrator'
+    actorId?: string
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('user_roles')
+      .upsert({
+        user_id: params.userId,
+        role: params.role
+      }, { onConflict: 'user_id,role' })
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: 'assign_platform_role',
+      resourceType: 'user_role',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: { new_role: params.role }
+    })
+  },
+
+  async toggleUserActiveStatus(params: {
+    userId: string
+    isActive: boolean
+    actorId?: string
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ is_active: params.isActive, updated_at: new Date().toISOString() })
+      .eq('id', params.userId)
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: params.isActive ? 'activate_user' : 'suspend_user',
+      resourceType: 'user',
+      resourceId: params.userId,
+      actorId: params.actorId,
+      metadata: { is_active: params.isActive }
+    })
+  },
+
+  // ============================================================================
+  // 7. PLATFORM OPERATIONS, BACKGROUND JOBS & HEALTH
+  // ============================================================================
+  async getPlatformOperationsSummary(): Promise<{
+    active_jobs: number
+    completed_jobs: number
+    failed_jobs: number
+    total_jobs: number
+    recent_jobs: Array<{
+      id: string
+      mode: string
+      status: string
+      created_at: string
+      updated_at: string
+      duration_ms?: number
+      error_message?: string
+      models_used?: string[]
+    }>
+  }> {
+    const { data, error } = await (supabase.rpc as any)('get_platform_operations_summary')
+    if (error) {
+      console.error('Error fetching operations summary:', error)
+      return {
+        active_jobs: 0,
+        completed_jobs: 0,
+        failed_jobs: 0,
+        total_jobs: 0,
+        recent_jobs: []
+      }
+    }
+    return data
+  },
+
+  async retryFailedJob(jobId: string): Promise<boolean> {
+    const { data, error } = await (supabase.rpc as any)('retry_failed_job', {
+      p_job_id: jobId
+    })
+    if (error) throw error
+    return !!data
+  },
+
+  // ============================================================================
+  // 8. GLOBAL SEARCH ACROSS ALL TENANTS
+  // ============================================================================
+  async getPlatformGlobalSearch(query: string): Promise<{
+    organizations: Array<{ id: string; name: string; slug: string; is_active: boolean; hotel_count: number }>
+    hotels: Array<{ id: string; name: string; city: string; organization_id: string; organization_name: string }>
+    users: Array<{ id: string; full_name: string; email: string; primary_org?: string }>
+    master_sops: Array<{ id: string; title: string; category: string; version: number }>
+    master_courses: Array<{ id: string; title: string; category: string; difficulty_level: string }>
+  }> {
+    if (!query || query.trim().length === 0) {
+      return { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+    }
+
+    const { data, error } = await (supabase.rpc as any)('get_platform_global_search', {
+      p_query: query.trim()
+    })
+
+    if (error) {
+      console.error('Error in getPlatformGlobalSearch:', error)
+      return { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+    }
+
+    return data || { organizations: [], hotels: [], users: [], master_sops: [], master_courses: [] }
+  },
+
+  // ============================================================================
+  // 9. PLATFORM SYSTEM SETTINGS & FEATURE FLAGS
+  // ============================================================================
+  async getSystemSettings(): Promise<Array<{
+    id: string
+    key: string
+    value: any
+    category: string
+    description?: string
+    updated_at: string
+  }>> {
+    const { data, error } = await supabase
+      .from('system_settings')
+      .select('*')
+      .order('category', { ascending: true })
+
+    if (error) {
+      console.error('Error fetching system settings:', error)
+      return []
+    }
+    return data || []
+  },
+
+  async updateSystemSetting(params: {
+    key: string
+    value: any
+    actorId?: string
+  }): Promise<void> {
+    const { error } = await supabase
+      .from('system_settings')
+      .upsert({
+        key: params.key,
+        value: params.value,
+        updated_at: new Date().toISOString(),
+        updated_by: params.actorId || null
+      }, { onConflict: 'key' })
+
+    if (error) throw error
+
+    await this.logPlatformAction({
+      action: 'update_system_setting',
+      resourceType: 'system_setting',
+      resourceId: params.key,
+      actorId: params.actorId,
+      metadata: { key: params.key, new_value: params.value }
+    })
   }
 }
