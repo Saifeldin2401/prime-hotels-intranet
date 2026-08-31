@@ -8,27 +8,8 @@ import { Route } from 'react-router-dom'
 const MyProfile = lazy(() => import('@/pages/profile/MyProfile'))
 const UserProfile = lazy(() => import('@/pages/profile/UserProfile'))
 const Settings = lazy(() => import('@/pages/settings/Settings'))
-const ApprovalsDashboard = lazy(() => import('@/pages/approvals/ApprovalsDashboard'))
-const EmployeeDirectory = lazy(() => import('@/pages/directory/EmployeeDirectory'))
 const GlobalSearch = lazy(() => import('@/pages/search/GlobalSearch'))
-const TasksDashboard = lazy(() => import('@/pages/tasks/TasksDashboard'))
-const TaskDetail = lazy(() => import('@/pages/tasks/TaskDetail'))
-const MessagingDashboard = lazy(() => import('@/pages/messaging/MessagingDashboard'))
-const MessageDetail = lazy(() => import('@/pages/messaging/MessageDetail'))
-const AnnouncementFeed = lazy(() => import('@/pages/announcements/AnnouncementFeed'))
-const AnnouncementDetail = lazy(() => import('@/pages/announcements/AnnouncementDetail'))
-const AnnouncementAnalytics = lazy(() => import('@/pages/announcements/AnnouncementAnalytics'))
-const MaintenanceDashboard = lazy(() => import('@/pages/maintenance/MaintenanceDashboard'))
-const PreventiveMaintenance = lazy(() => import('@/pages/maintenance/PreventiveMaintenance'))
-const SubmitTicket = lazy(() => import('@/pages/maintenance/SubmitTicket'))
-const MaintenanceTicketDetail = lazy(() => import('@/pages/maintenance/MaintenanceTicketDetail'))
-const OnboardingDashboard = lazy(() => import('@/pages/onboarding/OnboardingDashboard'))
 const Notifications = lazy(() => import('@/pages/notifications/Notifications'))
-const JobPostings = lazy(() => import('@/pages/jobs/JobPostings'))
-const CreateJobPosting = lazy(() => import('@/pages/jobs/CreateJobPosting'))
-const JobPostingDetail = lazy(() => import('@/pages/jobs/JobPostingDetail'))
-const EditJobPosting = lazy(() => import('@/pages/jobs/EditJobPosting'))
-const EmployeeReferrals = lazy(() => import('@/pages/hr/EmployeeReferrals'))
 const ReportsDashboard = lazy(() => import('@/pages/reports/ReportsDashboard'))
 const DocumentDetail = lazy(() => import('@/pages/documents/DocumentDetail'))
 const DocumentLibrary = lazy(() => import('@/pages/documents/DocumentLibrary'))
@@ -72,30 +53,6 @@ export const MiscRoutes = () => (
             }
         />
         <Route
-            path="/approvals"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <ApprovalsDashboard />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/directory"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <EmployeeDirectory />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
             path="/search"
             element={
                 <ProtectedRoute>
@@ -105,146 +62,7 @@ export const MiscRoutes = () => (
                 </ProtectedRoute>
             }
         />
-        <Route
-            path="/messages"
-            element={<PreserveQueryNavigate to="/messaging" />}
-        />
-        <Route
-            path="/tasks"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <TasksDashboard />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/tasks/:taskId"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <TaskDetail />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/messaging"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MessagingDashboard />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/messaging/:messageId"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MessageDetail />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/announcements"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AnnouncementFeed />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/announcements/:id"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AnnouncementDetail />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/announcements/:id/analytics"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_manager', 'property_hr', 'department_head']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <AnnouncementAnalytics />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/help"
-            element={<PreserveQueryNavigate to="/knowledge" />}
-        />
-        <Route
-            path="/maintenance"
-            element={
-                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <MaintenanceDashboard />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/maintenance/preventive"
-            element={
-                <ProtectedRoute allowedRoles={['department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <PreventiveMaintenance />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/maintenance/submit"
-            element={
-                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
-                    <AppLayout>
-                        <SubmitTicket />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/maintenance/tickets/:id"
-            element={
-                <ProtectedRoute allowedRoles={['staff', 'department_head', 'property_hr', 'property_manager', 'regional_hr', 'regional_admin']}>
-                    <AppLayout>
-                        <MaintenanceTicketDetail />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/onboarding"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <MotionWrapper>
-                            <OnboardingDashboard />
-                        </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
+        <Route path="/help" element={<PreserveQueryNavigate to="/knowledge" />} />
         <Route
             path="/notifications"
             element={
@@ -253,56 +71,6 @@ export const MiscRoutes = () => (
                         <MotionWrapper>
                             <Notifications />
                         </MotionWrapper>
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/jobs"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <JobPostings />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/jobs/new"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
-                    <AppLayout>
-                        <CreateJobPosting />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/jobs/:id"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <JobPostingDetail />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/jobs/:id/edit"
-            element={
-                <ProtectedRoute allowedRoles={['regional_admin', 'regional_hr', 'property_hr', 'property_manager']}>
-                    <AppLayout>
-                        <EditJobPosting />
-                    </AppLayout>
-                </ProtectedRoute>
-            }
-        />
-        <Route
-            path="/jobs/referrals"
-            element={
-                <ProtectedRoute>
-                    <AppLayout>
-                        <EmployeeReferrals />
                     </AppLayout>
                 </ProtectedRoute>
             }
